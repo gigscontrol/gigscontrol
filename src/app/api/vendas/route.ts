@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { autenticarComWorkspace } from "@/lib/api/session";
+import {
+  listarVendasDoWorkspace,
+  criarVendaCompleta,
+} from "@/lib/services/vendas.service";
+import { vendaCreateSchema } from "@/lib/validators/vendas.schema";
+import {
+  verificarAcessoVendas,
+  verificarCriarVenda,
+} from "@/lib/api/permissoes";
+
+export async function GET() {
+  const r = await autenticarComWorkspace();
+  if ("response" in r) return r.response;
+  const bloqueio = verificarAcessoVendas(r.sessao);
+  if (bloqueio) return bloqueio;
+  try {
+    const vendas = await listarVendasDoWorkspace(r.sessao.supabase, r.sessao);
+    return NextResponse.json({ vendas });
+  } catch (e) {
+    return NextResponse.json(
+      { erro: (e as Error).message ?? "Falha ao listar vendas." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/vendas — cria venda transacional:
+ * insere venda + parcelas, sincroniza show e marca orçamento aceito.
+ */
+export async function POST(request: Request) {
+  const r = await autenticarComWorkspace();
+  if ("response" in r) return r.response;
+  const bloqueio = verificarCriarVenda(r.sessao);
+  if (bloqueio) return bloqueio;
+
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ erro: "JSON inválido." }, { status: 400 });
+  }
+
+  const parsed = vendaCreateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const venda = await criarVendaCompleta(
+      r.sessao.supabase,
+      r.sessao.workspaceId,
+      r.sessao.userId,
+      parsed.data
+    );
+    return NextResponse.json({ venda }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { erro: (e as Error).message ?? "Falha ao criar venda." },
+      { status: 500 }
+    );
+  }
+}

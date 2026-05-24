@@ -1,0 +1,539 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Compass } from "lucide-react";
+import PageHeader from "./PageHeader";
+import Modal from "./Modal";
+import ContratanteForm from "./forms/ContratanteForm";
+import CasaForm from "./forms/CasaForm";
+import CidadeForm from "./forms/CidadeForm";
+import ContatoDetail from "./ContatoDetail";
+import MapaDobras from "./contatos/MapaDobras";
+import { useContatos } from "@/lib/contatos-context";
+import { useShows } from "@/lib/shows-context";
+import { useOrcamentos } from "@/lib/orcamentos-context";
+import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatBRL } from "@/lib/contatos-stats";
+import { MODULE_THEMES } from "@/types";
+import type { ContatoCategoria, Contratante, Casa, Cidade } from "@/types";
+
+type Selecionado =
+  | { tipo: "contratante"; item: Contratante }
+  | { tipo: "casa"; item: Casa }
+  | { tipo: "cidade"; item: Cidade }
+  | null;
+
+const TIPO_CASA_LABEL: Record<string, string> = {
+  club: "Club",
+  festival: "Festival",
+  "festa-privada": "Festa privada",
+  bar: "Bar",
+  arena: "Arena",
+  outro: "Outro",
+};
+
+export default function Contatos({
+  categoriaInicial = "contratantes",
+}: {
+  categoriaInicial?: ContatoCategoria;
+}) {
+  const accent = MODULE_THEMES.contatos.color;
+  const { contratantes, casas, cidades, removeContratante, removeCasa, removeCidade } = useContatos();
+
+  const [categoria, setCategoria] = useState<ContatoCategoria>(categoriaInicial);
+  const [search, setSearch] = useState("");
+  const [selecionado, setSelecionado] = useState<Selecionado>(null);
+  const [modal, setModal] = useState<
+    | { type: "novo-contratante" }
+    | { type: "edit-contratante"; item: Contratante }
+    | { type: "novo-casa" }
+    | { type: "edit-casa"; item: Casa }
+    | { type: "novo-cidade" }
+    | { type: "edit-cidade"; item: Cidade }
+    | null
+  >(null);
+
+  // Filtros aplicados conforme aba
+  const contratantesFiltrados = useMemo(() => {
+    if (!search.trim()) return contratantes;
+    const q = search.toLowerCase();
+    return contratantes.filter(
+      (c) =>
+        c.nome.toLowerCase().includes(q) ||
+        (c.email ?? "").toLowerCase().includes(q) ||
+        c.telefone.toLowerCase().includes(q) ||
+        getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
+    );
+  }, [contratantes, search, cidades]);
+
+  const casasFiltradas = useMemo(() => {
+    if (!search.trim()) return casas;
+    const q = search.toLowerCase();
+    return casas.filter(
+      (c) =>
+        c.nome.toLowerCase().includes(q) ||
+        getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
+        TIPO_CASA_LABEL[c.tipo]?.toLowerCase().includes(q)
+    );
+  }, [casas, search, cidades]);
+
+  const cidadesFiltradas = useMemo(() => {
+    if (!search.trim()) return cidades;
+    const q = search.toLowerCase();
+    return cidades.filter(
+      (c) => c.nome.toLowerCase().includes(q) || c.estado.toLowerCase().includes(q)
+    );
+  }, [cidades, search]);
+
+  // Tela de detalhe quando algo selecionado
+  if (selecionado) {
+    return (
+      <ContatoDetail
+        selecionado={selecionado}
+        onBack={() => setSelecionado(null)}
+        onEdit={() => {
+          if (selecionado.tipo === "contratante")
+            setModal({ type: "edit-contratante", item: selecionado.item });
+          else if (selecionado.tipo === "casa")
+            setModal({ type: "edit-casa", item: selecionado.item });
+          else setModal({ type: "edit-cidade", item: selecionado.item });
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+      <PageHeader
+        title="Contatos"
+        subtitle="Contratantes, casas/eventos e cidades — sua base de relacionamento"
+        accentColor={accent}
+        actions={
+          <button
+            onClick={() => {
+              if (categoria === "contratantes") setModal({ type: "novo-contratante" });
+              else if (categoria === "casas") setModal({ type: "novo-casa" });
+              else setModal({ type: "novo-cidade" });
+            }}
+            className="btn btn-primary"
+            style={{ backgroundColor: accent, color: "#fff" }}
+          >
+            <Plus size={16} />
+            Novo {categoria === "contratantes" ? "contratante" : categoria === "casas" ? "casa" : "cidade"}
+          </button>
+        }
+      />
+
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <SummaryTile
+          icon={<Users size={16} />}
+          label="Contratantes"
+          value={contratantes.length}
+          active={categoria === "contratantes"}
+          accent={accent}
+          onClick={() => setCategoria("contratantes")}
+        />
+        <SummaryTile
+          icon={<Building2 size={16} />}
+          label="Casas / Eventos"
+          value={casas.length}
+          active={categoria === "casas"}
+          accent={accent}
+          onClick={() => setCategoria("casas")}
+        />
+        <SummaryTile
+          icon={<MapPin size={16} />}
+          label="Cidades"
+          value={cidades.length}
+          active={categoria === "cidades"}
+          accent={accent}
+          onClick={() => setCategoria("cidades")}
+        />
+        <SummaryTile
+          icon={<Compass size={16} />}
+          label="Mapa de Dobras"
+          value={cidades.filter((c) => c.latitude !== undefined).length}
+          active={categoria === "mapa"}
+          accent={accent}
+          onClick={() => setCategoria("mapa")}
+        />
+      </div>
+
+      {/* Busca (não aparece no mapa) */}
+      {categoria !== "mapa" && (
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+          <Search size={15} className="text-muted flex-shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Buscar em ${categoria}...`}
+            className="input"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mapa de Dobras (busca por raio) */}
+      {categoria === "mapa" && <MapaDobras />}
+
+      {/* Tabela conforme categoria */}
+      {categoria !== "mapa" && (
+      <div className="card p-0 overflow-hidden">
+        {categoria === "contratantes" && (
+          <TabelaContratantes
+            items={contratantesFiltrados}
+            onSelect={(item) => setSelecionado({ tipo: "contratante", item })}
+            onEdit={(item) => setModal({ type: "edit-contratante", item })}
+            onRemove={(id) => {
+              if (confirm("Remover este contratante?")) removeContratante(id);
+            }}
+          />
+        )}
+
+        {categoria === "casas" && (
+          <TabelaCasas
+            items={casasFiltradas}
+            onSelect={(item) => setSelecionado({ tipo: "casa", item })}
+            onEdit={(item) => setModal({ type: "edit-casa", item })}
+            onRemove={(id) => {
+              if (confirm("Remover esta casa?")) removeCasa(id);
+            }}
+          />
+        )}
+
+        {categoria === "cidades" && (
+          <TabelaCidades
+            items={cidadesFiltradas}
+            onSelect={(item) => setSelecionado({ tipo: "cidade", item })}
+            onEdit={(item) => setModal({ type: "edit-cidade", item })}
+            onRemove={(id) => {
+              if (confirm("Remover esta cidade?")) removeCidade(id);
+            }}
+          />
+        )}
+      </div>
+      )}
+
+      {/* Modais */}
+      <Modal
+        isOpen={modal?.type === "novo-contratante" || modal?.type === "edit-contratante"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-contratante" ? "Editar contratante" : "Novo contratante"}
+        subtitle="Cliente que contrata os DJs da agência"
+      >
+        <ContratanteForm
+          initial={modal?.type === "edit-contratante" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={modal?.type === "novo-casa" || modal?.type === "edit-casa"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-casa" ? "Editar casa / evento" : "Nova casa / evento"}
+        subtitle="Local onde os shows acontecem"
+        maxWidth={640}
+      >
+        <CasaForm
+          initial={modal?.type === "edit-casa" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={modal?.type === "novo-cidade" || modal?.type === "edit-cidade"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-cidade" ? "Editar cidade" : "Nova cidade"}
+        subtitle="Cidades onde a agência atua"
+      >
+        <CidadeForm
+          initial={modal?.type === "edit-cidade" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+// ---------- Tile de categoria ----------
+
+function SummaryTile({
+  icon,
+  label,
+  value,
+  active,
+  accent,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  active: boolean;
+  accent: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="card-interactive flex items-center gap-4 text-left"
+      style={{
+        borderColor: active ? accent : undefined,
+        boxShadow: active ? `0 0 0 1px ${accent}` : undefined,
+      }}
+    >
+      <div
+        className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
+        style={{
+          backgroundColor: active ? `${accent}20` : "var(--bg-elevated)",
+          color: active ? accent : "var(--text-secondary)",
+        }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="stat-label">{label}</div>
+        <div className="text-2xl font-bold tabular-nums mt-0.5">{value}</div>
+      </div>
+      <ChevronRight size={16} className={active ? "" : "text-muted"} style={active ? { color: accent } : undefined} />
+    </button>
+  );
+}
+
+// ---------- Tabelas ----------
+
+function TabelaContratantes({
+  items,
+  onSelect,
+  onEdit,
+  onRemove,
+}: {
+  items: Contratante[];
+  onSelect: (c: Contratante) => void;
+  onEdit: (c: Contratante) => void;
+  onRemove: (id: string) => void;
+}) {
+  const { cidades } = useContatos();
+  const { shows } = useShows();
+  const { orcamentos } = useOrcamentos();
+  if (items.length === 0) return <EmptyTable label="Nenhum contratante encontrado" />;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-2/40">
+            <Th>Nome</Th>
+            <Th>Cidade</Th>
+            <Th>Contato</Th>
+            <Th className="text-right">Orçamentos</Th>
+            <Th className="text-right">Shows</Th>
+            <Th className="w-[1%]"></Th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((c) => {
+            const stats = getContratanteStats(c.id, shows, orcamentos);
+            return (
+              <tr
+                key={c.id}
+                onClick={() => onSelect(c)}
+                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+              >
+                <Td className="font-medium text-primary">{c.nome}</Td>
+                <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
+                <Td className="text-secondary">
+                  <div className="text-xs">{c.email || <span className="text-muted italic">sem e-mail</span>}</div>
+                  <div className="text-xs text-muted">{c.telefone}</div>
+                </Td>
+                <Td className="text-right tabular-nums font-semibold">{stats.totalOrcamentos}</Td>
+                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
+                <Td>
+                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TabelaCasas({
+  items,
+  onSelect,
+  onEdit,
+  onRemove,
+}: {
+  items: Casa[];
+  onSelect: (c: Casa) => void;
+  onEdit: (c: Casa) => void;
+  onRemove: (id: string) => void;
+}) {
+  const { cidades } = useContatos();
+  const { shows } = useShows();
+  if (items.length === 0) return <EmptyTable label="Nenhuma casa encontrada" />;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-2/40">
+            <Th>Nome</Th>
+            <Th>Tipo</Th>
+            <Th>Cidade</Th>
+            <Th className="text-right">Capacidade</Th>
+            <Th className="text-right">Shows</Th>
+            <Th className="text-right">Faturado</Th>
+            <Th className="w-[1%]"></Th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((c) => {
+            const stats = getCasaStats(c.id, shows);
+            return (
+              <tr
+                key={c.id}
+                onClick={() => onSelect(c)}
+                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+              >
+                <Td className="font-medium text-primary">{c.nome}</Td>
+                <Td>
+                  <span className="badge badge-neutral">{TIPO_CASA_LABEL[c.tipo]}</span>
+                </Td>
+                <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
+                <Td className="text-right tabular-nums">
+                  {c.capacidade ? c.capacidade.toLocaleString("pt-BR") : "—"}
+                </Td>
+                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
+                <Td className="text-right tabular-nums font-semibold">
+                  {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
+                </Td>
+                <Td>
+                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TabelaCidades({
+  items,
+  onSelect,
+  onEdit,
+  onRemove,
+}: {
+  items: Cidade[];
+  onSelect: (c: Cidade) => void;
+  onEdit: (c: Cidade) => void;
+  onRemove: (id: string) => void;
+}) {
+  const { shows } = useShows();
+  if (items.length === 0) return <EmptyTable label="Nenhuma cidade encontrada" />;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-2/40">
+            <Th>Cidade</Th>
+            <Th>UF</Th>
+            <Th>Região</Th>
+            <Th className="text-right">Casas</Th>
+            <Th className="text-right">Shows</Th>
+            <Th className="text-right">Faturado</Th>
+            <Th>Top DJ</Th>
+            <Th className="w-[1%]"></Th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((c) => {
+            const stats = getCidadeStats(c.id, shows);
+            return (
+              <tr
+                key={c.id}
+                onClick={() => onSelect(c)}
+                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+              >
+                <Td className="font-medium text-primary">{c.nome}</Td>
+                <Td className="text-secondary">{c.estado}</Td>
+                <Td className="text-secondary">{c.regiao}</Td>
+                <Td className="text-right tabular-nums">{stats.totalCasas}</Td>
+                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
+                <Td className="text-right tabular-nums font-semibold">
+                  {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
+                </Td>
+                <Td className="text-secondary">
+                  {stats.topDJ ? (
+                    <span>
+                      {stats.topDJ.nome}{" "}
+                      <span className="text-muted">({stats.topDJ.shows})</span>
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </Td>
+                <Td>
+                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
+                </Td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------- Utilitários de tabela ----------
+
+function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`text-left px-4 py-3 stat-label font-semibold whitespace-nowrap ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
+  return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
+}
+
+function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
+  return (
+    <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+      <button onClick={onEdit} className="btn-ghost p-1.5 rounded" aria-label="Editar">
+        <Pencil size={14} />
+      </button>
+      <button onClick={onRemove} className="btn-ghost p-1.5 rounded hover:text-danger" aria-label="Remover">
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+function EmptyTable({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
+        <Search size={18} className="text-muted" />
+      </div>
+      <div className="section-title mb-1">{label}</div>
+      <div className="section-subtitle">Ajuste a busca ou cadastre um novo registro</div>
+    </div>
+  );
+}

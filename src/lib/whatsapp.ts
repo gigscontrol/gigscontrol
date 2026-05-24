@@ -1,0 +1,105 @@
+import type { Orcamento, Contratante, Casa, Cidade, DJ } from "@/types";
+import { TEXTO_TRANSLADO } from "@/types";
+
+export function formatarDuracao(horas: number, minutos: number): string {
+  const h = Math.max(0, horas);
+  const m = Math.max(0, minutos);
+  if (h === 0 && m === 0) return "1 hora";
+  if (h === 0) return `${m} minutos`;
+  if (m === 0) return h === 1 ? "1 hora" : `${h} horas`;
+  const partHoras = h === 1 ? "1 hora" : `${h} horas`;
+  return `${partHoras} e ${m} minutos`;
+}
+
+/**
+ * Gera o texto do orçamento.
+ * - Asteriscos viram negrito no WhatsApp.
+ * - Seções com 0 itens são suprimidas.
+ * - Logística: se nada selecionado → "Já inclusa do cachê".
+ *              Caso contrário → lista as opções selecionadas.
+ */
+export function gerarTextoWhatsApp(
+  orc: Orcamento,
+  ctx: {
+    contratante?: Contratante;
+    casa?: Casa;
+    cidade?: Cidade;
+    dj?: DJ;
+  }
+): string {
+  const cidadeNome = ctx.cidade?.nome ?? "—";
+  const djNome = ctx.dj?.name ?? "—";
+  const valor = formatBRL(orc.valorCache);
+  const duracao = formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0);
+
+  const linhas: string[] = [];
+  linhas.push(`*Valores de cachê ${cidadeNome}*`);
+  linhas.push("");
+  linhas.push(`*${djNome}*`);
+  linhas.push(`${valor} por ${duracao} de show.`);
+
+  const camarim = orc.camarim.filter((i) => i.qtd > 0);
+  if (camarim.length > 0) {
+    linhas.push("");
+    linhas.push("*Camarim/Consumação (não incluso no cachê)*");
+    camarim.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
+  }
+
+  const efeitos = orc.efeitos.filter((i) => i.qtd > 0);
+  if (efeitos.length > 0) {
+    linhas.push("");
+    linhas.push("*Efeitos*");
+    efeitos.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
+  }
+
+  const hotel = orc.hotel.filter((i) => i.qtd > 0);
+  if (hotel.length > 0) {
+    linhas.push("");
+    linhas.push("*Hotel (não incluso no cachê)*");
+    hotel.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
+  }
+
+  // ----- Logística -----
+  const temAerea = (orc.logistica.aereaQtd ?? 0) > 0;
+  const temTranslado = !!orc.logistica.transladoTerrestre;
+
+  if (!temAerea && !temTranslado) {
+    // Nada selecionado = inclusa no cachê
+    linhas.push("");
+    linhas.push("*Logistica*");
+    linhas.push("Já inclusa do cachê");
+  } else {
+    linhas.push("");
+    linhas.push("*Logistica (não incluso no cachê)*");
+    if (temAerea) {
+      linhas.push(`${orc.logistica.aereaQtd}x Logística Aérea (Ida e Volta)`);
+    }
+    if (temTranslado) {
+      linhas.push(TEXTO_TRANSLADO);
+    }
+  }
+
+  // Código discreto no fim (sem itálico)
+  linhas.push("");
+  linhas.push(orc.numero);
+
+  return linhas.join("\n");
+}
+
+export function normalizarTelefoneWA(telefoneBruto: string): string {
+  const apenasNumeros = telefoneBruto.replace(/\D/g, "");
+  if (apenasNumeros.length === 0) return "";
+  if (apenasNumeros.startsWith("55") && (apenasNumeros.length === 12 || apenasNumeros.length === 13)) {
+    return apenasNumeros;
+  }
+  return `55${apenasNumeros}`;
+}
+
+export function montarLinkWhatsApp(telefone: string, texto: string): string {
+  const tel = normalizarTelefoneWA(telefone);
+  const txt = encodeURIComponent(texto);
+  return `https://wa.me/${tel}?text=${txt}`;
+}
+
+export const formatBRL = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -1,0 +1,168 @@
+import { NextResponse } from "next/server";
+import { criarClienteServidor } from "@/lib/db/supabase-server";
+import type { Papel } from "@/lib/permissoes";
+
+/**
+ * Helper compartilhado pelos Route Handlers para autenticar uma requisição
+ * e devolver o cliente Supabase do servidor + o profile do usuário.
+ *
+ * Inclui o `papel`, `escopo` e `artistaId` para que os services apliquem
+ * filtros de permissão (Etapa 10).
+ */
+export type EscopoSessao = {
+  verTodosContatos: boolean;
+  verTodasVendas: boolean;
+  editarTodosEventos: boolean;
+};
+
+const ESCOPO_PADRAO: EscopoSessao = {
+  verTodosContatos: true,
+  verTodasVendas: true,
+  editarTodosEventos: true,
+};
+
+export type SessaoAutenticada = {
+  supabase: ReturnType<typeof criarClienteServidor>;
+  userId: string;
+  workspaceId: string | null;
+  isSuperAdmin: boolean;
+  papel: Papel;
+  artistaId: string | null;
+  escopo: EscopoSessao;
+};
+
+function normalizarEscopo(raw: unknown): EscopoSessao {
+  if (!raw || typeof raw !== "object") return { ...ESCOPO_PADRAO };
+  const r = raw as Record<string, unknown>;
+  return {
+    verTodosContatos:
+      typeof r.verTodosContatos === "boolean"
+        ? r.verTodosContatos
+        : ESCOPO_PADRAO.verTodosContatos,
+    verTodasVendas:
+      typeof r.verTodasVendas === "boolean"
+        ? r.verTodasVendas
+        : ESCOPO_PADRAO.verTodasVendas,
+    editarTodosEventos:
+      typeof r.editarTodosEventos === "boolean"
+        ? r.editarTodosEventos
+        : ESCOPO_PADRAO.editarTodosEventos,
+  };
+}
+
+export async function autenticar(): Promise<
+  { sessao: SessaoAutenticada } | { response: NextResponse }
+> {
+  const supabase = criarClienteServidor();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      response: NextResponse.json({ erro: "Não autenticado." }, { status: 401 }),
+    };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select(
+      "id, workspace_id, is_super_admin, papel, artista_id, escopo, status, deletado_em"
+    )
+    .eq("id", user.id)
+    .single<{
+      id: string;
+      workspace_id: string | null;
+      is_super_admin: boolean;
+      papel: Papel;
+      artista_id: string | null;
+      escopo: unknown;
+      status: string;
+      deletado_em: string | null;
+    }>();
+
+  if (!profile) {
+    return {
+      response: NextResponse.json(
+        { erro: "Conta sem perfil configurado." },
+        { status: 403 }
+      ),
+    };
+  }
+
+  if (profile.deletado_em) {
+    return {
+      response: NextResponse.json(
+        { erro: "Esta conta foi removida." },
+        { status: 403 }
+      ),
+    };
+  }
+
+  if (profile.status !== "ativo") {
+    return {
+      response: NextResponse.json(
+        { erro: "Conta desativada." },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return {
+    sessao: {
+      supabase,
+      userId: profile.id,
+      workspaceId: profile.workspace_id,
+      isSuperAdmin: profile.is_super_admin,
+      papel: profile.papel,
+      artistaId: profile.artista_id,
+      escopo: normalizarEscopo(profile.escopo),
+    },
+  };
+}
+
+/**
+ * Variante que exige um workspace ativo (cliente). Para super-admin sem
+ * workspace selecionado, devolve 400 — chamadas de domínio precisam de
+ * tenant.
+ */
+export async function autenticarComWorkspace(): Promise<
+  | { sessao: SessaoAutenticada & { workspaceId: string } }
+  | { response: NextResponse }
+> {
+  const r = await autenticar();
+  if ("response" in r) return r;
+
+  if (!r.sessao.workspaceId) {
+    return {
+      response: NextResponse.json(
+        { erro: "Workspace não selecionado." },
+        { status: 400 }
+      ),
+    };
+  }
+
+  return {
+    sessao: { ...r.sessao, workspaceId: r.sessao.workspaceId },
+  };
+}
+
+/**
+ * Variante que exige super-admin da plataforma. Usado pelos endpoints
+ * `/api/admin/*` que listam/alteram todos os workspaces.
+ */
+export async function autenticarSuperAdmin(): Promise<
+  { sessao: SessaoAutenticada } | { response: NextResponse }
+> {
+  const r = await autenticar();
+  if ("response" in r) return r;
+  if (!r.sessao.isSuperAdmin) {
+    return {
+      response: NextResponse.json(
+        { erro: "Acesso restrito ao super-admin." },
+        { status: 403 }
+      ),
+    };
+  }
+  return r;
+}

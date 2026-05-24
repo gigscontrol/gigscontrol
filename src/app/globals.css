@@ -1,0 +1,276 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Backgrounds */
+    --bg-main: #0a0a0b;
+    --bg-surface: #111113;
+    --bg-surface-2: #18181b;
+    --bg-elevated: #1f1f23;
+
+    /* Borders */
+    --border-color: #1f1f23;
+    --border-hover: #2a2a2f;
+    --border-strong: #3a3a40;
+
+    /* Text */
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --text-disabled: #52525b;
+
+    /* Brand / Módulos */
+    --module-agenda: #3b82f6;
+    --module-vendas: #a855f7;
+    --module-financeiro: #22c55e;
+    --module-contatos: #f97316;
+
+    /* Semantic */
+    --accent-color: #fafafa;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+
+    /* Layout */
+    --sidebar-width: 240px;
+    --sidebar-collapsed: 64px;
+    --topbar-height: 64px;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+
+    /* Easing */
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Força a renderização de emoji colorido nas bandeiras (Windows não tem por padrão) */
+  .flag-emoji {
+    font-family:
+      "Twemoji Mozilla",
+      "Apple Color Emoji",
+      "Segoe UI Emoji",
+      "Noto Color Emoji",
+      "Android Emoji",
+      "EmojiSymbols",
+      "EmojiOne Mozilla",
+      sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-variant-emoji: emoji;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  ::selection { background: rgba(59, 130, 246, 0.3); }
+}
+
+@layer components {
+  /* Card */
+  .card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: border-color 200ms var(--ease);
+  }
+  .card:hover { border-color: var(--border-hover); }
+
+  .card-interactive {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color 200ms var(--ease), transform 200ms var(--ease);
+  }
+  .card-interactive:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-success { color: var(--success); background-color: rgba(34, 197, 94, 0.1); }
+  .badge-danger { color: var(--danger); background-color: rgba(239, 68, 68, 0.1); }
+  .badge-warning { color: var(--warning); background-color: rgba(245, 158, 11, 0.1); }
+  .badge-info { color: var(--info); background-color: rgba(59, 130, 246, 0.1); }
+  .badge-neutral { color: var(--text-secondary); background-color: var(--bg-elevated); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 200ms var(--ease);
+  }
+  .btn-primary {
+    background-color: var(--text-primary);
+    color: var(--bg-main);
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+  .btn-secondary:hover { border-color: var(--border-strong); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  /* Typography helpers */
+  .stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .section-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .page-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  /* Inputs */
+  .input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+  }
+  .input::placeholder { color: var(--text-muted); }
+
+  .campo-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.5rem 0.65rem;
+    outline: none;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    transition: border-color 0.15s ease;
+  }
+  .campo-input:focus { border-color: var(--border-strong); }
+  .campo-input::placeholder { color: var(--text-muted); }
+
+  /* Tab pills (period selector etc.) */
+  .pill-group {
+    display: inline-flex;
+    padding: 4px;
+    gap: 2px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+  }
+  .pill {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 150ms var(--ease);
+    white-space: nowrap;
+    border: none;
+    background: transparent;
+  }
+  .pill:hover { color: var(--text-primary); }
+  .pill.active {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fadeUp 300ms var(--ease) both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade {
+    animation: fade 200ms var(--ease) both;
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
