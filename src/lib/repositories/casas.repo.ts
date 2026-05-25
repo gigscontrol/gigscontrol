@@ -8,9 +8,46 @@ export async function listarCasas(supabase: SupabaseClient): Promise<CasaRow[]> 
   const { data, error } = await supabase
     .from("casas")
     .select(COLS)
+    .is("deletado_em", null)
     .order("nome", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as CasaRow[];
+}
+
+export async function listarCasasDeletadas(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<(CasaRow & { deletado_em: string | null })[]> {
+  const { data, error } = await supabase
+    .from("casas")
+    .select(`${COLS}, deletado_em`)
+    .eq("workspace_id", workspaceId)
+    .not("deletado_em", "is", null)
+    .order("deletado_em", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as (CasaRow & { deletado_em: string | null })[];
+}
+
+export async function moverCasaParaLixeira(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("casas")
+    .update({ deletado_em: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function restaurarCasa(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("casas")
+    .update({ deletado_em: null })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function buscarCasa(
@@ -56,6 +93,6 @@ export async function atualizarCasa(
 }
 
 export async function removerCasa(supabase: SupabaseClient, id: string): Promise<void> {
-  const { error } = await supabase.from("casas").delete().eq("id", id);
-  if (error) throw error;
+  // Soft delete — fica na lixeira por 30 dias.
+  await moverCasaParaLixeira(supabase, id);
 }

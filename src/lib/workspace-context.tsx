@@ -93,19 +93,54 @@ type ResultadoNovoUsuario = {
   senhaTemporaria: string;
 };
 
-export type ItemLixeiraArtista = {
-  tipo: "artista";
-  artista: ArtistaWS;
+type ItemLixeiraBase = {
   deletadoEm: string;
   diasRestantes: number;
 };
 
-export type ItemLixeiraUsuario = {
+export type ItemLixeiraArtista = ItemLixeiraBase & {
+  tipo: "artista";
+  artista: ArtistaWS;
+};
+
+export type ItemLixeiraUsuario = ItemLixeiraBase & {
   tipo: "usuario";
   usuario: UsuarioEquipe;
-  deletadoEm: string;
-  diasRestantes: number;
 };
+
+export type ItemLixeiraOrcamento = ItemLixeiraBase & {
+  tipo: "orcamento";
+  orcamento: import("@/types").Orcamento;
+};
+
+export type ItemLixeiraVenda = ItemLixeiraBase & {
+  tipo: "venda";
+  venda: import("@/types").Venda;
+};
+
+export type ItemLixeiraContratante = ItemLixeiraBase & {
+  tipo: "contratante";
+  contratante: import("@/types").Contratante;
+};
+
+export type ItemLixeiraCasa = ItemLixeiraBase & {
+  tipo: "casa";
+  casa: import("@/types").Casa;
+};
+
+export type ItemLixeiraCidade = ItemLixeiraBase & {
+  tipo: "cidade";
+  cidade: import("@/types").Cidade;
+};
+
+export type TipoLixeira =
+  | "artista"
+  | "usuario"
+  | "orcamento"
+  | "venda"
+  | "contratante"
+  | "casa"
+  | "cidade";
 
 type WorkspaceContextValue = {
   // Aparência
@@ -155,9 +190,14 @@ type WorkspaceContextValue = {
   // Lixeira
   lixeiraArtistas: ItemLixeiraArtista[];
   lixeiraUsuarios: ItemLixeiraUsuario[];
+  lixeiraOrcamentos: ItemLixeiraOrcamento[];
+  lixeiraVendas: ItemLixeiraVenda[];
+  lixeiraContratantes: ItemLixeiraContratante[];
+  lixeiraCasas: ItemLixeiraCasa[];
+  lixeiraCidades: ItemLixeiraCidade[];
   carregandoLixeira: boolean;
   recarregarLixeira: () => Promise<void>;
-  restaurarDaLixeira: (tipo: "artista" | "usuario", id: string) => Promise<void>;
+  restaurarDaLixeira: (tipo: TipoLixeira, id: string) => Promise<void>;
 
   // Histórico
   carregarHistorico: (filtros?: {
@@ -198,6 +238,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const [lixeiraArtistas, setLixeiraArtistas] = useState<ItemLixeiraArtista[]>([]);
   const [lixeiraUsuarios, setLixeiraUsuarios] = useState<ItemLixeiraUsuario[]>([]);
+  const [lixeiraOrcamentos, setLixeiraOrcamentos] = useState<ItemLixeiraOrcamento[]>([]);
+  const [lixeiraVendas, setLixeiraVendas] = useState<ItemLixeiraVenda[]>([]);
+  const [lixeiraContratantes, setLixeiraContratantes] = useState<ItemLixeiraContratante[]>([]);
+  const [lixeiraCasas, setLixeiraCasas] = useState<ItemLixeiraCasa[]>([]);
+  const [lixeiraCidades, setLixeiraCidades] = useState<ItemLixeiraCidade[]>([]);
   const [carregandoLixeira, setCarregandoLixeira] = useState(false);
 
   // -------- Aparência --------
@@ -447,6 +492,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (!sessao?.workspace) {
       setLixeiraArtistas([]);
       setLixeiraUsuarios([]);
+      setLixeiraOrcamentos([]);
+      setLixeiraVendas([]);
+      setLixeiraContratantes([]);
+      setLixeiraCasas([]);
+      setLixeiraCidades([]);
       return;
     }
     setCarregandoLixeira(true);
@@ -455,30 +505,60 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const body = await jsonOuErro(res);
       setLixeiraArtistas((body.artistas as ItemLixeiraArtista[]) ?? []);
       setLixeiraUsuarios((body.usuarios as ItemLixeiraUsuario[]) ?? []);
+      setLixeiraOrcamentos((body.orcamentos as ItemLixeiraOrcamento[]) ?? []);
+      setLixeiraVendas((body.vendas as ItemLixeiraVenda[]) ?? []);
+      setLixeiraContratantes((body.contratantes as ItemLixeiraContratante[]) ?? []);
+      setLixeiraCasas((body.casas as ItemLixeiraCasa[]) ?? []);
+      setLixeiraCidades((body.cidades as ItemLixeiraCidade[]) ?? []);
     } catch {
       setLixeiraArtistas([]);
       setLixeiraUsuarios([]);
+      setLixeiraOrcamentos([]);
+      setLixeiraVendas([]);
+      setLixeiraContratantes([]);
+      setLixeiraCasas([]);
+      setLixeiraCidades([]);
     } finally {
       setCarregandoLixeira(false);
     }
   }, [sessao?.workspace]);
 
   const restaurarDaLixeira = useCallback(
-    async (tipo: "artista" | "usuario", id: string) => {
+    async (tipo: TipoLixeira, id: string) => {
       const res = await fetch(`/api/lixeira/${tipo}/${id}/restaurar`, {
         method: "POST",
         credentials: "include",
       });
       await jsonOuErro(res);
-      // Remove da lixeira local
-      if (tipo === "artista") {
-        setLixeiraArtistas((prev) => prev.filter((i) => i.artista.id !== id));
-      } else {
-        setLixeiraUsuarios((prev) => prev.filter((i) => i.usuario.id !== id));
+      // Remove da lixeira local (atualização otimista)
+      switch (tipo) {
+        case "artista":
+          setLixeiraArtistas((p) => p.filter((i) => i.artista.id !== id));
+          void recarregarArtistas();
+          break;
+        case "usuario":
+          setLixeiraUsuarios((p) => p.filter((i) => i.usuario.id !== id));
+          void recarregarEquipe();
+          break;
+        case "orcamento":
+          setLixeiraOrcamentos((p) => p.filter((i) => i.orcamento.id !== id));
+          break;
+        case "venda":
+          setLixeiraVendas((p) => p.filter((i) => i.venda.id !== id));
+          break;
+        case "contratante":
+          setLixeiraContratantes((p) => p.filter((i) => i.contratante.id !== id));
+          break;
+        case "casa":
+          setLixeiraCasas((p) => p.filter((i) => i.casa.id !== id));
+          break;
+        case "cidade":
+          setLixeiraCidades((p) => p.filter((i) => i.cidade.id !== id));
+          break;
       }
-      // Recarrega listas ativas
-      if (tipo === "artista") void recarregarArtistas();
-      else void recarregarEquipe();
+      // Listas ativas de orçamentos/vendas/contatos recarregam quando o
+      // usuário voltar para a respectiva tela (useEffect on-mount dos
+      // contexts daqueles módulos).
     },
     [recarregarArtistas, recarregarEquipe]
   );
@@ -539,6 +619,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       lixeiraArtistas,
       lixeiraUsuarios,
+      lixeiraOrcamentos,
+      lixeiraVendas,
+      lixeiraContratantes,
+      lixeiraCasas,
+      lixeiraCidades,
       carregandoLixeira,
       recarregarLixeira,
       restaurarDaLixeira,
@@ -552,8 +637,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       adicionarArtista, removerArtista, alternarSuspensaoArtista,
       equipe, carregandoEquipe, erroEquipe, recarregarEquipe,
       adicionarUsuario, atualizarUsuario, removerUsuario, resetarSenhaUsuario,
-      lixeiraArtistas, lixeiraUsuarios, carregandoLixeira,
-      recarregarLixeira, restaurarDaLixeira,
+      lixeiraArtistas, lixeiraUsuarios,
+      lixeiraOrcamentos, lixeiraVendas,
+      lixeiraContratantes, lixeiraCasas, lixeiraCidades,
+      carregandoLixeira, recarregarLixeira, restaurarDaLixeira,
       carregarHistorico,
     ]
   );
