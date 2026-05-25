@@ -273,4 +273,21 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+
+  /* Foguinho animado nos dias de sexta/sábado da agenda */
+  .animate-flame {
+    animation: flame-flicker 1.2s ease-in-out infinite;
+    transform-origin: center bottom;
+    filter: drop-shadow(0 0 4px #ff6b35);
+  }
+  @keyframes flame-flicker {
+    0%, 100% {
+      transform: scale(1) rotate(-2deg);
+      filter: drop-shadow(0 0 4px #ff6b35);
+    }
+    50% {
+      transform: scale(1.15) rotate(2deg);
+      filter: drop-shadow(0 0 8px #ff8c00);
+    }
+  }
 }

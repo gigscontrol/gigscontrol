@@ -318,12 +318,13 @@ function DayCellComponent({
       }}
     >
       {day.isWeekend && !day.isOtherMonth && (
-        <div
-          className="absolute top-0 right-0 px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-wider rounded-bl-md"
-          style={{ backgroundColor: accent, color: "#fff" }}
+        <span
+          className="absolute top-1 right-1.5 text-base leading-none animate-flame select-none"
+          aria-label="Dia de pico"
+          title="Dia de pico"
         >
-          Pico
-        </div>
+          🔥
+        </span>
       )}
 
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
@@ -384,10 +385,11 @@ function MobileDayCard({
         </div>
         {day.isWeekend && (
           <span
-            className="text-[0.6rem] px-2 py-0.5 rounded font-bold uppercase tracking-wider"
-            style={{ backgroundColor: accent, color: "#fff" }}
+            className="text-lg leading-none animate-flame select-none"
+            aria-label="Dia de pico"
+            title="Dia de pico"
           >
-            Pico
+            🔥
           </span>
         )}
       </div>
