@@ -302,7 +302,7 @@ function AppRoot() {
             <ContatosDashboard onAbrirCategoria={abrirContatos} />
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
-            <Contatos categoriaInicial={contatoCategoria} />
+            <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
           )}
           </SomenteLeitura>
         </main>

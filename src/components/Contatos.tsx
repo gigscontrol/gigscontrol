@@ -12,6 +12,7 @@ import MapaDobras from "./contatos/MapaDobras";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
+import { useVendas } from "@/lib/vendas-context";
 import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatBRL } from "@/lib/contatos-stats";
 import { MODULE_THEMES } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade } from "@/types";
@@ -33,11 +34,16 @@ const TIPO_CASA_LABEL: Record<string, string> = {
 
 export default function Contatos({
   categoriaInicial = "contratantes",
+  selectedDJs = [],
 }: {
   categoriaInicial?: ContatoCategoria;
+  selectedDJs?: string[];
 }) {
   const accent = MODULE_THEMES.contatos.color;
   const { contratantes, casas, cidades, removeContratante, removeCasa, removeCidade } = useContatos();
+  const { shows } = useShows();
+  const { orcamentos } = useOrcamentos();
+  const { vendas } = useVendas();
 
   const [categoria, setCategoria] = useState<ContatoCategoria>(categoriaInicial);
   const [search, setSearch] = useState("");
@@ -52,37 +58,107 @@ export default function Contatos({
     | null
   >(null);
 
+  // ----------------------------------------------------------------
+  // Filtro por DJ selecionado (sidebar): um contato fica visível se
+  // pelo menos 1 DJ marcado aparece em algum show/orçamento/venda dele.
+  // Contatos sem histórico nenhum (cadastrados manualmente, nunca usados)
+  // aparecem sempre, pra não sumir contato novo recém-criado.
+  // ----------------------------------------------------------------
+  const filtrosPorDj = useMemo(() => {
+    const djSet = new Set(selectedDJs);
+    const contratantesAtivos = new Set<string>();
+    const contratantesComHist = new Set<string>();
+    const casasAtivas = new Set<string>();
+    const casasComHist = new Set<string>();
+    const cidadesAtivas = new Set<string>();
+    const cidadesComHist = new Set<string>();
+
+    const marcar = (
+      djId: string | null | undefined,
+      contId: string | null | undefined,
+      casaId: string | null | undefined,
+      cidadeId: string | null | undefined
+    ) => {
+      const djOk = !!djId && djSet.has(djId);
+      if (contId) {
+        contratantesComHist.add(contId);
+        if (djOk) contratantesAtivos.add(contId);
+      }
+      if (casaId) {
+        casasComHist.add(casaId);
+        if (djOk) casasAtivas.add(casaId);
+      }
+      if (cidadeId) {
+        cidadesComHist.add(cidadeId);
+        if (djOk) cidadesAtivas.add(cidadeId);
+      }
+    };
+
+    for (const s of shows) marcar(s.djId, s.contratanteId, s.casaId ?? null, s.cidadeId);
+    for (const o of orcamentos) marcar(o.djId, o.contratanteId, o.casaId ?? null, o.cidadeId);
+    for (const v of vendas) marcar(v.djId, v.contratanteId, v.casaId ?? null, v.cidadeId);
+
+    return {
+      contratantesAtivos,
+      contratantesComHist,
+      casasAtivas,
+      casasComHist,
+      cidadesAtivas,
+      cidadesComHist,
+    };
+  }, [shows, orcamentos, vendas, selectedDJs]);
+
+  function passaFiltroDj(
+    id: string,
+    ativos: Set<string>,
+    comHist: Set<string>
+  ): boolean {
+    // Sem histórico → contato manual, sempre visível
+    if (!comHist.has(id)) return true;
+    // Com histórico → só visível se algum DJ marcado tem ligação
+    return ativos.has(id);
+  }
+
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
-    if (!search.trim()) return contratantes;
+    const base = contratantes.filter((c) =>
+      passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist)
+    );
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return contratantes.filter(
+    return base.filter(
       (c) =>
         c.nome.toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q) ||
         c.telefone.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
     );
-  }, [contratantes, search, cidades]);
+  }, [contratantes, search, cidades, filtrosPorDj]);
 
   const casasFiltradas = useMemo(() => {
-    if (!search.trim()) return casas;
+    const base = casas.filter((c) =>
+      passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist)
+    );
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return casas.filter(
+    return base.filter(
       (c) =>
         c.nome.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
         TIPO_CASA_LABEL[c.tipo]?.toLowerCase().includes(q)
     );
-  }, [casas, search, cidades]);
+  }, [casas, search, cidades, filtrosPorDj]);
 
   const cidadesFiltradas = useMemo(() => {
-    if (!search.trim()) return cidades;
+    const base = cidades.filter((c) =>
+      passaFiltroDj(c.id, filtrosPorDj.cidadesAtivas, filtrosPorDj.cidadesComHist)
+    );
+    if (!search.trim()) return base;
     const q = search.toLowerCase();
-    return cidades.filter(
+    return base.filter(
       (c) => c.nome.toLowerCase().includes(q) || c.estado.toLowerCase().includes(q)
     );
-  }, [cidades, search]);
+  }, [cidades, search, filtrosPorDj]);
 
   // Tela de detalhe quando algo selecionado
   if (selecionado) {

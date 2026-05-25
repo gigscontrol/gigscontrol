@@ -253,8 +253,11 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* DJs (continua igual, só não aparece em Contatos) */}
-        {activeTab !== "contatos" && (
+        {/* DJs — aparece em todos os módulos. Em Contatos, os checks
+            filtram quais contatos aparecem na lista (regra: contato fica
+            visível se pelo menos 1 DJ marcado tem show/orçamento/venda
+            com ele; contatos manuais sem histórico aparecem sempre). */}
+        {(
           <div>
             <div className="flex items-center justify-between px-2 mb-2">
               <span className="stat-label">DJs</span>
@@ -304,9 +307,7 @@ export default function Sidebar({
 
       <div className="border-t border-border p-4 flex-shrink-0">
         <div className="text-[0.7rem] text-muted">
-          {activeTab === "contatos"
-            ? "Gerencie contratantes, casas e cidades"
-            : `${selectedDJs.length} de ${DJS.length} DJs visíveis`}
+          {`${selectedDJs.length} de ${DJS.length} DJs visíveis`}
         </div>
       </div>
     </aside>
