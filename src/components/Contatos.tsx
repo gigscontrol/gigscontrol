@@ -204,7 +204,7 @@ export default function Contatos({
         <SummaryTile
           icon={<Users size={16} />}
           label="Contratantes"
-          value={contratantes.length}
+          value={contratantesFiltrados.length}
           active={categoria === "contratantes"}
           accent={accent}
           onClick={() => setCategoria("contratantes")}
@@ -212,7 +212,7 @@ export default function Contatos({
         <SummaryTile
           icon={<Building2 size={16} />}
           label="Casas / Eventos"
-          value={casas.length}
+          value={casasFiltradas.length}
           active={categoria === "casas"}
           accent={accent}
           onClick={() => setCategoria("casas")}
@@ -220,7 +220,7 @@ export default function Contatos({
         <SummaryTile
           icon={<MapPin size={16} />}
           label="Cidades"
-          value={cidades.length}
+          value={cidadesFiltradas.length}
           active={categoria === "cidades"}
           accent={accent}
           onClick={() => setCategoria("cidades")}
@@ -228,7 +228,7 @@ export default function Contatos({
         <SummaryTile
           icon={<Compass size={16} />}
           label="Mapa de Dobras"
-          value={cidades.filter((c) => c.latitude !== undefined).length}
+          value={cidadesFiltradas.filter((c) => c.latitude !== undefined).length}
           active={categoria === "mapa"}
           accent={accent}
           onClick={() => setCategoria("mapa")}
@@ -255,7 +255,13 @@ export default function Contatos({
       )}
 
       {/* Mapa de Dobras (busca por raio) */}
-      {categoria === "mapa" && <MapaDobras />}
+      {categoria === "mapa" && (
+        <MapaDobras
+          cidades={cidadesFiltradas}
+          casas={casasFiltradas}
+          contratantes={contratantesFiltrados}
+        />
+      )}
 
       {/* Tabela conforme categoria */}
       {categoria !== "mapa" && (

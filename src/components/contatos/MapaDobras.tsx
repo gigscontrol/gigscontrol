@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { MapPin, Building2, Users, Search } from "lucide-react";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
+import type { Cidade, Casa, Contratante } from "@/types";
 
 /**
  * Mapa de Dobras — busca de contatos por raio (km) a partir de uma
@@ -12,9 +13,24 @@ import { distanciaKm, formatarKm } from "@/lib/geo";
  * Versão funcional (sem mapa visual). Lista cidades, casas e contratantes
  * dentro do raio, ordenados por distância. Itens cuja cidade não tem
  * coordenadas no banco são marcados como "sem coordenadas".
+ *
+ * Aceita props opcionais pra trabalhar com listas já filtradas (ex.: pelo
+ * filtro de DJ na sidebar de Contatos). Se omitidas, cai pra leitura
+ * direta do `useContatos()`.
  */
-export default function MapaDobras() {
-  const { cidades, casas, contratantes } = useContatos();
+export default function MapaDobras({
+  cidades: cidadesProp,
+  casas: casasProp,
+  contratantes: contratantesProp,
+}: {
+  cidades?: Cidade[];
+  casas?: Casa[];
+  contratantes?: Contratante[];
+} = {}) {
+  const ctx = useContatos();
+  const cidades = cidadesProp ?? ctx.cidades;
+  const casas = casasProp ?? ctx.casas;
+  const contratantes = contratantesProp ?? ctx.contratantes;
 
   // Padrão: primeira cidade com coordenadas
   const cidadesComCoord = useMemo(
