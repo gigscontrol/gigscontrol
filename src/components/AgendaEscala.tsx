@@ -5,6 +5,7 @@ import { MapPin, Clock, Music, Calendar } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
+import { useWorkspace } from "@/lib/workspace-context";
 import { DJS } from "@/lib/djs";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange, Show, ShowStatus } from "@/types";
@@ -83,6 +84,7 @@ type Props = {
 
 export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda }: Props) {
   const { shows } = useShows();
+  const { workspaceCriadoEm } = useWorkspace();
   const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
   // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
@@ -228,6 +230,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             setSelectedCustomMonth={setSelectedCustomMonth}
             selectedCustomYear={selectedCustomYear}
             setSelectedCustomYear={setSelectedCustomYear}
+            accountCreatedAt={workspaceCriadoEm}
           />
         }
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props<T extends string> = {
   options: readonly T[];
@@ -13,22 +13,37 @@ type Props<T extends string> = {
   /** Ano selecionado no Personalizado. null = nenhum. */
   selectedCustomYear: number | null;
   setSelectedCustomYear: (y: number | null) => void;
-  /** Anos disponíveis. Default: 2026 em diante até ano atual + 1. */
-  years?: number[];
+  /**
+   * ISO timestamp da criação da conta/workspace. Define o piso absoluto
+   * dos filtros — anos anteriores não aparecem, e no ano de criação só
+   * são liberados meses ≥ mês de criação. Se null, usa mai/2026 (data
+   * de criação do próprio GIGS CONTROL).
+   */
+  accountCreatedAt?: string | null;
 };
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const ANO_LIMITE_SUPERIOR = 2030;
+const ANO_BASE_APP = 2026;
+const MES_BASE_APP = 4; // Maio (0-based)
 
 /**
- * Mês mínimo permitido pra um dado ano.
+ * Resolve o {ano, mês} mínimo permitido, considerando:
+ *  - base do app: mai/2026 (criação do GIGS CONTROL)
+ *  - data de criação da conta: se for mais nova, vira o piso
  *
- * O GIGS CONTROL foi criado em maio/2026, então no ano 2026 só
- * permitimos selecionar Mai-Dez. Anos posteriores (2027+) liberam
- * todos os 12 meses.
+ * Retorna o mais restritivo entre os dois.
  */
-function indiceMesMinimoNoAno(year: number): number {
-  if (year === 2026) return 4; // 0-based: 4 = Maio
-  return 0;
+function resolverPiso(accountCreatedAt: string | null | undefined): { ano: number; mes: number } {
+  if (!accountCreatedAt) return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
+  const d = new Date(accountCreatedAt);
+  if (isNaN(d.getTime())) return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
+  const a = d.getFullYear();
+  const m = d.getMonth();
+  if (a > ANO_BASE_APP || (a === ANO_BASE_APP && m > MES_BASE_APP)) {
+    return { ano: a, mes: m };
+  }
+  return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
 }
 
 export default function DateRangeSelector<T extends string>({
@@ -40,19 +55,39 @@ export default function DateRangeSelector<T extends string>({
   setSelectedCustomMonth,
   selectedCustomYear,
   setSelectedCustomYear,
-  years,
+  accountCreatedAt,
 }: Props<T>) {
   const [isCustomMenuOpen, setIsCustomMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Default de anos: 2026 até max(2027, currentYear + 1)
-  const defaultYears = (() => {
-    const limiteSuperior = Math.max(2027, new Date().getFullYear() + 1);
-    const out: number[] = [];
-    for (let y = 2026; y <= limiteSuperior; y++) out.push(y);
-    return out;
-  })();
-  const yearsFinal = years && years.length > 0 ? years : defaultYears;
+  // Piso (ano/mês mínimos permitidos)
+  const piso = useMemo(() => resolverPiso(accountCreatedAt), [accountCreatedAt]);
+
+  // Pools de anos:
+  //  - todos: piso.ano .. 2030
+  //  - destaque: piso.ano até max(currentYear + 1, piso.ano + 1) — limitado a 2030
+  //  - ocultos: resto
+  const { yearsDestaque, yearsOcultos } = useMemo(() => {
+    const todos: number[] = [];
+    for (let y = piso.ano; y <= ANO_LIMITE_SUPERIOR; y++) todos.push(y);
+    const limiteDestaque = Math.min(
+      ANO_LIMITE_SUPERIOR,
+      Math.max(new Date().getFullYear() + 1, piso.ano + 1)
+    );
+    const destaque = todos.filter((y) => y <= limiteDestaque);
+    const ocultos = todos.filter((y) => y > limiteDestaque);
+    return { yearsDestaque: destaque, yearsOcultos: ocultos };
+  }, [piso.ano]);
+
+  // Estado "ver mais anos" — auto-true se o ano selecionado tá no pool oculto
+  const [showMoreYears, setShowMoreYears] = useState(() =>
+    selectedCustomYear !== null && yearsOcultos.includes(selectedCustomYear)
+  );
+  useEffect(() => {
+    if (selectedCustomYear !== null && yearsOcultos.includes(selectedCustomYear)) {
+      setShowMoreYears(true);
+    }
+  }, [selectedCustomYear, yearsOcultos]);
 
   // Fecha popover ao clicar fora
   useEffect(() => {
@@ -66,9 +101,14 @@ export default function DateRangeSelector<T extends string>({
     return () => document.removeEventListener("mousedown", handler);
   }, [isCustomMenuOpen]);
 
-  // Quando o ano muda, se o mês selecionado fica fora do range permitido
-  // pra esse ano, limpa.
-  const minMesIdx = selectedCustomYear !== null ? indiceMesMinimoNoAno(selectedCustomYear) : 0;
+  // Mês mínimo permitido pro ano selecionado
+  const minMesIdx = useMemo(() => {
+    if (selectedCustomYear === null) return 0;
+    if (selectedCustomYear === piso.ano) return piso.mes;
+    return 0;
+  }, [selectedCustomYear, piso]);
+
+  // Limpa o mês selecionado se o ano muda e o mês fica fora do range
   const mesSelecionadoIdx = selectedCustomMonth ? ALL_MONTHS.indexOf(selectedCustomMonth) : -1;
   useEffect(() => {
     if (mesSelecionadoIdx !== -1 && mesSelecionadoIdx < minMesIdx) {
@@ -76,6 +116,8 @@ export default function DateRangeSelector<T extends string>({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustomYear]);
+
+  const yearsVisiveis = showMoreYears ? [...yearsDestaque, ...yearsOcultos] : yearsDestaque;
 
   return (
     <div className="relative" ref={popoverRef}>
@@ -101,10 +143,22 @@ export default function DateRangeSelector<T extends string>({
           className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-32px)] bg-surface border border-border rounded-lg p-4 animate-in"
           style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}
         >
-          <div className="stat-label mb-2">Selecione o ano</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="stat-label">Selecione o ano</span>
+            {yearsOcultos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowMoreYears((v) => !v)}
+                className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+              >
+                {showMoreYears ? "Recolher" : "+ Mostrar mais"}
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-1.5 mb-4">
-            {yearsFinal.map((year) => {
+            {yearsVisiveis.map((year) => {
               const isSel = selectedCustomYear === year;
+              const isExtra = yearsOcultos.includes(year);
               return (
                 <button
                   key={year}
@@ -114,6 +168,8 @@ export default function DateRangeSelector<T extends string>({
                     py-2 rounded-md text-xs font-semibold transition-all
                     ${isSel
                       ? "bg-primary text-main border border-primary"
+                      : isExtra
+                      ? "bg-elevated text-muted border border-border hover:border-border-strong hover:text-primary opacity-75"
                       : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
                     }
                   `}
@@ -144,7 +200,7 @@ export default function DateRangeSelector<T extends string>({
                       : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
                     }
                   `}
-                  title={isDisabled ? "GIGS CONTROL foi criado em maio/2026" : undefined}
+                  title={isDisabled ? "Mês anterior à criação da conta" : undefined}
                 >
                   {month}
                 </button>

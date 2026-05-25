@@ -99,6 +99,8 @@ type WorkspaceContextValue = {
   atualizarNomeAgencia: (nome: string) => Promise<void>;
   uploadLogo: (arquivo: File | Blob) => Promise<void>;
   removerLogo: () => Promise<void>;
+  /** ISO timestamp da criação do workspace (null enquanto carrega/se anônimo). */
+  workspaceCriadoEm: string | null;
 
   // Artistas
   artistas: ArtistaWS[];
@@ -150,13 +152,14 @@ async function jsonOuErro(res: Response): Promise<Record<string, unknown>> {
   return body;
 }
 
-type WorkspaceApi = { nomeAgencia: string; logoUrl: string | null };
+type WorkspaceApi = { nomeAgencia: string; logoUrl: string | null; criadoEm: string | null };
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
 
   const [aparencia, setAparencia] = useState<Aparencia>(APARENCIA_INICIAL);
   const [carregandoAparencia, setCarregandoAparencia] = useState(false);
+  const [workspaceCriadoEm, setWorkspaceCriadoEm] = useState<string | null>(null);
 
   const [artistas, setArtistas] = useState<ArtistaWS[]>([]);
   const [carregandoArtistas, setCarregandoArtistas] = useState(false);
@@ -175,6 +178,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const recarregarAparencia = useCallback(async () => {
     if (!sessao?.workspace) {
       setAparencia(APARENCIA_INICIAL);
+      setWorkspaceCriadoEm(null);
       return;
     }
     setCarregandoAparencia(true);
@@ -183,6 +187,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const body = await jsonOuErro(res);
       const ws = body.workspace as WorkspaceApi;
       setAparencia({ nomeAgencia: ws.nomeAgencia, logoUrl: ws.logoUrl });
+      setWorkspaceCriadoEm(ws.criadoEm);
     } catch {
       setAparencia((prev) => ({
         ...prev,
@@ -207,6 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const body = await jsonOuErro(res);
     const ws = body.workspace as WorkspaceApi;
     setAparencia({ nomeAgencia: ws.nomeAgencia, logoUrl: ws.logoUrl });
+    setWorkspaceCriadoEm(ws.criadoEm);
   }, []);
 
   const uploadLogo = useCallback(async (arquivo: File | Blob) => {
@@ -459,6 +465,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       atualizarNomeAgencia,
       uploadLogo,
       removerLogo,
+      workspaceCriadoEm,
 
       artistas,
       carregandoArtistas,
@@ -485,7 +492,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }),
     [
       aparencia, carregandoAparencia, recarregarAparencia,
-      atualizarNomeAgencia, uploadLogo, removerLogo,
+      atualizarNomeAgencia, uploadLogo, removerLogo, workspaceCriadoEm,
       artistas, carregandoArtistas, erroArtistas, recarregarArtistas,
       adicionarArtista, removerArtista, alternarSuspensaoArtista,
       equipe, carregandoEquipe, erroEquipe, recarregarEquipe,

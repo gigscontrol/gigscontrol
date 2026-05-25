@@ -22,6 +22,8 @@ export type WorkspaceResumo = WorkspaceAparencia & {
   plano: PlanoId;
   ciclo: string | null;
   status: string | null;
+  /** ISO timestamp da criação do workspace (limite inferior dos filtros de data). */
+  criadoEm: string | null;
 };
 
 export function rowParaWorkspace(row: WorkspaceRow): WorkspaceResumo {
@@ -32,5 +34,6 @@ export function rowParaWorkspace(row: WorkspaceRow): WorkspaceResumo {
     plano: row.plano as PlanoId,
     ciclo: row.ciclo,
     status: row.status,
+    criadoEm: row.criado_em,
   };
 }
