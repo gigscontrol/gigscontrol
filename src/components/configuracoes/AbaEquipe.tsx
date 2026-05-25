@@ -547,7 +547,7 @@ function LinhaEscopo({
         aria-label={label}
       >
         <span
-          className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform"
+          className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform"
           style={{
             transform: valor ? "translateX(22px)" : "translateX(2px)",
           }}
