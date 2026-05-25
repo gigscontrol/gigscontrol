@@ -13,6 +13,7 @@ import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
+import { useArtistas } from "@/lib/workspace-context";
 import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatBRL } from "@/lib/contatos-stats";
 import { MODULE_THEMES } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade } from "@/types";
@@ -44,6 +45,7 @@ export default function Contatos({
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
+  const artistasAtivos = useArtistas(); // só retorna DJs não-deletados
 
   const [categoria, setCategoria] = useState<ContatoCategoria>(categoriaInicial);
   const [search, setSearch] = useState("");
@@ -59,13 +61,19 @@ export default function Contatos({
   >(null);
 
   // ----------------------------------------------------------------
-  // Filtro por DJ selecionado (sidebar): um contato fica visível se
-  // pelo menos 1 DJ marcado aparece em algum show/orçamento/venda dele.
-  // Contatos sem histórico nenhum (cadastrados manualmente, nunca usados)
-  // aparecem sempre, pra não sumir contato novo recém-criado.
+  // Filtro por DJ selecionado (sidebar):
+  //  - "comHist" = aparece em show/orçamento/venda cujo djId pertence
+  //    a um DJ ATIVO (não está na lixeira). Registros vinculados a DJs
+  //    já excluídos são ignorados — assim, contato que era exclusivo
+  //    de um DJ deletado "vira manual" e passa a aparecer sempre.
+  //  - "ativos" = subset de comHist em que pelo menos 1 dos djIds está
+  //    em selectedDJs (DJs marcados na sidebar).
+  // Regra final em passaFiltroDj: sem histórico → sempre visível;
+  // com histórico → só se algum DJ marcado é dono.
   // ----------------------------------------------------------------
   const filtrosPorDj = useMemo(() => {
     const djSet = new Set(selectedDJs);
+    const djsAtivosSet = new Set(artistasAtivos.map((a) => a.id));
     const contratantesAtivos = new Set<string>();
     const contratantesComHist = new Set<string>();
     const casasAtivas = new Set<string>();
@@ -79,7 +87,10 @@ export default function Contatos({
       casaId: string | null | undefined,
       cidadeId: string | null | undefined
     ) => {
-      const djOk = !!djId && djSet.has(djId);
+      // Ignora registros de DJs deletados/inexistentes — o contato passa
+      // a se comportar como manual.
+      if (!djId || !djsAtivosSet.has(djId)) return;
+      const djOk = djSet.has(djId);
       if (contId) {
         contratantesComHist.add(contId);
         if (djOk) contratantesAtivos.add(contId);
@@ -106,7 +117,7 @@ export default function Contatos({
       cidadesAtivas,
       cidadesComHist,
     };
-  }, [shows, orcamentos, vendas, selectedDJs]);
+  }, [shows, orcamentos, vendas, selectedDJs, artistasAtivos]);
 
   function passaFiltroDj(
     id: string,
