@@ -1,5 +1,24 @@
 import type { Papel } from "@/lib/permissoes";
 
+/**
+ * Mapa de funções operacionais → lista de DJs (artists.id) atendidos.
+ *
+ * Estrutura armazenada em `profiles.funcoes` (jsonb). Apenas usuários
+ * com papel operacional (vendedor / financeiro / produtor) usam isso;
+ * admin e artista mantêm `funcoes = {}`.
+ *
+ * Convenção: a chave só aparece quando a função está ativa. Lista vazia
+ * significa "função marcada mas nenhum DJ ainda" — equivale a SEM
+ * acesso àquela função (precisa de pelo menos 1 DJ pra ter efeito).
+ */
+export type Funcoes = {
+  vendedor?: string[];
+  financeiro?: string[];
+  produtor?: string[];
+};
+
+export const FUNCOES_VAZIA: Funcoes = {};
+
 /** Linha da tabela `profiles`. */
 export type ProfileRow = {
   id: string;
@@ -10,6 +29,7 @@ export type ProfileRow = {
   is_super_admin: boolean;
   artista_id: string | null;
   escopo: Record<string, unknown> | null;
+  funcoes: Record<string, unknown> | null;
   status: string | null;
   deletado_em: string | null;
 };
@@ -34,6 +54,7 @@ export type UsuarioEquipe = {
   email: string;
   papel: Papel;
   escopo: EscopoUsuario;
+  funcoes: Funcoes;
   ativo: boolean;
 };
 
@@ -51,6 +72,22 @@ function escopoValido(raw: Record<string, unknown> | null | undefined): EscopoUs
   };
 }
 
+/**
+ * Normaliza o JSON do banco para o tipo Funcoes da UI.
+ * Aceita listas de strings; qualquer outro tipo é ignorado.
+ */
+export function funcoesValido(raw: Record<string, unknown> | null | undefined): Funcoes {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Funcoes = {};
+  for (const k of ["vendedor", "financeiro", "produtor"] as const) {
+    const v = (raw as Record<string, unknown>)[k];
+    if (Array.isArray(v) && v.every((x) => typeof x === "string")) {
+      out[k] = v as string[];
+    }
+  }
+  return out;
+}
+
 export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   return {
     id: row.id,
@@ -58,6 +95,7 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
     email: row.email,
     papel: row.papel,
     escopo: escopoValido(row.escopo),
+    funcoes: funcoesValido(row.funcoes),
     ativo: row.status === "ativo",
   };
 }
@@ -68,5 +106,6 @@ export type UsuarioEscrita = {
   email?: string;
   papel?: Papel;
   escopo?: EscopoUsuario;
+  funcoes?: Funcoes;
   status?: "ativo" | "bloqueado" | "desativado";
 };

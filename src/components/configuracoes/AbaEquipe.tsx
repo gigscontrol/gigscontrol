@@ -15,16 +15,27 @@ import Modal from "../Modal";
 import Toast from "../Toast";
 import {
   useWorkspace,
+  useArtistas,
   LABELS_PAPEL_EQUIPE,
   ESCOPO_PADRAO,
   type UsuarioEquipe,
   type PapelEquipe,
   type EscopoUsuario,
+  type Funcoes,
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 
-const PAPEIS: PapelEquipe[] = ["produtor", "vendedor", "financeiro"];
+const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
+
+/** Função primária derivada do mapa de funções (1ª preenchida). */
+function inferirPapelPrimario(funcoes: Funcoes): PapelEquipe {
+  for (const f of FUNCOES_DISPONIVEIS) {
+    if ((funcoes[f] ?? []).length > 0) return f;
+  }
+  // Fallback impossível na prática (validação na UI exige pelo menos 1)
+  return "vendedor";
+}
 
 /**
  * Aba "Equipe" — Etapa 7c.
@@ -56,11 +67,15 @@ export default function AbaEquipe() {
   async function aoCriar(dados: {
     nome: string;
     email: string;
-    papel: PapelEquipe;
     escopo: EscopoUsuario;
+    funcoes: Funcoes;
   }) {
     try {
-      const { usuario, senhaTemporaria } = await adicionarUsuario(dados);
+      const papel = inferirPapelPrimario(dados.funcoes);
+      const { usuario, senhaTemporaria } = await adicionarUsuario({
+        ...dados,
+        papel,
+      });
       setCriando(false);
       setSenhaNova({ nome: usuario.nome, senha: senhaTemporaria });
     } catch (e) {
@@ -70,12 +85,21 @@ export default function AbaEquipe() {
 
   async function aoEditar(id: string, dados: Partial<UsuarioEquipe>) {
     try {
-      await atualizarUsuario(id, {
+      const patch: {
+        nome?: string;
+        papel?: PapelEquipe;
+        escopo?: EscopoUsuario;
+        funcoes?: Funcoes;
+        ativo?: boolean;
+      } = {
         nome: dados.nome,
-        papel: dados.papel as PapelEquipe | undefined,
         escopo: dados.escopo,
+        funcoes: dados.funcoes,
         ativo: dados.ativo,
-      });
+      };
+      // Recalcula o papel primário quando as funções mudam.
+      if (dados.funcoes) patch.papel = inferirPapelPrimario(dados.funcoes);
+      await atualizarUsuario(id, patch);
       setEditando(null);
       setToast({ msg: "Usuário atualizado.", tipo: "sucesso" });
     } catch (e) {
@@ -175,6 +199,9 @@ export default function AbaEquipe() {
           <div className="divide-y divide-border">
             {equipe.map((u) => {
               const info = LABELS_PAPEL_EQUIPE[u.papel];
+              const funcoesAtivas = FUNCOES_DISPONIVEIS.filter(
+                (f) => (u.funcoes?.[f]?.length ?? 0) > 0
+              );
               return (
                 <div
                   key={u.id}
@@ -198,15 +225,37 @@ export default function AbaEquipe() {
                     </div>
                     <div className="text-xs text-muted truncate">{u.email}</div>
                   </div>
-                  <span
-                    className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-                    style={{
-                      backgroundColor: `${info?.cor ?? "#888"}22`,
-                      color: info?.cor ?? "#888",
-                    }}
-                  >
-                    {info?.nome ?? u.papel}
-                  </span>
+                  <div className="flex flex-wrap gap-1 justify-end flex-shrink-0 max-w-[40%]">
+                    {funcoesAtivas.length === 0 ? (
+                      <span
+                        className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                        style={{
+                          backgroundColor: `${info?.cor ?? "#888"}22`,
+                          color: info?.cor ?? "#888",
+                        }}
+                      >
+                        {info?.nome ?? u.papel}
+                      </span>
+                    ) : (
+                      funcoesAtivas.map((f) => {
+                        const fInfo = LABELS_PAPEL_EQUIPE[f];
+                        const qtd = u.funcoes?.[f]?.length ?? 0;
+                        return (
+                          <span
+                            key={f}
+                            className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                            style={{
+                              backgroundColor: `${fInfo.cor}22`,
+                              color: fInfo.cor,
+                            }}
+                            title={`${qtd} DJ(s) atendido(s)`}
+                          >
+                            {fInfo.nome} · {qtd}
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
                   <button
                     onClick={() => aoResetarSenha(u)}
                     className="btn-ghost p-1.5 rounded"
@@ -354,18 +403,46 @@ function ModalUsuario({
   onCriar: (dados: {
     nome: string;
     email: string;
-    papel: PapelEquipe;
     escopo: EscopoUsuario;
+    funcoes: Funcoes;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
 }) {
+  const artistas = useArtistas();
   const [nome, setNome] = useState(inicial?.nome ?? "");
   const [email, setEmail] = useState(inicial?.email ?? "");
-  const [papel, setPapel] = useState<PapelEquipe>(inicial?.papel ?? "produtor");
   const [escopo, setEscopo] = useState<EscopoUsuario>(inicial?.escopo ?? ESCOPO_PADRAO);
+  const [funcoes, setFuncoes] = useState<Funcoes>(inicial?.funcoes ?? {});
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  function toggleFuncao(f: PapelEquipe) {
+    setFuncoes((prev) => {
+      const next = { ...prev };
+      if (f in next) delete next[f];
+      else next[f] = [];
+      return next;
+    });
+  }
+
+  function toggleDj(f: PapelEquipe, djId: string) {
+    setFuncoes((prev) => {
+      const atuais = prev[f] ?? [];
+      const proximos = atuais.includes(djId)
+        ? atuais.filter((x) => x !== djId)
+        : [...atuais, djId];
+      return { ...prev, [f]: proximos };
+    });
+  }
+
+  function selecionarTodosDjs(f: PapelEquipe) {
+    setFuncoes((prev) => ({ ...prev, [f]: artistas.map((a) => a.id) }));
+  }
+
+  function limparDjs(f: PapelEquipe) {
+    setFuncoes((prev) => ({ ...prev, [f]: [] }));
+  }
 
   async function salvar() {
     if (!nome.trim()) {
@@ -376,13 +453,38 @@ function ModalUsuario({
       setErro("Informe um e-mail válido.");
       return;
     }
+    // Valida: pelo menos 1 função marcada + cada função marcada precisa
+    // ter pelo menos 1 DJ.
+    const funcoesAtivas = FUNCOES_DISPONIVEIS.filter((f) => f in funcoes);
+    if (funcoesAtivas.length === 0) {
+      setErro("Selecione pelo menos uma função para o usuário.");
+      return;
+    }
+    for (const f of funcoesAtivas) {
+      if ((funcoes[f] ?? []).length === 0) {
+        setErro(
+          `Selecione pelo menos um DJ para a função "${LABELS_PAPEL_EQUIPE[f].nome}".`
+        );
+        return;
+      }
+    }
     setSalvando(true);
     setErro(null);
     try {
       if (modo === "criar") {
-        await onCriar({ nome: nome.trim(), email: email.trim(), papel, escopo });
+        await onCriar({
+          nome: nome.trim(),
+          email: email.trim(),
+          escopo,
+          funcoes,
+        });
       } else if (inicial) {
-        await onEditar(inicial.id, { nome: nome.trim(), papel, escopo, ativo });
+        await onEditar(inicial.id, {
+          nome: nome.trim(),
+          escopo,
+          funcoes,
+          ativo,
+        });
       }
     } catch (e) {
       setErro((e as Error).message);
@@ -424,36 +526,99 @@ function ModalUsuario({
         )}
 
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-secondary">Papel</span>
-          {PAPEIS.map((p) => {
-            const info = LABELS_PAPEL_EQUIPE[p];
-            const ativoPapel = papel === p;
+          <span className="text-xs font-medium text-secondary">
+            Funções e DJs atendidos
+          </span>
+          <p className="text-[0.7rem] text-muted -mt-1">
+            Marque cada função que o usuário desempenha e, dentro dela,
+            quais DJs ele atende. As escolhas são independentes (ex.:
+            vendedor do DJ Z e financeiro do DJ Y).
+          </p>
+          {FUNCOES_DISPONIVEIS.map((f) => {
+            const info = LABELS_PAPEL_EQUIPE[f];
+            const ativoFuncao = f in funcoes;
+            const djsSelecionados = funcoes[f] ?? [];
             return (
-              <button
-                key={p}
-                onClick={() => setPapel(p)}
-                className="flex items-center gap-2.5 p-2.5 rounded-md border text-left transition-colors"
+              <div
+                key={f}
+                className="rounded-md border transition-colors"
                 style={{
-                  borderColor: ativoPapel ? info.cor : "var(--border-color)",
-                  backgroundColor: ativoPapel ? `${info.cor}14` : "transparent",
+                  borderColor: ativoFuncao ? info.cor : "var(--border-color)",
+                  backgroundColor: ativoFuncao ? `${info.cor}10` : "transparent",
                 }}
               >
-                <span
-                  className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{
-                    backgroundColor: ativoPapel ? info.cor : "transparent",
-                    border: ativoPapel ? "none" : "1px solid var(--border-strong)",
-                  }}
+                <button
+                  type="button"
+                  onClick={() => toggleFuncao(f)}
+                  className="w-full flex items-center gap-2.5 p-2.5 text-left"
                 >
-                  {ativoPapel && <Check size={13} className="text-white" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="text-sm font-medium text-primary block">
-                    {info.nome}
+                  <span
+                    className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0"
+                    style={{
+                      backgroundColor: ativoFuncao ? info.cor : "transparent",
+                      border: ativoFuncao ? "none" : "1px solid var(--border-strong)",
+                    }}
+                  >
+                    {ativoFuncao && <Check size={13} className="text-white" />}
                   </span>
-                  <span className="text-xs text-muted">{info.descricao}</span>
-                </span>
-              </button>
+                  <span className="min-w-0 flex-1">
+                    <span className="text-sm font-medium text-primary block">
+                      {info.nome}
+                    </span>
+                    <span className="text-xs text-muted">{info.descricao}</span>
+                  </span>
+                </button>
+                {ativoFuncao && (
+                  <div className="px-2.5 pb-2.5 border-t border-border pt-2.5 mt-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted">
+                        DJs atendidos ({djsSelecionados.length} de {artistas.length})
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => selecionarTodosDjs(f)}
+                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
+                        >
+                          Todos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => limparDjs(f)}
+                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {artistas.length === 0 && (
+                        <span className="text-xs text-muted">
+                          Nenhum DJ cadastrado ainda. Cadastre na aba Artistas.
+                        </span>
+                      )}
+                      {artistas.map((dj) => {
+                        const sel = djsSelecionados.includes(dj.id);
+                        return (
+                          <button
+                            key={dj.id}
+                            type="button"
+                            onClick={() => toggleDj(f, dj.id)}
+                            className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+                            style={{
+                              backgroundColor: sel ? dj.color : "var(--bg-elevated)",
+                              color: sel ? "#fff" : "var(--text-muted)",
+                              boxShadow: sel ? `0 0 0 1px ${dj.color}` : "none",
+                            }}
+                          >
+                            {dj.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
