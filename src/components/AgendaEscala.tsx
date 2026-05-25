@@ -199,8 +199,12 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
     return month;
   }, [activeDateRange, selectedCustomMonth, selectedCustomYear]);
 
-  // Scroll para hoje quando o range muda
+  // Scroll automático para o card de hoje quando o usuário troca entre
+  // os 3 atalhos pré-definidos (Mês atual / anterior / próximo).
+  // No "Personalizado" NÃO rola — o usuário pode estar só abrindo o
+  // popover pra escolher outro período; teleportar a tela atrapalha.
   useEffect(() => {
+    if (activeDateRange === "Personalizado") return;
     const timer = setTimeout(() => {
       const todayCard = document.getElementById("day-card-today");
       if (todayCard) {
@@ -208,7 +212,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [activeDateRange, selectedCustomMonth, selectedCustomYear]);
+  }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
 
