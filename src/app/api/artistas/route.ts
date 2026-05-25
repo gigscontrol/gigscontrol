@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/artistas.service";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
+import { audit } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -61,6 +62,13 @@ export async function POST(request: Request) {
       ws.plano as PlanoId,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "artista",
+      tipo: "criar",
+      entidadeId: artista.id,
+      entidadeNome: artista.name,
+      descricao: `Cadastrou o artista ${artista.name}`,
+    });
     return NextResponse.json({ artista }, { status: 201 });
   } catch (e) {
     if (e instanceof LimitePlanoAtingidoError) {

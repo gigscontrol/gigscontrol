@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { alternarSuspensaoArtista } from "@/lib/services/artistas.service";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -12,6 +13,15 @@ export async function POST(_request: Request, { params }: RouteCtx) {
   if ("response" in r) return r.response;
   try {
     const artista = await alternarSuspensaoArtista(r.sessao.supabase, params.id);
+    await audit(r.sessao, {
+      modulo: "artista",
+      tipo: "suspender",
+      entidadeId: artista.id,
+      entidadeNome: artista.name,
+      descricao: artista.acessoSuspenso
+        ? `Suspendeu o acesso do artista ${artista.name}`
+        : `Reativou o acesso do artista ${artista.name}`,
+    });
     return NextResponse.json({ artista });
   } catch (e) {
     return NextResponse.json(

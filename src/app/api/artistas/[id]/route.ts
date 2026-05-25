@@ -5,6 +5,7 @@ import {
   removerArtistaPorId,
 } from "@/lib/services/artistas.service";
 import { artistaUpdateSchema } from "@/lib/validators/artistas.schema";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -33,6 +34,13 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "artista",
+      tipo: "editar",
+      entidadeId: artista.id,
+      entidadeNome: artista.name,
+      descricao: `Editou o artista ${artista.name}`,
+    });
     return NextResponse.json({ artista });
   } catch (e) {
     return NextResponse.json(
@@ -45,8 +53,21 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  // Snapshot do nome ANTES de remover, pra auditoria legível
+  const { data: snap } = await r.sessao.supabase
+    .from("artists")
+    .select("id, name")
+    .eq("id", params.id)
+    .maybeSingle();
   try {
     await removerArtistaPorId(r.sessao.supabase, params.id);
+    await audit(r.sessao, {
+      modulo: "artista",
+      tipo: "remover",
+      entidadeId: params.id,
+      entidadeNome: snap?.name ?? null,
+      descricao: `Removeu o artista ${snap?.name ?? params.id}`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

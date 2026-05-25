@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
 import { workspaceUpdateSchema } from "@/lib/validators/workspace.schema";
+import { audit } from "@/lib/services/historico.service";
 
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
@@ -70,7 +71,17 @@ export async function PATCH(request: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ workspace: rowParaWorkspace(data) });
+    const ws = rowParaWorkspace(data);
+    if (parsed.data.nome !== undefined) {
+      await audit(r.sessao, {
+        modulo: "aparencia",
+        tipo: "editar",
+        entidadeId: ws.id,
+        entidadeNome: ws.nomeAgencia,
+        descricao: `Alterou o nome da agência para "${ws.nomeAgencia}"`,
+      });
+    }
+    return NextResponse.json({ workspace: ws });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao atualizar workspace." },

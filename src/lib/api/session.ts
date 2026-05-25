@@ -25,6 +25,8 @@ const ESCOPO_PADRAO: EscopoSessao = {
 export type SessaoAutenticada = {
   supabase: ReturnType<typeof criarClienteServidor>;
   userId: string;
+  userNome: string | null;
+  userEmail: string | null;
   workspaceId: string | null;
   isSuperAdmin: boolean;
   papel: Papel;
@@ -73,11 +75,13 @@ export async function autenticar(): Promise<
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em"
+      "id, nome, email, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em"
     )
     .eq("id", user.id)
     .single<{
       id: string;
+      nome: string | null;
+      email: string | null;
       workspace_id: string | null;
       is_super_admin: boolean;
       papel: Papel;
@@ -119,6 +123,8 @@ export async function autenticar(): Promise<
     sessao: {
       supabase,
       userId: profile.id,
+      userNome: profile.nome,
+      userEmail: profile.email,
       workspaceId: profile.workspace_id,
       isSuperAdmin: profile.is_super_admin,
       papel: profile.papel,

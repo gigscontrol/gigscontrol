@@ -6,6 +6,7 @@ import {
   removerUsuarioDaEquipe,
 } from "@/lib/services/usuarios.service";
 import { usuarioUpdateSchema } from "@/lib/validators/usuarios.schema";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -31,6 +32,13 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   try {
     const admin = criarClienteAdmin();
     const usuario = await atualizarUsuarioDaEquipe(admin, params.id, parsed.data);
+    await audit(r.sessao, {
+      modulo: "equipe",
+      tipo: "editar",
+      entidadeId: usuario.id,
+      entidadeNome: usuario.nome,
+      descricao: `Editou o usuário ${usuario.nome}`,
+    });
     return NextResponse.json({ usuario });
   } catch (e) {
     return NextResponse.json(
@@ -43,9 +51,23 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  // Snapshot do nome ANTES de remover, pra auditoria legível
+  const adminPre = criarClienteAdmin();
+  const { data: snap } = await adminPre
+    .from("profiles")
+    .select("id, nome")
+    .eq("id", params.id)
+    .maybeSingle();
   try {
     const admin = criarClienteAdmin();
     await removerUsuarioDaEquipe(admin, params.id);
+    await audit(r.sessao, {
+      modulo: "equipe",
+      tipo: "remover",
+      entidadeId: params.id,
+      entidadeNome: snap?.nome ?? null,
+      descricao: `Removeu ${snap?.nome ?? "usuário"} da equipe`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

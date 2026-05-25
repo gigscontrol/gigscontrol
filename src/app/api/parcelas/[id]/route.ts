@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { atualizarParcelaPorId } from "@/lib/services/vendas.service";
 import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
 import { verificarInformarPagamento } from "@/lib/api/permissoes";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -33,6 +34,25 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 
   try {
     const parcela = await atualizarParcelaPorId(r.sessao.supabase, params.id, parsed.data);
+    // Registra apenas mudanças de status_base (pagar/desfazer), que são
+    // as ações de auditoria relevantes. Ajustes finos (data, obs) não.
+    if (parsed.data.status_base === "pago") {
+      await audit(r.sessao, {
+        modulo: "parcela",
+        tipo: "pagar",
+        entidadeId: parcela.id,
+        entidadeNome: `parcela ${parcela.percentual}%`,
+        descricao: `Marcou parcela como paga (${parcela.percentual}% — R$ ${parcela.valor.toLocaleString("pt-BR")})`,
+      });
+    } else if (parsed.data.status_base === "pendente") {
+      await audit(r.sessao, {
+        modulo: "parcela",
+        tipo: "desfazer-pagamento",
+        entidadeId: parcela.id,
+        entidadeNome: `parcela ${parcela.percentual}%`,
+        descricao: `Desfez pagamento da parcela (${parcela.percentual}% — R$ ${parcela.valor.toLocaleString("pt-BR")})`,
+      });
+    }
     return NextResponse.json({ parcela });
   } catch (e) {
     return NextResponse.json(

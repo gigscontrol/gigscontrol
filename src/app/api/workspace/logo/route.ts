@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
+import { audit } from "@/lib/services/historico.service";
 
 const BUCKET = "workspace-logos";
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -104,7 +105,15 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ workspace: rowParaWorkspace(atualizado) });
+  const ws = rowParaWorkspace(atualizado);
+  await audit(r.sessao, {
+    modulo: "aparencia",
+    tipo: "upload-logo",
+    entidadeId: ws.id,
+    entidadeNome: ws.nomeAgencia,
+    descricao: `Atualizou a logo da agência`,
+  });
+  return NextResponse.json({ workspace: ws });
 }
 
 /**
@@ -142,7 +151,15 @@ export async function DELETE() {
     );
   }
 
-  return NextResponse.json({ workspace: rowParaWorkspace(atualizado) });
+  const ws = rowParaWorkspace(atualizado);
+  await audit(r.sessao, {
+    modulo: "aparencia",
+    tipo: "remover-logo",
+    entidadeId: ws.id,
+    entidadeNome: ws.nomeAgencia,
+    descricao: `Removeu a logo da agência`,
+  });
+  return NextResponse.json({ workspace: ws });
 }
 
 /** Extrai o path interno do bucket a partir de uma URL pública do Supabase. */

@@ -6,6 +6,7 @@ import {
   restaurarUsuarioDaLixeira,
 } from "@/lib/services/lixeira.service";
 import type { PlanoId } from "@/lib/planos";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { tipo: string; id: string } };
 
@@ -41,9 +42,22 @@ export async function POST(_request: Request, { params }: RouteCtx) {
   const planoId = ws.plano as PlanoId;
 
   try {
+    let entidadeNome: string | null = null;
     if (params.tipo === "artista") {
+      const { data: snap } = await admin
+        .from("artists")
+        .select("name")
+        .eq("id", params.id)
+        .maybeSingle();
+      entidadeNome = snap?.name ?? null;
       await restaurarArtistaDaLixeira(admin, params.id, planoId);
     } else if (params.tipo === "usuario") {
+      const { data: snap } = await admin
+        .from("profiles")
+        .select("nome")
+        .eq("id", params.id)
+        .maybeSingle();
+      entidadeNome = snap?.nome ?? null;
       await restaurarUsuarioDaLixeira(
         admin,
         params.id,
@@ -56,6 +70,13 @@ export async function POST(_request: Request, { params }: RouteCtx) {
         { status: 400 }
       );
     }
+    await audit(r.sessao, {
+      modulo: "lixeira",
+      tipo: "restaurar",
+      entidadeId: params.id,
+      entidadeNome,
+      descricao: `Restaurou ${params.tipo} ${entidadeNome ?? params.id} da lixeira`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     const err = e as Error & { status?: number };
