@@ -6,7 +6,7 @@ import {
   removerUsuarioDaEquipe,
 } from "@/lib/services/usuarios.service";
 import { usuarioUpdateSchema } from "@/lib/validators/usuarios.schema";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   try {
     const admin = criarClienteAdmin();
     const usuario = await atualizarUsuarioDaEquipe(admin, params.id, parsed.data);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "equipe",
       tipo: "editar",
       entidadeId: usuario.id,
@@ -61,7 +61,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   try {
     const admin = criarClienteAdmin();
     await removerUsuarioDaEquipe(admin, params.id);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "equipe",
       tipo: "remover",
       entidadeId: params.id,

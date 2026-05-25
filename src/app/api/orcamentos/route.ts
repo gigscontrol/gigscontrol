@@ -6,7 +6,7 @@ import {
 } from "@/lib/services/orcamentos.service";
 import { orcamentoCreateSchema } from "@/lib/validators/orcamentos.schema";
 import { verificarAcessoOrcamentos } from "@/lib/api/permissoes";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       r.sessao.userId,
       parsed.data
     );
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "orcamento",
       tipo: "criar",
       entidadeId: orcamento.id,

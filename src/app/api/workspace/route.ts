@@ -3,7 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
 import { workspaceUpdateSchema } from "@/lib/validators/workspace.schema";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
@@ -73,7 +73,7 @@ export async function PATCH(request: Request) {
     }
     const ws = rowParaWorkspace(data);
     if (parsed.data.nome !== undefined) {
-      await audit(r.sessao, {
+      await auditAndNotify(r.sessao, {
         modulo: "aparencia",
         tipo: "editar",
         entidadeId: ws.id,

@@ -3,7 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { atualizarParcelaPorId } from "@/lib/services/vendas.service";
 import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
 import { verificarInformarPagamento } from "@/lib/api/permissoes";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -37,7 +37,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     // Registra apenas mudanças de status_base (pagar/desfazer), que são
     // as ações de auditoria relevantes. Ajustes finos (data, obs) não.
     if (parsed.data.status_base === "pago") {
-      await audit(r.sessao, {
+      await auditAndNotify(r.sessao, {
         modulo: "parcela",
         tipo: "pagar",
         entidadeId: parcela.id,
@@ -45,7 +45,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         descricao: `Marcou parcela como paga (${parcela.percentual}% — R$ ${parcela.valor.toLocaleString("pt-BR")})`,
       });
     } else if (parsed.data.status_base === "pendente") {
-      await audit(r.sessao, {
+      await auditAndNotify(r.sessao, {
         modulo: "parcela",
         tipo: "desfazer-pagamento",
         entidadeId: parcela.id,

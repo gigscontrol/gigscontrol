@@ -9,7 +9,7 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
 } from "@/lib/api/permissoes";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       r.sessao.userId,
       parsed.data
     );
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "venda",
       tipo: "criar",
       entidadeId: venda.id,

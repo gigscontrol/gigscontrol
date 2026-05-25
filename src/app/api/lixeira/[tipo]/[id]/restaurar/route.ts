@@ -12,7 +12,7 @@ import {
   type TipoLixeira,
 } from "@/lib/services/lixeira.service";
 import type { PlanoId } from "@/lib/planos";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { tipo: string; id: string } };
 
@@ -108,7 +108,7 @@ export async function POST(_request: Request, { params }: RouteCtx) {
         await restaurarCidadeDaLixeira(admin, params.id);
         break;
     }
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "lixeira",
       tipo: "restaurar",
       entidadeId: params.id,

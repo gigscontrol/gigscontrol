@@ -5,7 +5,7 @@ import {
   removerArtistaPorId,
 } from "@/lib/services/artistas.service";
 import { artistaUpdateSchema } from "@/lib/validators/artistas.schema";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "artista",
       tipo: "editar",
       entidadeId: artista.id,
@@ -61,7 +61,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     .maybeSingle();
   try {
     await removerArtistaPorId(r.sessao.supabase, params.id);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "artista",
       tipo: "remover",
       entidadeId: params.id,
