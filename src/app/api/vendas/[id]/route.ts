@@ -11,7 +11,7 @@ import {
   podeEditarVenda,
 } from "@/lib/api/permissoes";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 
   try {
     const venda = await atualizarVendaPorId(r.sessao.supabase, params.id, parsed.data);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "venda",
       tipo: "editar",
       entidadeId: venda.id,
@@ -100,7 +100,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
 
   try {
     await removerVendaPorId(r.sessao.supabase, params.id);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "venda",
       tipo: "remover",
       entidadeId: row.id,

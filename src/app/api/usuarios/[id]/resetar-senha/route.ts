@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { resetarSenhaDoUsuario } from "@/lib/services/usuarios.service";
 import { audit } from "@/lib/services/historico.service";
+import { notificarUsuario } from "@/lib/services/notificacoes.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -29,6 +30,13 @@ export async function POST(_request: Request, { params }: RouteCtx) {
       entidadeId: params.id,
       entidadeNome: snap?.nome ?? null,
       descricao: `Resetou a senha de ${snap?.nome ?? "usuário"}`,
+    });
+    // Notifica o usuário afetado (não os admins)
+    await notificarUsuario(r.sessao.workspaceId, params.id, {
+      titulo: "Sua senha foi resetada",
+      mensagem: `${r.sessao.userNome ?? "Um admin"} resetou sua senha. Use a nova senha temporária enviada e altere em Configurações → Segurança.`,
+      tipo: "aviso",
+      modulo: "equipe",
     });
     return NextResponse.json(resultado);
   } catch (e) {

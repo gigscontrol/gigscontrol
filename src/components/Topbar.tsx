@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import {
   Search,
   Menu,
-  Bell,
   LogOut,
   BadgeCheck,
   ChevronDown,
@@ -15,6 +14,7 @@ import type { ActiveTab } from "@/types";
 import { useAuth } from "@/lib/auth-context";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
+import SinoNotificacoes from "./SinoNotificacoes";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -87,10 +87,7 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        <button className="btn-ghost relative p-2 rounded" aria-label="Notificações">
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-danger" />
-        </button>
+        <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
 
         {/* Menu de perfil */}
         <div ref={menuRef} className="relative">

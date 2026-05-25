@@ -98,3 +98,51 @@ export async function audit(
     ...params,
   });
 }
+
+/**
+ * Combina audit() + notificarAdmins() numa só chamada. Use nos
+ * handlers de eventos importantes que devem aparecer tanto no
+ * histórico quanto no sino dos admins.
+ *
+ * O autor da ação NÃO recebe a notificação (notificarAdmins exclui
+ * o autorId do destinatário).
+ */
+export async function auditAndNotify(
+  sessao: {
+    userId: string;
+    userNome: string | null;
+    userEmail: string | null;
+    workspaceId: string;
+  },
+  params: {
+    modulo: ModuloHistorico;
+    tipo: TipoHistorico;
+    entidadeId?: string | null;
+    entidadeNome?: string | null;
+    descricao: string;
+    dados?: Record<string, unknown> | null;
+    /** Override do título/mensagem da notificação. Default: usa a descricao. */
+    notificacao?: {
+      titulo?: string;
+      mensagem?: string;
+      link?: string | null;
+      tipo?: "info" | "sucesso" | "aviso" | "alerta";
+    };
+  }
+): Promise<void> {
+  // Import dinâmico pra evitar ciclo entre services.
+  const { notificarAdmins } = await import("./notificacoes.service");
+  await Promise.all([
+    audit(sessao, params),
+    notificarAdmins(sessao.workspaceId, sessao.userId, {
+      titulo: params.notificacao?.titulo ?? params.descricao,
+      mensagem:
+        params.notificacao?.mensagem ??
+        `${sessao.userNome ?? "Alguém"} • ${params.descricao}`,
+      link: params.notificacao?.link ?? null,
+      tipo: params.notificacao?.tipo ?? "info",
+      modulo: params.modulo,
+      entidadeId: params.entidadeId ?? null,
+    }),
+  ]);
+}

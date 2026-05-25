@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 const BUCKET = "workspace-logos";
 const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   }
 
   const ws = rowParaWorkspace(atualizado);
-  await audit(r.sessao, {
+  await auditAndNotify(r.sessao, {
     modulo: "aparencia",
     tipo: "upload-logo",
     entidadeId: ws.id,
@@ -152,7 +152,7 @@ export async function DELETE() {
   }
 
   const ws = rowParaWorkspace(atualizado);
-  await audit(r.sessao, {
+  await auditAndNotify(r.sessao, {
     modulo: "aparencia",
     tipo: "remover-logo",
     entidadeId: ws.id,

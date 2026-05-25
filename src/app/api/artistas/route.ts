@@ -7,7 +7,7 @@ import {
 } from "@/lib/services/artistas.service";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       ws.plano as PlanoId,
       parsed.data
     );
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "artista",
       tipo: "criar",
       entidadeId: artista.id,

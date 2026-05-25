@@ -11,7 +11,7 @@ import {
   podeEditarOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
-import { audit } from "@/lib/services/historico.service";
+import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -71,7 +71,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "orcamento",
       tipo: "editar",
       entidadeId: orcamento.id,
@@ -105,7 +105,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
 
   try {
     await removerOrcamentoPorId(r.sessao.supabase, params.id);
-    await audit(r.sessao, {
+    await auditAndNotify(r.sessao, {
       modulo: "orcamento",
       tipo: "remover",
       entidadeId: row.id,

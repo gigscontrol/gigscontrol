@@ -9,6 +9,7 @@ import {
   Users,
   Trash2,
   History,
+  Bell,
 } from "lucide-react";
 import AbaAparencia from "./AbaAparencia";
 import AbaSeguranca from "./AbaSeguranca";
@@ -16,6 +17,7 @@ import AbaArtistas from "./AbaArtistas";
 import AbaEquipe from "./AbaEquipe";
 import AbaLixeira from "./AbaLixeira";
 import AbaHistorico from "./AbaHistorico";
+import AbaNotificacoes from "./AbaNotificacoes";
 import { useAuth } from "@/lib/auth-context";
 
 /**
@@ -26,7 +28,7 @@ import { useAuth } from "@/lib/auth-context";
  *   só veem a aba "Segurança" — para alterar a própria senha.
  */
 
-type AbaConfig = "aparencia" | "seguranca" | "artistas" | "equipe" | "lixeira" | "historico";
+type AbaConfig = "aparencia" | "seguranca" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
 
 type AbaDef = { id: AbaConfig; label: string; icon: typeof Palette };
 
@@ -36,10 +38,13 @@ const ABAS_ADMIN: AbaDef[] = [
   { id: "equipe", label: "Equipe", icon: Users },
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
   { id: "historico", label: "Histórico", icon: History },
+  { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
+// Usuários comuns também podem ver as próprias notificações
 const ABAS_USUARIO: AbaDef[] = [
+  { id: "notificacoes", label: "Notificações", icon: Bell },
   { id: "seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
@@ -106,6 +111,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
       {aba === "equipe" && isAdmin && <AbaEquipe />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}
       {aba === "historico" && isAdmin && <AbaHistorico />}
+      {aba === "notificacoes" && <AbaNotificacoes />}
       {aba === "seguranca" && <AbaSeguranca />}
     </div>
   );
