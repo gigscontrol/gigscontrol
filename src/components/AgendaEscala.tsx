@@ -85,10 +85,16 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const { shows } = useShows();
   const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
-  const [selectedCustomMonths, setSelectedCustomMonths] = useState<string[]>([]);
-  const [selectedCustomYears, setSelectedCustomYears] = useState<number[]>([new Date().getFullYear()]);
+  // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
+  // atuais (respeitando o mínimo de mai/2026 — data de criação do GIGS).
   const currentSysYear = new Date().getFullYear();
-  const allYears = [currentSysYear - 1, currentSysYear, currentSysYear + 1];
+  const currentSysMonthIdx = new Date().getMonth();
+  const [selectedCustomMonth, setSelectedCustomMonth] = useState<string | null>(
+    ALL_MONTHS[Math.max(currentSysMonthIdx, currentSysYear === 2026 ? 4 : 0)]
+  );
+  const [selectedCustomYear, setSelectedCustomYear] = useState<number | null>(
+    Math.max(currentSysYear, 2026)
+  );
 
   const accent = MODULE_THEMES.agenda.color;
 
@@ -115,10 +121,9 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       targetMonths = [nM];
       targetYears = [nY];
     } else if (activeDateRange === "Personalizado") {
-      targetMonths = selectedCustomMonths.map((m) => ALL_MONTHS.indexOf(m)).sort((a, b) => a - b);
-      targetYears = [...selectedCustomYears].sort();
-      if (targetMonths.length === 0) targetMonths = [currentMonthIdx];
-      if (targetYears.length === 0) targetYears = [currentYear];
+      const mesIdx = selectedCustomMonth ? ALL_MONTHS.indexOf(selectedCustomMonth) : -1;
+      targetMonths = mesIdx >= 0 ? [mesIdx] : [currentMonthIdx];
+      targetYears = selectedCustomYear !== null ? [selectedCustomYear] : [currentYear];
     }
 
     const month: DayCell[][] = [];
@@ -190,7 +195,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       month.push(currentWeek);
     }
     return month;
-  }, [activeDateRange, selectedCustomMonths, selectedCustomYears]);
+  }, [activeDateRange, selectedCustomMonth, selectedCustomYear]);
 
   // Scroll para hoje quando o range muda
   useEffect(() => {
@@ -201,7 +206,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [activeDateRange, selectedCustomMonths, selectedCustomYears]);
+  }, [activeDateRange, selectedCustomMonth, selectedCustomYear]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
 
@@ -219,11 +224,10 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             options={DATE_RANGES}
             value={activeDateRange}
             onChange={setActiveDateRange}
-            selectedCustomMonths={selectedCustomMonths}
-            setSelectedCustomMonths={setSelectedCustomMonths}
-            selectedCustomYears={selectedCustomYears}
-            setSelectedCustomYears={setSelectedCustomYears}
-            years={allYears}
+            selectedCustomMonth={selectedCustomMonth}
+            setSelectedCustomMonth={setSelectedCustomMonth}
+            selectedCustomYear={selectedCustomYear}
+            setSelectedCustomYear={setSelectedCustomYear}
           />
         }
       />
