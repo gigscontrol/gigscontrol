@@ -4,12 +4,17 @@ import { rowParaDj } from "@/lib/mappers/artista";
 import { rowParaUsuario, type UsuarioEquipe } from "@/lib/mappers/usuario";
 import {
   listarArtistasDeletados,
+  contarArtistas,
   restaurarArtista as repoRestaurarArtista,
 } from "@/lib/repositories/artistas.repo";
 import {
   listarUsuariosDeletados,
+  contarUsuariosEquipe,
   restaurarProfile,
 } from "@/lib/repositories/usuarios.repo";
+import { LimitePlanoAtingidoError } from "@/lib/services/artistas.service";
+import { LimitePlanoEquipeError } from "@/lib/services/usuarios.service";
+import { getPlano, type PlanoId } from "@/lib/planos";
 
 /** Cada item da lixeira inclui quantos dias faltam pra expirar. */
 export type ItemLixeiraArtista = {
@@ -62,15 +67,32 @@ export async function listarLixeira(
 
 export async function restaurarArtistaDaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  planoId: PlanoId
 ): Promise<void> {
+  // Re-conta artistas ativos antes de restaurar. Se já está no limite do
+  // plano, não permite — força o admin a remover outro ativo ou fazer
+  // upgrade primeiro.
+  const plano = getPlano(planoId);
+  const total = await contarArtistas(supabase);
+  if (total >= plano.maxArtistas) {
+    throw new LimitePlanoAtingidoError(plano.maxArtistas, plano.nome);
+  }
   await repoRestaurarArtista(supabase, id);
 }
 
 export async function restaurarUsuarioDaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  workspaceId: string,
+  planoId: PlanoId
 ): Promise<void> {
+  // Mesma regra do criar: respeita o limite do plano antes de restaurar.
+  const plano = getPlano(planoId);
+  const total = await contarUsuariosEquipe(supabase, workspaceId);
+  if (total >= plano.maxUsuariosAdicionais) {
+    throw new LimitePlanoEquipeError(plano.maxUsuariosAdicionais, plano.nome);
+  }
   await restaurarProfile(supabase, id);
 }
 
