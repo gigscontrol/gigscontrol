@@ -15,6 +15,7 @@ import {
   CalendarCheck2,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import MiniLixeira from "./MiniLixeira";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { DJS } from "@/lib/djs";
@@ -315,6 +316,8 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
           </div>
         )}
       </div>
+
+      <MiniLixeira tipo="orcamento" />
     </div>
   );
 }

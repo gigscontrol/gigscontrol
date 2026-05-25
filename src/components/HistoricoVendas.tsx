@@ -5,6 +5,7 @@ import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText } from "lucide-reac
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import MiniLixeira from "./MiniLixeira";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
@@ -241,16 +242,18 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
         )}
       </div>
 
+      <MiniLixeira tipo="venda" />
+
       {/* Confirmação de remover */}
       <Modal
         isOpen={!!removeAlvo}
         onClose={() => setRemoveAlvo(null)}
         title="Remover venda"
-        subtitle="Esta ação não pode ser desfeita."
+        subtitle="Esta ação pode ser desfeita até 30 dias na Lixeira."
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            A venda e suas parcelas serão apagadas. O <strong className="text-primary">show vinculado</strong> também será removido da agenda.
+            A venda e suas parcelas vão pra <strong className="text-primary">Lixeira</strong>. Você pode restaurar em até 30 dias. Depois disso, é apagado automaticamente.
           </p>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button

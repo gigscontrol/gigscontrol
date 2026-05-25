@@ -9,6 +9,7 @@ import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
 import MapaDobras from "./contatos/MapaDobras";
+import MiniLixeira from "./MiniLixeira";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -311,6 +312,12 @@ export default function Contatos({
         )}
       </div>
       )}
+
+      {/* Mini-lixeira da categoria ativa — só admin vê, e só se houver
+          algum item dessa categoria na lixeira. */}
+      {categoria === "contratantes" && <MiniLixeira tipo="contratante" />}
+      {categoria === "casas" && <MiniLixeira tipo="casa" />}
+      {categoria === "cidades" && <MiniLixeira tipo="cidade" />}
 
       {/* Modais */}
       <Modal
