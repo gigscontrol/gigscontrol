@@ -7,9 +7,46 @@ export async function listarCidades(supabase: SupabaseClient): Promise<CidadeRow
   const { data, error } = await supabase
     .from("cidades")
     .select(COLS)
+    .is("deletado_em", null)
     .order("nome", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as CidadeRow[];
+}
+
+export async function listarCidadesDeletadas(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<(CidadeRow & { deletado_em: string | null })[]> {
+  const { data, error } = await supabase
+    .from("cidades")
+    .select(`${COLS}, deletado_em`)
+    .eq("workspace_id", workspaceId)
+    .not("deletado_em", "is", null)
+    .order("deletado_em", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as (CidadeRow & { deletado_em: string | null })[];
+}
+
+export async function moverCidadeParaLixeira(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("cidades")
+    .update({ deletado_em: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function restaurarCidade(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("cidades")
+    .update({ deletado_em: null })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function buscarCidade(
@@ -55,6 +92,6 @@ export async function atualizarCidade(
 }
 
 export async function removerCidade(supabase: SupabaseClient, id: string): Promise<void> {
-  const { error } = await supabase.from("cidades").delete().eq("id", id);
-  if (error) throw error;
+  // Soft delete — fica na lixeira por 30 dias.
+  await moverCidadeParaLixeira(supabase, id);
 }

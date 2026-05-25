@@ -19,11 +19,26 @@ export async function listarVendas(
   let q = supabase
     .from("vendas")
     .select(COLS)
+    .is("deletado_em", null)
     .order("criado_em", { ascending: false });
   if (aplicarFiltro) q = aplicarFiltro(q);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as VendaRow[];
+}
+
+export async function listarVendasDeletadas(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<(VendaRow & { deletado_em: string | null })[]> {
+  const { data, error } = await supabase
+    .from("vendas")
+    .select(`${COLS}, deletado_em`)
+    .eq("workspace_id", workspaceId)
+    .not("deletado_em", "is", null)
+    .order("deletado_em", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as (VendaRow & { deletado_em: string | null })[];
 }
 
 export async function buscarVenda(
@@ -37,6 +52,28 @@ export async function buscarVenda(
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as VendaRow) ?? null;
+}
+
+export async function moverVendaParaLixeira(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("vendas")
+    .update({ deletado_em: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function restaurarVenda(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("vendas")
+    .update({ deletado_em: null })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function proximoNumeroVenda(
@@ -89,7 +126,7 @@ export async function removerVendaRow(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  // Parcelas tem ON DELETE CASCADE no schema, então caem juntas.
-  const { error } = await supabase.from("vendas").delete().eq("id", id);
-  if (error) throw error;
+  // Soft delete — vai pra lixeira por 30 dias. Hard delete real
+  // acontece via pg_cron (parcelas vão junto por FK CASCADE).
+  await moverVendaParaLixeira(supabase, id);
 }

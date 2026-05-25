@@ -17,11 +17,48 @@ export async function listarOrcamentos(
   let q = supabase
     .from("orcamentos")
     .select(COLS)
+    .is("deletado_em", null)
     .order("criado_em", { ascending: false });
   if (aplicarFiltro) q = aplicarFiltro(q);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as OrcamentoRow[];
+}
+
+export async function listarOrcamentosDeletados(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<(OrcamentoRow & { deletado_em: string | null })[]> {
+  const { data, error } = await supabase
+    .from("orcamentos")
+    .select(`${COLS}, deletado_em`)
+    .eq("workspace_id", workspaceId)
+    .not("deletado_em", "is", null)
+    .order("deletado_em", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as (OrcamentoRow & { deletado_em: string | null })[];
+}
+
+export async function moverOrcamentoParaLixeira(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("orcamentos")
+    .update({ deletado_em: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function restaurarOrcamento(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("orcamentos")
+    .update({ deletado_em: null })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function buscarOrcamento(
@@ -87,6 +124,6 @@ export async function removerOrcamento(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase.from("orcamentos").delete().eq("id", id);
-  if (error) throw error;
+  // Soft delete — fica na lixeira por 30 dias.
+  await moverOrcamentoParaLixeira(supabase, id);
 }
