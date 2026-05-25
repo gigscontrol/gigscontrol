@@ -9,6 +9,7 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
 } from "@/lib/api/permissoes";
+import { audit } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -58,6 +59,13 @@ export async function POST(request: Request) {
       r.sessao.userId,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "venda",
+      tipo: "criar",
+      entidadeId: venda.id,
+      entidadeNome: venda.numero,
+      descricao: `Criou venda ${venda.numero}`,
+    });
     return NextResponse.json({ venda }, { status: 201 });
   } catch (e) {
     return NextResponse.json(

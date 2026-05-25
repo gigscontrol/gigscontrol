@@ -6,6 +6,7 @@ import {
   podeEditarOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -38,6 +39,13 @@ export async function POST(_request: Request, { params }: RouteCtx) {
       r.sessao.workspaceId,
       params.id
     );
+    await audit(r.sessao, {
+      modulo: "orcamento",
+      tipo: "aceitar",
+      entidadeId: resultado.orcamento.id,
+      entidadeNome: resultado.orcamento.numero,
+      descricao: `Aceitou orçamento ${resultado.orcamento.numero}`,
+    });
     return NextResponse.json(resultado);
   } catch (e) {
     return NextResponse.json(

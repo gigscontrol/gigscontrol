@@ -9,6 +9,7 @@ import {
 } from "@/lib/services/usuarios.service";
 import { usuarioCreateSchema } from "@/lib/validators/usuarios.schema";
 import type { PlanoId } from "@/lib/planos";
+import { audit } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -68,6 +69,13 @@ export async function POST(request: Request) {
       ws.plano as PlanoId,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "equipe",
+      tipo: "criar",
+      entidadeId: resultado.usuario.id,
+      entidadeNome: resultado.usuario.nome,
+      descricao: `Adicionou ${resultado.usuario.nome} à equipe`,
+    });
     return NextResponse.json(resultado, { status: 201 });
   } catch (e) {
     if (e instanceof LimitePlanoEquipeError || e instanceof EmailEmUsoError) {

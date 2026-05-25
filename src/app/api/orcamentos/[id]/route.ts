@@ -11,6 +11,7 @@ import {
   podeEditarOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -70,6 +71,13 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "orcamento",
+      tipo: "editar",
+      entidadeId: orcamento.id,
+      entidadeNome: orcamento.numero,
+      descricao: `Editou orçamento ${orcamento.numero}`,
+    });
     return NextResponse.json({ orcamento });
   } catch (e) {
     return NextResponse.json(
@@ -97,6 +105,13 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
 
   try {
     await removerOrcamentoPorId(r.sessao.supabase, params.id);
+    await audit(r.sessao, {
+      modulo: "orcamento",
+      tipo: "remover",
+      entidadeId: row.id,
+      entidadeNome: row.numero,
+      descricao: `Removeu orçamento ${row.numero}`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

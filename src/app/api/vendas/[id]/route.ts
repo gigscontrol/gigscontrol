@@ -11,6 +11,7 @@ import {
   podeEditarVenda,
 } from "@/lib/api/permissoes";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
+import { audit } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
 
@@ -65,6 +66,13 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 
   try {
     const venda = await atualizarVendaPorId(r.sessao.supabase, params.id, parsed.data);
+    await audit(r.sessao, {
+      modulo: "venda",
+      tipo: "editar",
+      entidadeId: venda.id,
+      entidadeNome: venda.numero,
+      descricao: `Editou venda ${venda.numero}`,
+    });
     return NextResponse.json({ venda });
   } catch (e) {
     return NextResponse.json(
@@ -92,6 +100,13 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
 
   try {
     await removerVendaPorId(r.sessao.supabase, params.id);
+    await audit(r.sessao, {
+      modulo: "venda",
+      tipo: "remover",
+      entidadeId: row.id,
+      entidadeNome: row.numero,
+      descricao: `Removeu venda ${row.numero}`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

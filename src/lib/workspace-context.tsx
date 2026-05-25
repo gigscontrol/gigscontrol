@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { DJ } from "@/types";
 import type { Papel } from "./permissoes";
+import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 
 /**
@@ -157,6 +158,15 @@ type WorkspaceContextValue = {
   carregandoLixeira: boolean;
   recarregarLixeira: () => Promise<void>;
   restaurarDaLixeira: (tipo: "artista" | "usuario", id: string) => Promise<void>;
+
+  // Histórico
+  carregarHistorico: (filtros?: {
+    modulo?: string;
+    actor?: string;
+    periodo?: "24h" | "7d" | "30d";
+    limit?: number;
+    offset?: number;
+  }) => Promise<HistoricoAcao[]>;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -476,6 +486,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Não há método "apagar definitivamente" cliente — a única remoção
   // permanente é via pg_cron 30 dias após o soft delete.
 
+  // -------- Histórico --------
+
+  const carregarHistorico = useCallback(
+    async (filtros?: {
+      modulo?: string;
+      actor?: string;
+      periodo?: "24h" | "7d" | "30d";
+      limit?: number;
+      offset?: number;
+    }): Promise<HistoricoAcao[]> => {
+      const qs = new URLSearchParams();
+      if (filtros?.modulo) qs.set("modulo", filtros.modulo);
+      if (filtros?.actor) qs.set("actor", filtros.actor);
+      if (filtros?.periodo) qs.set("periodo", filtros.periodo);
+      if (filtros?.limit !== undefined) qs.set("limit", String(filtros.limit));
+      if (filtros?.offset !== undefined) qs.set("offset", String(filtros.offset));
+      const url = `/api/historico${qs.size > 0 ? `?${qs.toString()}` : ""}`;
+      const res = await fetch(url, { credentials: "include" });
+      const body = await jsonOuErro(res);
+      return (body.historico as HistoricoAcao[]) ?? [];
+    },
+    []
+  );
+
   const value = useMemo<WorkspaceContextValue>(
     () => ({
       aparencia,
@@ -508,6 +542,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       carregandoLixeira,
       recarregarLixeira,
       restaurarDaLixeira,
+
+      carregarHistorico,
     }),
     [
       aparencia, carregandoAparencia, recarregarAparencia,
@@ -518,6 +554,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       adicionarUsuario, atualizarUsuario, removerUsuario, resetarSenhaUsuario,
       lixeiraArtistas, lixeiraUsuarios, carregandoLixeira,
       recarregarLixeira, restaurarDaLixeira,
+      carregarHistorico,
     ]
   );
 

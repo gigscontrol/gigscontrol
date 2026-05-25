@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/orcamentos.service";
 import { orcamentoCreateSchema } from "@/lib/validators/orcamentos.schema";
 import { verificarAcessoOrcamentos } from "@/lib/api/permissoes";
+import { audit } from "@/lib/services/historico.service";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
       r.sessao.userId,
       parsed.data
     );
+    await audit(r.sessao, {
+      modulo: "orcamento",
+      tipo: "criar",
+      entidadeId: orcamento.id,
+      entidadeNome: orcamento.numero,
+      descricao: `Criou orçamento ${orcamento.numero}`,
+    });
     return NextResponse.json({ orcamento }, { status: 201 });
   } catch (e) {
     return NextResponse.json(
