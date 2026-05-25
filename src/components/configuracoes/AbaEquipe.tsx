@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   KeyRound,
   Copy,
+  RotateCcw,
 } from "lucide-react";
 import Modal from "../Modal";
 import Toast from "../Toast";
@@ -49,8 +50,18 @@ export default function AbaEquipe() {
     atualizarUsuario,
     removerUsuario,
     resetarSenhaUsuario,
+    lixeiraUsuarios,
+    recarregarLixeira,
+    restaurarDaLixeira,
   } = useWorkspace();
   const { sessao } = useAuth();
+
+  // Carrega a lixeira ao montar (e quando o workspace mudar) — assim a
+  // mini-lixeira abaixo da equipe aparece automaticamente após remover
+  // alguém, sem precisar trocar de aba.
+  useEffect(() => {
+    void recarregarLixeira();
+  }, [recarregarLixeira]);
 
   const plano = sessao?.workspace ? getPlano(sessao.workspace.plano) : null;
   const limite = plano?.maxUsuariosAdicionais ?? 0;
@@ -63,6 +74,19 @@ export default function AbaEquipe() {
   const [removendo, setRemovendo] = useState(false);
   const [senhaNova, setSenhaNova] = useState<{ nome: string; senha: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
+  const [acaoLixeira, setAcaoLixeira] = useState<string | null>(null);
+
+  async function aoRestaurarUsuario(id: string, nomeUsr: string) {
+    setAcaoLixeira(`restaurar-${id}`);
+    try {
+      await restaurarDaLixeira("usuario", id);
+      setToast({ msg: `${nomeUsr} restaurado.`, tipo: "sucesso" });
+    } catch (e) {
+      setToast({ msg: (e as Error).message, tipo: "erro" });
+    } finally {
+      setAcaoLixeira(null);
+    }
+  }
 
   async function aoCriar(dados: {
     nome: string;
@@ -285,6 +309,74 @@ export default function AbaEquipe() {
           </div>
         )}
       </div>
+
+      {/* Mini-lixeira: aparece só quando há usuários removidos. A aba
+          completa fica em Configurações → Lixeira (admin). */}
+      {lixeiraUsuarios.length > 0 && (
+        <div className="card p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
+              <div className="section-title">
+                Na lixeira ({lixeiraUsuarios.length})
+              </div>
+            </div>
+            <span className="text-xs text-muted">
+              Recuperáveis por 30 dias
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {lixeiraUsuarios.map((item) => {
+              const urgente = item.diasRestantes <= 3;
+              return (
+                <div
+                  key={item.usuario.id}
+                  className="flex items-center gap-3 px-4 py-3"
+                >
+                  <span
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                    style={{ backgroundColor: "var(--module-contatos)", opacity: 0.6 }}
+                  >
+                    {item.usuario.nome
+                      .split(" ")
+                      .map((p) => p[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-primary truncate">
+                      {item.usuario.nome}
+                    </div>
+                    <div className="text-xs text-muted truncate">
+                      {item.usuario.email}
+                    </div>
+                    <div
+                      className="text-xs font-medium mt-0.5"
+                      style={{
+                        color: urgente ? "var(--danger)" : "var(--warning)",
+                      }}
+                    >
+                      {item.diasRestantes === 0
+                        ? "Expira hoje"
+                        : `${item.diasRestantes} dia${item.diasRestantes === 1 ? "" : "s"} restantes`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => aoRestaurarUsuario(item.usuario.id, item.usuario.nome)}
+                    disabled={acaoLixeira === `restaurar-${item.usuario.id}`}
+                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1 disabled:opacity-50"
+                    style={{ color: "var(--success)" }}
+                  >
+                    <RotateCcw size={13} />
+                    Restaurar
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Modal criação/edição */}
       {(criando || editando) && (
