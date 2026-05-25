@@ -317,19 +317,18 @@ function DayCellComponent({
         backgroundColor: day.isWeekend && !day.isOtherMonth ? "var(--bg-surface-2)" : undefined,
       }}
     >
-      {day.isWeekend && !day.isOtherMonth && (
-        <span
-          className="absolute top-1 right-1.5 text-base leading-none animate-flame select-none"
-          aria-label="Dia de pico"
-          title="Dia de pico"
-        >
-          🔥
-        </span>
-      )}
-
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
-        <div className="text-[0.7rem] uppercase font-bold tracking-wider text-muted">
+        <div className="text-[0.7rem] uppercase font-bold tracking-wider text-muted flex items-center gap-1">
           {day.name.slice(0, 3)}
+          {day.isWeekend && !day.isOtherMonth && (
+            <span
+              className="text-sm leading-none animate-flame select-none"
+              aria-label="Dia de pico"
+              title="Dia de pico"
+            >
+              🔥
+            </span>
+          )}
         </div>
         <div
           className={`text-base font-bold tabular-nums ${day.isToday ? "" : "text-primary"}`}
