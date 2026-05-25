@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 import type { Papel } from "@/lib/permissoes";
+import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
 
 /**
  * Helper compartilhado pelos Route Handlers para autenticar uma requisição
@@ -29,6 +30,11 @@ export type SessaoAutenticada = {
   papel: Papel;
   artistaId: string | null;
   escopo: EscopoSessao;
+  /**
+   * Funções operacionais e DJs atendidos. Vazio quando o papel é admin
+   * ou artista, ou quando o operacional ainda não foi configurado.
+   */
+  funcoes: Funcoes;
 };
 
 function normalizarEscopo(raw: unknown): EscopoSessao {
@@ -67,7 +73,7 @@ export async function autenticar(): Promise<
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, workspace_id, is_super_admin, papel, artista_id, escopo, status, deletado_em"
+      "id, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em"
     )
     .eq("id", user.id)
     .single<{
@@ -77,6 +83,7 @@ export async function autenticar(): Promise<
       papel: Papel;
       artista_id: string | null;
       escopo: unknown;
+      funcoes: unknown;
       status: string;
       deletado_em: string | null;
     }>();
@@ -117,6 +124,9 @@ export async function autenticar(): Promise<
       papel: profile.papel,
       artistaId: profile.artista_id,
       escopo: normalizarEscopo(profile.escopo),
+      funcoes: funcoesValido(
+        (profile.funcoes ?? null) as Record<string, unknown> | null
+      ),
     },
   };
 }

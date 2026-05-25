@@ -97,6 +97,7 @@ export async function criarUsuarioDaEquipe(
       email: input.email,
       papel: input.papel,
       escopo: input.escopo,
+      funcoes: input.funcoes,
       status: "ativo",
     });
     return { usuario: rowParaUsuario(row), senhaTemporaria };
@@ -116,6 +117,7 @@ export async function atualizarUsuarioDaEquipe(
   if (input.nome !== undefined) patch.nome = input.nome;
   if (input.papel !== undefined) patch.papel = input.papel;
   if (input.escopo !== undefined) patch.escopo = input.escopo;
+  if (input.funcoes !== undefined) patch.funcoes = input.funcoes;
   if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
   const row = await atualizarProfile(admin, id, patch);
   return rowParaUsuario(row);

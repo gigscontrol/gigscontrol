@@ -47,8 +47,22 @@ export const ESCOPO_PADRAO: EscopoUsuario = {
 };
 
 /**
- * Usuário da equipe (Etapa 7c: papel único, não mais array).
- * `tipo` foi removido — esta listagem trata só usuários administrativos.
+ * Funções operacionais e DJs atendidos.
+ * Vazio quando o usuário ainda não foi configurado.
+ */
+export type Funcoes = {
+  vendedor?: string[];
+  financeiro?: string[];
+  produtor?: string[];
+};
+
+/**
+ * Usuário da equipe.
+ *
+ * Cada usuário operacional pode acumular múltiplas FUNÇÕES (vendedor /
+ * financeiro / produtor) e cada uma carrega sua própria lista de DJs
+ * atendidos. O campo `papel` continua existindo como "função primária"
+ * pra compatibilidade com policies e código legado.
  */
 export type UsuarioEquipe = {
   id: string;
@@ -56,6 +70,7 @@ export type UsuarioEquipe = {
   email: string;
   papel: PapelEquipe;
   escopo: EscopoUsuario;
+  funcoes: Funcoes;
   ativo: boolean;
 };
 
@@ -121,6 +136,7 @@ type WorkspaceContextValue = {
     email: string;
     papel: PapelEquipe;
     escopo: EscopoUsuario;
+    funcoes: Funcoes;
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
     id: string,
@@ -128,6 +144,7 @@ type WorkspaceContextValue = {
       nome: string;
       papel: PapelEquipe;
       escopo: EscopoUsuario;
+      funcoes: Funcoes;
       ativo: boolean;
     }>
   ) => Promise<UsuarioEquipe>;
@@ -345,6 +362,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       email: string;
       papel: PapelEquipe;
       escopo: EscopoUsuario;
+      funcoes: Funcoes;
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
         method: "POST",
@@ -368,6 +386,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         nome: string;
         papel: PapelEquipe;
         escopo: EscopoUsuario;
+        funcoes: Funcoes;
         ativo: boolean;
       }>
     ): Promise<UsuarioEquipe> => {
