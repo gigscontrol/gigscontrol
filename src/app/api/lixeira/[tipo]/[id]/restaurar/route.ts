@@ -9,6 +9,7 @@ import {
   restaurarContratanteDaLixeira,
   restaurarCasaDaLixeira,
   restaurarCidadeDaLixeira,
+  restaurarShowDaLixeira,
   type TipoLixeira,
 } from "@/lib/services/lixeira.service";
 import type { PlanoId } from "@/lib/planos";
@@ -24,6 +25,7 @@ const TIPOS_VALIDOS: TipoLixeira[] = [
   "contratante",
   "casa",
   "cidade",
+  "show",
 ];
 
 /** Tabela e coluna de nome usadas pra montar o snapshot da auditoria. */
@@ -35,6 +37,7 @@ const META_POR_TIPO: Record<TipoLixeira, { tabela: string; colNome: string }> = 
   contratante: { tabela: "contratantes", colNome: "nome" },
   casa:        { tabela: "casas",        colNome: "nome" },
   cidade:      { tabela: "cidades",      colNome: "nome" },
+  show:        { tabela: "shows",        colNome: "data" },
 };
 
 /**
@@ -106,6 +109,9 @@ export async function POST(_request: Request, { params }: RouteCtx) {
         break;
       case "cidade":
         await restaurarCidadeDaLixeira(admin, params.id);
+        break;
+      case "show":
+        await restaurarShowDaLixeira(admin, params.id);
         break;
     }
     await auditAndNotify(r.sessao, {

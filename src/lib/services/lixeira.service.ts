@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DJ, Orcamento, Venda, Contratante, Casa, Cidade } from "@/types";
+import type { DJ, Orcamento, Venda, Contratante, Casa, Cidade, Show } from "@/types";
 import { rowParaDj } from "@/lib/mappers/artista";
 import { rowParaUsuario, type UsuarioEquipe } from "@/lib/mappers/usuario";
 import { rowParaOrcamento } from "@/lib/mappers/orcamento";
@@ -9,6 +9,7 @@ import {
   rowParaCasa,
   rowParaCidade,
 } from "@/lib/mappers/contatos";
+import { rowParaShow } from "@/lib/mappers/show";
 import {
   listarArtistasDeletados,
   contarArtistas,
@@ -39,6 +40,10 @@ import {
   listarCidadesDeletadas,
   restaurarCidade as repoRestaurarCidade,
 } from "@/lib/repositories/cidades.repo";
+import {
+  listarShowsDeletados,
+  restaurarShow as repoRestaurarShow,
+} from "@/lib/repositories/shows.repo";
 import { LimitePlanoAtingidoError } from "@/lib/services/artistas.service";
 import { LimitePlanoEquipeError } from "@/lib/services/usuarios.service";
 import { getPlano, type PlanoId } from "@/lib/planos";
@@ -52,7 +57,8 @@ export type TipoLixeira =
   | "venda"
   | "contratante"
   | "casa"
-  | "cidade";
+  | "cidade"
+  | "show";
 
 type ItemBase = {
   tipo: TipoLixeira;
@@ -67,6 +73,7 @@ export type ItemLixeiraVenda = ItemBase & { tipo: "venda"; venda: Venda };
 export type ItemLixeiraContratante = ItemBase & { tipo: "contratante"; contratante: Contratante };
 export type ItemLixeiraCasa = ItemBase & { tipo: "casa"; casa: Casa };
 export type ItemLixeiraCidade = ItemBase & { tipo: "cidade"; cidade: Cidade };
+export type ItemLixeiraShow = ItemBase & { tipo: "show"; show: Show };
 
 export type ItemLixeira =
   | ItemLixeiraArtista
@@ -75,7 +82,8 @@ export type ItemLixeira =
   | ItemLixeiraVenda
   | ItemLixeiraContratante
   | ItemLixeiraCasa
-  | ItemLixeiraCidade;
+  | ItemLixeiraCidade
+  | ItemLixeiraShow;
 
 // ====================== Helpers ======================
 
@@ -98,6 +106,7 @@ export async function listarLixeira(
   contratantes: ItemLixeiraContratante[];
   casas: ItemLixeiraCasa[];
   cidades: ItemLixeiraCidade[];
+  shows: ItemLixeiraShow[];
 }> {
   const [
     artistasRows,
@@ -107,6 +116,7 @@ export async function listarLixeira(
     contratantesRows,
     casasRows,
     cidadesRows,
+    showsRows,
   ] = await Promise.all([
     listarArtistasDeletados(supabase),
     listarUsuariosDeletados(supabase, workspaceId),
@@ -115,6 +125,7 @@ export async function listarLixeira(
     listarContratantesDeletados(supabase, workspaceId),
     listarCasasDeletadas(supabase, workspaceId),
     listarCidadesDeletadas(supabase, workspaceId),
+    listarShowsDeletados(supabase, workspaceId),
   ]);
 
   const artistas: ItemLixeiraArtista[] = artistasRows.map((row) => ({
@@ -168,7 +179,14 @@ export async function listarLixeira(
     diasRestantes: diasRestantes(row.deletado_em),
   }));
 
-  return { artistas, usuarios, orcamentos, vendas, contratantes, casas, cidades };
+  const shows: ItemLixeiraShow[] = showsRows.map((row) => ({
+    tipo: "show",
+    show: rowParaShow(row),
+    deletadoEm: row.deletado_em ?? "",
+    diasRestantes: diasRestantes(row.deletado_em),
+  }));
+
+  return { artistas, usuarios, orcamentos, vendas, contratantes, casas, cidades, shows };
 }
 
 // ====================== Restauração ======================
@@ -233,6 +251,13 @@ export async function restaurarCidadeDaLixeira(
   id: string
 ): Promise<void> {
   await repoRestaurarCidade(supabase, id);
+}
+
+export async function restaurarShowDaLixeira(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  await repoRestaurarShow(supabase, id);
 }
 
 // Apagar definitivamente NÃO é exposto: a única forma de remoção

@@ -7,8 +7,9 @@ import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 
 type Props = {
-  /** Categoria que esta mini-lixeira mostra. */
-  tipo: Exclude<TipoLixeira, "artista" | "usuario">;
+  /** Categoria que esta mini-lixeira mostra. Shows ficam só na AbaLixeira
+   *  completa porque a agenda é visual (calendário), não lista. */
+  tipo: Exclude<TipoLixeira, "artista" | "usuario" | "show">;
 };
 
 /**

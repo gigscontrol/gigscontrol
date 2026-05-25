@@ -133,6 +133,11 @@ export type ItemLixeiraCidade = ItemLixeiraBase & {
   cidade: import("@/types").Cidade;
 };
 
+export type ItemLixeiraShow = ItemLixeiraBase & {
+  tipo: "show";
+  show: import("@/types").Show;
+};
+
 export type TipoLixeira =
   | "artista"
   | "usuario"
@@ -140,7 +145,8 @@ export type TipoLixeira =
   | "venda"
   | "contratante"
   | "casa"
-  | "cidade";
+  | "cidade"
+  | "show";
 
 type WorkspaceContextValue = {
   // Aparência
@@ -195,6 +201,7 @@ type WorkspaceContextValue = {
   lixeiraContratantes: ItemLixeiraContratante[];
   lixeiraCasas: ItemLixeiraCasa[];
   lixeiraCidades: ItemLixeiraCidade[];
+  lixeiraShows: ItemLixeiraShow[];
   carregandoLixeira: boolean;
   recarregarLixeira: () => Promise<void>;
   restaurarDaLixeira: (tipo: TipoLixeira, id: string) => Promise<void>;
@@ -243,6 +250,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [lixeiraContratantes, setLixeiraContratantes] = useState<ItemLixeiraContratante[]>([]);
   const [lixeiraCasas, setLixeiraCasas] = useState<ItemLixeiraCasa[]>([]);
   const [lixeiraCidades, setLixeiraCidades] = useState<ItemLixeiraCidade[]>([]);
+  const [lixeiraShows, setLixeiraShows] = useState<ItemLixeiraShow[]>([]);
   const [carregandoLixeira, setCarregandoLixeira] = useState(false);
 
   // -------- Aparência --------
@@ -497,6 +505,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setLixeiraContratantes([]);
       setLixeiraCasas([]);
       setLixeiraCidades([]);
+      setLixeiraShows([]);
       return;
     }
     setCarregandoLixeira(true);
@@ -510,6 +519,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setLixeiraContratantes((body.contratantes as ItemLixeiraContratante[]) ?? []);
       setLixeiraCasas((body.casas as ItemLixeiraCasa[]) ?? []);
       setLixeiraCidades((body.cidades as ItemLixeiraCidade[]) ?? []);
+      setLixeiraShows((body.shows as ItemLixeiraShow[]) ?? []);
     } catch {
       setLixeiraArtistas([]);
       setLixeiraUsuarios([]);
@@ -518,6 +528,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setLixeiraContratantes([]);
       setLixeiraCasas([]);
       setLixeiraCidades([]);
+      setLixeiraShows([]);
     } finally {
       setCarregandoLixeira(false);
     }
@@ -554,6 +565,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           break;
         case "cidade":
           setLixeiraCidades((p) => p.filter((i) => i.cidade.id !== id));
+          break;
+        case "show":
+          setLixeiraShows((p) => p.filter((i) => i.show.id !== id));
           break;
       }
       // Listas ativas de orçamentos/vendas/contatos recarregam quando o
@@ -624,6 +638,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       lixeiraContratantes,
       lixeiraCasas,
       lixeiraCidades,
+      lixeiraShows,
       carregandoLixeira,
       recarregarLixeira,
       restaurarDaLixeira,
@@ -639,7 +654,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       adicionarUsuario, atualizarUsuario, removerUsuario, resetarSenhaUsuario,
       lixeiraArtistas, lixeiraUsuarios,
       lixeiraOrcamentos, lixeiraVendas,
-      lixeiraContratantes, lixeiraCasas, lixeiraCidades,
+      lixeiraContratantes, lixeiraCasas, lixeiraCidades, lixeiraShows,
       carregandoLixeira, recarregarLixeira, restaurarDaLixeira,
       carregarHistorico,
     ]

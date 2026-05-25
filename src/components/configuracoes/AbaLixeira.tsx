@@ -11,6 +11,7 @@ import {
   Building2,
   MapPin,
   UserCircle,
+  CalendarRange,
 } from "lucide-react";
 import Toast from "../Toast";
 import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
@@ -34,13 +35,14 @@ const META_SUBABA: Record<
   TipoLixeira,
   { label: string; icon: typeof Music; cor: string }
 > = {
-  artista:     { label: "Artistas",     icon: Music,       cor: "var(--module-agenda)" },
-  usuario:     { label: "Equipe",       icon: Users,       cor: "var(--module-contatos)" },
-  orcamento:   { label: "Orçamentos",   icon: FileText,    cor: "var(--module-vendas)" },
-  venda:       { label: "Vendas",       icon: ShoppingBag, cor: "var(--module-vendas)" },
-  contratante: { label: "Contratantes", icon: UserCircle,  cor: "var(--module-contatos)" },
-  casa:        { label: "Casas",        icon: Building2,   cor: "var(--module-contatos)" },
-  cidade:      { label: "Cidades",      icon: MapPin,      cor: "var(--module-contatos)" },
+  artista:     { label: "Artistas",     icon: Music,         cor: "var(--module-agenda)" },
+  usuario:     { label: "Equipe",       icon: Users,         cor: "var(--module-contatos)" },
+  orcamento:   { label: "Orçamentos",   icon: FileText,      cor: "var(--module-vendas)" },
+  venda:       { label: "Vendas",       icon: ShoppingBag,   cor: "var(--module-vendas)" },
+  contratante: { label: "Contratantes", icon: UserCircle,    cor: "var(--module-contatos)" },
+  casa:        { label: "Casas",        icon: Building2,     cor: "var(--module-contatos)" },
+  cidade:      { label: "Cidades",      icon: MapPin,        cor: "var(--module-contatos)" },
+  show:        { label: "Shows",        icon: CalendarRange, cor: "var(--module-agenda)" },
 };
 
 export default function AbaLixeira() {
@@ -52,6 +54,7 @@ export default function AbaLixeira() {
     lixeiraContratantes,
     lixeiraCasas,
     lixeiraCidades,
+    lixeiraShows,
     carregandoLixeira,
     recarregarLixeira,
     restaurarDaLixeira,
@@ -75,10 +78,11 @@ export default function AbaLixeira() {
       contratante: lixeiraContratantes.length,
       casa: lixeiraCasas.length,
       cidade: lixeiraCidades.length,
+      show: lixeiraShows.length,
     }),
     [
       lixeiraArtistas, lixeiraUsuarios, lixeiraOrcamentos, lixeiraVendas,
-      lixeiraContratantes, lixeiraCasas, lixeiraCidades,
+      lixeiraContratantes, lixeiraCasas, lixeiraCidades, lixeiraShows,
     ]
   );
 
@@ -227,6 +231,18 @@ export default function AbaLixeira() {
         i.diasRestantes,
         "var(--module-contatos)",
         i.cidade.nome.charAt(0).toUpperCase()
+      )
+    ),
+    show: lixeiraShows.map((i) =>
+      renderLinha(
+        i.show.id,
+        "show",
+        i.show.id,
+        `${i.show.dj} • ${i.show.data ?? "sem data"}`,
+        i.show.venue || i.show.location || null,
+        i.diasRestantes,
+        "var(--module-agenda)",
+        "SH"
       )
     ),
   };
