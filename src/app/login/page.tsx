@@ -141,7 +141,16 @@ function LoginInner() {
               {!enviando && <ArrowRight size={14} />}
             </button>
 
-            <div className="text-center flex flex-col gap-1.5">
+            <div className="text-center">
+              <Link
+                href="/forgot-password"
+                className="text-xs text-muted hover:text-primary transition-colors"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
+
+            <div className="text-center flex flex-col gap-1.5 pt-3 border-t border-border">
               <Link
                 href="/signup"
                 className="text-sm font-medium hover:text-primary transition-colors"
