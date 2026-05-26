@@ -141,28 +141,22 @@ function LoginInner() {
               {!enviando && <ArrowRight size={14} />}
             </button>
 
-            <div className="text-center">
+            <div className="text-center flex flex-col gap-1.5">
+              <Link
+                href="/signup"
+                className="text-sm font-medium hover:text-primary transition-colors"
+                style={{ color: "var(--module-vendas)" }}
+              >
+                Criar conta agora →
+              </Link>
               <Link
                 href="/planos"
                 className="text-xs text-muted hover:text-secondary transition-colors"
               >
-                Ainda não tem conta? Ver planos
+                Ver planos disponíveis
               </Link>
             </div>
           </form>
-
-          {/* Dica das contas-modelo */}
-          <div className="mt-4 card bg-elevated/40">
-            <div className="text-xs text-muted leading-relaxed">
-              <span className="font-semibold text-secondary">Contas de demonstração</span>
-              <br />
-              Cliente (agência): <code className="text-primary">two</code> /{" "}
-              <code className="text-primary">two</code>
-              <br />
-              Plataforma (super-admin): <code className="text-primary">admin</code> /{" "}
-              <code className="text-primary">admin</code>
-            </div>
-          </div>
         </div>
       </div>
     </div>
