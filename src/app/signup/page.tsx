@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Lock,
   Mail,
   User,
   Building2,
@@ -21,6 +20,8 @@ import {
   type PlanoId,
 } from "@/lib/planos";
 import BotoesOAuth from "@/components/BotoesOAuth";
+import CampoSenha from "@/components/CampoSenha";
+import { avaliarSenha } from "@/lib/senha-forca";
 
 /**
  * Tela de cadastro (signup) em 2 etapas:
@@ -102,7 +103,10 @@ export default function SignupPage() {
     if (!nome.trim()) return setErro("Informe seu nome.");
     if (!nomeAgencia.trim()) return setErro("Informe o nome da agência.");
     if (!email.trim() || !email.includes("@")) return setErro("Email inválido.");
-    if (senha.length < 8) return setErro("A senha precisa ter pelo menos 8 caracteres.");
+    const avalSenha = avaliarSenha(senha);
+    if (!avalSenha.podeUsar) {
+      return setErro(avalSenha.motivos[0] ?? "Escolha uma senha mais segura.");
+    }
     if (!aceitouTermos) return setErro("Você precisa aceitar os Termos de Uso.");
     if (!planoEscolhido) return setErro("Volte e escolha um plano.");
 
@@ -333,11 +337,12 @@ function Etapa2({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const planoInfo = PLANOS.find((p) => p.id === plano)!;
-  // Habilita o botão só quando o email é válido E livre, senha mínima
-  // e termos aceitos. Outros campos validamos no submit.
+  // Habilita o botão só quando o email é válido E livre, senha passa
+  // na política (NIST + bloqueio de senhas comuns) e termos aceitos.
+  // Outros campos validamos no submit.
   const podeEnviar =
     emailStatus === "ok" &&
-    senha.length >= 8 &&
+    avaliarSenha(senha).podeUsar &&
     aceitouTermos &&
     nome.trim().length > 0 &&
     nomeAgencia.trim().length > 0 &&
@@ -403,13 +408,10 @@ function Etapa2({
           setEmail={setEmail}
           status={emailStatus}
         />
-        <Campo
-          icon={<Lock size={14} />}
-          label="Senha (mín. 8 caracteres)"
+        <CampoSenha
+          label="Senha"
           value={senha}
           onChange={setSenha}
-          placeholder="••••••••"
-          type="password"
           autoComplete="new-password"
         />
 

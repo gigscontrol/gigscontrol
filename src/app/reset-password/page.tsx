@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
+import CampoSenha from "@/components/CampoSenha";
+import { avaliarSenha } from "@/lib/senha-forca";
 
 /**
  * Tela de redefinição de senha.
@@ -37,8 +39,9 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
-    if (senha.length < 8) {
-      setErro("A senha precisa ter pelo menos 8 caracteres.");
+    const aval = avaliarSenha(senha);
+    if (!aval.podeUsar) {
+      setErro(aval.motivos[0] ?? "Escolha uma senha mais segura.");
       return;
     }
     if (senha !== senhaConfirm) {
@@ -149,7 +152,7 @@ export default function ResetPasswordPage() {
 
               <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
                 <CampoSenha
-                  label="Nova senha (mín. 8 caracteres)"
+                  label="Nova senha"
                   value={senha}
                   onChange={setSenha}
                   autoFocus
@@ -158,6 +161,7 @@ export default function ResetPasswordPage() {
                   label="Confirmar nova senha"
                   value={senhaConfirm}
                   onChange={setSenhaConfirm}
+                  mostrarForca={false}
                 />
 
                 {erro && (
@@ -195,32 +199,3 @@ export default function ResetPasswordPage() {
   );
 }
 
-function CampoSenha({
-  label,
-  value,
-  onChange,
-  autoFocus,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  autoFocus?: boolean;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-secondary">{label}</span>
-      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-        <Lock size={14} className="text-muted flex-shrink-0" />
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          autoFocus={autoFocus}
-          className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
-        />
-      </div>
-    </label>
-  );
-}
