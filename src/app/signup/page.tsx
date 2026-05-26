@@ -62,6 +62,22 @@ export default function SignupPage() {
 
     setEnviando(true);
     try {
+      // Pre-check: o Supabase devolve sucesso silencioso pra email já
+      // cadastrado (por segurança). Checamos antes pra dar feedback claro.
+      const checkRes = await fetch("/api/auth/email-existe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (checkRes.ok) {
+        const body = await checkRes.json();
+        if (body.existe) {
+          throw new Error(
+            "Esse e-mail já tem uma conta no GIGS CONTROL. Faça login ou recupere sua senha."
+          );
+        }
+      }
+
       const supabase = criarClienteBrowser();
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -76,13 +92,11 @@ export default function SignupPage() {
         },
       });
       if (error) {
-        // Mensagens comuns do Supabase
         if (error.message.toLowerCase().includes("already registered")) {
           throw new Error("Esse e-mail já tem uma conta. Faça login.");
         }
         throw error;
       }
-      // Sucesso → manda pra tela de "confira seu email"
       router.replace(`/signup/verifique-email?email=${encodeURIComponent(email.trim())}`);
     } catch (e) {
       setErro((e as Error).message);
