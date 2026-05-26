@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Lock, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import BotoesOAuth from "@/components/BotoesOAuth";
 
 export default function LoginPage() {
   return (
@@ -86,6 +87,23 @@ function LoginInner() {
             <p className="mt-1.5 text-sm text-secondary">
               Acesse o painel da sua agência
             </p>
+          </div>
+
+          {/* OAuth — Google + Facebook */}
+          <div className="card mb-3">
+            <BotoesOAuth prefixo="Entrar com" />
+          </div>
+
+          {/* Divisor */}
+          <div className="relative my-3">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-main px-3 text-[0.65rem] uppercase tracking-wider text-muted">
+                ou com email
+              </span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="card flex flex-col gap-4">

@@ -19,6 +19,7 @@ import {
   formatarPreco,
   type PlanoId,
 } from "@/lib/planos";
+import BotoesOAuth from "@/components/BotoesOAuth";
 
 /**
  * Tela de cadastro (signup) em 2 etapas:
@@ -289,6 +290,23 @@ function Etapa2({
           Plano <strong className="text-primary">{planoInfo.nome}</strong> ·{" "}
           {formatarPreco(planoInfo.precoMensal)}/mês
         </p>
+      </div>
+
+      {/* OAuth — atalho rápido */}
+      <div className="card mb-3">
+        <BotoesOAuth prefixo="Cadastrar com" />
+      </div>
+
+      {/* Divisor */}
+      <div className="relative my-3">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-main px-3 text-[0.65rem] uppercase tracking-wider text-muted">
+            ou com email
+          </span>
+        </div>
       </div>
 
       <form onSubmit={onSubmit} className="card flex flex-col gap-4">
