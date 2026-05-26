@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,7 @@ import {
   User,
   Building2,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import {
@@ -43,6 +44,51 @@ export default function SignupPage() {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  // Status do email — validação em tempo real (debounce 500ms)
+  type EmailStatus = "idle" | "invalido" | "checando" | "em-uso" | "ok";
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
+
+  // Debounce do email: roda checagem 500ms após parar de digitar
+  useEffect(() => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setEmailStatus("idle");
+      return;
+    }
+    // Validação simples de formato
+    const valido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    if (!valido) {
+      setEmailStatus("invalido");
+      return;
+    }
+    setEmailStatus("checando");
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/auth/email-existe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmed.toLowerCase() }),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) {
+          // Falha técnica: deixa idle pra não bloquear UX por bug nosso
+          setEmailStatus("idle");
+          return;
+        }
+        const body = (await res.json()) as { existe?: boolean };
+        setEmailStatus(body.existe ? "em-uso" : "ok");
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+        setEmailStatus("idle");
+      }
+    }, 500);
+    return () => {
+      ctrl.abort();
+      clearTimeout(timer);
+    };
+  }, [email]);
 
   function escolherPlano(id: PlanoId) {
     setPlanoEscolhido(id);
@@ -153,6 +199,7 @@ export default function SignupPage() {
             setNomeAgencia={setNomeAgencia}
             email={email}
             setEmail={setEmail}
+            emailStatus={emailStatus}
             senha={senha}
             setSenha={setSenha}
             aceitouTermos={aceitouTermos}
@@ -258,6 +305,7 @@ function Etapa2({
   setNomeAgencia,
   email,
   setEmail,
+  emailStatus,
   senha,
   setSenha,
   aceitouTermos,
@@ -274,6 +322,7 @@ function Etapa2({
   setNomeAgencia: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  emailStatus: "idle" | "invalido" | "checando" | "em-uso" | "ok";
   senha: string;
   setSenha: (v: string) => void;
   aceitouTermos: boolean;
@@ -284,6 +333,15 @@ function Etapa2({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const planoInfo = PLANOS.find((p) => p.id === plano)!;
+  // Habilita o botão só quando o email é válido E livre, senha mínima
+  // e termos aceitos. Outros campos validamos no submit.
+  const podeEnviar =
+    emailStatus === "ok" &&
+    senha.length >= 8 &&
+    aceitouTermos &&
+    nome.trim().length > 0 &&
+    nomeAgencia.trim().length > 0 &&
+    !enviando;
   return (
     <div className="w-full max-w-[440px]">
       <button
@@ -340,14 +398,10 @@ function Etapa2({
           placeholder="Agência Estrela"
           autoComplete="organization"
         />
-        <Campo
-          icon={<Mail size={14} />}
-          label="E-mail"
-          value={email}
-          onChange={setEmail}
-          placeholder="seu@email.com"
-          type="email"
-          autoComplete="email"
+        <CampoEmail
+          email={email}
+          setEmail={setEmail}
+          status={emailStatus}
         />
         <Campo
           icon={<Lock size={14} />}
@@ -388,8 +442,8 @@ function Etapa2({
 
         <button
           type="submit"
-          disabled={enviando}
-          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+          disabled={!podeEnviar}
+          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
         >
           {enviando ? "Criando conta…" : "Criar conta e enviar verificação"}
@@ -440,6 +494,82 @@ function Campo({
           className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
         />
       </div>
+    </label>
+  );
+}
+
+/**
+ * Campo de email com validação em tempo real (debounce 500ms).
+ * Mostra ícone à direita (spinner/check/x) + mensagem inline abaixo.
+ */
+function CampoEmail({
+  email,
+  setEmail,
+  status,
+}: {
+  email: string;
+  setEmail: (v: string) => void;
+  status: "idle" | "invalido" | "checando" | "em-uso" | "ok";
+}) {
+  // Cor de borda + mensagem conforme status
+  const borda =
+    status === "em-uso" || status === "invalido"
+      ? "var(--danger)"
+      : status === "ok"
+      ? "var(--success)"
+      : undefined;
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-secondary">E-mail</span>
+      <div
+        className="flex items-center gap-2 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+        style={{ borderColor: borda ?? "var(--border-color)" }}
+      >
+        <Mail size={14} className="text-muted flex-shrink-0" />
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="seu@email.com"
+          autoComplete="email"
+          className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
+        />
+        {status === "checando" && (
+          <Loader2 size={14} className="animate-spin text-muted flex-shrink-0" />
+        )}
+        {status === "ok" && (
+          <Check size={14} style={{ color: "var(--success)" }} className="flex-shrink-0" />
+        )}
+        {(status === "em-uso" || status === "invalido") && (
+          <AlertCircle size={14} style={{ color: "var(--danger)" }} className="flex-shrink-0" />
+        )}
+      </div>
+
+      {/* Mensagem inline abaixo do campo */}
+      {status === "invalido" && (
+        <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
+          Formato de e-mail inválido.
+        </span>
+      )}
+      {status === "em-uso" && (
+        <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
+          Esse e-mail já tem uma conta.{" "}
+          <Link href="/login" className="underline">
+            Entrar
+          </Link>{" "}
+          ou{" "}
+          <Link href="/forgot-password" className="underline">
+            recuperar senha
+          </Link>
+          .
+        </span>
+      )}
+      {status === "ok" && (
+        <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
+          E-mail disponível ✓
+        </span>
+      )}
     </label>
   );
 }
