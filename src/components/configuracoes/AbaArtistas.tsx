@@ -431,6 +431,22 @@ type Props = {
   nomesExistentes: string[];
 };
 
+/**
+ * Normaliza um texto pra virar username:
+ *   "DJ Lúnar" → "djlunar"
+ *   "Black Drumm!" → "blackdrumm"
+ * Remove acentos, lowercase, mantém só [a-z0-9-].
+ */
+function normalizarUsername(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function ModalNovoArtista({
   slugAgencia,
   nomeAgencia,
@@ -445,7 +461,10 @@ function ModalNovoArtista({
   const [cidade, setCidade] = useState<CidadeIBGE | null>(null);
 
   // Seção 2 — acesso
+  // Auto-preenche a partir do nome enquanto o usuário não toca no campo.
+  // Quando ele edita manualmente o username, paramos de espelhar.
   const [usernameRaiz, setUsernameRaiz] = useState("");
+  const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
 
   // Seção 3 — taxa
   const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>("sem-taxa");
@@ -555,7 +574,15 @@ function ModalNovoArtista({
             <Campo label="Nome do artista">
               <input
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setNome(v);
+                  // Espelha o username enquanto o usuário não tiver
+                  // mexido manualmente no campo de login
+                  if (!usernameFoiEditado) {
+                    setUsernameRaiz(normalizarUsername(v));
+                  }
+                }}
                 placeholder="Ex.: DJ Lunar"
                 className="campo-input"
                 autoFocus
@@ -600,11 +627,12 @@ function ModalNovoArtista({
               <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
                 <input
                   value={usernameRaiz}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setUsernameFoiEditado(true);
                     setUsernameRaiz(
                       e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                    )
-                  }
+                    );
+                  }}
                   placeholder="ex: djlunar"
                   className="bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0 flex-1"
                 />
