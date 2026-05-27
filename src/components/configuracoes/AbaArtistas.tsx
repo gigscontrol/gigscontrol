@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Music,
   Plus,
@@ -11,6 +11,7 @@ import {
   PlayCircle,
   RotateCcw,
   Copy,
+  Check,
   CheckCircle2,
   KeyRound,
   MapPin,
@@ -45,9 +46,23 @@ import {
  * de agência (5 modos), rider de camarim e rider de efeitos.
  */
 
+/**
+ * 10 cores padrão pro identificador visual do artista. Curadas pra
+ * serem bem distinguíveis entre si em dark mode (matiz separados ≥30°).
+ * Pra ter dezenas de artistas, o admin também pode escolher cor
+ * customizada via color picker.
+ */
 const CORES = [
-  "#ef4444", "#f59e0b", "#22c55e", "#3b82f6",
-  "#a855f7", "#ec4899", "#14b8a6", "#f97316",
+  "#ef4444", // vermelho
+  "#f97316", // laranja
+  "#f59e0b", // âmbar
+  "#eab308", // amarelo
+  "#22c55e", // verde
+  "#14b8a6", // teal
+  "#06b6d4", // ciano
+  "#3b82f6", // azul
+  "#a855f7", // roxo
+  "#ec4899", // rosa
 ];
 
 const MODOS_TAXA: TaxaAgenciaModo[] = [
@@ -536,6 +551,7 @@ function ModalNovoArtista({
     if (nomesExistentes.includes(n.toLowerCase()))
       return "Já existe um artista com esse nome.";
     if (!usernameValido) return "Username inválido (3+ chars, letras/números/hífen).";
+    if (!cidade) return "Informe a cidade onde o artista reside.";
     // Taxa obrigatória nos modos fixos
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
       const v = parseFloat(taxaValor.replace(",", "."));
@@ -630,30 +646,9 @@ function ModalNovoArtista({
               />
             </Campo>
 
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-secondary">
-                Cor de identificação
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {CORES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCor(c)}
-                    className="h-7 w-7 rounded-full transition-transform"
-                    style={{
-                      backgroundColor: c,
-                      outline:
-                        cor === c ? "2px solid var(--text-primary)" : "none",
-                      outlineOffset: 2,
-                      transform: cor === c ? "scale(1.1)" : "scale(1)",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label="Cidade onde reside (opcional)">
+            <Campo label="Cidade onde reside">
               <CidadeIBGEAutocomplete
                 value={cidade}
                 onChange={setCidade}
@@ -944,6 +939,132 @@ function ModalCredenciais({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Seletor de cor — 10 cores + cor personalizada
+// ============================================================
+
+/**
+ * Seletor visual de cor com 10 swatches padrão + 1 botão "personalizada"
+ * que abre o color picker nativo. Quando o usuário escolhe uma cor que
+ * não está no padrão, ela aparece como 11ª bolinha destacada.
+ */
+function SeletorDeCor({
+  cor,
+  onChange,
+}: {
+  cor: string;
+  onChange: (cor: string) => void;
+}) {
+  // A cor atual está nas predefinidas? Se não, é "personalizada".
+  const ePersonalizada = !CORES.includes(cor);
+
+  // Ref pro input hidden — clicar no botão "personalizada" abre o picker
+  const inputColorRef = useRef<HTMLInputElement>(null);
+
+  function abrirPicker() {
+    inputColorRef.current?.click();
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-secondary">
+        Cor de identificação
+      </span>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        {CORES.map((c) => {
+          const sel = !ePersonalizada && c === cor;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onChange(c)}
+              aria-label={`Cor ${c}`}
+              className="relative h-8 w-8 rounded-full transition-all hover:scale-110"
+              style={{
+                backgroundColor: c,
+                boxShadow: sel
+                  ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${c}`
+                  : "0 1px 2px rgba(0,0,0,0.3)",
+                transform: sel ? "scale(1.1)" : "scale(1)",
+              }}
+            >
+              {sel && (
+                <Check
+                  size={14}
+                  className="absolute inset-0 m-auto text-white drop-shadow"
+                  strokeWidth={3}
+                />
+              )}
+            </button>
+          );
+        })}
+
+        {/* Botão "cor personalizada" — quando ativo, vira a 11ª bolinha
+            mostrando a cor escolhida com um anel destacado */}
+        <button
+          type="button"
+          onClick={abrirPicker}
+          aria-label="Escolher cor personalizada"
+          title="Cor personalizada"
+          className="relative h-8 w-8 rounded-full transition-all hover:scale-110 flex items-center justify-center overflow-hidden"
+          style={{
+            // Quando personalizada está ativa: mostra a cor escolhida
+            // Quando inativa: mostra um gradient arco-íris como "hint" de paleta
+            background: ePersonalizada
+              ? cor
+              : "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #14b8a6, #3b82f6, #a855f7, #ec4899, #ef4444)",
+            boxShadow: ePersonalizada
+              ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${cor}`
+              : "0 1px 2px rgba(0,0,0,0.3)",
+            transform: ePersonalizada ? "scale(1.1)" : "scale(1)",
+          }}
+        >
+          {ePersonalizada ? (
+            <Check
+              size={14}
+              className="text-white drop-shadow"
+              strokeWidth={3}
+            />
+          ) : (
+            <Plus
+              size={14}
+              className="text-white drop-shadow"
+              strokeWidth={2.5}
+              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" }}
+            />
+          )}
+        </button>
+
+        {/* Input nativo escondido — o botão acima dispara o click nele */}
+        <input
+          ref={inputColorRef}
+          type="color"
+          value={cor}
+          onChange={(e) => onChange(e.target.value)}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+        />
+
+        {/* Hex da cor personalizada (preview legível) */}
+        {ePersonalizada && (
+          <span className="text-[0.7rem] font-mono text-muted ml-1 tabular-nums">
+            {cor.toUpperCase()}
+          </span>
+        )}
+      </div>
+
+      {/* Dica sutil */}
+      <p className="text-[0.65rem] text-muted mt-0.5">
+        {ePersonalizada
+          ? "Cor personalizada — clique pra trocar"
+          : "Clique no + pra escolher uma cor personalizada"}
+      </p>
     </div>
   );
 }
