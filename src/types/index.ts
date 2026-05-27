@@ -1,9 +1,59 @@
+/**
+ * Modos de taxa de agência (cobrança que o artista paga à agência por
+ * intermediar a venda). Definido no cadastro do artista.
+ *
+ *  - sem-taxa:        artista não paga nada.
+ *  - perc-fixa:       % do cachê, fixo no artista (admin define).
+ *  - perc-variavel:   % por orçamento (vendedor/admin define a cada
+ *                     novo orçamento).
+ *  - valor-fixo:      R$ por show, fixo no artista (admin define).
+ *  - valor-variavel:  R$ por orçamento (vendedor/admin define a cada
+ *                     novo orçamento).
+ */
+export type TaxaAgenciaModo =
+  | "sem-taxa"
+  | "perc-fixa"
+  | "perc-variavel"
+  | "valor-fixo"
+  | "valor-variavel";
+
+export const LABELS_TAXA_MODO: Record<TaxaAgenciaModo, string> = {
+  "sem-taxa": "Sem taxa",
+  "perc-fixa": "% fixa",
+  "perc-variavel": "% variável",
+  "valor-fixo": "R$ fixo",
+  "valor-variavel": "R$ variável",
+};
+
+/**
+ * Item do rider (camarim ou efeitos) salvo no artista. Funciona como
+ * sugestão pro vendedor escolher um por um na hora de montar o orçamento.
+ */
+export type ItemRider = {
+  nome: string;
+  qtdSugerida: number;
+};
+
 export type DJ = {
   id: string;
   name: string;
   color: string;
   /** Quando true, o artista aparece em cinza e não pode criar/editar nada. */
   acessoSuspenso?: boolean;
+  // ----------- Cadastro completo (etapa 21+) -----------
+  /** Username único (formato: usuario-slugDaAgencia) — usado pra login. */
+  username?: string;
+  /** Cidade onde reside — referência do IBGE (catálogo nacional). */
+  cidadeIbgeId?: string;
+  cidadeNome?: string;
+  cidadeUf?: string;
+  /** Modo de taxa de agência. Default 'sem-taxa'. */
+  taxaModo?: TaxaAgenciaModo;
+  /** Em modos perc-*: percentual (ex 15 = 15%). Em modos valor-*: R$. */
+  taxaValor?: number;
+  /** Rider salvo no artista (sugestões pro orçamento). */
+  riderCamarim?: ItemRider[];
+  riderEfeitos?: ItemRider[];
 };
 
 export type ShowStatus = "confirmado" | "pendente" | "logistica";
@@ -144,6 +194,10 @@ export type Orcamento = {
   hotel: ItemQuantidade[];
   logistica: LogisticaSelecao;
 
+  // taxa de agência (snapshot — não muda se o artista trocar o modo depois)
+  taxaAgenciaValor?: number;
+  taxaModoAplicado?: TaxaAgenciaModo;
+
   // gestão
   validade?: string;
   observacoes?: string;
@@ -272,6 +326,10 @@ export type Venda = {
 
   // 💳 Pagamento
   parcelas: Parcela[];
+
+  // taxa de agência (snapshot do orçamento de origem)
+  taxaAgenciaValor?: number;
+  taxaModoAplicado?: TaxaAgenciaModo;
 
   observacoes?: string;
   criadoEm: string;

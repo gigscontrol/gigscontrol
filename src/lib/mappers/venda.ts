@@ -3,6 +3,7 @@ import type {
   Parcela,
   ItemQuantidade,
   LogisticaSelecao,
+  TaxaAgenciaModo,
 } from "@/types";
 import { LOGISTICA_VAZIA } from "@/types";
 
@@ -45,6 +46,8 @@ export type VendaRow = {
   criado_por: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
+  taxa_agencia_valor: number | string | null;
+  taxa_modo_aplicado: TaxaAgenciaModo | null;
 };
 
 function paraNumero(v: number | string | null | undefined): number {
@@ -101,6 +104,11 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     logistica: logisticaValida(row.logistica),
 
     parcelas,
+    taxaAgenciaValor:
+      row.taxa_agencia_valor !== null && row.taxa_agencia_valor !== undefined
+        ? paraNumero(row.taxa_agencia_valor)
+        : undefined,
+    taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
     observacoes: row.observacoes ?? undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
@@ -140,6 +148,8 @@ export type VendaEscrita = {
   observacoes?: string | null;
   criado_por?: string | null;
   atualizado_em?: string;
+  taxa_agencia_valor?: number | null;
+  taxa_modo_aplicado?: TaxaAgenciaModo | null;
 };
 
 // ============================================================

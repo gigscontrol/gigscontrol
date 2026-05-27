@@ -4,6 +4,7 @@ import type {
   TipoEvento,
   ItemQuantidade,
   LogisticaSelecao,
+  TaxaAgenciaModo,
 } from "@/types";
 import { LOGISTICA_VAZIA } from "@/types";
 
@@ -35,6 +36,8 @@ export type OrcamentoRow = {
   criado_por: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
+  taxa_agencia_valor: number | string | null;
+  taxa_modo_aplicado: TaxaAgenciaModo | null;
 };
 
 function statusValido(s: string | null | undefined): OrcamentoStatus {
@@ -88,6 +91,11 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     validade: row.validade ?? undefined,
     observacoes: row.observacoes ?? undefined,
     showId: row.show_id ?? undefined,
+    taxaAgenciaValor:
+      row.taxa_agencia_valor !== null && row.taxa_agencia_valor !== undefined
+        ? paraNumero(row.taxa_agencia_valor)
+        : undefined,
+    taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -120,4 +128,6 @@ export type OrcamentoEscrita = {
   show_id?: string | null;
   criado_por?: string | null;
   atualizado_em?: string;
+  taxa_agencia_valor?: number | null;
+  taxa_modo_aplicado?: TaxaAgenciaModo | null;
 };
