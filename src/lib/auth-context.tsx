@@ -86,6 +86,7 @@ type WorkspaceRow = {
   id: string;
   nome: string;
   plano: string;
+  slug: string | null;
   criado_em: string;
 };
 
@@ -142,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!profile.is_super_admin && profile.workspace_id) {
         const { data: ws } = await supabase
           .from("workspaces")
-          .select("id, nome, plano, criado_em")
+          .select("id, nome, plano, slug, criado_em")
           .eq("id", profile.workspace_id)
           .single<WorkspaceRow>();
         if (ws) {
@@ -150,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: ws.id,
             nome: ws.nome,
             plano: ws.plano as Workspace["plano"],
+            slug: ws.slug ?? "",
             criadoEm: ws.criado_em,
           };
         }

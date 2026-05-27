@@ -204,6 +204,7 @@ function DetalheCliente({
       id: assinatura!.workspaceId,
       nome: assinatura!.nomeWorkspace,
       plano: assinatura!.plano,
+      slug: "",
       criadoEm: assinatura!.inicioEm,
     });
     router.push("/app");

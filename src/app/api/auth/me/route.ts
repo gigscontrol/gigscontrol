@@ -37,7 +37,7 @@ export async function GET() {
   if (!profile.is_super_admin && profile.workspace_id) {
     const { data: ws } = await supabase
       .from("workspaces")
-      .select("id, nome, plano, criado_em")
+      .select("id, nome, plano, slug, criado_em")
       .eq("id", profile.workspace_id)
       .single();
     workspace = ws ?? null;

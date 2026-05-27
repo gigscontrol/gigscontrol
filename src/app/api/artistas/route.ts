@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   listarArtistasDoWorkspace,
-  criarArtistaNoWorkspace,
+  criarArtistaCompleto,
   LimitePlanoAtingidoError,
+  UsernameEmUsoError,
 } from "@/lib/services/artistas.service";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
@@ -27,6 +29,14 @@ export async function POST(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
 
+  // Somente admin pode criar artistas (porque cria auth user + profile)
+  if (r.sessao.papel !== "admin") {
+    return NextResponse.json(
+      { erro: "Apenas admin pode cadastrar artistas." },
+      { status: 403 }
+    );
+  }
+
   let raw: unknown;
   try {
     raw = await request.json();
@@ -42,7 +52,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Busca o plano do workspace para checar o limite
+  // Plano do workspace pra checar limite
   const { data: ws, error: wsError } = await r.sessao.supabase
     .from("workspaces")
     .select("plano")
@@ -55,23 +65,34 @@ export async function POST(request: Request) {
     );
   }
 
+  // Para criar auth user precisamos do service_role (cliente admin).
+  // Após a criação, a leitura volta pelo cliente normal (RLS aplica).
+  const admin = criarClienteAdmin();
+
   try {
-    const artista = await criarArtistaNoWorkspace(
-      r.sessao.supabase,
-      r.sessao.workspaceId,
-      ws.plano as PlanoId,
-      parsed.data
-    );
+    const { artista, senhaTemporaria, usernameCompleto } =
+      await criarArtistaCompleto(
+        admin,
+        r.sessao.workspaceId,
+        ws.plano as PlanoId,
+        parsed.data
+      );
     await auditAndNotify(r.sessao, {
       modulo: "artista",
       tipo: "criar",
       entidadeId: artista.id,
       entidadeNome: artista.name,
-      descricao: `Cadastrou o artista ${artista.name}`,
+      descricao: `Cadastrou o artista ${artista.name} (${usernameCompleto})`,
     });
-    return NextResponse.json({ artista }, { status: 201 });
+    return NextResponse.json(
+      { artista, senhaTemporaria, usernameCompleto },
+      { status: 201 }
+    );
   } catch (e) {
     if (e instanceof LimitePlanoAtingidoError) {
+      return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
+    if (e instanceof UsernameEmUsoError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
     return NextResponse.json(

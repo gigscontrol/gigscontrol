@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   atualizarArtistaPorId,
   removerArtistaPorId,
@@ -28,12 +29,11 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Update usa admin pra também conseguir ler o profile.username via join
+  // sem precisar de policy extra.
+  const admin = criarClienteAdmin();
   try {
-    const artista = await atualizarArtistaPorId(
-      r.sessao.supabase,
-      params.id,
-      parsed.data
-    );
+    const artista = await atualizarArtistaPorId(admin, params.id, parsed.data);
     await auditAndNotify(r.sessao, {
       modulo: "artista",
       tipo: "editar",
@@ -56,7 +56,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   // Snapshot do nome ANTES de remover, pra auditoria legível
   const { data: snap } = await r.sessao.supabase
     .from("artists")
-    .select("id, name")
+    .select("id, nome")
     .eq("id", params.id)
     .maybeSingle();
   try {
@@ -65,8 +65,8 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
       modulo: "artista",
       tipo: "remover",
       entidadeId: params.id,
-      entidadeNome: snap?.name ?? null,
-      descricao: `Removeu o artista ${snap?.name ?? params.id}`,
+      entidadeNome: snap?.nome ?? null,
+      descricao: `Removeu o artista ${snap?.nome ?? params.id}`,
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -80,6 +80,8 @@ export type Workspace = {
   id: string;
   nome: string;
   plano: PlanoId;
+  /** Slug único da agência — usado pra montar username de artistas. */
+  slug: string;
   criadoEm: string;
 };
 

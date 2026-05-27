@@ -9,7 +9,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DJ } from "@/types";
+import type { DJ, ItemRider, TaxaAgenciaModo } from "@/types";
 import type { Papel } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
@@ -30,6 +30,30 @@ export type Aparencia = {
 };
 
 export type ArtistaWS = DJ;
+
+/** Payload do form de novo artista (mandado pra /api/artistas POST). */
+export type NovoArtistaInput = {
+  nome: string;
+  cor?: string;
+  /** Parte do username digitada pelo admin — o backend concatena o slug. */
+  usernameRaiz: string;
+  /** Cidade onde reside (do catálogo IBGE). */
+  cidadeIbgeId?: string;
+  cidadeNome?: string;
+  cidadeUf?: string;
+  /** Taxa de agência. */
+  taxaModo?: TaxaAgenciaModo;
+  taxaValor?: number;
+  /** Rider salvo no artista. */
+  riderCamarim?: ItemRider[];
+  riderEfeitos?: ItemRider[];
+};
+
+export type NovoArtistaResultado = {
+  artista: ArtistaWS;
+  senhaTemporaria: string;
+  usernameCompleto: string;
+};
 
 /** Papéis administrativos suportados na aba Equipe. */
 export type PapelEquipe = Extract<Papel, "produtor" | "vendedor" | "financeiro">;
@@ -164,9 +188,11 @@ type WorkspaceContextValue = {
   carregandoArtistas: boolean;
   erroArtistas: string | null;
   recarregarArtistas: () => Promise<void>;
-  adicionarArtista: (nome: string, cor: string) => Promise<ArtistaWS>;
+  adicionarArtista: (input: NovoArtistaInput) => Promise<NovoArtistaResultado>;
+  atualizarArtista: (id: string, patch: Partial<NovoArtistaInput>) => Promise<ArtistaWS>;
   removerArtista: (id: string) => Promise<void>;
   alternarSuspensaoArtista: (id: string) => Promise<void>;
+  resetarSenhaArtista: (id: string) => Promise<string>;
 
   // Equipe
   equipe: UsuarioEquipe[];
@@ -348,20 +374,73 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [recarregarArtistas]);
 
   const adicionarArtista = useCallback(
-    async (nome: string, cor: string): Promise<ArtistaWS> => {
+    async (input: NovoArtistaInput): Promise<NovoArtistaResultado> => {
+      const payload: Record<string, unknown> = {
+        nome: input.nome.trim(),
+        username_raiz: input.usernameRaiz.trim().toLowerCase(),
+      };
+      if (input.cor) payload.cor = input.cor;
+      if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
+      if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
+      if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.taxaModo) payload.taxa_modo = input.taxaModo;
+      if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
+      if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
+      if (input.riderEfeitos) payload.rider_efeitos = input.riderEfeitos;
+
       const res = await fetch("/api/artistas", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome: nome.trim(), cor }),
+        body: JSON.stringify(payload),
       });
       const body = await jsonOuErro(res);
       const novo = body.artista as ArtistaWS;
       setArtistas((prev) => [...prev, novo]);
-      return novo;
+      return {
+        artista: novo,
+        senhaTemporaria: body.senhaTemporaria as string,
+        usernameCompleto: body.usernameCompleto as string,
+      };
     },
     []
   );
+
+  const atualizarArtista = useCallback(
+    async (id: string, patch: Partial<NovoArtistaInput>): Promise<ArtistaWS> => {
+      const payload: Record<string, unknown> = {};
+      if (patch.nome !== undefined) payload.nome = patch.nome.trim();
+      if (patch.cor !== undefined) payload.cor = patch.cor;
+      if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
+      if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
+      if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
+      if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
+      if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
+      if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
+
+      const res = await fetch(`/api/artistas/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await jsonOuErro(res);
+      const atualizado = body.artista as ArtistaWS;
+      setArtistas((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
+      return atualizado;
+    },
+    []
+  );
+
+  const resetarSenhaArtista = useCallback(async (id: string): Promise<string> => {
+    const res = await fetch(`/api/artistas/${id}/resetar-senha`, {
+      method: "POST",
+      credentials: "include",
+    });
+    const body = await jsonOuErro(res);
+    return body.senhaTemporaria as string;
+  }, []);
 
   const removerArtista = useCallback(async (id: string): Promise<void> => {
     const res = await fetch(`/api/artistas/${id}`, {
@@ -619,8 +698,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       erroArtistas,
       recarregarArtistas,
       adicionarArtista,
+      atualizarArtista,
       removerArtista,
       alternarSuspensaoArtista,
+      resetarSenhaArtista,
 
       equipe,
       carregandoEquipe,
@@ -649,7 +730,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       aparencia, carregandoAparencia, recarregarAparencia,
       atualizarNomeAgencia, uploadLogo, removerLogo, workspaceCriadoEm,
       artistas, carregandoArtistas, erroArtistas, recarregarArtistas,
-      adicionarArtista, removerArtista, alternarSuspensaoArtista,
+      adicionarArtista, atualizarArtista, removerArtista,
+      alternarSuspensaoArtista, resetarSenhaArtista,
       equipe, carregandoEquipe, erroEquipe, recarregarEquipe,
       adicionarUsuario, atualizarUsuario, removerUsuario, resetarSenhaUsuario,
       lixeiraArtistas, lixeiraUsuarios,
