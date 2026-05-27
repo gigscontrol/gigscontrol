@@ -19,7 +19,7 @@ export type ShowRow = {
   venda_id: string | null;
   criado_em: string | null;
   // joins (selecionados pelo repository)
-  artist?: { id: string; nome: string } | null;
+  artist?: { id: string; nome: string; deletado_em: string | null } | null;
   casa?: { id: string; nome: string } | null;
   cidade?: { id: string; nome: string; estado: string | null } | null;
 };

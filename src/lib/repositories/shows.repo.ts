@@ -8,10 +8,12 @@ import type { ShowRow, ShowEscrita } from "@/lib/mappers/show";
  * Toda query confia no RLS — o filtro por workspace_id está no banco.
  */
 
+// Traz o `deletado_em` do artist pra conseguir esconder na listagem
+// shows cujo artista foi soft-deletado (mandado pra lixeira).
 const SELECT_COM_JOINS = `
   id, workspace_id, artist_id, contratante_id, casa_id, cidade_id,
   data, horario, status, valor, orcamento_id, venda_id, criado_em,
-  artist:artists ( id, nome ),
+  artist:artists ( id, nome, deletado_em ),
   casa:casas ( id, nome ),
   cidade:cidades ( id, nome, estado )
 `;
@@ -28,7 +30,12 @@ export async function listarShows(
   if (aplicarFiltro) q = aplicarFiltro(q);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as ShowRow[];
+  // Esconde shows cujo artista foi soft-deletado (artist_id NULL ainda
+  // aparece — é um show "sem artista" intencional). Quando o admin
+  // restaura o artista pela lixeira, esses shows voltam a aparecer.
+  return ((data ?? []) as unknown as ShowRow[]).filter(
+    (r) => !r.artist_id || (r.artist && r.artist.deletado_em === null)
+  );
 }
 
 export async function listarShowsDeletados(
