@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Music,
   Plus,
@@ -963,6 +963,8 @@ function SeletorDeCor({
   // A cor atual está nas predefinidas? Se não, é "personalizada".
   const ePersonalizada = !CORES.includes(cor);
   const [pickerAberto, setPickerAberto] = useState(false);
+  // Ref do botão "+" — o popover usa pra calcular a altura vertical
+  const botaoPickerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -1002,6 +1004,7 @@ function SeletorDeCor({
         {/* Botão "cor personalizada" — quando ativo, vira a 11ª bolinha
             mostrando a cor escolhida com um anel destacado */}
         <button
+          ref={botaoPickerRef}
           type="button"
           onClick={() => setPickerAberto((v) => !v)}
           aria-label="Escolher cor personalizada"
@@ -1042,10 +1045,11 @@ function SeletorDeCor({
           </span>
         )}
 
-        {/* Popover do color picker custom */}
+        {/* Popover do color picker custom — fica centralizado na viewport */}
         {pickerAberto && (
           <ColorPicker
             cor={cor}
+            anchorRef={botaoPickerRef}
             onApply={(novaCor) => {
               onChange(novaCor);
               setPickerAberto(false);

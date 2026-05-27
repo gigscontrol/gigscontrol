@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Check, X } from "lucide-react";
 
 /**
@@ -26,6 +26,9 @@ type Props = {
   onApply: (cor: string) => void;
   /** Fechar o popover sem aplicar. */
   onClose: () => void;
+  /** Elemento que abriu o picker — usado pra calcular a altura vertical
+   *  do popover (horizontalmente fica centralizado na viewport). */
+  anchorRef: RefObject<HTMLElement | null>;
 };
 
 // ---------- Helpers HSV ↔ Hex ----------
@@ -84,12 +87,21 @@ function hsvPuro(h: number): string {
 
 // ---------- Componente ----------
 
-export default function ColorPicker({ cor, onApply, onClose }: Props) {
+export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props) {
   const [hsv, setHsv] = useState<HSV>(() => hexParaHsv(cor));
   const [hexInput, setHexInput] = useState(cor.toUpperCase());
   const popRef = useRef<HTMLDivElement>(null);
   const svRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
+
+  // Posição fixa na viewport: top alinhado ao anchor, horizontalmente
+  // centralizado em 50%. Calculado quando abre — não acompanha scroll.
+  const [top, setTop] = useState(0);
+  useLayoutEffect(() => {
+    if (!anchorRef.current) return;
+    const r = anchorRef.current.getBoundingClientRect();
+    setTop(r.bottom + 8);
+  }, [anchorRef]);
 
   const hexAtual = hsvParaHex(hsv).toUpperCase();
 
@@ -160,13 +172,18 @@ export default function ColorPicker({ cor, onApply, onClose }: Props) {
   return (
     <div
       ref={popRef}
-      className="absolute top-full left-0 mt-2 z-50 rounded-lg p-3 flex flex-col gap-3"
+      className="rounded-lg p-3 flex flex-col gap-3"
       style={{
+        position: "fixed",
+        top,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 60, // acima do modal pai (50)
         backgroundColor: "var(--bg-surface)",
         border: "1px solid var(--border-color)",
         boxShadow:
           "0 16px 40px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35)",
-        width: 240,
+        width: 280,
       }}
       onClick={(e) => e.stopPropagation()}
     >
