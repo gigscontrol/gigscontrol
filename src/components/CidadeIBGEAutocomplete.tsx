@@ -190,7 +190,7 @@ export default function CidadeIBGEAutocomplete({
 
       {open && !buscando && input.trim().length >= 2 && sugestoes.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md shadow-xl z-40 px-3 py-3 text-xs text-muted">
-          Nenhuma cidade encontrada no catálogo do IBGE.
+          Nenhuma cidade encontrada.
         </div>
       )}
     </div>

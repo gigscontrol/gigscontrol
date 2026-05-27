@@ -657,7 +657,7 @@ function ModalNovoArtista({
               <CidadeIBGEAutocomplete
                 value={cidade}
                 onChange={setCidade}
-                placeholder="Buscar no catálogo do IBGE..."
+                placeholder="Ex: São Paulo, Belo Horizonte..."
               />
             </Campo>
           </Secao>
