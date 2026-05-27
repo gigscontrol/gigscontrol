@@ -19,10 +19,10 @@ export type TaxaAgenciaModo =
 
 export const LABELS_TAXA_MODO: Record<TaxaAgenciaModo, string> = {
   "sem-taxa": "Sem taxa",
-  "perc-fixa": "% fixa",
-  "perc-variavel": "% variável",
-  "valor-fixo": "R$ fixo",
-  "valor-variavel": "R$ variável",
+  "perc-fixa": "(%) Porcentagem fixa",
+  "perc-variavel": "(%) Porcentagem variável",
+  "valor-fixo": "(R$) Valor fixo",
+  "valor-variavel": "(R$) Valor variável",
 };
 
 /**
