@@ -60,6 +60,12 @@ function montarEmailFake(username: string): string {
   return `${username}@interno.gigscontrol.app`;
 }
 
+/** Detecta se o email atual ainda é o fake interno gerado pelo signup. */
+export function emailEhInternoFake(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.toLowerCase().endsWith("@interno.gigscontrol.app");
+}
+
 function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   const out: ArtistaEscrita = {};
   if (input.nome !== undefined) out.nome = input.nome;
@@ -201,15 +207,140 @@ export async function criarArtistaCompleto(
   return { artista: dj, senhaTemporaria, usernameCompleto };
 }
 
+/**
+ * Atualiza o username (login) de um artista. Mantém o profile.username
+ * único globalmente e sincroniza o email fake interno do auth user se
+ * ele ainda for interno; se já trocou pra email real do artista, não
+ * mexe.
+ */
+async function atualizarUsernameArtista(
+  admin: SupabaseClient,
+  artistaId: string,
+  novoUsernameRaiz: string,
+  workspaceId: string
+): Promise<void> {
+  const slug = await buscarSlugWorkspace(admin, workspaceId);
+  const novoCompleto = montarUsernameCompleto(novoUsernameRaiz, slug);
+
+  // Acha o profile vinculado e o username atual
+  const { data: profile, error: errProf } = await admin
+    .from("profiles")
+    .select("id, username, email")
+    .eq("artista_id", artistaId)
+    .maybeSingle();
+  if (errProf || !profile) {
+    throw new Error("Artista sem usuário vinculado.");
+  }
+
+  // Se não mudou de fato, segue em frente sem mexer
+  if (profile.username === novoCompleto) return;
+
+  // Checa unicidade (excluindo o próprio profile)
+  const { count } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("username", novoCompleto)
+    .neq("id", profile.id);
+  if ((count ?? 0) > 0) {
+    throw new UsernameEmUsoError(novoCompleto);
+  }
+
+  // Atualiza o username no profile
+  const { error: errUpd } = await admin
+    .from("profiles")
+    .update({ username: novoCompleto })
+    .eq("id", profile.id);
+  if (errUpd) throw errUpd;
+
+  // Se o email atual ainda é o fake interno, atualiza pra bater com o
+  // novo username (mantém consistência). Se já é email real do artista,
+  // NÃO mexe.
+  if (emailEhInternoFake(profile.email)) {
+    const novoEmailFake = montarEmailFake(novoCompleto);
+    const { error: errAuth } = await admin.auth.admin.updateUserById(
+      profile.id,
+      { email: novoEmailFake, email_confirm: true }
+    );
+    if (errAuth) {
+      throw new Error(
+        "Username atualizado, mas falha ao atualizar email interno: " +
+          errAuth.message
+      );
+    }
+    await admin
+      .from("profiles")
+      .update({ email: novoEmailFake })
+      .eq("id", profile.id);
+  }
+}
+
+/**
+ * Atualiza o email do auth user vinculado ao artista (admin sobrescreve).
+ * Marca como verificado direto (admin garantiu).
+ */
+async function atualizarEmailArtista(
+  admin: SupabaseClient,
+  artistaId: string,
+  novoEmail: string
+): Promise<void> {
+  const { data: profile, error: errProf } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("artista_id", artistaId)
+    .maybeSingle();
+  if (errProf || !profile) {
+    throw new Error("Artista sem usuário vinculado.");
+  }
+  if (profile.email?.toLowerCase() === novoEmail.toLowerCase()) return; // no-op
+
+  const { error: errAuth } = await admin.auth.admin.updateUserById(
+    profile.id,
+    { email: novoEmail, email_confirm: true }
+  );
+  if (errAuth) {
+    if (errAuth.message?.toLowerCase().includes("already registered")) {
+      throw new Error("Esse e-mail já está em uso por outra conta.");
+    }
+    throw new Error(errAuth.message ?? "Falha ao atualizar e-mail.");
+  }
+  await admin.from("profiles").update({ email: novoEmail }).eq("id", profile.id);
+}
+
 export async function atualizarArtistaPorId(
   admin: SupabaseClient,
   id: string,
   input: ArtistaUpdateInput
 ): Promise<DJ> {
-  const row = await repoAtualizar(admin, id, entradaUpdateParaEscrita(input));
-  // Carrega o username também (pra o caller mostrar)
-  const comUsername = await repoBuscarComUsername(admin, row.id);
-  return rowParaDj(comUsername ?? row);
+  // Username e email precisam ser tratados em separado (mexem em auth + profile)
+  if (input.username_raiz) {
+    // Pra saber o workspace, busca pelo próprio artista
+    const { data: row } = await admin
+      .from("artists")
+      .select("workspace_id")
+      .eq("id", id)
+      .single();
+    if (!row) throw new Error("Artista não encontrado.");
+    await atualizarUsernameArtista(
+      admin,
+      id,
+      input.username_raiz,
+      row.workspace_id
+    );
+  }
+  if (input.email_conta) {
+    await atualizarEmailArtista(admin, id, input.email_conta);
+  }
+
+  // Resto dos campos vão pra tabela `artists` direto
+  const escrita = entradaUpdateParaEscrita(input);
+  if (Object.keys(escrita).length > 0) {
+    await repoAtualizar(admin, id, escrita);
+  }
+
+  // Recarrega completo com username pra devolver
+  const final = await repoBuscarComUsername(admin, id);
+  if (!final) throw new Error("Artista não encontrado após atualização.");
+  return rowParaDj(final);
 }
 
 /** Inverte o flag `acesso_suspenso`. */

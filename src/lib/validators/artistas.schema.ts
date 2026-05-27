@@ -67,10 +67,19 @@ export const artistaCreateSchema = z.object({
 export type ArtistaCreateInput = z.infer<typeof artistaCreateSchema>;
 
 /**
- * Update: tudo opcional, exceto `username_raiz` que NÃO pode ser alterado
- * (porque o artista já usa pra login).
+ * Update: tudo opcional. O admin pode editar:
+ *  - `username_raiz` → o backend cuida de sincronizar profiles.username
+ *    e o email fake interno do auth (se ainda for interno)
+ *  - `email_conta` → atualiza o email do auth.users (admin marca como
+ *    verificado direto)
  */
 export const artistaUpdateSchema = artistaCreateSchema
-  .omit({ username_raiz: true })
+  .extend({
+    email_conta: z
+      .string()
+      .email("E-mail inválido.")
+      .max(120)
+      .optional(),
+  })
   .partial();
 export type ArtistaUpdateInput = z.infer<typeof artistaUpdateSchema>;

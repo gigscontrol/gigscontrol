@@ -18,6 +18,11 @@ import {
   Percent,
   DollarSign,
   AtSign,
+  Pencil,
+  Mail,
+  AlertTriangle,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -66,6 +71,24 @@ const CORES = [
   "#ec4899", // rosa
 ];
 
+/**
+ * Snapshot do artista usado pra abrir o modal de edição com os dados
+ * pré-preenchidos. ArtistaWS (=DJ) já tem tudo que precisamos.
+ */
+type ArtistaParaEdicao = {
+  id: string;
+  nome: string;
+  cor: string;
+  usernameAtual: string; // ex: brunosocek-twobookings
+  cidadeIbgeId?: string;
+  cidadeNome?: string;
+  cidadeUf?: string;
+  taxaModo: TaxaAgenciaModo;
+  taxaValor?: number;
+  riderCamarim: string[];
+  riderEfeitos: string[];
+};
+
 const MODOS_TAXA: TaxaAgenciaModo[] = [
   "sem-taxa",
   "perc-fixa",
@@ -94,6 +117,7 @@ export default function AbaArtistas() {
   const noLimite = usados >= limite;
 
   const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<ArtistaParaEdicao | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [resetando, setResetando] = useState<string | null>(null);
   const [credenciaisGeradas, setCredenciaisGeradas] = useState<{
@@ -316,6 +340,28 @@ export default function AbaArtistas() {
                   ) : (
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() =>
+                          setEditando({
+                            id: a.id,
+                            nome: a.name,
+                            cor: a.color,
+                            usernameAtual: a.username ?? "",
+                            cidadeIbgeId: a.cidadeIbgeId,
+                            cidadeNome: a.cidadeNome,
+                            cidadeUf: a.cidadeUf,
+                            taxaModo: a.taxaModo ?? "sem-taxa",
+                            taxaValor: a.taxaValor,
+                            riderCamarim: a.riderCamarim ?? [],
+                            riderEfeitos: a.riderEfeitos ?? [],
+                          })
+                        }
+                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1"
+                        title="Editar artista"
+                      >
+                        <Pencil size={13} />
+                        Editar
+                      </button>
+                      <button
                         onClick={() => aoResetar(a.id, a.name)}
                         disabled={resetando === a.id}
                         className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1 disabled:opacity-50"
@@ -455,6 +501,28 @@ export default function AbaArtistas() {
           }}
           adicionarArtista={adicionarArtista}
           nomesExistentes={artistas.map((a) => a.name.toLowerCase())}
+        />
+      )}
+
+      {/* Modal de edição */}
+      {editando && (
+        <ModalEditarArtista
+          artista={editando}
+          slugAgencia={slugAgencia}
+          onCancelar={() => setEditando(null)}
+          onSalvo={() => {
+            setEditando(null);
+            setToast({ msg: "Artista atualizado.", tipo: "sucesso" });
+          }}
+          onResetarSenha={async () => {
+            const novaSenha = await resetarSenhaArtista(editando.id);
+            setEditando(null);
+            setCredenciaisGeradas({
+              nomeArtista: editando.nome,
+              username: "—",
+              senha: novaSenha,
+            });
+          }}
         />
       )}
 
@@ -818,6 +886,463 @@ function ModalNovoArtista({
             {enviando
               ? "Cadastrando..."
               : `Cadastrar em ${nomeAgencia || "agência"}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Modal — Editar artista
+// ============================================================
+
+type EditarProps = {
+  artista: ArtistaParaEdicao;
+  slugAgencia: string;
+  onCancelar: () => void;
+  onSalvo: () => void;
+  /** Dispara o reset de senha — o caller mostra modal de credenciais. */
+  onResetarSenha: () => Promise<void>;
+};
+
+type DadosConta = {
+  email: string;
+  emailVerificado: boolean;
+  emailFakeInterno: boolean;
+};
+
+function ModalEditarArtista({
+  artista,
+  slugAgencia,
+  onCancelar,
+  onSalvo,
+  onResetarSenha,
+}: EditarProps) {
+  const { atualizarArtista } = useWorkspace();
+
+  // Username "raiz" — o que aparece antes do "-slug". Derivado do
+  // username completo no banco. Ex: "brunosocek-twobookings" → "brunosocek"
+  const usernameRaizInicial = useMemo(
+    () =>
+      artista.usernameAtual.endsWith(`-${slugAgencia}`)
+        ? artista.usernameAtual.slice(0, -`-${slugAgencia}`.length)
+        : artista.usernameAtual,
+    [artista.usernameAtual, slugAgencia]
+  );
+
+  // Estado dos campos editáveis
+  const [nome, setNome] = useState(artista.nome);
+  const [cor, setCor] = useState(artista.cor);
+  const [cidade, setCidade] = useState<CidadeIBGE | null>(
+    artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
+      ? {
+          ibgeId: artista.cidadeIbgeId,
+          nome: artista.cidadeNome,
+          uf: artista.cidadeUf,
+        }
+      : null
+  );
+  const [usernameRaiz, setUsernameRaiz] = useState(usernameRaizInicial);
+  const [emailEditavel, setEmailEditavel] = useState("");
+  const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>(artista.taxaModo);
+  const [taxaValor, setTaxaValor] = useState<string>(
+    artista.taxaValor !== undefined ? String(artista.taxaValor) : ""
+  );
+  const [riderCamarim, setRiderCamarim] = useState<string[]>(artista.riderCamarim);
+  const [riderEfeitos, setRiderEfeitos] = useState<string[]>(artista.riderEfeitos);
+
+  // Dados da conta (email + verificado) — async ao abrir
+  const [conta, setConta] = useState<DadosConta | null>(null);
+  const [carregandoConta, setCarregandoConta] = useState(true);
+
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  // Carrega os dados da conta auth (email + verificado)
+  useEffect(() => {
+    let ativo = true;
+    setCarregandoConta(true);
+    fetch(`/api/artistas/${artista.id}/conta`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as DadosConta;
+      })
+      .then((d) => {
+        if (!ativo) return;
+        setConta(d);
+        setEmailEditavel(d.emailFakeInterno ? "" : d.email);
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setConta(null);
+      })
+      .finally(() => {
+        if (ativo) setCarregandoConta(false);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [artista.id]);
+
+  const usernameValido = useMemo(() => {
+    const v = usernameRaiz.trim();
+    if (v.length < 3) return false;
+    return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(v);
+  }, [usernameRaiz]);
+
+  const usernameMudou = usernameRaiz.trim() !== usernameRaizInicial;
+  const emailMudou =
+    !!conta &&
+    !conta.emailFakeInterno &&
+    emailEditavel.trim().toLowerCase() !== conta.email.toLowerCase();
+
+  function validar(): string | null {
+    const n = nome.trim();
+    if (!n) return "Informe o nome do artista.";
+    if (!cidade) return "Informe a cidade onde o artista reside.";
+    if (!usernameValido)
+      return "Username inválido (3+ chars, letras/números/hífen).";
+    if (emailEditavel.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEditavel.trim())) {
+      return "E-mail inválido.";
+    }
+    if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
+      const v = parseFloat(taxaValor.replace(",", "."));
+      if (!Number.isFinite(v) || v <= 0) {
+        return `Informe o valor da taxa (${LABELS_TAXA_MODO[taxaModo]}).`;
+      }
+      if (taxaModo === "perc-fixa" && v > 100) {
+        return "Porcentagem não pode ser maior que 100%.";
+      }
+    }
+    return null;
+  }
+
+  async function salvar() {
+    setErro(null);
+    const v = validar();
+    if (v) {
+      setErro(v);
+      return;
+    }
+    setEnviando(true);
+    try {
+      const patch: Partial<NovoArtistaInput> = {
+        nome: nome.trim(),
+        cor,
+        cidadeIbgeId: cidade!.ibgeId,
+        cidadeNome: cidade!.nome,
+        cidadeUf: cidade!.uf,
+        taxaModo,
+        taxaValor:
+          taxaModo === "perc-fixa" || taxaModo === "valor-fixo"
+            ? parseFloat(taxaValor.replace(",", "."))
+            : undefined,
+        riderCamarim,
+        riderEfeitos,
+      };
+      // Username e email só se mudaram (evita trabalho desnecessário no backend)
+      if (usernameMudou) {
+        patch.usernameRaiz = usernameRaiz.trim().toLowerCase();
+      }
+      if (emailMudou) {
+        patch.emailConta = emailEditavel.trim();
+      }
+      await atualizarArtista(artista.id, patch);
+      onSalvo();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onCancelar}
+    >
+      <div
+        className="bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
+        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
+          <div className="flex items-center gap-2">
+            <Pencil size={16} style={{ color: "var(--module-vendas)" }} />
+            <div className="section-title">Editar {artista.nome}</div>
+          </div>
+          <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-4 flex flex-col gap-5">
+          {/* Seção 1 — Dados básicos */}
+          <Secao titulo="Dados básicos">
+            <Campo label="Nome do artista">
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="campo-input"
+              />
+            </Campo>
+
+            <SeletorDeCor cor={cor} onChange={setCor} />
+
+            <Campo label="Cidade onde reside">
+              <CidadeIBGEAutocomplete
+                value={cidade}
+                onChange={setCidade}
+                placeholder="Ex: São Paulo, Belo Horizonte..."
+              />
+            </Campo>
+          </Secao>
+
+          {/* Seção 2 — Acesso */}
+          <Secao titulo="Acesso ao sistema">
+            <Campo label="Login (username)">
+              <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                <input
+                  value={usernameRaiz}
+                  onChange={(e) =>
+                    setUsernameRaiz(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                    )
+                  }
+                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0 flex-1"
+                />
+                <span className="text-xs text-muted whitespace-nowrap">
+                  -{slugAgencia}
+                </span>
+              </div>
+              {!usernameValido && usernameRaiz.length > 0 && (
+                <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
+                  Use 3+ chars (letras, números, hífen).
+                </p>
+              )}
+              {usernameMudou && usernameValido && (
+                <div
+                  className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
+                  style={{
+                    backgroundColor: "rgba(245,158,11,0.08)",
+                    color: "var(--warning)",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                  }}
+                >
+                  <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    O artista vai precisar usar este novo login na próxima entrada.
+                  </span>
+                </div>
+              )}
+            </Campo>
+          </Secao>
+
+          {/* Seção 3 — Conta */}
+          <Secao titulo="Conta">
+            {carregandoConta ? (
+              <div className="flex items-center gap-2 text-sm text-muted py-2">
+                <Loader2 size={14} className="animate-spin" />
+                Carregando dados da conta...
+              </div>
+            ) : !conta ? (
+              <p className="text-xs text-danger">
+                Não foi possível carregar os dados da conta.
+              </p>
+            ) : (
+              <>
+                <Campo label="E-mail cadastrado">
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                    <Mail size={14} className="text-muted flex-shrink-0" />
+                    <input
+                      type="email"
+                      value={emailEditavel}
+                      onChange={(e) => setEmailEditavel(e.target.value)}
+                      placeholder={
+                        conta.emailFakeInterno
+                          ? "Defina um e-mail real (opcional)"
+                          : conta.email
+                      }
+                      className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
+                    />
+                  </div>
+                  {/* Status do email */}
+                  <div className="mt-1.5 text-[0.7rem] flex items-center gap-1">
+                    {conta.emailFakeInterno ? (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{ color: "var(--warning)" }}
+                      >
+                        <AlertTriangle size={11} />
+                        Ainda usando e-mail interno (
+                        <span className="font-mono">{conta.email}</span>) — o
+                        artista ainda não trocou.
+                      </span>
+                    ) : conta.emailVerificado ? (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{ color: "var(--success)" }}
+                      >
+                        <ShieldCheck size={11} />
+                        Verificado
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{ color: "var(--warning)" }}
+                      >
+                        <AlertTriangle size={11} />
+                        Não verificado
+                      </span>
+                    )}
+                  </div>
+                  {emailMudou && (
+                    <div
+                      className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
+                      style={{
+                        backgroundColor: "rgba(245,158,11,0.08)",
+                        color: "var(--warning)",
+                        border: "1px solid rgba(245,158,11,0.2)",
+                      }}
+                    >
+                      <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                      <span>
+                        Você está trocando o e-mail. O artista vai usar este
+                        novo endereço pra recuperar senha.
+                      </span>
+                    </div>
+                  )}
+                </Campo>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Gerar uma nova senha aleatória pro artista ${artista.nome}?`
+                      )
+                    ) {
+                      void onResetarSenha();
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated"
+                  style={{
+                    borderColor: "var(--module-vendas)",
+                    color: "var(--module-vendas)",
+                  }}
+                >
+                  <KeyRound size={14} />
+                  Gerar nova senha aleatória
+                </button>
+              </>
+            )}
+          </Secao>
+
+          {/* Seção 4 — Taxa de agência */}
+          <Secao titulo="Taxa de agência">
+            <div className="flex flex-col gap-1.5">
+              {MODOS_TAXA.map((m) => {
+                const sel = taxaModo === m;
+                return (
+                  <label
+                    key={m}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer border transition-colors ${
+                      sel
+                        ? "border-border-strong bg-elevated"
+                        : "border-border hover:border-border-strong"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="taxaModoEdit"
+                      checked={sel}
+                      onChange={() => {
+                        setTaxaModo(m);
+                        if (m !== "perc-fixa" && m !== "valor-fixo") {
+                          setTaxaValor("");
+                        }
+                      }}
+                    />
+                    <span className="text-sm flex-1">{LABELS_TAXA_MODO[m]}</span>
+                    {sel && (m === "perc-fixa" || m === "valor-fixo") && (
+                      <div className="flex items-center gap-1">
+                        {m === "valor-fixo" && (
+                          <span className="text-xs text-muted">R$</span>
+                        )}
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={taxaValor}
+                          onChange={(e) => setTaxaValor(e.target.value)}
+                          placeholder={m === "perc-fixa" ? "15" : "500"}
+                          className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none focus:border-border-strong"
+                          onClick={(e) => e.preventDefault()}
+                        />
+                        {m === "perc-fixa" && (
+                          <span className="text-xs text-muted">%</span>
+                        )}
+                      </div>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </Secao>
+
+          {/* Seção 5 — Rider de camarim */}
+          <Secao
+            titulo={`Rider de camarim (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}
+          >
+            <ListaRider
+              itens={riderCamarim}
+              onChange={setRiderCamarim}
+              catalogoSugestoes={CATALOGO_CAMARIM}
+              placeholderItem="Ex: Jack Daniels"
+              limite={LIMITE_RIDER_CAMARIM}
+            />
+          </Secao>
+
+          {/* Seção 6 — Rider de efeitos */}
+          <Secao
+            titulo={`Rider de efeitos (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}
+          >
+            <ListaRider
+              itens={riderEfeitos}
+              onChange={setRiderEfeitos}
+              catalogoSugestoes={CATALOGO_EFEITOS}
+              placeholderItem="Ex: CO²"
+              limite={LIMITE_RIDER_EFEITOS}
+            />
+          </Secao>
+
+          {erro && (
+            <div
+              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertCircle size={13} className="flex-shrink-0" />
+              {erro}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 p-4 border-t border-border sticky bottom-0 bg-surface">
+          <button onClick={onCancelar} className="btn btn-secondary text-sm">
+            Cancelar
+          </button>
+          <button
+            onClick={salvar}
+            disabled={enviando}
+            className="btn btn-primary text-sm disabled:opacity-60"
+          >
+            <Check size={14} />
+            {enviando ? "Salvando..." : "Salvar alterações"}
           </button>
         </div>
       </div>

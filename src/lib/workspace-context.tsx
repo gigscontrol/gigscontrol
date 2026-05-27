@@ -47,6 +47,8 @@ export type NovoArtistaInput = {
   /** Rider salvo no artista — só nomes. Quantidade vai no orçamento. */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
+  emailConta?: string;
 };
 
 export type NovoArtistaResultado = {
@@ -411,6 +413,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const payload: Record<string, unknown> = {};
       if (patch.nome !== undefined) payload.nome = patch.nome.trim();
       if (patch.cor !== undefined) payload.cor = patch.cor;
+      if (patch.usernameRaiz !== undefined)
+        payload.username_raiz = patch.usernameRaiz.trim().toLowerCase();
+      if (patch.emailConta !== undefined) payload.email_conta = patch.emailConta.trim();
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
