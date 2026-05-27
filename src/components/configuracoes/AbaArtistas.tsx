@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Music,
   Plus,
@@ -23,6 +23,7 @@ import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
 } from "../CidadeIBGEAutocomplete";
+import ColorPicker from "../ColorPicker";
 import {
   useWorkspace,
   type NovoArtistaInput,
@@ -961,13 +962,7 @@ function SeletorDeCor({
 }) {
   // A cor atual está nas predefinidas? Se não, é "personalizada".
   const ePersonalizada = !CORES.includes(cor);
-
-  // Ref pro input hidden — clicar no botão "personalizada" abre o picker
-  const inputColorRef = useRef<HTMLInputElement>(null);
-
-  function abrirPicker() {
-    inputColorRef.current?.click();
-  }
+  const [pickerAberto, setPickerAberto] = useState(false);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -975,7 +970,7 @@ function SeletorDeCor({
         Cor de identificação
       </span>
 
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="relative flex flex-wrap gap-2 items-center">
         {CORES.map((c) => {
           const sel = !ePersonalizada && c === cor;
           return (
@@ -1008,7 +1003,7 @@ function SeletorDeCor({
             mostrando a cor escolhida com um anel destacado */}
         <button
           type="button"
-          onClick={abrirPicker}
+          onClick={() => setPickerAberto((v) => !v)}
           aria-label="Escolher cor personalizada"
           title="Cor personalizada"
           className="relative h-8 w-8 rounded-full transition-all hover:scale-110 flex items-center justify-center overflow-hidden"
@@ -1040,22 +1035,23 @@ function SeletorDeCor({
           )}
         </button>
 
-        {/* Input nativo escondido — o botão acima dispara o click nele */}
-        <input
-          ref={inputColorRef}
-          type="color"
-          value={cor}
-          onChange={(e) => onChange(e.target.value)}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-        />
-
         {/* Hex da cor personalizada (preview legível) */}
         {ePersonalizada && (
           <span className="text-[0.7rem] font-mono text-muted ml-1 tabular-nums">
             {cor.toUpperCase()}
           </span>
+        )}
+
+        {/* Popover do color picker custom */}
+        {pickerAberto && (
+          <ColorPicker
+            cor={cor}
+            onApply={(novaCor) => {
+              onChange(novaCor);
+              setPickerAberto(false);
+            }}
+            onClose={() => setPickerAberto(false)}
+          />
         )}
       </div>
 
