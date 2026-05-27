@@ -80,7 +80,25 @@ export async function listarArtistasDoWorkspace(
   supabase: SupabaseClient
 ): Promise<DJ[]> {
   const rows = await repoListar(supabase);
-  return rows.map(rowParaDj);
+  if (rows.length === 0) return [];
+
+  // Carrega usernames vinculados (papel=artista) pra exibir na lista
+  const ids = rows.map((r) => r.id);
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("artista_id, username")
+    .in("artista_id", ids);
+
+  const mapaUsername = new Map<string, string>();
+  for (const p of profiles ?? []) {
+    if (p.artista_id && p.username) {
+      mapaUsername.set(p.artista_id, p.username);
+    }
+  }
+
+  return rows.map((r) =>
+    rowParaDj({ ...r, username: mapaUsername.get(r.id) ?? null })
+  );
 }
 
 export async function buscarArtistaPorId(

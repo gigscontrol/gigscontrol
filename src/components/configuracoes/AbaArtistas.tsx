@@ -16,6 +16,7 @@ import {
   MapPin,
   Percent,
   DollarSign,
+  AtSign,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -86,7 +87,15 @@ export default function AbaArtistas() {
   } | null>(null);
 
   const [acaoLixeira, setAcaoLixeira] = useState<string | null>(null);
+  const [usernameCopiado, setUsernameCopiado] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
+
+  function copiarUsername(username: string) {
+    navigator.clipboard.writeText(username).then(() => {
+      setUsernameCopiado(username);
+      setTimeout(() => setUsernameCopiado(null), 1800);
+    });
+  }
 
   useEffect(() => {
     void recarregarLixeira();
@@ -212,6 +221,28 @@ export default function AbaArtistas() {
                       {a.name}
                     </div>
                     <div className="text-xs text-muted flex items-center gap-2 flex-wrap mt-0.5">
+                      {a.username && (
+                        <button
+                          type="button"
+                          onClick={() => copiarUsername(a.username!)}
+                          className="inline-flex items-center gap-1 hover:text-primary transition-colors group"
+                          title="Clique pra copiar o login"
+                        >
+                          <AtSign size={10} />
+                          <span className="font-mono">{a.username}</span>
+                          {usernameCopiado === a.username ? (
+                            <CheckCircle2
+                              size={10}
+                              style={{ color: "var(--success)" }}
+                            />
+                          ) : (
+                            <Copy
+                              size={10}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            />
+                          )}
+                        </button>
+                      )}
                       {a.cidadeNome && (
                         <span className="inline-flex items-center gap-1">
                           <MapPin size={10} />
@@ -372,12 +403,21 @@ export default function AbaArtistas() {
       )}
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
-        <strong className="text-primary">Suspender acesso</strong> deixa o
-        artista visível porém em cinza e sem poder criar/editar nada.{" "}
-        <strong className="text-primary">Senha</strong> gera uma nova senha
-        aleatória pro artista (substitui a anterior).{" "}
-        <strong className="text-primary">Remover</strong> manda pra Lixeira
-        (recuperável por 30 dias).
+        <strong className="text-primary">Login do artista:</strong> aparece
+        ao lado do nome (clique pra copiar). Fica salvo no sistema e você
+        consegue acessar sempre que precisar.{" "}
+        <br />
+        <strong className="text-primary">Senha:</strong> só aparece uma vez
+        ao criar. Se o artista perder, clique em{" "}
+        <span className="inline-flex items-center gap-1 font-medium">
+          <KeyRound size={11} /> Senha
+        </span>{" "}
+        pra gerar uma nova.{" "}
+        <br />
+        <strong className="text-primary">Suspender:</strong> artista fica
+        visível mas em cinza e sem editar nada.{" "}
+        <strong className="text-primary">Remover:</strong> manda pra
+        Lixeira (recuperável por 30 dias).
       </div>
 
       <Toast
@@ -656,16 +696,23 @@ function ModalNovoArtista({
             </Campo>
 
             <div
-              className="text-xs rounded-md px-3 py-2"
+              className="text-xs rounded-md px-3 py-2 leading-relaxed"
               style={{
                 backgroundColor: "rgba(168,85,247,0.08)",
                 color: "var(--text-secondary)",
               }}
             >
+              <strong>Login:</strong> fica salvo e você consegue ver
+              depois na lista de artistas.
+              <br />
               <strong>Senha:</strong> será gerada automaticamente (algo
               tipo <span className="font-mono">Lyra-Bravo-7421</span>) e
-              mostrada uma única vez ao final pra você copiar e mandar pro
-              artista. Depois, ele pode trocar quando quiser.
+              mostrada <strong>só uma vez</strong> ao final pra você
+              copiar. Se perder, dá pra gerar uma nova clicando em{" "}
+              <span className="inline-flex items-center gap-1 font-medium">
+                <KeyRound size={11} /> Senha
+              </span>{" "}
+              na lista.
             </div>
           </Secao>
 
