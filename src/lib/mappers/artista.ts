@@ -1,4 +1,4 @@
-import type { DJ, ItemRider, TaxaAgenciaModo } from "@/types";
+import type { DJ, TaxaAgenciaModo } from "@/types";
 
 export type ArtistaRow = {
   id: string;
@@ -14,25 +14,30 @@ export type ArtistaRow = {
   cidade_uf: string | null;
   taxa_modo: TaxaAgenciaModo | null;
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
-  rider_camarim: ItemRider[] | null;
-  rider_efeitos: ItemRider[] | null;
+  rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
+  rider_efeitos: unknown;
   // Username vem por JOIN com profiles na consulta (não está em artists)
   username?: string | null;
 };
 
-/** Garante array de ItemRider mesmo se vier null/undefined. */
-function normalizarRider(raw: unknown): ItemRider[] {
+/**
+ * Normaliza o rider para string[] (lista de nomes).
+ * Aceita 2 formatos pra retrocompat:
+ *  - Atual:  ["Jack Daniels", "Red Bull"]
+ *  - Legado: [{nome:"Jack Daniels", qtdSugerida:1}] — pega só o nome
+ */
+function normalizarRider(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((r) => {
-      if (typeof r !== "object" || r === null) return null;
-      const obj = r as { nome?: unknown; qtdSugerida?: unknown; qtd_sugerida?: unknown };
-      const nome = typeof obj.nome === "string" ? obj.nome : null;
-      const qtd = Number(obj.qtdSugerida ?? obj.qtd_sugerida ?? 1);
-      if (!nome) return null;
-      return { nome, qtdSugerida: Number.isFinite(qtd) && qtd > 0 ? qtd : 1 };
+      if (typeof r === "string") return r.trim();
+      if (typeof r === "object" && r !== null) {
+        const nome = (r as { nome?: unknown }).nome;
+        return typeof nome === "string" ? nome.trim() : "";
+      }
+      return "";
     })
-    .filter((x): x is ItemRider => x !== null);
+    .filter((s) => s.length > 0);
 }
 
 export function rowParaDj(row: ArtistaRow): DJ {
@@ -66,6 +71,6 @@ export type ArtistaEscrita = {
   cidade_uf?: string | null;
   taxa_modo?: TaxaAgenciaModo;
   taxa_valor?: number | null;
-  rider_camarim?: ItemRider[];
-  rider_efeitos?: ItemRider[];
+  rider_camarim?: string[];
+  rider_efeitos?: string[];
 };

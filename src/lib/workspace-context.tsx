@@ -9,7 +9,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DJ, ItemRider, TaxaAgenciaModo } from "@/types";
+import type { DJ, TaxaAgenciaModo } from "@/types";
 import type { Papel } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
@@ -44,9 +44,9 @@ export type NovoArtistaInput = {
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
-  /** Rider salvo no artista. */
-  riderCamarim?: ItemRider[];
-  riderEfeitos?: ItemRider[];
+  /** Rider salvo no artista — só nomes. Quantidade vai no orçamento. */
+  riderCamarim?: string[];
+  riderEfeitos?: string[];
 };
 
 export type NovoArtistaResultado = {

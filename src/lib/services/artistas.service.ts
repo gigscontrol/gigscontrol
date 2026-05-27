@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DJ, ItemRider, TaxaAgenciaModo } from "@/types";
+import type { DJ, TaxaAgenciaModo } from "@/types";
 import { rowParaDj, type ArtistaEscrita } from "@/lib/mappers/artista";
 import {
   listarArtistas as repoListar,
@@ -71,10 +71,8 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   if (input.cidade_uf !== undefined) out.cidade_uf = input.cidade_uf ?? null;
   if (input.taxa_modo !== undefined) out.taxa_modo = input.taxa_modo;
   if (input.taxa_valor !== undefined) out.taxa_valor = input.taxa_valor ?? null;
-  if (input.rider_camarim !== undefined)
-    out.rider_camarim = input.rider_camarim as ItemRider[];
-  if (input.rider_efeitos !== undefined)
-    out.rider_efeitos = input.rider_efeitos as ItemRider[];
+  if (input.rider_camarim !== undefined) out.rider_camarim = input.rider_camarim;
+  if (input.rider_efeitos !== undefined) out.rider_efeitos = input.rider_efeitos;
   return out;
 }
 
@@ -150,8 +148,8 @@ export async function criarArtistaCompleto(
     if (input.cidade_nome) escrita.cidade_nome = input.cidade_nome;
     if (input.cidade_uf) escrita.cidade_uf = input.cidade_uf;
     if (input.taxa_valor !== undefined) escrita.taxa_valor = input.taxa_valor;
-    if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim as ItemRider[];
-    if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos as ItemRider[];
+    if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
+    if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;
     artistaRow = await repoCriar(admin, workspaceId, escrita);
   } catch (e) {
     // Rollback auth user

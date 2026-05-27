@@ -31,7 +31,8 @@ import {
   LABELS_TAXA_MODO,
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
-  type ItemRider,
+  LIMITE_RIDER_CAMARIM,
+  LIMITE_RIDER_EFEITOS,
   type TaxaAgenciaModo,
 } from "@/types";
 
@@ -470,9 +471,9 @@ function ModalNovoArtista({
   const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>("sem-taxa");
   const [taxaValor, setTaxaValor] = useState<string>("");
 
-  // Seção 4 e 5 — rider
-  const [riderCamarim, setRiderCamarim] = useState<ItemRider[]>([]);
-  const [riderEfeitos, setRiderEfeitos] = useState<ItemRider[]>([]);
+  // Seção 4 e 5 — rider (apenas nomes; quantidade vai no orçamento)
+  const [riderCamarim, setRiderCamarim] = useState<string[]>([]);
+  const [riderEfeitos, setRiderEfeitos] = useState<string[]>([]);
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -725,22 +726,24 @@ function ModalNovoArtista({
           </Secao>
 
           {/* Seção 4 — Rider de camarim */}
-          <Secao titulo="Rider de camarim">
+          <Secao titulo={`Rider de camarim (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}>
             <ListaRider
               itens={riderCamarim}
               onChange={setRiderCamarim}
               catalogoSugestoes={CATALOGO_CAMARIM}
               placeholderItem="Ex: Jack Daniels"
+              limite={LIMITE_RIDER_CAMARIM}
             />
           </Secao>
 
           {/* Seção 5 — Rider de efeitos */}
-          <Secao titulo="Rider de efeitos">
+          <Secao titulo={`Rider de efeitos (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}>
             <ListaRider
               itens={riderEfeitos}
               onChange={setRiderEfeitos}
               catalogoSugestoes={CATALOGO_EFEITOS}
               placeholderItem="Ex: CO²"
+              limite={LIMITE_RIDER_EFEITOS}
             />
           </Secao>
 
@@ -944,72 +947,62 @@ function ListaRider({
   onChange,
   catalogoSugestoes,
   placeholderItem,
+  limite,
 }: {
-  itens: ItemRider[];
-  onChange: (itens: ItemRider[]) => void;
+  itens: string[];
+  onChange: (itens: string[]) => void;
   catalogoSugestoes: readonly string[];
   placeholderItem: string;
+  limite: number;
 }) {
   const [novoNome, setNovoNome] = useState("");
-  const [novaQtd, setNovaQtd] = useState(1);
+  const cheio = itens.length >= limite;
 
-  function adicionar(nome: string, qtd: number) {
+  function adicionar(nome: string) {
+    if (cheio) return;
     const n = nome.trim();
     if (!n) return;
     // Evita duplicado por nome
-    if (itens.some((i) => i.nome.toLowerCase() === n.toLowerCase())) return;
-    onChange([...itens, { nome: n, qtdSugerida: qtd }]);
+    if (itens.some((i) => i.toLowerCase() === n.toLowerCase())) return;
+    onChange([...itens, n]);
     setNovoNome("");
-    setNovaQtd(1);
   }
 
   function remover(idx: number) {
     onChange(itens.filter((_, i) => i !== idx));
   }
 
-  function atualizarQtd(idx: number, qtd: number) {
-    onChange(
-      itens.map((it, i) => (i === idx ? { ...it, qtdSugerida: qtd } : it))
-    );
-  }
-
   // Sugestões do catálogo global que ainda não estão na lista
   const sugestoes = catalogoSugestoes.filter(
-    (s) => !itens.some((i) => i.nome.toLowerCase() === s.toLowerCase())
+    (s) => !itens.some((i) => i.toLowerCase() === s.toLowerCase())
   );
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Mensagem explicativa */}
+      <p className="text-[0.7rem] text-muted leading-relaxed">
+        Liste apenas os itens. A <strong>quantidade</strong> é definida em
+        cada orçamento (varia por evento).
+      </p>
+
       {/* Itens já adicionados */}
       {itens.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {itens.map((item, idx) => (
-            <div
-              key={item.nome}
-              className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-1.5"
+        <div className="flex flex-wrap gap-1.5">
+          {itens.map((nome, idx) => (
+            <span
+              key={nome}
+              className="inline-flex items-center gap-1.5 bg-elevated border border-border rounded-md pl-3 pr-1.5 py-1 text-sm text-primary"
             >
-              <span className="flex-1 text-sm text-primary truncate">
-                {item.nome}
-              </span>
-              <input
-                type="number"
-                min={1}
-                max={99}
-                value={item.qtdSugerida}
-                onChange={(e) =>
-                  atualizarQtd(idx, Math.max(1, parseInt(e.target.value) || 1))
-                }
-                className="w-14 bg-main border border-border rounded px-2 py-0.5 text-xs text-right outline-none focus:border-border-strong"
-              />
+              {nome}
               <button
                 type="button"
                 onClick={() => remover(idx)}
-                className="btn-ghost p-1 rounded text-danger"
+                className="hover:text-danger transition-colors"
                 aria-label="Remover item"
               >
-                <X size={13} />
+                <X size={12} />
               </button>
-            </div>
+            </span>
           ))}
         </div>
       )}
@@ -1019,29 +1012,20 @@ function ListaRider({
         <input
           value={novoNome}
           onChange={(e) => setNovoNome(e.target.value)}
-          placeholder={placeholderItem}
+          placeholder={cheio ? `Limite de ${limite} atingido` : placeholderItem}
+          disabled={cheio}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              adicionar(novoNome, novaQtd);
+              adicionar(novoNome);
             }
           }}
-          className="campo-input flex-1 text-sm"
-        />
-        <input
-          type="number"
-          min={1}
-          max={99}
-          value={novaQtd}
-          onChange={(e) =>
-            setNovaQtd(Math.max(1, parseInt(e.target.value) || 1))
-          }
-          className="w-14 bg-elevated border border-border rounded-md px-2 py-2 text-xs text-right outline-none focus:border-border-strong"
+          className="campo-input flex-1 text-sm disabled:opacity-50"
         />
         <button
           type="button"
-          onClick={() => adicionar(novoNome, novaQtd)}
-          disabled={!novoNome.trim()}
+          onClick={() => adicionar(novoNome)}
+          disabled={!novoNome.trim() || cheio}
           className="btn-ghost p-2 rounded disabled:opacity-40"
         >
           <Plus size={14} />
@@ -1049,7 +1033,7 @@ function ListaRider({
       </div>
 
       {/* Chips de sugestões */}
-      {sugestoes.length > 0 && (
+      {!cheio && sugestoes.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1">
           <span className="text-[0.65rem] text-muted self-center">
             Sugestões:
@@ -1058,7 +1042,7 @@ function ListaRider({
             <button
               key={s}
               type="button"
-              onClick={() => adicionar(s, 1)}
+              onClick={() => adicionar(s)}
               className="text-[0.7rem] px-2 py-0.5 rounded-full border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
             >
               + {s}

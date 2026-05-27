@@ -26,13 +26,11 @@ export const LABELS_TAXA_MODO: Record<TaxaAgenciaModo, string> = {
 };
 
 /**
- * Item do rider (camarim ou efeitos) salvo no artista. Funciona como
- * sugestão pro vendedor escolher um por um na hora de montar o orçamento.
+ * Limites de itens do rider salvo no artista. Definidos no produto pra
+ * evitar listas absurdas que poluem o orçamento.
  */
-export type ItemRider = {
-  nome: string;
-  qtdSugerida: number;
-};
+export const LIMITE_RIDER_CAMARIM = 10;
+export const LIMITE_RIDER_EFEITOS = 15;
 
 export type DJ = {
   id: string;
@@ -51,9 +49,12 @@ export type DJ = {
   taxaModo?: TaxaAgenciaModo;
   /** Em modos perc-*: percentual (ex 15 = 15%). Em modos valor-*: R$. */
   taxaValor?: number;
-  /** Rider salvo no artista (sugestões pro orçamento). */
-  riderCamarim?: ItemRider[];
-  riderEfeitos?: ItemRider[];
+  /**
+   * Rider salvo no artista — só os NOMES dos itens. A quantidade é
+   * definida em cada orçamento (porque varia por evento).
+   */
+  riderCamarim?: string[];
+  riderEfeitos?: string[];
 };
 
 export type ShowStatus = "confirmado" | "pendente" | "logistica";

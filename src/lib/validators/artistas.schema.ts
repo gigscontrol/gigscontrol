@@ -1,10 +1,14 @@
 import { z } from "zod";
+import { LIMITE_RIDER_CAMARIM, LIMITE_RIDER_EFEITOS } from "@/types";
 
-/** Item do rider salvo no artista. */
-const itemRiderSchema = z.object({
-  nome: z.string().min(1).max(80),
-  qtdSugerida: z.number().int().min(1).max(99),
-});
+/**
+ * Item do rider salvo no artista: só o NOME do item.
+ * A quantidade é definida em cada orçamento (varia por evento).
+ */
+const itemRiderSchema = z
+  .string()
+  .min(1, "Nome do item obrigatório.")
+  .max(80, "Nome do item muito longo.");
 
 const taxaModoSchema = z.enum([
   "sem-taxa",
@@ -44,9 +48,21 @@ export const artistaCreateSchema = z.object({
   // Taxa de agência
   taxa_modo: taxaModoSchema.optional(),
   taxa_valor: z.number().min(0).max(999999).optional(),
-  // Rider
-  rider_camarim: z.array(itemRiderSchema).max(50).optional(),
-  rider_efeitos: z.array(itemRiderSchema).max(50).optional(),
+  // Rider (só nomes — a quantidade vai pro orçamento)
+  rider_camarim: z
+    .array(itemRiderSchema)
+    .max(
+      LIMITE_RIDER_CAMARIM,
+      `Máximo ${LIMITE_RIDER_CAMARIM} itens no rider de camarim.`
+    )
+    .optional(),
+  rider_efeitos: z
+    .array(itemRiderSchema)
+    .max(
+      LIMITE_RIDER_EFEITOS,
+      `Máximo ${LIMITE_RIDER_EFEITOS} itens no rider de efeitos.`
+    )
+    .optional(),
 });
 export type ArtistaCreateInput = z.infer<typeof artistaCreateSchema>;
 
