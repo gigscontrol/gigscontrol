@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
 /**
  * POST /api/workspace/ativar-plano
  *
- * Mock de ativação de plano. Atualiza `subscriptions.status` de 'trial'
- * pra 'ativa' (cria a row se não existir). NÃO cobra nada — é só o
- * placeholder pra quando o Stripe entrar.
+ * Mock de ativação de plano (futuramente disparado pelo webhook do
+ * Stripe). Atualiza `workspaces.plano` pro plano escolhido e
+ * marca a subscription como 'ativa' (sem trial).
  *
- * Em produção real, isso vai ser disparado pelo webhook do Stripe
- * quando o pagamento for confirmado.
+ * Body: { plano?: 'individual' | 'agencia' | 'plus' }
+ * Se `plano` não vier, usa o plano que já está no workspace.
  */
-export async function POST() {
+const schema = z.object({
+  plano: z.enum(["individual", "agencia", "plus"]).optional(),
+});
+
+export async function POST(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   if (r.sessao.papel !== "admin") {
@@ -22,53 +27,68 @@ export async function POST() {
     );
   }
 
+  let raw: unknown = {};
+  try {
+    raw = await request.json();
+  } catch {
+    // Body opcional — segue com {}
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ erro: "Plano inválido." }, { status: 400 });
+  }
+
   const admin = criarClienteAdmin();
   const workspaceId = r.sessao.workspaceId;
 
   try {
-    // Pega o plano do workspace pra calcular o valor
-    const { data: ws, error: errWs } = await admin
-      .from("workspaces")
-      .select("plano, ciclo")
-      .eq("id", workspaceId)
-      .single();
-    if (errWs || !ws) {
-      return NextResponse.json(
-        { erro: "Workspace não encontrado." },
-        { status: 404 }
-      );
+    // Resolve o plano (do body ou do workspace existente)
+    let planoFinal = parsed.data.plano;
+    if (!planoFinal) {
+      const { data: ws } = await admin
+        .from("workspaces")
+        .select("plano")
+        .eq("id", workspaceId)
+        .single();
+      planoFinal = (ws?.plano as "individual" | "agencia" | "plus") ?? "individual";
+    } else {
+      // Veio plano no body — atualiza o workspace também
+      await admin
+        .from("workspaces")
+        .update({ plano: planoFinal, status: "ativa" })
+        .eq("id", workspaceId);
     }
 
-    // Já existe subscription?
+    // Cria/atualiza subscription
     const { data: sub } = await admin
       .from("subscriptions")
-      .select("id, status")
+      .select("id")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
 
     if (sub) {
-      // Atualiza pra ativa
       const { error } = await admin
         .from("subscriptions")
         .update({
+          plano: planoFinal,
           status: "ativa",
+          trial_termina_em: null, // sai do trial
           inicio_em: new Date().toISOString().slice(0, 10),
         })
         .eq("id", sub.id);
       if (error) throw error;
     } else {
-      // Cria nova
       const { error } = await admin.from("subscriptions").insert({
         workspace_id: workspaceId,
-        plano: ws.plano,
-        ciclo: ws.ciclo ?? "mensal",
+        plano: planoFinal,
+        ciclo: "mensal",
         status: "ativa",
         inicio_em: new Date().toISOString().slice(0, 10),
       });
       if (error) throw error;
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, plano: planoFinal });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao ativar plano." },

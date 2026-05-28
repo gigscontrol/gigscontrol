@@ -5,6 +5,10 @@ import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
 import { workspaceUpdateSchema } from "@/lib/validators/workspace.schema";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
+const COLS =
+  "id, nome, plano, ciclo, status, logo_url, slug, whatsapp, cor_acento, " +
+  "cidade_ibge_id, cidade_nome, cidade_uf, criado_em";
+
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -12,7 +16,7 @@ export async function GET() {
   try {
     const { data, error } = await r.sessao.supabase
       .from("workspaces")
-      .select("id, nome, plano, ciclo, status, logo_url, slug, criado_em")
+      .select(COLS)
       .eq("id", r.sessao.workspaceId)
       .single<WorkspaceRow>();
     if (error || !data) {
@@ -30,10 +34,18 @@ export async function GET() {
   }
 }
 
-/** PATCH /api/workspace — atualiza nome. */
+/** PATCH /api/workspace — atualiza nome, identidade (whatsapp, cor, cidade). */
 export async function PATCH(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+
+  // Só admin pode editar dados da agência
+  if (r.sessao.papel !== "admin") {
+    return NextResponse.json(
+      { erro: "Apenas admin pode editar a agência." },
+      { status: 403 }
+    );
+  }
 
   let raw: unknown;
   try {
@@ -50,12 +62,27 @@ export async function PATCH(request: Request) {
     );
   }
 
+  // Constrói o patch só com os campos que vieram (não sobrescreve com null
+  // se o caller não enviou a chave)
   const patch: Record<string, unknown> = {};
   if (parsed.data.nome !== undefined) patch.nome = parsed.data.nome;
+  if (parsed.data.whatsapp !== undefined) patch.whatsapp = parsed.data.whatsapp;
+  if (parsed.data.cor_acento !== undefined) patch.cor_acento = parsed.data.cor_acento;
+  if (parsed.data.cidade_ibge_id !== undefined) patch.cidade_ibge_id = parsed.data.cidade_ibge_id;
+  if (parsed.data.cidade_nome !== undefined) patch.cidade_nome = parsed.data.cidade_nome;
+  if (parsed.data.cidade_uf !== undefined) patch.cidade_uf = parsed.data.cidade_uf;
 
-  // Usa o cliente admin (service_role) porque a policy `workspaces_escrita`
-  // só permite UPDATE para super-admin. A autorização do cliente
-  // (que é dono do workspace) já foi validada por `autenticarComWorkspace`.
+  if (Object.keys(patch).length === 0) {
+    // Nada pra atualizar — devolve o estado atual
+    const { data } = await r.sessao.supabase
+      .from("workspaces")
+      .select(COLS)
+      .eq("id", r.sessao.workspaceId)
+      .single<WorkspaceRow>();
+    return NextResponse.json({ workspace: data ? rowParaWorkspace(data) : null });
+  }
+
+  // Cliente admin porque RLS de workspaces só permite escrita pra super-admin
   const admin = criarClienteAdmin();
 
   try {
@@ -63,7 +90,7 @@ export async function PATCH(request: Request) {
       .from("workspaces")
       .update(patch)
       .eq("id", r.sessao.workspaceId)
-      .select("id, nome, plano, ciclo, status, logo_url, slug, criado_em")
+      .select(COLS)
       .single<WorkspaceRow>();
     if (error || !data) {
       return NextResponse.json(
@@ -72,15 +99,13 @@ export async function PATCH(request: Request) {
       );
     }
     const ws = rowParaWorkspace(data);
-    if (parsed.data.nome !== undefined) {
-      await auditAndNotify(r.sessao, {
-        modulo: "aparencia",
-        tipo: "editar",
-        entidadeId: ws.id,
-        entidadeNome: ws.nomeAgencia,
-        descricao: `Alterou o nome da agência para "${ws.nomeAgencia}"`,
-      });
-    }
+    await auditAndNotify(r.sessao, {
+      modulo: "aparencia",
+      tipo: "editar",
+      entidadeId: ws.id,
+      entidadeNome: ws.nomeAgencia,
+      descricao: `Atualizou dados da agência (${Object.keys(patch).join(", ")})`,
+    });
     return NextResponse.json({ workspace: ws });
   } catch (e) {
     return NextResponse.json(

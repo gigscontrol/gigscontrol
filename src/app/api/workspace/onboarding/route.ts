@@ -36,12 +36,26 @@ export async function GET() {
   const workspaceId = r.sessao.workspaceId;
 
   try {
-    // Workspace + plano
+    // Workspace + plano + identidade (pra etapa 3 saber o que já tá preenchido)
     const { data: ws, error: errWs } = await admin
       .from("workspaces")
-      .select("id, nome, plano, logo_url, onboarding_completo")
+      .select(
+        "id, nome, plano, logo_url, onboarding_completo, whatsapp, " +
+          "cor_acento, cidade_ibge_id, cidade_nome, cidade_uf"
+      )
       .eq("id", workspaceId)
-      .single();
+      .single<{
+        id: string;
+        nome: string;
+        plano: string;
+        logo_url: string | null;
+        onboarding_completo: boolean;
+        whatsapp: string | null;
+        cor_acento: string | null;
+        cidade_ibge_id: string | null;
+        cidade_nome: string | null;
+        cidade_uf: string | null;
+      }>();
     if (errWs || !ws) {
       return NextResponse.json(
         { erro: "Workspace não encontrado." },
@@ -49,10 +63,10 @@ export async function GET() {
       );
     }
 
-    // Subscription (status de pagamento)
+    // Subscription (status de pagamento + trial)
     const { data: sub } = await admin
       .from("subscriptions")
-      .select("status, ciclo")
+      .select("status, ciclo, trial_termina_em")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
 
@@ -87,6 +101,7 @@ export async function GET() {
     return NextResponse.json({
       onboardingCompleto: !!ws.onboarding_completo,
       subscriptionStatus: sub?.status ?? "trial",
+      trialTerminaEm: sub?.trial_termina_em ?? null,
       plano: plano
         ? {
             id: plano.id,
@@ -95,12 +110,26 @@ export async function GET() {
             tagline: plano.tagline,
           }
         : null,
+      planoEscolhido: ws.plano,
       checklist: {
         contaCriada: true, // sempre
+        planoEscolhido: !!ws.plano && (sub?.status === "ativa" || sub?.status === "trial"),
+        agenciaConfigurada:
+          !!ws.whatsapp && !!ws.cidade_ibge_id, // mínimos pra etapa 3
         temArtista: (nArtistas ?? 0) > 0,
+        temEquipe: (nEquipe ?? 0) > 0,
+        // Mantém os antigos pra compat — não vai mais ser usado
         temContato: (nContratantes ?? 0) + (nCasas ?? 0) > 0,
         logoSubida: !!ws.logo_url,
-        temEquipe: (nEquipe ?? 0) > 0,
+      },
+      identidade: {
+        nomeAgencia: ws.nome,
+        whatsapp: ws.whatsapp,
+        corAcento: ws.cor_acento,
+        cidadeIbgeId: ws.cidade_ibge_id,
+        cidadeNome: ws.cidade_nome,
+        cidadeUf: ws.cidade_uf,
+        logoUrl: ws.logo_url,
       },
       nomeAgencia: ws.nome,
     });
