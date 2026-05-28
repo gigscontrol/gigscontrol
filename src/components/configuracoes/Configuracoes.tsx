@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
-  Palette,
+  Settings,
   ShieldCheck,
   Music,
   Users,
@@ -11,7 +11,7 @@ import {
   History,
   Bell,
 } from "lucide-react";
-import AbaAparencia from "./AbaAparencia";
+import AbaGeral from "./AbaGeral";
 import AbaSeguranca from "./AbaSeguranca";
 import AbaArtistas from "./AbaArtistas";
 import AbaEquipe from "./AbaEquipe";
@@ -28,12 +28,12 @@ import { useAuth } from "@/lib/auth-context";
  *   só veem a aba "Segurança" — para alterar a própria senha.
  */
 
-type AbaConfig = "aparencia" | "seguranca" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
+type AbaConfig = "geral" | "seguranca" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
 
-type AbaDef = { id: AbaConfig; label: string; icon: typeof Palette };
+type AbaDef = { id: AbaConfig; label: string; icon: typeof Settings };
 
 const ABAS_ADMIN: AbaDef[] = [
-  { id: "aparencia", label: "Aparência", icon: Palette },
+  { id: "geral", label: "Geral", icon: Settings },
   { id: "artistas", label: "Artistas", icon: Music },
   { id: "equipe", label: "Equipe", icon: Users },
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
@@ -106,7 +106,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
       )}
 
       {/* Conteúdo */}
-      {aba === "aparencia" && isAdmin && <AbaAparencia />}
+      {aba === "geral" && isAdmin && <AbaGeral />}
       {aba === "artistas" && isAdmin && <AbaArtistas />}
       {aba === "equipe" && isAdmin && <AbaEquipe />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}
