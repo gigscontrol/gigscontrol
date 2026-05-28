@@ -134,6 +134,9 @@ export type Cidade = {
   /** Coordenadas para o Mapa de Dobras (busca por raio). */
   latitude?: number;
   longitude?: number;
+  /** ID do município no catálogo do IBGE. Cidades novas (a partir da
+   *  migração 22) sempre têm. Cidades legadas/manuais podem não ter. */
+  ibgeId?: string;
 };
 
 // ----------- Orçamentos -----------

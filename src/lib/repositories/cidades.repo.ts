@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CidadeRow, CidadeEscrita } from "@/lib/mappers/contatos";
 
-const COLS = "id, workspace_id, nome, estado, latitude, longitude";
+const COLS = "id, workspace_id, nome, estado, latitude, longitude, ibge_id";
 
 export async function listarCidades(supabase: SupabaseClient): Promise<CidadeRow[]> {
   const { data, error } = await supabase
@@ -94,4 +94,44 @@ export async function atualizarCidade(
 export async function removerCidade(supabase: SupabaseClient, id: string): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
   await moverCidadeParaLixeira(supabase, id);
+}
+
+/** Busca uma cidade do workspace pelo ID do IBGE (catálogo nacional). */
+export async function buscarCidadePorIbge(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  ibgeId: string
+): Promise<CidadeRow | null> {
+  const { data, error } = await supabase
+    .from("cidades")
+    .select(COLS)
+    .eq("workspace_id", workspaceId)
+    .eq("ibge_id", ibgeId)
+    .is("deletado_em", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as CidadeRow) ?? null;
+}
+
+/**
+ * Busca cidade ativa do workspace por nome+UF (case-insensitive). Usado
+ * pra "adotar" uma cidade legada (sem ibge_id) quando o user escolhe
+ * uma cidade IBGE com o mesmo nome — evita duplicação.
+ */
+export async function buscarCidadePorNomeUf(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  nome: string,
+  uf: string
+): Promise<CidadeRow | null> {
+  const { data, error } = await supabase
+    .from("cidades")
+    .select(COLS)
+    .eq("workspace_id", workspaceId)
+    .ilike("nome", nome)
+    .ilike("estado", uf)
+    .is("deletado_em", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as CidadeRow) ?? null;
 }

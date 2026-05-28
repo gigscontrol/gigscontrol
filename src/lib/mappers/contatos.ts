@@ -12,6 +12,7 @@ export type CidadeRow = {
   estado: string | null;
   latitude: number | string | null;
   longitude: number | string | null;
+  ibge_id: string | null;
 };
 
 function paraNumero(v: number | string | null | undefined): number | undefined {
@@ -21,14 +22,18 @@ function paraNumero(v: number | string | null | undefined): number | undefined {
 }
 
 export function rowParaCidade(row: CidadeRow): Cidade {
-  return {
+  const c: Cidade = {
     id: row.id,
     nome: row.nome,
     estado: row.estado ?? "",
     regiao: ufParaRegiao(row.estado),
-    latitude: paraNumero(row.latitude),
-    longitude: paraNumero(row.longitude),
   };
+  const lat = paraNumero(row.latitude);
+  const lng = paraNumero(row.longitude);
+  if (lat !== undefined) c.latitude = lat;
+  if (lng !== undefined) c.longitude = lng;
+  if (row.ibge_id) c.ibgeId = row.ibge_id;
+  return c;
 }
 
 export type CidadeEscrita = {
@@ -37,6 +42,7 @@ export type CidadeEscrita = {
   estado?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  ibge_id?: string | null;
 };
 
 // ============================================================
