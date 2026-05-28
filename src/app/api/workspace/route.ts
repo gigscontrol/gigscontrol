@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const { data, error } = await r.sessao.supabase
       .from("workspaces")
-      .select("id, nome, plano, ciclo, status, logo_url, criado_em")
+      .select("id, nome, plano, ciclo, status, logo_url, slug, criado_em")
       .eq("id", r.sessao.workspaceId)
       .single<WorkspaceRow>();
     if (error || !data) {
@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
       .from("workspaces")
       .update(patch)
       .eq("id", r.sessao.workspaceId)
-      .select("id, nome, plano, ciclo, status, logo_url, criado_em")
+      .select("id, nome, plano, ciclo, status, logo_url, slug, criado_em")
       .single<WorkspaceRow>();
     if (error || !data) {
       return NextResponse.json(

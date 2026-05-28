@@ -8,6 +8,7 @@ export type WorkspaceRow = {
   ciclo: string | null;
   status: string | null;
   logo_url: string | null;
+  slug: string | null;
   criado_em: string | null;
 };
 
@@ -22,6 +23,8 @@ export type WorkspaceResumo = WorkspaceAparencia & {
   plano: PlanoId;
   ciclo: string | null;
   status: string | null;
+  /** Slug único — vai pro fim do username dos artistas/equipe. */
+  slug: string;
   /** ISO timestamp da criação do workspace (limite inferior dos filtros de data). */
   criadoEm: string | null;
 };
@@ -34,6 +37,7 @@ export function rowParaWorkspace(row: WorkspaceRow): WorkspaceResumo {
     plano: row.plano as PlanoId,
     ciclo: row.ciclo,
     status: row.status,
+    slug: row.slug ?? "",
     criadoEm: row.criado_em,
   };
 }
