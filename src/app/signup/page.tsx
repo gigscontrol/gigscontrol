@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
   Mail,
@@ -14,19 +13,18 @@ import {
   Loader2,
 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
-import {
-  PLANOS,
-  formatarPreco,
-  type PlanoId,
-} from "@/lib/planos";
+import type { PlanoId } from "@/lib/planos";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
 
 /**
- * Tela de cadastro (signup) em 2 etapas:
- *   1) Escolha do plano
- *   2) Form: nome, e-mail, senha, nome da agência, termos
+ * Tela de cadastro (signup) — uma única etapa:
+ *   nome, e-mail, senha, nome da agência, termos.
+ *
+ * O PLANO é escolhido depois, na Etapa 2 do /onboarding (com opção
+ * de teste grátis 7 dias). Aqui o plano vai como "individual" no
+ * user_metadata só pra preencher — o user troca depois.
  *
  * Cliente chama supabase.auth.signUp() com user_metadata. O Supabase
  * envia o email de confirmação. Quando o usuário clicar no link, cai
@@ -34,8 +32,9 @@ import { avaliarSenha } from "@/lib/senha-forca";
  */
 export default function SignupPage() {
   const router = useRouter();
-  const [etapa, setEtapa] = useState<1 | 2>(1);
-  const [planoEscolhido, setPlanoEscolhido] = useState<PlanoId | null>(null);
+  // Plano fixo no signup — o usuário escolhe de verdade na Etapa 2
+  // do /onboarding (com opção de trial grátis 7 dias).
+  const planoFixoInicial: PlanoId = "individual";
 
   // Form
   const [nome, setNome] = useState("");
@@ -91,11 +90,6 @@ export default function SignupPage() {
     };
   }, [email]);
 
-  function escolherPlano(id: PlanoId) {
-    setPlanoEscolhido(id);
-    setEtapa(2);
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
@@ -108,7 +102,6 @@ export default function SignupPage() {
       return setErro(avalSenha.motivos[0] ?? "Escolha uma senha mais segura.");
     }
     if (!aceitouTermos) return setErro("Você precisa aceitar os Termos de Uso.");
-    if (!planoEscolhido) return setErro("Volte e escolha um plano.");
 
     setEnviando(true);
     try {
@@ -137,7 +130,7 @@ export default function SignupPage() {
           data: {
             nome: nome.trim(),
             nome_agencia: nomeAgencia.trim(),
-            plano_escolhido: planoEscolhido,
+            plano_escolhido: planoFixoInicial,
           },
         },
       });
@@ -189,120 +182,32 @@ export default function SignupPage() {
       </nav>
 
       <div className="relative flex-1 flex items-start justify-center px-6 py-10">
-        {etapa === 1 ? (
-          <Etapa1
-            planoSelecionado={planoEscolhido}
-            onEscolher={escolherPlano}
-          />
-        ) : (
-          <Etapa2
-            plano={planoEscolhido!}
-            nome={nome}
-            setNome={setNome}
-            nomeAgencia={nomeAgencia}
-            setNomeAgencia={setNomeAgencia}
-            email={email}
-            setEmail={setEmail}
-            emailStatus={emailStatus}
-            senha={senha}
-            setSenha={setSenha}
-            aceitouTermos={aceitouTermos}
-            setAceitouTermos={setAceitouTermos}
-            erro={erro}
-            enviando={enviando}
-            onVoltar={() => setEtapa(1)}
-            onSubmit={handleSubmit}
-          />
-        )}
+        <FormCadastro
+          nome={nome}
+          setNome={setNome}
+          nomeAgencia={nomeAgencia}
+          setNomeAgencia={setNomeAgencia}
+          email={email}
+          setEmail={setEmail}
+          emailStatus={emailStatus}
+          senha={senha}
+          setSenha={setSenha}
+          aceitouTermos={aceitouTermos}
+          setAceitouTermos={setAceitouTermos}
+          erro={erro}
+          enviando={enviando}
+          onSubmit={handleSubmit}
+        />
       </div>
     </div>
   );
 }
 
 // ============================================================
-// Etapa 1 — Escolha do plano
+// Form de cadastro — único passo. Plano é escolhido depois no /onboarding
+// (com opção de teste grátis 7 dias).
 // ============================================================
-function Etapa1({
-  planoSelecionado,
-  onEscolher,
-}: {
-  planoSelecionado: PlanoId | null;
-  onEscolher: (id: PlanoId) => void;
-}) {
-  return (
-    <div className="w-full max-w-[1000px]">
-      <div className="text-center mb-8">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
-          Passo 1 de 2
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Escolha o plano da sua agência
-        </h1>
-        <p className="mt-2 text-sm text-secondary max-w-md mx-auto">
-          Você pode mudar de plano quando quiser. Sem fidelidade.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {PLANOS.map((p) => {
-          const sel = planoSelecionado === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onEscolher(p.id)}
-              className="card text-left transition-all hover:border-border-strong relative"
-              style={{
-                borderColor: sel ? "var(--module-vendas)" : undefined,
-                boxShadow: sel ? "0 0 0 1px var(--module-vendas)" : undefined,
-              }}
-            >
-              {p.destaque && (
-                <span
-                  className="absolute -top-2 left-4 text-[0.6rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
-                  style={{ backgroundColor: "var(--module-vendas)" }}
-                >
-                  Mais popular
-                </span>
-              )}
-              <div className="text-base font-bold text-primary">{p.nome}</div>
-              <div className="text-xs text-muted mb-3">{p.tagline}</div>
-              <div className="mb-3">
-                <span className="text-2xl font-bold text-primary">
-                  {formatarPreco(p.precoMensal)}
-                </span>
-                <span className="text-xs text-muted">/mês</span>
-              </div>
-              <ul className="flex flex-col gap-1.5 text-xs text-secondary">
-                {p.recursos.slice(0, 4).map((r) => (
-                  <li key={r} className="flex items-start gap-1.5">
-                    <Check size={11} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 pt-3 border-t border-border">
-                <span
-                  className="text-xs font-semibold inline-flex items-center gap-1"
-                  style={{ color: sel ? "var(--module-vendas)" : "var(--text-muted)" }}
-                >
-                  {sel ? <Check size={12} /> : <ArrowRight size={12} />}
-                  {sel ? "Selecionado" : "Escolher"}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Etapa 2 — Form de cadastro
-// ============================================================
-function Etapa2({
-  plano,
+function FormCadastro({
   nome,
   setNome,
   nomeAgencia,
@@ -316,10 +221,8 @@ function Etapa2({
   setAceitouTermos,
   erro,
   enviando,
-  onVoltar,
   onSubmit,
 }: {
-  plano: PlanoId;
   nome: string;
   setNome: (v: string) => void;
   nomeAgencia: string;
@@ -333,13 +236,8 @@ function Etapa2({
   setAceitouTermos: (v: boolean) => void;
   erro: string | null;
   enviando: boolean;
-  onVoltar: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
-  const planoInfo = PLANOS.find((p) => p.id === plano)!;
-  // Habilita o botão só quando o email é válido E livre, senha passa
-  // na política (NIST + bloqueio de senhas comuns) e termos aceitos.
-  // Outros campos validamos no submit.
   const podeEnviar =
     emailStatus === "ok" &&
     avaliarSenha(senha).podeUsar &&
@@ -349,23 +247,10 @@ function Etapa2({
     !enviando;
   return (
     <div className="w-full max-w-[440px]">
-      <button
-        onClick={onVoltar}
-        type="button"
-        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-4"
-      >
-        <ArrowLeft size={13} />
-        Trocar plano
-      </button>
-
       <div className="text-center mb-6">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-1">
-          Passo 2 de 2
-        </div>
         <h1 className="text-2xl font-bold tracking-tight">Criar conta</h1>
         <p className="mt-1 text-sm text-secondary">
-          Plano <strong className="text-primary">{planoInfo.nome}</strong> ·{" "}
-          {formatarPreco(planoInfo.precoMensal)}/mês
+          7 dias grátis. Sem cartão de crédito.
         </p>
       </div>
 

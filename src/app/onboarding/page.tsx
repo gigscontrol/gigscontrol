@@ -1,109 +1,90 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
-  Circle,
+  Loader2,
+  ArrowRight,
+  ArrowLeft,
+  PartyPopper,
+  Sparkles,
   Music,
   Users,
+  Building2,
+  Phone,
+  MapPin,
   Image as ImageIcon,
-  Contact2,
-  Loader2,
-  Sparkles,
-  ArrowRight,
-  PartyPopper,
+  Palette,
+  AtSign,
+  Lock,
+  Mail,
+  AlertTriangle,
+  Check,
 } from "lucide-react";
+import { useWorkspace } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
+import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
+import CidadeIBGEAutocomplete, {
+  type CidadeIBGE,
+} from "@/components/CidadeIBGEAutocomplete";
+import ColorPicker from "@/components/ColorPicker";
+import PhoneInput, {
+  DEFAULT_COUNTRY,
+  contarDigitos,
+  type Country,
+} from "@/components/PhoneInput";
+import { montarTelefoneE164 } from "@/lib/data/countries";
 
 /**
- * Página /onboarding — checklist "Comece por aqui".
+ * /onboarding — wizard linear de 5 etapas pra novos admins.
  *
- * Aparece pra novos admins entre /pagamento e /app. Mostra 5 tarefas:
- *   1. ✓ Conta criada (sempre check — gatilho de chegar aqui)
- *   2. Adicionar 1º artista
- *   3. Cadastrar 1º contratante ou casa
- *   4. Subir logo da agência
- *   5. Convidar membro da equipe
+ *   1. Bem-vindo ✓
+ *   2. Plano (com opção trial grátis 7d)
+ *   3. Configurar agência (nome + cidade + whatsapp + slug + cor + logo)
+ *   4. Cadastrar primeiro artista
+ *   5. Convidar primeiro membro da equipe
  *
- * Cada item linka pra Configurações na aba certa. O status do
- * checklist é calculado em tempo real pelo endpoint (count de cada
- * entidade no workspace). Admin pode "Pular por agora" se quiser
- * ir pra dashboard sem completar — marcar como completo manualmente.
- *
- * Quando completa todos os passos OU clica "Pular", marca
- * onboarding_completo = true e vai pro /app.
+ * Cada etapa salva no backend antes de avançar. Botão "Pular" disponível
+ * na maioria. Etapa 5 termina → marca onboarding_completo + /app.
  */
 
 type Status = {
   onboardingCompleto: boolean;
   subscriptionStatus: string;
+  trialTerminaEm: string | null;
+  planoEscolhido: string;
   checklist: {
     contaCriada: boolean;
+    planoEscolhido: boolean;
+    agenciaConfigurada: boolean;
     temArtista: boolean;
-    temContato: boolean;
-    logoSubida: boolean;
     temEquipe: boolean;
   };
-  nomeAgencia: string;
+  identidade: {
+    nomeAgencia: string;
+    whatsapp: string | null;
+    corAcento: string | null;
+    cidadeIbgeId: string | null;
+    cidadeNome: string | null;
+    cidadeUf: string | null;
+    logoUrl: string | null;
+  };
 };
 
-type ItemChecklist = {
-  id: keyof Status["checklist"];
-  titulo: string;
-  descricao: string;
-  icone: typeof Music;
-  href: string;
-  obrigatorio: boolean;
-};
-
-const ITENS: ItemChecklist[] = [
-  {
-    id: "contaCriada",
-    titulo: "Conta criada",
-    descricao: "Seu workspace tá no ar e configurado.",
-    icone: Sparkles,
-    href: "#",
-    obrigatorio: true,
-  },
-  {
-    id: "temArtista",
-    titulo: "Adicionar primeiro artista",
-    descricao: "Cadastre um DJ pra começar a montar a agenda dele.",
-    icone: Music,
-    href: "/app?aba=configuracoes&config=artistas",
-    obrigatorio: true,
-  },
-  {
-    id: "temContato",
-    titulo: "Cadastrar primeiro contratante ou casa",
-    descricao: "Pra emitir orçamentos você precisa de pelo menos um cliente.",
-    icone: Contact2,
-    href: "/app?aba=contatos",
-    obrigatorio: true,
-  },
-  {
-    id: "logoSubida",
-    titulo: "Subir logo da agência",
-    descricao: "Aparece no topo da dashboard e nos orçamentos enviados.",
-    icone: ImageIcon,
-    href: "/app?aba=configuracoes&config=geral",
-    obrigatorio: false,
-  },
-  {
-    id: "temEquipe",
-    titulo: "Convidar membro da equipe",
-    descricao: "Compartilhe acesso com vendedor, produtor ou financeiro.",
-    icone: Users,
-    href: "/app?aba=configuracoes&config=equipe",
-    obrigatorio: false,
-  },
+const ETAPAS: { id: number; label: string; descricao: string }[] = [
+  { id: 1, label: "Conta", descricao: "Conta criada" },
+  { id: 2, label: "Plano", descricao: "Escolha do plano" },
+  { id: 3, label: "Agência", descricao: "Identidade" },
+  { id: 4, label: "Artista", descricao: "1º DJ" },
+  { id: 5, label: "Equipe", descricao: "Convidar membro" },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [etapa, setEtapa] = useState(1);
   const [finalizando, setFinalizando] = useState(false);
 
   async function recarregar() {
@@ -115,12 +96,6 @@ export default function OnboardingPage() {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = (await r.json()) as Status;
-      // Se a subscription tá em trial (não passou pelo /pagamento), volta lá
-      if (d.subscriptionStatus !== "ativa") {
-        router.replace("/pagamento");
-        return;
-      }
-      // Já tinha completado? vai pro app
       if (d.onboardingCompleto) {
         router.replace("/app");
         return;
@@ -150,6 +125,15 @@ export default function OnboardingPage() {
     }
   }
 
+  function avancar() {
+    if (etapa < 5) setEtapa(etapa + 1);
+    else void concluir();
+  }
+
+  function voltar() {
+    if (etapa > 1) setEtapa(etapa - 1);
+  }
+
   if (carregando) {
     return (
       <div className="min-h-screen bg-main flex items-center justify-center">
@@ -162,15 +146,6 @@ export default function OnboardingPage() {
   }
 
   if (!status) return null;
-
-  const completos = ITENS.filter((it) => status.checklist[it.id]).length;
-  const totalObrigatorios = ITENS.filter((it) => it.obrigatorio).length;
-  const obrigatoriosFeitos = ITENS.filter(
-    (it) => it.obrigatorio && status.checklist[it.id]
-  ).length;
-  const tudoFeito = completos === ITENS.length;
-  const obrigatoriosOk = obrigatoriosFeitos === totalObrigatorios;
-  const progresso = (completos / ITENS.length) * 100;
 
   return (
     <div className="min-h-screen bg-main text-primary flex flex-col">
@@ -200,178 +175,979 @@ export default function OnboardingPage() {
             disabled={finalizando}
             className="text-xs text-muted hover:text-secondary transition-colors disabled:opacity-50"
           >
-            Pular por agora
+            Pular tudo
           </button>
         </div>
       </nav>
 
-      <div className="relative flex-1 flex items-start justify-center px-6 py-10">
+      <div className="relative flex-1 flex flex-col items-center px-6 py-10">
         <div className="w-full max-w-[680px]">
-          <div className="text-center mb-8">
-            <div
-              className="h-14 w-14 mx-auto rounded-full flex items-center justify-center mb-4"
-              style={{
-                background:
-                  "linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))",
-                color: "var(--module-vendas)",
-              }}
-            >
-              <PartyPopper size={26} />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Bem-vindo ao GIGS CONTROL!
-            </h1>
-            <p className="mt-2 text-sm text-secondary">
-              <strong className="text-primary">{status.nomeAgencia}</strong> tá
-              quase pronta. Configure 4 coisas e comece a usar.
-            </p>
-          </div>
+          {/* Stepper */}
+          <Stepper etapaAtual={etapa} />
 
-          {/* Barra de progresso */}
-          <div className="card mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-primary">
-                Progresso da configuração
-              </span>
-              <span className="text-sm font-mono text-muted tabular-nums">
-                {completos} de {ITENS.length}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-elevated overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${progresso}%`,
-                  backgroundColor: tudoFeito
-                    ? "var(--success)"
-                    : "var(--module-vendas)",
-                }}
+          {/* Conteúdo */}
+          <div className="mt-8">
+            {etapa === 1 && (
+              <Etapa1Bemvindo
+                nomeAgencia={status.identidade.nomeAgencia}
+                onAvancar={avancar}
               />
-            </div>
-          </div>
-
-          {/* Lista de itens */}
-          <div className="flex flex-col gap-2">
-            {ITENS.map((it) => {
-              const Icon = it.icone;
-              const feito = status.checklist[it.id];
-              return (
-                <Link
-                  key={it.id}
-                  href={feito ? "#" : it.href}
-                  onClick={(e) => {
-                    if (feito) e.preventDefault();
-                  }}
-                  className="card flex items-center gap-4 transition-all hover:border-border-strong"
-                  style={{
-                    opacity: feito ? 0.7 : 1,
-                    cursor: feito ? "default" : "pointer",
-                    backgroundColor: feito
-                      ? "rgba(34,197,94,0.04)"
-                      : undefined,
-                    borderColor: feito
-                      ? "rgba(34,197,94,0.2)"
-                      : undefined,
-                  }}
-                >
-                  <div className="flex-shrink-0">
-                    {feito ? (
-                      <CheckCircle2
-                        size={22}
-                        style={{ color: "var(--success)" }}
-                      />
-                    ) : (
-                      <Circle size={22} className="text-muted" />
-                    )}
-                  </div>
-                  <div
-                    className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor: feito
-                        ? "rgba(34,197,94,0.1)"
-                        : "var(--bg-elevated)",
-                      color: feito
-                        ? "var(--success)"
-                        : "var(--module-vendas)",
-                    }}
-                  >
-                    <Icon size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-sm font-medium"
-                      style={{
-                        color: feito ? "var(--text-muted)" : "var(--text-primary)",
-                        textDecoration: feito ? "line-through" : "none",
-                      }}
-                    >
-                      {it.titulo}
-                      {!it.obrigatorio && (
-                        <span className="text-[0.65rem] font-normal text-muted ml-2 uppercase tracking-wider">
-                          opcional
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-secondary mt-0.5">
-                      {it.descricao}
-                    </div>
-                  </div>
-                  {!feito && (
-                    <ArrowRight
-                      size={14}
-                      className="text-muted flex-shrink-0"
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* CTA: ir pra dashboard */}
-          <div className="mt-6 flex flex-col gap-3 items-center">
-            <button
-              onClick={concluir}
-              disabled={finalizando}
-              className="btn btn-primary text-sm py-2.5 px-6 disabled:opacity-60"
-              style={{
-                backgroundColor: obrigatoriosOk
-                  ? "var(--module-vendas)"
-                  : undefined,
-                color: obrigatoriosOk ? "#fff" : undefined,
-                opacity: obrigatoriosOk ? 1 : 0.6,
-              }}
-            >
-              {finalizando
-                ? "Indo..."
-                : obrigatoriosOk
-                ? tudoFeito
-                  ? "Tudo pronto! Ir para a dashboard"
-                  : "Ir para a dashboard"
-                : "Conclua os passos obrigatórios"}
-              {!finalizando && <ArrowRight size={14} />}
-            </button>
-            {!obrigatoriosOk && (
-              <span className="text-[0.65rem] text-muted">
-                Faltam {totalObrigatorios - obrigatoriosFeitos} passo(s)
-                obrigatório(s) — ou{" "}
-                <button
-                  type="button"
-                  onClick={concluir}
-                  className="underline hover:text-secondary"
-                >
-                  pular tudo
-                </button>
-              </span>
             )}
+            {etapa === 2 && (
+              <Etapa2Plano
+                planoEscolhido={status.planoEscolhido as PlanoId}
+                subscriptionStatus={status.subscriptionStatus}
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
+            )}
+            {etapa === 3 && (
+              <Etapa3Agencia
+                status={status}
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
+            )}
+            {etapa === 4 && (
+              <Etapa4Artista
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
+            )}
+            {etapa === 5 && (
+              <Etapa5Equipe
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
+            )}
+          </div>
+
+          {/* Navegação inferior */}
+          <div className="mt-6 flex justify-between items-center">
             <button
-              onClick={() => void recarregar()}
-              className="text-[0.65rem] text-muted hover:text-secondary"
+              onClick={voltar}
+              disabled={etapa === 1}
+              className="text-xs text-muted hover:text-secondary disabled:opacity-30 inline-flex items-center gap-1"
             >
-              Já fiz na outra aba — atualizar status
+              <ArrowLeft size={12} />
+              Voltar
             </button>
+            <span className="text-xs text-muted">
+              Etapa {etapa} de {ETAPAS.length}
+            </span>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Stepper
+// ============================================================
+function Stepper({ etapaAtual }: { etapaAtual: number }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      {ETAPAS.map((e, i) => {
+        const concluida = e.id < etapaAtual;
+        const ativa = e.id === etapaAtual;
+        return (
+          <div key={e.id} className="flex items-center flex-1 min-w-0">
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                style={{
+                  backgroundColor: concluida
+                    ? "var(--success)"
+                    : ativa
+                    ? "var(--module-vendas)"
+                    : "var(--bg-elevated)",
+                  color: concluida || ativa ? "#fff" : "var(--text-muted)",
+                  border: concluida || ativa ? "none" : "1px solid var(--border-color)",
+                }}
+              >
+                {concluida ? <Check size={14} /> : e.id}
+              </div>
+              <span
+                className="text-[0.65rem] uppercase tracking-wider font-semibold"
+                style={{
+                  color: ativa
+                    ? "var(--text-primary)"
+                    : concluida
+                    ? "var(--success)"
+                    : "var(--text-muted)",
+                }}
+              >
+                {e.label}
+              </span>
+            </div>
+            {i < ETAPAS.length - 1 && (
+              <div
+                className="h-px flex-1 mx-1 mt-[-14px]"
+                style={{
+                  backgroundColor: concluida
+                    ? "var(--success)"
+                    : "var(--border-color)",
+                }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 1 — Bem-vindo
+// ============================================================
+function Etapa1Bemvindo({
+  nomeAgencia,
+  onAvancar,
+}: {
+  nomeAgencia: string;
+  onAvancar: () => void;
+}) {
+  return (
+    <div className="text-center">
+      <div
+        className="h-16 w-16 mx-auto rounded-full flex items-center justify-center mb-4"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))",
+          color: "var(--module-vendas)",
+        }}
+      >
+        <PartyPopper size={28} />
+      </div>
+      <h1 className="text-2xl font-bold tracking-tight">
+        Bem-vindo ao GIGS CONTROL!
+      </h1>
+      <p className="mt-2 text-sm text-secondary max-w-md mx-auto">
+        Sua conta da{" "}
+        <strong className="text-primary">{nomeAgencia}</strong> está criada.
+        Vamos configurar os essenciais em 4 passos rápidos.
+      </p>
+      <button
+        onClick={onAvancar}
+        className="btn btn-primary text-sm mt-6 py-2.5 px-6"
+        style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+      >
+        <Sparkles size={14} />
+        Vamos lá
+        <ArrowRight size={14} />
+      </button>
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 2 — Plano (cards + trial grátis 7d)
+// ============================================================
+function Etapa2Plano({
+  planoEscolhido,
+  subscriptionStatus,
+  onAvancar,
+  onRecarregar,
+}: {
+  planoEscolhido: PlanoId;
+  subscriptionStatus: string;
+  onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
+}) {
+  const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
+    planoEscolhido ?? "individual"
+  );
+  const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Mostra só os 3 primeiros planos pra não poluir (user vê todos em Configurações)
+  const planosVisiveis = PLANOS.slice(0, 3);
+
+  // Se já está ativo (não em trial inicial), passou direto pra próxima
+  const jaConfigurou = subscriptionStatus === "ativa" || subscriptionStatus === "trial";
+
+  async function iniciarTrial() {
+    setAcao("trial");
+    setErro(null);
+    try {
+      const r = await fetch("/api/workspace/iniciar-trial", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: planoSelecionado }),
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
+      }
+      await onRecarregar();
+      onAvancar();
+    } catch (e) {
+      setErro((e as Error).message);
+      setAcao(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">Escolha o plano</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Comece com{" "}
+          <strong className="text-primary">7 dias grátis</strong> em qualquer
+          plano. Sem cartão de crédito. Cancele quando quiser.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        {planosVisiveis.map((p) => {
+          const sel = planoSelecionado === p.id;
+          // "Individual" é o mais popular (decisão do produto)
+          const popular = p.id === "individual";
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setPlanoSelecionado(p.id)}
+              className="card text-left transition-all hover:border-border-strong relative"
+              style={{
+                borderColor: sel ? "var(--module-vendas)" : undefined,
+                boxShadow: sel ? "0 0 0 1px var(--module-vendas)" : undefined,
+              }}
+            >
+              {popular && (
+                <span
+                  className="absolute -top-2 left-3 text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
+                  style={{ backgroundColor: "var(--module-vendas)" }}
+                >
+                  Mais popular
+                </span>
+              )}
+              <div className="text-sm font-bold text-primary">{p.nome}</div>
+              <div className="text-xs text-muted mb-2">{p.tagline}</div>
+              <div className="mb-2">
+                <span className="text-xl font-bold text-primary">
+                  {formatarPreco(p.precoMensal)}
+                </span>
+                <span className="text-[0.65rem] text-muted">/mês</span>
+              </div>
+              <ul className="flex flex-col gap-1 text-[0.7rem] text-secondary">
+                {p.recursos.slice(0, 3).map((r) => (
+                  <li key={r} className="flex items-start gap-1">
+                    <Check size={10} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+              {sel && (
+                <div
+                  className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: "var(--module-vendas)" }}
+                >
+                  <Check size={12} className="text-white" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {erro && (
+        <div
+          className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-3"
+          style={{
+            backgroundColor: "rgba(239,68,68,0.08)",
+            color: "var(--danger)",
+            border: "1px solid rgba(239,68,68,0.3)",
+          }}
+        >
+          <AlertTriangle size={12} />
+          {erro}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={iniciarTrial}
+          disabled={acao !== null}
+          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+          style={{ backgroundColor: "var(--success)", color: "#fff" }}
+        >
+          {acao === "trial" ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Iniciando...
+            </>
+          ) : jaConfigurou && subscriptionStatus === "trial" ? (
+            <>
+              Continuar com o trial
+              <ArrowRight size={14} />
+            </>
+          ) : (
+            <>
+              <Sparkles size={14} />
+              Começar teste grátis (7 dias)
+            </>
+          )}
+        </button>
+
+        {jaConfigurou && (
+          <button
+            onClick={onAvancar}
+            className="text-xs text-muted hover:text-secondary text-center"
+          >
+            Continuar com o plano atual
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 3 — Configurar agência
+// ============================================================
+function Etapa3Agencia({
+  status,
+  onAvancar,
+  onRecarregar,
+}: {
+  status: Status;
+  onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
+}) {
+  const { uploadLogo, atualizarNomeAgencia } = useWorkspace();
+  const id = status.identidade;
+
+  // Nome
+  const [nome, setNome] = useState(id.nomeAgencia);
+  // Cidade (autocomplete IBGE)
+  const [cidade, setCidade] = useState<CidadeIBGE | null>(
+    id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
+      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf }
+      : null
+  );
+  // WhatsApp
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [telDigits, setTelDigits] = useState(() => {
+    const tel = id.whatsapp ?? "";
+    const digs = tel.replace(/\D/g, "");
+    return digs.startsWith("55") && digs.length >= 12 ? digs.slice(2) : digs;
+  });
+  // Cor de preferência
+  const [cor, setCor] = useState<string>(id.corAcento ?? "#a855f7");
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  // Logo
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const [logoLocal, setLogoLocal] = useState<string | null>(id.logoUrl);
+
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function aoSelecionarLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErro("Use um arquivo de imagem.");
+      return;
+    }
+    setEnviandoLogo(true);
+    try {
+      // Redimensionamento via canvas (igual ao da AbaGeral)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const escala = 96 / img.height;
+            let largura = img.width * escala;
+            let altura = 96;
+            if (largura > 420) {
+              const e2 = 420 / largura;
+              largura = 420;
+              altura = altura * e2;
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = largura * 2;
+            canvas.height = altura * 2;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return reject(new Error("canvas indisponível"));
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/png");
+          };
+          img.onerror = () => reject(new Error("imagem inválida"));
+          img.src = reader.result as string;
+        };
+        reader.readAsDataURL(file);
+      });
+      await uploadLogo(blob);
+      setLogoLocal(URL.createObjectURL(blob));
+    } catch (err) {
+      setErro((err as Error).message);
+    } finally {
+      setEnviandoLogo(false);
+    }
+  }
+
+  async function salvar() {
+    setErro(null);
+    if (!nome.trim()) return setErro("Informe o nome da agência.");
+    if (!cidade) return setErro("Informe a cidade da agência.");
+    if (contarDigitos(telDigits) < country.minDigits)
+      return setErro("WhatsApp incompleto.");
+
+    setSalvando(true);
+    try {
+      // Nome separado pelo workspace-context (pra atualizar a sidebar)
+      if (nome.trim() !== id.nomeAgencia) {
+        await atualizarNomeAgencia(nome.trim());
+      }
+      // Resto vai numa única chamada
+      const r = await fetch("/api/workspace", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whatsapp: montarTelefoneE164(country, telDigits),
+          cor_acento: cor,
+          cidade_ibge_id: cidade.ibgeId,
+          cidade_nome: cidade.nome,
+          cidade_uf: cidade.uf,
+        }),
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
+      }
+      await onRecarregar();
+      onAvancar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">Sua agência</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Esses dados aparecem nos orçamentos e na dashboard.
+        </p>
+      </div>
+
+      <div className="card flex flex-col gap-4">
+        {/* Nome */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            Nome da agência <span className="text-danger">*</span>
+          </span>
+          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
+            <Building2 size={14} className="text-muted flex-shrink-0" />
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
+              maxLength={40}
+            />
+          </div>
+        </label>
+
+        {/* Cidade */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            Cidade onde fica <span className="text-danger">*</span>
+          </span>
+          <CidadeIBGEAutocomplete
+            value={cidade}
+            onChange={setCidade}
+            placeholder="Ex: São Paulo, Belo Horizonte..."
+          />
+        </label>
+
+        {/* WhatsApp */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            WhatsApp <span className="text-danger">*</span>
+          </span>
+          <PhoneInput
+            country={country}
+            onCountryChange={setCountry}
+            value={telDigits}
+            onChange={setTelDigits}
+          />
+        </label>
+
+        {/* Cor */}
+        <CampoCor cor={cor} onChange={setCor} aberto={colorPickerOpen} setAberto={setColorPickerOpen} />
+
+        {/* Logo */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            Logo (opcional)
+          </span>
+          <div className="flex items-center gap-3">
+            <div
+              className="h-12 w-20 rounded-md border border-border bg-elevated flex items-center justify-center overflow-hidden flex-shrink-0"
+            >
+              {logoLocal ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoLocal} alt="Logo" style={{ maxHeight: 32 }} />
+              ) : (
+                <ImageIcon size={16} className="text-muted" />
+              )}
+            </div>
+            <label className="btn btn-secondary text-xs cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={aoSelecionarLogo}
+                className="hidden"
+              />
+              {enviandoLogo ? "Enviando..." : "Enviar logo"}
+            </label>
+          </div>
+        </div>
+
+        {erro && (
+          <div
+            className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+            style={{
+              backgroundColor: "rgba(239,68,68,0.08)",
+              color: "var(--danger)",
+              border: "1px solid rgba(239,68,68,0.3)",
+            }}
+          >
+            <AlertTriangle size={12} />
+            {erro}
+          </div>
+        )}
+
+        <button
+          onClick={salvar}
+          disabled={salvando}
+          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+          style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+        >
+          {salvando ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              Salvar e continuar
+              <ArrowRight size={14} />
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Campo de cor com botão "pílula" + popover do ColorPicker quando aberto.
+ * Usa useRef no botão pra ancorar o popover de forma correta (sem
+ * gambiarra com document.activeElement).
+ */
+function CampoCor({
+  cor,
+  onChange,
+  aberto,
+  setAberto,
+}: {
+  cor: string;
+  onChange: (c: string) => void;
+  aberto: boolean;
+  setAberto: (v: boolean) => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="flex flex-col gap-1.5 relative">
+      <span className="text-xs font-medium text-secondary">Cor de preferência</span>
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => setAberto(!aberto)}
+        className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors"
+      >
+        <span
+          className="h-5 w-5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: cor }}
+        />
+        <span className="font-mono text-sm text-primary flex-1 text-left">
+          {cor.toUpperCase()}
+        </span>
+        <Palette size={14} className="text-muted" />
+      </button>
+      {aberto && (
+        <ColorPicker
+          cor={cor}
+          anchorRef={ref}
+          onApply={(c) => {
+            onChange(c);
+            setAberto(false);
+          }}
+          onClose={() => setAberto(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 4 — Primeiro artista
+// ============================================================
+function Etapa4Artista({
+  onAvancar,
+  onRecarregar,
+}: {
+  onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
+}) {
+  const { adicionarArtista } = useWorkspace();
+  const { sessao } = useAuth();
+  const slug = sessao?.workspace?.slug ?? "";
+
+  const [nome, setNome] = useState("");
+  const [usernameRaiz, setUsernameRaiz] = useState("");
+  const [usernameEditado, setUsernameEditado] = useState(false);
+  const [cor, setCor] = useState("#ef4444");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [credenciais, setCredenciais] = useState<{ username: string; senha: string } | null>(null);
+
+  const CORES = [
+    "#ef4444", "#f97316", "#f59e0b", "#eab308", "#22c55e",
+    "#14b8a6", "#06b6d4", "#3b82f6", "#a855f7", "#ec4899",
+  ];
+
+  function normalizar(s: string): string {
+    return s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function aoMudarNome(v: string) {
+    setNome(v);
+    if (!usernameEditado) setUsernameRaiz(normalizar(v));
+  }
+
+  async function salvar() {
+    setErro(null);
+    if (!nome.trim()) return setErro("Informe o nome do artista.");
+    if (usernameRaiz.length < 3) return setErro("Username precisa ter 3+ chars.");
+    setSalvando(true);
+    try {
+      const r = await adicionarArtista({
+        nome: nome.trim(),
+        cor,
+        usernameRaiz: usernameRaiz.trim().toLowerCase(),
+      });
+      setCredenciais({ username: r.usernameCompleto, senha: r.senhaTemporaria });
+      await onRecarregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <Music
+          size={32}
+          className="mx-auto mb-3"
+          style={{ color: "var(--module-vendas)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">Cadastre seu primeiro artista</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Você pode adicionar mais detalhes (cidade, taxa, rider) depois em
+          Configurações. Aqui é só o essencial.
+        </p>
+      </div>
+
+      {credenciais ? (
+        <div className="card text-center">
+          <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
+          <h3 className="text-base font-bold">Artista cadastrado!</h3>
+          <p className="text-sm text-secondary mt-1 mb-4">
+            Anote ou copie agora — a senha não aparece de novo:
+          </p>
+          <div className="bg-elevated rounded-md p-3 text-left flex flex-col gap-2">
+            <div>
+              <div className="text-[0.65rem] text-muted">Login</div>
+              <div className="font-mono text-sm text-primary">{credenciais.username}</div>
+            </div>
+            <div>
+              <div className="text-[0.65rem] text-muted">Senha</div>
+              <div className="font-mono text-sm text-primary">{credenciais.senha}</div>
+            </div>
+          </div>
+          <button
+            onClick={onAvancar}
+            className="btn btn-primary text-sm w-full justify-center py-2.5 mt-4"
+            style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+          >
+            Continuar
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      ) : (
+        <div className="card flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">Nome do artista</span>
+            <input
+              value={nome}
+              onChange={(e) => aoMudarNome(e.target.value)}
+              placeholder="Ex.: DJ Lunar"
+              className="campo-input"
+              autoFocus
+            />
+          </label>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">Cor</span>
+            <div className="flex flex-wrap gap-2">
+              {CORES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCor(c)}
+                  className="h-7 w-7 rounded-full transition-transform"
+                  style={{
+                    backgroundColor: c,
+                    outline: cor === c ? "2px solid var(--text-primary)" : "none",
+                    outlineOffset: 2,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">Login (username)</span>
+            <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              <AtSign size={14} className="text-muted" />
+              <input
+                value={usernameRaiz}
+                onChange={(e) => {
+                  setUsernameEditado(true);
+                  setUsernameRaiz(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+                }}
+                placeholder="ex: djlunar"
+                className="bg-transparent outline-none text-sm text-primary flex-1 min-w-0"
+              />
+              <span className="text-xs text-muted whitespace-nowrap">-{slug}</span>
+            </div>
+          </label>
+
+          {erro && (
+            <div
+              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertTriangle size={12} />
+              {erro}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={salvar}
+              disabled={salvando}
+              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+            >
+              {salvando ? "Cadastrando..." : "Cadastrar artista"}
+            </button>
+            <button
+              onClick={onAvancar}
+              className="text-xs text-muted hover:text-secondary"
+            >
+              Pular por agora
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 5 — Convidar primeiro membro da equipe
+// ============================================================
+function Etapa5Equipe({
+  onAvancar,
+  onRecarregar,
+}: {
+  onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
+}) {
+  const { adicionarUsuario } = useWorkspace();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [papel, setPapel] = useState<"vendedor" | "produtor" | "financeiro">(
+    "vendedor"
+  );
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<{ senha: string; email: string } | null>(null);
+
+  async function salvar() {
+    setErro(null);
+    if (!nome.trim()) return setErro("Informe o nome.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro("Email inválido.");
+    setSalvando(true);
+    try {
+      const r = await adicionarUsuario({
+        nome: nome.trim(),
+        email: email.trim(),
+        papel,
+        escopo: { verTodosContatos: true, verTodasVendas: true, editarTodosEventos: true },
+        funcoes: {},
+      });
+      setResultado({ senha: r.senhaTemporaria, email: email.trim() });
+      await onRecarregar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <Users
+          size={32}
+          className="mx-auto mb-3"
+          style={{ color: "var(--module-vendas)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">Convide a equipe</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Vendedor, produtor ou financeiro — adicione quem vai te ajudar a
+          tocar a agência. Pode pular se ainda tá começando sozinho.
+        </p>
+      </div>
+
+      {resultado ? (
+        <div className="card text-center">
+          <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
+          <h3 className="text-base font-bold">Equipe convidada!</h3>
+          <p className="text-sm text-secondary mt-1 mb-4">
+            Mande pra essa pessoa:
+          </p>
+          <div className="bg-elevated rounded-md p-3 text-left flex flex-col gap-2">
+            <div>
+              <div className="text-[0.65rem] text-muted">E-mail</div>
+              <div className="font-mono text-sm text-primary">{resultado.email}</div>
+            </div>
+            <div>
+              <div className="text-[0.65rem] text-muted">Senha temporária</div>
+              <div className="font-mono text-sm text-primary">{resultado.senha}</div>
+            </div>
+          </div>
+          <button
+            onClick={onAvancar}
+            className="btn btn-primary text-sm w-full justify-center py-2.5 mt-4"
+            style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+          >
+            Terminar
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      ) : (
+        <div className="card flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">Nome completo</span>
+            <input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Marina Souza"
+              className="campo-input"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">E-mail</span>
+            <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              <Mail size={14} className="text-muted" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="marina@email.com"
+                className="flex-1 bg-transparent outline-none text-sm text-primary"
+              />
+            </div>
+          </label>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">Papel</span>
+            <div className="grid grid-cols-3 gap-2">
+              {(["vendedor", "produtor", "financeiro"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPapel(p)}
+                  className="card text-center py-2 text-xs capitalize transition-colors"
+                  style={{
+                    borderColor: papel === p ? "var(--module-vendas)" : undefined,
+                    color: papel === p ? "var(--text-primary)" : "var(--text-secondary)",
+                    fontWeight: papel === p ? 600 : 400,
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {erro && (
+            <div
+              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertTriangle size={12} />
+              {erro}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={salvar}
+              disabled={salvando}
+              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+            >
+              {salvando ? "Convidando..." : "Convidar"}
+            </button>
+            <button
+              onClick={onAvancar}
+              className="text-xs text-muted hover:text-secondary"
+            >
+              Pular e finalizar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

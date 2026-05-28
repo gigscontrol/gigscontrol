@@ -87,9 +87,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       })
       .then((d: { subscriptionStatus?: string; onboardingCompleto?: boolean }) => {
         if (!ativo) return;
-        if (d.subscriptionStatus !== "ativa") {
-          router.replace("/pagamento");
-        } else if (!d.onboardingCompleto) {
+        // Onboarding incompleto → manda pro wizard. O wizard cuida de
+        // ativar o trial na etapa 2 — não precisa mais bloquear em
+        // /pagamento (cobrança real só vai ser pedida quando o trial
+        // expirar de fato).
+        if (!d.onboardingCompleto) {
           router.replace("/onboarding");
         } else {
           setVerificandoOnboarding(false);

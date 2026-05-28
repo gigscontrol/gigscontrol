@@ -79,10 +79,9 @@ export async function GET(request: Request) {
     } catch (e) {
       console.error("[auth/callback] setup falhou:", (e as Error).message);
     }
-    // Primeiro acesso → passa pelo /pagamento (mock) e depois /onboarding.
-    // Quem já está ativo (admin existente sem profile, edge case) vai pro
-    // destino normal.
-    return NextResponse.redirect(new URL("/pagamento", url.origin));
+    // Primeiro acesso → wizard de onboarding. O próprio wizard cuida da
+    // escolha de plano e do trial grátis na Etapa 2.
+    return NextResponse.redirect(new URL("/onboarding", url.origin));
   }
 
   // Veio de OAuth (Google/Facebook) sem dados de agência —
