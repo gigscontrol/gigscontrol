@@ -22,8 +22,8 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react";
-import { useWorkspace } from "@/lib/workspace-context";
-import { useAuth } from "@/lib/auth-context";
+import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
+import { useAuth, AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
 import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
@@ -81,6 +81,16 @@ const ETAPAS: { id: number; label: string; descricao: string }[] = [
 ];
 
 export default function OnboardingPage() {
+  return (
+    <AuthProvider>
+      <WorkspaceProvider>
+        <OnboardingInner />
+      </WorkspaceProvider>
+    </AuthProvider>
+  );
+}
+
+function OnboardingInner() {
   const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [carregando, setCarregando] = useState(true);
