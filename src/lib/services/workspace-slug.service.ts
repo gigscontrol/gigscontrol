@@ -110,13 +110,25 @@ export async function trocasSlug30d(
  * seria ideal usar uma função PL/pgSQL com BEGIN; deixei pra evoluir
  * depois se houver pressão.
  */
+/**
+ * Opções de troca do slug.
+ *  - `pularCota`: não verifica o limite de 3 trocas/30d. Usado na
+ *    PRIMEIRA definição do slug pelo onboarding (não é troca, é setup).
+ *  - `pularHistorico`: não grava em workspace_slug_history. Idem.
+ */
+type OpcoesTrocarSlug = {
+  pularCota?: boolean;
+  pularHistorico?: boolean;
+};
+
 export async function trocarSlugDoWorkspace(
   admin: SupabaseClient,
   params: {
     workspaceId: string;
     novoSlug: string;
     alteradoPor: string; // profile.id do admin que disparou
-  }
+  },
+  opts: OpcoesTrocarSlug = {}
 ): Promise<{ slugAntigo: string; slugNovo: string; usuariosAtualizados: number }> {
   const { workspaceId, novoSlug, alteradoPor } = params;
   const slug = novoSlug.trim().toLowerCase();
@@ -140,9 +152,11 @@ export async function trocarSlugDoWorkspace(
     throw new SlugEmUsoError(slug);
   }
 
-  // 4. Limite de 3 trocas em 30 dias
-  if ((await trocasSlug30d(admin, workspaceId)) >= SLUG_LIMITE_30D) {
-    throw new LimiteTrocaSlugError();
+  // 4. Limite de 3 trocas em 30 dias (pulado no setup inicial do onboarding)
+  if (!opts.pularCota) {
+    if ((await trocasSlug30d(admin, workspaceId)) >= SLUG_LIMITE_30D) {
+      throw new LimiteTrocaSlugError();
+    }
   }
 
   const slugAntigo = ws.slug;
@@ -198,13 +212,15 @@ export async function trocarSlugDoWorkspace(
     await admin.from("profiles").update(updates).eq("id", p.id);
   }
 
-  // 8. Registra no histórico
-  await admin.from("workspace_slug_history").insert({
-    workspace_id: workspaceId,
-    slug_anterior: slugAntigo,
-    slug_novo: slug,
-    alterado_por: alteradoPor,
-  });
+  // 8. Registra no histórico (pulado no setup inicial — não é uma "troca")
+  if (!opts.pularHistorico) {
+    await admin.from("workspace_slug_history").insert({
+      workspace_id: workspaceId,
+      slug_anterior: slugAntigo,
+      slug_novo: slug,
+      alterado_por: alteradoPor,
+    });
+  }
 
   return {
     slugAntigo,

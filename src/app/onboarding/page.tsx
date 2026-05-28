@@ -587,10 +587,29 @@ function Etapa3Agencia({
   onRecarregar: () => Promise<void>;
 }) {
   const { uploadLogo, atualizarNomeAgencia } = useWorkspace();
+  const { sessao } = useAuth();
+  const slugAtual = sessao?.workspace?.slug ?? "";
   const id = status.identidade;
+
+  // Normaliza um nome em slug (lowercase, sem acentos, só [a-z0-9])
+  function normalizarSlug(s: string): string {
+    return s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
 
   // Nome
   const [nome, setNome] = useState(id.nomeAgencia);
+  // Slug — pré-popula com o slug que o signup gerou automaticamente.
+  // Auto-preenche enquanto o usuário não tocar manualmente (igual artista).
+  const [slug, setSlug] = useState<string>(slugAtual);
+  const [slugEditado, setSlugEditado] = useState(false);
+  const [slugCheck, setSlugCheck] = useState<
+    "idle" | "checando" | "ok" | "em-uso" | "invalido"
+  >("idle");
+  const [slugMsg, setSlugMsg] = useState<string | null>(null);
   // Cidade (autocomplete IBGE)
   const [cidade, setCidade] = useState<CidadeIBGE | null>(
     id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
@@ -613,6 +632,63 @@ function Etapa3Agencia({
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Auto-fill: quando o nome muda e o user ainda não tocou no slug,
+  // espelha o nome normalizado
+  function aoMudarNome(novo: string) {
+    setNome(novo);
+    if (!slugEditado) {
+      setSlug(normalizarSlug(novo));
+    }
+  }
+
+  // Debounce do check de disponibilidade do slug (400ms)
+  useEffect(() => {
+    const v = slug.trim().toLowerCase();
+    if (!v) {
+      setSlugCheck("idle");
+      setSlugMsg(null);
+      return;
+    }
+    // Mesmo slug atual: já está OK (a gente vai pular o update no salvar)
+    if (v === slugAtual) {
+      setSlugCheck("ok");
+      setSlugMsg("Username atual");
+      return;
+    }
+    setSlugCheck("checando");
+    setSlugMsg(null);
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
+          { credentials: "include", signal: ctrl.signal }
+        );
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const body = (await r.json()) as { disponivel: boolean; erro?: string };
+        if (body.disponivel) {
+          setSlugCheck("ok");
+          setSlugMsg("Disponível");
+        } else if (body.erro) {
+          setSlugCheck("invalido");
+          setSlugMsg(body.erro);
+        } else {
+          setSlugCheck("em-uso");
+          setSlugMsg("Já em uso por outra agência.");
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          setSlugCheck("invalido");
+          setSlugMsg("Falha na checagem.");
+        }
+      }
+    }, 400);
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [slug, slugAtual]);
 
   async function aoSelecionarLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -665,14 +741,31 @@ function Etapa3Agencia({
     if (!cidade) return setErro("Informe a cidade da agência.");
     if (contarDigitos(telDigits) < country.minDigits)
       return setErro("WhatsApp incompleto.");
+    if (!slug.trim()) return setErro("Informe o username da agência.");
+    if (slug.trim() !== slugAtual && slugCheck !== "ok") {
+      return setErro("Username inválido ou em uso.");
+    }
 
     setSalvando(true);
     try {
-      // Nome separado pelo workspace-context (pra atualizar a sidebar)
+      // 1. Se o slug mudou, define agora (rota especial sem cota)
+      if (slug.trim() !== slugAtual) {
+        const rs = await fetch("/api/workspace/slug/definir-inicial", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: slug.trim().toLowerCase() }),
+        });
+        if (!rs.ok) {
+          const b = await rs.json().catch(() => ({}));
+          throw new Error((b.erro as string) ?? "Falha ao definir username.");
+        }
+      }
+      // 2. Nome via workspace-context (atualiza sidebar)
       if (nome.trim() !== id.nomeAgencia) {
         await atualizarNomeAgencia(nome.trim());
       }
-      // Resto vai numa única chamada
+      // 3. Resto numa única chamada
       const r = await fetch("/api/workspace", {
         method: "PATCH",
         credentials: "include",
@@ -717,11 +810,67 @@ function Etapa3Agencia({
             <Building2 size={14} className="text-muted flex-shrink-0" />
             <input
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => aoMudarNome(e.target.value)}
               className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
               maxLength={40}
             />
           </div>
+        </label>
+
+        {/* Username da agência (slug) */}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            Username da agência <span className="text-danger">*</span>
+          </span>
+          <div
+            className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+            style={{
+              borderColor:
+                slugCheck === "ok"
+                  ? "var(--success)"
+                  : slugCheck === "em-uso" || slugCheck === "invalido"
+                  ? "var(--danger)"
+                  : "var(--border-color)",
+            }}
+          >
+            <span className="text-muted text-sm">-</span>
+            <input
+              value={slug}
+              onChange={(e) => {
+                setSlugEditado(true);
+                setSlug(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                );
+              }}
+              placeholder="ex: agenciaelo"
+              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+              maxLength={30}
+            />
+            {slugCheck === "checando" && (
+              <Loader2 size={14} className="animate-spin text-muted" />
+            )}
+            {slugCheck === "ok" && (
+              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+            )}
+          </div>
+          {slugMsg && (
+            <span
+              className="text-[0.7rem]"
+              style={{
+                color:
+                  slugCheck === "ok" || slug === slugAtual
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+            >
+              {slugMsg}
+            </span>
+          )}
+          <span className="text-[0.65rem] text-muted leading-relaxed">
+            Vai pro fim do login dos seus artistas e equipe (ex:{" "}
+            <span className="font-mono text-primary">dudu-{slug || "agencia"}</span>).
+            Cada agência tem um username único — ninguém mais pode usar.
+          </span>
         </label>
 
         {/* Cidade */}
