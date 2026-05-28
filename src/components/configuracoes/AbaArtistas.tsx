@@ -616,7 +616,7 @@ function normalizarUsername(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function ModalNovoArtista({
+export function ModalNovoArtista({
   slugAgencia,
   nomeAgencia,
   onCancelar,
@@ -1398,7 +1398,7 @@ function ModalEditarArtista({
 // Modal — Credenciais geradas (mostradas uma única vez)
 // ============================================================
 
-function ModalCredenciais({
+export function ModalCredenciais({
   nomeArtista,
   username,
   senha,

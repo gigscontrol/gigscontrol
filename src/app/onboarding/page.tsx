@@ -35,6 +35,10 @@ import PhoneInput, {
   type Country,
 } from "@/components/PhoneInput";
 import { montarTelefoneE164 } from "@/lib/data/countries";
+import {
+  ModalNovoArtista,
+  ModalCredenciais,
+} from "@/components/configuracoes/AbaArtistas";
 
 /**
  * /onboarding — wizard linear de 5 etapas pra novos admins.
@@ -864,7 +868,7 @@ function CampoCor({
 }
 
 // ============================================================
-// Etapa 4 — Primeiro artista
+// Etapa 4 — Primeiro artista (usa o MESMO modal de Configurações)
 // ============================================================
 function Etapa4Artista({
   onAvancar,
@@ -873,56 +877,45 @@ function Etapa4Artista({
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
-  const { adicionarArtista } = useWorkspace();
+  const { artistas, adicionarArtista } = useWorkspace();
   const { sessao } = useAuth();
   const slug = sessao?.workspace?.slug ?? "";
+  const nomeAgencia = sessao?.workspace?.nome ?? "";
 
-  const [nome, setNome] = useState("");
-  const [usernameRaiz, setUsernameRaiz] = useState("");
-  const [usernameEditado, setUsernameEditado] = useState(false);
-  const [cor, setCor] = useState("#ef4444");
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [credenciais, setCredenciais] = useState<{ username: string; senha: string } | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [credenciais, setCredenciais] = useState<{
+    nomeArtista: string;
+    username: string;
+    senha: string;
+  } | null>(null);
 
-  const CORES = [
-    "#ef4444", "#f97316", "#f59e0b", "#eab308", "#22c55e",
-    "#14b8a6", "#06b6d4", "#3b82f6", "#a855f7", "#ec4899",
-  ];
+  // Se já tem credenciais geradas, mostra elas
+  if (credenciais) {
+    return (
+      <div>
+        <div className="text-center mb-6">
+          <CheckCircle2
+            size={32}
+            className="mx-auto mb-3"
+            style={{ color: "var(--success)" }}
+          />
+          <h2 className="text-xl font-bold tracking-tight">Artista cadastrado!</h2>
+          <p className="mt-1 text-sm text-secondary">
+            Anote agora — a senha não aparece de novo.
+          </p>
+        </div>
 
-  function normalizar(s: string): string {
-    return s
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "")
-      .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
-
-  function aoMudarNome(v: string) {
-    setNome(v);
-    if (!usernameEditado) setUsernameRaiz(normalizar(v));
-  }
-
-  async function salvar() {
-    setErro(null);
-    if (!nome.trim()) return setErro("Informe o nome do artista.");
-    if (usernameRaiz.length < 3) return setErro("Username precisa ter 3+ chars.");
-    setSalvando(true);
-    try {
-      const r = await adicionarArtista({
-        nome: nome.trim(),
-        cor,
-        usernameRaiz: usernameRaiz.trim().toLowerCase(),
-      });
-      setCredenciais({ username: r.usernameCompleto, senha: r.senhaTemporaria });
-      await onRecarregar();
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvando(false);
-    }
+        <ModalCredenciais
+          nomeArtista={credenciais.nomeArtista}
+          username={credenciais.username}
+          senha={credenciais.senha}
+          onFechar={() => {
+            setCredenciais(null);
+            onAvancar();
+          }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -933,119 +926,52 @@ function Etapa4Artista({
           className="mx-auto mb-3"
           style={{ color: "var(--module-vendas)" }}
         />
-        <h2 className="text-xl font-bold tracking-tight">Cadastre seu primeiro artista</h2>
-        <p className="mt-1 text-sm text-secondary">
-          Você pode adicionar mais detalhes (cidade, taxa, rider) depois em
-          Configurações. Aqui é só o essencial.
+        <h2 className="text-xl font-bold tracking-tight">
+          Cadastre seu primeiro artista
+        </h2>
+        <p className="mt-1 text-sm text-secondary max-w-md mx-auto">
+          O cadastro completo inclui cidade, taxa de agência e rider — você
+          vai conseguir gerar orçamentos pra ele em seguida.
         </p>
       </div>
 
-      {credenciais ? (
-        <div className="card text-center">
-          <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
-          <h3 className="text-base font-bold">Artista cadastrado!</h3>
-          <p className="text-sm text-secondary mt-1 mb-4">
-            Anote ou copie agora — a senha não aparece de novo:
-          </p>
-          <div className="bg-elevated rounded-md p-3 text-left flex flex-col gap-2">
-            <div>
-              <div className="text-[0.65rem] text-muted">Login</div>
-              <div className="font-mono text-sm text-primary">{credenciais.username}</div>
-            </div>
-            <div>
-              <div className="text-[0.65rem] text-muted">Senha</div>
-              <div className="font-mono text-sm text-primary">{credenciais.senha}</div>
-            </div>
-          </div>
+      <div className="card flex flex-col gap-3 items-center text-center">
+        <p className="text-sm text-secondary">
+          Pode pular agora e adicionar artistas depois em{" "}
+          <strong className="text-primary">Configurações → Artistas</strong>.
+        </p>
+        <div className="flex flex-col gap-2 w-full max-w-[280px]">
           <button
-            onClick={onAvancar}
-            className="btn btn-primary text-sm w-full justify-center py-2.5 mt-4"
+            onClick={() => setModalAberto(true)}
+            className="btn btn-primary text-sm w-full justify-center py-2.5"
             style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
           >
-            Continuar
-            <ArrowRight size={14} />
+            <Music size={14} />
+            Abrir cadastro completo
+          </button>
+          <button
+            onClick={onAvancar}
+            className="text-xs text-muted hover:text-secondary"
+          >
+            Pular por agora
           </button>
         </div>
-      ) : (
-        <div className="card flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Nome do artista</span>
-            <input
-              value={nome}
-              onChange={(e) => aoMudarNome(e.target.value)}
-              placeholder="Ex.: DJ Lunar"
-              className="campo-input"
-              autoFocus
-            />
-          </label>
+      </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Cor</span>
-            <div className="flex flex-wrap gap-2">
-              {CORES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCor(c)}
-                  className="h-7 w-7 rounded-full transition-transform"
-                  style={{
-                    backgroundColor: c,
-                    outline: cor === c ? "2px solid var(--text-primary)" : "none",
-                    outlineOffset: 2,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Login (username)</span>
-            <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              <AtSign size={14} className="text-muted" />
-              <input
-                value={usernameRaiz}
-                onChange={(e) => {
-                  setUsernameEditado(true);
-                  setUsernameRaiz(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
-                }}
-                placeholder="ex: djlunar"
-                className="bg-transparent outline-none text-sm text-primary flex-1 min-w-0"
-              />
-              <span className="text-xs text-muted whitespace-nowrap">-{slug}</span>
-            </div>
-          </label>
-
-          {erro && (
-            <div
-              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
-              style={{
-                backgroundColor: "rgba(239,68,68,0.08)",
-                color: "var(--danger)",
-                border: "1px solid rgba(239,68,68,0.3)",
-              }}
-            >
-              <AlertTriangle size={12} />
-              {erro}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={salvar}
-              disabled={salvando}
-              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
-            >
-              {salvando ? "Cadastrando..." : "Cadastrar artista"}
-            </button>
-            <button
-              onClick={onAvancar}
-              className="text-xs text-muted hover:text-secondary"
-            >
-              Pular por agora
-            </button>
-          </div>
-        </div>
+      {/* Modal completo (mesmo de Configurações → Artistas) */}
+      {modalAberto && (
+        <ModalNovoArtista
+          slugAgencia={slug}
+          nomeAgencia={nomeAgencia}
+          adicionarArtista={adicionarArtista}
+          nomesExistentes={artistas.map((a) => a.name.toLowerCase())}
+          onCancelar={() => setModalAberto(false)}
+          onCriado={async (resultado) => {
+            setModalAberto(false);
+            setCredenciais(resultado);
+            await onRecarregar();
+          }}
+        />
       )}
     </div>
   );
