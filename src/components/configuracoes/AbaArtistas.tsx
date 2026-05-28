@@ -147,7 +147,6 @@ export default function AbaArtistas() {
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<ArtistaParaEdicao | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
-  const [resetando, setResetando] = useState<string | null>(null);
   const [credenciaisGeradas, setCredenciaisGeradas] = useState<{
     nomeArtista: string;
     username: string;
@@ -181,23 +180,9 @@ export default function AbaArtistas() {
     }
   }
 
-  async function aoResetar(id: string, nomeArt: string) {
-    if (!confirm(`Gerar uma nova senha aleatória pro artista ${nomeArt}?`)) return;
-    setResetando(id);
-    try {
-      const novaSenha = await resetarSenhaArtista(id);
-      // Reusa o modal de credenciais — só com a senha, sem username
-      setCredenciaisGeradas({
-        nomeArtista: nomeArt,
-        username: "—",
-        senha: novaSenha,
-      });
-    } catch (e) {
-      setToast({ msg: (e as Error).message, tipo: "erro" });
-    } finally {
-      setResetando(null);
-    }
-  }
+  // Reset de senha agora vive só dentro do modal "Editar artista" —
+  // o botão antigo direto na linha foi removido (a função existe no
+  // workspace-context e é chamada pelo onResetarSenha do ModalEditar).
 
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
@@ -424,16 +409,6 @@ export default function AbaArtistas() {
                         Editar
                       </button>
                       <button
-                        onClick={() => aoResetar(a.id, a.name)}
-                        disabled={resetando === a.id}
-                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1 disabled:opacity-50"
-                        style={{ color: "var(--module-vendas)" }}
-                        title="Gerar nova senha"
-                      >
-                        <KeyRound size={13} />
-                        {resetando === a.id ? "..." : "Senha"}
-                      </button>
-                      <button
                         onClick={() => alternarSuspensaoArtista(a.id)}
                         className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1"
                         style={{
@@ -539,11 +514,11 @@ export default function AbaArtistas() {
         consegue acessar sempre que precisar.{" "}
         <br />
         <strong className="text-primary">Senha:</strong> só aparece uma vez
-        ao criar. Se o artista perder, clique em{" "}
+        ao criar. Se o artista perder, abra{" "}
         <span className="inline-flex items-center gap-1 font-medium">
-          <KeyRound size={11} /> Senha
+          <Pencil size={11} /> Editar
         </span>{" "}
-        pra gerar uma nova.{" "}
+        e gere uma nova lá dentro.{" "}
         <br />
         <strong className="text-primary">Suspender:</strong> artista fica
         visível mas em cinza e sem editar nada.{" "}
