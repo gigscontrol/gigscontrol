@@ -13,8 +13,11 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
  * Body: { plano?: 'individual' | 'agencia' | 'plus' }
  * Se `plano` não vier, usa o plano que já está no workspace.
  */
+// Aceita qualquer um dos 5 planos do catálogo
 const schema = z.object({
-  plano: z.enum(["individual", "agencia", "plus"]).optional(),
+  plano: z
+    .enum(["individual", "equipe", "agencia", "agencia-plus", "agencia-max"])
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -50,7 +53,12 @@ export async function POST(request: Request) {
         .select("plano")
         .eq("id", workspaceId)
         .single();
-      planoFinal = (ws?.plano as "individual" | "agencia" | "plus") ?? "individual";
+      planoFinal = (ws?.plano as
+        | "individual"
+        | "equipe"
+        | "agencia"
+        | "agencia-plus"
+        | "agencia-max") ?? "individual";
     } else {
       // Veio plano no body — atualiza o workspace também
       await admin

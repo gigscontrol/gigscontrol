@@ -16,8 +16,10 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
  * Body: { plano: 'individual' | 'agencia' | 'plus' }
  */
 
+// Trial grátis de 7 dias é EXCLUSIVO do plano Individual.
+// Outros planos vão direto pro /pagamento mock.
 const schema = z.object({
-  plano: z.enum(["individual", "agencia", "plus"]),
+  plano: z.literal("individual"),
 });
 
 export async function POST(request: Request) {
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json(
-      { erro: "Plano inválido." },
+      { erro: "Teste grátis disponível apenas no plano Individual." },
       { status: 400 }
     );
   }

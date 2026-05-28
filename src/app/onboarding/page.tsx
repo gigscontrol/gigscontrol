@@ -181,7 +181,15 @@ export default function OnboardingPage() {
       </nav>
 
       <div className="relative flex-1 flex flex-col items-center px-6 py-10">
-        <div className="w-full max-w-[680px]">
+        {/* Etapa 2 (plano) precisa de espaço pros 5 cards. Outras etapas
+            ficam centradas em largura confortável. */}
+        <div
+          className={
+            etapa === 2
+              ? "w-full max-w-[1180px]"
+              : "w-full max-w-[680px]"
+          }
+        >
           {/* Stepper */}
           <Stepper etapaAtual={etapa} />
 
@@ -342,7 +350,7 @@ function Etapa1Bemvindo({
 }
 
 // ============================================================
-// Etapa 2 — Plano (cards + trial grátis 7d)
+// Etapa 2 — Plano (todos os 5 + trial só no Individual)
 // ============================================================
 function Etapa2Plano({
   planoEscolhido,
@@ -355,19 +363,19 @@ function Etapa2Plano({
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
+  const router = useRouter();
   const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
     planoEscolhido ?? "individual"
   );
   const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Mostra só os 3 primeiros planos pra não poluir (user vê todos em Configurações)
-  const planosVisiveis = PLANOS.slice(0, 3);
-
-  // Se já está ativo (não em trial inicial), passou direto pra próxima
-  const jaConfigurou = subscriptionStatus === "ativa" || subscriptionStatus === "trial";
+  const jaConfigurou =
+    subscriptionStatus === "ativa" || subscriptionStatus === "trial";
+  const isIndividual = planoSelecionado === "individual";
 
   async function iniciarTrial() {
+    if (!isIndividual) return; // proteção; backend tb valida
     setAcao("trial");
     setErro(null);
     try {
@@ -375,7 +383,7 @@ function Etapa2Plano({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: planoSelecionado }),
+        body: JSON.stringify({ plano: "individual" }),
       });
       if (!r.ok) {
         const b = await r.json().catch(() => ({}));
@@ -389,54 +397,90 @@ function Etapa2Plano({
     }
   }
 
+  async function irParaPagamento() {
+    setAcao("pagar");
+    setErro(null);
+    try {
+      // Salva o plano escolhido em workspaces.plano sem ativar a
+      // subscription. O /pagamento mock lê de lá e processa o checkout.
+      const r = await fetch("/api/workspace/escolher-plano", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: planoSelecionado }),
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
+      }
+      router.push("/pagamento");
+    } catch (e) {
+      setErro((e as Error).message);
+      setAcao(null);
+    }
+  }
+
   return (
     <div>
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold tracking-tight">Escolha o plano</h2>
         <p className="mt-1 text-sm text-secondary">
-          Comece com{" "}
-          <strong className="text-primary">7 dias grátis</strong> em qualquer
-          plano. Sem cartão de crédito. Cancele quando quiser.
+          Plano <strong className="text-warning">Individual</strong> tem{" "}
+          <strong className="text-warning">7 dias grátis</strong> sem cartão.
+          Demais planos: cobrança imediata.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        {planosVisiveis.map((p) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+        {PLANOS.map((p) => {
           const sel = planoSelecionado === p.id;
-          // "Individual" é o mais popular (decisão do produto)
           const popular = p.id === "individual";
+          const temTrial = p.id === "individual";
           return (
             <button
               key={p.id}
               type="button"
               onClick={() => setPlanoSelecionado(p.id)}
-              className="card text-left transition-all hover:border-border-strong relative"
+              className="card text-left transition-all hover:border-border-strong relative flex flex-col"
               style={{
                 borderColor: sel ? "var(--module-vendas)" : undefined,
                 boxShadow: sel ? "0 0 0 1px var(--module-vendas)" : undefined,
+                paddingTop: temTrial || popular ? 24 : undefined,
               }}
             >
-              {popular && (
-                <span
-                  className="absolute -top-2 left-3 text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
-                  style={{ backgroundColor: "var(--module-vendas)" }}
-                >
-                  Mais popular
-                </span>
-              )}
+              {/* Badges no topo */}
+              <div className="absolute top-0 left-3 right-3 flex flex-wrap gap-1" style={{ transform: "translateY(-50%)" }}>
+                {popular && (
+                  <span
+                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
+                    style={{ backgroundColor: "var(--module-vendas)" }}
+                  >
+                    Mais popular
+                  </span>
+                )}
+                {temTrial && (
+                  <span
+                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-black"
+                    style={{ backgroundColor: "#fbbf24" }}
+                  >
+                    Teste grátis 7 dias
+                  </span>
+                )}
+              </div>
+
               <div className="text-sm font-bold text-primary">{p.nome}</div>
-              <div className="text-xs text-muted mb-2">{p.tagline}</div>
+              <div className="text-[0.65rem] text-muted mb-2 line-clamp-2">{p.tagline}</div>
               <div className="mb-2">
-                <span className="text-xl font-bold text-primary">
+                <span className="text-base font-bold text-primary">
                   {formatarPreco(p.precoMensal)}
                 </span>
-                <span className="text-[0.65rem] text-muted">/mês</span>
+                <span className="text-[0.6rem] text-muted">/mês</span>
               </div>
-              <ul className="flex flex-col gap-1 text-[0.7rem] text-secondary">
+              <ul className="flex flex-col gap-1 text-[0.65rem] text-secondary flex-1">
                 {p.recursos.slice(0, 3).map((r) => (
                   <li key={r} className="flex items-start gap-1">
-                    <Check size={10} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-                    {r}
+                    <Check size={9} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
+                    <span className="line-clamp-2">{r}</span>
                   </li>
                 ))}
               </ul>
@@ -467,35 +511,61 @@ function Etapa2Plano({
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 max-w-[480px] mx-auto">
+        {/* Botão verde: pagar agora (todos os planos) */}
         <button
-          onClick={iniciarTrial}
+          onClick={irParaPagamento}
           disabled={acao !== null}
           className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
           style={{ backgroundColor: "var(--success)", color: "#fff" }}
         >
-          {acao === "trial" ? (
+          {acao === "pagar" ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Iniciando...
-            </>
-          ) : jaConfigurou && subscriptionStatus === "trial" ? (
-            <>
-              Continuar com o trial
-              <ArrowRight size={14} />
+              Indo pro pagamento...
             </>
           ) : (
             <>
-              <Sparkles size={14} />
-              Começar teste grátis (7 dias)
+              Continuar e pagar agora
+              <ArrowRight size={14} />
             </>
           )}
         </button>
 
+        {/* Botão amarelo: trial grátis (só Individual) */}
+        {isIndividual && (
+          <button
+            onClick={iniciarTrial}
+            disabled={acao !== null}
+            className="text-sm w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-md font-medium disabled:opacity-60 text-black"
+            style={{ backgroundColor: "#fbbf24" }}
+          >
+            {acao === "trial" ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Iniciando...
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} />
+                Começar teste grátis (7 dias)
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Se não é Individual, lembra que não tem trial */}
+        {!isIndividual && (
+          <p className="text-[0.65rem] text-muted text-center">
+            Teste grátis disponível apenas no plano Individual.
+          </p>
+        )}
+
+        {/* Quem já configurou (caso volte na etapa) */}
         {jaConfigurou && (
           <button
             onClick={onAvancar}
-            className="text-xs text-muted hover:text-secondary text-center"
+            className="text-xs text-muted hover:text-secondary text-center mt-2"
           >
             Continuar com o plano atual
           </button>
