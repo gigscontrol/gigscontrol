@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Settings,
-  ShieldCheck,
   Music,
   Users,
   Trash2,
@@ -12,7 +11,6 @@ import {
   Bell,
 } from "lucide-react";
 import AbaGeral from "./AbaGeral";
-import AbaSeguranca from "./AbaSeguranca";
 import AbaArtistas from "./AbaArtistas";
 import AbaEquipe from "./AbaEquipe";
 import AbaLixeira from "./AbaLixeira";
@@ -23,12 +21,14 @@ import { useAuth } from "@/lib/auth-context";
 /**
  * Tela de Configurações.
  *
- * - Admin do workspace: vê as 4 abas (Aparência, Artistas, Equipe, Segurança).
+ * - Admin do workspace: vê todas as abas — a aba "Geral" reúne logo,
+ *   nome, e-mail, username da agência E alteração da própria senha.
  * - Demais usuários (produtor, vendedor, financeiro, artista):
- *   só veem a aba "Segurança" — para alterar a própria senha.
+ *   veem só "Geral" (que pra eles só mostra Alterar senha) e
+ *   "Notificações".
  */
 
-type AbaConfig = "geral" | "seguranca" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
+type AbaConfig = "geral" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
 
 type AbaDef = { id: AbaConfig; label: string; icon: typeof Settings };
 
@@ -39,13 +39,12 @@ const ABAS_ADMIN: AbaDef[] = [
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
   { id: "historico", label: "Histórico", icon: History },
   { id: "notificacoes", label: "Notificações", icon: Bell },
-  { id: "seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
-// Usuários comuns também podem ver as próprias notificações
+// Usuários comuns veem só Geral (= Alterar senha) e Notificações
 const ABAS_USUARIO: AbaDef[] = [
+  { id: "geral", label: "Geral", icon: Settings },
   { id: "notificacoes", label: "Notificações", icon: Bell },
-  { id: "seguranca", label: "Segurança", icon: ShieldCheck },
 ];
 
 export default function Configuracoes({ onSair }: { onSair: () => void }) {
@@ -53,7 +52,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
   const isAdmin = sessao?.usuario?.papel === "admin";
 
   const abas = useMemo(() => (isAdmin ? ABAS_ADMIN : ABAS_USUARIO), [isAdmin]);
-  const [aba, setAba] = useState<AbaConfig>(abas[0]?.id ?? "seguranca");
+  const [aba, setAba] = useState<AbaConfig>(abas[0]?.id ?? "geral");
 
   return (
     <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
@@ -73,7 +72,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
         <p className="text-sm text-muted">
           {isAdmin
             ? "Personalize a dashboard, gerencie artistas e a equipe da sua agência."
-            : "Altere a sua senha de acesso."}
+            : "Configurações da sua conta."}
         </p>
       </div>
 
@@ -106,13 +105,12 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
       )}
 
       {/* Conteúdo */}
-      {aba === "geral" && isAdmin && <AbaGeral />}
+      {aba === "geral" && <AbaGeral />}
       {aba === "artistas" && isAdmin && <AbaArtistas />}
       {aba === "equipe" && isAdmin && <AbaEquipe />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}
       {aba === "historico" && isAdmin && <AbaHistorico />}
       {aba === "notificacoes" && <AbaNotificacoes />}
-      {aba === "seguranca" && <AbaSeguranca />}
     </div>
   );
 }

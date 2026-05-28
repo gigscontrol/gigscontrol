@@ -17,6 +17,7 @@ import Toast from "../Toast";
 import Modal from "../Modal";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import AbaSeguranca from "./AbaSeguranca";
 
 /**
  * Aba "Geral" das Configurações (antes era "Aparência").
@@ -48,6 +49,7 @@ type CheckResultado = {
 export default function AbaGeral() {
   const { aparencia, atualizarNomeAgencia, uploadLogo, removerLogo } = useWorkspace();
   const { sessao } = useAuth();
+  const isAdmin = sessao?.usuario?.papel === "admin";
   const [nome, setNome] = useState(aparencia.nomeAgencia);
   const [erro, setErro] = useState<string | null>(null);
   const [salvandoNome, setSalvandoNome] = useState(false);
@@ -124,6 +126,10 @@ export default function AbaGeral() {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
+      {/* Blocos abaixo só pra admin. Não-admin (artista, vendedor etc)
+          vê só a seção de Segurança no final. */}
+      {isAdmin && (
+        <>
       {/* ---- Logo ---- */}
       <section className="card">
         <div className="section-title mb-1">Logo da dashboard</div>
@@ -250,6 +256,11 @@ export default function AbaGeral() {
       <SlugSection
         onToast={(msg, tipo) => setToast({ msg, tipo })}
       />
+        </>
+      )}
+
+      {/* ---- Segurança (alterar senha) — sempre visível ---- */}
+      <AbaSeguranca />
 
       {erro && (
         <div
