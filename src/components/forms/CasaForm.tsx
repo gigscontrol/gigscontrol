@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Field, TextInput, TextArea, Select } from "../Field";
+import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
+import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
 import type { Casa, TipoCasa } from "@/types";
 
 const TIPOS: { value: TipoCasa; label: string }[] = [
@@ -23,9 +25,18 @@ type Props = {
 export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const { cidades, addCasa, updateCasa } = useContatos();
 
+  // Pré-popula a cidade IBGE a partir da cidade atual da casa (se ela
+  // tem ibgeId no banco). Cidades legadas sem ibge_id ficam vazias e o
+  // user precisa escolher uma do IBGE.
+  const cidadeInicial = initial?.cidadeId
+    ? cidades.find((c) => c.id === initial.cidadeId)
+    : undefined;
+  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
+    cidadeParaIbge(cidadeInicial)
+  );
+
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [tipo, setTipo] = useState<TipoCasa>(initial?.tipo ?? "club");
-  const [cidadeId, setCidadeId] = useState<string>(initial?.cidadeId ?? cidades[0]?.id ?? "");
   const [capacidade, setCapacidade] = useState<string>(initial?.capacidade?.toString() ?? "");
   const [endereco, setEndereco] = useState(initial?.endereco ?? "");
   const [contatoResponsavel, setContatoResponsavel] = useState(initial?.contatoResponsavel ?? "");
@@ -33,21 +44,32 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const [observacoes, setObservacoes] = useState(initial?.observacoes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = "Nome obrigatório";
-    if (!cidadeId) errs.cidade = "Selecione uma cidade";
+    if (!cidadeIbge) errs.cidade = "Selecione uma cidade";
     if (capacidade && isNaN(Number(capacidade))) errs.capacidade = "Capacidade deve ser número";
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
+    if (!cidadeIbge) return; // type guard pro TS
+
+    // Resolve IBGE → UUID local antes de salvar
+    let cidadeIdResolvido: string;
+    try {
+      const cid = await resolverCidadeIbge(cidadeIbge);
+      cidadeIdResolvido = cid.id;
+    } catch (e) {
+      setErrors({ cidade: (e as Error).message });
+      return;
+    }
 
     const payload = {
       nome,
       tipo,
-      cidadeId,
+      cidadeId: cidadeIdResolvido,
       capacidade: capacidade ? Number(capacidade) : undefined,
       endereco: endereco || undefined,
       contatoResponsavel: contatoResponsavel || undefined,
@@ -55,8 +77,13 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
       observacoes: observacoes || undefined,
     };
 
-    const op = initial ? updateCasa(initial.id, payload) : addCasa(payload);
-    op.then(() => onSubmit()).catch((e) => setErrors({ nome: (e as Error).message }));
+    try {
+      if (initial) await updateCasa(initial.id, payload);
+      else await addCasa(payload);
+      onSubmit();
+    } catch (e) {
+      setErrors({ nome: (e as Error).message });
+    }
   };
 
   return (
@@ -73,12 +100,14 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
           </Select>
         </Field>
         <Field label="Cidade" required error={errors.cidade}>
-          <Select value={cidadeId} onChange={(e) => setCidadeId(e.target.value)}>
-            <option value="">Selecione...</option>
-            {cidades.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome} — {c.estado}</option>
-            ))}
-          </Select>
+          <CidadeIBGEAutocomplete
+            value={cidadeIbge}
+            onChange={(c) => {
+              setCidadeIbge(c);
+              if (c) setErrors((p) => ({ ...p, cidade: "" }));
+            }}
+            placeholder="Ex: São Paulo, Belo Horizonte..."
+          />
         </Field>
         <Field label="Capacidade" hint="Quantidade de pessoas" error={errors.capacidade}>
           <TextInput

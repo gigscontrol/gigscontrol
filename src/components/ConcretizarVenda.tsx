@@ -18,7 +18,8 @@ import PageHeader from "./PageHeader";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
-import CityAutocomplete, { type CidadeSelecionada } from "./CityAutocomplete";
+import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
+import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -62,7 +63,7 @@ function calcularDuracao(inicio: string, fim: string): { horas: number; minutos:
 
 export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Props) {
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, casas, cidades, addCidade } = useContatos();
+  const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
 
@@ -100,19 +101,9 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   const [horarioInicio, setHorarioInicio] = useState(orc?.horario ?? "");
   const [horarioFim, setHorarioFim] = useState("");
 
-  // Cidade
-  const [paisCidade, setPaisCidade] = useState<Country>(DEFAULT_COUNTRY);
-  const [cidadeSelecionada, setCidadeSelecionada] = useState<CidadeSelecionada | null>(
-    cidadeOrc
-      ? {
-          id: cidadeOrc.id,
-          nome: cidadeOrc.nome,
-          uf: cidadeOrc.estado,
-          regiao: cidadeOrc.regiao,
-          pais: "BR",
-          paisNome: "Brasil",
-        }
-      : null
+  // Cidade — pré-popula a partir do orçamento se ele tiver ibge_id
+  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
+    cidadeParaIbge(cidadeOrc)
   );
 
   // Show — djId é uuid do artista (workspace.artistas).
@@ -264,7 +255,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
     if (!dataShow) errs.dataShow = "Data obrigatória";
     if (!horarioInicio) errs.horarioInicio = "Horário de início obrigatório";
     if (!horarioFim) errs.horarioFim = "Horário de fim obrigatório";
-    if (!cidadeSelecionada) errs.cidade = "Cidade obrigatória";
+    if (!cidadeIbge) errs.cidade = "Cidade obrigatória";
 
     if (djId === null) errs.dj = "Selecione o artista da agência";
     const cacheNum = parseFloat(cache.replace(",", "."));
@@ -302,22 +293,20 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   }
 
   async function handleSubmit() {
-    if (!validate() || !cidadeSelecionada || djId === null) return;
+    if (!validate() || !cidadeIbge || djId === null) return;
 
     const cacheNum = parseFloat(cache.replace(",", "."));
     const telefoneE164 = `${country.ddi}${telDigits.replace(/\D/g, "")}`;
 
-    // Resolver cidade nova
-    let cidadeIdResolvido: string | undefined = cidadeSelecionada.id;
-    if (!cidadeIdResolvido) {
-      const novaCid = await addCidade({
-        nome: cidadeSelecionada.nome,
-        estado: cidadeSelecionada.uf,
-        regiao: cidadeSelecionada.regiao,
-      });
-      cidadeIdResolvido = novaCid.id;
+    // Resolve a cidade IBGE → UUID local (cria se ainda não existe)
+    let cidadeIdResolvido: string;
+    try {
+      const cid = await resolverCidadeIbge(cidadeIbge);
+      cidadeIdResolvido = cid.id;
+    } catch (e) {
+      setErrors((p) => ({ ...p, cidade: (e as Error).message }));
+      return;
     }
-    if (!cidadeIdResolvido) return;
 
     const input: NovaVendaInput = {
       orcamentoId,
@@ -618,16 +607,20 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           </div>
 
           <div className="sm:col-span-2">
-            <FieldWithAuto label="Cidade" required showAuto={showAutoBadge("cidade")}>
-              <CityAutocomplete
-                value={cidadeSelecionada}
+            <FieldWithAuto
+              label="Cidade"
+              required
+              error={errors.cidade}
+              showAuto={showAutoBadge("cidade")}
+            >
+              <CidadeIBGEAutocomplete
+                value={cidadeIbge}
                 onChange={(c) => {
-                  setCidadeSelecionada(c);
+                  setCidadeIbge(c);
                   marcarEditado("cidade");
+                  if (c) setErrors((p) => ({ ...p, cidade: "" }));
                 }}
-                country={paisCidade}
-                onCountryChange={setPaisCidade}
-                error={errors.cidade}
+                placeholder="Ex: São Paulo, Belo Horizonte..."
               />
             </FieldWithAuto>
           </div>

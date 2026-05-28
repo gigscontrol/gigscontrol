@@ -22,7 +22,8 @@ import Stepper from "./Stepper";
 import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
-import CityAutocomplete, { type CidadeSelecionada } from "./CityAutocomplete";
+import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
+import { resolverCidadeIbge } from "@/lib/cidade-helpers";
 import { Field, TextInput, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -92,8 +93,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [novoNome, setNovoNome] = useState("");
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [telDigits, setTelDigits] = useState("");
-  const [paisCidade, setPaisCidade] = useState<Country>(DEFAULT_COUNTRY);
-  const [cidadeSelecionada, setCidadeSelecionada] = useState<CidadeSelecionada | null>(null);
+  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
 
   // ----- ETAPA 2 -----
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj(DJS[0]?.id ?? "")]);
@@ -124,7 +124,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       if (dig === 0) errs.contratanteTel = "Telefone obrigatório";
       else if (dig < country.minDigits) errs.contratanteTel = "Faltam dígitos";
     }
-    if (!cidadeSelecionada) errs.cidade = "Selecione a cidade do evento";
+    if (!cidadeIbge) errs.cidade = "Selecione a cidade do evento";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -173,7 +173,17 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   async function handleSubmit() {
     if (!validateStep1()) { setStep(1); return; }
     if (!validateStep2()) return;
-    if (!tipoEvento || !cidadeSelecionada) return;
+    if (!tipoEvento || !cidadeIbge) return;
+
+    // Resolve a cidade IBGE → UUID local (cria se ainda não existe;
+    // geocoda lat/lng via OSM no caminho).
+    let cidadeResolvida;
+    try {
+      cidadeResolvida = await resolverCidadeIbge(cidadeIbge);
+    } catch (e) {
+      setErrors((p) => ({ ...p, cidade: (e as Error).message }));
+      return;
+    }
 
     const contratanteInputInicial: ContratanteInput =
       contratanteMode === "existente"
@@ -188,16 +198,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
     const casaInput: CasaInput = { tipo: "nenhuma" };
 
-    const cidadeInputInicial: CidadeInput = cidadeSelecionada.id
-      ? { tipo: "existente", id: cidadeSelecionada.id }
-      : {
-          tipo: "novo",
-          dados: {
-            nome: cidadeSelecionada.nome,
-            estado: cidadeSelecionada.uf,
-            regiao: cidadeSelecionada.regiao,
-          },
-        };
+    const cidadeInputInicial: CidadeInput = {
+      tipo: "existente",
+      id: cidadeResolvida.id,
+    };
 
     const resultados: NonNullable<typeof salvos> = [];
     let contratanteIdResolvido: string | null = null;
@@ -245,9 +249,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
       const cidadeObj = {
         id: orc.cidadeId,
-        nome: cidadeSelecionada.nome,
-        estado: cidadeSelecionada.uf,
-        regiao: cidadeSelecionada.regiao,
+        nome: cidadeResolvida.nome,
+        estado: cidadeResolvida.estado,
+        regiao: cidadeResolvida.regiao,
       };
       const dj = DJS.find((d) => d.id === b.djId);
       const e164 = getTelefoneSelecionadoE164();
@@ -514,13 +518,17 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             <div className="section-title mb-3">
               Cidade do evento <span className="text-danger">*</span>
             </div>
-            <CityAutocomplete
-              value={cidadeSelecionada}
-              onChange={setCidadeSelecionada}
-              country={paisCidade}
-              onCountryChange={setPaisCidade}
-              error={errors.cidade}
+            <CidadeIBGEAutocomplete
+              value={cidadeIbge}
+              onChange={(c) => {
+                setCidadeIbge(c);
+                if (c) setErrors((p) => ({ ...p, cidade: "" }));
+              }}
+              placeholder="Ex: São Paulo, Belo Horizonte..."
             />
+            {errors.cidade && (
+              <p className="text-xs text-danger mt-1">{errors.cidade}</p>
+            )}
           </div>
         </div>
       )}
@@ -538,8 +546,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               onChange={(patch) => atualizarBloco(idx, patch)}
               onRemove={() => removerBloco(idx)}
               errors={errors}
-              ufCidade={cidadeSelecionada?.uf}
-              nomeCidade={cidadeSelecionada?.nome}
+              ufCidade={cidadeIbge?.uf}
+              nomeCidade={cidadeIbge?.nome}
               tipoEvento={tipoEvento}
             />
           ))}

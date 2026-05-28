@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Info } from "lucide-react";
 import { Field, TextInput, Select } from "../Field";
 import { useContatos } from "@/lib/contatos-context";
 import type { Cidade } from "@/types";
@@ -13,14 +14,57 @@ type Props = {
   onCancel: () => void;
 };
 
+/**
+ * Formulário de cidade.
+ *
+ * NOVO (sem `initial`): mostra apenas uma mensagem informativa explicando
+ * que cidades agora são criadas automaticamente a partir do catálogo
+ * nacional do IBGE quando aparecem em orçamento/venda/casa/contratante.
+ *
+ * EDIÇÃO (com `initial`): permite ajustar nome/UF de cidades legadas
+ * (criadas antes da integração IBGE). Cidades novas (com ibge_id) também
+ * podem ser editadas — útil pra corrigir grafia ou UF errados.
+ */
 export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
-  const { addCidade, updateCidade } = useContatos();
+  const { updateCidade } = useContatos();
 
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [estado, setEstado] = useState(initial?.estado ?? "");
   const [regiao, setRegiao] = useState<Cidade["regiao"]>(initial?.regiao ?? "Sudeste");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Modo NOVO: explica que não precisa criar manualmente
+  if (!initial) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div
+          className="flex items-start gap-3 rounded-md px-4 py-3"
+          style={{
+            backgroundColor: "rgba(168,85,247,0.08)",
+            border: "1px solid rgba(168,85,247,0.2)",
+          }}
+        >
+          <Info size={18} style={{ color: "var(--module-vendas)" }} className="flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-secondary leading-relaxed">
+            Cidades agora são adicionadas <strong className="text-primary">automaticamente</strong> a
+            partir do catálogo nacional do IBGE quando aparecem em um
+            orçamento, venda, casa ou contratante.
+            <br />
+            <br />
+            Não precisa criar manualmente — basta usar o autocomplete de
+            cidade nos formulários e a cidade fica salva aqui.
+          </div>
+        </div>
+        <div className="flex justify-end pt-2 border-t border-border">
+          <button onClick={onCancel} className="btn btn-primary">
+            Entendi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Modo EDIÇÃO: permite ajustar cidade existente (legada ou IBGE)
   const handleSave = () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = "Nome obrigatório";
@@ -31,13 +75,10 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
       return;
     }
 
-    // O `regiao` é derivado do `estado` no servidor (mapper). Aqui a UI
-    // mantém o campo só pra preencher o filtro local enquanto os dados
-    // não voltam da API.
     const payload = { nome, estado: estado.toUpperCase(), regiao };
-
-    const op = initial ? updateCidade(initial.id, payload) : addCidade(payload);
-    op.then(() => onSubmit()).catch((e) => setErrors({ nome: (e as Error).message }));
+    updateCidade(initial.id, payload)
+      .then(() => onSubmit())
+      .catch((e) => setErrors({ nome: (e as Error).message }));
   };
 
   return (
@@ -67,7 +108,7 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
         <button onClick={onCancel} className="btn btn-secondary">Cancelar</button>
         <button onClick={handleSave} className="btn btn-primary">
-          {initial ? "Salvar alterações" : "Cadastrar cidade"}
+          Salvar alterações
         </button>
       </div>
     </div>
