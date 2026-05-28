@@ -75,7 +75,8 @@ export default function CompletarCadastroPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.erro ?? `Falha (${res.status}).`);
       }
-      router.replace("/app");
+      // Primeiro acesso (veio do OAuth) — passa pelo /pagamento → /onboarding → /app
+      router.replace("/pagamento");
     } catch (e) {
       setErro((e as Error).message);
     } finally {

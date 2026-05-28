@@ -49,10 +49,19 @@ export default function AppPage() {
   );
 }
 
-/** Protege a dashboard — sem sessão, manda para /login */
+/**
+ * Protege a dashboard — sem sessão, manda para /login.
+ *
+ * Também verifica o status do onboarding pra admins novos: se a
+ * subscription ainda está em "trial" → /pagamento; se já pagou mas
+ * não terminou o checklist → /onboarding. Quem já está rodando o
+ * app normal (Bruno) tem `onboarding_completo=true` no backfill da
+ * migração 25 e passa direto.
+ */
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { sessao, carregando, isSuperAdmin, modoVisitante } = useAuth();
   const router = useRouter();
+  const [verificandoOnboarding, setVerificandoOnboarding] = useState(true);
 
   useEffect(() => {
     if (carregando) return;
@@ -63,10 +72,39 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     // Super-admin só acessa /app em modo visitante (visualizando um cliente)
     if (isSuperAdmin && !modoVisitante) {
       router.replace("/admin");
+      return;
     }
+    // Verifica onboarding só pra admin não-visitante
+    if (modoVisitante || sessao.usuario.papel !== "admin") {
+      setVerificandoOnboarding(false);
+      return;
+    }
+    let ativo = true;
+    fetch("/api/workspace/onboarding", { credentials: "include", cache: "no-store" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      })
+      .then((d: { subscriptionStatus?: string; onboardingCompleto?: boolean }) => {
+        if (!ativo) return;
+        if (d.subscriptionStatus !== "ativa") {
+          router.replace("/pagamento");
+        } else if (!d.onboardingCompleto) {
+          router.replace("/onboarding");
+        } else {
+          setVerificandoOnboarding(false);
+        }
+      })
+      .catch(() => {
+        // Em caso de falha, deixa entrar pra não bloquear pelo erro
+        if (ativo) setVerificandoOnboarding(false);
+      });
+    return () => {
+      ativo = false;
+    };
   }, [carregando, sessao, isSuperAdmin, modoVisitante, router]);
 
-  if (carregando) {
+  if (carregando || verificandoOnboarding) {
     return (
       <div className="flex h-screen items-center justify-center bg-main">
         <div className="text-sm text-muted">Carregando…</div>

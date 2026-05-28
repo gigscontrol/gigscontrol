@@ -79,8 +79,10 @@ export async function GET(request: Request) {
     } catch (e) {
       console.error("[auth/callback] setup falhou:", (e as Error).message);
     }
-    const dest = next.startsWith("/") ? next : "/app";
-    return NextResponse.redirect(new URL(dest, url.origin));
+    // Primeiro acesso → passa pelo /pagamento (mock) e depois /onboarding.
+    // Quem já está ativo (admin existente sem profile, edge case) vai pro
+    // destino normal.
+    return NextResponse.redirect(new URL("/pagamento", url.origin));
   }
 
   // Veio de OAuth (Google/Facebook) sem dados de agência —
