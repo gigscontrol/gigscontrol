@@ -13,8 +13,11 @@ import { auditAndNotify } from "@/lib/services/historico.service";
  * Body: { ids: string[] }
  */
 
+// Aceita qualquer string não vazia. A semântica (IDs do workspace
+// correto) é validada no service, então não precisa apertar com
+// .uuid() aqui (que rejeita formatos não-v4 mesmo sendo UUIDs válidos).
 const schema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
+  ids: z.array(z.string().min(1)).min(1).max(200),
 });
 
 export async function POST(request: Request) {
