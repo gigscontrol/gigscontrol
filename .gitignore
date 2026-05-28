@@ -15,3 +15,7 @@ yarn-error.log*
 next-env.d.ts
 .claude/
 
+# Scripts locais de manutenção (uso pontual via service_role; nunca devem
+# ir pra produção, contêm operações destrutivas)
+scripts/
+
