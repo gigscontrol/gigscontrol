@@ -7,7 +7,7 @@ import Modal from "./Modal";
 import Toast from "./Toast";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import {
   LABELS_STATUS_ORCAMENTO,
@@ -28,6 +28,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
+  const artistas = useArtistas();
 
   // Estado dos diálogos de feedback (duplicar)
   const [confirmaDuplicar, setConfirmaDuplicar] = useState(false);
@@ -57,7 +58,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const cont = contratantes.find((c) => c.id === orc.contratanteId);
   const cs = orc.casaId ? casas.find((c) => c.id === orc.casaId) : undefined;
   const cid = cidades.find((c) => c.id === orc.cidadeId);
-  const dj = DJS.find((d) => d.id === orc.djId);
+  const dj = artistas.find((d) => d.id === orc.djId);
   const st = LABELS_STATUS_ORCAMENTO[orc.status];
 
   const texto = gerarTextoWhatsApp(orc, { contratante: cont, casa: cs, cidade: cid, dj });

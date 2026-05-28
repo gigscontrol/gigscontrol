@@ -15,7 +15,7 @@ import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import { useVendas } from "@/lib/vendas-context";
 import { useAuth } from "@/lib/auth-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
   MODULE_THEMES,
@@ -43,6 +43,7 @@ export default function ControlePagamentos() {
   const accent = MODULE_THEMES.financeiro.color;
   const { vendas, atualizarParcela } = useVendas();
   const { modoVisitante } = useAuth();
+  const artistas = useArtistas();
 
   const [search, setSearch] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
@@ -51,7 +52,7 @@ export default function ControlePagamentos() {
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendas) {
-      const dj = DJS.find((d) => d.id === v.djId);
+      const dj = artistas.find((d) => d.id === v.djId);
       v.parcelas.forEach((parcela, idx) => {
         linhas.push({
           vendaId: v.id,
@@ -73,7 +74,7 @@ export default function ControlePagamentos() {
         new Date(a.parcela.dataVencimento).getTime() -
         new Date(b.parcela.dataVencimento).getTime()
     );
-  }, [vendas]);
+  }, [vendas, artistas]);
 
   // Totais
   const totais = useMemo(() => {

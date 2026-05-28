@@ -24,7 +24,7 @@ import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./Phon
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import {
   CATALOGO_CAMARIM,
@@ -66,6 +66,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
+  const artistas = useArtistas();
 
   const orc = orcamentoId ? orcamentos.find((o) => o.id === orcamentoId) : undefined;
   const contratanteOrc = orc ? contratantes.find((c) => c.id === orc.contratanteId) : undefined;
@@ -355,7 +356,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
     onSaved(venda.id);
   }
 
-  const djSelecionado = djId !== null ? DJS.find((d) => d.id === djId) : undefined;
+  const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
 
   return (
     <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8 pb-32">
@@ -637,7 +638,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           showAuto={showAutoBadge("djId")}
         >
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-            {DJS.map((d) => {
+            {artistas.map((d) => {
               const isActive = djId === d.id;
               return (
                 <button

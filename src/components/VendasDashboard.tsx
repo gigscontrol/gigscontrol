@@ -14,7 +14,7 @@ import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
@@ -35,6 +35,7 @@ export default function VendasDashboard({
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
+  const artistas = useArtistas();
 
   const orcamentosVisiveis = useMemo(
     () => orcamentos.filter((o) => selectedDJs.includes(o.djId)),
@@ -157,7 +158,7 @@ export default function VendasDashboard({
           ) : (
             <div className="flex flex-col gap-1.5">
               {orcamentosRecentes.map((o) => {
-                const dj = DJS.find((d) => d.id === o.djId);
+                const dj = artistas.find((d) => d.id === o.djId);
                 const st = LABELS_STATUS_ORCAMENTO[o.status];
                 return (
                   <button
@@ -207,7 +208,7 @@ export default function VendasDashboard({
           ) : (
             <div className="flex flex-col gap-1.5">
               {vendasRecentes.map((v) => {
-                const dj = DJS.find((d) => d.id === v.djId);
+                const dj = artistas.find((d) => d.id === v.djId);
                 return (
                   <button
                     key={v.id}

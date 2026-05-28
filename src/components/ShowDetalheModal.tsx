@@ -30,7 +30,7 @@ import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import {
   LABELS_STATUS_ORCAMENTO,
@@ -59,6 +59,7 @@ export default function ShowDetalheModal({
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
+  const artistas = useArtistas();
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
   if (!show) {
@@ -69,7 +70,7 @@ export default function ShowDetalheModal({
     );
   }
 
-  const dj = DJS.find((d) => d.id === show.djId);
+  const dj = artistas.find((d) => d.id === show.djId);
   const contratante = show.contratanteId
     ? contratantes.find((c) => String(c.id) === show.contratanteId)
     : null;

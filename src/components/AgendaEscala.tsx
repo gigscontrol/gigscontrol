@@ -5,10 +5,9 @@ import { MapPin, Clock, Music, Calendar } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
-import { useWorkspace } from "@/lib/workspace-context";
-import { DJS } from "@/lib/djs";
+import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { MODULE_THEMES } from "@/types";
-import type { AgendaDateRange, Show, ShowStatus } from "@/types";
+import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -44,8 +43,7 @@ function StatusBadge({ status }: { status: ShowStatus }) {
   );
 }
 
-function EventCard({ show, onClick }: { show: Show; onClick?: () => void }) {
-  const dj = DJS.find((d) => d.id === show.djId);
+function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () => void }) {
   return (
     <button
       type="button"
@@ -85,6 +83,7 @@ type Props = {
 export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda }: Props) {
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
+  const artistas = useArtistas();
   const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
   // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
@@ -260,6 +259,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 key={day.uniqueKey}
                 day={day}
                 shows={filteredShows.filter((s) => s.dayId === day.id)}
+                artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
               />
@@ -280,6 +280,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 key={day.uniqueKey}
                 day={day}
                 shows={shows}
+                artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
               />
@@ -306,11 +307,13 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
 function DayCellComponent({
   day,
   shows,
+  artistas,
   accent,
   onShowClick,
 }: {
   day: DayCell;
   shows: Show[];
+  artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
 }) {
@@ -351,7 +354,14 @@ function DayCellComponent({
 
       <div className="flex-1 overflow-y-auto -mr-1 pr-1">
         {shows.length > 0 ? (
-          shows.map((show) => <EventCard key={show.id} show={show} onClick={() => onShowClick(show.id)} />)
+          shows.map((show) => (
+            <EventCard
+              key={show.id}
+              show={show}
+              dj={artistas.find((d) => d.id === show.djId)}
+              onClick={() => onShowClick(show.id)}
+            />
+          ))
         ) : (
           <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md text-[0.7rem] text-muted">
             Sem shows
@@ -365,11 +375,13 @@ function DayCellComponent({
 function MobileDayCard({
   day,
   shows,
+  artistas,
   accent,
   onShowClick,
 }: {
   day: DayCell;
   shows: Show[];
+  artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
 }) {
@@ -404,7 +416,14 @@ function MobileDayCard({
         )}
       </div>
       {shows.length > 0 ? (
-        shows.map((show) => <EventCard key={show.id} show={show} onClick={() => onShowClick(show.id)} />)
+        shows.map((show) => (
+          <EventCard
+            key={show.id}
+            show={show}
+            dj={artistas.find((d) => d.id === show.djId)}
+            onClick={() => onShowClick(show.id)}
+          />
+        ))
       ) : (
         <div className="flex items-center justify-center h-16 border border-dashed border-border rounded-md text-xs text-muted">
           Sem shows agendados

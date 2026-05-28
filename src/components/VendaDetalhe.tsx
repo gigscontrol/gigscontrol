@@ -7,7 +7,7 @@ import Modal from "./Modal";
 import Toast from "./Toast";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 
@@ -20,6 +20,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda } = useVendas();
   const { orcamentos } = useOrcamentos();
+  const artistas = useArtistas();
   const [confirmaRemover, setConfirmaRemover] = useState(false);
   const [removendo, setRemovendo] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
@@ -40,7 +41,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     );
   }
 
-  const dj = DJS.find((d) => d.id === venda.djId);
+  const dj = artistas.find((d) => d.id === venda.djId);
   const orc = venda.orcamentoId ? orcamentos.find((o) => o.id === venda.orcamentoId) : null;
   const itensCamarim = venda.camarim.filter((i) => i.qtd > 0);
   const itensEfeitos = venda.efeitos.filter((i) => i.qtd > 0);

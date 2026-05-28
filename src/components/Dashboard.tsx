@@ -13,7 +13,7 @@ import {
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import { useVendas } from "@/lib/vendas-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
   MODULE_THEMES,
@@ -43,6 +43,7 @@ type LinhaParcela = {
 export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Props) {
   const accent = MODULE_THEMES.financeiro.color;
   const { vendas } = useVendas();
+  const artistas = useArtistas();
 
   const vendasVisiveis = useMemo(
     () => vendas.filter((v) => selectedDJs.includes(v.djId)),
@@ -53,7 +54,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
   const parcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendasVisiveis) {
-      const dj = DJS.find((d) => d.id === v.djId);
+      const dj = artistas.find((d) => d.id === v.djId);
       v.parcelas.forEach((parcela, idx) => {
         linhas.push({
           vendaId: v.id,
@@ -68,7 +69,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
       });
     }
     return linhas;
-  }, [vendasVisiveis]);
+  }, [vendasVisiveis, artistas]);
 
   const totais = useMemo(() => {
     let recebido = 0;
@@ -97,7 +98,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
 
   // Faturamento por DJ
   const porDJ = useMemo(() => {
-    return DJS.filter((d) => selectedDJs.includes(d.id))
+    return artistas.filter((d) => selectedDJs.includes(d.id))
       .map((dj) => ({
         dj,
         valor: vendasVisiveis
@@ -105,7 +106,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           .reduce((acc, v) => acc + v.cache, 0),
       }))
       .sort((a, b) => b.valor - a.valor);
-  }, [vendasVisiveis, selectedDJs]);
+  }, [vendasVisiveis, selectedDJs, artistas]);
 
   const maxDJ = Math.max(1, ...porDJ.map((p) => p.valor));
   const pctRecebido =

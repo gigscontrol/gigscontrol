@@ -18,7 +18,7 @@ import PageHeader from "./PageHeader";
 import MiniLixeira from "./MiniLixeira";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL } from "@/lib/whatsapp";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
 
@@ -40,6 +40,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
   const { contratantes, cidades, casas } = useContatos();
+  const artistas = useArtistas();
 
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -62,7 +63,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
             cont?.telefone ?? "",
             cid?.nome ?? "",
             cs?.nome ?? "",
-            DJS.find((d) => d.id === o.djId)?.name ?? "",
+            artistas.find((d) => d.id === o.djId)?.name ?? "",
           ]
             .join(" ")
             .toLowerCase();
@@ -70,7 +71,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
         }
         return true;
       });
-  }, [orcamentos, filtroStatus, filtroDJ, search, contratantes, cidades, casas]);
+  }, [orcamentos, filtroStatus, filtroDJ, search, contratantes, cidades, casas, artistas]);
 
   const totalPorStatus = useMemo(() => {
     const acc: Record<OrcamentoStatus, number> = {
@@ -90,7 +91,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
     if (!orc) return;
     const cont = contratantes.find((c) => c.id === orc.contratanteId);
     const cid = cidades.find((c) => c.id === orc.cidadeId);
-    const dj = DJS.find((d) => d.id === orc.djId);
+    const dj = artistas.find((d) => d.id === orc.djId);
     const texto = gerarTextoWhatsApp(orc, { contratante: cont, cidade: cid, dj });
     const link = montarLinkWhatsApp(cont?.telefone ?? "", texto);
     window.open(link, "_blank", "noopener,noreferrer");
@@ -205,7 +206,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
           >
             Todos DJs
           </button>
-          {DJS.map((d) => (
+          {artistas.map((d) => (
             <button
               key={d.id}
               type="button"
@@ -264,7 +265,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                 {lista.map((o) => {
                   const cont = contratantes.find((c) => c.id === o.contratanteId);
                   const cid = cidades.find((c) => c.id === o.cidadeId);
-                  const dj = DJS.find((d) => d.id === o.djId);
+                  const dj = artistas.find((d) => d.id === o.djId);
                   const st = LABELS_STATUS_ORCAMENTO[o.status];
                   return (
                     <tr

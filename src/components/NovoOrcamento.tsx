@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,7 +27,7 @@ import { resolverCidadeIbge } from "@/lib/cidade-helpers";
 import { Field, TextInput, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { montarTelefoneE164 } from "@/lib/data/countries";
 import {
@@ -40,6 +40,7 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type TipoEvento,
+  type DJ,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 
@@ -83,6 +84,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
+  const artistas = useArtistas();
 
   const [step, setStep] = useState(1);
 
@@ -96,8 +98,19 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
 
   // ----- ETAPA 2 -----
-  const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj(DJS[0]?.id ?? "")]);
+  const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);
   const [modalAddDj, setModalAddDj] = useState(false);
+
+  // Quando a lista de artistas carregar, preenche o djId do bloco
+  // inicial (era estático via DJS[0] antes; agora vem do hook).
+  useEffect(() => {
+    if (artistas.length === 0) return;
+    setBlocos((prev) =>
+      prev.length === 1 && !prev[0].djId
+        ? [{ ...prev[0], djId: artistas[0].id }]
+        : prev
+    );
+  }, [artistas]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -253,7 +266,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         estado: cidadeResolvida.estado,
         regiao: cidadeResolvida.regiao,
       };
-      const dj = DJS.find((d) => d.id === b.djId);
+      const dj = artistas.find((d) => d.id === b.djId);
       const e164 = getTelefoneSelecionadoE164();
       const texto = gerarTextoWhatsApp(orc, { cidade: cidadeObj, dj });
 
@@ -409,7 +422,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   // ============ WIZARD ============
-  const djsDisponiveis = DJS.filter((d) => !blocos.some((b) => b.djId === d.id));
+  const djsDisponiveis = artistas.filter((d) => !blocos.some((b) => b.djId === d.id));
 
   return (
     <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8">
@@ -543,6 +556,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               indice={idx}
               totalBlocos={blocos.length}
               accent={accent}
+              artistas={artistas}
               onChange={(patch) => atualizarBloco(idx, patch)}
               onRemove={() => removerBloco(idx)}
               errors={errors}
@@ -638,6 +652,7 @@ function BlocoOrcamentoDj({
   indice,
   totalBlocos,
   accent,
+  artistas,
   onChange,
   onRemove,
   errors,
@@ -649,6 +664,7 @@ function BlocoOrcamentoDj({
   indice: number;
   totalBlocos: number;
   accent: string;
+  artistas: DJ[];
   onChange: (patch: Partial<DjBlock>) => void;
   onRemove: () => void;
   errors: Record<string, string>;
@@ -656,7 +672,7 @@ function BlocoOrcamentoDj({
   nomeCidade?: string;
   tipoEvento: TipoEvento | null;
 }) {
-  const dj = DJS.find((d) => d.id === bloco.djId);
+  const dj = artistas.find((d) => d.id === bloco.djId);
   const valor = parseFloat(bloco.valorCache.replace(",", "."));
 
   return (
@@ -705,7 +721,7 @@ function BlocoOrcamentoDj({
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <Field label="DJ" required error={errors[`dj-${indice}`]}>
             <Select value={bloco.djId} onChange={(e) => onChange({ djId: e.target.value })}>
-              {DJS.map((d) => (
+              {artistas.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </Select>

@@ -9,7 +9,7 @@ import MiniLixeira from "./MiniLixeira";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES } from "@/types";
 
@@ -23,6 +23,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
   const { vendas, removeVenda } = useVendas();
   const { orcamentos } = useOrcamentos();
   const { cidades } = useContatos();
+  const artistas = useArtistas();
 
   const [search, setSearch] = useState("");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -35,7 +36,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
         if (search.trim()) {
           const q = search.toLowerCase();
           const cid = cidades.find((c) => c.id === v.cidadeId);
-          const dj = DJS.find((d) => d.id === v.djId);
+          const dj = artistas.find((d) => d.id === v.djId);
           const orc = v.orcamentoId
             ? orcamentos.find((o) => o.id === v.orcamentoId)
             : null;
@@ -56,7 +57,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
         }
         return true;
       });
-  }, [vendas, search, filtroDJ, cidades, orcamentos]);
+  }, [vendas, search, filtroDJ, cidades, orcamentos, artistas]);
 
   const totalCache = useMemo(
     () => vendas.reduce((acc, v) => acc + (v.cache ?? 0), 0),
@@ -111,7 +112,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
           >
             Todos DJs
           </button>
-          {DJS.map((d) => (
+          {artistas.map((d) => (
             <button
               key={d.id}
               type="button"
@@ -168,7 +169,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               <tbody>
                 {lista.map((v) => {
                   const cid = cidades.find((c) => c.id === v.cidadeId);
-                  const dj = DJS.find((d) => d.id === v.djId);
+                  const dj = artistas.find((d) => d.id === v.djId);
                   const orc = v.orcamentoId
                     ? orcamentos.find((o) => o.id === v.orcamentoId)
                     : null;

@@ -14,7 +14,7 @@ import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
-import { DJS } from "@/lib/djs";
+import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
@@ -29,6 +29,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   const accent = MODULE_THEMES.agenda.color;
   const { shows } = useShows();
   const { cidades } = useContatos();
+  const artistas = useArtistas();
 
   // Considera só DJs selecionados na sidebar (uuid após Etapa 7).
   const showsVisiveis = useMemo(
@@ -55,11 +56,11 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
 
   // Distribuição por DJ
   const porDJ = useMemo(() => {
-    return DJS.filter((d) => selectedDJs.includes(d.id)).map((dj) => ({
+    return artistas.filter((d) => selectedDJs.includes(d.id)).map((dj) => ({
       dj,
       total: showsVisiveis.filter((s) => s.djId === dj.id).length,
     }));
-  }, [showsVisiveis, selectedDJs]);
+  }, [showsVisiveis, selectedDJs, artistas]);
 
   const maxPorDJ = Math.max(1, ...porDJ.map((p) => p.total));
 
@@ -104,7 +105,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <ClickableStat onClick={() => onNavigate?.("agenda", "agenda-completa")}>
           <StatCard
             title="DJs Escalados"
-            value={`${stats.djsEscalados}/${DJS.length}`}
+            value={`${stats.djsEscalados}/${artistas.length}`}
             icon={<Users size={16} />}
             accentColor={accent}
             subtitle="Artistas com shows"
@@ -142,7 +143,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           ) : (
             <div className="flex flex-col gap-1.5">
               {proximosShows.map((show) => {
-                const dj = DJS.find((d) => d.id === show.djId);
+                const dj = artistas.find((d) => d.id === show.djId);
                 const cidade = cidades.find((c) => String(c.id) === show.cidadeId);
                 return (
                   <button
