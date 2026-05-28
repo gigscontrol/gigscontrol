@@ -4,9 +4,9 @@ import type { ArtistaRow, ArtistaEscrita } from "@/lib/mappers/artista";
 const COLS =
   "id, workspace_id, nome, cor, acesso_suspenso, deletado_em, criado_em, " +
   "cidade_ibge_id, cidade_nome, cidade_uf, taxa_modo, taxa_valor, " +
-  "rider_camarim, rider_efeitos";
+  "rider_camarim, rider_efeitos, posicao";
 
-/** Lista só ativos (deletado_em IS NULL). */
+/** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */
 export async function listarArtistas(
   supabase: SupabaseClient
 ): Promise<ArtistaRow[]> {
@@ -14,6 +14,10 @@ export async function listarArtistas(
     .from("artists")
     .select(COLS)
     .is("deletado_em", null)
+    // Posição manual primeiro (drag&drop em Configurações), nome como
+    // desempate. Linhas com posicao NULL (não devem existir após
+    // migração 23) caem pro fim.
+    .order("posicao", { ascending: true, nullsFirst: false })
     .order("nome", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as ArtistaRow[];
@@ -117,6 +121,44 @@ export async function removerArtistaDefinitivamente(
 ): Promise<void> {
   const { error } = await supabase.from("artists").delete().eq("id", id);
   if (error) throw error;
+}
+
+/**
+ * Próxima posição disponível pra um artista novo (= MAX + 10).
+ * Novos artistas vão pro FIM da lista; admin reordena depois.
+ */
+export async function proximaPosicaoArtista(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("artists")
+    .select("posicao")
+    .eq("workspace_id", workspaceId)
+    .order("posicao", { ascending: false, nullsFirst: false })
+    .limit(1);
+  if (error) throw error;
+  const max = (data?.[0]?.posicao as number | null) ?? 0;
+  return max + 10;
+}
+
+/**
+ * Atualiza a posição de vários artistas em lote.
+ * Não usa transação (Supabase JS não expõe), mas faz updates
+ * sequenciais. Se algum falhar, a UI vai recarregar e mostrar o estado
+ * atual do banco — o usuário arrasta de novo.
+ */
+export async function atualizarPosicoes(
+  supabase: SupabaseClient,
+  updates: Array<{ id: string; posicao: number }>
+): Promise<void> {
+  for (const u of updates) {
+    const { error } = await supabase
+      .from("artists")
+      .update({ posicao: u.posicao })
+      .eq("id", u.id);
+    if (error) throw error;
+  }
 }
 
 /**

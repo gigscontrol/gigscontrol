@@ -16,6 +16,8 @@ export type ArtistaRow = {
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
   rider_efeitos: unknown;
+  // Posição manual (migração 23). Quanto menor, mais no topo.
+  posicao: number | null;
   // Username vem por JOIN com profiles na consulta (não está em artists)
   username?: string | null;
 };
@@ -73,4 +75,5 @@ export type ArtistaEscrita = {
   taxa_valor?: number | null;
   rider_camarim?: string[];
   rider_efeitos?: string[];
+  posicao?: number;
 };

@@ -12,6 +12,8 @@ import {
   moverArtistaParaLixeira,
   removerArtistaDefinitivamente,
   usernameJaExiste,
+  proximaPosicaoArtista,
+  atualizarPosicoes,
 } from "@/lib/repositories/artistas.repo";
 import type {
   ArtistaCreateInput,
@@ -174,6 +176,8 @@ export async function criarArtistaCompleto(
     if (input.taxa_valor !== undefined) escrita.taxa_valor = input.taxa_valor;
     if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
     if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;
+    // Novo artista vai pro FIM da lista — admin reordena depois se quiser
+    escrita.posicao = await proximaPosicaoArtista(admin, workspaceId);
     artistaRow = await repoCriar(admin, workspaceId, escrita);
   } catch (e) {
     // Rollback auth user
@@ -388,6 +392,40 @@ export async function resetarSenhaArtista(
   });
   if (errUpd) throw new Error(errUpd.message ?? "Falha ao resetar senha.");
   return { senhaTemporaria };
+}
+
+/**
+ * Reordena artistas no workspace. Recebe os IDs na NOVA ordem
+ * desejada e regrava `posicao = (índice + 1) * 10` pra cada um.
+ *
+ * Por que incrementos de 10? Reserva espaço pra inserções intermediárias
+ * futuras sem precisar renumerar tudo (truque clássico de listas
+ * orderable).
+ *
+ * Idempotente: chamar 2x com a mesma ordem dá o mesmo resultado.
+ */
+export async function reordenarArtistasNoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  idsNaOrdem: string[]
+): Promise<void> {
+  // Confirma que todos os IDs pertencem ao workspace (segurança)
+  const { data, error } = await supabase
+    .from("artists")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .in("id", idsNaOrdem)
+    .is("deletado_em", null);
+  if (error) throw error;
+  const idsValidos = new Set((data ?? []).map((r) => r.id as string));
+  const filtrados = idsNaOrdem.filter((id) => idsValidos.has(id));
+
+  const updates = filtrados.map((id, idx) => ({
+    id,
+    posicao: (idx + 1) * 10,
+  }));
+  if (updates.length === 0) return;
+  await atualizarPosicoes(supabase, updates);
 }
 
 /**

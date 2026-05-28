@@ -192,6 +192,7 @@ type WorkspaceContextValue = {
   recarregarArtistas: () => Promise<void>;
   adicionarArtista: (input: NovoArtistaInput) => Promise<NovoArtistaResultado>;
   atualizarArtista: (id: string, patch: Partial<NovoArtistaInput>) => Promise<ArtistaWS>;
+  reordenarArtistas: (idsNaOrdem: string[]) => Promise<void>;
   removerArtista: (id: string) => Promise<void>;
   alternarSuspensaoArtista: (id: string) => Promise<void>;
   resetarSenhaArtista: (id: string) => Promise<string>;
@@ -446,6 +447,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const body = await jsonOuErro(res);
     return body.senhaTemporaria as string;
   }, []);
+
+  /**
+   * Reordena os artistas — UI otimista. Atualiza local primeiro,
+   * dispara API. Se a API falhar, recarrega o estado correto do banco
+   * e mostra o erro pro caller.
+   */
+  const reordenarArtistas = useCallback(
+    async (idsNaOrdem: string[]): Promise<void> => {
+      // Snapshot pra rollback se a API falhar
+      const anterior = artistas;
+      // Aplica a nova ordem localmente (otimista)
+      const mapa = new Map(artistas.map((a) => [a.id, a]));
+      const nova = idsNaOrdem
+        .map((id) => mapa.get(id))
+        .filter((a): a is ArtistaWS => !!a);
+      setArtistas(nova);
+
+      try {
+        const res = await fetch("/api/artistas/reordenar", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: idsNaOrdem }),
+        });
+        await jsonOuErro(res);
+      } catch (e) {
+        // Rollback no front
+        setArtistas(anterior);
+        throw e;
+      }
+    },
+    [artistas]
+  );
 
   const removerArtista = useCallback(async (id: string): Promise<void> => {
     const res = await fetch(`/api/artistas/${id}`, {
@@ -704,6 +738,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       recarregarArtistas,
       adicionarArtista,
       atualizarArtista,
+      reordenarArtistas,
       removerArtista,
       alternarSuspensaoArtista,
       resetarSenhaArtista,
@@ -735,7 +770,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       aparencia, carregandoAparencia, recarregarAparencia,
       atualizarNomeAgencia, uploadLogo, removerLogo, workspaceCriadoEm,
       artistas, carregandoArtistas, erroArtistas, recarregarArtistas,
-      adicionarArtista, atualizarArtista, removerArtista,
+      adicionarArtista, atualizarArtista, reordenarArtistas, removerArtista,
       alternarSuspensaoArtista, resetarSenhaArtista,
       equipe, carregandoEquipe, erroEquipe, recarregarEquipe,
       adicionarUsuario, atualizarUsuario, removerUsuario, resetarSenhaUsuario,

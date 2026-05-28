@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   ShieldCheck,
   Loader2,
+  GripVertical,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -104,11 +105,38 @@ export default function AbaArtistas() {
     removerArtista,
     alternarSuspensaoArtista,
     resetarSenhaArtista,
+    reordenarArtistas,
     lixeiraArtistas,
     recarregarLixeira,
     restaurarDaLixeira,
   } = useWorkspace();
   const { sessao } = useAuth();
+
+  // Drag & drop pra reordenar — guarda o ID que está sendo arrastado
+  // e o ID atualmente sob o ponteiro (alvo do drop).
+  const [arrastandoId, setArrastandoId] = useState<string | null>(null);
+  const [sobreId, setSobreId] = useState<string | null>(null);
+
+  function aoSoltar(targetId: string) {
+    if (!arrastandoId || arrastandoId === targetId) {
+      setArrastandoId(null);
+      setSobreId(null);
+      return;
+    }
+    const idsAtuais = artistas.map((a) => a.id);
+    const from = idsAtuais.indexOf(arrastandoId);
+    const to = idsAtuais.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    // Reordena: tira o item de from e insere em to
+    const nova = [...idsAtuais];
+    const [movido] = nova.splice(from, 1);
+    nova.splice(to, 0, movido);
+    setArrastandoId(null);
+    setSobreId(null);
+    void reordenarArtistas(nova).catch((e) => {
+      setToast({ msg: (e as Error).message, tipo: "erro" });
+    });
+  }
 
   const plano = sessao?.workspace ? getPlano(sessao.workspace.plano) : null;
   const slugAgencia = sessao?.workspace?.slug ?? "";
@@ -240,12 +268,46 @@ export default function AbaArtistas() {
           <div className="divide-y divide-border">
             {artistas.map((a) => {
               const suspenso = !!a.acessoSuspenso;
+              const sendoArrastado = arrastandoId === a.id;
+              const ehAlvo = sobreId === a.id && arrastandoId && arrastandoId !== a.id;
               return (
                 <div
                   key={a.id}
-                  className="flex items-center gap-3 px-4 py-3"
-                  style={{ opacity: suspenso ? 0.55 : 1 }}
+                  draggable
+                  onDragStart={(e) => {
+                    setArrastandoId(a.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    // Necessário no Firefox pro drag começar
+                    e.dataTransfer.setData("text/plain", a.id);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (sobreId !== a.id) setSobreId(a.id);
+                  }}
+                  onDragLeave={() => {
+                    if (sobreId === a.id) setSobreId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    aoSoltar(a.id);
+                  }}
+                  onDragEnd={() => {
+                    setArrastandoId(null);
+                    setSobreId(null);
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 transition-all"
+                  style={{
+                    opacity: sendoArrastado ? 0.4 : suspenso ? 0.55 : 1,
+                    borderTop: ehAlvo ? "2px solid var(--module-vendas)" : undefined,
+                    cursor: "grab",
+                  }}
                 >
+                  <GripVertical
+                    size={14}
+                    className="text-muted flex-shrink-0"
+                    style={{ cursor: "grab" }}
+                  />
                   <span
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                     style={{
@@ -465,6 +527,13 @@ export default function AbaArtistas() {
       )}
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
+        <strong className="text-primary">Ordem:</strong> arraste pelo{" "}
+        <span className="inline-flex items-center gap-0.5 font-mono">
+          <GripVertical size={11} />
+        </span>{" "}
+        à esquerda pra reordenar — a ordem reflete na sidebar de DJs e em
+        todos os filtros do app.
+        <br />
         <strong className="text-primary">Login do artista:</strong> aparece
         ao lado do nome (clique pra copiar). Fica salvo no sistema e você
         consegue acessar sempre que precisar.{" "}
