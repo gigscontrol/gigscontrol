@@ -214,7 +214,6 @@ function OnboardingInner() {
             {etapa === 2 && (
               <Etapa2Plano
                 planoEscolhido={status.planoEscolhido as PlanoId}
-                subscriptionStatus={status.subscriptionStatus}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
@@ -364,12 +363,10 @@ function Etapa1Bemvindo({
 // ============================================================
 function Etapa2Plano({
   planoEscolhido,
-  subscriptionStatus,
   onAvancar,
   onRecarregar,
 }: {
   planoEscolhido: PlanoId;
-  subscriptionStatus: string;
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
@@ -380,8 +377,6 @@ function Etapa2Plano({
   const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
   const [erro, setErro] = useState<string | null>(null);
 
-  const jaConfigurou =
-    subscriptionStatus === "ativa" || subscriptionStatus === "trial";
   const isIndividual = planoSelecionado === "individual";
 
   async function iniciarTrial() {
@@ -569,16 +564,6 @@ function Etapa2Plano({
           <p className="text-[0.65rem] text-muted text-center">
             Teste grátis disponível apenas no plano Individual.
           </p>
-        )}
-
-        {/* Quem já configurou (caso volte na etapa) */}
-        {jaConfigurou && (
-          <button
-            onClick={onAvancar}
-            className="text-xs text-muted hover:text-secondary text-center mt-2"
-          >
-            Continuar com o plano atual
-          </button>
         )}
       </div>
     </div>
