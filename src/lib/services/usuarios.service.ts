@@ -99,6 +99,9 @@ export async function criarUsuarioDaEquipe(
       escopo: input.escopo,
       funcoes: input.funcoes,
       status: "ativo",
+      // Membro da equipe nasce com a senha aleatória gerada acima.
+      senha_padrao: true,
+      senha_padrao_valor: senhaTemporaria,
     });
     return { usuario: rowParaUsuario(row), senhaTemporaria };
   } catch (e) {
@@ -158,5 +161,12 @@ export async function resetarSenhaDoUsuario(
     password: senhaTemporaria,
   });
   if (error) throw new Error(error.message ?? "Falha ao resetar senha.");
+  // Volta o flag pra "padrão" + guarda nova senha em plaintext. Não
+  // bloqueia em caso de erro (a senha já foi resetada no auth com
+  // sucesso).
+  await admin
+    .from("profiles")
+    .update({ senha_padrao: true, senha_padrao_valor: senhaTemporaria })
+    .eq("id", id);
   return { senhaTemporaria };
 }

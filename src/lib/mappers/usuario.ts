@@ -32,6 +32,18 @@ export type ProfileRow = {
   funcoes: Record<string, unknown> | null;
   status: string | null;
   deletado_em: string | null;
+  /**
+   * true = a senha do usuário ainda é a aleatória gerada pelo sistema
+   * (criação ou último reset). false = o próprio usuário já trocou no
+   * AbaSeguranca. Default false (existentes não são alarmados).
+   */
+  senha_padrao: boolean;
+  /**
+   * Senha aleatória em plaintext — só preenchida enquanto
+   * `senha_padrao = true`. Apagada quando o usuário troca pelo painel.
+   * Ver migration 28 e doc do trade-off.
+   */
+  senha_padrao_valor: string | null;
 };
 
 /** Escopo de privacidade da equipe (flags genéricas). */
@@ -108,4 +120,8 @@ export type UsuarioEscrita = {
   escopo?: EscopoUsuario;
   funcoes?: Funcoes;
   status?: "ativo" | "bloqueado" | "desativado";
+  /** Marca true ao criar ou resetar; false quando o usuário troca pelo painel. */
+  senha_padrao?: boolean;
+  /** Valor da senha aleatória (plaintext). Só viaja junto com `senha_padrao=true`. */
+  senha_padrao_valor?: string | null;
 };

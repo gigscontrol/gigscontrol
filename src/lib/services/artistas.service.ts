@@ -43,6 +43,75 @@ export class UsernameEmUsoError extends Error {
 }
 
 /**
+ * Colisão com um artista que está na lixeira do mesmo workspace.
+ * Diferente de UsernameEmUsoError, este é específico pra dar uma
+ * mensagem acionável: o admin precisa restaurar ou apagar de vez antes
+ * de poder reutilizar nome/username.
+ */
+export class ArtistaNaLixeiraError extends Error {
+  status = 409;
+  constructor(
+    public artistaNome: string,
+    public matchPor: "nome" | "username"
+  ) {
+    const campo = matchPor === "nome" ? "nome" : "username";
+    super(
+      `Existe um artista na lixeira com esse ${campo} ("${artistaNome}"). ` +
+        `Restaure-o ou apague definitivamente antes de criar outro com os mesmos dados.`
+    );
+    this.name = "ArtistaNaLixeiraError";
+  }
+}
+
+/**
+ * Verifica se já existe na lixeira do workspace algum artista cujo
+ * NOME (case-insensitive) bata, ou cujo PROFILE.username bata com o
+ * que o admin está tentando criar. Devolve o que achou (com qual
+ * critério bateu) ou `null` se está livre.
+ *
+ * Roda só com cliente admin (service_role) — precisa ler artistas
+ * deletados, que ficam fora das policies normais.
+ */
+async function artistaNaLixeiraColidente(
+  admin: SupabaseClient,
+  workspaceId: string,
+  nome: string,
+  usernameCompleto: string
+): Promise<{ nome: string; matchPor: "nome" | "username" } | null> {
+  // 1. Por nome (no mesmo workspace, ignora caixa)
+  const { data: porNome } = await admin
+    .from("artists")
+    .select("id, nome")
+    .eq("workspace_id", workspaceId)
+    .not("deletado_em", "is", null)
+    .ilike("nome", nome)
+    .limit(1);
+  if (porNome && porNome.length > 0) {
+    return { nome: porNome[0].nome as string, matchPor: "nome" };
+  }
+
+  // 2. Por username — busca o profile colidente e, se ele aponta pra
+  //    um artista, vê se esse artista está na lixeira.
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("artista_id")
+    .eq("username", usernameCompleto)
+    .maybeSingle();
+  if (profile?.artista_id) {
+    const { data: artista } = await admin
+      .from("artists")
+      .select("nome, deletado_em")
+      .eq("id", profile.artista_id as string)
+      .maybeSingle();
+    if (artista?.deletado_em) {
+      return { nome: artista.nome as string, matchPor: "username" };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Monta o username final a partir da raiz digitada pelo admin + slug
  * da agência. Ex: ("brunosocek", "twobookings") → "brunosocek-twobookings".
  */
@@ -145,6 +214,20 @@ export async function criarArtistaCompleto(
   // 2. Username
   const slug = await buscarSlugWorkspace(admin, workspaceId);
   const usernameCompleto = montarUsernameCompleto(input.username_raiz, slug);
+
+  // 2a. Colisão com artista na lixeira do mesmo workspace? Esse check
+  // roda ANTES do usernameJaExiste porque queremos uma mensagem mais
+  // específica nesse caso ("restaure ou apague" em vez de "já em uso").
+  const naLixeira = await artistaNaLixeiraColidente(
+    admin,
+    workspaceId,
+    input.nome,
+    usernameCompleto
+  );
+  if (naLixeira) {
+    throw new ArtistaNaLixeiraError(naLixeira.nome, naLixeira.matchPor);
+  }
+
   if (await usernameJaExiste(admin, usernameCompleto)) {
     throw new UsernameEmUsoError(usernameCompleto);
   }
@@ -197,6 +280,12 @@ export async function criarArtistaCompleto(
       artista_id: artistaRow.id,
       username: usernameCompleto,
       status: "ativo",
+      // Artista nasce com a senha aleatória gerada acima — admin precisa
+      // saber que ainda é a padrão até o próprio artista trocar.
+      senha_padrao: true,
+      // Guarda em plaintext pra admin conseguir recuperar/copiar depois
+      // (apagada na 1ª troca de senha pelo próprio artista).
+      senha_padrao_valor: senhaTemporaria,
     });
     if (errProfile) throw errProfile;
   } catch (e) {
@@ -391,6 +480,13 @@ export async function resetarSenhaArtista(
     password: senhaTemporaria,
   });
   if (errUpd) throw new Error(errUpd.message ?? "Falha ao resetar senha.");
+  // Volta o flag pra "padrão" + guarda a nova senha em plaintext.
+  // Não bloqueia em caso de erro (a senha já foi resetada com sucesso
+  // no auth).
+  await admin
+    .from("profiles")
+    .update({ senha_padrao: true, senha_padrao_valor: senhaTemporaria })
+    .eq("id", profile.id);
   return { senhaTemporaria };
 }
 

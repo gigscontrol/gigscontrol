@@ -63,6 +63,18 @@ export default function AbaSeguranca() {
         return;
       }
 
+      // 3) Avisa o backend que o usuário trocou a senha — derruba a
+      // flag `profiles.senha_padrao` pra `false`. Falha aqui não rolba
+      // a troca de senha (já foi feita); só perde o sinal pro admin.
+      try {
+        await fetch("/api/auth/senha-trocada", {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch {
+        // ignora — flag é cosmética, não impede o sucesso da troca.
+      }
+
       setToast({ msg: "Senha alterada com sucesso.", tipo: "sucesso" });
       setAtual("");
       setNova("");
@@ -75,7 +87,7 @@ export default function AbaSeguranca() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-md">
+    <div className="flex flex-col gap-6">
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} style={{ color: "var(--module-financeiro)" }} />
