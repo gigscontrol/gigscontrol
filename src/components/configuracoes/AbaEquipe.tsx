@@ -11,6 +11,10 @@ import {
   KeyRound,
   Copy,
   RotateCcw,
+  Lock,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import Modal from "../Modal";
 import Toast from "../Toast";
@@ -389,6 +393,15 @@ export default function AbaEquipe() {
           }}
           onCriar={aoCriar}
           onEditar={aoEditar}
+          onResetarSenha={async () => {
+            if (!editando) return;
+            // Dispara o reset, fecha o modal de edição e o parent mostra
+            // o modal de credenciais com a nova senha. Mesmo padrão de
+            // AbaArtistas.
+            const u = editando;
+            setEditando(null);
+            await aoResetarSenha(u);
+          }}
         />
       )}
 
@@ -482,12 +495,22 @@ export default function AbaEquipe() {
 // Modal de criação / edição
 // ================================================================
 
+type DadosContaUsuario = {
+  email: string;
+  emailVerificado: boolean;
+  ultimoLogin: string | null;
+  senhaPadrao: boolean;
+  /** Plaintext da senha aleatória — só preenchida enquanto senhaPadrao=true. */
+  senhaPadraoValor: string | null;
+};
+
 function ModalUsuario({
   modo,
   inicial,
   onFechar,
   onCriar,
   onEditar,
+  onResetarSenha,
 }: {
   modo: "criar" | "editar";
   inicial?: UsuarioEquipe;
@@ -499,6 +522,8 @@ function ModalUsuario({
     funcoes: Funcoes;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
+  /** Só passado no modo editar. Reseta a senha do usuário. */
+  onResetarSenha?: () => void | Promise<void>;
 }) {
   const artistas = useArtistas();
   const [nome, setNome] = useState(inicial?.nome ?? "");
@@ -508,6 +533,35 @@ function ModalUsuario({
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  // Dados de conta — async no modo editar. No modo criar não tem
+  // sentido (o usuário ainda nem existe).
+  const [conta, setConta] = useState<DadosContaUsuario | null>(null);
+  const [carregandoConta, setCarregandoConta] = useState(modo === "editar");
+  const [copiouSenhaPadrao, setCopiouSenhaPadrao] = useState(false);
+
+  useEffect(() => {
+    if (modo !== "editar" || !inicial?.id) return;
+    let mounted = true;
+    setCarregandoConta(true);
+    fetch(`/api/usuarios/${inicial.id}/conta`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as DadosContaUsuario;
+      })
+      .then((d) => {
+        if (mounted) setConta(d);
+      })
+      .catch(() => {
+        if (mounted) setConta(null);
+      })
+      .finally(() => {
+        if (mounted) setCarregandoConta(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [modo, inicial?.id]);
 
   function toggleFuncao(f: PapelEquipe) {
     setFuncoes((prev) => {
@@ -753,6 +807,120 @@ function ModalUsuario({
             valor={ativo}
             onChange={setAtivo}
           />
+        )}
+
+        {/* ---- Bloco Senha (só no modo editar) ---- */}
+        {modo === "editar" && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-border">
+            <div className="flex items-center gap-1.5">
+              <Lock size={14} style={{ color: "var(--module-financeiro)" }} />
+              <span className="text-xs font-medium text-secondary">Senha</span>
+            </div>
+            {carregandoConta ? (
+              <div className="flex items-center gap-2 text-sm text-muted py-2">
+                <Loader2 size={14} className="animate-spin" />
+                Carregando dados da conta...
+              </div>
+            ) : !conta ? (
+              <p className="text-xs text-danger">
+                Não foi possível carregar a conta.
+              </p>
+            ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
+              <>
+                {/* Senha padrão conhecida: mostra + botão copiar */}
+                <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                  <Lock size={14} className="text-muted flex-shrink-0" />
+                  <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                    {conta.senhaPadraoValor}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard
+                        .writeText(conta.senhaPadraoValor!)
+                        .then(() => {
+                          setCopiouSenhaPadrao(true);
+                          setTimeout(
+                            () => setCopiouSenhaPadrao(false),
+                            2000
+                          );
+                        });
+                    }}
+                    className="btn-ghost p-1.5 rounded"
+                    aria-label="Copiar senha"
+                  >
+                    {copiouSenhaPadrao ? (
+                      <CheckCircle2
+                        size={14}
+                        style={{ color: "var(--success)" }}
+                      />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </button>
+                </div>
+                <div
+                  className="text-[0.7rem] inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Senha padrão gerada pelo sistema — usuário ainda não trocou.
+                </div>
+              </>
+            ) : conta.senhaPadrao ? (
+              <div
+                className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
+                style={{
+                  backgroundColor: "rgba(245,158,11,0.08)",
+                  color: "var(--warning)",
+                  border: "1px solid rgba(245,158,11,0.2)",
+                }}
+              >
+                <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  Usuário ainda está com a <strong>senha padrão</strong>{" "}
+                  gerada pelo sistema, mas o valor não está disponível
+                  (usuário criado antes desta versão). Gere uma nova abaixo
+                  pra conseguir copiar.
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
+                style={{
+                  backgroundColor: "rgba(34,197,94,0.08)",
+                  color: "var(--success)",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                }}
+              >
+                <Lock size={13} className="flex-shrink-0" />
+                <span>Senha já foi alterada pelo usuário.</span>
+              </div>
+            )}
+
+            {onResetarSenha && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Gerar uma nova senha aleatória pro usuário ${nome || inicial?.nome || ""}?`
+                    )
+                  ) {
+                    void onResetarSenha();
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-1"
+                style={{
+                  borderColor: "var(--module-vendas)",
+                  color: "var(--module-vendas)",
+                }}
+              >
+                <KeyRound size={14} />
+                Gerar nova senha aleatória
+              </button>
+            )}
+          </div>
         )}
 
         {erro && (
