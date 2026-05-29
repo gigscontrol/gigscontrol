@@ -40,13 +40,14 @@ export async function GET() {
     const { data: ws, error: errWs } = await admin
       .from("workspaces")
       .select(
-        "id, nome, plano, logo_url, onboarding_completo, whatsapp, " +
+        "id, nome, slug, plano, logo_url, onboarding_completo, whatsapp, " +
           "cor_acento, cidade_ibge_id, cidade_nome, cidade_uf"
       )
       .eq("id", workspaceId)
       .single<{
         id: string;
         nome: string;
+        slug: string;
         plano: string;
         logo_url: string | null;
         onboarding_completo: boolean;
@@ -69,6 +70,14 @@ export async function GET() {
       .select("status, ciclo, trial_termina_em")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
+
+    // Nome do admin logado — usado como exemplo no campo de slug
+    // (ex: "joao-twobookings" em vez de "dudu-twobookings").
+    const { data: meuProfile } = await admin
+      .from("profiles")
+      .select("nome")
+      .eq("id", r.sessao.userId)
+      .maybeSingle<{ nome: string | null }>();
 
     // Counts em paralelo
     const [{ count: nArtistas }, { count: nContratantes }, { count: nCasas }, { count: nEquipe }] =
@@ -124,12 +133,23 @@ export async function GET() {
       },
       identidade: {
         nomeAgencia: ws.nome,
+        slug: ws.slug,
         whatsapp: ws.whatsapp,
         corAcento: ws.cor_acento,
         cidadeIbgeId: ws.cidade_ibge_id,
         cidadeNome: ws.cidade_nome,
         cidadeUf: ws.cidade_uf,
         logoUrl: ws.logo_url,
+        // Pega só o primeiro nome, lowercase, sem acentos, só [a-z0-9].
+        // Usado como exemplo no campo de slug (ex: "joao-twobookings").
+        primeiroNomeAdmin:
+          meuProfile?.nome
+            ?.trim()
+            .split(/\s+/)[0]
+            ?.normalize("NFD")
+            .replace(/[̀-ͯ]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "") || null,
       },
       nomeAgencia: ws.nome,
     });

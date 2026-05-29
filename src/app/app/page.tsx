@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -24,9 +24,8 @@ import { ShowsProvider } from "@/lib/shows-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { WorkspaceProvider } from "@/lib/workspace-context";
+import { WorkspaceProvider, useArtistas } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
-import { DEFAULT_SELECTED_DJ_IDS } from "@/lib/djs";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 
 export default function AppPage() {
@@ -128,8 +127,51 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function AppRoot() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("agenda");
   const [activePage, setActivePage] = useState<ActivePage>("dashboard");
-  const [selectedDJs, setSelectedDJs] = useState<string[]>(DEFAULT_SELECTED_DJ_IDS);
+  // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
+  // abaixo sincroniza com a lista real de artistas do workspace assim
+  // que ela carrega.
+  const [selectedDJs, setSelectedDJs] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Sincronização com a lista real de artistas:
+  //  - 1º carregamento: todos os artistas vêm pré-selecionados
+  //  - Novo artista criado → adicionado à seleção automaticamente
+  //  - Artista removido → tirado da seleção
+  //  - Artista que o admin deselecionou manualmente continua deselecionado
+  // O ref guarda a lista anterior pra detectar diffs.
+  const artistasReal = useArtistas();
+  const artistasIdsPrevRef = useRef<Set<string>>(new Set());
+  const jaInicializouRef = useRef(false);
+
+  useEffect(() => {
+    const idsAtuais = new Set(artistasReal.map((a) => a.id));
+
+    // Espera o primeiro carregamento real (lista não-vazia OU já
+    // sabemos que tá vazio mesmo). O workspace-context retorna `[]`
+    // tanto durante o load quanto quando o workspace genuinamente não
+    // tem artistas — pra distinguir, usamos a flag `jaInicializou`.
+    if (!jaInicializouRef.current) {
+      // No mount, espera 1 ciclo pra dar tempo do fetch — mas se já
+      // tem artistas, inicializa imediatamente.
+      if (idsAtuais.size > 0) {
+        setSelectedDJs(Array.from(idsAtuais));
+        artistasIdsPrevRef.current = idsAtuais;
+        jaInicializouRef.current = true;
+      }
+      return;
+    }
+
+    // Diffs depois do primeiro load
+    const novos = [...idsAtuais].filter((id) => !artistasIdsPrevRef.current.has(id));
+    const removidos = [...artistasIdsPrevRef.current].filter((id) => !idsAtuais.has(id));
+    if (novos.length > 0 || removidos.length > 0) {
+      setSelectedDJs((prev) => {
+        const semRemovidos = prev.filter((id) => !removidos.includes(id));
+        return Array.from(new Set([...semRemovidos, ...novos]));
+      });
+    }
+    artistasIdsPrevRef.current = idsAtuais;
+  }, [artistasReal]);
 
   const [orcamentoSelecionado, setOrcamentoSelecionado] = useState<string | null>(null);
   const [vendaSelecionada, setVendaSelecionada] = useState<string | null>(null);
