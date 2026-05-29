@@ -6,6 +6,7 @@ import {
   criarArtistaCompleto,
   LimitePlanoAtingidoError,
   UsernameEmUsoError,
+  ArtistaNaLixeiraError,
 } from "@/lib/services/artistas.service";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
@@ -93,6 +94,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
     if (e instanceof UsernameEmUsoError) {
+      return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
+    if (e instanceof ArtistaNaLixeiraError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
     return NextResponse.json(

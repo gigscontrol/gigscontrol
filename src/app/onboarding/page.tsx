@@ -14,7 +14,6 @@ import {
   Building2,
   Phone,
   MapPin,
-  Image as ImageIcon,
   Palette,
   AtSign,
   Lock,
@@ -23,7 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
-import { useAuth, AuthProvider } from "@/lib/auth-context";
+import { AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
 import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
@@ -67,12 +66,14 @@ type Status = {
   };
   identidade: {
     nomeAgencia: string;
+    slug: string;
     whatsapp: string | null;
     corAcento: string | null;
     cidadeIbgeId: string | null;
     cidadeNome: string | null;
     cidadeUf: string | null;
     logoUrl: string | null;
+    primeiroNomeAdmin: string | null;
   };
 };
 
@@ -101,8 +102,14 @@ function OnboardingInner() {
   const [etapa, setEtapa] = useState(1);
   const [finalizando, setFinalizando] = useState(false);
 
-  async function recarregar() {
-    setCarregando(true);
+  /**
+   * Refetcha o status. Por padrão NÃO toggla `carregando`, pra não
+   * desmontar a etapa atual (o que perderia state local — ex: a tela
+   * de credenciais geradas na Etapa 4 sumiria). Só o mount inicial
+   * passa `{ inicial: true }` pra exibir o spinner full-page.
+   */
+  async function recarregar(opts?: { inicial?: boolean }) {
+    if (opts?.inicial) setCarregando(true);
     try {
       const r = await fetch("/api/workspace/onboarding", {
         credentials: "include",
@@ -116,12 +123,12 @@ function OnboardingInner() {
       }
       setStatus(d);
     } finally {
-      setCarregando(false);
+      if (opts?.inicial) setCarregando(false);
     }
   }
 
   useEffect(() => {
-    void recarregar();
+    void recarregar({ inicial: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -231,6 +238,7 @@ function OnboardingInner() {
             )}
             {etapa === 4 && (
               <Etapa4Artista
+                status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
@@ -586,10 +594,9 @@ function Etapa3Agencia({
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
-  const { uploadLogo, atualizarNomeAgencia } = useWorkspace();
-  const { sessao } = useAuth();
-  const slugAtual = sessao?.workspace?.slug ?? "";
+  const { atualizarNomeAgencia } = useWorkspace();
   const id = status.identidade;
+  const slugAtual = id.slug ?? "";
 
   // Normaliza um nome em slug (lowercase, sem acentos, só [a-z0-9])
   function normalizarSlug(s: string): string {
@@ -626,9 +633,6 @@ function Etapa3Agencia({
   // Cor de preferência
   const [cor, setCor] = useState<string>(id.corAcento ?? "#a855f7");
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  // Logo
-  const [enviandoLogo, setEnviandoLogo] = useState(false);
-  const [logoLocal, setLogoLocal] = useState<string | null>(id.logoUrl);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -689,51 +693,6 @@ function Etapa3Agencia({
       clearTimeout(t);
     };
   }, [slug, slugAtual]);
-
-  async function aoSelecionarLogo(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setErro("Use um arquivo de imagem.");
-      return;
-    }
-    setEnviandoLogo(true);
-    try {
-      // Redimensionamento via canvas (igual ao da AbaGeral)
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const img = new Image();
-          img.onload = () => {
-            const escala = 96 / img.height;
-            let largura = img.width * escala;
-            let altura = 96;
-            if (largura > 420) {
-              const e2 = 420 / largura;
-              largura = 420;
-              altura = altura * e2;
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = largura * 2;
-            canvas.height = altura * 2;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return reject(new Error("canvas indisponível"));
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/png");
-          };
-          img.onerror = () => reject(new Error("imagem inválida"));
-          img.src = reader.result as string;
-        };
-        reader.readAsDataURL(file);
-      });
-      await uploadLogo(blob);
-      setLogoLocal(URL.createObjectURL(blob));
-    } catch (err) {
-      setErro((err as Error).message);
-    } finally {
-      setEnviandoLogo(false);
-    }
-  }
 
   async function salvar() {
     setErro(null);
@@ -868,15 +827,17 @@ function Etapa3Agencia({
           )}
           <span className="text-[0.65rem] text-muted leading-relaxed">
             Vai pro fim do login dos seus artistas e equipe (ex:{" "}
-            <span className="font-mono text-primary">dudu-{slug || "agencia"}</span>).
-            Cada agência tem um username único — ninguém mais pode usar.
+            <span className="font-mono text-primary">
+              {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
+            </span>
+            ). Cada agência tem um username único — ninguém mais pode usar.
           </span>
         </label>
 
         {/* Cidade */}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            Cidade onde fica <span className="text-danger">*</span>
+            Cidade <span className="text-danger">*</span>
           </span>
           <CidadeIBGEAutocomplete
             value={cidade}
@@ -900,34 +861,6 @@ function Etapa3Agencia({
 
         {/* Cor */}
         <CampoCor cor={cor} onChange={setCor} aberto={colorPickerOpen} setAberto={setColorPickerOpen} />
-
-        {/* Logo */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            Logo (opcional)
-          </span>
-          <div className="flex items-center gap-3">
-            <div
-              className="h-12 w-20 rounded-md border border-border bg-elevated flex items-center justify-center overflow-hidden flex-shrink-0"
-            >
-              {logoLocal ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoLocal} alt="Logo" style={{ maxHeight: 32 }} />
-              ) : (
-                <ImageIcon size={16} className="text-muted" />
-              )}
-            </div>
-            <label className="btn btn-secondary text-xs cursor-pointer">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={aoSelecionarLogo}
-                className="hidden"
-              />
-              {enviandoLogo ? "Enviando..." : "Enviar logo"}
-            </label>
-          </div>
-        </div>
 
         {erro && (
           <div
@@ -1020,18 +953,28 @@ function CampoCor({
 // Etapa 4 — Primeiro artista (usa o MESMO modal de Configurações)
 // ============================================================
 function Etapa4Artista({
+  status,
   onAvancar,
   onRecarregar,
 }: {
+  status: Status;
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
-  const { artistas, adicionarArtista } = useWorkspace();
-  const { sessao } = useAuth();
-  const slug = sessao?.workspace?.slug ?? "";
-  const nomeAgencia = sessao?.workspace?.nome ?? "";
+  const { artistas, adicionarArtista, recarregarArtistas } = useWorkspace();
+  // Lê do status que vem do /api/workspace/onboarding (refrescado a cada
+  // onRecarregar). NÃO usa useAuth().sessao.workspace.slug porque essa
+  // referência é carregada UMA vez no mount e fica stale depois que a
+  // Etapa 3 troca o slug.
+  const slug = status.identidade.slug ?? "";
+  const nomeAgencia = status.identidade.nomeAgencia ?? "";
 
-  const [modalAberto, setModalAberto] = useState(false);
+  // Refresh dos artistas ao montar — garante que a validação de "nome
+  // já existe" rode contra o DB real (não contra cache stale).
+  useEffect(() => {
+    void recarregarArtistas();
+  }, [recarregarArtistas]);
+
   const [credenciais, setCredenciais] = useState<{
     nomeArtista: string;
     username: string;
@@ -1084,44 +1027,25 @@ function Etapa4Artista({
         </p>
       </div>
 
-      <div className="card flex flex-col gap-3 items-center text-center">
-        <p className="text-sm text-secondary">
-          Pode pular agora e adicionar artistas depois em{" "}
-          <strong className="text-primary">Configurações → Artistas</strong>.
-        </p>
-        <div className="flex flex-col gap-2 w-full max-w-[280px]">
-          <button
-            onClick={() => setModalAberto(true)}
-            className="btn btn-primary text-sm w-full justify-center py-2.5"
-            style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
-          >
-            <Music size={14} />
-            Abrir cadastro completo
-          </button>
-          <button
-            onClick={onAvancar}
-            className="text-xs text-muted hover:text-secondary"
-          >
-            Pular por agora
-          </button>
-        </div>
-      </div>
-
-      {/* Modal completo (mesmo de Configurações → Artistas) */}
-      {modalAberto && (
-        <ModalNovoArtista
-          slugAgencia={slug}
-          nomeAgencia={nomeAgencia}
-          adicionarArtista={adicionarArtista}
-          nomesExistentes={artistas.map((a) => a.name.toLowerCase())}
-          onCancelar={() => setModalAberto(false)}
-          onCriado={async (resultado) => {
-            setModalAberto(false);
-            setCredenciais(resultado);
-            await onRecarregar();
-          }}
-        />
-      )}
+      {/* Formulário completo embedado direto (sem modal — etapa obrigatória) */}
+      <ModalNovoArtista
+        modoInline
+        slugAgencia={slug}
+        nomeAgencia={nomeAgencia}
+        adicionarArtista={adicionarArtista}
+        nomesExistentes={artistas.map((a) => a.name.toLowerCase())}
+        // Workspace recém-criado no onboarding: lixeira ainda vazia.
+        nomesNaLixeira={[]}
+        usernamesExistentes={[]}
+        usernamesNaLixeira={[]}
+        onCancelar={() => {
+          /* inline: sem cancelar */
+        }}
+        onCriado={async (resultado) => {
+          setCredenciais(resultado);
+          await onRecarregar();
+        }}
+      />
     </div>
   );
 }

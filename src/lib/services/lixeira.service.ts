@@ -128,9 +128,26 @@ export async function listarLixeira(
     listarShowsDeletados(supabase, workspaceId),
   ]);
 
+  // Enriquece com username (mora em profiles, não em artists). Sem
+  // isso, a UI não consegue detectar colisão de login com artista na
+  // lixeira no cadastro de novos artistas.
+  const mapaUsername = new Map<string, string>();
+  if (artistasRows.length > 0) {
+    const ids = artistasRows.map((r) => r.id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("artista_id, username")
+      .in("artista_id", ids);
+    for (const p of profiles ?? []) {
+      if (p.artista_id && p.username) {
+        mapaUsername.set(p.artista_id as string, p.username as string);
+      }
+    }
+  }
+
   const artistas: ItemLixeiraArtista[] = artistasRows.map((row) => ({
     tipo: "artista",
-    artista: rowParaDj(row),
+    artista: rowParaDj({ ...row, username: mapaUsername.get(row.id) ?? null }),
     deletadoEm: row.deletado_em ?? "",
     diasRestantes: diasRestantes(row.deletado_em),
   }));

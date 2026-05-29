@@ -34,6 +34,19 @@ import AbaSeguranca from "./AbaSeguranca";
 const ALTURA_LOGO = 96;
 const LARGURA_MAX_LOGO = 420;
 
+// Pega o primeiro nome do admin e normaliza pro mesmo formato dos logins
+// (lowercase, sem acentos, só [a-z0-9]) — usado só nos textos de exemplo
+// do bloco "Username da agência".
+function slugificarPrimeiroNome(nome: string | null | undefined): string {
+  if (!nome) return "";
+  const primeiro = nome.trim().split(/\s+/)[0] ?? "";
+  return primeiro
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
 type SlugInfo = {
   slug: string;
   trocasUltimos30d: number;
@@ -254,6 +267,7 @@ export default function AbaGeral() {
 
       {/* ---- Username da agência ---- */}
       <SlugSection
+        primeiroNomeAdmin={slugificarPrimeiroNome(sessao?.usuario?.nome) || "voce"}
         onToast={(msg, tipo) => setToast({ msg, tipo })}
       />
         </>
@@ -289,8 +303,10 @@ export default function AbaGeral() {
 // ============================================================
 
 function SlugSection({
+  primeiroNomeAdmin,
   onToast,
 }: {
+  primeiroNomeAdmin: string;
   onToast: (msg: string, tipo: "sucesso" | "erro") => void;
 }) {
   const [info, setInfo] = useState<SlugInfo | null>(null);
@@ -432,7 +448,7 @@ function SlugSection({
       <div className="section-title mb-1">Username da agência</div>
       <div className="section-subtitle mb-4">
         Vai pro fim do login de todo artista e da equipe (ex:{" "}
-        <span className="font-mono text-primary">dudu-{info.slug}</span>).
+        <span className="font-mono text-primary">{primeiroNomeAdmin}-{info.slug}</span>).
         Esse identificador é único: nenhuma outra agência consegue usar.
       </div>
 
@@ -580,9 +596,9 @@ function SlugSection({
                 </strong>
                 <br />
                 Exemplo:{" "}
-                <span className="font-mono">dudu-{info.slug}</span> vai
+                <span className="font-mono">{primeiroNomeAdmin}-{info.slug}</span> vai
                 virar{" "}
-                <span className="font-mono">dudu-{limpo}</span>.
+                <span className="font-mono">{primeiroNomeAdmin}-{limpo}</span>.
                 <br />
                 Avise sua equipe antes de confirmar — eles precisam usar o
                 login novo na próxima entrada.

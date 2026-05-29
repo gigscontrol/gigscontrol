@@ -17,6 +17,8 @@ import { emailEhInternoFake } from "@/lib/services/artistas.service";
  *    emailFakeInterno: boolean,
  *    verificadoEm: string | null,
  *    ultimoLogin: string | null,
+ *    senhaPadrao: boolean,  // true = ainda com a senha aleatória gerada
+ *    senhaPadraoValor: string | null,  // plaintext enquanto senhaPadrao=true
  *  }
  */
 type RouteCtx = { params: { id: string } };
@@ -37,7 +39,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   // Acha o profile vinculado a este artista
   const { data: profile, error: errProf } = await admin
     .from("profiles")
-    .select("id")
+    .select("id, senha_padrao, senha_padrao_valor")
     .eq("artista_id", params.id)
     .maybeSingle();
 
@@ -62,6 +64,12 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       emailFakeInterno: emailEhInternoFake(email),
       verificadoEm: user.email_confirmed_at ?? null,
       ultimoLogin: user.last_sign_in_at ?? null,
+      // Default-safe: se a coluna não existir num ambiente antigo, trata
+      // como `false` (admin não vê alarme falso).
+      senhaPadrao: !!(profile as { senha_padrao?: boolean }).senha_padrao,
+      senhaPadraoValor:
+        (profile as { senha_padrao_valor?: string | null })
+          .senha_padrao_valor ?? null,
     });
   } catch (e) {
     return NextResponse.json(

@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Loader2,
   GripVertical,
+  Lock,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -545,6 +546,17 @@ export default function AbaArtistas() {
           }}
           adicionarArtista={adicionarArtista}
           nomesExistentes={artistas.map((a) => a.name.toLowerCase())}
+          nomesNaLixeira={lixeiraArtistas.map((it) =>
+            it.artista.name.toLowerCase()
+          )}
+          usernamesExistentes={artistas
+            .map((a) => extrairRaizUsername(a.username, slugAgencia))
+            .filter(Boolean)}
+          usernamesNaLixeira={lixeiraArtistas
+            .map((it) =>
+              extrairRaizUsername(it.artista.username, slugAgencia)
+            )
+            .filter(Boolean)}
         />
       )}
 
@@ -567,6 +579,25 @@ export default function AbaArtistas() {
               senha: novaSenha,
             });
           }}
+          // Listas pra validação inline — excluem o próprio editando
+          // (id na lista ativa, ou match exato de username na lixeira)
+          // pra não colidir consigo mesmo.
+          nomesExistentes={artistas
+            .filter((a) => a.id !== editando.id)
+            .map((a) => a.name.toLowerCase())}
+          nomesNaLixeira={lixeiraArtistas
+            .filter((it) => it.artista.id !== editando.id)
+            .map((it) => it.artista.name.toLowerCase())}
+          usernamesExistentes={artistas
+            .filter((a) => a.id !== editando.id)
+            .map((a) => extrairRaizUsername(a.username, slugAgencia))
+            .filter(Boolean)}
+          usernamesNaLixeira={lixeiraArtistas
+            .filter((it) => it.artista.id !== editando.id)
+            .map((it) =>
+              extrairRaizUsername(it.artista.username, slugAgencia)
+            )
+            .filter(Boolean)}
         />
       )}
 
@@ -597,8 +628,46 @@ type Props = {
     senhaTemporaria: string;
     usernameCompleto: string;
   }>;
+  /**
+   * Nomes dos artistas que já existem NO WORKSPACE atual (lowercase).
+   * Usado pra bloquear duplicata dentro da mesma agência — o admin não
+   * pode ter dois "Bruno" no próprio CRM porque vira confusão. Mas
+   * agências diferentes podem ter "Bruno" sem problema (cada
+   * `nomesExistentes` é escopado pelo workspace que monta a lista).
+   */
   nomesExistentes: string[];
+  /** Nomes dos artistas que estão na lixeira do workspace (lowercase). */
+  nomesNaLixeira: string[];
+  /**
+   * Raízes de username dos artistas ATIVOS no workspace (lowercase, sem
+   * o sufixo "-slugAgencia"). Usado pra warning inline antes do submit.
+   */
+  usernamesExistentes: string[];
+  /** Raízes de username dos artistas na lixeira. */
+  usernamesNaLixeira: string[];
+  /**
+   * Quando true, renderiza inline (sem overlay fixed, sem botão X,
+   * sem botão Cancelar). Usado pelo onboarding wizard, onde o cadastro
+   * do 1º artista é obrigatório e fica embedado na Etapa 4.
+   */
+  modoInline?: boolean;
 };
+
+/**
+ * Extrai a "raiz" do username completo, removendo o sufixo "-slugAgencia".
+ *   "djlunar-twobookings", slug "twobookings" → "djlunar"
+ * Se não tiver sufixo (ou username for vazio), devolve o que recebeu
+ * em lowercase. Usado nas checagens de colisão inline do form.
+ */
+function extrairRaizUsername(
+  usernameCompleto: string | undefined | null,
+  slugAgencia: string
+): string {
+  if (!usernameCompleto) return "";
+  const u = usernameCompleto.toLowerCase();
+  const sufixo = `-${slugAgencia.toLowerCase()}`;
+  return u.endsWith(sufixo) ? u.slice(0, -sufixo.length) : u;
+}
 
 /**
  * Normaliza um texto pra virar username:
@@ -623,6 +692,10 @@ export function ModalNovoArtista({
   onCriado,
   adicionarArtista,
   nomesExistentes,
+  nomesNaLixeira,
+  usernamesExistentes,
+  usernamesNaLixeira,
+  modoInline = false,
 }: Props) {
   // Seção 1 — dados básicos
   const [nome, setNome] = useState("");
@@ -645,6 +718,8 @@ export function ModalNovoArtista({
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Feedback do botão de copiar username completo.
+  const [copiouUsername, setCopiouUsername] = useState(false);
 
   const usernameCompleto = useMemo(() => {
     if (!usernameRaiz.trim()) return "";
@@ -657,13 +732,45 @@ export function ModalNovoArtista({
     return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(v);
   }, [usernameRaiz]);
 
+  // Colisões em tempo real — checa contra ativos E lixeira. "ativo"
+  // bloqueia direto; "lixeira" também bloqueia mas com mensagem
+  // diferente (admin precisa restaurar ou apagar).
+  const colisaoNome: "ativo" | "lixeira" | null = useMemo(() => {
+    const n = nome.trim().toLowerCase();
+    if (!n) return null;
+    if (nomesExistentes.includes(n)) return "ativo";
+    if (nomesNaLixeira.includes(n)) return "lixeira";
+    return null;
+  }, [nome, nomesExistentes, nomesNaLixeira]);
+
+  const colisaoUsername: "ativo" | "lixeira" | null = useMemo(() => {
+    const u = usernameRaiz.trim().toLowerCase();
+    if (!u) return null;
+    if (usernamesExistentes.includes(u)) return "ativo";
+    if (usernamesNaLixeira.includes(u)) return "lixeira";
+    return null;
+  }, [usernameRaiz, usernamesExistentes, usernamesNaLixeira]);
+
+  const temColisao = colisaoNome !== null || colisaoUsername !== null;
+
   // Validação por seção (pra habilitar/desabilitar submit)
+  // Nome do artista NÃO precisa ser único globalmente — duas agências
+  // diferentes podem ter "Bruno" cada uma. Mas DENTRO da mesma agência
+  // bloqueamos duplicata pra não confundir o admin no próprio CRM.
+  // `nomesExistentes` chega do parent já escopado pelo workspace atual.
   function validarTudo(): string | null {
     const n = nome.trim();
     if (!n) return "Informe o nome do artista.";
-    if (nomesExistentes.includes(n.toLowerCase()))
-      return "Já existe um artista com esse nome.";
-    if (!usernameValido) return "Username inválido (3+ chars, letras/números/hífen).";
+    if (colisaoNome === "ativo")
+      return "Já existe um artista com esse nome na sua agência.";
+    if (colisaoNome === "lixeira")
+      return `Existe um artista na lixeira com esse nome ("${n}"). Restaure ou apague antes de reutilizar.`;
+    if (!usernameValido)
+      return "Username inválido (3+ chars, letras/números/hífen).";
+    if (colisaoUsername === "ativo")
+      return "Esse login já está em uso por outro artista da sua agência.";
+    if (colisaoUsername === "lixeira")
+      return "Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.";
     if (!cidade) return "Informe a cidade onde o artista reside.";
     // Taxa obrigatória nos modos fixos
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
@@ -717,17 +824,18 @@ export function ModalNovoArtista({
     }
   }
 
-  return (
+  // Conteúdo do formulário — usado tanto no modal quanto inline.
+  const conteudo = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
-      onClick={onCancelar}
+      className={
+        modoInline
+          ? "bg-surface border border-border rounded-lg w-full"
+          : "bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
+      }
+      style={modoInline ? undefined : { boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+      onClick={modoInline ? undefined : (e) => e.stopPropagation()}
     >
-      <div
-        className="bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
-        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      {!modoInline && (
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <Music size={16} style={{ color: "var(--module-vendas)" }} />
@@ -737,6 +845,7 @@ export function ModalNovoArtista({
             <X size={18} />
           </button>
         </div>
+      )}
 
         <div className="p-4 flex flex-col gap-5">
           {/* Seção 1 — Dados básicos */}
@@ -757,6 +866,25 @@ export function ModalNovoArtista({
                 className="campo-input"
                 autoFocus
               />
+              {colisaoNome === "ativo" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  <AlertCircle size={11} />
+                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                </p>
+              )}
+              {colisaoNome === "lixeira" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Existe um artista na <strong>lixeira</strong> com esse nome.
+                  Restaure ou apague pra reutilizar.
+                </p>
+              )}
             </Campo>
 
             <SeletorDeCor cor={cor} onChange={setCor} />
@@ -773,7 +901,10 @@ export function ModalNovoArtista({
           {/* Seção 2 — Acesso ao sistema */}
           <Secao titulo="Acesso ao sistema">
             <Campo label="Login (username)">
-              <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                {/* Input cresce conforme o usuário digita (largura em `ch`
+                    casa com a font-mono — sem espaço sobrando entre o
+                    que foi digitado e o sufixo da agência). */}
                 <input
                   value={usernameRaiz}
                   onChange={(e) => {
@@ -782,23 +913,86 @@ export function ModalNovoArtista({
                       e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
                     );
                   }}
-                  placeholder="ex: djlunar"
-                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0 flex-1"
+                  placeholder="djlunar"
+                  style={{
+                    width: `${Math.max(
+                      usernameRaiz.length || "djlunar".length,
+                      4
+                    )}ch`,
+                  }}
+                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
                 />
-                <span className="text-xs text-muted whitespace-nowrap">
+                <span className="text-sm text-muted font-mono whitespace-nowrap">
                   -{slugAgencia || "agencia"}
                 </span>
-              </div>
-              {usernameCompleto && (
-                <p className="text-xs mt-1" style={{ color: usernameValido ? "var(--success)" : "var(--danger)" }}>
-                  {usernameValido
-                    ? `Login completo: `
-                    : "Use 3+ chars (letras, números, hífen)"}
-                  {usernameValido && (
-                    <strong className="font-mono text-primary">
-                      {usernameCompleto}
-                    </strong>
+                {/* Botão copiar — só ativa quando o username completo é
+                    válido. Copia "raiz-slug" pronto pra colar. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!usernameValido || !usernameCompleto) return;
+                    navigator.clipboard
+                      .writeText(usernameCompleto)
+                      .then(() => {
+                        setCopiouUsername(true);
+                        setTimeout(() => setCopiouUsername(false), 2000);
+                      });
+                  }}
+                  disabled={!usernameValido}
+                  className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Copiar username completo"
+                  title={
+                    usernameValido
+                      ? "Copiar username completo"
+                      : "Preencha um username válido pra copiar"
+                  }
+                >
+                  {copiouUsername ? (
+                    <CheckCircle2
+                      size={14}
+                      style={{ color: "var(--success)" }}
+                    />
+                  ) : (
+                    <Copy size={14} />
                   )}
+                </button>
+              </div>
+              {usernameCompleto && !usernameValido && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  Use 3+ chars (letras, números, hífen)
+                </p>
+              )}
+              {usernameValido && colisaoUsername === "ativo" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  <AlertCircle size={11} />
+                  Esse login já está em uso por outro artista ATIVO.
+                </p>
+              )}
+              {usernameValido && colisaoUsername === "lixeira" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Esse login pertence a um artista na <strong>lixeira</strong>.
+                  Restaure ou apague pra reutilizar.
+                </p>
+              )}
+              {usernameValido && !colisaoUsername && usernameCompleto && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--success)" }}
+                >
+                  Login completo:{" "}
+                  <strong className="font-mono text-primary">
+                    {usernameCompleto}
+                  </strong>
                 </p>
               )}
             </Campo>
@@ -917,14 +1111,27 @@ export function ModalNovoArtista({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 p-4 border-t border-border sticky bottom-0 bg-surface">
-          <button onClick={onCancelar} className="btn btn-secondary text-sm">
-            Cancelar
-          </button>
+        <div
+          className={
+            modoInline
+              ? "flex justify-end gap-2 p-4 border-t border-border bg-surface"
+              : "flex justify-end gap-2 p-4 border-t border-border sticky bottom-0 bg-surface"
+          }
+        >
+          {!modoInline && (
+            <button onClick={onCancelar} className="btn btn-secondary text-sm">
+              Cancelar
+            </button>
+          )}
           <button
             onClick={salvar}
-            disabled={enviando}
-            className="btn btn-primary text-sm disabled:opacity-60"
+            disabled={enviando || temColisao}
+            className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            title={
+              temColisao
+                ? "Resolva os avisos de nome/login antes de cadastrar"
+                : undefined
+            }
           >
             <Plus size={14} />
             {enviando
@@ -933,6 +1140,17 @@ export function ModalNovoArtista({
           </button>
         </div>
       </div>
+  );
+
+  if (modoInline) return conteudo;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onCancelar}
+    >
+      {conteudo}
     </div>
   );
 }
@@ -948,12 +1166,23 @@ type EditarProps = {
   onSalvo: () => void;
   /** Dispara o reset de senha — o caller mostra modal de credenciais. */
   onResetarSenha: () => Promise<void>;
+  /**
+   * Mesmas listas usadas no cadastro novo, MAS já excluindo o próprio
+   * artista sendo editado (pra que ele não colida consigo mesmo).
+   */
+  nomesExistentes: string[];
+  nomesNaLixeira: string[];
+  usernamesExistentes: string[];
+  usernamesNaLixeira: string[];
 };
 
 type DadosConta = {
   email: string;
   emailVerificado: boolean;
   emailFakeInterno: boolean;
+  senhaPadrao: boolean;
+  /** Senha em plaintext — só vem quando senhaPadrao=true E foi gerada após migration 28. */
+  senhaPadraoValor: string | null;
 };
 
 function ModalEditarArtista({
@@ -962,6 +1191,10 @@ function ModalEditarArtista({
   onCancelar,
   onSalvo,
   onResetarSenha,
+  nomesExistentes,
+  nomesNaLixeira,
+  usernamesExistentes,
+  usernamesNaLixeira,
 }: EditarProps) {
   const { atualizarArtista } = useWorkspace();
 
@@ -989,6 +1222,12 @@ function ModalEditarArtista({
   );
   const [usernameRaiz, setUsernameRaiz] = useState(usernameRaizInicial);
   const [emailEditavel, setEmailEditavel] = useState("");
+  // Modo de exibição do bloco de e-mail. Por padrão mostra só leitura
+  // (e-mail em cinza ou aviso "não cadastrou"); só revela o input
+  // quando o admin clica em "Definir e-mail" / "Editar".
+  const [editandoEmail, setEditandoEmail] = useState(false);
+  // Feedback do botão de copiar senha aleatória do bloco "Senha".
+  const [copiouSenhaPadrao, setCopiouSenhaPadrao] = useState(false);
   const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>(artista.taxaModo);
   const [taxaValor, setTaxaValor] = useState<string>(
     artista.taxaValor !== undefined ? String(artista.taxaValor) : ""
@@ -1002,6 +1241,8 @@ function ModalEditarArtista({
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Feedback do botão de copiar o username completo (Acesso ao sistema).
+  const [copiouUsername, setCopiouUsername] = useState(false);
 
   // Carrega os dados da conta auth (email + verificado)
   useEffect(() => {
@@ -1035,18 +1276,57 @@ function ModalEditarArtista({
     return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(v);
   }, [usernameRaiz]);
 
+  // Username completo (raiz + sufixo da agência) — usado no botão copiar.
+  const usernameCompleto = useMemo(() => {
+    if (!usernameRaiz.trim()) return "";
+    return `${usernameRaiz.trim().toLowerCase()}-${slugAgencia}`;
+  }, [usernameRaiz, slugAgencia]);
+
+  // Colisões em tempo real — mesmo padrão do cadastro novo. As listas
+  // recebidas via props já excluem o próprio artista sendo editado.
+  const colisaoNome: "ativo" | "lixeira" | null = useMemo(() => {
+    const n = nome.trim().toLowerCase();
+    if (!n) return null;
+    if (nomesExistentes.includes(n)) return "ativo";
+    if (nomesNaLixeira.includes(n)) return "lixeira";
+    return null;
+  }, [nome, nomesExistentes, nomesNaLixeira]);
+
+  const colisaoUsername: "ativo" | "lixeira" | null = useMemo(() => {
+    const u = usernameRaiz.trim().toLowerCase();
+    if (!u) return null;
+    if (usernamesExistentes.includes(u)) return "ativo";
+    if (usernamesNaLixeira.includes(u)) return "lixeira";
+    return null;
+  }, [usernameRaiz, usernamesExistentes, usernamesNaLixeira]);
+
+  const temColisao = colisaoNome !== null || colisaoUsername !== null;
+
   const usernameMudou = usernameRaiz.trim() !== usernameRaizInicial;
+  // Email mudou quando: tem conta carregada, o admin digitou algo não
+  // vazio, e ou (a) o artista nunca tinha e-mail real (estava no fake
+  // interno) ou (b) o que ele digitou é diferente do atual. Antes
+  // bloqueava o save quando estava fake — bug.
   const emailMudou =
     !!conta &&
-    !conta.emailFakeInterno &&
-    emailEditavel.trim().toLowerCase() !== conta.email.toLowerCase();
+    emailEditavel.trim().length > 0 &&
+    (conta.emailFakeInterno ||
+      emailEditavel.trim().toLowerCase() !== conta.email.toLowerCase());
 
   function validar(): string | null {
     const n = nome.trim();
     if (!n) return "Informe o nome do artista.";
+    if (colisaoNome === "ativo")
+      return "Já existe um artista com esse nome na sua agência.";
+    if (colisaoNome === "lixeira")
+      return `Existe um artista na lixeira com esse nome ("${n}"). Restaure ou apague antes de reutilizar.`;
     if (!cidade) return "Informe a cidade onde o artista reside.";
     if (!usernameValido)
       return "Username inválido (3+ chars, letras/números/hífen).";
+    if (colisaoUsername === "ativo")
+      return "Esse login já está em uso por outro artista da sua agência.";
+    if (colisaoUsername === "lixeira")
+      return "Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.";
     if (emailEditavel.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEditavel.trim())) {
       return "E-mail inválido.";
     }
@@ -1131,6 +1411,25 @@ function ModalEditarArtista({
                 onChange={(e) => setNome(e.target.value)}
                 className="campo-input"
               />
+              {colisaoNome === "ativo" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  <AlertCircle size={11} />
+                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                </p>
+              )}
+              {colisaoNome === "lixeira" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Existe um artista na <strong>lixeira</strong> com esse nome.
+                  Restaure ou apague pra reutilizar.
+                </p>
+              )}
             </Campo>
 
             <SeletorDeCor cor={cor} onChange={setCor} />
@@ -1147,7 +1446,10 @@ function ModalEditarArtista({
           {/* Seção 2 — Acesso */}
           <Secao titulo="Acesso ao sistema">
             <Campo label="Login (username)">
-              <div className="flex items-center gap-1 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                {/* Input com largura dinâmica (em ch + font-mono) — o
+                    sufixo da agência fica colado na ponta do que foi
+                    digitado, mesmo padrão do cadastro novo. */}
                 <input
                   value={usernameRaiz}
                   onChange={(e) =>
@@ -1155,18 +1457,73 @@ function ModalEditarArtista({
                       e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
                     )
                   }
-                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0 flex-1"
+                  placeholder="djlunar"
+                  style={{
+                    width: `${Math.max(
+                      usernameRaiz.length || "djlunar".length,
+                      4
+                    )}ch`,
+                  }}
+                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
                 />
-                <span className="text-xs text-muted whitespace-nowrap">
+                <span className="text-sm text-muted font-mono whitespace-nowrap">
                   -{slugAgencia}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!usernameValido || !usernameCompleto) return;
+                    navigator.clipboard
+                      .writeText(usernameCompleto)
+                      .then(() => {
+                        setCopiouUsername(true);
+                        setTimeout(() => setCopiouUsername(false), 2000);
+                      });
+                  }}
+                  disabled={!usernameValido}
+                  className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label="Copiar username completo"
+                  title={
+                    usernameValido
+                      ? "Copiar username completo"
+                      : "Preencha um username válido pra copiar"
+                  }
+                >
+                  {copiouUsername ? (
+                    <CheckCircle2
+                      size={14}
+                      style={{ color: "var(--success)" }}
+                    />
+                  ) : (
+                    <Copy size={14} />
+                  )}
+                </button>
               </div>
               {!usernameValido && usernameRaiz.length > 0 && (
                 <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
                   Use 3+ chars (letras, números, hífen).
                 </p>
               )}
-              {usernameMudou && usernameValido && (
+              {usernameValido && colisaoUsername === "ativo" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  <AlertCircle size={11} />
+                  Esse login já está em uso por outro artista ATIVO.
+                </p>
+              )}
+              {usernameValido && colisaoUsername === "lixeira" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Esse login pertence a um artista na <strong>lixeira</strong>.
+                  Restaure ou apague pra reutilizar.
+                </p>
+              )}
+              {usernameMudou && usernameValido && !colisaoUsername && (
                 <div
                   className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
                   style={{
@@ -1198,64 +1555,176 @@ function ModalEditarArtista({
             ) : (
               <>
                 <Campo label="E-mail cadastrado">
-                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-                    <Mail size={14} className="text-muted flex-shrink-0" />
-                    <input
-                      type="email"
-                      value={emailEditavel}
-                      onChange={(e) => setEmailEditavel(e.target.value)}
-                      placeholder={
-                        conta.emailFakeInterno
-                          ? "Defina um e-mail real (opcional)"
-                          : conta.email
-                      }
-                      className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
-                    />
-                  </div>
-                  {/* Status do email */}
-                  <div className="mt-1.5 text-[0.7rem] flex items-center gap-1">
-                    {conta.emailFakeInterno ? (
-                      <span
-                        className="inline-flex items-center gap-1"
+                  {editandoEmail ? (
+                    <>
+                      {/* Modo edição: input + cancelar */}
+                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                        <Mail size={14} className="text-muted flex-shrink-0" />
+                        <input
+                          type="email"
+                          value={emailEditavel}
+                          onChange={(e) => setEmailEditavel(e.target.value)}
+                          placeholder="email@exemplo.com"
+                          className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditandoEmail(false);
+                            // Restaura valor original (vazio se estava fake)
+                            setEmailEditavel(
+                              conta.emailFakeInterno ? "" : conta.email
+                            );
+                          }}
+                          className="text-[0.7rem] text-muted hover:text-secondary underline"
+                        >
+                          Cancelar
+                        </button>
+                        {emailMudou && (
+                          <span
+                            className="text-[0.7rem] inline-flex items-center gap-1"
+                            style={{ color: "var(--warning)" }}
+                          >
+                            <AlertTriangle size={11} />
+                            Salve o modal pra confirmar a troca.
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : conta.emailFakeInterno ? (
+                    <>
+                      {/* Sem e-mail real */}
+                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                        <Mail size={14} className="text-muted flex-shrink-0" />
+                        <span className="flex-1 text-sm text-muted italic">
+                          Usuário não cadastrou nenhum email
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoEmail(true)}
+                        className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
+                        style={{ color: "var(--module-vendas)" }}
+                      >
+                        <Pencil size={11} /> Definir e-mail
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Tem e-mail real — leitura em cinza + editar */}
+                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                        <Mail size={14} className="text-muted flex-shrink-0" />
+                        <span className="flex-1 text-sm text-secondary break-all">
+                          {conta.email}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5 text-[0.7rem]">
+                        {conta.emailVerificado ? (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            style={{ color: "var(--success)" }}
+                          >
+                            <ShieldCheck size={11} />
+                            Verificado
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            style={{ color: "var(--warning)" }}
+                          >
+                            <AlertTriangle size={11} />
+                            Não verificado
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditandoEmail(true)}
+                          className="inline-flex items-center gap-1 hover:underline"
+                          style={{ color: "var(--module-vendas)" }}
+                        >
+                          <Pencil size={11} /> Editar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Campo>
+
+                {/* ---- Senha ---- */}
+                <Campo label="Senha">
+                  {conta.senhaPadrao && conta.senhaPadraoValor ? (
+                    <>
+                      {/* Senha padrão conhecida: mostra + botão copiar */}
+                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                        <Lock size={14} className="text-muted flex-shrink-0" />
+                        <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                          {conta.senhaPadraoValor}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard
+                              .writeText(conta.senhaPadraoValor!)
+                              .then(() => {
+                                setCopiouSenhaPadrao(true);
+                                setTimeout(
+                                  () => setCopiouSenhaPadrao(false),
+                                  2000
+                                );
+                              });
+                          }}
+                          className="btn-ghost p-1.5 rounded"
+                          aria-label="Copiar senha"
+                        >
+                          {copiouSenhaPadrao ? (
+                            <CheckCircle2
+                              size={14}
+                              style={{ color: "var(--success)" }}
+                            />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      </div>
+                      <div
+                        className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1"
                         style={{ color: "var(--warning)" }}
                       >
                         <AlertTriangle size={11} />
-                        Ainda usando e-mail interno (
-                        <span className="font-mono">{conta.email}</span>) — o
-                        artista ainda não trocou.
-                      </span>
-                    ) : conta.emailVerificado ? (
-                      <span
-                        className="inline-flex items-center gap-1"
-                        style={{ color: "var(--success)" }}
-                      >
-                        <ShieldCheck size={11} />
-                        Verificado
-                      </span>
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-1"
-                        style={{ color: "var(--warning)" }}
-                      >
-                        <AlertTriangle size={11} />
-                        Não verificado
-                      </span>
-                    )}
-                  </div>
-                  {emailMudou && (
+                        Senha padrão gerada pelo sistema — usuário ainda não
+                        trocou.
+                      </div>
+                    </>
+                  ) : conta.senhaPadrao ? (
                     <div
-                      className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
+                      className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
                       style={{
                         backgroundColor: "rgba(245,158,11,0.08)",
                         color: "var(--warning)",
                         border: "1px solid rgba(245,158,11,0.2)",
                       }}
                     >
-                      <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                      <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                       <span>
-                        Você está trocando o e-mail. O artista vai usar este
-                        novo endereço pra recuperar senha.
+                        Usuário ainda está com a <strong>senha padrão</strong>{" "}
+                        gerada pelo sistema, mas o valor não está disponível
+                        (artista criado antes desta versão). Gere uma nova
+                        abaixo pra conseguir copiar.
                       </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
+                      style={{
+                        backgroundColor: "rgba(34,197,94,0.08)",
+                        color: "var(--success)",
+                        border: "1px solid rgba(34,197,94,0.2)",
+                      }}
+                    >
+                      <Lock size={13} className="flex-shrink-0" />
+                      <span>Senha já foi alterada pelo usuário.</span>
                     </div>
                   )}
                 </Campo>
@@ -1382,8 +1851,13 @@ function ModalEditarArtista({
           </button>
           <button
             onClick={salvar}
-            disabled={enviando}
-            className="btn btn-primary text-sm disabled:opacity-60"
+            disabled={enviando || temColisao}
+            className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            title={
+              temColisao
+                ? "Resolva os avisos de nome/login antes de salvar"
+                : undefined
+            }
           >
             <Check size={14} />
             {enviando ? "Salvando..." : "Salvar alterações"}
@@ -1409,15 +1883,21 @@ export function ModalCredenciais({
   senha: string;
   onFechar: () => void;
 }) {
-  const [copiou, setCopiou] = useState<"user" | "pass" | null>(null);
+  const [copiou, setCopiou] = useState<"user" | "pass" | "ambos" | null>(null);
   const mostraUsuario = username !== "—";
 
-  function copiar(texto: string, qual: "user" | "pass") {
+  function copiar(texto: string, qual: "user" | "pass" | "ambos") {
     navigator.clipboard.writeText(texto).then(() => {
       setCopiou(qual);
       setTimeout(() => setCopiou(null), 2000);
     });
   }
+
+  // Texto consolidado pra copiar tudo de uma vez — formato pronto pra
+  // colar no WhatsApp do artista.
+  const textoCompleto = mostraUsuario
+    ? `Login: ${username}\nSenha: ${senha}`
+    : `Senha: ${senha}`;
 
   return (
     <div
@@ -1503,7 +1983,24 @@ export function ModalCredenciais({
           </div>
         </div>
 
-        <div className="p-4 border-t border-border flex justify-end">
+        <div className="p-4 border-t border-border flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => copiar(textoCompleto, "ambos")}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+          >
+            {copiou === "ambos" ? (
+              <>
+                <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                Copiado!
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                {mostraUsuario ? "Copiar login + senha" : "Copiar senha"}
+              </>
+            )}
+          </button>
           <button onClick={onFechar} className="btn btn-primary text-sm">
             Entendi, fechar
           </button>
