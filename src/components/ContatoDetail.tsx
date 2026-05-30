@@ -13,6 +13,7 @@ import {
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { MODULE_THEMES } from "@/types";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import type { Contratante, Casa, Cidade } from "@/types";
 
 type Selecionado =
@@ -120,7 +121,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           <div className="card">
             <div className="section-title mb-4">Informações</div>
             <div className="flex flex-col gap-3 text-sm">
-              <InfoRow icon={<Hash size={13} />} label="Documento" value={item.documento || "—"} />
+              <InfoRow icon={<Hash size={13} />} label="Documento" value={mascararCpfCnpj(item.documento) || "—"} />
               <InfoRow icon={<Mail size={13} />} label="E-mail" value={item.email || "—"} mono />
               <InfoRow icon={<Phone size={13} />} label="Telefone" value={item.telefone} />
               <InfoRow icon={<MapPin size={13} />} label="Cidade" value={getCidadeNome(item.cidadeId, cidades)} />

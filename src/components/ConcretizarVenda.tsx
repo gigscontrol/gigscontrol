@@ -13,11 +13,16 @@ import {
   X,
   Users,
   CreditCard,
+  Lock,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
+import InputCpfCnpj from "./inputs/InputCpfCnpj";
+import InputCapacidade from "./inputs/InputCapacidade";
+import InputDataBR from "./inputs/InputDataBR";
+import { apenasDigitos } from "@/lib/formatters";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
 import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
@@ -258,7 +263,15 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
     if (!horarioFim) errs.horarioFim = "Horário de fim obrigatório";
     if (!cidadeIbge) errs.cidade = "Cidade obrigatória";
 
-    if (djId === null) errs.dj = "Selecione o artista da agência";
+    // djId precisa apontar pra um artista ATIVO. Não basta ser != null
+    // porque pode ter herdado de orçamento com id inválido (DJ deletado).
+    const djIdValido =
+      djId !== null && artistas.some((d) => d.id === djId);
+    if (!djIdValido) {
+      errs.dj = orc?.djId
+        ? "Selecione o DJ atual da agência (o original do orçamento foi removido)."
+        : "Selecione o artista da agência";
+    }
     const cacheNum = parseFloat(cache.replace(",", "."));
     if (!cache || isNaN(cacheNum) || cacheNum <= 0) errs.cache = "Cachê obrigatório";
 
@@ -318,14 +331,17 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             nomeNovo: contratanteNome,
             emailNovo: contratanteEmail,
             telefoneNovo: telefoneE164,
-            documentoNovo: contratanteDocumento,
+            // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara
+            // pra exibir. Mantém o banco consistente entre cadastros
+            // antigos (mascarados) e novos.
+            documentoNovo: apenasDigitos(contratanteDocumento),
           }
         : {
             tipo: "novo",
             nome: contratanteNome,
             email: contratanteEmail,
             telefone: telefoneE164,
-            documento: contratanteDocumento,
+            documento: apenasDigitos(contratanteDocumento),
             cidadeId: cidadeIdResolvido,
           },
       contratanteEndereco,
@@ -357,6 +373,31 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
+
+  // Resolve o DJ a ser usado quando vem de orçamento:
+  //  1. orc.djId bate com um ativo → usa direto (caso comum)
+  //  2. orc.djId está inválido (DJ original foi pra lixeira ou foi
+  //     recriado com outro id) E o workspace tem só 1 DJ ativo →
+  //     assume que é ele (auto-fix silencioso). Cobre o caso típico
+  //     do plano Individual.
+  //  3. Caso contrário → caller mostra grid / erro pra resolver.
+  const djDoOrcamento = orc?.djId
+    ? artistas.find((d) => d.id === orc.djId)
+    : null;
+  const djAutoFallback =
+    !djDoOrcamento && orc?.djId && artistas.length === 1
+      ? artistas[0]
+      : null;
+  const djEfetivoOrc = djDoOrcamento ?? djAutoFallback;
+
+  // Sincroniza djId com o djEfetivoOrc quando ele resolve (admin não
+  // precisa clicar — a venda é gravada com o id certo).
+  useEffect(() => {
+    if (djEfetivoOrc && djId !== djEfetivoOrc.id) {
+      setDjId(djEfetivoOrc.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [djEfetivoOrc?.id]);
 
   return (
     <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8 pb-32">
@@ -452,10 +493,10 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             error={errors.contratanteDocumento}
             showAuto={showAutoBadge("contratanteDocumento")}
           >
-            <TextInput
+            <InputCpfCnpj
               value={contratanteDocumento}
-              onChange={(e) => {
-                setContratanteDocumento(e.target.value);
+              onChange={(novo) => {
+                setContratanteDocumento(novo);
                 marcarEditado("contratanteDocumento");
               }}
               placeholder="000.000.000-00 ou 00.000.000/0000-00"
@@ -517,11 +558,10 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             label="Capacidade de público"
             showAuto={showAutoBadge("capacidadePublico")}
           >
-            <TextInput
-              type="number"
+            <InputCapacidade
               value={capacidadePublico}
-              onChange={(e) => {
-                setCapacidadePublico(e.target.value);
+              onChange={(digitos) => {
+                setCapacidadePublico(digitos);
                 marcarEditado("capacidadePublico");
               }}
               placeholder="1200"
@@ -552,11 +592,10 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             error={errors.dataShow}
             showAuto={showAutoBadge("dataShow")}
           >
-            <TextInput
-              type="date"
+            <InputDataBR
               value={dataShow}
-              onChange={(e) => {
-                setDataShow(e.target.value);
+              onChange={(iso) => {
+                setDataShow(iso);
                 marcarEditado("dataShow");
               }}
             />
@@ -630,45 +669,98 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
       {/* ============ 🎵 SHOW ============ */}
       <SectionCard icon={<Music size={16} />} title="Informações do Show" accent={accent}>
-        {/* Artista da agência — cards visuais */}
-        <FieldWithAuto
-          label="Artista da agência (quem vai se apresentar)"
-          required
-          error={errors.dj}
-          showAuto={showAutoBadge("djId")}
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-            {artistas.map((d) => {
-              const isActive = djId === d.id;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => {
-                    setDjId(d.id);
-                    marcarEditado("djId");
-                  }}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
-                  style={{
-                    borderColor: isActive ? d.color : "var(--border-color)",
-                    boxShadow: isActive ? `0 0 0 1px ${d.color}` : undefined,
-                  }}
+        {/* Artista da agência:
+            (1) Vem de orçamento E djEfetivoOrc resolveu (bate direto
+                OU auto-fix de workspace 1-DJ) → card simples travado.
+            (2) Vem de orçamento, djEfetivoOrc não resolveu (multi-DJ
+                + DJ original deletado) → grid + aviso, força escolha.
+            (3) Sem orçamento → grid normal. */}
+        {djEfetivoOrc ? (
+          <FieldWithAuto
+            label="Artista da agência (quem vai se apresentar)"
+            required
+            error={errors.dj}
+            showAuto={showAutoBadge("djId")}
+          >
+            <div
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md border bg-elevated mt-1"
+              style={{
+                borderColor: djEfetivoOrc.color,
+                boxShadow: `0 0 0 1px ${djEfetivoOrc.color}`,
+              }}
+            >
+              <span
+                className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                style={{
+                  backgroundColor: djEfetivoOrc.color,
+                  color: "#fff",
+                }}
+              >
+                {djEfetivoOrc.name.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="text-sm font-semibold text-primary truncate flex-1">
+                {djEfetivoOrc.name}
+              </span>
+            </div>
+          </FieldWithAuto>
+        ) : (
+          <FieldWithAuto
+            label="Artista da agência (quem vai se apresentar)"
+            required
+            error={errors.dj}
+            showAuto={showAutoBadge("djId")}
+          >
+            {orc?.djId &&
+              !djDoOrcamento &&
+              !djAutoFallback &&
+              !(djId && artistas.some((a) => a.id === djId)) && (
+                <p
+                  className="text-xs mt-1 mb-2"
+                  style={{ color: "var(--danger)" }}
                 >
-                  <span
-                    className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
+                  O DJ original do orçamento não está mais ativo. Selecione
+                  um substituto abaixo.
+                </p>
+              )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+              {artistas.map((d) => {
+                const isActive = djId === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      setDjId(d.id);
+                      marcarEditado("djId");
+                    }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
                     style={{
-                      backgroundColor: isActive ? d.color : "var(--bg-surface-2)",
-                      color: isActive ? "#fff" : "var(--text-muted)",
+                      borderColor: isActive ? d.color : "var(--border-color)",
+                      boxShadow: isActive
+                        ? `0 0 0 1px ${d.color}`
+                        : undefined,
                     }}
                   >
-                    {d.name.slice(0, 2).toUpperCase()}
-                  </span>
-                  <span className="text-sm font-semibold text-primary truncate">{d.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </FieldWithAuto>
+                    <span
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
+                      style={{
+                        backgroundColor: isActive
+                          ? d.color
+                          : "var(--bg-surface-2)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
+                      }}
+                    >
+                      {d.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="text-sm font-semibold text-primary truncate">
+                      {d.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </FieldWithAuto>
+        )}
 
         {/* Line-Up — outros artistas do evento */}
         <div className="mt-5">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field, TextInput, TextArea, Select } from "../Field";
+import InputCapacidade from "../inputs/InputCapacidade";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
 import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
@@ -110,12 +111,10 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
           />
         </Field>
         <Field label="Capacidade" hint="Quantidade de pessoas" error={errors.capacidade}>
-          <TextInput
-            type="number"
+          <InputCapacidade
             value={capacidade}
-            onChange={(e) => setCapacidade(e.target.value)}
+            onChange={setCapacidade}
             placeholder="1200"
-            min={0}
           />
         </Field>
         <Field label="Contato responsável">

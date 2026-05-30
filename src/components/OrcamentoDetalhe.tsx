@@ -9,6 +9,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -246,7 +247,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               <InfoItem label="Nome" value={cont?.nome ?? "—"} />
               <InfoItem label="Telefone" value={cont?.telefone ?? "—"} />
               <InfoItem label="E-mail" value={cont?.email || "—"} missing={!cont?.email} />
-              <InfoItem label="Documento" value={cont?.documento || "—"} missing={!cont?.documento} />
+              <InfoItem label="Documento" value={mascararCpfCnpj(cont?.documento) || "—"} missing={!cont?.documento} />
             </div>
           </div>
 

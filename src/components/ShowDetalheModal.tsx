@@ -32,6 +32,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -221,7 +222,7 @@ export default function ShowDetalheModal({
               <Linha icon={<Mail size={13} />}>{contEmail}</Linha>
             )}
             {contDocumento && (
-              <Linha icon={<Hash size={13} />}>{contDocumento}</Linha>
+              <Linha icon={<Hash size={13} />}>{mascararCpfCnpj(contDocumento)}</Linha>
             )}
             {contEndereco && (
               <Linha icon={<MapPin size={13} />}>{contEndereco}</Linha>
