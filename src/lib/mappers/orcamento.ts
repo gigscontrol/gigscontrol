@@ -38,6 +38,8 @@ export type OrcamentoRow = {
   atualizado_em: string | null;
   taxa_agencia_valor: number | string | null;
   taxa_modo_aplicado: TaxaAgenciaModo | null;
+  /** Texto livre opcional anexado ao fim do orçamento. Ver migration 29. */
+  info_extra: string | null;
 };
 
 function statusValido(s: string | null | undefined): OrcamentoStatus {
@@ -96,6 +98,7 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
         ? paraNumero(row.taxa_agencia_valor)
         : undefined,
     taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
+    infoExtra: row.info_extra ?? undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -130,4 +133,5 @@ export type OrcamentoEscrita = {
   atualizado_em?: string;
   taxa_agencia_valor?: number | null;
   taxa_modo_aplicado?: TaxaAgenciaModo | null;
+  info_extra?: string | null;
 };

@@ -24,7 +24,7 @@ import ExistenteOuNovo from "./ExistenteOuNovo";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
 import { resolverCidadeIbge } from "@/lib/cidade-helpers";
-import { Field, TextInput, Select } from "./Field";
+import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
@@ -65,6 +65,8 @@ type DjBlock = {
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
   logistica: LogisticaSelecao;
+  /** Texto livre opcional anexado ao fim do orçamento deste DJ. */
+  infoExtra: string;
 };
 
 function novoBlocoDj(djId: string): DjBlock {
@@ -77,6 +79,7 @@ function novoBlocoDj(djId: string): DjBlock {
     efeitos: CATALOGO_EFEITOS.map((n) => ({ nome: n, qtd: 0 })),
     hotel: CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 })),
     logistica: { ...LOGISTICA_VAZIA },
+    infoExtra: "",
   };
 }
 
@@ -253,6 +256,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         efeitos: b.efeitos,
         hotel: b.hotel,
         logistica: b.logistica,
+        infoExtra: b.infoExtra.trim() || undefined,
       });
 
       if (idx === 0) {
@@ -892,6 +896,21 @@ function BlocoOrcamentoDj({
             </label>
           </div>
         </div>
+
+        {/* Informações extras — texto livre que vai pro fim do orçamento
+            no WhatsApp / detalhe. Opcional. */}
+        <Field
+          label="Informações extras"
+          hint="Opcional. Se preenchido, aparece no fim do orçamento (WhatsApp e detalhe)."
+        >
+          <TextArea
+            value={bloco.infoExtra}
+            onChange={(e) => onChange({ infoExtra: e.target.value })}
+            placeholder="Ex: Promoção especial — desconto de 10% se confirmar até amanhã."
+            maxLength={1000}
+            rows={3}
+          />
+        </Field>
       </div>
     </div>
   );

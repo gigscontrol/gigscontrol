@@ -76,6 +76,7 @@ export type NovaVendaInput = {
   parcelas: Parcela[];
 
   observacoes?: string;
+  infoExtra?: string;
 };
 
 type VendasContextValue = {
@@ -133,6 +134,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.hotel !== undefined) out.hotel = p.hotel;
   if (p.logistica !== undefined) out.logistica = p.logistica;
   if (p.observacoes !== undefined) out.observacoes = p.observacoes;
+  if (p.infoExtra !== undefined) out.info_extra = p.infoExtra || null;
   return out;
 }
 
@@ -252,6 +254,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         hotel: input.hotel,
         logistica: input.logistica,
         observacoes: input.observacoes ?? null,
+        info_extra: input.infoExtra ?? null,
         parcelas: input.parcelas.map((p) => ({
           percentual: p.percentual,
           valor: p.valor,

@@ -79,6 +79,14 @@ export function gerarTextoWhatsApp(
     }
   }
 
+  // Informações extras opcionais — texto livre do admin. Vai antes do
+  // código pra que o contratante leia antes do "tracking number".
+  if (orc.infoExtra && orc.infoExtra.trim()) {
+    linhas.push("");
+    linhas.push("*Informações extras*");
+    linhas.push(orc.infoExtra.trim());
+  }
+
   // Código discreto no fim (sem itálico)
   linhas.push("");
   linhas.push(orc.numero);

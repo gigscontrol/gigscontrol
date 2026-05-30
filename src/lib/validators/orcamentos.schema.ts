@@ -29,6 +29,7 @@ export const orcamentoCreateSchema = z.object({
   hotel: z.array(itemQtdSchema).optional(),
   logistica: logisticaSchema.optional(),
   observacoes: z.string().nullable().optional(),
+  info_extra: z.string().nullable().optional(),
   data_show: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "data_show deve ser YYYY-MM-DD")
