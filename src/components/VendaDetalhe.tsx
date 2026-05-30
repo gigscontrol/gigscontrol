@@ -8,6 +8,7 @@ import Toast from "./Toast";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 
@@ -91,7 +92,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               label="Telefone"
               value={venda.contratanteTelefone ? `+${venda.contratanteTelefone}` : "—"}
             />
-            <InfoLine label="CPF/CNPJ" value={venda.contratanteDocumento || "—"} />
+            <InfoLine label="CPF/CNPJ" value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
             <InfoLine label="Endereço" value={venda.contratanteEndereco || "—"} />
           </div>
 

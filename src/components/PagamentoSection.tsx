@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Plus, Trash2, Percent, DollarSign, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { TextInput } from "./Field";
+import InputDataBR from "./inputs/InputDataBR";
 import { formatBRL } from "@/lib/whatsapp";
 import type { Parcela } from "@/types";
 
@@ -171,11 +172,10 @@ export default function PagamentoSection({
               </div>
             )}
 
-            {/* Data de vencimento */}
-            <TextInput
-              type="date"
+            {/* Data de vencimento — formato BR garantido (DD/MM/YYYY) */}
+            <InputDataBR
               value={p.dataVencimento}
-              onChange={(e) => atualizar(p.id, { dataVencimento: e.target.value })}
+              onChange={(iso) => atualizar(p.id, { dataVencimento: iso })}
             />
 
             {/* Remover */}

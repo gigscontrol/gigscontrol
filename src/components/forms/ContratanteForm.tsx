@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Field, TextInput, TextArea } from "../Field";
+import InputCpfCnpj from "../inputs/InputCpfCnpj";
+import { apenasDigitos } from "@/lib/formatters";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
 import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
@@ -56,7 +58,7 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
 
     const payload = {
       nome,
-      documento: documento || "",
+      documento: apenasDigitos(documento),
       email: email || "",
       telefone,
       cidadeId: cidadeIdResolvido,
@@ -95,7 +97,7 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
           <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@email.com" />
         </Field>
         <Field label="CPF / CNPJ" hint="Necessário ao converter em venda">
-          <TextInput value={documento} onChange={(e) => setDocumento(e.target.value)} placeholder="000.000.000-00" />
+          <InputCpfCnpj value={documento} onChange={setDocumento} placeholder="000.000.000-00 ou 00.000.000/0000-00" />
         </Field>
       </div>
 

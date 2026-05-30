@@ -45,7 +45,18 @@ export const vendaCreateSchema = z.object({
   nome_evento: z.string().nullable().optional(),
   evento_instagram: z.string().nullable().optional(),
   nome_local: z.string().nullable().optional(),
-  capacidade_publico: z.number().int().nonnegative().nullable().optional(),
+  // Aceita number direto OU string (que vira number via coerção). O
+  // cliente envia number, mas integrações externas (n8n, zapier etc)
+  // tendem a mandar string. Trunca pra inteiro >= 0; vazio/NaN viram null.
+  capacidade_publico: z
+    .union([z.number(), z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v === null || v === undefined || v === "") return null;
+      const n =
+        typeof v === "number" ? v : Number(String(v).replace(/\D/g, ""));
+      return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+    }),
   endereco_local: z.string().nullable().optional(),
   data_show: dataYmd.nullable().optional(),
   horario: horaHm.nullable().optional(),
