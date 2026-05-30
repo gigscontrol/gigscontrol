@@ -8,7 +8,9 @@ const COLS = `
   nome_evento, evento_instagram, nome_local, capacidade_publico, endereco_local,
   data_show, horario, horario_fim, cidade_id, casa_id, artist_id,
   line_up, cache, duracao_horas, duracao_minutos,
-  camarim, efeitos, hotel, logistica, observacoes,
+  camarim, efeitos, hotel, logistica,
+  observacoes, info_extra,
+  taxa_agencia_valor, taxa_modo_aplicado,
   criado_por, criado_em, atualizado_em
 `;
 

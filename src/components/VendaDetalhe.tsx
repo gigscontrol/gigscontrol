@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard } from "lucide-react";
+import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -19,12 +19,17 @@ type Props = {
 
 export default function VendaDetalhe({ vendaId, onBack }: Props) {
   const accent = MODULE_THEMES.vendas.color;
-  const { vendas, removeVenda } = useVendas();
+  const { vendas, removeVenda, updateVenda } = useVendas();
   const { orcamentos } = useOrcamentos();
   const artistas = useArtistas();
   const [confirmaRemover, setConfirmaRemover] = useState(false);
   const [removendo, setRemovendo] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
+  // Edição inline de "Informações extras" — herdado do orçamento mas
+  // editável de novo aqui se o admin quiser ajustar pra venda.
+  const [editandoInfoExtra, setEditandoInfoExtra] = useState(false);
+  const [infoExtraDraft, setInfoExtraDraft] = useState("");
+  const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
 
   const venda = vendas.find((v) => v.id === vendaId);
 
@@ -193,6 +198,81 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
             </div>
           )}
+
+          {/* Informações extras — herdadas do orçamento + editáveis */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-2">
+              <div className="section-title">Informações extras</div>
+              {!editandoInfoExtra && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInfoExtraDraft(venda.infoExtra ?? "");
+                    setEditandoInfoExtra(true);
+                  }}
+                  className="btn-ghost text-xs inline-flex items-center gap-1"
+                >
+                  <Pencil size={12} />
+                  Editar
+                </button>
+              )}
+            </div>
+            {editandoInfoExtra ? (
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={infoExtraDraft}
+                  onChange={(e) => setInfoExtraDraft(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Algo extra que apareceu no orçamento ou queira anotar."
+                  className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
+                  autoFocus
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditandoInfoExtra(false);
+                      setInfoExtraDraft("");
+                    }}
+                    disabled={salvandoInfoExtra}
+                    className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+                  >
+                    <X size={13} />
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setSalvandoInfoExtra(true);
+                      try {
+                        await updateVenda(venda.id, {
+                          infoExtra: infoExtraDraft.trim() || undefined,
+                        });
+                        setEditandoInfoExtra(false);
+                        setToastMsg({ msg: "Informações extras atualizadas.", tipo: "sucesso" });
+                      } catch (e) {
+                        setToastMsg({ msg: (e as Error).message, tipo: "erro" });
+                      } finally {
+                        setSalvandoInfoExtra(false);
+                      }
+                    }}
+                    disabled={salvandoInfoExtra}
+                    className="btn btn-primary text-sm inline-flex items-center gap-1.5"
+                  >
+                    <Check size={13} />
+                    {salvandoInfoExtra ? "Salvando..." : "Salvar"}
+                  </button>
+                </div>
+              </div>
+            ) : venda.infoExtra ? (
+              <p className="text-sm text-secondary whitespace-pre-wrap">{venda.infoExtra}</p>
+            ) : (
+              <p className="text-sm text-muted italic">
+                Nenhuma informação extra. Clique em &quot;Editar&quot; pra adicionar.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Coluna 2 */}

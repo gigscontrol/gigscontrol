@@ -43,6 +43,7 @@ export type VendaRow = {
   hotel: ItemQuantidade[] | null;
   logistica: LogisticaSelecao | Record<string, never> | null;
   observacoes: string | null;
+  info_extra: string | null;
   criado_por: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
@@ -110,6 +111,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
         : undefined,
     taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
     observacoes: row.observacoes ?? undefined,
+    infoExtra: row.info_extra ?? undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -146,6 +148,7 @@ export type VendaEscrita = {
   hotel?: ItemQuantidade[];
   logistica?: LogisticaSelecao;
   observacoes?: string | null;
+  info_extra?: string | null;
   criado_por?: string | null;
   atualizado_em?: string;
   taxa_agencia_valor?: number | null;

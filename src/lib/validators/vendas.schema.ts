@@ -73,6 +73,7 @@ export const vendaCreateSchema = z.object({
   hotel: z.array(itemQtdSchema).optional(),
   logistica: logisticaSchema.optional(),
   observacoes: z.string().nullable().optional(),
+  info_extra: z.string().nullable().optional(),
   parcelas: z.array(parcelaSchema).optional(),
 });
 export type VendaCreateInput = z.infer<typeof vendaCreateSchema>;

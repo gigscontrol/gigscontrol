@@ -55,6 +55,8 @@ export type NovoOrcamentoInput = {
   logistica: LogisticaSelecao;
   validade?: string;
   observacoes?: string;
+  /** Texto livre opcional anexado ao fim do orçamento. */
+  infoExtra?: string;
 };
 
 type OrcamentosContextValue = {
@@ -103,6 +105,7 @@ function orcamentoParaApi(o: Partial<Orcamento>): Record<string, unknown> {
   if (o.hotel !== undefined) out.hotel = o.hotel;
   if (o.logistica !== undefined) out.logistica = o.logistica;
   if (o.observacoes !== undefined) out.observacoes = o.observacoes || null;
+  if (o.infoExtra !== undefined) out.info_extra = o.infoExtra || null;
   if (o.dataShow !== undefined) out.data_show = o.dataShow || null;
   if (o.horario !== undefined) out.horario = o.horario || null;
   if (o.validade !== undefined) out.validade = o.validade || null;
@@ -198,6 +201,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         logistica: input.logistica,
         validade: input.validade ?? null,
         observacoes: input.observacoes ?? null,
+        info_extra: input.infoExtra ?? null,
       };
 
       const res = await fetch("/api/orcamentos", {

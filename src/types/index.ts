@@ -205,6 +205,8 @@ export type Orcamento = {
   // gestão
   validade?: string;
   observacoes?: string;
+  /** Texto livre opcional anexado ao fim do orçamento (WhatsApp + detalhe). */
+  infoExtra?: string;
   showId?: string;
   criadoEm: string;
   atualizadoEm: string;
@@ -336,6 +338,8 @@ export type Venda = {
   taxaModoAplicado?: TaxaAgenciaModo;
 
   observacoes?: string;
+  /** Texto livre opcional — copiado do orçamento ao concretizar. Editável depois. */
+  infoExtra?: string;
   criadoEm: string;
   atualizadoEm: string;
 };

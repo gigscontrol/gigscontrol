@@ -68,6 +68,7 @@ function vendaInputParaEscrita(
   if (input.hotel !== undefined) out.hotel = input.hotel;
   if (input.logistica !== undefined) out.logistica = input.logistica;
   if (input.observacoes !== undefined) out.observacoes = input.observacoes;
+  if (input.info_extra !== undefined) out.info_extra = input.info_extra;
   return out;
 }
 
@@ -126,6 +127,18 @@ export async function criarVendaCompleta(
   // 1 + 2: cria a venda
   const escrita = vendaInputParaEscrita(input);
   escrita.numero = await proximoNumeroVenda(supabase);
+  // Herda info_extra do orçamento se o input não trouxe um próprio.
+  // Cliente concretizar pode editar antes; se não editou, assume o do
+  // orçamento como ponto de partida.
+  if (
+    (escrita.info_extra === undefined || escrita.info_extra === null) &&
+    input.orcamento_id
+  ) {
+    const orc = await buscarOrcamentoPorId(supabase, input.orcamento_id);
+    if (orc?.infoExtra) {
+      escrita.info_extra = orc.infoExtra;
+    }
+  }
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
   // 3: parcelas (se houver)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -27,13 +27,19 @@ type Props = {
 
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
   const accent = MODULE_THEMES.vendas.color;
-  const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
+  const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
   const artistas = useArtistas();
 
   // Estado dos diálogos de feedback (duplicar)
   const [confirmaDuplicar, setConfirmaDuplicar] = useState(false);
   const [duplicando, setDuplicando] = useState(false);
+  // Edição inline do campo "Informações extras". Aberta sob demanda
+  // pra não poluir o detalhe — admin clica em "Editar" pra revelar
+  // o textarea.
+  const [editandoInfoExtra, setEditandoInfoExtra] = useState(false);
+  const [infoExtraDraft, setInfoExtraDraft] = useState("");
+  const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
     tipo: "sucesso" | "erro";
@@ -270,6 +276,89 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               <p className="text-sm text-secondary whitespace-pre-wrap">{orc.observacoes}</p>
             </div>
           )}
+
+          {/* Informações extras — texto que vai pro fim do orçamento.
+              Sempre exibido (mesmo se vazio) com botão de editar. */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="section-title">Informações extras</div>
+                <div className="text-xs text-muted mt-0.5">
+                  Aparece no fim do texto enviado pelo WhatsApp.
+                </div>
+              </div>
+              {!editandoInfoExtra && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInfoExtraDraft(orc.infoExtra ?? "");
+                    setEditandoInfoExtra(true);
+                  }}
+                  className="btn-ghost text-xs inline-flex items-center gap-1"
+                >
+                  <Pencil size={12} />
+                  Editar
+                </button>
+              )}
+            </div>
+            {editandoInfoExtra ? (
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={infoExtraDraft}
+                  onChange={(e) => setInfoExtraDraft(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Ex: Promoção especial — desconto de 10% se confirmar até amanhã."
+                  className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
+                  autoFocus
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditandoInfoExtra(false);
+                      setInfoExtraDraft("");
+                    }}
+                    disabled={salvandoInfoExtra}
+                    className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+                  >
+                    <X size={13} />
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setSalvandoInfoExtra(true);
+                      try {
+                        await updateOrcamento(orc.id, {
+                          infoExtra: infoExtraDraft.trim() || undefined,
+                        });
+                        setEditandoInfoExtra(false);
+                        setToast({ msg: "Informações extras atualizadas.", tipo: "sucesso" });
+                      } catch (e) {
+                        setToast({ msg: (e as Error).message, tipo: "erro" });
+                      } finally {
+                        setSalvandoInfoExtra(false);
+                      }
+                    }}
+                    disabled={salvandoInfoExtra}
+                    className="btn btn-primary text-sm inline-flex items-center gap-1.5"
+                  >
+                    <Check size={13} />
+                    {salvandoInfoExtra ? "Salvando..." : "Salvar"}
+                  </button>
+                </div>
+              </div>
+            ) : orc.infoExtra ? (
+              <p className="text-sm text-secondary whitespace-pre-wrap">
+                {orc.infoExtra}
+              </p>
+            ) : (
+              <p className="text-sm text-muted italic">
+                Nenhuma informação extra. Clique em &quot;Editar&quot; pra adicionar.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Coluna 2: Itens + preview */}

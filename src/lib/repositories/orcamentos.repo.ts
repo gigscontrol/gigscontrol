@@ -5,8 +5,10 @@ const COLS = `
   id, workspace_id, numero, status, tipo_evento,
   contratante_id, casa_id, cidade_id, artist_id,
   valor_cache, duracao_horas, duracao_minutos,
-  camarim, efeitos, hotel, logistica, observacoes,
+  camarim, efeitos, hotel, logistica,
+  observacoes, info_extra,
   data_show, horario, validade, show_id,
+  taxa_agencia_valor, taxa_modo_aplicado,
   criado_por, criado_em, atualizado_em
 `;
 
