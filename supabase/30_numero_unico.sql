@@ -43,7 +43,20 @@ where s.venda_id = v.id
   and v.deletado_em is not null
   and s.deletado_em is null;
 
--- 1c. Índice único parcial
+-- 1c. CONSERTO do over-trash: o show duplicado costuma estar vinculado à
+--     venda MAIS NOVA (a que foi removida no 1a), então o 1b acabaria
+--     trashando o único show e deixando a venda mantida sem show. Aqui
+--     restauramos qualquer show que uma venda ATIVA ainda referencia
+--     (via show_id) e re-vinculamos o venda_id pra ela.
+update shows s
+set deletado_em = null,
+    venda_id = v.id
+from vendas v
+where v.show_id = s.id
+  and v.deletado_em is null
+  and s.deletado_em is not null;
+
+-- 1d. Índice único parcial
 create unique index if not exists vendas_workspace_numero_uniq
   on vendas (workspace_id, numero)
   where deletado_em is null;
