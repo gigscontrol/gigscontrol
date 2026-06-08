@@ -92,29 +92,30 @@ como "depois").
 
 ---
 
-## FASE 1 — Pagamento real 🔴 *(o bloqueador de receita)*
-> Hoje `/pagamento` é mock e o trial auto-confirma. Aqui entra dinheiro.
+## FASE 1 — Pagamento real (Mercado Pago Checkout Pro) 🔴
+> **Decidido:** Checkout Pro (redirect, PIX+boleto+cartão, paga por ciclo).
+> Recorrência automática (Preapproval) e Stripe ficam pra depois.
+> Muita fundação JÁ existe: tabela `subscriptions`, 5 planos, onboarding
+> Etapa 2, `/pagamento` (mock), endpoints escolher/ativar-plano e trial.
 
-### 1a. Fundação
-- [ ] Tabela/colunas de assinatura: `provider`, `customer_id`, `subscription_id`,
-      `status`, `proxima_cobranca`, `metodo` (revisar o que já existe em `subscriptions`)
-- [ ] Camada de abstração `PaymentProvider` (pra BR + Stripe plugarem juntos)
-- [ ] Variáveis de ambiente + secrets (chaves de API dos gateways)
+### Você (em paralelo, antes de testar)
+- [ ] Criar aplicação no Mercado Pago Developers → pegar **Access Token**
+      e **Public Key** (modo TESTE primeiro)
+- [ ] Pôr as chaves no `.env.local` (dev) e na Vercel (prod) — Claude
+      não manuseia chave secreta
 
-### 1b. Gateway BR (PIX/boleto/cartão) — prioridade
-- [ ] Criar customer no gateway ao concluir signup/onboarding
-- [ ] Checkout real em `/pagamento` (PIX QR + cartão)
-- [ ] Webhook `/api/webhooks/<gateway>` → atualiza status da assinatura
-- [ ] Tela de "pagamento pendente / confirmado"
-
-### 1c. Stripe (cartão internacional)
-- [ ] Stripe Checkout / Subscriptions
-- [ ] Webhook Stripe → mesma camada de status
-- [ ] Seletor de método no checkout (BR vs internacional)
-
-### 1d. Recorrência
-- [ ] Cobrança recorrente no ciclo (mensal/anual)
-- [ ] Tratamento de falha de pagamento (retry + notificação)
+### Build (Claude)
+- [ ] **31 — schema**: colunas `provider`, `mp_preference_id`,
+      `mp_payment_id`, `metodo` em subscriptions + tabela de log de
+      eventos do webhook (idempotência)
+- [ ] **SDK + env**: instalar `mercadopago`, scaffolding de env (.env.example)
+- [ ] **payment.service**: cria preference do Checkout Pro → retorna init_point
+- [ ] **POST /api/checkout/mercadopago**: monta a preference do plano/ciclo
+- [ ] **/pagamento**: troca o form mock por resumo do plano + botão
+      "Pagar com Mercado Pago" (redirect pro init_point) + back_urls
+- [ ] **POST /api/webhooks/mercadopago**: verifica assinatura, no
+      `payment.approved` ativa a assinatura (reusa ativar-plano), grava
+      provider/metodo/proxima_cobranca, idempotente por payment_id
 
 ---
 
