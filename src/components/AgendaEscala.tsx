@@ -139,10 +139,14 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           const jsDay = date.getDay();
 
           if (currentWeek.length === 0 && day === 1) {
-            const paddingCount = jsDay === 0 ? 6 : jsDay - 1;
+            // Calendário DOM-first (igual ao header DAY_NAMES_SHORT): o
+            // dia 1 vai pra coluna = seu weekday (Dom=0 ... Sáb=6). O
+            // padding preenche as colunas anteriores com o fim do mês
+            // passado. (Antes era Mon-first, o que desalinhava 1 coluna.)
+            const paddingCount = jsDay;
             const prevMonthDays = new Date(year, monthIdx, 0).getDate();
             for (let i = 0; i < paddingCount; i++) {
-              const paddingJsDay = (i + 1) % 7;
+              const paddingJsDay = i; // coluna i = weekday i (Dom-first)
               currentWeek.push({
                 uniqueKey: `prev-${year}-${monthIdx}-${i}`,
                 id: `prev-${prevMonthDays - paddingCount + 1 + i}`,
@@ -183,7 +187,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       const lastMonthIdx = targetMonths[targetMonths.length - 1];
       const nextMonthName = ALL_MONTHS[lastMonthIdx === 11 ? 0 : lastMonthIdx + 1];
       while (currentWeek.length < 7) {
-        const paddingJsDay = (currentWeek.length + 1) % 7;
+        const paddingJsDay = currentWeek.length; // coluna = weekday (Dom-first)
         currentWeek.push({
           uniqueKey: `next-${lastMonthIdx}-${paddingNextDay}`,
           id: `next-${paddingNextDay}`,

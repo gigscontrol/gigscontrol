@@ -64,15 +64,22 @@ como "depois").
 - [x] Schema numérico estrito (risco 500) → `contatos.capacidade` endurecido (coerção) ✓
 - [x] null filtrado escondendo dado → mapeado (raiz já corrigida; resíduo no backlog)
 
-### Falta (precisa login / browser)
-- [ ] Confirmar migrations **27, 28, 29** aplicadas em PROD
-- [ ] Smoke test ponta-a-ponta logado no localhost:
-  - [ ] Criar orçamento → concretizar venda → ver na agenda → marcar pagamento
-  - [ ] Editar artista (senha, email, username) sem erro
-  - [ ] Editar membro de equipe (senha) sem erro
-  - [ ] Lixeira: deletar e restaurar de cada tipo
-  - [ ] Notificações disparando nos eventos certos
-- [ ] Pass de responsivo mobile nos módulos principais
+### Smoke test logado (Claude dirigiu o browser) — feito
+- [x] Agenda dashboard + Agenda de Shows renderizam dado real
+- [x] Vendas dashboard + detalhe da venda OK (CPF/CNPJ, capacidade,
+      info_extra, datas BR confirmados ao vivo)
+- [x] **Bug 1 achado + corrigido:** venda duplicada (ORC concretizado 2x
+      → 2 VND com mesmo número). Fix nas 4 camadas (client/server/banco/
+      limpeza). Migration 30.
+- [x] **Bug 2 achado + corrigido:** calendário Mon-first vs header
+      DOM-first (off-by-one). Alinhado pra DOM-first. Verificado ao vivo.
+
+### Falta (ação do usuário / próxima sessão)
+- [ ] **Rodar migration 30** (limpa a VND-0003 duplicada + índice único)
+- [ ] Confirmar migrations **27, 28, 29, 30** aplicadas em PROD
+- [ ] Testar fluxos restantes: editar equipe, lixeira de cada tipo,
+      notificações disparando
+- [ ] Pass de responsivo mobile
 
 ---
 

@@ -30,6 +30,18 @@ import { atualizarOrcamentoPorId, buscarOrcamentoPorId } from "@/lib/services/or
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroVendas } from "@/lib/api/permissoes";
 
+/** Orçamento já tem uma venda ativa — bloqueia concretizar de novo. */
+export class VendaDuplicadaError extends Error {
+  status = 409;
+  constructor(public numeroExistente: string) {
+    super(
+      `Este orçamento já foi concretizado na venda ${numeroExistente}. ` +
+        `Abra a venda existente em vez de criar outra.`
+    );
+    this.name = "VendaDuplicadaError";
+  }
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function normalizarUuid(v: string | null | undefined): string | null {
@@ -124,6 +136,22 @@ export async function criarVendaCompleta(
   criadoPor: string,
   input: VendaCreateInput
 ): Promise<Venda> {
+  // 0: guard anti-duplicação. Se este orçamento já tem uma venda ATIVA,
+  // não cria outra. Protege contra double-click / re-concretização (bug
+  // que gerou duas VND-0003 do mesmo ORC-0004).
+  if (input.orcamento_id) {
+    const { data: existente } = await supabase
+      .from("vendas")
+      .select("id, numero")
+      .eq("orcamento_id", input.orcamento_id)
+      .is("deletado_em", null)
+      .limit(1)
+      .maybeSingle();
+    if (existente) {
+      throw new VendaDuplicadaError(existente.numero as string);
+    }
+  }
+
   // 1 + 2: cria a venda
   const escrita = vendaInputParaEscrita(input);
   escrita.numero = await proximoNumeroVenda(supabase);

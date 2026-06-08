@@ -158,6 +158,9 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
   const [observacoes, setObservacoes] = useState(orc?.observacoes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Trava o submit: evita double-click criar duas vendas (bug que gerou
+  // duas VND com o mesmo número a partir do mesmo orçamento).
+  const [salvando, setSalvando] = useState(false);
 
   // ------- Pagamento / Parcelas -------
   const cacheNumAtual = parseFloat(cache.replace(",", ".")) || 0;
@@ -307,18 +310,34 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   }
 
   async function handleSubmit() {
+    // Guard de reentrada: se já está salvando, ignora cliques extras.
+    if (salvando) return;
     if (!validate() || !cidadeIbge || djId === null) return;
 
+    setSalvando(true);
+    try {
+      await submeter();
+    } catch (e) {
+      setErrors((p) => ({ ...p, geral: (e as Error).message }));
+      setSalvando(false); // libera pra tentar de novo só em caso de erro
+    }
+  }
+
+  async function submeter() {
+    // Re-narrowing pro TS (o guard real está em handleSubmit, mas o
+    // type-checker não atravessa a fronteira de função).
+    if (djId === null || !cidadeIbge) return;
     const cacheNum = parseFloat(cache.replace(",", "."));
     const telefoneE164 = `${country.ddi}${telDigits.replace(/\D/g, "")}`;
 
     // Resolve a cidade IBGE → UUID local (cria se ainda não existe)
     let cidadeIdResolvido: string;
     try {
-      const cid = await resolverCidadeIbge(cidadeIbge);
+      const cid = await resolverCidadeIbge(cidadeIbge!);
       cidadeIdResolvido = cid.id;
     } catch (e) {
       setErrors((p) => ({ ...p, cidade: (e as Error).message }));
+      setSalvando(false);
       return;
     }
 
@@ -1071,11 +1090,12 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
         </button>
         <button
           onClick={handleSubmit}
-          className="btn btn-primary"
+          disabled={salvando}
+          className="btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ backgroundColor: accent, color: "#fff" }}
         >
           <CheckCircle2 size={14} />
-          Concretizar Venda
+          {salvando ? "Concretizando..." : "Concretizar Venda"}
         </button>
       </div>
     </div>
