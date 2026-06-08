@@ -74,12 +74,21 @@ como "depois").
 - [x] **Bug 2 achado + corrigido:** calendário Mon-first vs header
       DOM-first (off-by-one). Alinhado pra DOM-first. Verificado ao vivo.
 
-### Falta (ação do usuário / próxima sessão)
-- [ ] **Rodar migration 30** (limpa a VND-0003 duplicada + índice único)
+### Smoke test — varredura completa (Claude dirigiu)
+- [x] Financeiro: totais batem com o dado curado (R$5k, atrasado OK)
+- [x] Contatos: Bruno Galindo 1 show/1 venda consistente
+- [x] Config › Geral: logo, nome, e-mail OK
+- [x] Config › Artistas: editar Maninhoo — bloco Senha mostra
+      `Delta-Lyra-9700` (senha padrão) + e-mail "não cadastrou" ✓ ao vivo
+- [x] Config › Equipe: vazia (plano Individual 0/1) — esperado
+- [x] Lixeira: itens trashados com Restaurar funcionando
+- [x] Migration 30 rodada no DEV (+ conserto do show órfão)
+
+### Falta (ação do usuário)
 - [ ] Confirmar migrations **27, 28, 29, 30** aplicadas em PROD
-- [ ] Testar fluxos restantes: editar equipe, lixeira de cada tipo,
-      notificações disparando
-- [ ] Pass de responsivo mobile
+- [ ] (Opcional) Pass de responsivo mobile
+- [ ] (Opcional) Testar bloco senha de Equipe — exige criar 1 membro
+      (código já verificado, espelha o do artista)
 
 ---
 
