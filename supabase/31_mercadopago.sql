@@ -43,6 +43,13 @@ create table if not exists pagamento_eventos (
 comment on table pagamento_eventos is
   'Log de webhooks de pagamento recebidos. O índice único por mp_payment_id garante idempotência (não ativar a assinatura 2x pro mesmo pagamento).';
 
+-- RLS: a tabela é tocada SÓ pelo webhook (service_role, que bypassa RLS).
+-- Habilitar RLS sem policies de cliente = nenhum anon/authenticated lê ou
+-- escreve. Mesma postura do `notificacoes` (escrita só por service_role).
+-- (Um futuro painel admin lê via service_role, então também não precisa
+-- de policy de cliente.)
+alter table pagamento_eventos enable row level security;
+
 -- Idempotência: o mesmo pagamento aprovado só é processado uma vez.
 create unique index if not exists pagamento_eventos_mp_payment_uniq
   on pagamento_eventos (mp_payment_id)
