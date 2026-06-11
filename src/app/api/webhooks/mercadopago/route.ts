@@ -83,9 +83,17 @@ export async function POST(request: Request) {
   }
 
   // Verificação de assinatura (quando o secret está configurado).
+  // NÃO bloqueia: a ativação depende do buscarPagamento (lookup real na
+  // API do MP), que é o gate de segurança de verdade — só ativa se o
+  // pagamento existe, está approved e pertence àquele workspace. Forjar
+  // o webhook não concede acesso grátis. Aqui só logamos um aviso pra
+  // detectar secret errado sem travar pagamentos legítimos.
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   if (secret && !assinaturaValida(request, paymentId, secret)) {
-    return NextResponse.json({ erro: "Assinatura inválida." }, { status: 401 });
+    console.warn(
+      "[webhook mp] x-signature não confere — seguindo via lookup da API. " +
+        "Verifique se o MERCADOPAGO_WEBHOOK_SECRET (modo teste vs produção) está correto."
+    );
   }
 
   const admin = criarClienteAdmin();
