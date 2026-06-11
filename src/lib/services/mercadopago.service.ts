@@ -68,6 +68,12 @@ export async function criarPreferenceCheckout(params: {
   const valor = valorCobranca(planoId, ciclo);
   const base = appUrl();
 
+  // O Mercado Pago só aceita auto_return e notification_url com URL
+  // pública (https). Em dev (localhost) eles são omitidos — o back_url
+  // ainda redireciona, mas sem auto_return; e o webhook só funciona em
+  // ambiente público mesmo. Em produção (vercel https) ambos entram.
+  const isPublico = base.startsWith("https://");
+
   const preference = new Preference(getClient());
   const result = await preference.create({
     body: {
@@ -86,11 +92,14 @@ export async function criarPreferenceCheckout(params: {
         pending: `${base}/pagamento/retorno?status=pending`,
         failure: `${base}/pagamento/retorno?status=failure`,
       },
-      // Volta automático pro app quando aprova.
-      auto_return: "approved",
+      // Volta automático pro app quando aprova (só com URL pública).
+      ...(isPublico ? { auto_return: "approved" } : {}),
       // Liga o pagamento à conta — usado no webhook.
       external_reference: workspaceId,
-      notification_url: `${base}/api/webhooks/mercadopago`,
+      // Webhook só com URL pública (MP não alcança localhost).
+      ...(isPublico
+        ? { notification_url: `${base}/api/webhooks/mercadopago` }
+        : {}),
       metadata: { workspace_id: workspaceId, plano: planoId, ciclo },
       statement_descriptor: "GIGSCONTROL",
     },
