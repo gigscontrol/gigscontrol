@@ -104,18 +104,24 @@ como "depois").
 - [ ] Pôr as chaves no `.env.local` (dev) e na Vercel (prod) — Claude
       não manuseia chave secreta
 
-### Build (Claude)
-- [ ] **31 — schema**: colunas `provider`, `mp_preference_id`,
-      `mp_payment_id`, `metodo` em subscriptions + tabela de log de
-      eventos do webhook (idempotência)
-- [ ] **SDK + env**: instalar `mercadopago`, scaffolding de env (.env.example)
-- [ ] **payment.service**: cria preference do Checkout Pro → retorna init_point
-- [ ] **POST /api/checkout/mercadopago**: monta a preference do plano/ciclo
-- [ ] **/pagamento**: troca o form mock por resumo do plano + botão
-      "Pagar com Mercado Pago" (redirect pro init_point) + back_urls
-- [ ] **POST /api/webhooks/mercadopago**: verifica assinatura, no
-      `payment.approved` ativa a assinatura (reusa ativar-plano), grava
-      provider/metodo/proxima_cobranca, idempotente por payment_id
+### Build (Claude) — feito, falta testar
+- [x] **31 — schema**: colunas MP em subscriptions + tabela
+      `pagamento_eventos` (idempotência)
+- [x] **SDK + env**: `mercadopago@3.1.0` + .env.example
+- [x] **mercadopago.service**: criarPreferenceCheckout + buscarPagamento
+- [x] **POST /api/checkout/mercadopago**: cria a preference, grava ref
+- [x] **/pagamento**: resumo + botão "Pagar com Mercado Pago" → init_point
+- [x] **/pagamento/retorno**: back_url, polling até ativar
+- [x] **POST /api/webhooks/mercadopago**: ativa no payment.approved,
+      x-signature gated, idempotente, proxima_cobranca por ciclo
+
+### Testar (precisa de ação tua)
+- [ ] Rodar **migration 31** no Supabase (DEV)
+- [ ] `.env.local`: garantir MP keys + `NEXT_PUBLIC_APP_URL=http://localhost:3000`
+- [ ] Restart do dev server (Claude faz) + testar o botão → checkout MP
+- [ ] **Webhook em dev**: MP não alcança localhost. Pra testar ativação
+      precisa de túnel (ngrok/cloudflared) OU deploy na Vercel preview.
+      Configurar o webhook no painel MP apontando pra essa URL.
 
 ---
 
