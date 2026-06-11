@@ -28,7 +28,18 @@ export const casaCreateSchema = z.object({
   nome: z.string().min(1, "nome obrigatório"),
   tipo: tipoCasaEnum,
   cidade_id: uuidLike.nullable().optional(),
-  capacidade: z.number().int().nonnegative().nullable().optional(),
+  // Aceita number, string ou null — coage pra inteiro >= 0. Mesmo padrão
+  // de vendas.capacidade_publico: cliente manda number, integrações
+  // externas tendem a mandar string. Vazio/NaN viram null.
+  capacidade: z
+    .union([z.number(), z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v === null || v === undefined || v === "") return null;
+      const n =
+        typeof v === "number" ? v : Number(String(v).replace(/\D/g, ""));
+      return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+    }),
   endereco: z.string().nullable().optional(),
   contato_responsavel: z.string().nullable().optional(),
   telefone: z.string().nullable().optional(),

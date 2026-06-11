@@ -3,26 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CreditCard,
   Lock,
-  CheckCircle2,
   Loader2,
   Sparkles,
-  Calendar,
-  User,
   AlertTriangle,
+  QrCode,
+  CreditCard,
+  Barcode,
+  ShieldCheck,
 } from "lucide-react";
 
 /**
- * Página /pagamento — mock de checkout.
+ * Página /pagamento — Checkout Pro do Mercado Pago.
  *
- * Aparece UMA vez na primeira entrada do admin, logo após confirmar
- * o email. Visualmente parece um checkout real (campo de cartão,
- * CVV, etc) mas NÃO valida nem cobra nada — só simula um loading e
- * marca a subscription como 'ativa' no banco.
- *
- * Quando o Stripe entrar, essa página vira o componente de checkout
- * real e dispara o webhook.
+ * Aparece na primeira entrada do admin que escolheu um plano pago. Em
+ * vez de coletar cartão aqui, cria a "preference" no Mercado Pago e
+ * redireciona pro ambiente hospedado deles (PIX, boleto ou cartão). A
+ * ATIVAÇÃO da assinatura acontece de forma assíncrona via webhook
+ * quando o pagamento aprova — por isso o retorno cai em /pagamento/retorno,
+ * que aguarda a confirmação.
  */
 
 type OnboardingStatus = {
@@ -42,16 +41,8 @@ export default function PagamentoPage() {
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
-
-  // Campos do cartão (visuais; sem validação real)
-  const [numero, setNumero] = useState("");
-  const [titular, setTitular] = useState("");
-  const [validade, setValidade] = useState("");
-  const [cvv, setCvv] = useState("");
-
-  const [processando, setProcessando] = useState(false);
+  const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [sucesso, setSucesso] = useState(false);
 
   // Carrega status do onboarding ao montar
   useEffect(() => {
@@ -62,7 +53,7 @@ export default function PagamentoPage() {
       })
       .then((d) => {
         setStatus(d);
-        // Se já está ativo, pula direto pro onboarding
+        // Se já está ativo, pula direto
         if (d.subscriptionStatus === "ativa") {
           router.replace(d.onboardingCompleto ? "/app" : "/onboarding");
         }
@@ -71,47 +62,26 @@ export default function PagamentoPage() {
       .finally(() => setCarregando(false));
   }, [router]);
 
-  async function pagar() {
-    if (processando) return;
+  async function irParaCheckout() {
+    if (indo || !status?.plano) return;
     setErro(null);
-
-    // Validações cosméticas
-    const numeroLimpo = numero.replace(/\s/g, "");
-    if (numeroLimpo.length < 13) {
-      setErro("Número de cartão incompleto.");
-      return;
-    }
-    if (!titular.trim()) {
-      setErro("Informe o nome do titular do cartão.");
-      return;
-    }
-    if (!/^\d{2}\/\d{2}$/.test(validade)) {
-      setErro("Validade no formato MM/AA.");
-      return;
-    }
-    if (cvv.length < 3) {
-      setErro("CVV incompleto.");
-      return;
-    }
-
-    setProcessando(true);
+    setIndo(true);
     try {
-      // Simula latência de processamento de pagamento
-      await new Promise((res) => setTimeout(res, 1800));
-      const res = await fetch("/api/workspace/ativar-plano", {
+      const res = await fetch("/api/checkout/mercadopago", {
         method: "POST",
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: status.plano.id, ciclo: "mensal" }),
       });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error((b.erro as string) ?? `HTTP ${res.status}`);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.initPoint) {
+        throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
       }
-      setSucesso(true);
-      // Aguarda 1s pra mostrar o sucesso e segue
-      setTimeout(() => router.replace("/onboarding"), 1000);
+      // Redireciona pro checkout hospedado do Mercado Pago.
+      window.location.href = body.initPoint as string;
     } catch (e) {
       setErro((e as Error).message);
-      setProcessando(false);
+      setIndo(false);
     }
   }
 
@@ -150,7 +120,6 @@ export default function PagamentoPage() {
 
   return (
     <div className="min-h-screen bg-main text-primary flex flex-col">
-      {/* Glow de fundo */}
       <div
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
@@ -174,14 +143,14 @@ export default function PagamentoPage() {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted">
             <Lock size={12} />
-            Pagamento seguro
+            Pagamento seguro via Mercado Pago
           </div>
         </div>
       </nav>
 
       <div className="relative flex-1 flex items-start justify-center px-6 py-10">
         <div className="w-full max-w-[920px] grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-          {/* Coluna principal — form */}
+          {/* Coluna principal */}
           <div>
             <div className="mb-6">
               <h1 className="text-2xl font-bold tracking-tight">
@@ -194,154 +163,63 @@ export default function PagamentoPage() {
               </p>
             </div>
 
-            {sucesso ? (
-              <div className="card text-center py-10">
+            <div className="card">
+              <div className="section-title mb-1 flex items-center gap-2">
+                <ShieldCheck size={16} style={{ color: "var(--module-vendas)" }} />
+                Pagamento pelo Mercado Pago
+              </div>
+              <p className="text-sm text-secondary mb-4">
+                Você vai pro ambiente seguro do Mercado Pago pra concluir.
+                Escolha como pagar:
+              </p>
+
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <MetodoCard icon={<QrCode size={18} />} label="PIX" hint="na hora" />
+                <MetodoCard icon={<CreditCard size={18} />} label="Cartão" hint="crédito" />
+                <MetodoCard icon={<Barcode size={18} />} label="Boleto" hint="1-2 dias" />
+              </div>
+
+              {erro && (
                 <div
-                  className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
                   style={{
-                    background:
-                      "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.05))",
-                    color: "var(--success)",
+                    backgroundColor: "rgba(239,68,68,0.08)",
+                    color: "var(--danger)",
+                    border: "1px solid rgba(239,68,68,0.3)",
                   }}
                 >
-                  <CheckCircle2 size={28} />
+                  <AlertTriangle size={12} className="flex-shrink-0" />
+                  {erro}
                 </div>
-                <h2 className="text-lg font-bold text-primary">
-                  Pagamento confirmado!
-                </h2>
-                <p className="text-sm text-secondary mt-1">
-                  Redirecionando pra configuração inicial...
-                </p>
-              </div>
-            ) : (
-              <div className="card">
-                <div className="section-title mb-4 flex items-center gap-2">
-                  <CreditCard size={16} style={{ color: "var(--module-vendas)" }} />
-                  Dados do cartão
-                </div>
+              )}
 
-                <div className="flex flex-col gap-4">
-                  {/* Número do cartão */}
-                  <Campo label="Número do cartão" icon={<CreditCard size={14} />}>
-                    <input
-                      value={numero}
-                      onChange={(e) =>
-                        setNumero(
-                          e.target.value
-                            .replace(/\D/g, "")
-                            .replace(/(.{4})/g, "$1 ")
-                            .trim()
-                            .slice(0, 19)
-                        )
-                      }
-                      placeholder="1234 5678 9012 3456"
-                      className="bg-transparent outline-none text-sm text-primary placeholder:text-muted flex-1 font-mono"
-                      inputMode="numeric"
-                      maxLength={19}
-                    />
-                  </Campo>
-
-                  <Campo label="Nome do titular" icon={<User size={14} />}>
-                    <input
-                      value={titular}
-                      onChange={(e) =>
-                        setTitular(e.target.value.toUpperCase())
-                      }
-                      placeholder="COMO ESTÁ NO CARTÃO"
-                      className="bg-transparent outline-none text-sm text-primary placeholder:text-muted flex-1 uppercase"
-                    />
-                  </Campo>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Campo label="Validade" icon={<Calendar size={14} />}>
-                      <input
-                        value={validade}
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          setValidade(
-                            v.length > 2 ? `${v.slice(0, 2)}/${v.slice(2)}` : v
-                          );
-                        }}
-                        placeholder="MM/AA"
-                        className="bg-transparent outline-none text-sm text-primary placeholder:text-muted flex-1 font-mono"
-                        maxLength={5}
-                      />
-                    </Campo>
-                    <Campo label="CVV" icon={<Lock size={14} />}>
-                      <input
-                        value={cvv}
-                        onChange={(e) =>
-                          setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))
-                        }
-                        placeholder="123"
-                        className="bg-transparent outline-none text-sm text-primary placeholder:text-muted flex-1 font-mono"
-                        inputMode="numeric"
-                        maxLength={4}
-                      />
-                    </Campo>
-                  </div>
-                </div>
-
-                {erro && (
-                  <div
-                    className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mt-4"
-                    style={{
-                      backgroundColor: "rgba(239,68,68,0.08)",
-                      color: "var(--danger)",
-                      border: "1px solid rgba(239,68,68,0.3)",
-                    }}
-                  >
-                    <AlertTriangle size={12} className="flex-shrink-0" />
-                    {erro}
-                  </div>
+              <button
+                onClick={irParaCheckout}
+                disabled={indo || !plano}
+                className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+                style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              >
+                {indo ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Abrindo o Mercado Pago...
+                  </>
+                ) : (
+                  <>
+                    <Lock size={14} />
+                    Pagar {precoFormatado} com Mercado Pago
+                  </>
                 )}
+              </button>
 
-                <button
-                  onClick={pagar}
-                  disabled={processando}
-                  className="btn btn-primary text-sm w-full justify-center py-2.5 mt-5 disabled:opacity-60"
-                  style={{
-                    backgroundColor: "var(--module-vendas)",
-                    color: "#fff",
-                  }}
-                >
-                  {processando ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Processando pagamento...
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={14} />
-                      Confirmar pagamento de {precoFormatado}
-                    </>
-                  )}
-                </button>
-
-                <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
-                  Você pode cancelar a qualquer momento em Configurações.
-                  Sem fidelidade.
-                </p>
-
-                {/* Banner de aviso — esse é mock */}
-                <div
-                  className="text-[0.7rem] rounded-md px-3 py-2 mt-3 leading-relaxed"
-                  style={{
-                    backgroundColor: "rgba(245,158,11,0.08)",
-                    color: "var(--warning)",
-                    border: "1px solid rgba(245,158,11,0.2)",
-                  }}
-                >
-                  <strong>Modo demonstração:</strong> esse checkout é
-                  visual — não cobra do cartão. Pode digitar qualquer
-                  número (com 13+ dígitos) e validade futura. Em breve
-                  vai integrar com Stripe.
-                </div>
-              </div>
-            )}
+              <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
+                Você pode cancelar a qualquer momento em Configurações.
+                Sem fidelidade.
+              </p>
+            </div>
           </div>
 
-          {/* Coluna lateral — resumo do plano */}
+          {/* Coluna lateral — resumo */}
           <aside>
             <div
               className="card sticky top-4"
@@ -370,9 +248,7 @@ export default function PagamentoPage() {
                   <div className="border-t border-border my-3" />
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-secondary">Mensalidade</span>
-                    <span className="font-mono text-primary">
-                      {precoFormatado}
-                    </span>
+                    <span className="font-mono text-primary">{precoFormatado}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-secondary">Hoje</span>
@@ -382,9 +258,8 @@ export default function PagamentoPage() {
                   </div>
                   <div className="border-t border-border my-3" />
                   <div className="text-[0.7rem] text-muted leading-relaxed">
-                    Cobrança mensal recorrente.
-                    <br />
-                    Pode trocar de plano em Configurações a qualquer momento.
+                    Cobrança mensal. Pode trocar de plano em Configurações a
+                    qualquer momento.
                   </div>
                 </>
               ) : (
@@ -400,26 +275,20 @@ export default function PagamentoPage() {
   );
 }
 
-// ============================================================
-// Helper de campo (label + ícone + input filho)
-// ============================================================
-
-function Campo({
-  label,
+function MetodoCard({
   icon,
-  children,
+  label,
+  hint,
 }: {
-  label: string;
   icon: React.ReactNode;
-  children: React.ReactNode;
+  label: string;
+  hint: string;
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-secondary">{label}</span>
-      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-        <span className="text-muted flex-shrink-0">{icon}</span>
-        {children}
-      </div>
-    </label>
+    <div className="flex flex-col items-center gap-1 rounded-md border border-border bg-elevated py-3">
+      <span style={{ color: "var(--module-vendas)" }}>{icon}</span>
+      <span className="text-xs font-semibold text-primary">{label}</span>
+      <span className="text-[0.6rem] text-muted">{hint}</span>
+    </div>
   );
 }

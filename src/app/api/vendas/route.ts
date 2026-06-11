@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarVendasDoWorkspace,
   criarVendaCompleta,
+  VendaDuplicadaError,
 } from "@/lib/services/vendas.service";
 import { vendaCreateSchema } from "@/lib/validators/vendas.schema";
 import {
@@ -68,6 +69,9 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ venda }, { status: 201 });
   } catch (e) {
+    if (e instanceof VendaDuplicadaError) {
+      return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao criar venda." },
       { status: 500 }
