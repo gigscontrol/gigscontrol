@@ -1,0 +1,206 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  CheckCircle2,
+  Loader2,
+  Clock,
+  XCircle,
+} from "lucide-react";
+
+/**
+ * Página /pagamento/retorno — back_url do Checkout Pro.
+ *
+ * O Mercado Pago redireciona pra cá depois do checkout com ?status=
+ * success | pending | failure. A ativação real é assíncrona (webhook),
+ * então no caso "success" a gente faz polling do status do onboarding
+ * até a subscription virar 'ativa' e então segue pro /onboarding.
+ */
+
+function RetornoInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const status = params.get("status") ?? "pending";
+
+  const [tentativas, setTentativas] = useState(0);
+  const [confirmado, setConfirmado] = useState(false);
+  const [demorou, setDemorou] = useState(false);
+
+  // Polling do status quando o retorno é de sucesso.
+  useEffect(() => {
+    if (status !== "success") return;
+    let ativo = true;
+    let n = 0;
+
+    const checar = async () => {
+      try {
+        const r = await fetch("/api/workspace/onboarding", {
+          credentials: "include",
+        });
+        if (r.ok) {
+          const d = (await r.json()) as { subscriptionStatus: string };
+          if (d.subscriptionStatus === "ativa") {
+            if (ativo) {
+              setConfirmado(true);
+              setTimeout(() => router.replace("/onboarding"), 1000);
+            }
+            return true;
+          }
+        }
+      } catch {
+        // ignora; tenta de novo
+      }
+      return false;
+    };
+
+    const loop = setInterval(async () => {
+      n += 1;
+      if (ativo) setTentativas(n);
+      const ok = await checar();
+      if (ok || n >= 12) {
+        clearInterval(loop);
+        if (!ok && ativo) setDemorou(true);
+      }
+    }, 2000);
+
+    // primeira checagem imediata
+    void checar();
+
+    return () => {
+      ativo = false;
+      clearInterval(loop);
+    };
+  }, [status, router]);
+
+  return (
+    <div className="min-h-screen bg-main text-primary flex items-center justify-center p-4">
+      <div className="card max-w-md w-full text-center py-10">
+        {status === "success" && !confirmado && !demorou && (
+          <>
+            <Loader2
+              size={40}
+              className="animate-spin mx-auto mb-4"
+              style={{ color: "var(--module-vendas)" }}
+            />
+            <h1 className="text-lg font-bold text-primary">
+              Confirmando seu pagamento...
+            </h1>
+            <p className="text-sm text-secondary mt-1">
+              Só um instante — estamos validando com o Mercado Pago.
+            </p>
+            {tentativas > 3 && (
+              <p className="text-xs text-muted mt-3">
+                Tá levando um pouquinho mais que o normal...
+              </p>
+            )}
+          </>
+        )}
+
+        {status === "success" && confirmado && (
+          <>
+            <div
+              className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.05))",
+                color: "var(--success)",
+              }}
+            >
+              <CheckCircle2 size={28} />
+            </div>
+            <h1 className="text-lg font-bold text-primary">
+              Pagamento confirmado!
+            </h1>
+            <p className="text-sm text-secondary mt-1">
+              Redirecionando pra configuração inicial...
+            </p>
+          </>
+        )}
+
+        {status === "success" && demorou && (
+          <>
+            <Clock
+              size={40}
+              className="mx-auto mb-4"
+              style={{ color: "var(--warning)" }}
+            />
+            <h1 className="text-lg font-bold text-primary">
+              Quase lá
+            </h1>
+            <p className="text-sm text-secondary mt-1">
+              O pagamento foi feito, mas a confirmação do Mercado Pago está
+              demorando. Pode seguir — assim que confirmar, sua conta é
+              ativada automaticamente.
+            </p>
+            <button
+              onClick={() => router.replace("/onboarding")}
+              className="btn btn-primary text-sm mt-5"
+              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+            >
+              Continuar
+            </button>
+          </>
+        )}
+
+        {status === "pending" && (
+          <>
+            <Clock
+              size={40}
+              className="mx-auto mb-4"
+              style={{ color: "var(--warning)" }}
+            />
+            <h1 className="text-lg font-bold text-primary">
+              Pagamento pendente
+            </h1>
+            <p className="text-sm text-secondary mt-1">
+              Se você pagou via boleto ou PIX, a confirmação pode levar um
+              tempinho. Assim que cair, sua conta é ativada automaticamente
+              e a gente te avisa.
+            </p>
+            <button
+              onClick={() => router.replace("/onboarding")}
+              className="btn btn-secondary text-sm mt-5"
+            >
+              Continuar mesmo assim
+            </button>
+          </>
+        )}
+
+        {status === "failure" && (
+          <>
+            <XCircle size={40} className="text-danger mx-auto mb-4" />
+            <h1 className="text-lg font-bold text-primary">
+              Pagamento não concluído
+            </h1>
+            <p className="text-sm text-secondary mt-1">
+              Algo deu errado ou o pagamento foi recusado. Pode tentar de
+              novo — nenhuma cobrança foi feita.
+            </p>
+            <button
+              onClick={() => router.replace("/pagamento")}
+              className="btn btn-primary text-sm mt-5"
+              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+            >
+              Tentar de novo
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function RetornoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-main flex items-center justify-center">
+          <Loader2 size={20} className="animate-spin text-muted" />
+        </div>
+      }
+    >
+      <RetornoInner />
+    </Suspense>
+  );
+}
