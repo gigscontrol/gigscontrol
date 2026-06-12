@@ -12,6 +12,7 @@ import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const DAY_NAMES_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const DATE_RANGES = ["Mês anterior", "Mês atual", "Próximo mês", "Personalizado"] as const satisfies readonly AgendaDateRange[];
@@ -21,11 +22,37 @@ type DayCell = {
   id: number | string;
   name: string;
   date: string;
+  /** Data ISO completa "YYYY-MM-DD" desta célula — usada pra casar shows. */
+  dataISO: string;
   /** Dia "quente": Sex/Sáb OU feriado OU véspera de feriado (ganha 🔥). */
   isQuente: boolean;
   isOtherMonth: boolean;
   isToday?: boolean;
 };
+
+/** "YYYY-MM-DD" a partir de ano, mês (1-12) e dia. */
+function isoDia(ano: number, mes1a12: number, dia: number): string {
+  return `${ano}-${String(mes1a12).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+/**
+ * Um show pertence a esta célula do calendário?
+ *
+ * Casa pela DATA ISO completa (fonte da verdade). Isso conserta o bug em
+ * que um show de 03/jun aparecia também no dia 3 de nov, dez etc. — o
+ * match antigo era só por dia-do-mês (`dayId`), ignorando mês/ano.
+ *
+ * Shows legados sem `data` caem no match por dia-do-mês, válido apenas
+ * dentro do mês exibido (nunca no padding de outro mês).
+ */
+function showNoDia(s: Show, day: DayCell): boolean {
+  // Células de padding (dias de outro mês) nunca exibem shows: cada show
+  // aparece em exatamente um mês, evitando "duplicar" um show de borda ao
+  // virar o mês.
+  if (day.isOtherMonth) return false;
+  if (s.data && day.dataISO) return s.data === day.dataISO;
+  return s.dayId === day.id;
+}
 
 const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: string }> = {
   confirmado: { bg: "rgba(34, 197, 94, 0.12)", color: "var(--success)", label: "Confirmado" },
@@ -158,11 +185,15 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             const prevMonthDays = new Date(year, monthIdx, 0).getDate();
             for (let i = 0; i < paddingCount; i++) {
               const paddingJsDay = i; // coluna i = weekday i (Dom-first)
+              const prevDia = prevMonthDays - paddingCount + 1 + i;
+              const prevMonthIdx = monthIdx === 0 ? 11 : monthIdx - 1;
+              const prevYear = monthIdx === 0 ? year - 1 : year;
               currentWeek.push({
                 uniqueKey: `prev-${year}-${monthIdx}-${i}`,
-                id: `prev-${prevMonthDays - paddingCount + 1 + i}`,
+                id: `prev-${prevDia}`,
                 name: DAY_NAMES[paddingJsDay],
-                date: `${prevMonthDays - paddingCount + 1 + i} ${ALL_MONTHS[monthIdx === 0 ? 11 : monthIdx - 1]}`,
+                date: `${prevDia} ${ALL_MONTHS[prevMonthIdx]}`,
+                dataISO: isoDia(prevYear, prevMonthIdx + 1, prevDia),
                 isQuente: false,
                 isOtherMonth: true,
               });
@@ -185,6 +216,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             id: day,
             name: DAY_NAMES[jsDay],
             date: `${day} ${ALL_MONTHS[monthIdx]}`,
+            dataISO: dISO,
             isQuente,
             isOtherMonth: false,
             isToday,
@@ -201,17 +233,23 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
     if (currentWeek.length > 0) {
       let paddingNextDay = 1;
       const lastMonthIdx = targetMonths[targetMonths.length - 1];
-      const nextMonthName = ALL_MONTHS[lastMonthIdx === 11 ? 0 : lastMonthIdx + 1];
+      const lastYear = targetYears[targetYears.length - 1];
+      const nextMonthIdx = lastMonthIdx === 11 ? 0 : lastMonthIdx + 1;
+      const nextYear = lastMonthIdx === 11 ? lastYear + 1 : lastYear;
+      const nextMonthName = ALL_MONTHS[nextMonthIdx];
       while (currentWeek.length < 7) {
         const paddingJsDay = currentWeek.length; // coluna = weekday (Dom-first)
+        const nextDia = paddingNextDay;
         currentWeek.push({
-          uniqueKey: `next-${lastMonthIdx}-${paddingNextDay}`,
-          id: `next-${paddingNextDay}`,
+          uniqueKey: `next-${lastMonthIdx}-${nextDia}`,
+          id: `next-${nextDia}`,
           name: DAY_NAMES[paddingJsDay],
-          date: `${paddingNextDay++} ${nextMonthName}`,
+          date: `${nextDia} ${nextMonthName}`,
+          dataISO: isoDia(nextYear, nextMonthIdx + 1, nextDia),
           isQuente: false,
           isOtherMonth: true,
         });
+        paddingNextDay++;
       }
       month.push(currentWeek);
     }
@@ -238,6 +276,16 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
 
+  // Rótulo do período exibido (ex: "Junho 2026"). Derivado da 1ª célula
+  // real do grid — assim acompanha os atalhos e o "Personalizado" sem
+  // duplicar a lógica do resolver, e cobre a virada de ano sozinho.
+  const periodoLabel = useMemo(() => {
+    const real = allDays.find((d) => !d.isOtherMonth && d.dataISO);
+    if (!real) return "";
+    const [ano, mes] = real.dataISO.split("-").map(Number);
+    return `${MESES_LONGOS[mes - 1]} ${ano}`;
+  }, [allDays]);
+
   return (
     <div className="max-w-[1600px] mx-auto w-full p-4 lg:p-8">
       <PageHeader
@@ -257,6 +305,16 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           />
         }
       />
+
+      {/* Mês/ano em visualização — título do período */}
+      {periodoLabel && (
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-primary capitalize whitespace-nowrap">
+            {periodoLabel}
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      )}
 
       {/* Header dos dias da semana (desktop) */}
       <div className="hidden md:grid grid-cols-7 gap-2 mb-2 sticky top-0 bg-main py-2 z-10">
@@ -278,7 +336,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
               <DayCellComponent
                 key={day.uniqueKey}
                 day={day}
-                shows={filteredShows.filter((s) => s.dayId === day.id)}
+                shows={filteredShows.filter((s) => showNoDia(s, day))}
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
@@ -293,7 +351,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         {allDays
           .filter((d) => !d.isOtherMonth)
           .map((day) => {
-            const shows = filteredShows.filter((s) => s.dayId === day.id);
+            const shows = filteredShows.filter((s) => showNoDia(s, day));
             if (shows.length === 0 && !day.isToday) return null;
             return (
               <MobileDayCard
@@ -306,7 +364,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
               />
             );
           })}
-        {allDays.filter((d) => !d.isOtherMonth && filteredShows.some((s) => s.dayId === d.id)).length === 0 && (
+        {allDays.filter((d) => !d.isOtherMonth && filteredShows.some((s) => showNoDia(s, d))).length === 0 && (
           <EmptyState />
         )}
       </div>
