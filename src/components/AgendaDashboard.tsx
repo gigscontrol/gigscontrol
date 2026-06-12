@@ -1,23 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Music,
-  Clock,
-  Users,
-  MapPin,
-  CalendarRange,
   ChevronRight,
-  TrendingUp,
+  Plane,
+  CalendarDays,
+  CheckCircle2,
+  AlertTriangle,
+  ListChecks,
+  Clock,
+  Copy,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import DateRangeSelector from "./DateRangeSelector";
+import Modal from "./Modal";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
-import { useArtistas } from "@/lib/workspace-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
+import { useVendas } from "@/lib/vendas-context";
+import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
-import type { ActiveTab, ActivePage } from "@/types";
+import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 
 type Props = {
   selectedDJs: string[];
@@ -25,126 +30,609 @@ type Props = {
   onAbrirShow?: (showId: string) => void;
 };
 
+const ATALHOS: AgendaDateRange[] = [
+  "Mês anterior",
+  "Mês atual",
+  "Próximo mês",
+  "Personalizado",
+];
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function iso(ano: number, mes1: number, dia: number): string {
+  return `${ano}-${String(mes1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+function hojeISO(): string {
+  const d = new Date();
+  return iso(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+function diasEntre(aISO: string, bISO: string): number {
+  const a = new Date(`${aISO}T12:00:00`).getTime();
+  const b = new Date(`${bISO}T12:00:00`).getTime();
+  return Math.round((a - b) / 86400000);
+}
+/** Resolve {ano, mes(0-based)} a partir do seletor. */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number } {
+  const h = new Date();
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)) };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth() };
+}
+
 export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }: Props) {
   const accent = MODULE_THEMES.agenda.color;
   const { shows } = useShows();
-  const { cidades } = useContatos();
+  const { cidades, casas } = useContatos();
   const artistas = useArtistas();
+  const { workspaceCriadoEm } = useWorkspace();
+  const { vendas } = useVendas();
 
-  // Considera só DJs selecionados na sidebar (uuid após Etapa 7).
-  const showsVisiveis = useMemo(
-    () => shows.filter((s) => selectedDJs.includes(s.djId)),
-    [shows, selectedDJs]
+  // ---- Seletor de mês ----
+  const [range, setRange] = useState<AgendaDateRange>("Mês atual");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const [resumoAberto, setResumoAberto] = useState(false);
+  const [ocupacaoAberta, setOcupacaoAberta] = useState(false);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  // Quais tipos de dia entram na lista de datas disponíveis (copiar).
+  const [incluir, setIncluir] = useState({
+    sex: true,
+    sab: true,
+    dom: true,
+    feriado: true,
+  });
+  const toggleInclui = (k: keyof typeof incluir) =>
+    setIncluir((prev) => ({ ...prev, [k]: !prev[k] }));
+  const [lista, setLista] = useState<{
+    titulo: string;
+    subtitulo?: string;
+    shows: Show[];
+    pendencias?: boolean;
+  } | null>(null);
+  const { ano, mes } = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const hoje = hojeISO();
+
+  // Shows do mês selecionado + DJs visíveis na sidebar
+  const showsMes = useMemo(
+    () =>
+      shows.filter((s) => {
+        if (!selectedDJs.includes(s.djId) || !s.data) return false;
+        const d = new Date(`${s.data}T12:00:00`);
+        return d.getFullYear() === ano && d.getMonth() === mes;
+      }),
+    [shows, selectedDJs, ano, mes]
   );
 
-  const stats = useMemo(() => {
-    const confirmados = showsVisiveis.filter((s) => s.status === "confirmado").length;
-    const pendentes = showsVisiveis.filter((s) => s.status === "pendente").length;
-    const logistica = showsVisiveis.filter((s) => s.status === "logistica").length;
-    const djsEscalados = new Set(showsVisiveis.map((s) => s.djId)).size;
-    const pracas = new Set(showsVisiveis.map((s) => s.cidadeId).filter(Boolean)).size;
-    const valorTotal = showsVisiveis.reduce((acc, s) => acc + (s.valor ?? 0), 0);
-    return { confirmados, pendentes, logistica, djsEscalados, pracas, valorTotal };
-  }, [showsVisiveis]);
+  const cidadeDoShow = (s: Show) =>
+    s.cidadeId ? cidades.find((c) => String(c.id) === s.cidadeId) : undefined;
+  const djDoShow = (s: Show) => artistas.find((d) => d.id === s.djId);
+  // Local do evento (a "balada"): venue do show → casa vinculada →
+  // nome_local da venda vinculada. Vazio se nenhum estiver setado.
+  const localDoEvento = (s: Show): string => {
+    const casa = s.casaId ? casas.find((c) => String(c.id) === s.casaId) : undefined;
+    const venda = s.vendaId ? vendas.find((v) => v.id === s.vendaId) : undefined;
+    return s.venue || casa?.nome || venda?.nomeLocal || "";
+  };
 
-  // Shows ordenados por dia (próximos)
-  const proximosShows = useMemo(() => {
-    return [...showsVisiveis]
-      .sort((a, b) => (a.dayId || 999) - (b.dayId || 999))
-      .slice(0, 6);
-  }, [showsVisiveis]);
+  // ---- 1) Shows confirmados (no mês) ----
+  const confirmadosList = useMemo(
+    () => showsMes.filter((s) => s.status === "confirmado"),
+    [showsMes]
+  );
+  const confirmados = confirmadosList.length;
+  // Shows ainda a realizar (data de hoje em diante, dentro do mês).
+  const aRealizarList = useMemo(
+    () =>
+      showsMes
+        .filter((s) => s.data && s.data >= hoje)
+        .sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "")),
+    [showsMes, hoje]
+  );
+  const aRealizar = aRealizarList.length;
 
-  // Distribuição por DJ
-  const porDJ = useMemo(() => {
-    return artistas.filter((d) => selectedDJs.includes(d.id)).map((dj) => ({
-      dj,
-      total: showsVisiveis.filter((s) => s.djId === dj.id).length,
-    }));
-  }, [showsVisiveis, selectedDJs, artistas]);
+  // Shows com pendência: data marcada, mas algo pendente — confirmação,
+  // logística, horário ou pagamento atrasado.
+  const pendenciasDoShow = (s: Show): string[] => {
+    const p: string[] = [];
+    if (s.status === "pendente") p.push("confirmação");
+    if (s.status === "logistica") p.push("logística");
+    if (!s.time) p.push("horário");
+    if (s.vendaId) {
+      const v = vendas.find((x) => x.id === s.vendaId);
+      if (
+        v &&
+        v.parcelas.some(
+          (pc) =>
+            pc.statusBase !== "pago" &&
+            pc.dataVencimento &&
+            pc.dataVencimento < hoje
+        )
+      ) {
+        p.push("pagamento");
+      }
+    }
+    return p;
+  };
+  const showsComPendencia = useMemo(
+    () => showsMes.filter((s) => pendenciasDoShow(s).length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showsMes, vendas, hoje]
+  );
+  const subtitlePendencia = useMemo(() => {
+    if (showsComPendencia.length === 0) return "Tudo resolvido";
+    const tipos = new Set<string>();
+    showsComPendencia.forEach((s) =>
+      pendenciasDoShow(s).forEach((t) => tipos.add(t))
+    );
+    const txt = Array.from(tipos).join(", ");
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showsComPendencia]);
 
-  const maxPorDJ = Math.max(1, ...porDJ.map((p) => p.total));
+  // ---- 2) Próximas viagens (fora da cidade natal do DJ) ----
+  const viagens = useMemo(() => {
+    return showsMes
+      .filter((s) => {
+        const cid = cidadeDoShow(s);
+        const dj = djDoShow(s);
+        // Sem cidade não dá pra dizer se é viagem — inclui por garantia.
+        if (!cid) return true;
+        // Exclui se a cidade do show é a cidade natal do DJ (match por IBGE).
+        if (cid.ibgeId && dj?.cidadeIbgeId && cid.ibgeId === dj.cidadeIbgeId) {
+          return false;
+        }
+        return true;
+      })
+      .map((s) => {
+        const cid = cidadeDoShow(s);
+        const dj = djDoShow(s);
+        const dias = s.data ? diasEntre(s.data, hoje) : 0;
+        return {
+          show: s,
+          cidade: cid ? `${cid.nome}/${cid.estado}` : s.location || "—",
+          djNome: dj?.name ?? "—",
+          djCor: dj?.color ?? "#888",
+          dias,
+          data: s.data ?? "",
+        };
+      })
+      .sort((a, b) => a.data.localeCompare(b.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showsMes, cidades, artistas, hoje]);
+
+  // ---- 3) Fim de semana / feriados ocupados ----
+  const ocupacao = useMemo(() => {
+    const diasComShow = new Set(showsMes.map((s) => s.data));
+    const feriados = setFeriados([ano - 1, ano, ano + 1]);
+    const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+    // [ocupados, total]
+    const q = [0, 0], sx = [0, 0], sb = [0, 0], dm = [0, 0], vp = [0, 0], fr = [0, 0];
+    for (let dia = 1; dia <= diasNoMes; dia++) {
+      const dISO = iso(ano, mes + 1, dia);
+      const wd = new Date(ano, mes, dia).getDay(); // 0=Dom .. 6=Sáb
+      const ocupado = diasComShow.has(dISO);
+      const bump = (arr: number[]) => {
+        arr[1]++;
+        if (ocupado) arr[0]++;
+      };
+      if (wd === 4) bump(q);
+      if (wd === 5) bump(sx);
+      if (wd === 6) bump(sb);
+      if (wd === 0) bump(dm);
+      if (ehVesperaDeFeriado(dISO, feriados)) bump(vp);
+      if (ehFeriado(dISO, feriados)) bump(fr);
+    }
+    return [
+      { label: "Quintas", v: q },
+      { label: "Sextas", v: sx },
+      { label: "Sábados", v: sb },
+      { label: "Domingos", v: dm },
+      { label: "Véspera de feriado", v: vp },
+      { label: "Feriados", v: fr },
+    ].filter((row) => row.v[1] > 0);
+  }, [showsMes, ano, mes]);
+
+  // ---- 4) Próximos shows — do mês + 1ª semana do mês seguinte, só os
+  //         que ainda vão acontecer (data >= hoje). Assim no fim do mês
+  //         já aparecem os primeiros shows do mês que vem.
+  const proximosShowsFull = useMemo(() => {
+    const inicioMes = iso(ano, mes + 1, 1);
+    const inicio = inicioMes > hoje ? inicioMes : hoje;
+    const fimDate = new Date(ano, mes + 1, 7);
+    const fim = iso(
+      fimDate.getFullYear(),
+      fimDate.getMonth() + 1,
+      fimDate.getDate()
+    );
+    return shows
+      .filter(
+        (s) =>
+          selectedDJs.includes(s.djId) &&
+          s.data &&
+          s.data >= inicio &&
+          s.data <= fim
+      )
+      .sort((a, b) => (a.data ?? "").localeCompare(b.data ?? ""));
+  }, [shows, selectedDJs, ano, mes, hoje]);
+  const proximosShows = proximosShowsFull.slice(0, 6);
+
+  // ---- 5) Shows realizados (data passada) + pendências ----
+  const temPendencia = (s: Show): boolean => {
+    if (!s.vendaId) return false;
+    const v = vendas.find((x) => x.id === s.vendaId);
+    if (!v) return false;
+    return v.parcelas.some((p) => p.statusBase !== "pago");
+  };
+  const realizados = useMemo(() => {
+    const passados = showsMes.filter((s) => s.data && s.data < hoje);
+    const comPendencia = passados.filter(temPendencia);
+    return { total: passados.length, comPendencia, lista: passados };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showsMes, vendas, hoje]);
+
+  // ---- 6) Resumo do mês (todos os shows do mês) ----
+  const resumo = useMemo(
+    () => [...showsMes].sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "")),
+    [showsMes]
+  );
+
+  const tituloMes = `${MESES_LONGO[mes]} ${ano}`;
+
+  // Texto de datas disponíveis de UM DJ pra colar no WhatsApp do cliente.
+  // Dias importantes (Sex/Sáb/Dom + feriados/vésperas) FUTUROS do mês:
+  //   - livre → "Qualquer horário"
+  //   - com show → "Disponível para região de {cidade} — checar horário"
+  const gerarDatasDisponiveis = (djId: string): string => {
+    const dj = artistas.find((d) => d.id === djId);
+    const djNome = dj?.name ?? "DJ";
+    const feriados = setFeriados([ano - 1, ano, ano + 1]);
+    const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+    const linhas: string[] = [];
+    // Só o mês selecionado (não estende pro mês seguinte aqui).
+    for (let dia = 1; dia <= diasNoMes; dia++) {
+      const dISO = iso(ano, mes + 1, dia);
+      if (dISO < hoje) continue; // só datas futuras
+      const wd = new Date(ano, mes, dia).getDay();
+      const importante =
+        (incluir.sex && wd === 5) ||
+        (incluir.sab && wd === 6) ||
+        (incluir.dom && wd === 0) ||
+        (incluir.feriado &&
+          (ehFeriado(dISO, feriados) || ehVesperaDeFeriado(dISO, feriados)));
+      if (!importante) continue;
+      const ddmm = `${String(dia).padStart(2, "0")}/${String(mes + 1).padStart(2, "0")}`;
+      const showsNoDia = showsMes.filter((s) => s.data === dISO && s.djId === djId);
+      if (showsNoDia.length === 0) {
+        linhas.push(`${DIAS_SEMANA[wd]} ${ddmm} - Qualquer horário`);
+      } else {
+        const cidadesDia = Array.from(
+          new Set(
+            showsNoDia
+              .map((s) => {
+                const c = cidadeDoShow(s);
+                return c ? c.nome : s.location || "";
+              })
+              .filter(Boolean)
+          )
+        ).join(", ");
+        linhas.push(
+          `${DIAS_SEMANA[wd]} ${ddmm} - Disponível para região de ${cidadesDia} — checar disponibilidade de horário`
+        );
+      }
+    }
+    const header = `*Datas disponíveis (${djNome}) em ${MESES_LONGO[mes]}*`;
+    if (linhas.length === 0) {
+      return `${header}\n\nNenhuma data importante disponível neste mês.`;
+    }
+    return [header, "", ...linhas].join("\n");
+  };
+
+  const copiarDatas = async (djId: string) => {
+    try {
+      await navigator.clipboard.writeText(gerarDatasDisponiveis(djId));
+      setCopiado(djId);
+      setTimeout(() => setCopiado(null), 2000);
+    } catch {
+      /* clipboard indisponível */
+    }
+  };
+
+  // Linha de show reutilizada no "Resumo do mês" e nos modais das stats.
+  // opts.pendencias → mostra badges das pendências em vez do status.
+  const renderLinhaResumo = (show: Show, opts?: { pendencias?: boolean }) => {
+    const dj = djDoShow(show);
+    const cid = cidadeDoShow(show);
+    const diaMes = show.data ? Number(show.data.slice(8, 10)) : show.dayId;
+    const balada = localDoEvento(show);
+    const cidadeTxt = cid ? `${cid.nome}/${cid.estado}` : show.location || "";
+    const headline = balada || cidadeTxt || "Local a definir";
+    const sub = [balada ? cidadeTxt : "", dj?.name, show.time]
+      .filter(Boolean)
+      .join(" · ");
+    return (
+      <button
+        key={show.id}
+        onClick={() => onAbrirShow?.(show.id)}
+        className="flex items-center gap-3 py-2.5 text-left hover:bg-elevated transition-colors -mx-2 px-2 rounded-md w-full"
+      >
+        <div className="w-10 text-center flex-shrink-0">
+          <div className="text-lg font-bold tabular-nums leading-none text-primary">
+            {diaMes}
+          </div>
+          <div className="text-[0.6rem] uppercase text-muted">{MESES_CURTO[mes]}</div>
+        </div>
+        <span
+          className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
+          style={{ backgroundColor: dj?.color ?? "#888", color: "#fff" }}
+        >
+          {dj?.name.slice(0, 2).toUpperCase()}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-primary truncate">
+            {headline}
+          </div>
+          {sub && <div className="text-xs text-muted truncate">{sub}</div>}
+        </div>
+        {opts?.pendencias ? (
+          <span className="flex flex-wrap gap-1 justify-end max-w-[180px]">
+            {pendenciasDoShow(show).map((p) => (
+              <span key={p} className="badge badge-warning">
+                {p}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span
+            className={`badge ${
+              show.status === "confirmado"
+                ? "badge-success"
+                : show.status === "logistica"
+                ? "badge-danger"
+                : "badge-warning"
+            }`}
+          >
+            {show.status}
+          </span>
+        )}
+        <ChevronRight size={14} className="text-muted flex-shrink-0" />
+      </button>
+    );
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Agenda"
-        subtitle="Visão geral dos shows e da escala"
+        subtitle={`Visão do mês — ${tituloMes}`}
         accentColor={accent}
         actions={
-          <button
-            onClick={() => onNavigate?.("agenda", "agenda-completa")}
-            className="btn btn-primary"
-            style={{ backgroundColor: accent, color: "#fff" }}
-          >
-            <CalendarRange size={14} />
-            Abrir Agenda de Shows
-          </button>
+          <DateRangeSelector
+            options={ATALHOS}
+            value={range}
+            onChange={setRange}
+            selectedCustomMonth={customMonth}
+            setSelectedCustomMonth={setCustomMonth}
+            selectedCustomYear={customYear}
+            setSelectedCustomYear={setCustomYear}
+            accountCreatedAt={workspaceCriadoEm}
+          />
         }
       />
 
-      {/* Cards — clicáveis */}
+      {/* Cards de número — clicáveis, abrem a lista correspondente */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => onNavigate?.("agenda", "agenda-completa")}>
+        <ClickableStat
+          onClick={() =>
+            setLista({
+              titulo: "Shows confirmados",
+              subtitulo: tituloMes,
+              shows: confirmadosList,
+            })
+          }
+        >
           <StatCard
-            title="Shows Confirmados"
-            value={stats.confirmados}
+            title="Shows confirmados"
+            value={confirmados}
             icon={<Music size={16} />}
             accentColor={accent}
-            subtitle="Toque para ver a escala"
+            subtitle={`Em ${MESES_LONGO[mes]}`}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("agenda", "agenda-completa")}>
+        <ClickableStat
+          onClick={() =>
+            setLista({
+              titulo: "Shows com pendências",
+              subtitulo: tituloMes,
+              shows: showsComPendencia,
+              pendencias: true,
+            })
+          }
+        >
           <StatCard
-            title="Aguardando Contrato"
-            value={stats.pendentes}
+            title="Com pendências"
+            value={showsComPendencia.length}
+            icon={<AlertTriangle size={16} />}
+            accentColor="var(--warning)"
+            subtitle={subtitlePendencia}
+          />
+        </ClickableStat>
+        <ClickableStat
+          onClick={() =>
+            setLista({
+              titulo: "Shows realizados",
+              subtitulo: tituloMes,
+              shows: realizados.lista,
+            })
+          }
+        >
+          <StatCard
+            title="Shows realizados"
+            value={realizados.total}
+            icon={<CheckCircle2 size={16} />}
+            accentColor="var(--success)"
+            subtitle={
+              realizados.comPendencia.length > 0
+                ? `${realizados.comPendencia.length} com pendência`
+                : "Tudo certo"
+            }
+          />
+        </ClickableStat>
+        <ClickableStat
+          onClick={() =>
+            setLista({
+              titulo: "Shows a realizar",
+              subtitulo: tituloMes,
+              shows: aRealizarList,
+            })
+          }
+        >
+          <StatCard
+            title="A realizar"
+            value={aRealizar}
             icon={<Clock size={16} />}
             accentColor="var(--warning)"
-            subtitle="Datas pendentes"
-          />
-        </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("agenda", "agenda-completa")}>
-          <StatCard
-            title="DJs Escalados"
-            value={`${stats.djsEscalados}/${artistas.length}`}
-            icon={<Users size={16} />}
-            accentColor={accent}
-            subtitle="Artistas com shows"
-          />
-        </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("agenda", "agenda-completa")}>
-          <StatCard
-            title="Praças"
-            value={stats.pracas}
-            icon={<MapPin size={16} />}
-            accentColor={accent}
-            subtitle="Cidades diferentes"
+            subtitle="Shows que ainda vão acontecer"
           />
         </ClickableStat>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        {/* Próximos shows — clicáveis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Fim de semana / feriados ocupados */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="section-title flex items-center gap-2">
+              <CalendarDays size={16} style={{ color: accent }} />
+              Ocupação do mês
+            </div>
+            <button
+              onClick={() => setOcupacaoAberta(true)}
+              className="btn-ghost text-xs inline-flex items-center gap-1"
+            >
+              Datas disponíveis <ChevronRight size={12} />
+            </button>
+          </div>
+          {ocupacao.length === 0 ? (
+            <div className="text-sm text-muted text-center py-6">Sem dias no mês.</div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {ocupacao.map((row) => {
+                const [ocup, total] = row.v;
+                const pct = total > 0 ? (ocup / total) * 100 : 0;
+                const cheio = ocup === total && total > 0;
+                return (
+                  <div key={row.label}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-secondary">{row.label}</span>
+                      <span
+                        className="tabular-nums font-semibold"
+                        style={{ color: cheio ? "var(--success)" : "var(--text-primary)" }}
+                      >
+                        {ocup}/{total}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-elevated overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: cheio ? "var(--success)" : accent,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Próximas viagens */}
+        <div className="card">
+          <div className="section-title mb-4 flex items-center gap-2">
+            <Plane size={16} style={{ color: accent }} />
+            Próximas viagens
+          </div>
+          {viagens.length === 0 ? (
+            <div className="text-sm text-muted text-center py-6">
+              Nenhuma viagem no mês (só shows na cidade local).
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {viagens.slice(0, 8).map((v) => (
+                <button
+                  key={v.show.id}
+                  onClick={() => onAbrirShow?.(v.show.id)}
+                  className="flex items-center gap-3 p-2 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: v.djCor }}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-primary block truncate">
+                      {v.cidade}
+                    </span>
+                    <span className="text-xs text-muted">{v.djNome}</span>
+                  </span>
+                  <span className="text-xs font-semibold tabular-nums" style={{ color: accent }}>
+                    {v.dias > 0
+                      ? `em ${v.dias} dia${v.dias > 1 ? "s" : ""}`
+                      : v.dias === 0
+                      ? "hoje"
+                      : v.data.split("-").reverse().slice(0, 2).join("/")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Próximos shows */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="section-title">Próximos shows</div>
             <button
-              onClick={() => onNavigate?.("agenda", "agenda-completa")}
+              onClick={() =>
+                setLista({
+                  titulo: "Próximos shows",
+                  subtitulo: tituloMes,
+                  shows: proximosShowsFull,
+                })
+              }
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todos
-              <ChevronRight size={12} />
+              Ver todos <ChevronRight size={12} />
             </button>
           </div>
-
           {proximosShows.length === 0 ? (
-            <div className="text-sm text-muted text-center py-8">
-              Nenhum show agendado para os DJs selecionados.
+            <div className="text-sm text-muted text-center py-6">
+              Nenhum show próximo.
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               {proximosShows.map((show) => {
-                const dj = artistas.find((d) => d.id === show.djId);
-                const cidade = cidades.find((c) => String(c.id) === show.cidadeId);
+                const dj = djDoShow(show);
+                const cid = cidadeDoShow(show);
                 return (
                   <button
                     key={show.id}
@@ -163,11 +651,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                       </div>
                       <div className="text-xs text-muted truncate">
                         {dj?.name} ·{" "}
-                        {cidade ? `${cidade.nome}/${cidade.estado}` : show.location}
-                        {" · "}
-                        {show.dayId ? `dia ${show.dayId}` : ""}
-                        {" · "}
-                        {show.time}
+                        {cid ? `${cid.nome}/${cid.estado}` : show.location}
+                        {show.data ? ` · ${show.data.split("-").reverse().slice(0, 2).join("/")}` : ""}
+                        {show.time ? ` · ${show.time}` : ""}
                       </div>
                     </div>
                     <span
@@ -181,7 +667,6 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                     >
                       {show.status}
                     </span>
-                    <ChevronRight size={14} className="text-muted flex-shrink-0" />
                   </button>
                 );
               })}
@@ -189,40 +674,244 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           )}
         </div>
 
-        {/* Shows por DJ */}
+        {/* Shows realizados com pendência */}
         <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} style={{ color: accent }} />
-            <div className="section-title">Shows por DJ</div>
+          <div className="section-title mb-4 flex items-center gap-2">
+            <AlertTriangle size={16} style={{ color: "var(--warning)" }} />
+            Realizados com pendência
           </div>
-          <div className="flex flex-col gap-3">
-            {porDJ.map(({ dj, total }) => (
-              <div key={dj.id}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="font-medium text-primary">{dj.name}</span>
-                  <span className="tabular-nums text-secondary">{total}</span>
-                </div>
-                <div className="h-2 rounded-full bg-elevated overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${(total / maxPorDJ) * 100}%`,
-                      backgroundColor: dj.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-border">
-            <div className="stat-label mb-1">Valor total em shows</div>
-            <div className="text-2xl font-bold tabular-nums text-primary">
-              {formatBRL(stats.valorTotal)}
+          {realizados.comPendencia.length === 0 ? (
+            <div className="text-sm text-muted text-center py-6">
+              {realizados.total === 0
+                ? "Nenhum show realizado no mês."
+                : "Todos os shows realizados estão quitados. ✓"}
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {realizados.comPendencia.map((show) => {
+                const dj = djDoShow(show);
+                const cid = cidadeDoShow(show);
+                return (
+                  <button
+                    key={show.id}
+                    onClick={() => onAbrirShow?.(show.id)}
+                    className="flex items-center gap-3 p-2.5 rounded-md border bg-elevated text-left transition-colors hover:border-border-strong"
+                    style={{ borderColor: "rgba(245,158,11,0.3)" }}
+                  >
+                    <div
+                      className="h-9 w-9 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
+                      style={{ backgroundColor: dj?.color ?? "#888", color: "#fff" }}
+                    >
+                      {dj?.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-primary truncate">
+                        {localDoEvento(show) || cid?.nome || "Show"}
+                      </div>
+                      <div className="text-xs text-muted truncate">
+                        {dj?.name}
+                        {cid ? ` · ${cid.nome}/${cid.estado}` : ""}
+                        {show.data ? ` · ${show.data.split("-").reverse().slice(0, 2).join("/")}` : ""}
+                      </div>
+                    </div>
+                    <span className="badge badge-warning">pagamento</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Resumo do mês — preview + botão pra ver completo */}
+      <div className="card mt-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="section-title flex items-center gap-2">
+            <ListChecks size={16} style={{ color: accent }} />
+            Resumo do mês ({resumo.length} {resumo.length === 1 ? "show" : "shows"})
+          </div>
+          {resumo.length > 0 && (
+            <button
+              onClick={() => setResumoAberto(true)}
+              className="btn-ghost text-xs inline-flex items-center gap-1"
+            >
+              Ver resumo completo <ChevronRight size={12} />
+            </button>
+          )}
+        </div>
+        {resumo.length === 0 ? (
+          <div className="text-sm text-muted text-center py-8">
+            Nenhum show em {tituloMes} para os DJs selecionados.
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border">
+            {resumo.slice(0, 5).map((s) => renderLinhaResumo(s))}
+            {resumo.length > 5 && (
+              <button
+                onClick={() => setResumoAberto(true)}
+                className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
+              >
+                + {resumo.length - 5} shows — ver resumo completo
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modal — resumo completo das datas do mês */}
+      <Modal
+        isOpen={resumoAberto}
+        onClose={() => setResumoAberto(false)}
+        title={`Resumo de ${tituloMes}`}
+        subtitle={`${resumo.length} ${resumo.length === 1 ? "show" : "shows"} no mês`}
+        maxWidth={640}
+      >
+        {resumo.length === 0 ? (
+          <div className="text-sm text-muted text-center py-8">
+            Nenhum show no mês.
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border max-h-[65vh] overflow-y-auto">
+            {resumo.map((s) => renderLinhaResumo(s))}
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal — lista de shows (ao clicar nos cards de número) */}
+      <Modal
+        isOpen={!!lista}
+        onClose={() => setLista(null)}
+        title={lista?.titulo ?? ""}
+        subtitle={lista?.subtitulo}
+        maxWidth={640}
+      >
+        {!lista || lista.shows.length === 0 ? (
+          <div className="text-sm text-muted text-center py-8">
+            Nenhum show nesta categoria em {tituloMes}.
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border max-h-[65vh] overflow-y-auto">
+            {lista.shows.map((s) =>
+              renderLinhaResumo(s, { pendencias: lista.pendencias })
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal — ocupação do mês + copiar datas disponíveis */}
+      <Modal
+        isOpen={ocupacaoAberta}
+        onClose={() => setOcupacaoAberta(false)}
+        title={`Ocupação — ${tituloMes}`}
+        subtitle="Resumo da ocupação e datas disponíveis pro cliente"
+        maxWidth={560}
+      >
+        <div className="flex flex-col gap-4">
+          {/* Resumo da ocupação */}
+          <div className="flex flex-col gap-2.5">
+            {ocupacao.length === 0 ? (
+              <div className="text-sm text-muted text-center py-2">
+                Sem dias no mês.
+              </div>
+            ) : (
+              ocupacao.map((row) => {
+                const [ocup, total] = row.v;
+                const pct = total > 0 ? (ocup / total) * 100 : 0;
+                const cheio = ocup === total && total > 0;
+                return (
+                  <div key={row.label}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-secondary">{row.label}</span>
+                      <span
+                        className="tabular-nums font-semibold"
+                        style={{ color: cheio ? "var(--success)" : "var(--text-primary)" }}
+                      >
+                        {ocup}/{total}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-elevated overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, backgroundColor: cheio ? "var(--success)" : accent }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Datas disponíveis pro WhatsApp — um bloco por DJ selecionado */}
+          <div className="border-t border-border pt-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="stat-label">Lista de datas disponíveis</span>
+              <div className="pill-group flex-wrap">
+                <button
+                  type="button"
+                  className={`pill ${incluir.sex ? "active" : ""}`}
+                  onClick={() => toggleInclui("sex")}
+                >
+                  Sex
+                </button>
+                <button
+                  type="button"
+                  className={`pill ${incluir.sab ? "active" : ""}`}
+                  onClick={() => toggleInclui("sab")}
+                >
+                  Sáb
+                </button>
+                <button
+                  type="button"
+                  className={`pill ${incluir.dom ? "active" : ""}`}
+                  onClick={() => toggleInclui("dom")}
+                >
+                  Dom
+                </button>
+                <button
+                  type="button"
+                  className={`pill ${incluir.feriado ? "active" : ""}`}
+                  onClick={() => toggleInclui("feriado")}
+                >
+                  Feriados
+                </button>
+              </div>
+            </div>
+            {artistas.filter((d) => selectedDJs.includes(d.id)).length === 0 ? (
+              <div className="text-sm text-muted">Nenhum DJ selecionado.</div>
+            ) : (
+              artistas
+                .filter((d) => selectedDJs.includes(d.id))
+                .map((dj) => (
+                  <div key={dj.id}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: dj.color }}
+                        />
+                        {dj.name}
+                      </span>
+                      <button
+                        onClick={() => copiarDatas(dj.id)}
+                        className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+                      >
+                        {copiado === dj.id ? (
+                          <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                        {copiado === dj.id ? "Copiado!" : "Copiar"}
+                      </button>
+                    </div>
+                    <pre className="text-xs text-secondary bg-elevated border border-border rounded-md p-3 whitespace-pre-wrap font-sans max-h-[35vh] overflow-y-auto leading-relaxed">
+                      {gerarDatasDisponiveis(dj.id)}
+                    </pre>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -237,7 +926,7 @@ function ClickableStat({
   return (
     <button
       onClick={onClick}
-      className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0"
+      className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0 w-full"
     >
       {children}
     </button>

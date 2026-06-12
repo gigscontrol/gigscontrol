@@ -231,20 +231,15 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== LOCAL / EVENTO ===== */}
-        {(nomeLocal || cidadeNome || enderecoLocal || nomeEvento) && (
+        {(nomeLocal || cidadeNome || enderecoLocal) && (
           <Bloco icon={<Building2 size={14} />} title="Local do evento">
-            {nomeEvento && (
-              <Linha icon={<Sparkles size={13} />} bold>
-                {nomeEvento}
+            {nomeLocal && (
+              <Linha icon={<Building2 size={13} />} bold>
+                {nomeLocal}
               </Linha>
             )}
             {instagram && (
               <Linha icon={<Instagram size={13} />}>{instagram}</Linha>
-            )}
-            {nomeLocal && (
-              <Linha icon={<Building2 size={13} />} bold={!nomeEvento}>
-                {nomeLocal}
-              </Linha>
             )}
             {enderecoLocal && (
               <Linha icon={<MapPin size={13} />}>{enderecoLocal}</Linha>

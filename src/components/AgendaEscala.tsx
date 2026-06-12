@@ -6,6 +6,7 @@ import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
+import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
@@ -20,7 +21,8 @@ type DayCell = {
   id: number | string;
   name: string;
   date: string;
-  isWeekend: boolean;
+  /** Dia "quente": Sex/Sáb OU feriado OU véspera de feriado (ganha 🔥). */
+  isQuente: boolean;
   isOtherMonth: boolean;
   isToday?: boolean;
 };
@@ -127,6 +129,15 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       targetYears = selectedCustomYear !== null ? [selectedCustomYear] : [currentYear];
     }
 
+    // Feriados nacionais dos anos exibidos (± 1 pra véspera na virada do ano).
+    const anosSet = new Set<number>();
+    targetYears.forEach((y) => {
+      anosSet.add(y - 1);
+      anosSet.add(y);
+      anosSet.add(y + 1);
+    });
+    const feriados = setFeriados(Array.from(anosSet));
+
     const month: DayCell[][] = [];
     let currentWeek: DayCell[] = [];
 
@@ -152,13 +163,18 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 id: `prev-${prevMonthDays - paddingCount + 1 + i}`,
                 name: DAY_NAMES[paddingJsDay],
                 date: `${prevMonthDays - paddingCount + 1 + i} ${ALL_MONTHS[monthIdx === 0 ? 11 : monthIdx - 1]}`,
-                isWeekend: false,
+                isQuente: false,
                 isOtherMonth: true,
               });
             }
           }
 
           const isWeekend = jsDay === 5 || jsDay === 6;
+          const dISO = `${year}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isQuente =
+            isWeekend ||
+            ehFeriado(dISO, feriados) ||
+            ehVesperaDeFeriado(dISO, feriados);
           const isToday =
             day === now.getDate() &&
             monthIdx === now.getMonth() &&
@@ -169,7 +185,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             id: day,
             name: DAY_NAMES[jsDay],
             date: `${day} ${ALL_MONTHS[monthIdx]}`,
-            isWeekend,
+            isQuente,
             isOtherMonth: false,
             isToday,
           });
@@ -193,7 +209,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           id: `next-${paddingNextDay}`,
           name: DAY_NAMES[paddingJsDay],
           date: `${paddingNextDay++} ${nextMonthName}`,
-          isWeekend: false,
+          isQuente: false,
           isOtherMonth: true,
         });
       }
@@ -330,15 +346,15 @@ function DayCellComponent({
         ${day.isOtherMonth ? "opacity-30" : ""}
       `}
       style={{
-        borderColor: day.isToday ? accent : day.isWeekend ? "var(--border-strong)" : "var(--border-color)",
+        borderColor: day.isToday ? accent : day.isQuente ? "var(--border-strong)" : "var(--border-color)",
         boxShadow: day.isToday ? `0 0 0 1px ${accent}, 0 0 30px ${accent}25` : undefined,
-        backgroundColor: day.isWeekend && !day.isOtherMonth ? "var(--bg-surface-2)" : undefined,
+        backgroundColor: day.isQuente && !day.isOtherMonth ? "var(--bg-surface-2)" : undefined,
       }}
     >
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
         <div className="text-[0.7rem] uppercase font-bold tracking-wider text-muted flex items-center gap-1">
           {day.name.slice(0, 3)}
-          {day.isWeekend && !day.isOtherMonth && (
+          {day.isQuente && !day.isOtherMonth && (
             <span
               className="text-sm leading-none animate-flame select-none"
               aria-label="Dia de pico"
@@ -409,7 +425,7 @@ function MobileDayCard({
             {day.date}
           </div>
         </div>
-        {day.isWeekend && (
+        {day.isQuente && (
           <span
             className="text-lg leading-none animate-flame select-none"
             aria-label="Dia de pico"
