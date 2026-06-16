@@ -29,6 +29,10 @@
     --module-financeiro: #22c55e;
     --module-contatos: #f97316;
 
+    /* Loader / spinner */
+    --brand: var(--module-vendas);
+    --brand-soft: rgba(168, 85, 247, 0.18);
+
     /* Semantic */
     --accent-color: #fafafa;
     --success: #22c55e;
@@ -289,5 +293,50 @@
       transform: scale(1.15) rotate(2deg);
       filter: drop-shadow(0 0 8px #ff8c00);
     }
+  }
+
+  /* ---- Loader / spinner ---- */
+  .spinner {
+    border-radius: 9999px;
+    border-style: solid;
+    border-color: var(--brand-soft);
+    border-top-color: currentColor;
+    animation: spinnerSpin 0.7s linear infinite;
+  }
+  .spinner-sm { width: 28px; height: 28px; border-width: 2.5px; }
+  .spinner-lg { width: 44px; height: 44px; border-width: 3px; }
+  @keyframes spinnerSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  .animate-fade-slow {
+    animation: fade 320ms var(--ease) both;
+  }
+
+  /* "Respiração" suave de opacidade (logo/texto do loader inicial) */
+  .loader-breathe {
+    animation: loaderBreathe 2.4s var(--ease) infinite;
+  }
+  @keyframes loaderBreathe {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
+  /* Glow radial roxo de fundo do loader inicial */
+  .loader-glow {
+    background: radial-gradient(60% 50% at 50% 42%, var(--brand-soft) 0%, transparent 70%);
+  }
+
+  /* Overlay de navegação: SÓ desfoca o conteúdo atual de leve (sem
+     escurecer) — dá pra perceber que é a página por trás, borrada. */
+  .nav-overlay {
+    background: transparent;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 1.4s; }
+    .loader-breathe { animation: none; opacity: 1; }
   }
 }
