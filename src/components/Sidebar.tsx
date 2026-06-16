@@ -194,13 +194,7 @@ export default function Sidebar({
                 <div key={mod.tab} className="flex flex-col">
                   {/* Botão do módulo */}
                   <button
-                    onClick={() => {
-                      setActiveTab(mod.tab);
-                      // Se o módulo tem subpáginas, define a inicial como dashboard
-                      if (mod.subPages.length > 0) {
-                        setActivePage("dashboard");
-                      }
-                    }}
+                    onClick={() => setActiveTab(mod.tab)}
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                       transition-all duration-150 ease-smooth

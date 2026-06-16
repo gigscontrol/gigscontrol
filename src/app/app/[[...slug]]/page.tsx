@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import Dashboard from "@/components/Dashboard";
@@ -124,12 +124,114 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// ----------------- Roteamento por URL -----------------
+//
+// O app inteiro vive sob o catch-all /app/[[...slug]]. A aba/tela ativa
+// é DERIVADA da URL (não mais de useState), então o botão "voltar" do
+// navegador anda entre as telas internas e o refresh mantém a tela.
+
+const BASE = "/app";
+
+/** "/app/vendas/orcamentos/123" -> ["vendas","orcamentos","123"] */
+function segmentosDoPath(pathname: string): string[] {
+  return pathname
+    .replace(/^\/app\/?/, "")
+    .split("/")
+    .filter(Boolean)
+    .map((s) => {
+      try {
+        return decodeURIComponent(s);
+      } catch {
+        return s;
+      }
+    });
+}
+
+type Rota = {
+  activeTab: ActiveTab;
+  activePage: ActivePage;
+  configAberta: boolean;
+  orcamentoId: string | null;
+  vendaId: string | null;
+};
+
+function rotaBase(activeTab: ActiveTab, activePage: ActivePage): Rota {
+  return { activeTab, activePage, configAberta: false, orcamentoId: null, vendaId: null };
+}
+
+/** Mapeia os segmentos da URL para aba / tela / ids. */
+function resolverRota(seg: string[]): Rota {
+  const [a, b, c] = seg;
+
+  if (a === "configuracoes") {
+    return { ...rotaBase("agenda", "dashboard"), configAberta: true };
+  }
+  if (a === "vendas") {
+    if (b === "orcamentos") {
+      if (!c) return rotaBase("vendas", "vendas-historico");
+      if (c === "novo") return rotaBase("vendas", "vendas-novo-orcamento");
+      return { ...rotaBase("vendas", "vendas-orcamento-detalhe"), orcamentoId: c };
+    }
+    if (b === "vendas") {
+      if (!c) return rotaBase("vendas", "vendas-historico-vendas");
+      if (c === "nova") return rotaBase("vendas", "vendas-nova-venda");
+      return { ...rotaBase("vendas", "vendas-venda-detalhe"), vendaId: c };
+    }
+    return rotaBase("vendas", "dashboard");
+  }
+  if (a === "financeiro") {
+    if (b === "pagamentos") return rotaBase("financeiro", "financeiro-pagamentos");
+    return rotaBase("financeiro", "dashboard");
+  }
+  if (a === "contatos") {
+    if (b === "lista") return rotaBase("contatos", "contatos-lista");
+    return rotaBase("contatos", "dashboard");
+  }
+  // agenda é o default (inclui "/app" puro)
+  if (a === "agenda" && b === "shows") return rotaBase("agenda", "agenda-completa");
+  return rotaBase("agenda", "dashboard");
+}
+
+/** Constrói a URL de uma aba/tela (+ id opcional pros detalhes). */
+function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
+  switch (page) {
+    case "agenda-completa":
+      return `${BASE}/agenda/shows`;
+    case "vendas-historico":
+      return `${BASE}/vendas/orcamentos`;
+    case "vendas-novo-orcamento":
+      return `${BASE}/vendas/orcamentos/novo`;
+    case "vendas-orcamento-detalhe":
+      return `${BASE}/vendas/orcamentos/${id ?? ""}`;
+    case "vendas-historico-vendas":
+      return `${BASE}/vendas/vendas`;
+    case "vendas-nova-venda":
+      return `${BASE}/vendas/vendas/nova`;
+    case "vendas-venda-detalhe":
+      return `${BASE}/vendas/vendas/${id ?? ""}`;
+    case "financeiro-pagamentos":
+      return `${BASE}/financeiro/pagamentos`;
+    case "contatos-lista":
+      return `${BASE}/contatos/lista`;
+    case "dashboard":
+    default:
+      return `${BASE}/${tab}`;
+  }
+}
+
 function AppRoot() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("agenda");
-  const [activePage, setActivePage] = useState<ActivePage>("dashboard");
+  const router = useRouter();
+  const pathname = usePathname();
+  // Aba/tela/ids derivados da URL — fonte única da navegação.
+  const { activeTab, activePage, configAberta, orcamentoId, vendaId } = useMemo(
+    () => resolverRota(segmentosDoPath(pathname)),
+    [pathname]
+  );
+
   // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
   // abaixo sincroniza com a lista real de artistas do workspace assim
-  // que ela carrega.
+  // que ela carrega. (Estado de UI — preservado entre navegações porque
+  // o catch-all mantém este componente montado.)
   const [selectedDJs, setSelectedDJs] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -173,16 +275,13 @@ function AppRoot() {
     artistasIdsPrevRef.current = idsAtuais;
   }, [artistasReal]);
 
-  const [orcamentoSelecionado, setOrcamentoSelecionado] = useState<string | null>(null);
-  const [vendaSelecionada, setVendaSelecionada] = useState<string | null>(null);
+  // Orçamento de origem ao concretizar uma venda (não vai pra URL —
+  // é preenchido só no fluxo "transformar em venda").
   const [orcamentoSendoTransformado, setOrcamentoSendoTransformado] = useState<string | null>(null);
   // Categoria inicial ao abrir a lista de Contatos
   const [contatoCategoria, setContatoCategoria] = useState<ContatoCategoria>("contratantes");
   // Show aberto no modal (a partir de qualquer tela)
   const [showModalId, setShowModalId] = useState<string | null>(null);
-
-  // Tela de Configurações (só admin) — quando true, ocupa a área de conteúdo
-  const [configAberta, setConfigAberta] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? "hidden" : "";
@@ -191,58 +290,43 @@ function AppRoot() {
     };
   }, [sidebarOpen]);
 
+  // ---- Navegação: troca estado por router.push (cria histórico) ----
+
   const handleTabChange = (tab: ActiveTab) => {
-    setConfigAberta(false);
-    setActiveTab(tab);
-    setActivePage("dashboard");
     setSidebarOpen(false);
-    setOrcamentoSelecionado(null);
-    setVendaSelecionada(null);
     setOrcamentoSendoTransformado(null);
+    router.push(urlDaTela(tab, "dashboard"));
   };
 
   const handlePageChange = (page: ActivePage) => {
-    setConfigAberta(false);
-    setActivePage(page);
     setSidebarOpen(false);
-    if (page !== "vendas-orcamento-detalhe") setOrcamentoSelecionado(null);
-    if (page !== "vendas-venda-detalhe") setVendaSelecionada(null);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
+    router.push(urlDaTela(activeTab, page));
   };
 
   /** Navegação genérica usada pelos dashboards (cards e botões clicáveis) */
   const navegar = (tab: ActiveTab, page: ActivePage) => {
-    setConfigAberta(false);
-    setActiveTab(tab);
-    setActivePage(page);
     setSidebarOpen(false);
-    if (page !== "vendas-orcamento-detalhe") setOrcamentoSelecionado(null);
-    if (page !== "vendas-venda-detalhe") setVendaSelecionada(null);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
+    router.push(urlDaTela(tab, page));
   };
 
   const abrirOrcamento = (id: string) => {
-    setActiveTab("vendas");
-    setOrcamentoSelecionado(id);
-    setActivePage("vendas-orcamento-detalhe");
+    router.push(urlDaTela("vendas", "vendas-orcamento-detalhe", id));
   };
 
   const abrirVenda = (id: string) => {
-    setActiveTab("vendas");
-    setVendaSelecionada(id);
-    setActivePage("vendas-venda-detalhe");
+    router.push(urlDaTela("vendas", "vendas-venda-detalhe", id));
   };
 
-  const transformarOrcamentoEmVenda = (orcamentoId: string) => {
-    setActiveTab("vendas");
-    setOrcamentoSendoTransformado(orcamentoId);
-    setActivePage("vendas-nova-venda");
+  const transformarOrcamentoEmVenda = (id: string) => {
+    setOrcamentoSendoTransformado(id);
+    router.push(urlDaTela("vendas", "vendas-nova-venda"));
   };
 
   const abrirContatos = (cat: ContatoCategoria) => {
     setContatoCategoria(cat);
-    setActiveTab("contatos");
-    setActivePage("contatos-lista");
+    router.push(urlDaTela("contatos", "contatos-lista"));
   };
 
   return (
@@ -274,16 +358,16 @@ function AppRoot() {
         <Topbar
           onOpenSidebar={() => setSidebarOpen(true)}
           activeTab={activeTab}
-          onAbrirConfiguracoes={() => setConfigAberta(true)}
+          onAbrirConfiguracoes={() => router.push(`${BASE}/configuracoes`)}
         />
 
         {configAberta ? (
           <main className="flex-1 overflow-y-auto animate-in">
-            <Configuracoes onSair={() => setConfigAberta(false)} />
+            <Configuracoes onSair={() => router.push(`${BASE}/agenda`)} />
           </main>
         ) : (
         <main
-          key={`${activeTab}-${activePage}-${orcamentoSelecionado ?? ""}-${vendaSelecionada ?? ""}-${orcamentoSendoTransformado ?? ""}`}
+          key={pathname}
           className="flex-1 overflow-y-auto animate-in"
         >
           <SomenteLeitura>
@@ -324,9 +408,9 @@ function AppRoot() {
           )}
           {activeTab === "vendas" &&
             activePage === "vendas-orcamento-detalhe" &&
-            orcamentoSelecionado !== null && (
+            orcamentoId !== null && (
               <OrcamentoDetalhe
-                orcamentoId={orcamentoSelecionado}
+                orcamentoId={orcamentoId}
                 onBack={() => handlePageChange("vendas-historico")}
                 onTransformarEmVenda={transformarOrcamentoEmVenda}
                 onAbrir={abrirOrcamento}
@@ -356,9 +440,9 @@ function AppRoot() {
           )}
           {activeTab === "vendas" &&
             activePage === "vendas-venda-detalhe" &&
-            vendaSelecionada !== null && (
+            vendaId !== null && (
               <VendaDetalhe
-                vendaId={vendaSelecionada}
+                vendaId={vendaId}
                 onBack={() => handlePageChange("vendas-historico-vendas")}
               />
             )}
