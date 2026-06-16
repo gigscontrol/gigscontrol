@@ -548,12 +548,12 @@ function AppRoot() {
             <EmConstrucao titulo="Agência" subtitulo="Dashboard" cor={MODULE_THEMES.agencia.color} />
           )}
           {activeTab === "agencia" && activePage === "agencia-artistas" && (
-            <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
+            <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
               <AbaArtistas />
             </div>
           )}
           {activeTab === "agencia" && activePage === "agencia-equipe" && (
-            <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
+            <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
               <AbaEquipe />
             </div>
           )}
