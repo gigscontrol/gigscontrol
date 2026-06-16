@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   FileText,
   CalendarCheck2,
@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import Modal from "./Modal";
+import DateRangeSelector from "./DateRangeSelector";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
-import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO } from "@/types";
-import type { ActiveTab, ActivePage } from "@/types";
+import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/types";
+import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange } from "@/types";
 
 type Props = {
   selectedDJs: string[];
@@ -25,6 +27,44 @@ type Props = {
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
 };
+
+/** Qual resumo está aberto no modal (null = fechado). */
+type ResumoTipo = null | "orcamentos" | "vendas" | "faturamento" | "conversao";
+
+const ATALHOS_MES: AgendaDateRange[] = ["Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+/** Resolve {ano, mes(0-based)} a partir do seletor — mesma lógica da Agenda. */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number } {
+  const h = new Date();
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth() };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)) };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth() };
+}
+
+/**
+ * A data cai no mês/ano selecionado? Aceita date-only ("YYYY-MM-DD",
+ * ancorada ao meio-dia pra evitar fuso) ou timestamp completo (criadoEm).
+ */
+function mesAnoBate(dataISO: string | undefined, ano: number, mes: number): boolean {
+  if (!dataISO) return false;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === ano && d.getMonth() === mes;
+}
 
 export default function VendasDashboard({
   selectedDJs,
@@ -36,31 +76,127 @@ export default function VendasDashboard({
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { workspaceCriadoEm } = useWorkspace();
+  const [resumo, setResumo] = useState<ResumoTipo>(null);
 
+  // ---- Seletor de mês (igual à Agenda) ----
+  const [range, setRange] = useState<AgendaDateRange>("Mês atual");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const { ano, mes } = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const tituloMes = `${MESES_LONGO[mes]} ${ano}`;
+
+  // Tudo pela data de CRIAÇÃO: uma venda fechada em junho para um show em
+  // outubro conta em junho (foi quando vendi). Orçamentos idem (criação).
+  // A data do show só é usada depois pra separar "a realizar" x "realizadas".
   const orcamentosVisiveis = useMemo(
-    () => orcamentos.filter((o) => selectedDJs.includes(o.djId)),
-    [orcamentos, selectedDJs]
+    () =>
+      orcamentos.filter(
+        (o) => selectedDJs.includes(o.djId) && mesAnoBate(o.criadoEm, ano, mes)
+      ),
+    [orcamentos, selectedDJs, ano, mes]
   );
   const vendasVisiveis = useMemo(
-    () => vendas.filter((v) => selectedDJs.includes(v.djId)),
-    [vendas, selectedDJs]
+    () =>
+      vendas.filter(
+        (v) => selectedDJs.includes(v.djId) && mesAnoBate(v.criadoEm, ano, mes)
+      ),
+    [vendas, selectedDJs, ano, mes]
   );
 
   const stats = useMemo(() => {
+    // --- Orçamentos ---
     const totalOrcamentos = orcamentosVisiveis.length;
-    const pendentes = orcamentosVisiveis.filter(
-      (o) => o.status === "pendente" || o.status === "negociacao"
-    ).length;
+    const porStatus: Record<OrcamentoStatus, number> = {
+      pendente: 0,
+      negociacao: 0,
+      aceito: 0,
+      recusado: 0,
+    };
+    let valorTotalOrc = 0;
+    let valorEmAberto = 0;
+    for (const o of orcamentosVisiveis) {
+      porStatus[o.status] = (porStatus[o.status] ?? 0) + 1;
+      valorTotalOrc += o.valorCache || 0;
+      if (o.status === "pendente" || o.status === "negociacao") {
+        valorEmAberto += o.valorCache || 0;
+      }
+    }
+    const pendentes = porStatus.pendente + porStatus.negociacao;
+
+    // --- Vendas ---
     const totalVendas = vendasVisiveis.length;
-    const faturamento = vendasVisiveis.reduce((acc, v) => acc + v.cache, 0);
-    // Taxa de conversão: vendas / orçamentos
+    const faturamento = vendasVisiveis.reduce((acc, v) => acc + (v.cache || 0), 0);
+    // Taxa de conversão: vendas / (orçamentos + vendas)
     const conversao =
-      totalOrcamentos > 0
+      totalOrcamentos + totalVendas > 0
         ? Math.round((totalVendas / (totalOrcamentos + totalVendas)) * 100)
         : 0;
     const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
-    return { totalOrcamentos, pendentes, totalVendas, faturamento, conversao, ticketMedio };
+
+    // --- Pagamentos (parcelas): recebido x a receber x atrasado ---
+    let recebido = 0;
+    let atrasado = 0;
+    for (const v of vendasVisiveis) {
+      for (const p of v.parcelas ?? []) {
+        const st = statusEfetivoParcela(p);
+        if (st === "pago") recebido += p.valor || 0;
+        else if (st === "atrasado") atrasado += p.valor || 0;
+      }
+    }
+    // A receber deriva do faturamento (cobre vendas sem parcelas lançadas).
+    const aReceber = Math.max(0, faturamento - recebido);
+
+    // --- Vendas próximas (a realizar) x já realizadas (por dataShow) ---
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    let proximas = 0;
+    let realizadas = 0;
+    for (const v of vendasVisiveis) {
+      if (v.dataShow && v.dataShow >= hojeISO) proximas += 1;
+      else realizadas += 1;
+    }
+
+    return {
+      totalOrcamentos,
+      porStatus,
+      valorTotalOrc,
+      valorEmAberto,
+      pendentes,
+      totalVendas,
+      faturamento,
+      conversao,
+      ticketMedio,
+      recebido,
+      aReceber,
+      atrasado,
+      proximas,
+      realizadas,
+    };
   }, [orcamentosVisiveis, vendasVisiveis]);
+
+  // Título/subtítulo do modal conforme o resumo aberto.
+  const RESUMO_META: Record<NonNullable<ResumoTipo>, { titulo: string; subtitulo: string }> = {
+    orcamentos: {
+      titulo: "Resumo de orçamentos",
+      subtitulo: `Criados em ${tituloMes}`,
+    },
+    vendas: {
+      titulo: "Resumo de vendas",
+      subtitulo: `Fechadas em ${tituloMes}`,
+    },
+    faturamento: {
+      titulo: "Resumo de faturamento",
+      subtitulo: `Vendas de ${tituloMes}`,
+    },
+    conversao: {
+      titulo: "Taxa de conversão",
+      subtitulo: tituloMes,
+    },
+  };
+  const meta = resumo ? RESUMO_META[resumo] : { titulo: "", subtitulo: "" };
 
   // Orçamentos recentes
   const orcamentosRecentes = useMemo(
@@ -84,23 +220,35 @@ export default function VendasDashboard({
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Vendas"
-        subtitle="Orçamentos, conversão e faturamento"
+        subtitle={`${tituloMes} — por data de criação`}
         accentColor={accent}
         actions={
-          <button
-            onClick={() => onNavigate?.("vendas", "vendas-novo-orcamento")}
-            className="btn btn-primary"
-            style={{ backgroundColor: accent, color: "#fff" }}
-          >
-            <Plus size={14} />
-            Novo Orçamento
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeSelector
+              options={ATALHOS_MES}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+            <button
+              onClick={() => onNavigate?.("vendas", "vendas-novo-orcamento")}
+              className="btn btn-primary"
+              style={{ backgroundColor: accent, color: "#fff" }}
+            >
+              <Plus size={14} />
+              Novo Orçamento
+            </button>
+          </div>
         }
       />
 
       {/* Cards clicáveis */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => onNavigate?.("vendas", "vendas-historico")}>
+        <ClickableStat onClick={() => setResumo("orcamentos")}>
           <StatCard
             title="Orçamentos"
             value={stats.totalOrcamentos}
@@ -109,25 +257,25 @@ export default function VendasDashboard({
             subtitle={`${stats.pendentes} aguardando`}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("vendas", "vendas-historico-vendas")}>
+        <ClickableStat onClick={() => setResumo("vendas")}>
           <StatCard
             title="Vendas Fechadas"
             value={stats.totalVendas}
             icon={<CalendarCheck2 size={16} />}
             accentColor="var(--success)"
-            subtitle="Concretizadas"
+            subtitle="Fechadas no mês"
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("vendas", "vendas-historico-vendas")}>
+        <ClickableStat onClick={() => setResumo("faturamento")}>
           <StatCard
             title="Faturamento"
             value={formatBRL(stats.faturamento)}
             icon={<DollarSign size={16} />}
             accentColor={accent}
-            subtitle="Soma das vendas"
+            subtitle="Vendas do mês"
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("vendas", "vendas-historico")}>
+        <ClickableStat onClick={() => setResumo("conversao")}>
           <StatCard
             title="Taxa de Conversão"
             value={`${stats.conversao}%`}
@@ -153,7 +301,7 @@ export default function VendasDashboard({
           </div>
           {orcamentosRecentes.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhum orçamento ainda.
+              Nenhum orçamento criado em {tituloMes}.
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -203,7 +351,7 @@ export default function VendasDashboard({
           </div>
           {vendasRecentes.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhuma venda concretizada ainda.
+              Nenhuma venda fechada em {tituloMes}.
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -258,6 +406,124 @@ export default function VendasDashboard({
           </div>
         </div>
       )}
+
+      {/* Modal de resumo — aberto pelos cards de cima */}
+      <Modal
+        isOpen={resumo !== null}
+        onClose={() => setResumo(null)}
+        title={meta.titulo}
+        subtitle={meta.subtitulo}
+      >
+        {resumo === "orcamentos" && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ResumoNumero label="Total" value={String(stats.totalOrcamentos)} />
+              <ResumoNumero label="Em aberto" value={String(stats.pendentes)} color={accent} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="stat-label">Por status</div>
+              {(["pendente", "negociacao", "aceito", "recusado"] as OrcamentoStatus[]).map((s) => (
+                <ResumoLinha
+                  key={s}
+                  left={
+                    <span className={`badge ${LABELS_STATUS_ORCAMENTO[s].badge}`}>
+                      {LABELS_STATUS_ORCAMENTO[s].label}
+                    </span>
+                  }
+                  right={stats.porStatus[s]}
+                />
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="stat-label">Valores</div>
+              <ResumoLinha left="Em aberto (pendentes + negociação)" right={formatBRL(stats.valorEmAberto)} />
+              <ResumoLinha left="Valor total" right={formatBRL(stats.valorTotalOrc)} />
+            </div>
+            <ResumoFooter
+              onClick={() => {
+                setResumo(null);
+                onNavigate?.("vendas", "vendas-historico");
+              }}
+            >
+              Ver histórico de orçamentos
+            </ResumoFooter>
+          </div>
+        )}
+
+        {resumo === "vendas" && (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <ResumoNumero label="Vendas fechadas" value={String(stats.totalVendas)} />
+              <ResumoNumero label="Faturamento" value={formatBRL(stats.faturamento)} color="var(--success)" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <ResumoLinha left="Ticket médio" right={formatBRL(stats.ticketMedio)} />
+              <ResumoLinha left="Próximas (a realizar)" right={stats.proximas} />
+              <ResumoLinha left="Já realizadas" right={stats.realizadas} />
+            </div>
+            <ResumoFooter
+              onClick={() => {
+                setResumo(null);
+                onNavigate?.("vendas", "vendas-historico-vendas");
+              }}
+            >
+              Ver histórico de vendas
+            </ResumoFooter>
+          </div>
+        )}
+
+        {resumo === "faturamento" && (
+          <div className="flex flex-col gap-4">
+            <ResumoNumero label="Faturamento total" value={formatBRL(stats.faturamento)} color="var(--success)" />
+            <div className="flex flex-col gap-2">
+              <div className="stat-label">Pagamentos</div>
+              <ResumoLinha left="Recebido" right={formatBRL(stats.recebido)} rightColor="var(--success)" />
+              <ResumoLinha left="A receber" right={formatBRL(stats.aReceber)} rightColor={accent} />
+              <ResumoLinha left="Em atraso" right={formatBRL(stats.atrasado)} rightColor="var(--danger)" />
+            </div>
+            <ResumoLinha left="Ticket médio por venda" right={formatBRL(stats.ticketMedio)} />
+            <ResumoFooter
+              onClick={() => {
+                setResumo(null);
+                onNavigate?.("vendas", "vendas-historico-vendas");
+              }}
+            >
+              Ver histórico de vendas
+            </ResumoFooter>
+          </div>
+        )}
+
+        {resumo === "conversao" && (
+          <div className="flex flex-col gap-4">
+            <ResumoNumero label="Taxa de conversão" value={`${stats.conversao}%`} color={accent} />
+            <p className="text-sm text-secondary">
+              {stats.totalVendas} {stats.totalVendas === 1 ? "venda" : "vendas"} de{" "}
+              {stats.totalOrcamentos + stats.totalVendas} oportunidades no mês
+              (orçamentos e vendas criados no mês).
+            </p>
+            <div className="flex flex-col gap-2">
+              <div className="stat-label">Orçamentos</div>
+              <ResumoLinha
+                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.aceito.badge}`}>Aceito</span>}
+                right={stats.porStatus.aceito}
+              />
+              <ResumoLinha
+                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.recusado.badge}`}>Recusado</span>}
+                right={stats.porStatus.recusado}
+              />
+              <ResumoLinha left="Em aberto (pendentes + negociação)" right={stats.pendentes} />
+            </div>
+            <ResumoFooter
+              onClick={() => {
+                setResumo(null);
+                onNavigate?.("vendas", "vendas-historico");
+              }}
+            >
+              Ver histórico de orçamentos
+            </ResumoFooter>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -275,6 +541,65 @@ function ClickableStat({
       className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0"
     >
       {children}
+    </button>
+  );
+}
+
+/** Bloco de número grande dentro do resumo (label + valor). */
+function ResumoNumero({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <div className="rounded-md border border-border bg-elevated p-3">
+      <div className="stat-label">{label}</div>
+      <div
+        className={`text-2xl font-bold tabular-nums ${color ? "" : "text-primary"}`}
+        style={color ? { color } : undefined}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** Linha label → valor dentro do resumo. */
+function ResumoLinha({
+  left,
+  right,
+  rightColor,
+}: {
+  left: ReactNode;
+  right: ReactNode;
+  rightColor?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 p-2.5 rounded-md border border-border bg-elevated">
+      <div className="text-sm text-secondary min-w-0">{left}</div>
+      <div
+        className={`text-sm font-semibold tabular-nums flex-shrink-0 ${rightColor ? "" : "text-primary"}`}
+        style={rightColor ? { color: rightColor } : undefined}
+      >
+        {right}
+      </div>
+    </div>
+  );
+}
+
+/** Botão de rodapé do resumo que leva ao histórico. */
+function ResumoFooter({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full inline-flex items-center justify-center gap-1.5 p-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-sm font-medium text-primary mt-1"
+    >
+      {children}
+      <ChevronRight size={14} />
     </button>
   );
 }
