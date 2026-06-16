@@ -27,7 +27,9 @@
     --module-agenda: #3b82f6;
     --module-vendas: #a855f7;
     --module-financeiro: #22c55e;
+    --module-contratos: #14b8a6;
     --module-contatos: #f97316;
+    --module-agencia: #6366f1;
 
     /* Loader / spinner */
     --brand: var(--module-vendas);

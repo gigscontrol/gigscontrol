@@ -150,6 +150,7 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   if (input.taxa_valor !== undefined) out.taxa_valor = input.taxa_valor ?? null;
   if (input.rider_camarim !== undefined) out.rider_camarim = input.rider_camarim;
   if (input.rider_efeitos !== undefined) out.rider_efeitos = input.rider_efeitos;
+  if (input.privacidade !== undefined) out.privacidade = input.privacidade;
   return out;
 }
 
@@ -259,6 +260,7 @@ export async function criarArtistaCompleto(
     if (input.taxa_valor !== undefined) escrita.taxa_valor = input.taxa_valor;
     if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
     if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;
+    if (input.privacidade !== undefined) escrita.privacidade = input.privacidade;
     // Novo artista vai pro FIM da lista — admin reordena depois se quiser
     escrita.posicao = await proximaPosicaoArtista(admin, workspaceId);
     artistaRow = await repoCriar(admin, workspaceId, escrita);

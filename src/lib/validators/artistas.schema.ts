@@ -63,6 +63,21 @@ export const artistaCreateSchema = z.object({
       `Máximo ${LIMITE_RIDER_EFEITOS} itens no rider de efeitos.`
     )
     .optional(),
+  // Privacidade do DJ — cada campo é opcional; o merge com o padrão é
+  // feito no mapper (privacidadeValida). Persistido em artists.privacidade.
+  privacidade: z
+    .object({
+      orcamentosVer: z.boolean().optional(),
+      orcamentosCriar: z.boolean().optional(),
+      vendasVer: z.boolean().optional(),
+      vendasCriar: z.boolean().optional(),
+      financeiroVer: z.boolean().optional(),
+      financeiroInformar: z.boolean().optional(),
+      contratosVer: z.boolean().optional(),
+      contratosCriar: z.boolean().optional(),
+      contatos: z.enum(["todos", "proprios"]).optional(),
+    })
+    .optional(),
 });
 export type ArtistaCreateInput = z.infer<typeof artistaCreateSchema>;
 
