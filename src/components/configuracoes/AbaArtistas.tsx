@@ -852,32 +852,28 @@ export default function AbaArtistas() {
               {(() => {
                 const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
                 const grupos = [
-                  { label: "Orçamentos", ver: priv.orcamentosVer, age: priv.orcamentosCriar, ageLabel: "Criar" },
-                  { label: "Vendas", ver: priv.vendasVer, age: priv.vendasCriar, ageLabel: "Fechar" },
-                  { label: "Financeiro", ver: priv.financeiroVer, age: priv.financeiroInformar, ageLabel: "Informar" },
-                  { label: "Contratos", ver: priv.contratosVer, age: priv.contratosCriar, ageLabel: "Criar" },
+                  { label: "Orçamentos", ver: priv.orcamentosVer, agiu: priv.orcamentosCriar, agirLabel: "Vê e cria" },
+                  { label: "Vendas", ver: priv.vendasVer, agiu: priv.vendasCriar, agirLabel: "Vê e fecha" },
+                  { label: "Financeiro", ver: priv.financeiroVer, agiu: priv.financeiroInformar, agirLabel: "Vê e informa" },
+                  { label: "Contratos", ver: priv.contratosVer, agiu: priv.contratosCriar, agirLabel: "Vê e cria" },
                 ];
                 return (
                   <div className="flex flex-col gap-2">
-                    {grupos.map((g) => (
-                      <div key={g.label} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-secondary">{g.label}</span>
-                        <div className="flex items-center gap-1">
+                    {grupos.map((g) => {
+                      const txt = g.agiu ? g.agirLabel : g.ver ? "Só vê" : "Não vê";
+                      const cls = g.agiu ? "badge-success" : g.ver ? "badge-info" : "badge-neutral";
+                      return (
+                        <div key={g.label} className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-secondary">{g.label}</span>
                           <span
-                            className={`badge ${g.ver ? "badge-success" : "badge-neutral"}`}
-                            style={g.ver ? undefined : { opacity: 0.45 }}
+                            className={`badge ${cls}`}
+                            style={g.ver ? undefined : { opacity: 0.55 }}
                           >
-                            Ver
-                          </span>
-                          <span
-                            className={`badge ${g.age ? "badge-success" : "badge-neutral"}`}
-                            style={g.age ? undefined : { opacity: 0.45 }}
-                          >
-                            {g.ageLabel}
+                            {txt}
                           </span>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-secondary">Contatos</span>
                       <span
@@ -2954,106 +2950,84 @@ function ModalEditarArtista({
             <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
             Privacidade
           </div>
-          <div className="flex flex-col gap-1.5">
-            <TogglePriv
-              label="Ver orçamentos"
-              sub="Vê os orçamentos dele"
-              valor={privacidade.orcamentosVer}
-              onChange={(v) =>
+          <p className="text-xs text-muted -mt-1">
+            Escolha o nível de cada área. Cada opção diz exatamente o que o DJ
+            pode fazer.
+          </p>
+          <div className="flex flex-col gap-4">
+            <SegmentedChoice
+              titulo="Orçamentos"
+              valor={nivelDe(privacidade.orcamentosVer, privacidade.orcamentosCriar)}
+              opcoes={[
+                { val: "nenhum", label: "Não vê" },
+                { val: "ver", label: "Só vê" },
+                { val: "agir", label: "Vê e cria" },
+              ]}
+              onChange={(n) =>
                 setPrivacidade((p) => ({
                   ...p,
-                  orcamentosVer: v,
-                  orcamentosCriar: v ? p.orcamentosCriar : false,
+                  orcamentosVer: n !== "nenhum",
+                  orcamentosCriar: n === "agir",
                 }))
               }
             />
-            <TogglePriv
-              label="Criar orçamentos"
-              sub="Pode gerar orçamento"
-              valor={privacidade.orcamentosCriar}
-              disabled={!privacidade.orcamentosVer}
-              onChange={(v) => setPrivacidade((p) => ({ ...p, orcamentosCriar: v }))}
-            />
-            <TogglePriv
-              label="Ver vendas"
-              sub="Vê o histórico de vendas dele"
-              valor={privacidade.vendasVer}
-              onChange={(v) =>
+            <SegmentedChoice
+              titulo="Vendas"
+              valor={nivelDe(privacidade.vendasVer, privacidade.vendasCriar)}
+              opcoes={[
+                { val: "nenhum", label: "Não vê" },
+                { val: "ver", label: "Só vê" },
+                { val: "agir", label: "Vê e fecha" },
+              ]}
+              onChange={(n) =>
                 setPrivacidade((p) => ({
                   ...p,
-                  vendasVer: v,
-                  vendasCriar: v ? p.vendasCriar : false,
+                  vendasVer: n !== "nenhum",
+                  vendasCriar: n === "agir",
                 }))
               }
             />
-            <TogglePriv
-              label="Fechar vendas"
-              sub="Pode concretizar venda"
-              valor={privacidade.vendasCriar}
-              disabled={!privacidade.vendasVer}
-              onChange={(v) => setPrivacidade((p) => ({ ...p, vendasCriar: v }))}
-            />
-            <TogglePriv
-              label="Ver financeiro"
-              sub="Vê o financeiro dele"
-              valor={privacidade.financeiroVer}
-              onChange={(v) =>
+            <SegmentedChoice
+              titulo="Financeiro"
+              valor={nivelDe(privacidade.financeiroVer, privacidade.financeiroInformar)}
+              opcoes={[
+                { val: "nenhum", label: "Não vê" },
+                { val: "ver", label: "Só vê" },
+                { val: "agir", label: "Vê e informa" },
+              ]}
+              onChange={(n) =>
                 setPrivacidade((p) => ({
                   ...p,
-                  financeiroVer: v,
-                  financeiroInformar: v ? p.financeiroInformar : false,
+                  financeiroVer: n !== "nenhum",
+                  financeiroInformar: n === "agir",
                 }))
               }
             />
-            <TogglePriv
-              label="Informar pagamento"
-              sub="Pode registrar pagamento no financeiro"
-              valor={privacidade.financeiroInformar}
-              disabled={!privacidade.financeiroVer}
-              onChange={(v) => setPrivacidade((p) => ({ ...p, financeiroInformar: v }))}
-            />
-            <TogglePriv
-              label="Ver contratos"
-              sub="Vê os contratos dele"
-              valor={privacidade.contratosVer}
-              onChange={(v) =>
+            <SegmentedChoice
+              titulo="Contratos"
+              valor={nivelDe(privacidade.contratosVer, privacidade.contratosCriar)}
+              opcoes={[
+                { val: "nenhum", label: "Não vê" },
+                { val: "ver", label: "Só vê" },
+                { val: "agir", label: "Vê e cria" },
+              ]}
+              onChange={(n) =>
                 setPrivacidade((p) => ({
                   ...p,
-                  contratosVer: v,
-                  contratosCriar: v ? p.contratosCriar : false,
+                  contratosVer: n !== "nenhum",
+                  contratosCriar: n === "agir",
                 }))
               }
             />
-            <TogglePriv
-              label="Criar contratos"
-              sub="Pode gerar contrato"
-              valor={privacidade.contratosCriar}
-              disabled={!privacidade.contratosVer}
-              onChange={(v) => setPrivacidade((p) => ({ ...p, contratosCriar: v }))}
+            <SegmentedChoice
+              titulo="Contatos"
+              valor={privacidade.contatos}
+              opcoes={[
+                { val: "proprios", label: "Só dos shows dele" },
+                { val: "todos", label: "Toda a agência" },
+              ]}
+              onChange={(c) => setPrivacidade((p) => ({ ...p, contatos: c }))}
             />
-
-            {/* Contatos */}
-            <div className="p-2.5 rounded-md border border-border bg-elevated">
-              <div className="text-sm font-medium text-primary mb-2">
-                Contatos que ele enxerga
-              </div>
-              <div className="pill-group">
-                <button
-                  type="button"
-                  onClick={() => setPrivacidade((p) => ({ ...p, contatos: "proprios" }))}
-                  className={`pill ${privacidade.contatos === "proprios" ? "active" : ""}`}
-                >
-                  Só dos shows dele
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrivacidade((p) => ({ ...p, contatos: "todos" }))}
-                  className={`pill ${privacidade.contatos === "todos" ? "active" : ""}`}
-                >
-                  Toda a agência
-                </button>
-              </div>
-            </div>
 
             {/* Agenda — trava de sistema */}
             <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
@@ -3221,6 +3195,69 @@ function TogglePriv({
           style={{ transform: valor ? "translateX(22px)" : "translateX(2px)" }}
         />
       </button>
+    </div>
+  );
+}
+
+// Nível de acesso de um módulo: nenhum → só vê → vê e age (cria/fecha/informa).
+// Mapeia pros dois booleanos do modelo (Ver / Criar|Informar) sem mudar o schema.
+type NivelAcessoTipo = "nenhum" | "ver" | "agir";
+
+function nivelDe(ver: boolean, agiu: boolean): NivelAcessoTipo {
+  return agiu ? "agir" : ver ? "ver" : "nenhum";
+}
+
+/**
+ * Seletor de nível por módulo — substitui os toggles ambíguos.
+ *
+ * Em vez de dois switches "Ver"/"Criar" (que não deixam claro o que
+ * ligado/desligado faz), mostra os níveis como botões de múltipla escolha
+ * com rótulo explícito ("Não vê" · "Só vê" · "Vê e cria"). Genérico: serve
+ * tanto pros módulos (3 níveis) quanto pra Contatos (2 opções).
+ */
+function SegmentedChoice<T extends string>({
+  titulo,
+  valor,
+  opcoes,
+  onChange,
+}: {
+  titulo: string;
+  valor: T;
+  opcoes: { val: T; label: string; sub?: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-sm font-medium text-primary">{titulo}</div>
+      <div className="flex gap-1.5">
+        {opcoes.map((o) => {
+          const ativo = valor === o.val;
+          return (
+            <button
+              key={o.val}
+              type="button"
+              onClick={() => onChange(o.val)}
+              aria-pressed={ativo}
+              className="flex-1 px-2 py-2 rounded-md text-xs font-medium border transition-colors text-center leading-tight"
+              style={
+                ativo
+                  ? {
+                      borderColor: "var(--module-agencia)",
+                      backgroundColor: "rgba(99,102,241,0.14)",
+                      color: "var(--text-primary)",
+                    }
+                  : {
+                      borderColor: "var(--border-color)",
+                      color: "var(--text-secondary)",
+                    }
+              }
+            >
+              <span className="block">{o.label}</span>
+              {o.sub && <span className="block text-[0.65rem] text-muted mt-0.5">{o.sub}</span>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
