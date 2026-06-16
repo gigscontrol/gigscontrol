@@ -14,6 +14,10 @@ import {
   CalendarCheck2,
   ShoppingCart,
   Wallet,
+  FileSignature,
+  Building2,
+  Music,
+  LayoutTemplate,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MODULE_THEMES } from "@/types";
@@ -92,12 +96,33 @@ const MODULES: ModuleDef[] = [
     ],
   },
   {
+    tab: "contratos",
+    label: "Contratos",
+    icon: FileSignature,
+    subPages: [
+      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { page: "contratos-novo", label: "Novo Contrato", icon: FilePlus },
+      { page: "contratos-modelos", label: "Modelos", icon: LayoutTemplate },
+      { page: "contratos-historico", label: "Histórico de Contratos", icon: History },
+    ],
+  },
+  {
     tab: "contatos",
     label: "Contatos",
     icon: Users,
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "contatos-lista", label: "Gerenciar Contatos", icon: Users },
+    ],
+  },
+  {
+    tab: "agencia",
+    label: "Agência",
+    icon: Building2,
+    subPages: [
+      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { page: "agencia-artistas", label: "Artistas", icon: Music },
+      { page: "agencia-equipe", label: "Equipe", icon: Users },
     ],
   },
 ];

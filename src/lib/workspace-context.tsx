@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DJ, TaxaAgenciaModo } from "@/types";
-import type { Papel } from "./permissoes";
+import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 
@@ -47,6 +47,8 @@ export type NovoArtistaInput = {
   /** Rider salvo no artista — só nomes. Quantidade vai no orçamento. */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  /** Privacidade do DJ — gravada direto no jsonb artists.privacidade. */
+  privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
   emailConta?: string;
 };
@@ -390,6 +392,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
       if (input.riderEfeitos) payload.rider_efeitos = input.riderEfeitos;
+      if (input.privacidade !== undefined) payload.privacidade = input.privacidade;
 
       const res = await fetch("/api/artistas", {
         method: "POST",
@@ -424,6 +427,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
+      if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
 
       const res = await fetch(`/api/artistas/${id}`, {
         method: "PATCH",

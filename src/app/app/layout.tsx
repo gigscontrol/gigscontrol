@@ -27,6 +27,10 @@ import { VendasProvider } from "@/lib/vendas-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
+import AbaArtistas from "@/components/configuracoes/AbaArtistas";
+import AbaEquipe from "@/components/configuracoes/AbaEquipe";
+import EmConstrucao from "@/components/EmConstrucao";
+import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 
 /**
@@ -214,9 +218,20 @@ function resolverRota(seg: string[]): Rota {
     if (b === "pagamentos") return rotaBase("financeiro", "financeiro-pagamentos");
     return rotaBase("financeiro", "dashboard");
   }
+  if (a === "contratos") {
+    if (b === "novo") return rotaBase("contratos", "contratos-novo");
+    if (b === "modelos") return rotaBase("contratos", "contratos-modelos");
+    if (b === "historico") return rotaBase("contratos", "contratos-historico");
+    return rotaBase("contratos", "dashboard");
+  }
   if (a === "contatos") {
     if (b === "lista") return rotaBase("contatos", "contatos-lista");
     return rotaBase("contatos", "dashboard");
+  }
+  if (a === "agencia") {
+    if (b === "artistas") return rotaBase("agencia", "agencia-artistas");
+    if (b === "equipe") return rotaBase("agencia", "agencia-equipe");
+    return rotaBase("agencia", "dashboard");
   }
   // agenda é o default (inclui "/app" puro)
   if (a === "agenda" && b === "shows") return rotaBase("agenda", "agenda-completa");
@@ -242,8 +257,18 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/vendas/vendas/${id ?? ""}`;
     case "financeiro-pagamentos":
       return `${BASE}/financeiro/pagamentos`;
+    case "contratos-novo":
+      return `${BASE}/contratos/novo`;
+    case "contratos-modelos":
+      return `${BASE}/contratos/modelos`;
+    case "contratos-historico":
+      return `${BASE}/contratos/historico`;
     case "contatos-lista":
       return `${BASE}/contatos/lista`;
+    case "agencia-artistas":
+      return `${BASE}/agencia/artistas`;
+    case "agencia-equipe":
+      return `${BASE}/agencia/equipe`;
     case "dashboard":
     default:
       return `${BASE}/${tab}`;
@@ -502,6 +527,35 @@ function AppRoot() {
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
             <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
+          )}
+
+          {/* Contratos */}
+          {activeTab === "contratos" && activePage === "dashboard" && (
+            <EmConstrucao titulo="Contratos" subtitulo="Dashboard" cor={MODULE_THEMES.contratos.color} />
+          )}
+          {activeTab === "contratos" && activePage === "contratos-novo" && (
+            <EmConstrucao titulo="Novo Contrato" cor={MODULE_THEMES.contratos.color} />
+          )}
+          {activeTab === "contratos" && activePage === "contratos-modelos" && (
+            <EmConstrucao titulo="Modelos de Contrato" cor={MODULE_THEMES.contratos.color} />
+          )}
+          {activeTab === "contratos" && activePage === "contratos-historico" && (
+            <EmConstrucao titulo="Histórico de Contratos" cor={MODULE_THEMES.contratos.color} />
+          )}
+
+          {/* Agência */}
+          {activeTab === "agencia" && activePage === "dashboard" && (
+            <EmConstrucao titulo="Agência" subtitulo="Dashboard" cor={MODULE_THEMES.agencia.color} />
+          )}
+          {activeTab === "agencia" && activePage === "agencia-artistas" && (
+            <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
+              <AbaArtistas />
+            </div>
+          )}
+          {activeTab === "agencia" && activePage === "agencia-equipe" && (
+            <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
+              <AbaEquipe />
+            </div>
           )}
           </SomenteLeitura>
         </main>

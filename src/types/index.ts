@@ -1,3 +1,5 @@
+import type { PrivacidadeDj } from "@/lib/permissoes";
+
 /**
  * Modos de taxa de agência (cobrança que o artista paga à agência por
  * intermediar a venda). Definido no cadastro do artista.
@@ -55,6 +57,12 @@ export type DJ = {
    */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  /**
+   * Privacidade do DJ — o que este artista pode ver/fazer. Configurado
+   * pelo admin, persistido em artists.privacidade. Sempre vem completo
+   * do mapper (merge sobre o padrão).
+   */
+  privacidade?: PrivacidadeDj;
 };
 
 export type ShowStatus = "confirmado" | "pendente" | "logistica";
@@ -82,7 +90,13 @@ export type Show = {
 export type DateRange = "Mês atual" | "Mês passado" | "Ano" | "Personalizado";
 export type AgendaDateRange = "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
 
-export type ActiveTab = "agenda" | "vendas" | "financeiro" | "contatos";
+export type ActiveTab =
+  | "agenda"
+  | "vendas"
+  | "financeiro"
+  | "contratos"
+  | "contatos"
+  | "agencia";
 export type ActivePage =
   | "dashboard"
   | "agenda-completa"
@@ -93,7 +107,12 @@ export type ActivePage =
   | "vendas-historico-vendas"
   | "vendas-venda-detalhe"
   | "financeiro-pagamentos"
-  | "contatos-lista";
+  | "contratos-novo"
+  | "contratos-modelos"
+  | "contratos-historico"
+  | "contatos-lista"
+  | "agencia-artistas"
+  | "agencia-equipe";
 
 export type ContatoCategoria = "contratantes" | "casas" | "cidades" | "mapa";
 export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
@@ -356,5 +375,7 @@ export const MODULE_THEMES: Record<ActiveTab, ModuleTheme> = {
   agenda: { key: "agenda", label: "Agenda", color: "var(--module-agenda)" },
   vendas: { key: "vendas", label: "Vendas", color: "var(--module-vendas)" },
   financeiro: { key: "financeiro", label: "Financeiro", color: "var(--module-financeiro)" },
+  contratos: { key: "contratos", label: "Contratos", color: "var(--module-contratos)" },
   contatos: { key: "contatos", label: "Contatos", color: "var(--module-contatos)" },
+  agencia: { key: "agencia", label: "Agência", color: "var(--module-agencia)" },
 };

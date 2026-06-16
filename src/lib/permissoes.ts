@@ -58,6 +58,47 @@ export const ESCOPO_VENDEDOR_PADRAO: EscopoVendedor = {
 };
 
 /**
+ * Privacidade do DJ — o que cada artista pode VER e FAZER no próprio
+ * espaço. Configurado pelo admin por artista, salvo em
+ * `artists.privacidade` (jsonb).
+ *
+ * NOTA: Fase 1 é só persistência/configuração. O ENFORCEMENT efetivo
+ * (calcularPermissoes + APIs) é tratado numa fase posterior.
+ */
+export type PrivacidadeDj = {
+  /** Vê os orçamentos dele. */
+  orcamentosVer: boolean;
+  /** Pode criar orçamento. */
+  orcamentosCriar: boolean;
+  /** Vê o histórico de vendas dele. */
+  vendasVer: boolean;
+  /** Pode fechar/criar venda. */
+  vendasCriar: boolean;
+  /** Vê o financeiro dele. */
+  financeiroVer: boolean;
+  /** Pode informar pagamento. */
+  financeiroInformar: boolean;
+  /** Vê os contratos dele. */
+  contratosVer: boolean;
+  /** Pode gerar contrato. */
+  contratosCriar: boolean;
+  /** "todos" = agência inteira | "proprios" = só dos shows dele. */
+  contatos: "todos" | "proprios";
+};
+
+export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
+  orcamentosVer: true,
+  orcamentosCriar: false,
+  vendasVer: true,
+  vendasCriar: false,
+  financeiroVer: true,
+  financeiroInformar: false,
+  contratosVer: true,
+  contratosCriar: false,
+  contatos: "proprios",
+};
+
+/**
  * Um usuário do workspace.
  */
 export type Usuario = {

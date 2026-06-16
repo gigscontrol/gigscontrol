@@ -4,15 +4,11 @@ import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Settings,
-  Music,
-  Users,
   Trash2,
   History,
   Bell,
 } from "lucide-react";
 import AbaGeral from "./AbaGeral";
-import AbaArtistas from "./AbaArtistas";
-import AbaEquipe from "./AbaEquipe";
 import AbaLixeira from "./AbaLixeira";
 import AbaHistorico from "./AbaHistorico";
 import AbaNotificacoes from "./AbaNotificacoes";
@@ -28,14 +24,12 @@ import { useAuth } from "@/lib/auth-context";
  *   "Notificações".
  */
 
-type AbaConfig = "geral" | "artistas" | "equipe" | "lixeira" | "historico" | "notificacoes";
+type AbaConfig = "geral" | "lixeira" | "historico" | "notificacoes";
 
 type AbaDef = { id: AbaConfig; label: string; icon: typeof Settings };
 
 const ABAS_ADMIN: AbaDef[] = [
   { id: "geral", label: "Geral", icon: Settings },
-  { id: "artistas", label: "Artistas", icon: Music },
-  { id: "equipe", label: "Equipe", icon: Users },
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
   { id: "historico", label: "Histórico", icon: History },
   { id: "notificacoes", label: "Notificações", icon: Bell },
@@ -71,7 +65,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
         </h1>
         <p className="text-sm text-muted">
           {isAdmin
-            ? "Personalize a dashboard, gerencie artistas e a equipe da sua agência."
+            ? "Personalize a aparência e gerencie a conta da sua agência. Artistas e equipe agora ficam no módulo Agência."
             : "Configurações da sua conta."}
         </p>
       </div>
@@ -106,8 +100,6 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
 
       {/* Conteúdo */}
       {aba === "geral" && <AbaGeral />}
-      {aba === "artistas" && isAdmin && <AbaArtistas />}
-      {aba === "equipe" && isAdmin && <AbaEquipe />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}
       {aba === "historico" && isAdmin && <AbaHistorico />}
       {aba === "notificacoes" && <AbaNotificacoes />}
