@@ -25,6 +25,8 @@ import {
   Loader2,
   GripVertical,
   Lock,
+  Search,
+  Users,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -33,8 +35,10 @@ import CidadeIBGEAutocomplete, {
 import ColorPicker from "../ColorPicker";
 import {
   useWorkspace,
+  LABELS_PAPEL_EQUIPE,
   type NovoArtistaInput,
 } from "@/lib/workspace-context";
+import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import {
@@ -89,6 +93,7 @@ type ArtistaParaEdicao = {
   taxaValor?: number;
   riderCamarim: string[];
   riderEfeitos: string[];
+  privacidade: PrivacidadeDj;
 };
 
 const MODOS_TAXA: TaxaAgenciaModo[] = [
@@ -110,6 +115,7 @@ export default function AbaArtistas() {
     lixeiraArtistas,
     recarregarLixeira,
     restaurarDaLixeira,
+    equipe,
   } = useWorkspace();
   const { sessao } = useAuth();
 
@@ -181,41 +187,131 @@ export default function AbaArtistas() {
     }
   }
 
-  // Reset de senha agora vive só dentro do modal "Editar artista" —
-  // o botão antigo direto na linha foi removido (a função existe no
-  // workspace-context e é chamada pelo onResetarSenha do ModalEditar).
+  // ---- Top bar de DJs + perfil (redesign) ----
+  const ultimoVistoRef = useRef<string | null>(null);
+  const [djSelecionadoId, setDjSelecionadoId] = useState<string | null>(null);
+  const [conta, setConta] = useState<DadosConta | null>(null);
+  const [carregandoConta, setCarregandoConta] = useState(false);
+  const [modoReordenar, setModoReordenar] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "suspensos">("todos");
+  const [copiouSenhaCard, setCopiouSenhaCard] = useState(false);
+
+  // Mantém uma seleção válida (default = primeiro, ou o último visto).
+  useEffect(() => {
+    if (artistas.length === 0) {
+      if (djSelecionadoId !== null) setDjSelecionadoId(null);
+      return;
+    }
+    const existe = djSelecionadoId && artistas.some((a) => a.id === djSelecionadoId);
+    if (!existe) {
+      const fb =
+        ultimoVistoRef.current &&
+        artistas.some((a) => a.id === ultimoVistoRef.current)
+          ? ultimoVistoRef.current
+          : artistas[0].id;
+      setDjSelecionadoId(fb);
+    }
+  }, [artistas, djSelecionadoId]);
+
+  useEffect(() => {
+    if (djSelecionadoId) ultimoVistoRef.current = djSelecionadoId;
+  }, [djSelecionadoId]);
+
+  // Carrega email/senha da conta do DJ selecionado (igual o modal de editar).
+  useEffect(() => {
+    if (!djSelecionadoId) {
+      setConta(null);
+      return;
+    }
+    let ativo = true;
+    setCarregandoConta(true);
+    setConta(null);
+    fetch(`/api/artistas/${djSelecionadoId}/conta`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as DadosConta;
+      })
+      .then((d) => {
+        if (ativo) setConta(d);
+      })
+      .catch(() => {
+        if (ativo) setConta(null);
+      })
+      .finally(() => {
+        if (ativo) setCarregandoConta(false);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [djSelecionadoId]);
+
+  const djSelecionado = useMemo(
+    () => artistas.find((a) => a.id === djSelecionadoId) ?? null,
+    [artistas, djSelecionadoId]
+  );
+
+  // Fila de chips: tudo no modo Reordenar; filtra por busca/status só com
+  // muitos DJs (pra não poluir agências pequenas).
+  const muitosDJs = artistas.length > 8;
+  const filaChips = useMemo(() => {
+    if (modoReordenar || !muitosDJs) return artistas;
+    let lista = artistas;
+    if (filtroStatus === "ativos") lista = lista.filter((a) => !a.acessoSuspenso);
+    else if (filtroStatus === "suspensos") lista = lista.filter((a) => !!a.acessoSuspenso);
+    const q = busca.trim().toLowerCase();
+    if (q)
+      lista = lista.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          (a.username ?? "").toLowerCase().includes(q)
+      );
+    return lista;
+  }, [artistas, modoReordenar, muitosDJs, filtroStatus, busca]);
+
+  function resetarSenhaDoPerfil(id: string, nome: string) {
+    if (!confirm(`Gerar uma nova senha aleatória pro artista ${nome}?`)) return;
+    resetarSenhaArtista(id)
+      .then((nova) =>
+        setCredenciaisGeradas({ nomeArtista: nome, username: "—", senha: nova })
+      )
+      .catch((e) => setToast({ msg: (e as Error).message, tipo: "erro" }));
+  }
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
-      {/* Resumo do limite */}
-      <div className="card">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <div className="section-title">Artistas da agência</div>
-            <div className="section-subtitle">
-              {plano
-                ? `Seu plano ${plano.nome} permite até ${limite} ${
-                    limite === 1 ? "artista" : "artistas"
-                  }.`
-                : "Cadastre os artistas da sua agência."}
-            </div>
+    <div className="flex flex-col gap-5 w-full">
+      {/* Header da página */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div
+            className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: "rgba(99,102,241,0.12)", color: "var(--module-agencia)" }}
+          >
+            <Music size={20} />
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold tabular-nums">
-              {usados}
-              <span className="text-muted text-base font-normal"> / {limite}</span>
+          <div>
+            <div className="page-title">Artistas</div>
+            <div className="page-subtitle">
+              {plano
+                ? `Plano ${plano.nome} — ${usados} de ${limite} em uso`
+                : "Artistas da sua agência"}
             </div>
-            <div className="text-xs text-muted">em uso</div>
           </div>
         </div>
-        <div className="mt-3 h-1.5 rounded-full bg-elevated overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-              backgroundColor: noLimite ? "var(--danger)" : "var(--module-vendas)",
-            }}
-          />
+        <div className="min-w-[160px]">
+          <div className="text-right">
+            <span className="text-2xl font-bold tabular-nums text-primary">{usados}</span>
+            <span className="text-muted text-base font-normal"> / {limite}</span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-elevated overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
+                backgroundColor: noLimite ? "var(--danger)" : "var(--module-agencia)",
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -232,41 +328,34 @@ export default function AbaArtistas() {
         </div>
       )}
 
-      {/* Lista de artistas */}
-      <div className="card p-0 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="section-title">Lista de artistas</div>
-          <button
-            onClick={() => setCriando(true)}
-            disabled={noLimite}
-            className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus size={14} />
-            Adicionar artista
-          </button>
-        </div>
-
-        {artistas.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted">
-            Nenhum artista cadastrado ainda.
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {artistas.map((a) => {
+      {/* Top bar de troca de DJ */}
+      <div className="sticky top-0 z-20 -mx-6 px-6 lg:-mx-8 lg:px-8 py-3 bg-surface border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto py-1">
+            {filaChips.map((a) => {
               const suspenso = !!a.acessoSuspenso;
+              const ativo = a.id === djSelecionadoId;
               const sendoArrastado = arrastandoId === a.id;
               const ehAlvo = sobreId === a.id && arrastandoId && arrastandoId !== a.id;
               return (
-                <div
+                <button
                   key={a.id}
-                  draggable
+                  type="button"
+                  draggable={modoReordenar}
+                  onClick={() => {
+                    if (!modoReordenar) {
+                      setEditando(null);
+                      setDjSelecionadoId(a.id);
+                    }
+                  }}
                   onDragStart={(e) => {
+                    if (!modoReordenar) return;
                     setArrastandoId(a.id);
                     e.dataTransfer.effectAllowed = "move";
-                    // Necessário no Firefox pro drag começar
                     e.dataTransfer.setData("text/plain", a.id);
                   }}
                   onDragOver={(e) => {
+                    if (!modoReordenar) return;
                     e.preventDefault();
                     e.dataTransfer.dropEffect = "move";
                     if (sobreId !== a.id) setSobreId(a.id);
@@ -275,6 +364,7 @@ export default function AbaArtistas() {
                     if (sobreId === a.id) setSobreId(null);
                   }}
                   onDrop={(e) => {
+                    if (!modoReordenar) return;
                     e.preventDefault();
                     aoSoltar(a.id);
                   }}
@@ -282,168 +372,673 @@ export default function AbaArtistas() {
                     setArrastandoId(null);
                     setSobreId(null);
                   }}
-                  className="flex items-center gap-3 px-4 py-3 transition-all"
+                  title={a.name}
+                  className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full flex-shrink-0 transition-colors ${
+                    ativo ? "bg-elevated" : "hover:bg-surface-2"
+                  }`}
                   style={{
-                    opacity: sendoArrastado ? 0.4 : suspenso ? 0.55 : 1,
-                    borderTop: ehAlvo ? "2px solid var(--module-vendas)" : undefined,
-                    cursor: "grab",
+                    opacity: sendoArrastado ? 0.4 : suspenso && !ativo ? 0.7 : 1,
+                    borderLeft: ehAlvo
+                      ? "2px solid var(--module-agencia)"
+                      : "2px solid transparent",
+                    cursor: modoReordenar ? "grab" : "pointer",
                   }}
                 >
-                  <GripVertical
-                    size={14}
-                    className="text-muted flex-shrink-0"
-                    style={{ cursor: "grab" }}
-                  />
-                  <span
-                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{
-                      background: suspenso
-                        ? "var(--border-strong)"
-                        : `linear-gradient(135deg, ${a.color}, ${a.color}99)`,
-                    }}
-                  >
-                    {a.name.charAt(0).toUpperCase()}
+                  <span className="relative flex-shrink-0">
+                    <span
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold text-white"
+                      style={{
+                        background: suspenso
+                          ? "var(--border-strong)"
+                          : `linear-gradient(135deg, ${a.color}, ${a.color}99)`,
+                        boxShadow: ativo
+                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${a.color}`
+                          : undefined,
+                      }}
+                    >
+                      {a.name.charAt(0).toUpperCase()}
+                    </span>
+                    {suspenso && (
+                      <PauseCircle
+                        size={12}
+                        className="absolute -bottom-0.5 -right-0.5"
+                        style={{ color: "var(--warning)" }}
+                      />
+                    )}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-primary truncate">
-                      {a.name}
-                    </div>
-                    <div className="text-xs text-muted flex items-center gap-2 flex-wrap mt-0.5">
-                      {a.username && (
-                        <button
-                          type="button"
-                          onClick={() => copiarUsername(a.username!)}
-                          className="inline-flex items-center gap-1 hover:text-primary transition-colors group"
-                          title="Clique pra copiar o login"
-                        >
-                          <AtSign size={10} />
-                          <span className="font-mono">{a.username}</span>
-                          {usernameCopiado === a.username ? (
-                            <CheckCircle2
-                              size={10}
-                              style={{ color: "var(--success)" }}
-                            />
-                          ) : (
-                            <Copy
-                              size={10}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            />
-                          )}
-                        </button>
-                      )}
-                      {a.cidadeNome && (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={10} />
-                          {a.cidadeNome}
-                          {a.cidadeUf ? `/${a.cidadeUf}` : ""}
-                        </span>
-                      )}
-                      {a.taxaModo && a.taxaModo !== "sem-taxa" && (
-                        <span className="inline-flex items-center gap-1">
-                          {a.taxaModo.startsWith("perc") ? (
-                            <Percent size={10} />
-                          ) : (
-                            <DollarSign size={10} />
-                          )}
-                          {LABELS_TAXA_MODO[a.taxaModo]}
-                          {a.taxaValor !== undefined &&
-                            (a.taxaModo === "perc-fixa"
-                              ? ` ${a.taxaValor}%`
-                              : a.taxaModo === "valor-fixo"
-                              ? ` R$ ${a.taxaValor.toFixed(2)}`
-                              : "")}
-                        </span>
-                      )}
-                      {suspenso && (
-                        <span
-                          className="font-medium"
-                          style={{ color: "var(--warning)" }}
-                        >
-                          Acesso suspenso
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {removendo === a.id ? (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted">Remover?</span>
-                      <button
-                        onClick={() => {
-                          removerArtista(a.id);
-                          setRemovendo(null);
-                        }}
-                        className="btn text-xs px-2 py-1"
-                        style={{ backgroundColor: "var(--danger)", color: "#fff" }}
-                      >
-                        Sim
-                      </button>
-                      <button
-                        onClick={() => setRemovendo(null)}
-                        className="btn-ghost text-xs px-2 py-1"
-                      >
-                        Não
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() =>
-                          setEditando({
-                            id: a.id,
-                            nome: a.name,
-                            cor: a.color,
-                            usernameAtual: a.username ?? "",
-                            cidadeIbgeId: a.cidadeIbgeId,
-                            cidadeNome: a.cidadeNome,
-                            cidadeUf: a.cidadeUf,
-                            taxaModo: a.taxaModo ?? "sem-taxa",
-                            taxaValor: a.taxaValor,
-                            riderCamarim: a.riderCamarim ?? [],
-                            riderEfeitos: a.riderEfeitos ?? [],
-                          })
-                        }
-                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1"
-                        title="Editar artista"
-                      >
-                        <Pencil size={13} />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => alternarSuspensaoArtista(a.id)}
-                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1"
-                        style={{
-                          color: suspenso ? "var(--success)" : "var(--warning)",
-                        }}
-                      >
-                        {suspenso ? (
-                          <>
-                            <PlayCircle size={14} />
-                            Reativar
-                          </>
-                        ) : (
-                          <>
-                            <PauseCircle size={14} />
-                            Suspender
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => setRemovendo(a.id)}
-                        className="btn-ghost p-1.5 rounded"
-                        style={{ color: "var(--danger)" }}
-                        aria-label="Remover artista"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  <span
+                    className={`hidden sm:block text-sm truncate max-w-[110px] ${
+                      ativo ? "text-primary font-medium" : "text-secondary"
+                    }`}
+                  >
+                    {a.name}
+                  </span>
+                </button>
               );
             })}
+
+            {/* Novo artista */}
+            <button
+              type="button"
+              onClick={() => setCriando(true)}
+              disabled={noLimite}
+              title={noLimite ? "Limite do plano atingido" : "Adicionar artista"}
+              className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ color: "var(--module-agencia)" }}
+            >
+              <Plus size={16} />
+            </button>
           </div>
+
+          {/* Busca + filtro (só com muitos DJs) */}
+          {muitosDJs && !modoReordenar && (
+            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 bg-elevated border border-border rounded-md px-2 py-1.5 w-40 focus-within:border-border-strong">
+                <Search size={13} className="text-muted flex-shrink-0" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar"
+                  className="bg-transparent outline-none text-sm text-primary placeholder:text-muted w-full min-w-0"
+                />
+              </div>
+              <div className="pill-group">
+                {(["todos", "ativos", "suspensos"] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFiltroStatus(f)}
+                    className={`pill ${filtroStatus === f ? "active" : ""}`}
+                  >
+                    {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Suspensos"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reordenar */}
+          {artistas.length > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                setModoReordenar((v) => !v);
+                setArrastandoId(null);
+                setSobreId(null);
+              }}
+              className={`text-sm inline-flex items-center gap-1.5 flex-shrink-0 ${
+                modoReordenar ? "btn btn-secondary" : "btn-ghost px-2 py-1.5 rounded"
+              }`}
+            >
+              {modoReordenar ? (
+                <>
+                  <Check size={14} />
+                  Concluir
+                </>
+              ) : (
+                <>
+                  <GripVertical size={14} />
+                  Reordenar
+                </>
+              )}
+            </button>
+          )}
+        </div>
+        {modoReordenar && (
+          <p className="text-xs text-muted mt-2">
+            Arraste os avatares pra reordenar — reflete na sidebar e nos filtros do app.
+          </p>
         )}
       </div>
+
+      {/* Perfil do DJ selecionado */}
+      {!djSelecionado ? (
+        <div className="card flex flex-col items-center justify-center text-center gap-3 py-16">
+          <div
+            className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center"
+            style={{ color: "var(--module-agencia)" }}
+          >
+            <Music size={22} />
+          </div>
+          <div className="section-title">Nenhum artista cadastrado</div>
+          <p className="text-sm text-muted max-w-sm">
+            Cadastre o primeiro artista da sua agência pra começar.
+          </p>
+          <button
+            onClick={() => setCriando(true)}
+            disabled={noLimite}
+            className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={14} /> Adicionar artista
+          </button>
+        </div>
+      ) : editando && editando.id === djSelecionado.id ? (
+        <ModalEditarArtista
+          modoInline
+          artista={editando}
+          slugAgencia={slugAgencia}
+          onCancelar={() => setEditando(null)}
+          onSalvo={() => {
+            setEditando(null);
+            setToast({ msg: "Artista atualizado.", tipo: "sucesso" });
+          }}
+          onResetarSenha={async () => {
+            const novaSenha = await resetarSenhaArtista(editando.id);
+            setEditando(null);
+            setCredenciaisGeradas({
+              nomeArtista: editando.nome,
+              username: "—",
+              senha: novaSenha,
+            });
+          }}
+          nomesExistentes={artistas
+            .filter((a) => a.id !== editando.id)
+            .map((a) => a.name.toLowerCase())}
+          nomesNaLixeira={lixeiraArtistas
+            .filter((it) => it.artista.id !== editando.id)
+            .map((it) => it.artista.name.toLowerCase())}
+          usernamesExistentes={artistas
+            .filter((a) => a.id !== editando.id)
+            .map((a) => extrairRaizUsername(a.username, slugAgencia))
+            .filter(Boolean)}
+          usernamesNaLixeira={lixeiraArtistas
+            .filter((it) => it.artista.id !== editando.id)
+            .map((it) =>
+              extrairRaizUsername(it.artista.username, slugAgencia)
+            )
+            .filter(Boolean)}
+        />
+      ) : (
+        <>
+          {/* Header do perfil */}
+          <div className="card p-0 overflow-hidden">
+            <div
+              style={{
+                height: 4,
+                background: `linear-gradient(90deg, ${djSelecionado.color}, ${djSelecionado.color}66)`,
+              }}
+            />
+            <div className="p-5 flex items-start gap-4 flex-wrap">
+              <span
+                className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+                style={{
+                  background: djSelecionado.acessoSuspenso
+                    ? "var(--border-strong)"
+                    : `linear-gradient(135deg, ${djSelecionado.color}, ${djSelecionado.color}99)`,
+                }}
+              >
+                {djSelecionado.name.charAt(0).toUpperCase()}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="page-title">{djSelecionado.name}</div>
+                  {djSelecionado.acessoSuspenso && (
+                    <span className="badge badge-warning">Acesso suspenso</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 flex-wrap text-xs text-muted mt-1.5">
+                  {djSelecionado.username && (
+                    <button
+                      type="button"
+                      onClick={() => copiarUsername(djSelecionado.username!)}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors group"
+                      title="Copiar login"
+                    >
+                      <AtSign size={11} />
+                      <span className="font-mono">{djSelecionado.username}</span>
+                      {usernameCopiado === djSelecionado.username ? (
+                        <CheckCircle2 size={11} style={{ color: "var(--success)" }} />
+                      ) : (
+                        <Copy
+                          size={11}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+                    </button>
+                  )}
+                  {djSelecionado.cidadeNome && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin size={11} />
+                      {djSelecionado.cidadeNome}
+                      {djSelecionado.cidadeUf ? `/${djSelecionado.cidadeUf}` : ""}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: djSelecionado.color }}
+                    />
+                    <span className="font-mono uppercase">{djSelecionado.color}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Ações */}
+              {removendo === djSelecionado.id ? (
+                <div className="ml-auto flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted">
+                    Remover {djSelecionado.name}?
+                  </span>
+                  <button
+                    onClick={() => {
+                      removerArtista(djSelecionado.id);
+                      setRemovendo(null);
+                    }}
+                    className="btn text-xs px-2.5 py-1"
+                    style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    onClick={() => setRemovendo(null)}
+                    className="btn-ghost text-xs px-2.5 py-1"
+                  >
+                    Não
+                  </button>
+                </div>
+              ) : (
+                <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={() =>
+                      setEditando({
+                        id: djSelecionado.id,
+                        nome: djSelecionado.name,
+                        cor: djSelecionado.color,
+                        usernameAtual: djSelecionado.username ?? "",
+                        cidadeIbgeId: djSelecionado.cidadeIbgeId,
+                        cidadeNome: djSelecionado.cidadeNome,
+                        cidadeUf: djSelecionado.cidadeUf,
+                        taxaModo: djSelecionado.taxaModo ?? "sem-taxa",
+                        taxaValor: djSelecionado.taxaValor,
+                        riderCamarim: djSelecionado.riderCamarim ?? [],
+                        riderEfeitos: djSelecionado.riderEfeitos ?? [],
+                        privacidade: djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
+                      })
+                    }
+                    className="btn btn-secondary text-xs inline-flex items-center gap-1"
+                  >
+                    <Pencil size={13} /> Editar
+                  </button>
+                  <button
+                    onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
+                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
+                    style={{
+                      color: djSelecionado.acessoSuspenso
+                        ? "var(--success)"
+                        : "var(--warning)",
+                    }}
+                  >
+                    {djSelecionado.acessoSuspenso ? (
+                      <>
+                        <PlayCircle size={14} /> Reativar
+                      </>
+                    ) : (
+                      <>
+                        <PauseCircle size={14} /> Suspender
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() =>
+                      resetarSenhaDoPerfil(djSelecionado.id, djSelecionado.name)
+                    }
+                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
+                    style={{ color: "var(--module-agencia)" }}
+                  >
+                    <KeyRound size={14} /> Resetar senha
+                  </button>
+                  <button
+                    onClick={() => setRemovendo(djSelecionado.id)}
+                    className="btn-ghost p-1.5 rounded"
+                    style={{ color: "var(--danger)" }}
+                    aria-label="Remover artista"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Grid de cards do perfil */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {/* Acesso */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
+                Acesso ao sistema
+              </div>
+              {djSelecionado.username && (
+                <div>
+                  <div className="text-[0.7rem] text-muted mb-1">Login</div>
+                  <button
+                    type="button"
+                    onClick={() => copiarUsername(djSelecionado.username!)}
+                    className="w-full flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors text-left"
+                  >
+                    <span className="font-mono text-sm text-primary flex-1 truncate">
+                      {djSelecionado.username}
+                    </span>
+                    {usernameCopiado === djSelecionado.username ? (
+                      <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                    ) : (
+                      <Copy size={14} className="text-muted" />
+                    )}
+                  </button>
+                </div>
+              )}
+              {carregandoConta ? (
+                <div className="flex items-center gap-2 text-sm text-muted py-1">
+                  <Loader2 size={14} className="animate-spin" />
+                  Carregando dados da conta…
+                </div>
+              ) : !conta ? (
+                <p className="text-xs" style={{ color: "var(--danger)" }}>
+                  Não foi possível carregar a conta.
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-[0.7rem] text-muted mb-1">E-mail</div>
+                    {conta.emailFakeInterno ? (
+                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                        <Mail size={14} className="text-muted flex-shrink-0" />
+                        <span className="flex-1 text-sm text-muted italic">
+                          Usuário não cadastrou nenhum email
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                          <Mail size={14} className="text-muted flex-shrink-0" />
+                          <span className="flex-1 text-sm text-secondary break-all">
+                            {conta.email}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-[0.7rem]">
+                          {conta.emailVerificado ? (
+                            <span
+                              className="inline-flex items-center gap-1"
+                              style={{ color: "var(--success)" }}
+                            >
+                              <ShieldCheck size={11} /> Verificado
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1"
+                              style={{ color: "var(--warning)" }}
+                            >
+                              <AlertTriangle size={11} /> Não verificado
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-[0.7rem] text-muted mb-1">Senha</div>
+                    {conta.senhaPadrao && conta.senhaPadraoValor ? (
+                      <>
+                        <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                          <Lock size={14} className="text-muted flex-shrink-0" />
+                          <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                            {conta.senhaPadraoValor}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard
+                                .writeText(conta.senhaPadraoValor!)
+                                .then(() => {
+                                  setCopiouSenhaCard(true);
+                                  setTimeout(() => setCopiouSenhaCard(false), 2000);
+                                });
+                            }}
+                            className="btn-ghost p-1 rounded"
+                            aria-label="Copiar senha"
+                          >
+                            {copiouSenhaCard ? (
+                              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                        <div
+                          className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                          style={{ color: "var(--warning)" }}
+                        >
+                          <AlertTriangle size={11} /> Senha padrão — usuário ainda não trocou.
+                        </div>
+                      </>
+                    ) : conta.senhaPadrao ? (
+                      <div
+                        className="flex items-start gap-2 text-xs rounded-md px-3 py-2 leading-relaxed"
+                        style={{
+                          backgroundColor: "rgba(245,158,11,0.08)",
+                          color: "var(--warning)",
+                          border: "1px solid rgba(245,158,11,0.2)",
+                        }}
+                      >
+                        <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                        <span>
+                          Senha padrão sem valor disponível. Use “Resetar senha” pra gerar uma nova.
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+                        style={{
+                          backgroundColor: "rgba(34,197,94,0.08)",
+                          color: "var(--success)",
+                          border: "1px solid rgba(34,197,94,0.2)",
+                        }}
+                      >
+                        <Lock size={13} className="flex-shrink-0" />
+                        <span>Senha já alterada pelo usuário.</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Privacidade (read-only; edita no formulário) */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
+                Privacidade
+              </div>
+              {(() => {
+                const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
+                const grupos = [
+                  { label: "Orçamentos", ver: priv.orcamentosVer, age: priv.orcamentosCriar, ageLabel: "Criar" },
+                  { label: "Vendas", ver: priv.vendasVer, age: priv.vendasCriar, ageLabel: "Fechar" },
+                  { label: "Financeiro", ver: priv.financeiroVer, age: priv.financeiroInformar, ageLabel: "Informar" },
+                  { label: "Contratos", ver: priv.contratosVer, age: priv.contratosCriar, ageLabel: "Criar" },
+                ];
+                return (
+                  <div className="flex flex-col gap-2">
+                    {grupos.map((g) => (
+                      <div key={g.label} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-secondary">{g.label}</span>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={`badge ${g.ver ? "badge-success" : "badge-neutral"}`}
+                            style={g.ver ? undefined : { opacity: 0.45 }}
+                          >
+                            Ver
+                          </span>
+                          <span
+                            className={`badge ${g.age ? "badge-success" : "badge-neutral"}`}
+                            style={g.age ? undefined : { opacity: 0.45 }}
+                          >
+                            {g.ageLabel}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-secondary">Contatos</span>
+                      <span
+                        className={`badge ${priv.contatos === "todos" ? "badge-info" : "badge-neutral"}`}
+                      >
+                        {priv.contatos === "todos" ? "Toda a agência" : "Só dos shows dele"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-secondary inline-flex items-center gap-1">
+                        <Lock size={11} /> Agenda
+                      </span>
+                      <span className="text-xs text-muted">Sempre só a dele</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Membros da equipe que atendem o DJ */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                <Users size={12} style={{ color: "var(--module-agencia)" }} />
+                Membros da equipe
+              </div>
+              {(() => {
+                const membros = equipe.filter(
+                  (m) =>
+                    m.ativo &&
+                    ((m.funcoes.vendedor ?? []).includes(djSelecionado.id) ||
+                      (m.funcoes.financeiro ?? []).includes(djSelecionado.id) ||
+                      (m.funcoes.produtor ?? []).includes(djSelecionado.id))
+                );
+                if (membros.length === 0)
+                  return (
+                    <div className="text-sm text-muted">
+                      Nenhum membro da equipe atende este artista ainda.
+                    </div>
+                  );
+                return (
+                  <div className="flex flex-col gap-2">
+                    {membros.map((m) => {
+                      const papeis = (
+                        ["vendedor", "financeiro", "produtor"] as const
+                      ).filter((p) => (m.funcoes[p] ?? []).includes(djSelecionado.id));
+                      return (
+                        <div key={m.id} className="flex items-center gap-2">
+                          <span
+                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold text-white flex-shrink-0"
+                            style={{ background: "var(--border-strong)" }}
+                          >
+                            {m.nome.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-primary truncate">{m.nome}</div>
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {papeis.map((p) => (
+                                <span
+                                  key={p}
+                                  className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
+                                  style={{
+                                    backgroundColor: `${LABELS_PAPEL_EQUIPE[p].cor}22`,
+                                    color: LABELS_PAPEL_EQUIPE[p].cor,
+                                  }}
+                                >
+                                  {LABELS_PAPEL_EQUIPE[p].nome}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Rider de camarim */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Rider de camarim ({(djSelecionado.riderCamarim ?? []).length}/
+                {LIMITE_RIDER_CAMARIM})
+              </div>
+              {(djSelecionado.riderCamarim ?? []).length === 0 ? (
+                <div className="text-sm text-muted">Nenhum item configurado.</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {(djSelecionado.riderCamarim ?? []).map((item, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Rider de efeitos */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Rider de efeitos ({(djSelecionado.riderEfeitos ?? []).length}/
+                {LIMITE_RIDER_EFEITOS})
+              </div>
+              {(djSelecionado.riderEfeitos ?? []).length === 0 ? (
+                <div className="text-sm text-muted">Nenhum item configurado.</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {(djSelecionado.riderEfeitos ?? []).map((item, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Taxa de agência */}
+            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                {(djSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
+                  <Percent size={12} style={{ color: "var(--module-agencia)" }} />
+                ) : (
+                  <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
+                )}
+                Taxa de agência
+              </div>
+              {(() => {
+                const modo = djSelecionado.taxaModo ?? "sem-taxa";
+                if (modo === "sem-taxa")
+                  return <div className="text-sm text-muted">Sem taxa</div>;
+                const val = djSelecionado.taxaValor;
+                const sufixo =
+                  modo === "perc-fixa" && val !== undefined
+                    ? ` ${val}%`
+                    : modo === "valor-fixo" && val !== undefined
+                    ? ` R$ ${val.toFixed(2)}`
+                    : "";
+                return (
+                  <div>
+                    <div className="text-base font-semibold text-primary">
+                      {LABELS_TAXA_MODO[modo]}
+                      {sufixo}
+                    </div>
+                    {(modo === "perc-variavel" || modo === "valor-variavel") && (
+                      <div className="text-xs text-muted mt-0.5">
+                        Valor definido a cada orçamento.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Mini-lixeira */}
       {lixeiraArtistas.length > 0 && (
@@ -503,12 +1098,12 @@ export default function AbaArtistas() {
       )}
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
-        <strong className="text-primary">Ordem:</strong> arraste pelo{" "}
-        <span className="inline-flex items-center gap-0.5 font-mono">
-          <GripVertical size={11} />
+        <strong className="text-primary">Ordem:</strong> clique em{" "}
+        <span className="inline-flex items-center gap-0.5 font-medium">
+          <GripVertical size={11} /> Reordenar
         </span>{" "}
-        à esquerda pra reordenar — a ordem reflete na sidebar de DJs e em
-        todos os filtros do app.
+        na barra de cima e arraste os avatares — a ordem reflete na sidebar
+        de DJs e em todos os filtros do app.
         <br />
         <strong className="text-primary">Login do artista:</strong> aparece
         ao lado do nome (clique pra copiar). Fica salvo no sistema e você
@@ -560,46 +1155,7 @@ export default function AbaArtistas() {
         />
       )}
 
-      {/* Modal de edição */}
-      {editando && (
-        <ModalEditarArtista
-          artista={editando}
-          slugAgencia={slugAgencia}
-          onCancelar={() => setEditando(null)}
-          onSalvo={() => {
-            setEditando(null);
-            setToast({ msg: "Artista atualizado.", tipo: "sucesso" });
-          }}
-          onResetarSenha={async () => {
-            const novaSenha = await resetarSenhaArtista(editando.id);
-            setEditando(null);
-            setCredenciaisGeradas({
-              nomeArtista: editando.nome,
-              username: "—",
-              senha: novaSenha,
-            });
-          }}
-          // Listas pra validação inline — excluem o próprio editando
-          // (id na lista ativa, ou match exato de username na lixeira)
-          // pra não colidir consigo mesmo.
-          nomesExistentes={artistas
-            .filter((a) => a.id !== editando.id)
-            .map((a) => a.name.toLowerCase())}
-          nomesNaLixeira={lixeiraArtistas
-            .filter((it) => it.artista.id !== editando.id)
-            .map((it) => it.artista.name.toLowerCase())}
-          usernamesExistentes={artistas
-            .filter((a) => a.id !== editando.id)
-            .map((a) => extrairRaizUsername(a.username, slugAgencia))
-            .filter(Boolean)}
-          usernamesNaLixeira={lixeiraArtistas
-            .filter((it) => it.artista.id !== editando.id)
-            .map((it) =>
-              extrairRaizUsername(it.artista.username, slugAgencia)
-            )
-            .filter(Boolean)}
-        />
-      )}
+      {/* A edição do artista é renderizada inline dentro do perfil (acima). */}
 
       {/* Modal de credenciais geradas */}
       {credenciaisGeradas && (
@@ -1174,6 +1730,8 @@ type EditarProps = {
   nomesNaLixeira: string[];
   usernamesExistentes: string[];
   usernamesNaLixeira: string[];
+  /** Render inline (sem overlay de modal) — usado dentro do perfil da Agência. */
+  modoInline?: boolean;
 };
 
 type DadosConta = {
@@ -1195,6 +1753,7 @@ function ModalEditarArtista({
   nomesNaLixeira,
   usernamesExistentes,
   usernamesNaLixeira,
+  modoInline = false,
 }: EditarProps) {
   const { atualizarArtista } = useWorkspace();
 
@@ -1234,6 +1793,7 @@ function ModalEditarArtista({
   );
   const [riderCamarim, setRiderCamarim] = useState<string[]>(artista.riderCamarim);
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>(artista.riderEfeitos);
+  const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
 
   // Dados da conta (email + verificado) — async ao abrir
   const [conta, setConta] = useState<DadosConta | null>(null);
@@ -1364,6 +1924,7 @@ function ModalEditarArtista({
             : undefined,
         riderCamarim,
         riderEfeitos,
+        privacidade,
       };
       // Username e email só se mudaram (evita trabalho desnecessário no backend)
       if (usernameMudou) {
@@ -1381,20 +1942,19 @@ function ModalEditarArtista({
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
-      onClick={onCancelar}
-    >
+  const box = (
       <div
-        className="bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
-        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
-        onClick={(e) => e.stopPropagation()}
+        className={
+          modoInline
+            ? "bg-surface border border-border rounded-lg w-full"
+            : "bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
+        }
+        style={modoInline ? undefined : { boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        onClick={modoInline ? undefined : (e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <Pencil size={16} style={{ color: "var(--module-vendas)" }} />
+            <Pencil size={16} style={{ color: "var(--module-agencia)" }} />
             <div className="section-title">Editar {artista.nome}</div>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
@@ -1830,6 +2390,124 @@ function ModalEditarArtista({
             />
           </Secao>
 
+          {/* Seção 7 — Privacidade (permissões do DJ) */}
+          <Secao titulo="Privacidade — o que ele pode ver/fazer">
+            <div className="flex flex-col gap-1.5">
+              <TogglePriv
+                label="Ver orçamentos"
+                sub="Vê os orçamentos dele"
+                valor={privacidade.orcamentosVer}
+                onChange={(v) =>
+                  setPrivacidade((p) => ({
+                    ...p,
+                    orcamentosVer: v,
+                    orcamentosCriar: v ? p.orcamentosCriar : false,
+                  }))
+                }
+              />
+              <TogglePriv
+                label="Criar orçamentos"
+                sub="Pode gerar orçamento"
+                valor={privacidade.orcamentosCriar}
+                disabled={!privacidade.orcamentosVer}
+                onChange={(v) => setPrivacidade((p) => ({ ...p, orcamentosCriar: v }))}
+              />
+              <TogglePriv
+                label="Ver vendas"
+                sub="Vê o histórico de vendas dele"
+                valor={privacidade.vendasVer}
+                onChange={(v) =>
+                  setPrivacidade((p) => ({
+                    ...p,
+                    vendasVer: v,
+                    vendasCriar: v ? p.vendasCriar : false,
+                  }))
+                }
+              />
+              <TogglePriv
+                label="Fechar vendas"
+                sub="Pode concretizar venda"
+                valor={privacidade.vendasCriar}
+                disabled={!privacidade.vendasVer}
+                onChange={(v) => setPrivacidade((p) => ({ ...p, vendasCriar: v }))}
+              />
+              <TogglePriv
+                label="Ver financeiro"
+                sub="Vê o financeiro dele"
+                valor={privacidade.financeiroVer}
+                onChange={(v) =>
+                  setPrivacidade((p) => ({
+                    ...p,
+                    financeiroVer: v,
+                    financeiroInformar: v ? p.financeiroInformar : false,
+                  }))
+                }
+              />
+              <TogglePriv
+                label="Informar pagamento"
+                sub="Pode registrar pagamento no financeiro"
+                valor={privacidade.financeiroInformar}
+                disabled={!privacidade.financeiroVer}
+                onChange={(v) => setPrivacidade((p) => ({ ...p, financeiroInformar: v }))}
+              />
+              <TogglePriv
+                label="Ver contratos"
+                sub="Vê os contratos dele"
+                valor={privacidade.contratosVer}
+                onChange={(v) =>
+                  setPrivacidade((p) => ({
+                    ...p,
+                    contratosVer: v,
+                    contratosCriar: v ? p.contratosCriar : false,
+                  }))
+                }
+              />
+              <TogglePriv
+                label="Criar contratos"
+                sub="Pode gerar contrato"
+                valor={privacidade.contratosCriar}
+                disabled={!privacidade.contratosVer}
+                onChange={(v) => setPrivacidade((p) => ({ ...p, contratosCriar: v }))}
+              />
+
+              {/* Contatos */}
+              <div className="p-2.5 rounded-md border border-border bg-elevated">
+                <div className="text-sm font-medium text-primary mb-2">
+                  Contatos que ele enxerga
+                </div>
+                <div className="pill-group">
+                  <button
+                    type="button"
+                    onClick={() => setPrivacidade((p) => ({ ...p, contatos: "proprios" }))}
+                    className={`pill ${privacidade.contatos === "proprios" ? "active" : ""}`}
+                  >
+                    Só dos shows dele
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrivacidade((p) => ({ ...p, contatos: "todos" }))}
+                    className={`pill ${privacidade.contatos === "todos" ? "active" : ""}`}
+                  >
+                    Toda a agência
+                  </button>
+                </div>
+              </div>
+
+              {/* Agenda — trava de sistema */}
+              <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
+                <Lock size={13} className="text-muted flex-shrink-0" />
+                <span className="text-sm text-secondary">
+                  Agenda — ele sempre vê só a própria (trava do sistema).
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-muted mt-2 leading-relaxed">
+              Por enquanto isso <strong className="text-secondary">configura</strong> as
+              permissões. A restrição efetiva no acesso do DJ (esconder/bloquear de fato)
+              entra numa próxima etapa.
+            </p>
+          </Secao>
+
           {erro && (
             <div
               className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
@@ -1864,6 +2542,60 @@ function ModalEditarArtista({
           </button>
         </div>
       </div>
+  );
+
+  if (modoInline) return box;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={onCancelar}
+    >
+      {box}
+    </div>
+  );
+}
+
+/** Toggle on/off de uma permissão (estilo switch), na cor da Agência. */
+function TogglePriv({
+  label,
+  sub,
+  valor,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  sub: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated ${
+        disabled ? "opacity-50" : ""
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-primary">{label}</div>
+        <div className="text-xs text-muted">{sub}</div>
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(!valor)}
+        className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0 disabled:cursor-not-allowed"
+        style={{
+          backgroundColor: valor ? "var(--module-agencia)" : "var(--border-strong)",
+        }}
+        aria-label={label}
+      >
+        <span
+          className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform"
+          style={{ transform: valor ? "translateX(22px)" : "translateX(2px)" }}
+        />
+      </button>
     </div>
   );
 }
