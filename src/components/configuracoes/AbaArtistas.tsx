@@ -2544,7 +2544,632 @@ function ModalEditarArtista({
       </div>
   );
 
-  if (modoInline) return box;
+  // ---- Modo inline: PERFIL EDITÁVEL ----
+  // Mesma cara do perfil read-only do AbaArtistas (header com banda de cor
+  // + avatar 64px, depois um grid de cards), só que com os campos
+  // editáveis e Salvar/Cancelar no topo. Reaproveita exatamente o mesmo
+  // estado/handlers do form em seções (box) acima.
+  const boxInline = (
+    <>
+      {/* Header do perfil — editável */}
+      <div className="card p-0 overflow-hidden">
+        <div
+          style={{
+            height: 4,
+            background: `linear-gradient(90deg, ${cor}, ${cor}66)`,
+          }}
+        />
+        <div className="p-5 flex flex-col gap-4">
+          <div className="flex items-start gap-4 flex-wrap">
+            <span
+              className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${cor}, ${cor}99)`,
+              }}
+            >
+              {(nome.trim().charAt(0) || "?").toUpperCase()}
+            </span>
+            <div className="flex-1 min-w-0">
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Nome do artista"
+                className="campo-input text-xl font-bold"
+              />
+              {colisaoNome === "ativo" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--danger)" }}
+                >
+                  <AlertCircle size={11} />
+                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                </p>
+              )}
+              {colisaoNome === "lixeira" && (
+                <p
+                  className="text-xs mt-1 inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                >
+                  <AlertTriangle size={11} />
+                  Existe um artista na <strong>lixeira</strong> com esse nome.
+                  Restaure ou apague pra reutilizar.
+                </p>
+              )}
+            </div>
+
+            {/* Ações: Salvar / Cancelar */}
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
+              <button
+                onClick={onCancelar}
+                className="btn btn-secondary text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvar}
+                disabled={enviando || temColisao}
+                className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                title={
+                  temColisao
+                    ? "Resolva os avisos de nome/login antes de salvar"
+                    : undefined
+                }
+              >
+                <Check size={14} />
+                {enviando ? "Salvando..." : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+
+          {/* Corpo do header: cor + cidade */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <SeletorDeCor cor={cor} onChange={setCor} />
+            <Campo label="Cidade onde reside">
+              <CidadeIBGEAutocomplete
+                value={cidade}
+                onChange={setCidade}
+                placeholder="Cidade onde reside"
+              />
+            </Campo>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid de cards editáveis */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {/* Acesso ao sistema */}
+        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
+            Acesso ao sistema
+          </div>
+
+          {/* Login (username) */}
+          <Campo label="Login (username)">
+            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              {/* Input com largura dinâmica (em ch + font-mono) — o
+                  sufixo da agência fica colado na ponta do que foi
+                  digitado, mesmo padrão do cadastro novo. */}
+              <input
+                value={usernameRaiz}
+                onChange={(e) =>
+                  setUsernameRaiz(
+                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                  )
+                }
+                placeholder="djlunar"
+                style={{
+                  width: `${Math.max(
+                    usernameRaiz.length || "djlunar".length,
+                    4
+                  )}ch`,
+                }}
+                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+              />
+              <span className="text-sm text-muted font-mono whitespace-nowrap">
+                -{slugAgencia}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!usernameValido || !usernameCompleto) return;
+                  navigator.clipboard
+                    .writeText(usernameCompleto)
+                    .then(() => {
+                      setCopiouUsername(true);
+                      setTimeout(() => setCopiouUsername(false), 2000);
+                    });
+                }}
+                disabled={!usernameValido}
+                className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Copiar username completo"
+                title={
+                  usernameValido
+                    ? "Copiar username completo"
+                    : "Preencha um username válido pra copiar"
+                }
+              >
+                {copiouUsername ? (
+                  <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                ) : (
+                  <Copy size={14} />
+                )}
+              </button>
+            </div>
+            {!usernameValido && usernameRaiz.length > 0 && (
+              <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
+                Use 3+ chars (letras, números, hífen).
+              </p>
+            )}
+            {usernameValido && colisaoUsername === "ativo" && (
+              <p
+                className="text-xs mt-1 inline-flex items-center gap-1"
+                style={{ color: "var(--danger)" }}
+              >
+                <AlertCircle size={11} />
+                Esse login já está em uso por outro artista ATIVO.
+              </p>
+            )}
+            {usernameValido && colisaoUsername === "lixeira" && (
+              <p
+                className="text-xs mt-1 inline-flex items-center gap-1"
+                style={{ color: "var(--warning)" }}
+              >
+                <AlertTriangle size={11} />
+                Esse login pertence a um artista na <strong>lixeira</strong>.
+                Restaure ou apague pra reutilizar.
+              </p>
+            )}
+            {usernameMudou && usernameValido && !colisaoUsername && (
+              <div
+                className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
+                style={{
+                  backgroundColor: "rgba(245,158,11,0.08)",
+                  color: "var(--warning)",
+                  border: "1px solid rgba(245,158,11,0.2)",
+                }}
+              >
+                <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  O artista vai precisar usar este novo login na próxima entrada.
+                </span>
+              </div>
+            )}
+          </Campo>
+
+          {/* Conta: e-mail + senha */}
+          {carregandoConta ? (
+            <div className="flex items-center gap-2 text-sm text-muted py-2">
+              <Loader2 size={14} className="animate-spin" />
+              Carregando dados da conta...
+            </div>
+          ) : !conta ? (
+            <p className="text-xs text-danger">
+              Não foi possível carregar os dados da conta.
+            </p>
+          ) : (
+            <>
+              <Campo label="E-mail cadastrado">
+                {editandoEmail ? (
+                  <>
+                    {/* Modo edição: input + cancelar */}
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <input
+                        type="email"
+                        value={emailEditavel}
+                        onChange={(e) => setEmailEditavel(e.target.value)}
+                        placeholder="email@exemplo.com"
+                        className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditandoEmail(false);
+                          // Restaura valor original (vazio se estava fake)
+                          setEmailEditavel(
+                            conta.emailFakeInterno ? "" : conta.email
+                          );
+                        }}
+                        className="text-[0.7rem] text-muted hover:text-secondary underline"
+                      >
+                        Cancelar
+                      </button>
+                      {emailMudou && (
+                        <span
+                          className="text-[0.7rem] inline-flex items-center gap-1"
+                          style={{ color: "var(--warning)" }}
+                        >
+                          <AlertTriangle size={11} />
+                          Salve pra confirmar a troca.
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : conta.emailFakeInterno ? (
+                  <>
+                    {/* Sem e-mail real */}
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <span className="flex-1 text-sm text-muted italic">
+                        Usuário não cadastrou nenhum email
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditandoEmail(true)}
+                      className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
+                      style={{ color: "var(--module-vendas)" }}
+                    >
+                      <Pencil size={11} /> Definir e-mail
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Tem e-mail real — leitura em cinza + editar */}
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <span className="flex-1 text-sm text-secondary break-all">
+                        {conta.email}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5 text-[0.7rem]">
+                      {conta.emailVerificado ? (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--success)" }}
+                        >
+                          <ShieldCheck size={11} />
+                          Verificado
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--warning)" }}
+                        >
+                          <AlertTriangle size={11} />
+                          Não verificado
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditandoEmail(true)}
+                        className="inline-flex items-center gap-1 hover:underline"
+                        style={{ color: "var(--module-vendas)" }}
+                      >
+                        <Pencil size={11} /> Editar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </Campo>
+
+              {/* ---- Senha ---- */}
+              <Campo label="Senha">
+                {conta.senhaPadrao && conta.senhaPadraoValor ? (
+                  <>
+                    {/* Senha padrão conhecida: mostra + botão copiar */}
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Lock size={14} className="text-muted flex-shrink-0" />
+                      <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                        {conta.senhaPadraoValor}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(conta.senhaPadraoValor!)
+                            .then(() => {
+                              setCopiouSenhaPadrao(true);
+                              setTimeout(
+                                () => setCopiouSenhaPadrao(false),
+                                2000
+                              );
+                            });
+                        }}
+                        className="btn-ghost p-1.5 rounded"
+                        aria-label="Copiar senha"
+                      >
+                        {copiouSenhaPadrao ? (
+                          <CheckCircle2
+                            size={14}
+                            style={{ color: "var(--success)" }}
+                          />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                      </button>
+                    </div>
+                    <div
+                      className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1"
+                      style={{ color: "var(--warning)" }}
+                    >
+                      <AlertTriangle size={11} />
+                      Senha padrão gerada pelo sistema — usuário ainda não
+                      trocou.
+                    </div>
+                  </>
+                ) : conta.senhaPadrao ? (
+                  <div
+                    className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
+                    style={{
+                      backgroundColor: "rgba(245,158,11,0.08)",
+                      color: "var(--warning)",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                    }}
+                  >
+                    <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                    <span>
+                      Usuário ainda está com a <strong>senha padrão</strong>{" "}
+                      gerada pelo sistema, mas o valor não está disponível
+                      (artista criado antes desta versão). Gere uma nova
+                      abaixo pra conseguir copiar.
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
+                    style={{
+                      backgroundColor: "rgba(34,197,94,0.08)",
+                      color: "var(--success)",
+                      border: "1px solid rgba(34,197,94,0.2)",
+                    }}
+                  >
+                    <Lock size={13} className="flex-shrink-0" />
+                    <span>Senha já foi alterada pelo usuário.</span>
+                  </div>
+                )}
+              </Campo>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Gerar uma nova senha aleatória pro artista ${artista.nome}?`
+                    )
+                  ) {
+                    void onResetarSenha();
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated"
+                style={{
+                  borderColor: "var(--module-vendas)",
+                  color: "var(--module-vendas)",
+                }}
+              >
+                <KeyRound size={14} />
+                Gerar nova senha aleatória
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Privacidade */}
+        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
+            Privacidade
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <TogglePriv
+              label="Ver orçamentos"
+              sub="Vê os orçamentos dele"
+              valor={privacidade.orcamentosVer}
+              onChange={(v) =>
+                setPrivacidade((p) => ({
+                  ...p,
+                  orcamentosVer: v,
+                  orcamentosCriar: v ? p.orcamentosCriar : false,
+                }))
+              }
+            />
+            <TogglePriv
+              label="Criar orçamentos"
+              sub="Pode gerar orçamento"
+              valor={privacidade.orcamentosCriar}
+              disabled={!privacidade.orcamentosVer}
+              onChange={(v) => setPrivacidade((p) => ({ ...p, orcamentosCriar: v }))}
+            />
+            <TogglePriv
+              label="Ver vendas"
+              sub="Vê o histórico de vendas dele"
+              valor={privacidade.vendasVer}
+              onChange={(v) =>
+                setPrivacidade((p) => ({
+                  ...p,
+                  vendasVer: v,
+                  vendasCriar: v ? p.vendasCriar : false,
+                }))
+              }
+            />
+            <TogglePriv
+              label="Fechar vendas"
+              sub="Pode concretizar venda"
+              valor={privacidade.vendasCriar}
+              disabled={!privacidade.vendasVer}
+              onChange={(v) => setPrivacidade((p) => ({ ...p, vendasCriar: v }))}
+            />
+            <TogglePriv
+              label="Ver financeiro"
+              sub="Vê o financeiro dele"
+              valor={privacidade.financeiroVer}
+              onChange={(v) =>
+                setPrivacidade((p) => ({
+                  ...p,
+                  financeiroVer: v,
+                  financeiroInformar: v ? p.financeiroInformar : false,
+                }))
+              }
+            />
+            <TogglePriv
+              label="Informar pagamento"
+              sub="Pode registrar pagamento no financeiro"
+              valor={privacidade.financeiroInformar}
+              disabled={!privacidade.financeiroVer}
+              onChange={(v) => setPrivacidade((p) => ({ ...p, financeiroInformar: v }))}
+            />
+            <TogglePriv
+              label="Ver contratos"
+              sub="Vê os contratos dele"
+              valor={privacidade.contratosVer}
+              onChange={(v) =>
+                setPrivacidade((p) => ({
+                  ...p,
+                  contratosVer: v,
+                  contratosCriar: v ? p.contratosCriar : false,
+                }))
+              }
+            />
+            <TogglePriv
+              label="Criar contratos"
+              sub="Pode gerar contrato"
+              valor={privacidade.contratosCriar}
+              disabled={!privacidade.contratosVer}
+              onChange={(v) => setPrivacidade((p) => ({ ...p, contratosCriar: v }))}
+            />
+
+            {/* Contatos */}
+            <div className="p-2.5 rounded-md border border-border bg-elevated">
+              <div className="text-sm font-medium text-primary mb-2">
+                Contatos que ele enxerga
+              </div>
+              <div className="pill-group">
+                <button
+                  type="button"
+                  onClick={() => setPrivacidade((p) => ({ ...p, contatos: "proprios" }))}
+                  className={`pill ${privacidade.contatos === "proprios" ? "active" : ""}`}
+                >
+                  Só dos shows dele
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivacidade((p) => ({ ...p, contatos: "todos" }))}
+                  className={`pill ${privacidade.contatos === "todos" ? "active" : ""}`}
+                >
+                  Toda a agência
+                </button>
+              </div>
+            </div>
+
+            {/* Agenda — trava de sistema */}
+            <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
+              <Lock size={13} className="text-muted flex-shrink-0" />
+              <span className="text-sm text-secondary">
+                Agenda — ele sempre vê só a própria (trava do sistema).
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Rider de camarim */}
+        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Rider de camarim ({riderCamarim.length}/{LIMITE_RIDER_CAMARIM})
+          </div>
+          <ListaRider
+            itens={riderCamarim}
+            onChange={setRiderCamarim}
+            catalogoSugestoes={CATALOGO_CAMARIM}
+            placeholderItem="Ex: Jack Daniels"
+            limite={LIMITE_RIDER_CAMARIM}
+          />
+        </div>
+
+        {/* Rider de efeitos */}
+        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Rider de efeitos ({riderEfeitos.length}/{LIMITE_RIDER_EFEITOS})
+          </div>
+          <ListaRider
+            itens={riderEfeitos}
+            onChange={setRiderEfeitos}
+            catalogoSugestoes={CATALOGO_EFEITOS}
+            placeholderItem="Ex: CO²"
+            limite={LIMITE_RIDER_EFEITOS}
+          />
+        </div>
+
+        {/* Taxa de agência */}
+        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            {taxaModo.startsWith("perc") ? (
+              <Percent size={12} style={{ color: "var(--module-agencia)" }} />
+            ) : (
+              <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
+            )}
+            Taxa de agência
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {MODOS_TAXA.map((m) => {
+              const sel = taxaModo === m;
+              return (
+                <label
+                  key={m}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer border transition-colors ${
+                    sel
+                      ? "border-border-strong bg-elevated"
+                      : "border-border hover:border-border-strong"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="taxaModoEditInline"
+                    checked={sel}
+                    onChange={() => {
+                      setTaxaModo(m);
+                      if (m !== "perc-fixa" && m !== "valor-fixo") {
+                        setTaxaValor("");
+                      }
+                    }}
+                  />
+                  <span className="text-sm flex-1">{LABELS_TAXA_MODO[m]}</span>
+                  {sel && (m === "perc-fixa" || m === "valor-fixo") && (
+                    <div className="flex items-center gap-1">
+                      {m === "valor-fixo" && (
+                        <span className="text-xs text-muted">R$</span>
+                      )}
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={taxaValor}
+                        onChange={(e) => setTaxaValor(e.target.value)}
+                        placeholder={m === "perc-fixa" ? "15" : "500"}
+                        className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none focus:border-border-strong"
+                        onClick={(e) => e.preventDefault()}
+                      />
+                      {m === "perc-fixa" && (
+                        <span className="text-xs text-muted">%</span>
+                      )}
+                    </div>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {erro && (
+        <div
+          className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+          style={{
+            backgroundColor: "rgba(239,68,68,0.08)",
+            color: "var(--danger)",
+            border: "1px solid rgba(239,68,68,0.3)",
+          }}
+        >
+          <AlertCircle size={13} className="flex-shrink-0" />
+          {erro}
+        </div>
+      )}
+    </>
+  );
+
+  if (modoInline) return boxInline;
 
   return (
     <div
@@ -2592,7 +3217,7 @@ function TogglePriv({
         aria-label={label}
       >
         <span
-          className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform"
+          className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform"
           style={{ transform: valor ? "translateX(22px)" : "translateX(2px)" }}
         />
       </button>
