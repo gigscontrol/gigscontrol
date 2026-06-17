@@ -14,6 +14,7 @@ import {
   atualizarVendaRow,
   removerVendaRow,
 } from "@/lib/repositories/vendas.repo";
+import { sincronizarShowNoGoogle } from "@/lib/google/calendario";
 import {
   listarParcelasDaVenda,
   listarTodasParcelas,
@@ -225,6 +226,20 @@ export async function criarVendaCompleta(
 
     // Persistir show_id na venda
     await atualizarVendaRow(supabase, vendaRow.id, { show_id: showIdFinal });
+
+    // Google Calendar (best-effort): cria o evento de dia inteiro no
+    // calendário do artista conectado. Falha aqui NÃO quebra a venda.
+    if (showIdFinal && input.artist_id) {
+      try {
+        await sincronizarShowNoGoogle(supabase, {
+          artistId: input.artist_id,
+          showId: showIdFinal,
+          input,
+        });
+      } catch (e) {
+        console.error("[google-calendar] falha ao sincronizar show:", e);
+      }
+    }
   }
 
   // Retorno consistente: re-busca a venda já com show_id e parcelas resolvidas
