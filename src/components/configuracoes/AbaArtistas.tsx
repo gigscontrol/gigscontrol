@@ -284,7 +284,7 @@ export default function AbaArtistas() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div
-            className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="h-10 w-10 rounded flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: "rgba(99,102,241,0.12)", color: "var(--module-agencia)" }}
           >
             <Music size={20} />
@@ -705,7 +705,7 @@ export default function AbaArtistas() {
           {/* Grid de cards do perfil */}
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Acesso */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
                 Acesso ao sistema
@@ -846,7 +846,7 @@ export default function AbaArtistas() {
             </div>
 
             {/* Privacidade (read-only; edita no formulário) */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
                 Privacidade
@@ -896,7 +896,7 @@ export default function AbaArtistas() {
             </div>
 
             {/* Membros da equipe que atendem o DJ */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--module-agencia)" }} />
                 Membros da equipe
@@ -955,7 +955,7 @@ export default function AbaArtistas() {
             </div>
 
             {/* Rider de camarim */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
                 Rider de camarim ({(djSelecionado.riderCamarim ?? []).length}/
                 {LIMITE_RIDER_CAMARIM})
@@ -977,7 +977,7 @@ export default function AbaArtistas() {
             </div>
 
             {/* Rider de efeitos */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
                 Rider de efeitos ({(djSelecionado.riderEfeitos ?? []).length}/
                 {LIMITE_RIDER_EFEITOS})
@@ -999,7 +999,7 @@ export default function AbaArtistas() {
             </div>
 
             {/* Taxa de agência */}
-            <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 {(djSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
                   <Percent size={12} style={{ color: "var(--module-agencia)" }} />
@@ -1383,8 +1383,8 @@ export function ModalNovoArtista({
     <div
       className={
         modoInline
-          ? "bg-surface border border-border rounded-lg w-full"
-          : "bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
+          ? "bg-surface border border-border rounded w-full"
+          : "bg-surface border border-border rounded w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
       }
       style={modoInline ? undefined : { boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
       onClick={modoInline ? undefined : (e) => e.stopPropagation()}
@@ -1944,8 +1944,8 @@ function ModalEditarArtista({
       <div
         className={
           modoInline
-            ? "bg-surface border border-border rounded-lg w-full"
-            : "bg-surface border border-border rounded-lg w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
+            ? "bg-surface border border-border rounded w-full"
+            : "bg-surface border border-border rounded w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
         }
         style={modoInline ? undefined : { boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
         onClick={modoInline ? undefined : (e) => e.stopPropagation()}
@@ -2636,7 +2636,7 @@ function ModalEditarArtista({
       {/* Grid de cards editáveis */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Acesso ao sistema */}
-        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
             Acesso ao sistema
@@ -2947,7 +2947,7 @@ function ModalEditarArtista({
         </div>
 
         {/* Privacidade */}
-        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
             Privacidade
@@ -3042,7 +3042,7 @@ function ModalEditarArtista({
         </div>
 
         {/* Rider de camarim */}
-        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Rider de camarim ({riderCamarim.length}/{LIMITE_RIDER_CAMARIM})
           </div>
@@ -3056,7 +3056,7 @@ function ModalEditarArtista({
         </div>
 
         {/* Rider de efeitos */}
-        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">
             Rider de efeitos ({riderEfeitos.length}/{LIMITE_RIDER_EFEITOS})
           </div>
@@ -3070,7 +3070,7 @@ function ModalEditarArtista({
         </div>
 
         {/* Taxa de agência */}
-        <div className="bg-surface-2 border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             {taxaModo.startsWith("perc") ? (
               <Percent size={12} style={{ color: "var(--module-agencia)" }} />
@@ -3301,7 +3301,7 @@ export function ModalCredenciais({
       style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
     >
       <div
-        className="bg-surface border border-border rounded-lg w-full max-w-[420px]"
+        className="bg-surface border border-border rounded w-full max-w-[420px]"
         style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
       >
         <div className="p-5 border-b border-border flex flex-col items-center text-center">
