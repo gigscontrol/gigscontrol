@@ -25,6 +25,8 @@ import {
   Loader2,
   GripVertical,
   Lock,
+  Eye,
+  EyeOff,
   Search,
   Users,
 } from "lucide-react";
@@ -196,6 +198,12 @@ export default function AbaArtistas() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "suspensos">("todos");
   const [copiouSenhaCard, setCopiouSenhaCard] = useState(false);
+  // Senha mascarada por padrão no card de acesso; o olhinho revela. Reseta ao
+  // trocar de DJ pra não vazar a senha de um artista ao abrir o próximo.
+  const [senhaReveladaCard, setSenhaReveladaCard] = useState(false);
+  useEffect(() => {
+    setSenhaReveladaCard(false);
+  }, [djSelecionadoId]);
 
   // Mantém uma seleção válida (default = primeiro, ou o último visto).
   useEffect(() => {
@@ -783,9 +791,22 @@ export default function AbaArtistas() {
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                           <Lock size={14} className="text-muted flex-shrink-0" />
-                          <span className="font-mono text-sm text-primary flex-1 break-all select-all">
-                            {conta.senhaPadraoValor}
+                          <span
+                            className={`font-mono text-sm text-primary flex-1 break-all ${
+                              senhaReveladaCard ? "select-all" : "tracking-widest"
+                            }`}
+                          >
+                            {senhaReveladaCard ? conta.senhaPadraoValor : "••••••••••"}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setSenhaReveladaCard((v) => !v)}
+                            className="btn-ghost p-1 rounded flex-shrink-0"
+                            aria-label={senhaReveladaCard ? "Ocultar senha" : "Revelar senha"}
+                            title={senhaReveladaCard ? "Ocultar senha" : "Revelar senha"}
+                          >
+                            {senhaReveladaCard ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -796,7 +817,7 @@ export default function AbaArtistas() {
                                   setTimeout(() => setCopiouSenhaCard(false), 2000);
                                 });
                             }}
-                            className="btn-ghost p-1 rounded"
+                            className="btn-ghost p-1 rounded flex-shrink-0"
                             aria-label="Copiar senha"
                           >
                             {copiouSenhaCard ? (
