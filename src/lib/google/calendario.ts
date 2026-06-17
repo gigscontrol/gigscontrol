@@ -156,5 +156,8 @@ export async function sincronizarShowNoGoogle(
     .update({ google_event_id: eventId })
     .eq("id", showId);
 
+  console.log(
+    `[google-calendar] evento criado ${eventId} (show ${showId}, calendar ${conexao.calendarId})`
+  );
   return { eventId };
 }
