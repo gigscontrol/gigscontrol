@@ -287,7 +287,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [allDays]);
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full p-4 lg:p-8">
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Agenda de Shows"
         subtitle={`Visão dinâmica — ${activeDateRange}`}

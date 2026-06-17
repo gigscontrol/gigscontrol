@@ -315,7 +315,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // ============ TELA 3 ============
   if (salvos) {
     return (
-      <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
         <PageHeader
           title={salvos.length === 1 ? "Orçamento criado" : `${salvos.length} orçamentos criados`}
           subtitle={
@@ -429,7 +429,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const djsDisponiveis = artistas.filter((d) => !blocos.some((b) => b.djId === d.id));
 
   return (
-    <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8">
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Novo Orçamento"
         subtitle="Você pode incluir mais de um DJ — cada um gera um orçamento próprio"

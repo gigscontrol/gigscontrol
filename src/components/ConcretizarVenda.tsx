@@ -419,7 +419,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   }, [djEfetivoOrc?.id]);
 
   return (
-    <div className="max-w-[900px] mx-auto w-full p-6 lg:p-8 pb-32">
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8 pb-32">
       <button
         onClick={onCancel}
         className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm"
