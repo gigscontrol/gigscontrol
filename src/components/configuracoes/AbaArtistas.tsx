@@ -328,8 +328,10 @@ export default function AbaArtistas() {
         </div>
       )}
 
-      {/* Top bar de troca de DJ */}
-      <div className="sticky top-0 z-20 -mx-6 px-6 lg:-mx-8 lg:px-8 py-3 bg-surface border-b border-border">
+      {/* Top bar de troca de DJ — alinhada com os cards (sem sangrar pras
+          bordas do container; o full-bleed antigo fazia o painel "passar"
+          32px de cada lado além do conteúdo). */}
+      <div className="sticky top-0 z-20 py-3 bg-surface border-b border-border">
         <div className="flex items-center gap-3">
           <div className="flex-1 flex items-center gap-2 overflow-x-auto py-1">
             {filaChips.map((a) => {
