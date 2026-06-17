@@ -6,6 +6,7 @@ import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
 import { useVendas } from "@/lib/vendas-context";
+import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { mascararCpfCnpj } from "@/lib/formatters";
@@ -20,9 +21,11 @@ type Props = {
 export default function VendaDetalhe({ vendaId, onBack }: Props) {
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, updateVenda } = useVendas();
+  const { shows, updateShow } = useShows();
   const { orcamentos } = useOrcamentos();
   const artistas = useArtistas();
   const [confirmaRemover, setConfirmaRemover] = useState(false);
+  const [processandoShow, setProcessandoShow] = useState(false);
   const [removendo, setRemovendo] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
   // Edição inline de "Informações extras" — herdado do orçamento mas
@@ -48,6 +51,41 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
   }
 
   const dj = artistas.find((d) => d.id === venda.djId);
+  const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
+  const cancelado = show?.status === "cancelado";
+  const showIdLigado = venda.showId;
+
+  async function cancelarOuReativarShow() {
+    if (processandoShow || !showIdLigado) return;
+    if (
+      !cancelado &&
+      !window.confirm(
+        "Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser)."
+      )
+    ) {
+      return;
+    }
+    setProcessandoShow(true);
+    try {
+      await updateShow(showIdLigado, {
+        status: cancelado ? "confirmado" : "cancelado",
+      });
+      setToastMsg({
+        msg: cancelado
+          ? "Show reativado."
+          : "Show cancelado — evento marcado em vermelho no Google.",
+        tipo: "sucesso",
+      });
+    } catch (e) {
+      setToastMsg({
+        msg: (e as Error).message ?? "Falha ao atualizar o show.",
+        tipo: "erro",
+      });
+    } finally {
+      setProcessandoShow(false);
+    }
+  }
+
   const orc = venda.orcamentoId ? orcamentos.find((o) => o.id === venda.orcamentoId) : null;
   const itensCamarim = venda.camarim.filter((i) => i.qtd > 0);
   const itensEfeitos = venda.efeitos.filter((i) => i.qtd > 0);
@@ -85,6 +123,32 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         }
         accentColor={accent}
       />
+
+      {/* Cancelar / reativar o show ligado (reflete a cor no Google Agenda) */}
+      {venda.showId && (
+        <div className="bg-surface border border-border rounded flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Music size={14} style={{ color: cancelado ? "var(--danger)" : accent }} />
+            <span className="text-sm text-secondary">
+              {cancelado ? "Show cancelado" : "Show na agenda"}
+            </span>
+            {cancelado && <span className="badge badge-danger">Cancelado</span>}
+          </div>
+          <button
+            type="button"
+            onClick={cancelarOuReativarShow}
+            disabled={processandoShow}
+            className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+            style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+          >
+            {processandoShow
+              ? "Salvando…"
+              : cancelado
+              ? "Reativar show"
+              : "Cancelar show"}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
         {/* Coluna 1 */}

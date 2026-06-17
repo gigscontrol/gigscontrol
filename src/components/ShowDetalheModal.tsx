@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Building2,
   MapPin,
@@ -56,11 +57,12 @@ export default function ShowDetalheModal({
   onAbrirOrcamento,
   onAbrirVenda,
 }: Props) {
-  const { shows } = useShows();
+  const { shows, updateShow } = useShows();
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const [processando, setProcessando] = useState(false);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
   if (!show) {
@@ -72,6 +74,30 @@ export default function ShowDetalheModal({
   }
 
   const dj = artistas.find((d) => d.id === show.djId);
+  const cancelado = show.status === "cancelado";
+
+  async function cancelarOuReativar() {
+    if (processando || !show) return;
+    if (
+      !cancelado &&
+      !window.confirm(
+        "Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser)."
+      )
+    ) {
+      return;
+    }
+    setProcessando(true);
+    try {
+      await updateShow(show.id, {
+        status: cancelado ? "confirmado" : "cancelado",
+      });
+    } catch (e) {
+      window.alert((e as Error).message ?? "Falha ao atualizar o show.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
   const contratante = show.contratanteId
     ? contratantes.find((c) => String(c.id) === show.contratanteId)
     : null;
@@ -202,6 +228,30 @@ export default function ShowDetalheModal({
             <span className="badge badge-neutral">{LABELS_TIPO_EVENTO[tipoEvento]}</span>
           )}
         </div>
+      </div>
+
+      {/* Cancelar / reativar o show — reflete a cor no Google Agenda */}
+      <div className="flex items-center justify-between gap-2 mb-5">
+        {cancelado ? (
+          <span className="badge badge-danger inline-flex items-center gap-1">
+            <AlertTriangle size={11} /> Show cancelado
+          </span>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={cancelarOuReativar}
+          disabled={processando}
+          className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+          style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+        >
+          {processando
+            ? "Salvando…"
+            : cancelado
+            ? "Reativar show"
+            : "Cancelar show"}
+        </button>
       </div>
 
       <div className="flex flex-col gap-5">

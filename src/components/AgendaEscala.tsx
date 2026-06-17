@@ -58,6 +58,7 @@ const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: stri
   confirmado: { bg: "rgba(34, 197, 94, 0.12)", color: "var(--success)", label: "Confirmado" },
   pendente: { bg: "rgba(239, 68, 68, 0.12)", color: "var(--danger)", label: "Sem contrato" },
   logistica: { bg: "rgba(245, 158, 11, 0.12)", color: "var(--warning)", label: "Logística" },
+  cancelado: { bg: "rgba(239, 68, 68, 0.18)", color: "var(--danger)", label: "Cancelado" },
 };
 
 function StatusBadge({ status }: { status: ShowStatus }) {
@@ -73,15 +74,26 @@ function StatusBadge({ status }: { status: ShowStatus }) {
 }
 
 function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () => void }) {
+  const cancelado = show.status === "cancelado";
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left bg-surface-2 border border-border rounded-md p-2.5 mb-2 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer"
-      style={{ borderLeft: dj ? `3px solid ${dj.color}` : undefined }}
+      className={`w-full text-left bg-surface-2 border border-border rounded-md p-2.5 mb-2 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer ${
+        cancelado ? "opacity-60" : ""
+      }`}
+      style={{
+        borderLeft: `3px solid ${cancelado ? "var(--danger)" : dj ? dj.color : "transparent"}`,
+      }}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span className="text-xs font-bold text-primary truncate">{show.dj}</span>
+        <span
+          className={`text-xs font-bold text-primary truncate ${
+            cancelado ? "line-through" : ""
+          }`}
+        >
+          {show.dj}
+        </span>
         <StatusBadge status={show.status} />
       </div>
 

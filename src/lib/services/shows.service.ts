@@ -17,6 +17,10 @@ import type {
 } from "@/lib/validators/shows.schema";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroShows } from "@/lib/api/permissoes";
+import {
+  marcarEventoCancelado,
+  marcarEventoReativado,
+} from "@/lib/google/calendario";
 
 /**
  * Camada de negócio dos shows.
@@ -79,6 +83,23 @@ export async function atualizarShowPorId(
   input: ShowUpdateInput
 ): Promise<Show> {
   const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+
+  // Google Calendar (best-effort): reflete cancelamento/reativação na COR do
+  // evento. Nunca apaga; falha aqui NÃO quebra a atualização do show.
+  if (input.status === "cancelado") {
+    try {
+      await marcarEventoCancelado(supabase, id);
+    } catch (e) {
+      console.error("[google-calendar] falha ao cancelar evento:", e);
+    }
+  } else if (input.status === "confirmado") {
+    try {
+      await marcarEventoReativado(supabase, id);
+    } catch (e) {
+      console.error("[google-calendar] falha ao reativar evento:", e);
+    }
+  }
+
   return rowParaShow(row);
 }
 

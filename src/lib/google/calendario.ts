@@ -172,14 +172,15 @@ export async function sincronizarShowNoGoogle(
 }
 
 /**
- * Marca o evento do show como CANCELADO: muda a cor pra VERMELHO no Google
- * Calendar. NUNCA apaga o evento — quem apaga é o usuário. Best-effort
- * (pensado pra try/catch). Não faz nada se o show não tem evento sincronizado
- * ou se o artista não está conectado.
+ * Muda a COR do evento do show no Google Calendar (PATCH). NUNCA apaga — quem
+ * apaga é o usuário. Best-effort (pensado pra try/catch). Não faz nada se o
+ * show não tem evento sincronizado ou se o artista não está conectado.
  */
-export async function marcarEventoCancelado(
+async function patchCorEvento(
   supabase: SupabaseClient,
-  showId: string
+  showId: string,
+  colorId: string,
+  rotulo: string
 ): Promise<boolean> {
   const { data } = await supabase
     .from("shows")
@@ -204,14 +205,30 @@ export async function marcarEventoCancelado(
         Authorization: `Bearer ${conexao.accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ colorId: COR_VERMELHO }),
+      body: JSON.stringify({ colorId }),
     }
   );
   if (!res.ok) {
-    throw new Error(`Calendar API (cancelar) ${res.status}: ${await res.text()}`);
+    throw new Error(`Calendar API (${rotulo}) ${res.status}: ${await res.text()}`);
   }
   console.log(
-    `[google-calendar] evento marcado como CANCELADO ${row.google_event_id} (show ${showId})`
+    `[google-calendar] evento ${rotulo} ${row.google_event_id} (show ${showId})`
   );
   return true;
+}
+
+/** Show CANCELADO → evento fica VERMELHO. Nunca apaga. */
+export function marcarEventoCancelado(
+  supabase: SupabaseClient,
+  showId: string
+): Promise<boolean> {
+  return patchCorEvento(supabase, showId, COR_VERMELHO, "CANCELADO");
+}
+
+/** Show REATIVADO (volta a confirmado) → evento volta pra UVA. */
+export function marcarEventoReativado(
+  supabase: SupabaseClient,
+  showId: string
+): Promise<boolean> {
+  return patchCorEvento(supabase, showId, COR_UVA, "reativado");
 }

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { uuidLike } from "./uuid";
 
 /** Status aceitos para um show. */
-const statusSchema = z.enum(["confirmado", "pendente", "logistica"]);
+const statusSchema = z.enum(["confirmado", "pendente", "logistica", "cancelado"]);
 
 /**
  * Schema de criação de show. Todos os FKs vêm como uuid; a data é YYYY-MM-DD.
