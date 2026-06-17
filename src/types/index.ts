@@ -65,7 +65,7 @@ export type DJ = {
   privacidade?: PrivacidadeDj;
 };
 
-export type ShowStatus = "confirmado" | "pendente" | "logistica";
+export type ShowStatus = "confirmado" | "pendente" | "logistica" | "cancelado";
 
 export type Show = {
   id: string;

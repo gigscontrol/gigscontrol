@@ -25,7 +25,13 @@ export type ShowRow = {
 };
 
 function statusValido(s: string | null | undefined): ShowStatus {
-  if (s === "confirmado" || s === "pendente" || s === "logistica") return s;
+  if (
+    s === "confirmado" ||
+    s === "pendente" ||
+    s === "logistica" ||
+    s === "cancelado"
+  )
+    return s;
   return "confirmado";
 }
 

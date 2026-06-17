@@ -35,6 +35,7 @@ import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
 } from "../CidadeIBGEAutocomplete";
 import ColorPicker from "../ColorPicker";
+import CardGoogleCalendar from "./CardGoogleCalendar";
 import {
   useWorkspace,
   LABELS_PAPEL_EQUIPE,
@@ -204,6 +205,32 @@ export default function AbaArtistas() {
   useEffect(() => {
     setSenhaReveladaCard(false);
   }, [djSelecionadoId]);
+
+  // Retorno do OAuth do Google: /api/google/callback redireciona pra cá com
+  // ?google=ok|erro (&artista &email &msg). Mostra um toast, seleciona o
+  // artista conectado e limpa os parâmetros da URL.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("google");
+    if (!g) return;
+    const artista = params.get("artista");
+    if (artista) setDjSelecionadoId(artista);
+    if (g === "ok") {
+      const email = params.get("email");
+      setToast({
+        msg: email ? `Google conectado: ${email}` : "Google conectado!",
+        tipo: "sucesso",
+      });
+    } else {
+      setToast({
+        msg: params.get("msg") ?? "Falha ao conectar o Google.",
+        tipo: "erro",
+      });
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Mantém uma seleção válida (default = primeiro, ou o último visto).
   useEffect(() => {
@@ -974,6 +1001,9 @@ export default function AbaArtistas() {
                 );
               })()}
             </div>
+
+            {/* Google Calendar — conexão da conta por artista (sync de shows) */}
+            <CardGoogleCalendar artistaId={djSelecionado.id} />
 
             {/* Rider de camarim */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
