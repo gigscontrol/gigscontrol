@@ -14,6 +14,13 @@ import { accessTokenValido } from "./conexao";
 
 const CAL_API = "https://www.googleapis.com/calendar/v3/calendars";
 
+// Cores do evento (colorId do Google Calendar):
+const COR_UVA = "3"; // Uva (Grape) — show agendado
+const COR_VERMELHO = "11"; // Tomate (Tomato) — show cancelado
+
+// Sem alarme/lembrete (o cliente não quer notificação).
+const SEM_ALARME = { useDefault: false, overrides: [] as unknown[] };
+
 type ItemQtd = { nome: string; qtd: number };
 
 function addDias(iso: string, n: number): string {
@@ -146,6 +153,8 @@ export async function sincronizarShowNoGoogle(
     // SEMPRE dia inteiro na data agendada (end.date é exclusivo no Google).
     start: { date: input.data_show },
     end: { date: addDias(input.data_show, 1) },
+    colorId: COR_UVA, // show agendado = roxo/uva
+    reminders: SEM_ALARME, // sem alarme
   };
   if (local) evento.location = local;
 
@@ -160,4 +169,49 @@ export async function sincronizarShowNoGoogle(
     `[google-calendar] evento criado ${eventId} (show ${showId}, calendar ${conexao.calendarId})`
   );
   return { eventId };
+}
+
+/**
+ * Marca o evento do show como CANCELADO: muda a cor pra VERMELHO no Google
+ * Calendar. NUNCA apaga o evento — quem apaga é o usuário. Best-effort
+ * (pensado pra try/catch). Não faz nada se o show não tem evento sincronizado
+ * ou se o artista não está conectado.
+ */
+export async function marcarEventoCancelado(
+  supabase: SupabaseClient,
+  showId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("shows")
+    .select("google_event_id, artist_id")
+    .eq("id", showId)
+    .maybeSingle();
+  const row = data as
+    | { google_event_id?: string | null; artist_id?: string | null }
+    | null;
+  if (!row?.google_event_id || !row.artist_id) return false;
+
+  const conexao = await accessTokenValido(supabase, row.artist_id);
+  if (!conexao) return false;
+
+  const res = await fetch(
+    `${CAL_API}/${encodeURIComponent(conexao.calendarId)}/events/${encodeURIComponent(
+      row.google_event_id
+    )}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${conexao.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ colorId: COR_VERMELHO }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Calendar API (cancelar) ${res.status}: ${await res.text()}`);
+  }
+  console.log(
+    `[google-calendar] evento marcado como CANCELADO ${row.google_event_id} (show ${showId})`
+  );
+  return true;
 }
