@@ -25,6 +25,7 @@ import { ShowsProvider } from "@/lib/shows-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
+import { ContratosProvider } from "@/lib/contratos-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
@@ -32,6 +33,9 @@ import AbaArtistas from "@/components/configuracoes/AbaArtistas";
 import AbaEquipe from "@/components/configuracoes/AbaEquipe";
 import EmConstrucao from "@/components/EmConstrucao";
 import ModelosPage from "@/components/contratos/ModelosPage";
+import NovoContratoPage from "@/components/contratos/NovoContratoPage";
+import HistoricoPage from "@/components/contratos/HistoricoPage";
+import DashboardContratos from "@/components/contratos/DashboardContratos";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 
@@ -54,12 +58,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <OrcamentosProvider>
               <VendasProvider>
                 <ModelosProvider>
-                  <AuthGuard>
-                    <NavProvider>
-                      <AppRoot />
-                      {children}
-                    </NavProvider>
-                  </AuthGuard>
+                  <ContratosProvider>
+                    <AuthGuard>
+                      <NavProvider>
+                        <AppRoot />
+                        {children}
+                      </NavProvider>
+                    </AuthGuard>
+                  </ContratosProvider>
                 </ModelosProvider>
               </VendasProvider>
             </OrcamentosProvider>
@@ -535,16 +541,16 @@ function AppRoot() {
 
           {/* Contratos */}
           {activeTab === "contratos" && activePage === "dashboard" && (
-            <EmConstrucao titulo="Contratos" subtitulo="Dashboard" cor={MODULE_THEMES.contratos.color} />
+            <DashboardContratos />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
-            <EmConstrucao titulo="Novo Contrato" cor={MODULE_THEMES.contratos.color} />
+            <NovoContratoPage />
           )}
           {activeTab === "contratos" && activePage === "contratos-modelos" && (
             <ModelosPage />
           )}
           {activeTab === "contratos" && activePage === "contratos-historico" && (
-            <EmConstrucao titulo="Histórico de Contratos" cor={MODULE_THEMES.contratos.color} />
+            <HistoricoPage />
           )}
 
           {/* Agência */}
