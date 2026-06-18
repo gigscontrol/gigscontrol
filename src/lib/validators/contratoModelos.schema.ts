@@ -5,7 +5,7 @@ const tipoSchema = z.enum(["editavel", "pdf"]);
 const secaoSchema = z.object({
   id: z.string(),
   titulo: z.string(),
-  corpo: z.string(),
+  paragrafos: z.array(z.string()),
 });
 
 export const contratoModeloCreateSchema = z.object({

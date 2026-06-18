@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeft, Plus, Trash2, ArrowUp, ArrowDown, Eye, EyeOff, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ArrowUp, ArrowDown, Eye, EyeOff, Save, X } from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
 import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
 import {
@@ -43,7 +43,12 @@ function agruparVariaveis(): { grupo: string; itens: VariavelContrato[] }[] {
 const GRUPOS_VARIAVEIS = agruparVariaveis();
 
 function novaSecao(): SecaoModelo {
-  return { id: crypto.randomUUID(), titulo: "", corpo: "" };
+  return { id: crypto.randomUUID(), titulo: "", paragrafos: [""] };
+}
+
+/** Chave única de um textarea de parágrafo (seção + índice). */
+function chaveParagrafo(secaoId: string, paraIdx: number): string {
+  return `${secaoId}:${paraIdx}`;
 }
 
 export default function EditorModelo({
@@ -63,11 +68,11 @@ export default function EditorModelo({
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
 
-  // Rastreamento do caret: guardamos a referência ao último <textarea> de
-  // corpo que recebeu foco e o id da seção correspondente, para inserir
-  // variáveis no ponto certo.
+  // Rastreamento do caret: guardamos a referência a cada <textarea> de
+  // parágrafo (chave = "secaoId:paraIdx") e qual deles recebeu foco por
+  // último (seção + índice do parágrafo), para inserir variáveis no ponto certo.
   const textareasRef = useRef<Record<string, HTMLTextAreaElement | null>>({});
-  const focoRef = useRef<string | null>(null);
+  const focoRef = useRef<{ secaoId: string; paraIdx: number } | null>(null);
 
   // ---- Manipulação de seções ----
 
@@ -81,13 +86,63 @@ export default function EditorModelo({
 
   function removerSecao(id: string) {
     const alvo = secoes.find((s) => s.id === id);
-    const temConteudo = !!(alvo && (alvo.titulo.trim() || alvo.corpo.trim()));
+    const temConteudo = !!(
+      alvo &&
+      (alvo.titulo.trim() || alvo.paragrafos.some((p) => p.trim()))
+    );
     if (temConteudo && !window.confirm("Remover esta seção? O conteúdo será perdido.")) {
       return;
     }
     setSecoes((prev) => prev.filter((s) => s.id !== id));
-    if (focoRef.current === id) focoRef.current = null;
-    delete textareasRef.current[id];
+    if (focoRef.current?.secaoId === id) focoRef.current = null;
+    // Limpa as referências de todos os parágrafos desta seção.
+    for (const chave of Object.keys(textareasRef.current)) {
+      if (chave.startsWith(`${id}:`)) delete textareasRef.current[chave];
+    }
+  }
+
+  // ---- Manipulação de parágrafos (cláusulas) ----
+
+  function atualizarParagrafo(secaoId: string, paraIdx: number, valor: string) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId
+          ? { ...s, paragrafos: s.paragrafos.map((p, i) => (i === paraIdx ? valor : p)) }
+          : s
+      )
+    );
+  }
+
+  function adicionarParagrafo(secaoId: string) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId ? { ...s, paragrafos: [...s.paragrafos, ""] } : s
+      )
+    );
+  }
+
+  function removerParagrafo(secaoId: string, paraIdx: number) {
+    const secao = secoes.find((s) => s.id === secaoId);
+    const texto = secao?.paragrafos[paraIdx] ?? "";
+    if (texto.trim() && !window.confirm("Remover esta cláusula? O conteúdo será perdido.")) {
+      return;
+    }
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId
+          ? { ...s, paragrafos: s.paragrafos.filter((_, i) => i !== paraIdx) }
+          : s
+      )
+    );
+    // Foco volta para indefinido se apontava para o parágrafo removido.
+    if (focoRef.current?.secaoId === secaoId && focoRef.current.paraIdx === paraIdx) {
+      focoRef.current = null;
+    }
+    // As chaves desta seção mudam de índice após a remoção; limpa para
+    // evitar referências obsoletas (serão recriadas no próximo render).
+    for (const chave of Object.keys(textareasRef.current)) {
+      if (chave.startsWith(`${secaoId}:`)) delete textareasRef.current[chave];
+    }
   }
 
   function moverSecao(index: number, dir: -1 | 1) {
@@ -106,26 +161,38 @@ export default function EditorModelo({
   function inserirVariavel(token: string) {
     const trecho = `{{${token}}}`;
 
-    // Sem nenhum textarea focado ainda: anexa na primeira seção.
-    const alvoId = focoRef.current ?? secoes[0]?.id ?? null;
-    if (!alvoId) return;
+    // Alvo: o parágrafo focado por último; sem foco, o 1º parágrafo da 1ª seção.
+    const foco = focoRef.current;
+    let secaoId = foco?.secaoId ?? secoes[0]?.id ?? null;
+    let paraIdx = foco?.paraIdx ?? 0;
+    if (!secaoId) return;
 
-    const el = textareasRef.current[alvoId];
-    const secao = secoes.find((s) => s.id === alvoId);
-    if (!secao) return;
+    let secao = secoes.find((s) => s.id === secaoId);
+    // Guarda contra índices/ids obsoletos: cai para a 1ª seção/1º parágrafo.
+    if (!secao || paraIdx < 0 || paraIdx >= secao.paragrafos.length) {
+      secao = secoes[0];
+      secaoId = secao?.id ?? null;
+      paraIdx = 0;
+    }
+    if (!secao || !secaoId || secao.paragrafos.length === 0) return;
 
-    // Posição de inserção: caret atual quando há textarea; senão, fim do corpo.
-    const temCaret = !!el && focoRef.current === alvoId;
-    const inicio = temCaret ? el!.selectionStart : secao.corpo.length;
-    const fim = temCaret ? el!.selectionEnd : secao.corpo.length;
+    const chave = chaveParagrafo(secaoId, paraIdx);
+    const el = textareasRef.current[chave];
+    const texto = secao.paragrafos[paraIdx] ?? "";
 
-    const novoCorpo = secao.corpo.slice(0, inicio) + trecho + secao.corpo.slice(fim);
-    atualizarSecao(alvoId, { corpo: novoCorpo });
+    // Posição de inserção: caret atual quando há textarea; senão, fim do texto.
+    const temCaret =
+      !!el && foco?.secaoId === secaoId && foco?.paraIdx === paraIdx;
+    const inicio = temCaret ? el!.selectionStart : texto.length;
+    const fim = temCaret ? el!.selectionEnd : texto.length;
+
+    const novoTexto = texto.slice(0, inicio) + trecho + texto.slice(fim);
+    atualizarParagrafo(secaoId, paraIdx, novoTexto);
 
     // Restaura o foco e posiciona o caret logo após o trecho inserido.
     const novaPos = inicio + trecho.length;
     requestAnimationFrame(() => {
-      const ref = textareasRef.current[alvoId];
+      const ref = textareasRef.current[chave];
       if (ref) {
         ref.focus();
         try {
@@ -141,7 +208,9 @@ export default function EditorModelo({
 
   async function salvar() {
     const nomeLimpo = nome.trim();
-    const temSecaoComConteudo = secoes.some((s) => s.titulo.trim() || s.corpo.trim());
+    const temSecaoComConteudo = secoes.some(
+      (s) => s.titulo.trim() || s.paragrafos.some((p) => p.trim())
+    );
 
     // Guarda básica: exige nome OU ao menos uma seção com algo.
     if (!nomeLimpo && !temSecaoComConteudo) {
@@ -269,19 +338,45 @@ export default function EditorModelo({
                     </div>
                   </div>
 
-                  <textarea
-                    ref={(el) => {
-                      textareasRef.current[secao.id] = el;
-                    }}
-                    value={secao.corpo}
-                    onChange={(e) => atualizarSecao(secao.id, { corpo: e.target.value })}
-                    onFocus={() => {
-                      focoRef.current = secao.id;
-                    }}
-                    placeholder="Escreva o conteúdo da seção. Use as variáveis ao lado para inserir {{campos}} automáticos."
-                    className="campo-input min-h-[140px] resize-y leading-relaxed"
-                    style={{ whiteSpace: "pre-wrap" }}
-                  />
+                  <div className="flex flex-col gap-2">
+                    {secao.paragrafos.map((paragrafo, paraIdx) => (
+                      <div key={paraIdx} className="flex items-start gap-1.5">
+                        <textarea
+                          ref={(el) => {
+                            textareasRef.current[chaveParagrafo(secao.id, paraIdx)] = el;
+                          }}
+                          value={paragrafo}
+                          onChange={(e) =>
+                            atualizarParagrafo(secao.id, paraIdx, e.target.value)
+                          }
+                          onFocus={() => {
+                            focoRef.current = { secaoId: secao.id, paraIdx };
+                          }}
+                          placeholder="Escreva a cláusula. Use as variáveis ao lado para inserir {{campos}} automáticos."
+                          className="campo-input min-h-[110px] resize-y leading-relaxed flex-1"
+                          style={{ whiteSpace: "pre-wrap" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removerParagrafo(secao.id, paraIdx)}
+                          title="Remover cláusula"
+                          aria-label="Remover cláusula"
+                          className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => adicionarParagrafo(secao.id)}
+                      className="btn btn-ghost self-start text-xs px-2 py-1"
+                    >
+                      <Plus size={13} />
+                      Cláusula
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -334,7 +429,9 @@ export default function EditorModelo({
 
 /** Preview do modelo com os dados de exemplo já substituídos. */
 function PreviewSecoes({ secoes }: { secoes: SecaoModelo[] }) {
-  const semConteudo = secoes.every((s) => !s.titulo.trim() && !s.corpo.trim());
+  const semConteudo = secoes.every(
+    (s) => !s.titulo.trim() && !s.paragrafos.some((p) => p.trim())
+  );
 
   return (
     <div className="card">
@@ -355,8 +452,15 @@ function PreviewSecoes({ secoes }: { secoes: SecaoModelo[] }) {
                   {secao.titulo}
                 </h3>
               )}
-              <div className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
-                {preencher(secao.corpo, VALORES_EXEMPLO)}
+              <div className="flex flex-col gap-3">
+                {secao.paragrafos.map((paragrafo, paraIdx) => (
+                  <div
+                    key={paraIdx}
+                    className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
+                  >
+                    {preencher(paragrafo, VALORES_EXEMPLO)}
+                  </div>
+                ))}
               </div>
             </div>
           ))}

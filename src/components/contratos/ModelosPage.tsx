@@ -30,8 +30,13 @@ function clonarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
   return secoes.map((s) => ({
     id: crypto.randomUUID(),
     titulo: s.titulo,
-    corpo: s.corpo,
+    paragrafos: [...s.paragrafos],
   }));
+}
+
+/** Seção em branco no novo formato (título vazio + 1 cláusula vazia). */
+function secaoEmBranco(): SecaoModelo {
+  return { id: crypto.randomUUID(), titulo: "", paragrafos: [""] };
 }
 
 export default function ModelosPage() {
@@ -58,7 +63,7 @@ export default function ModelosPage() {
     setEditando({
       modeloId: null,
       nome: "",
-      secoes: [{ id: crypto.randomUUID(), titulo: "", corpo: "" }],
+      secoes: [secaoEmBranco()],
     });
     setVista("editor");
   }
@@ -70,8 +75,8 @@ export default function ModelosPage() {
       // Garante ao menos uma seção para edição confortável.
       secoes:
         modelo.secoes.length > 0
-          ? modelo.secoes.map((s) => ({ ...s }))
-          : [{ id: crypto.randomUUID(), titulo: "", corpo: "" }],
+          ? modelo.secoes.map((s) => ({ ...s, paragrafos: [...s.paragrafos] }))
+          : [secaoEmBranco()],
     });
     setVista("editor");
   }

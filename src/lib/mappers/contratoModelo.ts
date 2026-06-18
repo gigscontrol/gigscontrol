@@ -20,7 +20,8 @@ export type ContratoModeloTipo = "editavel" | "pdf";
 export type SecaoModelo = {
   id: string;
   titulo: string;
-  corpo: string;
+  /** Cláusulas/parágrafos da seção. 1 = parágrafo único; vários = N cláusulas. */
+  paragrafos: string[];
 };
 
 /** Linha bruta da tabela `contrato_modelos` no Supabase. */
@@ -67,7 +68,11 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
     .map((s) => ({
       id: typeof s.id === "string" ? s.id : "",
       titulo: typeof s.titulo === "string" ? s.titulo : "",
-      corpo: typeof s.corpo === "string" ? s.corpo : "",
+      paragrafos: Array.isArray(s.paragrafos)
+        ? s.paragrafos.filter((p): p is string => typeof p === "string")
+        : typeof s.corpo === "string"
+        ? [s.corpo] // compat com o formato antigo (corpo único)
+        : [],
     }));
 }
 
