@@ -7,8 +7,8 @@ import type {
 
 const COLS = `
   id, contrato_id, workspace_id, nome, email, papel, ordem, token,
-  exige, status, assinatura, documento, ip, geolocalizacao, dispositivo,
-  assinado_em, criado_em
+  exige, arquivos, status, assinatura, documento, ip, geolocalizacao,
+  dispositivo, assinado_em, criado_em
 `;
 
 /** Signatários de um contrato (uso da agência — RLS por workspace). */
