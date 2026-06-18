@@ -25,18 +25,52 @@ type EditorInicial = {
   secoes: SecaoModelo[];
 };
 
-/** Clona seções gerando ids novos (para o "Duplicar e editar" do exemplo). */
+/**
+ * Clona seções gerando ids NOVOS (para o "Duplicar e editar" do exemplo).
+ * Faz `switch` por `tipo` para preservar todos os campos e regenerar também
+ * os ids dos itens das cláusulas.
+ */
 function clonarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
-  return secoes.map((s) => ({
-    id: crypto.randomUUID(),
-    titulo: s.titulo,
-    paragrafos: [...s.paragrafos],
-  }));
+  return secoes.map((s): SecaoModelo => {
+    const id = crypto.randomUUID();
+    switch (s.tipo) {
+      case "titulo":
+        return { id, tipo: "titulo", titulo: s.titulo, subtitulo: s.subtitulo };
+      case "partes":
+        return {
+          id,
+          tipo: "partes",
+          contratante: s.contratante,
+          contratado: s.contratado,
+          paragrafo: s.paragrafo,
+        };
+      case "clausula":
+        return {
+          id,
+          tipo: "clausula",
+          titulo: s.titulo,
+          itens: s.itens.map((i) => ({
+            id: crypto.randomUUID(),
+            tipo: i.tipo,
+            texto: i.texto,
+          })),
+        };
+      case "assinaturas":
+        return { id, tipo: "assinaturas", testemunhas: s.testemunhas };
+      case "anexo":
+        return { id, tipo: "anexo", titulo: s.titulo, conteudo: s.conteudo };
+    }
+  });
 }
 
-/** Seção em branco no novo formato (título vazio + 1 cláusula vazia). */
-function secaoEmBranco(): SecaoModelo {
-  return { id: crypto.randomUUID(), titulo: "", paragrafos: [""] };
+/**
+ * Cópia estrutural de seções PRESERVANDO os ids (para editar um modelo
+ * existente — só o "Duplicar" gera ids novos).
+ */
+function copiarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
+  return secoes.map((s): SecaoModelo =>
+    s.tipo === "clausula" ? { ...s, itens: s.itens.map((i) => ({ ...i })) } : { ...s }
+  );
 }
 
 export default function ModelosPage() {
@@ -60,11 +94,8 @@ export default function ModelosPage() {
   }
 
   function abrirNovoEmBranco() {
-    setEditando({
-      modeloId: null,
-      nome: "",
-      secoes: [secaoEmBranco()],
-    });
+    // Em branco: sem seções — o usuário adiciona pelo menu "Adicionar seção".
+    setEditando({ modeloId: null, nome: "", secoes: [] });
     setVista("editor");
   }
 
@@ -72,11 +103,8 @@ export default function ModelosPage() {
     setEditando({
       modeloId: modelo.id,
       nome: modelo.nome,
-      // Garante ao menos uma seção para edição confortável.
-      secoes:
-        modelo.secoes.length > 0
-          ? modelo.secoes.map((s) => ({ ...s, paragrafos: [...s.paragrafos] }))
-          : [secaoEmBranco()],
+      // Cópia estrutural preservando os ids (não regenera como o "Duplicar").
+      secoes: copiarSecoes(modelo.secoes),
     });
     setVista("editor");
   }

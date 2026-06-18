@@ -2,11 +2,44 @@ import { z } from "zod";
 
 const tipoSchema = z.enum(["editavel", "pdf"]);
 
-const secaoSchema = z.object({
+const itemClausulaSchema = z.object({
   id: z.string(),
-  titulo: z.string(),
-  paragrafos: z.array(z.string()),
+  tipo: z.enum(["subclausula", "paragrafo"]),
+  texto: z.string(),
 });
+
+const secaoSchema = z.discriminatedUnion("tipo", [
+  z.object({
+    id: z.string(),
+    tipo: z.literal("titulo"),
+    titulo: z.string(),
+    subtitulo: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    tipo: z.literal("partes"),
+    contratante: z.string(),
+    contratado: z.string(),
+    paragrafo: z.string(),
+  }),
+  z.object({
+    id: z.string(),
+    tipo: z.literal("clausula"),
+    titulo: z.string(),
+    itens: z.array(itemClausulaSchema),
+  }),
+  z.object({
+    id: z.string(),
+    tipo: z.literal("assinaturas"),
+    testemunhas: z.number().int().min(0).max(2),
+  }),
+  z.object({
+    id: z.string(),
+    tipo: z.literal("anexo"),
+    titulo: z.string(),
+    conteudo: z.string(),
+  }),
+]);
 
 export const contratoModeloCreateSchema = z.object({
   nome: z.string().min(1, "nome é obrigatório"),

@@ -1,9 +1,25 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ArrowLeft, Plus, Trash2, ArrowUp, ArrowDown, Eye, EyeOff, Save, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
+  Save,
+  X,
+  Heading,
+  Users,
+  ListOrdered,
+  PenLine,
+  Paperclip,
+} from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
-import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
+import type { SecaoModelo, ItemClausula } from "@/lib/mappers/contratoModelo";
+import { calcularNumeracao } from "@/lib/contratos/numeracao";
 import {
   VARIAVEIS_CONTRATO,
   VALORES_EXEMPLO,
@@ -21,6 +37,64 @@ type Props = {
   onVoltar: () => void;
   onSalvo: () => void;
 };
+
+/** Tipos de seção que o usuário pode adicionar, na ordem do menu. */
+type TipoSecao = SecaoModelo["tipo"];
+
+const TIPOS_SECAO: { tipo: TipoSecao; label: string; Icon: typeof Heading }[] = [
+  { tipo: "titulo", label: "Título", Icon: Heading },
+  { tipo: "partes", label: "Das partes", Icon: Users },
+  { tipo: "clausula", label: "Cláusula", Icon: ListOrdered },
+  { tipo: "assinaturas", label: "Assinaturas", Icon: PenLine },
+  { tipo: "anexo", label: "Anexo", Icon: Paperclip },
+];
+
+/** Cria uma seção vazia do tipo pedido (com ids novos). */
+function novaSecao(tipo: TipoSecao): SecaoModelo {
+  const id = crypto.randomUUID();
+  switch (tipo) {
+    case "titulo":
+      return { id, tipo: "titulo", titulo: "", subtitulo: "" };
+    case "partes":
+      return { id, tipo: "partes", contratante: "", contratado: "", paragrafo: "" };
+    case "clausula":
+      return {
+        id,
+        tipo: "clausula",
+        titulo: "",
+        itens: [{ id: crypto.randomUUID(), tipo: "subclausula", texto: "" }],
+      };
+    case "assinaturas":
+      return { id, tipo: "assinaturas", testemunhas: 0 };
+    case "anexo":
+      return { id, tipo: "anexo", titulo: "", conteudo: "" };
+  }
+}
+
+/**
+ * Campo editável de texto. Identifica exatamente qual string do estado um
+ * input/textarea edita, para inserir variáveis no ponto do cursor.
+ */
+/** Campos de string de seção (sem os itens de cláusula). */
+type CampoTextoSimples =
+  | "titulo"
+  | "subtitulo"
+  | "contratante"
+  | "contratado"
+  | "paragrafo"
+  | "conteudo";
+
+/** Qualquer campo editável: os simples acima OU um item de cláusula. */
+type CampoTexto = CampoTextoSimples | "item";
+
+type Descritor = { secaoId: string; campo: CampoTexto; itemId?: string };
+
+/** Chave única (estável) de um campo editável, para indexar o ref do DOM. */
+function chaveCampo(d: Descritor): string {
+  return d.campo === "item"
+    ? `${d.secaoId}:item:${d.itemId}`
+    : `${d.secaoId}:${d.campo}`;
+}
 
 /**
  * Agrupa as variáveis por `grupo`, preservando a ordem em que aparecem em
@@ -42,13 +116,22 @@ function agruparVariaveis(): { grupo: string; itens: VariavelContrato[] }[] {
 
 const GRUPOS_VARIAVEIS = agruparVariaveis();
 
-function novaSecao(): SecaoModelo {
-  return { id: crypto.randomUUID(), titulo: "", paragrafos: [""] };
-}
-
-/** Chave única de um textarea de parágrafo (seção + índice). */
-function chaveParagrafo(secaoId: string, paraIdx: number): string {
-  return `${secaoId}:${paraIdx}`;
+/** Há algo digitado em alguma seção? (para validações/preview). */
+function temConteudo(secoes: SecaoModelo[]): boolean {
+  return secoes.some((s) => {
+    switch (s.tipo) {
+      case "titulo":
+        return !!(s.titulo.trim() || s.subtitulo.trim());
+      case "partes":
+        return !!(s.contratante.trim() || s.contratado.trim() || s.paragrafo.trim());
+      case "clausula":
+        return !!(s.titulo.trim() || s.itens.some((i) => i.texto.trim()));
+      case "anexo":
+        return !!(s.titulo.trim() || s.conteudo.trim());
+      case "assinaturas":
+        return true; // assinaturas sempre geram blocos
+    }
+  });
 }
 
 export default function EditorModelo({
@@ -61,87 +144,49 @@ export default function EditorModelo({
   const { criarModelo, atualizarModelo } = useModelos();
 
   const [nome, setNome] = useState(nomeInicial);
-  const [secoes, setSecoes] = useState<SecaoModelo[]>(() =>
-    secoesIniciais.length > 0 ? secoesIniciais : [novaSecao()]
-  );
+  const [secoes, setSecoes] = useState<SecaoModelo[]>(secoesIniciais);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
 
-  // Rastreamento do caret: guardamos a referência a cada <textarea> de
-  // parágrafo (chave = "secaoId:paraIdx") e qual deles recebeu foco por
-  // último (seção + índice do parágrafo), para inserir variáveis no ponto certo.
-  const textareasRef = useRef<Record<string, HTMLTextAreaElement | null>>({});
-  const focoRef = useRef<{ secaoId: string; paraIdx: number } | null>(null);
+  // Numeração automática (cláusulas + sub-cláusulas), recalculada a cada render.
+  const num = calcularNumeracao(secoes);
+
+  // Rastreamento do caret: referência de cada campo editável (input/textarea),
+  // indexado pela chave do descritor, e qual recebeu foco por último.
+  const camposRef = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
+  const focoRef = useRef<Descritor | null>(null);
+
+  // Fecha o menu de "Adicionar seção" ao clicar fora.
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!menuAberto) return;
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [menuAberto]);
 
   // ---- Manipulação de seções ----
 
-  function atualizarSecao(id: string, patch: Partial<SecaoModelo>) {
-    setSecoes((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  }
-
-  function adicionarSecao() {
-    setSecoes((prev) => [...prev, novaSecao()]);
+  function adicionarSecao(tipo: TipoSecao) {
+    setSecoes((prev) => [...prev, novaSecao(tipo)]);
+    setMenuAberto(false);
   }
 
   function removerSecao(id: string) {
-    const alvo = secoes.find((s) => s.id === id);
-    const temConteudo = !!(
-      alvo &&
-      (alvo.titulo.trim() || alvo.paragrafos.some((p) => p.trim()))
-    );
-    if (temConteudo && !window.confirm("Remover esta seção? O conteúdo será perdido.")) {
+    if (temConteudo(secoes.filter((s) => s.id === id)) &&
+        !window.confirm("Remover esta seção? O conteúdo será perdido.")) {
       return;
     }
     setSecoes((prev) => prev.filter((s) => s.id !== id));
     if (focoRef.current?.secaoId === id) focoRef.current = null;
-    // Limpa as referências de todos os parágrafos desta seção.
-    for (const chave of Object.keys(textareasRef.current)) {
-      if (chave.startsWith(`${id}:`)) delete textareasRef.current[chave];
-    }
-  }
-
-  // ---- Manipulação de parágrafos (cláusulas) ----
-
-  function atualizarParagrafo(secaoId: string, paraIdx: number, valor: string) {
-    setSecoes((prev) =>
-      prev.map((s) =>
-        s.id === secaoId
-          ? { ...s, paragrafos: s.paragrafos.map((p, i) => (i === paraIdx ? valor : p)) }
-          : s
-      )
-    );
-  }
-
-  function adicionarParagrafo(secaoId: string) {
-    setSecoes((prev) =>
-      prev.map((s) =>
-        s.id === secaoId ? { ...s, paragrafos: [...s.paragrafos, ""] } : s
-      )
-    );
-  }
-
-  function removerParagrafo(secaoId: string, paraIdx: number) {
-    const secao = secoes.find((s) => s.id === secaoId);
-    const texto = secao?.paragrafos[paraIdx] ?? "";
-    if (texto.trim() && !window.confirm("Remover esta cláusula? O conteúdo será perdido.")) {
-      return;
-    }
-    setSecoes((prev) =>
-      prev.map((s) =>
-        s.id === secaoId
-          ? { ...s, paragrafos: s.paragrafos.filter((_, i) => i !== paraIdx) }
-          : s
-      )
-    );
-    // Foco volta para indefinido se apontava para o parágrafo removido.
-    if (focoRef.current?.secaoId === secaoId && focoRef.current.paraIdx === paraIdx) {
-      focoRef.current = null;
-    }
-    // As chaves desta seção mudam de índice após a remoção; limpa para
-    // evitar referências obsoletas (serão recriadas no próximo render).
-    for (const chave of Object.keys(textareasRef.current)) {
-      if (chave.startsWith(`${secaoId}:`)) delete textareasRef.current[chave];
+    for (const chave of Object.keys(camposRef.current)) {
+      if (chave.startsWith(`${id}:`)) delete camposRef.current[chave];
     }
   }
 
@@ -156,43 +201,162 @@ export default function EditorModelo({
     });
   }
 
+  /**
+   * Atualiza um campo de texto simples de uma seção, imutavelmente. O `switch`
+   * por `tipo` garante que só escrevemos o campo onde ele realmente existe
+   * (TS narrows corretamente cada membro da união).
+   */
+  function setCampo(secaoId: string, campo: CampoTextoSimples, valor: string) {
+    setSecoes((prev) =>
+      prev.map((s): SecaoModelo => {
+        if (s.id !== secaoId) return s;
+        switch (s.tipo) {
+          case "titulo":
+            if (campo === "titulo") return { ...s, titulo: valor };
+            if (campo === "subtitulo") return { ...s, subtitulo: valor };
+            return s;
+          case "partes":
+            if (campo === "contratante") return { ...s, contratante: valor };
+            if (campo === "contratado") return { ...s, contratado: valor };
+            if (campo === "paragrafo") return { ...s, paragrafo: valor };
+            return s;
+          case "clausula":
+            if (campo === "titulo") return { ...s, titulo: valor };
+            return s;
+          case "anexo":
+            if (campo === "titulo") return { ...s, titulo: valor };
+            if (campo === "conteudo") return { ...s, conteudo: valor };
+            return s;
+          case "assinaturas":
+            return s;
+        }
+      })
+    );
+  }
+
+  /** Define o número de testemunhas de uma seção de assinaturas. */
+  function setTestemunhas(secaoId: string, n: number) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "assinaturas" ? { ...s, testemunhas: n } : s
+      )
+    );
+  }
+
+  // ---- Manipulação de itens de cláusula ----
+
+  function atualizarItem(secaoId: string, itemId: string, texto: string) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "clausula"
+          ? {
+              ...s,
+              itens: s.itens.map((i) => (i.id === itemId ? { ...i, texto } : i)),
+            }
+          : s
+      )
+    );
+  }
+
+  function adicionarItem(secaoId: string, tipo: ItemClausula["tipo"]) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "clausula"
+          ? {
+              ...s,
+              itens: [...s.itens, { id: crypto.randomUUID(), tipo, texto: "" }],
+            }
+          : s
+      )
+    );
+  }
+
+  function removerItem(secaoId: string, itemId: string) {
+    const secao = secoes.find((s) => s.id === secaoId);
+    const item =
+      secao?.tipo === "clausula" ? secao.itens.find((i) => i.id === itemId) : null;
+    if (item?.texto.trim() &&
+        !window.confirm("Remover este item? O conteúdo será perdido.")) {
+      return;
+    }
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "clausula"
+          ? { ...s, itens: s.itens.filter((i) => i.id !== itemId) }
+          : s
+      )
+    );
+    if (focoRef.current?.itemId === itemId) focoRef.current = null;
+    delete camposRef.current[chaveCampo({ secaoId, campo: "item", itemId })];
+  }
+
   // ---- Inserção de variáveis no caret ----
+
+  /** Lê o valor atual da string que um descritor edita (ou null se obsoleto). */
+  function lerValor(d: Descritor): string | null {
+    const secao = secoes.find((s) => s.id === d.secaoId);
+    if (!secao) return null;
+    switch (d.campo) {
+      case "titulo":
+        return secao.tipo === "titulo" || secao.tipo === "clausula" || secao.tipo === "anexo"
+          ? secao.titulo
+          : null;
+      case "subtitulo":
+        return secao.tipo === "titulo" ? secao.subtitulo : null;
+      case "contratante":
+        return secao.tipo === "partes" ? secao.contratante : null;
+      case "contratado":
+        return secao.tipo === "partes" ? secao.contratado : null;
+      case "paragrafo":
+        return secao.tipo === "partes" ? secao.paragrafo : null;
+      case "conteudo":
+        return secao.tipo === "anexo" ? secao.conteudo : null;
+      case "item": {
+        if (secao.tipo !== "clausula") return null;
+        const it = secao.itens.find((i) => i.id === d.itemId);
+        return it ? it.texto : null;
+      }
+    }
+  }
+
+  /** Escreve um novo valor na string que um descritor edita. */
+  function escreverValor(d: Descritor, valor: string) {
+    if (d.campo === "item") {
+      if (d.itemId) atualizarItem(d.secaoId, d.itemId, valor);
+      return;
+    }
+    setCampo(d.secaoId, d.campo, valor);
+  }
 
   function inserirVariavel(token: string) {
     const trecho = `{{${token}}}`;
-
-    // Alvo: o parágrafo focado por último; sem foco, o 1º parágrafo da 1ª seção.
     const foco = focoRef.current;
-    let secaoId = foco?.secaoId ?? secoes[0]?.id ?? null;
-    let paraIdx = foco?.paraIdx ?? 0;
-    if (!secaoId) return;
 
-    let secao = secoes.find((s) => s.id === secaoId);
-    // Guarda contra índices/ids obsoletos: cai para a 1ª seção/1º parágrafo.
-    if (!secao || paraIdx < 0 || paraIdx >= secao.paragrafos.length) {
-      secao = secoes[0];
-      secaoId = secao?.id ?? null;
-      paraIdx = 0;
-    }
-    if (!secao || !secaoId || secao.paragrafos.length === 0) return;
+    // Sem foco válido: anexa ao 1º campo de texto disponível (sem crashar).
+    const alvo: Descritor | null =
+      foco && lerValor(foco) !== null ? foco : primeiroCampoTexto(secoes);
+    if (!alvo) return;
 
-    const chave = chaveParagrafo(secaoId, paraIdx);
-    const el = textareasRef.current[chave];
-    const texto = secao.paragrafos[paraIdx] ?? "";
+    const valor = lerValor(alvo);
+    if (valor === null) return;
 
-    // Posição de inserção: caret atual quando há textarea; senão, fim do texto.
-    const temCaret =
-      !!el && foco?.secaoId === secaoId && foco?.paraIdx === paraIdx;
-    const inicio = temCaret ? el!.selectionStart : texto.length;
-    const fim = temCaret ? el!.selectionEnd : texto.length;
+    const chave = chaveCampo(alvo);
+    const el = camposRef.current[chave];
+    const mesmoFoco =
+      !!el &&
+      foco?.secaoId === alvo.secaoId &&
+      foco?.campo === alvo.campo &&
+      foco?.itemId === alvo.itemId;
 
-    const novoTexto = texto.slice(0, inicio) + trecho + texto.slice(fim);
-    atualizarParagrafo(secaoId, paraIdx, novoTexto);
+    const inicio = mesmoFoco ? el!.selectionStart ?? valor.length : valor.length;
+    const fim = mesmoFoco ? el!.selectionEnd ?? valor.length : valor.length;
 
-    // Restaura o foco e posiciona o caret logo após o trecho inserido.
+    const novoValor = valor.slice(0, inicio) + trecho + valor.slice(fim);
+    escreverValor(alvo, novoValor);
+
     const novaPos = inicio + trecho.length;
     requestAnimationFrame(() => {
-      const ref = textareasRef.current[chave];
+      const ref = camposRef.current[chave];
       if (ref) {
         ref.focus();
         try {
@@ -207,22 +371,11 @@ export default function EditorModelo({
   // ---- Salvar ----
 
   async function salvar() {
-    const nomeLimpo = nome.trim();
-    const temSecaoComConteudo = secoes.some(
-      (s) => s.titulo.trim() || s.paragrafos.some((p) => p.trim())
-    );
-
-    // Guarda básica: exige nome OU ao menos uma seção com algo.
-    if (!nomeLimpo && !temSecaoComConteudo) {
-      setErro("Dê um nome ao modelo ou preencha ao menos uma seção.");
-      return;
-    }
-
     setSalvando(true);
     setErro(null);
     try {
       const payload = {
-        nome: nomeLimpo || "Modelo sem nome",
+        nome: nome.trim() || "Modelo sem nome",
         tipo: "editavel" as const,
         secoes,
       };
@@ -237,6 +390,20 @@ export default function EditorModelo({
     } finally {
       setSalvando(false);
     }
+  }
+
+  // ---- Helpers de render de campos ----
+
+  /** Props comuns de um campo editável (ref + foco). */
+  function campoProps(d: Descritor) {
+    return {
+      ref: (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+        camposRef.current[chaveCampo(d)] = el;
+      },
+      onFocus: () => {
+        focoRef.current = d;
+      },
+    };
   }
 
   // ---- Render ----
@@ -282,7 +449,7 @@ export default function EditorModelo({
       </div>
 
       {erro && (
-        <div className="card mb-6 border-danger/40" style={{ borderColor: "var(--danger)" }}>
+        <div className="card mb-6" style={{ borderColor: "var(--danger)" }}>
           <p className="text-sm text-danger">{erro}</p>
         </div>
       )}
@@ -297,15 +464,12 @@ export default function EditorModelo({
             <div className="flex flex-col gap-4">
               {secoes.map((secao, index) => (
                 <div key={secao.id} className="card">
+                  {/* Cabeçalho do card: rótulo do tipo + mover/remover */}
                   <div className="flex items-center gap-2 mb-3">
-                    <input
-                      type="text"
-                      value={secao.titulo}
-                      onChange={(e) => atualizarSecao(secao.id, { titulo: e.target.value })}
-                      placeholder="Título da seção"
-                      className="campo-input font-semibold"
-                    />
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <span className="stat-label" style={{ color: ACCENT }}>
+                      {TIPOS_SECAO.find((t) => t.tipo === secao.tipo)?.label ?? secao.tipo}
+                    </span>
+                    <div className="flex items-center gap-0.5 flex-shrink-0 ml-auto">
                       <button
                         type="button"
                         onClick={() => moverSecao(index, -1)}
@@ -338,56 +502,236 @@ export default function EditorModelo({
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    {secao.paragrafos.map((paragrafo, paraIdx) => (
-                      <div key={paraIdx} className="flex items-start gap-1.5">
+                  {/* Corpo do card por tipo */}
+                  {secao.tipo === "titulo" && (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        {...campoProps({ secaoId: secao.id, campo: "titulo" })}
+                        value={secao.titulo}
+                        onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
+                        placeholder="Título do contrato"
+                        className="campo-input font-semibold"
+                      />
+                      <input
+                        type="text"
+                        {...campoProps({ secaoId: secao.id, campo: "subtitulo" })}
+                        value={secao.subtitulo}
+                        onChange={(e) => setCampo(secao.id, "subtitulo", e.target.value)}
+                        placeholder="Subtítulo"
+                        className="campo-input"
+                      />
+                    </div>
+                  )}
+
+                  {secao.tipo === "partes" && (
+                    <div className="flex flex-col gap-3">
+                      <label className="flex flex-col gap-1">
+                        <span className="stat-label">Contratante</span>
                         <textarea
-                          ref={(el) => {
-                            textareasRef.current[chaveParagrafo(secao.id, paraIdx)] = el;
-                          }}
-                          value={paragrafo}
-                          onChange={(e) =>
-                            atualizarParagrafo(secao.id, paraIdx, e.target.value)
-                          }
-                          onFocus={() => {
-                            focoRef.current = { secaoId: secao.id, paraIdx };
-                          }}
-                          placeholder="Escreva a cláusula. Use as variáveis ao lado para inserir {{campos}} automáticos."
-                          className="campo-input min-h-[110px] resize-y leading-relaxed flex-1"
+                          {...campoProps({ secaoId: secao.id, campo: "contratante" })}
+                          value={secao.contratante}
+                          onChange={(e) => setCampo(secao.id, "contratante", e.target.value)}
+                          placeholder="Identificação do contratante. Use as variáveis ao lado."
+                          className="campo-input min-h-[70px] resize-y leading-relaxed"
                           style={{ whiteSpace: "pre-wrap" }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => removerParagrafo(secao.id, paraIdx)}
-                          title="Remover cláusula"
-                          aria-label="Remover cláusula"
-                          className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="stat-label">Contratado</span>
+                        <textarea
+                          {...campoProps({ secaoId: secao.id, campo: "contratado" })}
+                          value={secao.contratado}
+                          onChange={(e) => setCampo(secao.id, "contratado", e.target.value)}
+                          placeholder="Identificação do contratado. Use as variáveis ao lado."
+                          className="campo-input min-h-[70px] resize-y leading-relaxed"
+                          style={{ whiteSpace: "pre-wrap" }}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="stat-label">Parágrafo</span>
+                        <textarea
+                          {...campoProps({ secaoId: secao.id, campo: "paragrafo" })}
+                          value={secao.paragrafo}
+                          onChange={(e) => setCampo(secao.id, "paragrafo", e.target.value)}
+                          placeholder="Parágrafo de abertura (ex: 'As partes acima têm, entre si...')."
+                          className="campo-input min-h-[70px] resize-y leading-relaxed"
+                          style={{ whiteSpace: "pre-wrap" }}
+                        />
+                      </label>
+                    </div>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={() => adicionarParagrafo(secao.id)}
-                      className="btn btn-ghost self-start text-xs px-2 py-1"
-                    >
-                      <Plus size={13} />
-                      Cláusula
-                    </button>
-                  </div>
+                  {secao.tipo === "clausula" && (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="badge flex-shrink-0"
+                          style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                        >
+                          Cláusula {num.clausulas[secao.id]}
+                        </span>
+                        <input
+                          type="text"
+                          {...campoProps({ secaoId: secao.id, campo: "titulo" })}
+                          value={secao.titulo}
+                          onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
+                          placeholder="Título da cláusula (ex: DO OBJETO)"
+                          className="campo-input font-semibold"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 pl-1">
+                        {secao.itens.map((item) => (
+                          <div key={item.id} className="flex items-start gap-1.5">
+                            <span
+                              className="text-xs font-semibold flex-shrink-0 mt-2 w-9 text-right"
+                              style={{
+                                color:
+                                  item.tipo === "subclausula" ? ACCENT : "var(--text-muted)",
+                              }}
+                              title={item.tipo === "subclausula" ? "Sub-cláusula" : "Parágrafo"}
+                            >
+                              {item.tipo === "subclausula" ? num.itens[item.id] : "¶"}
+                            </span>
+                            <textarea
+                              {...campoProps({
+                                secaoId: secao.id,
+                                campo: "item",
+                                itemId: item.id,
+                              })}
+                              value={item.texto}
+                              onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
+                              placeholder={
+                                item.tipo === "subclausula"
+                                  ? "Sub-cláusula numerada automaticamente."
+                                  : "Parágrafo (sem número)."
+                              }
+                              className="campo-input min-h-[80px] resize-y leading-relaxed flex-1"
+                              style={{ whiteSpace: "pre-wrap" }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removerItem(secao.id, item.id)}
+                              title="Remover item"
+                              aria-label="Remover item"
+                              className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+
+                        <div className="flex items-center gap-2 pl-9">
+                          <button
+                            type="button"
+                            onClick={() => adicionarItem(secao.id, "subclausula")}
+                            className="btn btn-ghost text-xs px-2 py-1"
+                          >
+                            <Plus size={13} />
+                            Cláusula
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adicionarItem(secao.id, "paragrafo")}
+                            className="btn btn-ghost text-xs px-2 py-1"
+                          >
+                            <Plus size={13} />
+                            Parágrafo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {secao.tipo === "assinaturas" && (
+                    <div className="flex flex-col gap-3">
+                      <div className="pill-group">
+                        {[
+                          { n: 0, label: "Sem testemunha" },
+                          { n: 1, label: "1 testemunha" },
+                          { n: 2, label: "2 testemunhas" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.n}
+                            type="button"
+                            onClick={() => setTestemunhas(secao.id, opt.n)}
+                            className={`pill ${secao.testemunhas === opt.n ? "active" : ""}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="section-subtitle">
+                        Serão gerados blocos de assinatura para: Contratante, Contratado
+                        {secao.testemunhas > 0 &&
+                          ` e ${secao.testemunhas} testemunha${
+                            secao.testemunhas === 1 ? "" : "s"
+                          }`}
+                        .
+                      </p>
+                    </div>
+                  )}
+
+                  {secao.tipo === "anexo" && (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        {...campoProps({ secaoId: secao.id, campo: "titulo" })}
+                        value={secao.titulo}
+                        onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
+                        placeholder="Título do anexo (ex: ANEXO — RIDER TÉCNICO)"
+                        className="campo-input font-semibold"
+                      />
+                      <textarea
+                        {...campoProps({ secaoId: secao.id, campo: "conteudo" })}
+                        value={secao.conteudo}
+                        onChange={(e) => setCampo(secao.id, "conteudo", e.target.value)}
+                        placeholder="Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}."
+                        className="campo-input min-h-[110px] resize-y leading-relaxed"
+                        style={{ whiteSpace: "pre-wrap" }}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={adicionarSecao}
-                className="btn btn-secondary self-start"
-              >
-                <Plus size={15} />
-                Adicionar seção
-              </button>
+              {/* Menu "Adicionar seção" */}
+              <div ref={menuRef} className="relative self-start">
+                <button
+                  type="button"
+                  onClick={() => setMenuAberto((a) => !a)}
+                  className="btn btn-secondary"
+                  aria-haspopup="menu"
+                  aria-expanded={menuAberto}
+                >
+                  <Plus size={15} />
+                  Adicionar seção
+                </button>
+                {menuAberto && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full mt-1 z-10 min-w-[200px] rounded-md border p-1 shadow-lg"
+                    style={{
+                      backgroundColor: "var(--bg-surface)",
+                      borderColor: "var(--border-color)",
+                    }}
+                  >
+                    {TIPOS_SECAO.map(({ tipo, label, Icon }) => (
+                      <button
+                        key={tipo}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => adicionarSecao(tipo)}
+                        className="btn-ghost w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left"
+                      >
+                        <Icon size={15} style={{ color: ACCENT }} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -427,45 +771,155 @@ export default function EditorModelo({
   );
 }
 
+/** Primeiro campo de texto editável de um conjunto de seções (ou null). */
+function primeiroCampoTexto(secoes: SecaoModelo[]): Descritor | null {
+  for (const s of secoes) {
+    switch (s.tipo) {
+      case "titulo":
+        return { secaoId: s.id, campo: "titulo" };
+      case "partes":
+        return { secaoId: s.id, campo: "contratante" };
+      case "clausula":
+        if (s.itens.length > 0) {
+          return { secaoId: s.id, campo: "item", itemId: s.itens[0].id };
+        }
+        return { secaoId: s.id, campo: "titulo" };
+      case "anexo":
+        return { secaoId: s.id, campo: "titulo" };
+      case "assinaturas":
+        break; // sem campo de texto
+    }
+  }
+  return null;
+}
+
 /** Preview do modelo com os dados de exemplo já substituídos. */
 function PreviewSecoes({ secoes }: { secoes: SecaoModelo[] }) {
-  const semConteudo = secoes.every(
-    (s) => !s.titulo.trim() && !s.paragrafos.some((p) => p.trim())
-  );
+  const num = calcularNumeracao(secoes);
+  const ex = (t: string) => preencher(t, VALORES_EXEMPLO);
 
   return (
     <div className="card">
       <p className="section-subtitle mb-5">Preview com dados de exemplo</p>
-      {semConteudo ? (
+      {!temConteudo(secoes) ? (
         <p className="text-sm text-muted italic">
-          Nada para mostrar ainda — adicione título e conteúdo às seções.
+          Nada para mostrar ainda — adicione seções e preencha o conteúdo.
         </p>
       ) : (
         <div className="flex flex-col gap-6">
           {secoes.map((secao) => (
-            <div key={secao.id}>
-              {secao.titulo.trim() && (
-                <h3
-                  className="text-sm font-bold uppercase tracking-wide mb-2"
-                  style={{ color: ACCENT }}
-                >
-                  {secao.titulo}
-                </h3>
-              )}
-              <div className="flex flex-col gap-3">
-                {secao.paragrafos.map((paragrafo, paraIdx) => (
-                  <div
-                    key={paraIdx}
-                    className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
-                  >
-                    {preencher(paragrafo, VALORES_EXEMPLO)}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <div key={secao.id}>{renderPreviewSecao(secao, num, ex)}</div>
           ))}
         </div>
       )}
     </div>
   );
+}
+
+function renderPreviewSecao(
+  secao: SecaoModelo,
+  num: ReturnType<typeof calcularNumeracao>,
+  ex: (t: string) => string
+) {
+  switch (secao.tipo) {
+    case "titulo":
+      return (
+        <div className="text-center">
+          {secao.titulo.trim() && (
+            <h2 className="text-lg font-bold tracking-wide">{ex(secao.titulo)}</h2>
+          )}
+          {secao.subtitulo.trim() && (
+            <p className="text-sm text-secondary mt-1">{ex(secao.subtitulo)}</p>
+          )}
+        </div>
+      );
+
+    case "partes":
+      return (
+        <div>
+          <h3
+            className="text-sm font-bold uppercase tracking-wide mb-2"
+            style={{ color: ACCENT }}
+          >
+            Das partes
+          </h3>
+          <div className="flex flex-col gap-3">
+            {[secao.contratante, secao.contratado, secao.paragrafo]
+              .filter((t) => t.trim())
+              .map((t, i) => (
+                <div
+                  key={i}
+                  className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
+                >
+                  {ex(t)}
+                </div>
+              ))}
+          </div>
+        </div>
+      );
+
+    case "clausula":
+      return (
+        <div>
+          <h3
+            className="text-sm font-bold uppercase tracking-wide mb-2"
+            style={{ color: ACCENT }}
+          >
+            {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
+          </h3>
+          <div className="flex flex-col gap-3">
+            {secao.itens.map((item) => (
+              <div
+                key={item.id}
+                className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
+              >
+                {item.tipo === "subclausula"
+                  ? `${num.itens[item.id]} ${ex(item.texto)}`
+                  : ex(item.texto)}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+    case "assinaturas": {
+      const blocos: { nome: string; papel: string }[] = [
+        { nome: ex("{{contratante}}"), papel: "CONTRATANTE" },
+        { nome: ex("{{artista}}"), papel: "CONTRATADO" },
+      ];
+      for (let i = 1; i <= secao.testemunhas; i++) {
+        blocos.push({ nome: "", papel: `Testemunha ${i}` });
+      }
+      return (
+        <div className="flex flex-col gap-6 pt-2">
+          {blocos.map((b, i) => (
+            <div key={i} className="flex flex-col items-center text-center">
+              <div className="w-64 border-t border-strong" />
+              {b.nome && (
+                <span className="text-sm text-secondary mt-1">{b.nome}</span>
+              )}
+              <span className="text-xs text-muted uppercase tracking-wide mt-0.5">
+                {b.papel}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case "anexo":
+      return (
+        <div>
+          <h3
+            className="text-sm font-bold uppercase tracking-wide mb-2"
+            style={{ color: ACCENT }}
+          >
+            {ex(secao.titulo)}
+          </h3>
+          <div className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
+            {ex(secao.conteudo)}
+          </div>
+        </div>
+      );
+  }
 }

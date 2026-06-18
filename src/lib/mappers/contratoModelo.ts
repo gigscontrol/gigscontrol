@@ -1,47 +1,91 @@
 /**
  * Mapper de "modelos de contrato" (contrato_modelos).
  *
- * Tabela criada na migration 32 (+ coluna `secoes` na migration 36). CRUD
- * simples por workspace — sem número, sub-entidades ou vínculos com
- * show/venda. O `tipo` define se o modelo é um texto editável (montado por
- * SEÇÕES com variáveis) ou um PDF anexado no Storage.
+ * Tabela criada na migration 32 (+ coluna `secoes` na migration 36). O modelo
+ * editável é montado por SEÇÕES TIPADAS, na ordem que o usuário quiser:
+ *   - titulo:      título + subtítulo do contrato
+ *   - partes:      contratante + contratado + 1 parágrafo
+ *   - clausula:    título + itens (sub-cláusulas numeradas N.M ou parágrafos)
+ *   - assinaturas: contratante + contratado + 0/1/2 testemunhas
+ *   - anexo:       título + conteúdo digitado (ex: rider como anexo)
+ *
+ * Cláusulas (1, 2, 3…) e sub-cláusulas (N.1, N.2…) são numeradas AUTOMÁTICAMENTE
+ * na renderização (ver src/lib/contratos/numeracao.ts) — o usuário nunca digita
+ * número. O `tipo` do modelo define se é editável (seções) ou PDF anexado.
  */
 
-/** Tipo do modelo: editável (seções com variáveis) ou PDF anexado. */
+/** Tipo do modelo: editável (seções) ou PDF anexado. */
 export type ContratoModeloTipo = "editavel" | "pdf";
 
-/**
- * Seção de um modelo editável. O contrato é montado como uma lista ORDENADA
- * de seções (título + corpo). O `corpo` é texto com variáveis `{{...}}` que
- * são preenchidas com os dados do show ao gerar o contrato. Seções
- * "automáticas" já vêm com as variáveis; seções manuais (cláusulas, foro,
- * PIX) o usuário escreve livremente.
- */
-export type SecaoModelo = {
+// ---------------- Seções tipadas ----------------
+
+export type SecaoTitulo = {
   id: string;
+  tipo: "titulo";
   titulo: string;
-  /** Cláusulas/parágrafos da seção. 1 = parágrafo único; vários = N cláusulas. */
-  paragrafos: string[];
+  subtitulo: string;
 };
 
-/** Linha bruta da tabela `contrato_modelos` no Supabase. */
+export type SecaoPartes = {
+  id: string;
+  tipo: "partes";
+  contratante: string;
+  contratado: string;
+  paragrafo: string;
+};
+
+/** Item de uma cláusula: sub-cláusula (numerada N.M) ou parágrafo (sem número). */
+export type ItemClausula = {
+  id: string;
+  tipo: "subclausula" | "paragrafo";
+  texto: string;
+};
+
+export type SecaoClausula = {
+  id: string;
+  tipo: "clausula";
+  titulo: string;
+  itens: ItemClausula[];
+};
+
+export type SecaoAssinaturas = {
+  id: string;
+  tipo: "assinaturas";
+  /** 0, 1 ou 2 testemunhas. Contratante e contratado estão sempre presentes. */
+  testemunhas: number;
+};
+
+export type SecaoAnexo = {
+  id: string;
+  tipo: "anexo";
+  titulo: string;
+  conteudo: string;
+};
+
+export type SecaoModelo =
+  | SecaoTitulo
+  | SecaoPartes
+  | SecaoClausula
+  | SecaoAssinaturas
+  | SecaoAnexo;
+
+// ---------------- Linha / modelo ----------------
+
 export type ContratoModeloRow = {
   id: string;
   workspace_id: string;
   nome: string;
   tipo: string;
-  /** Legado (texto único). Editáveis novos usam `secoes`. */
+  /** Legado (texto único). Editáveis usam `secoes`. */
   corpo: string | null;
   /** jsonb — SecaoModelo[]. */
   secoes: unknown;
-  /** URL no Storage (para tipo "pdf"); null quando é editável. */
   arquivo_url: string | null;
   arquivo_nome: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
 };
 
-/** Modelo de contrato no formato do app (camelCase). */
 export type ContratoModelo = {
   id: string;
   nome: string;
@@ -54,26 +98,75 @@ export type ContratoModelo = {
   atualizadoEm: string;
 };
 
-/** Normaliza o `tipo` vindo do banco; default "editavel". */
 export function tipoValido(s: string | null | undefined): ContratoModeloTipo {
   if (s === "editavel" || s === "pdf") return s;
   return "editavel";
 }
 
-/** Normaliza o jsonb `secoes` num SecaoModelo[] seguro. */
+function texto(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+/** Normaliza o jsonb `secoes` num SecaoModelo[] seguro (com compat do formato antigo). */
 export function secoesValidas(raw: unknown): SecaoModelo[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
-    .map((s) => ({
-      id: typeof s.id === "string" ? s.id : "",
-      titulo: typeof s.titulo === "string" ? s.titulo : "",
-      paragrafos: Array.isArray(s.paragrafos)
-        ? s.paragrafos.filter((p): p is string => typeof p === "string")
-        : typeof s.corpo === "string"
-        ? [s.corpo] // compat com o formato antigo (corpo único)
-        : [],
-    }));
+  const out: SecaoModelo[] = [];
+  for (const s of raw) {
+    if (!s || typeof s !== "object") continue;
+    const o = s as Record<string, unknown>;
+    const id = texto(o.id);
+    switch (o.tipo) {
+      case "titulo":
+        out.push({ id, tipo: "titulo", titulo: texto(o.titulo), subtitulo: texto(o.subtitulo) });
+        break;
+      case "partes":
+        out.push({
+          id,
+          tipo: "partes",
+          contratante: texto(o.contratante),
+          contratado: texto(o.contratado),
+          paragrafo: texto(o.paragrafo),
+        });
+        break;
+      case "clausula": {
+        const itens: ItemClausula[] = Array.isArray(o.itens)
+          ? o.itens
+              .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
+              .map((i) => ({
+                id: texto(i.id),
+                tipo: i.tipo === "paragrafo" ? "paragrafo" : "subclausula",
+                texto: texto(i.texto),
+              }))
+          : [];
+        out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
+        break;
+      }
+      case "assinaturas": {
+        const t = typeof o.testemunhas === "number" ? Math.floor(o.testemunhas) : 0;
+        out.push({ id, tipo: "assinaturas", testemunhas: Math.max(0, Math.min(2, t)) });
+        break;
+      }
+      case "anexo":
+        out.push({ id, tipo: "anexo", titulo: texto(o.titulo), conteudo: texto(o.conteudo) });
+        break;
+      default: {
+        // Compat com formatos antigos ({titulo, paragrafos[]} ou {titulo, corpo}) → cláusula.
+        const fonte = Array.isArray(o.paragrafos)
+          ? o.paragrafos
+          : typeof o.corpo === "string"
+          ? [o.corpo]
+          : null;
+        if (fonte) {
+          const itens: ItemClausula[] = fonte
+            .filter((p): p is string => typeof p === "string")
+            .map((p) => ({ id: "", tipo: "paragrafo" as const, texto: p }));
+          out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
+        }
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 export function rowParaModelo(row: ContratoModeloRow): ContratoModelo {
@@ -90,7 +183,6 @@ export function rowParaModelo(row: ContratoModeloRow): ContratoModelo {
   };
 }
 
-/** Payload aceito no INSERT/UPDATE de contrato_modelos. */
 export type ContratoModeloEscrita = {
   workspace_id?: string;
   nome?: string;
