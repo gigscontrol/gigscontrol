@@ -160,11 +160,132 @@ function estiloTitulo(cor: string): CSSProperties {
   };
 }
 
+/** Dados de uma assinatura registrada (folha assinada + relatório). */
+export type AssinaturaInfo = {
+  nome: string;
+  papel: string | null;
+  documento: string | null;
+  ip: string | null;
+  geolocalizacao: string | null;
+  dispositivo: string | null;
+  assinadoEm: string | null;
+  assinatura: string | null; // PNG data URL
+};
+
+/** Acha a assinatura que combina com o papel do bloco (contratante/contratado). */
+function achaAssinatura(
+  assinaturas: AssinaturaInfo[] | undefined,
+  papelBloco: string
+): AssinaturaInfo | undefined {
+  if (!assinaturas) return undefined;
+  const p = papelBloco.toLowerCase();
+  const tem = (chave: string) =>
+    assinaturas.find(
+      (a) => (a.papel ?? "").toLowerCase().includes(chave) && a.assinatura
+    );
+  if (p.includes("contratante")) return tem("contratante");
+  if (p.includes("contratado")) return tem("contratado");
+  return undefined;
+}
+
+function dataHoraRel(iso: string | null): string {
+  if (!iso) return "";
+  const d = iso.slice(0, 10).split("-");
+  const h = iso.slice(11, 16);
+  if (d.length !== 3) return iso;
+  return `${d[2]}/${d[1]}/${d[0]}${h ? ` ${h}` : ""}`;
+}
+
+/** Página "Relatório de Assinaturas" (estilo ZapSign), anexada ao final. */
+function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
+  return (
+    <div
+      style={{ borderTop: `2px solid ${estilo.corTitulo}`, paddingTop: "10pt" }}
+    >
+      <h3 style={estiloTitulo(estilo.corTitulo)}>Relatório de Assinaturas</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "14pt" }}>
+        {assinaturas.map((a, i) => (
+          <div
+            key={i}
+            style={{ display: "flex", gap: "8mm", alignItems: "flex-start" }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700 }}>
+                {a.nome}
+                {a.assinadoEm ? " — Assinou" : " — Pendente"}
+              </div>
+              {a.papel && (
+                <div
+                  style={{
+                    fontSize: "8.5pt",
+                    opacity: 0.7,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {a.papel}
+                </div>
+              )}
+              <div
+                style={{
+                  fontSize: "8.5pt",
+                  opacity: 0.85,
+                  marginTop: "3pt",
+                  lineHeight: 1.55,
+                }}
+              >
+                {a.documento && <div>Documento: {a.documento}</div>}
+                {a.assinadoEm && (
+                  <div>Data/hora: {dataHoraRel(a.assinadoEm)}</div>
+                )}
+                {a.ip && <div>IP: {a.ip}</div>}
+                {a.geolocalizacao && (
+                  <div>Geolocalização: {a.geolocalizacao}</div>
+                )}
+                {a.dispositivo && (
+                  <div style={{ wordBreak: "break-word" }}>
+                    Dispositivo: {a.dispositivo}
+                  </div>
+                )}
+              </div>
+            </div>
+            {a.assinatura && (
+              <div style={{ width: "52mm", textAlign: "center", flexShrink: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={a.assinatura}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    maxHeight: "20mm",
+                    objectFit: "contain",
+                  }}
+                />
+                <div
+                  style={{
+                    borderTop: `1px solid ${estilo.corTexto}`,
+                    fontSize: "7.5pt",
+                    opacity: 0.7,
+                    paddingTop: "2pt",
+                  }}
+                >
+                  {a.nome}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function renderSecao(
   secao: SecaoModelo,
   num: ReturnType<typeof calcularNumeracao>,
   ex: (t: string) => string,
-  estilo: EstiloModelo
+  estilo: EstiloModelo,
+  assinaturas?: AssinaturaInfo[]
 ) {
   const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
 
@@ -261,6 +382,21 @@ function renderSecao(
                 textAlign: "center",
               }}
             >
+              {(() => {
+                const ass = achaAssinatura(assinaturas, b.papel);
+                return ass?.assinatura ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={ass.assinatura}
+                    alt=""
+                    style={{
+                      height: "15mm",
+                      objectFit: "contain",
+                      marginBottom: "-2pt",
+                    }}
+                  />
+                ) : null;
+              })()}
               <div
                 style={{
                   width: "70mm",
@@ -312,12 +448,14 @@ export function FolhaA4({
   folhaRef,
   conteudoRef,
   transformarTexto,
+  assinaturas,
 }: {
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
   folhaRef: Ref<HTMLDivElement>;
   conteudoRef: Ref<HTMLDivElement>;
   transformarTexto?: (t: string) => string;
+  assinaturas?: AssinaturaInfo[];
 }) {
   const num = calcularNumeracao(secoes);
   const ex = transformarTexto ?? ((t: string) => t);
@@ -355,8 +493,14 @@ export function FolhaA4({
             style={{ display: "flex", flexDirection: "column", gap: "18pt" }}
           >
             {secoes.map((secao) => (
-              <div key={secao.id}>{renderSecao(secao, num, ex, estilo)}</div>
+              <div key={secao.id}>
+                {renderSecao(secao, num, ex, estilo, assinaturas)}
+              </div>
             ))}
+            {assinaturas &&
+              assinaturas.some((a) => a.assinatura || a.assinadoEm) && (
+                <div>{renderRelatorio(assinaturas, estilo)}</div>
+              )}
           </div>
         )}
       </div>

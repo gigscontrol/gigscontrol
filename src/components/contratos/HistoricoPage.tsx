@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import { FolhaA4, gerarPdfFolha } from "./folhaA4";
+import PainelAssinatura from "./PainelAssinatura";
 import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
@@ -379,6 +380,9 @@ function DetalheContrato({
           </div>
         </div>
       </div>
+
+      {/* Painel de assinatura — signatários, links/WhatsApp, PDF assinado */}
+      <PainelAssinatura contrato={contrato} />
 
       {/* Preview da folha A4 */}
       <FolhaA4
