@@ -19,3 +19,4 @@ next-env.d.ts
 # ir pra produção, contêm operações destrutivas)
 scripts/
 
+gerar_contrato_dj.py
