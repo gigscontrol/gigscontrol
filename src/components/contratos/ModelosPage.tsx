@@ -5,7 +5,12 @@ import { Plus, Copy, Pencil, Trash2, FileText, Sparkles, Loader2 } from "lucide-
 import PageHeader from "../PageHeader";
 import EditorModelo from "./EditorModelo";
 import { useModelos } from "@/lib/modelos-context";
-import type { ContratoModelo, SecaoModelo } from "@/lib/mappers/contratoModelo";
+import type {
+  ContratoModelo,
+  SecaoModelo,
+  EstiloModelo,
+} from "@/lib/mappers/contratoModelo";
+import { ESTILO_PADRAO } from "@/lib/mappers/contratoModelo";
 import {
   NOME_MODELO_EXEMPLO,
   SECOES_MODELO_EXEMPLO,
@@ -23,6 +28,7 @@ type EditorInicial = {
   modeloId: string | null;
   nome: string;
   secoes: SecaoModelo[];
+  estilo: EstiloModelo;
 };
 
 /**
@@ -89,13 +95,14 @@ export default function ModelosPage() {
       modeloId: null,
       nome: NOME_MODELO_EXEMPLO,
       secoes: clonarSecoes(SECOES_MODELO_EXEMPLO),
+      estilo: ESTILO_PADRAO,
     });
     setVista("editor");
   }
 
   function abrirNovoEmBranco() {
     // Em branco: sem seções — o usuário adiciona pelo menu "Adicionar seção".
-    setEditando({ modeloId: null, nome: "", secoes: [] });
+    setEditando({ modeloId: null, nome: "", secoes: [], estilo: ESTILO_PADRAO });
     setVista("editor");
   }
 
@@ -105,6 +112,7 @@ export default function ModelosPage() {
       nome: modelo.nome,
       // Cópia estrutural preservando os ids (não regenera como o "Duplicar").
       secoes: copiarSecoes(modelo.secoes),
+      estilo: modelo.estilo,
     });
     setVista("editor");
   }
@@ -140,6 +148,7 @@ export default function ModelosPage() {
           modeloId={editando.modeloId}
           nomeInicial={editando.nome}
           secoesIniciais={editando.secoes}
+          estiloInicial={editando.estilo}
           onVoltar={voltarParaLista}
           onSalvo={voltarParaLista}
         />

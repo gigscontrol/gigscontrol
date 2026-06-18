@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Ref,
+} from "react";
 import {
   ArrowLeft,
   Plus,
@@ -16,9 +22,17 @@ import {
   ListOrdered,
   PenLine,
   Paperclip,
+  Download,
+  Palette,
 } from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
-import type { SecaoModelo, ItemClausula } from "@/lib/mappers/contratoModelo";
+import ColorPicker from "../ColorPicker";
+import type {
+  SecaoModelo,
+  ItemClausula,
+  EstiloModelo,
+} from "@/lib/mappers/contratoModelo";
+import { estiloParaCorpo } from "@/lib/mappers/contratoModelo";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
 import {
   VARIAVEIS_CONTRATO,
@@ -34,6 +48,7 @@ type Props = {
   modeloId?: string | null;
   nomeInicial: string;
   secoesIniciais: SecaoModelo[];
+  estiloInicial: EstiloModelo;
   onVoltar: () => void;
   onSalvo: () => void;
 };
@@ -138,6 +153,7 @@ export default function EditorModelo({
   modeloId,
   nomeInicial,
   secoesIniciais,
+  estiloInicial,
   onVoltar,
   onSalvo,
 }: Props) {
@@ -149,6 +165,11 @@ export default function EditorModelo({
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [estilo, setEstilo] = useState<EstiloModelo>(estiloInicial);
+  const [baixandoPdf, setBaixandoPdf] = useState(false);
+  // Folha A4 do preview (visual) + container das seções (capturado no PDF).
+  const folhaRef = useRef<HTMLDivElement>(null);
+  const conteudoRef = useRef<HTMLDivElement>(null);
 
   // Numeração automática (cláusulas + sub-cláusulas), recalculada a cada render.
   const num = calcularNumeracao(secoes);
@@ -416,6 +437,8 @@ export default function EditorModelo({
         nome: nome.trim() || "Modelo sem nome",
         tipo: "editavel" as const,
         secoes,
+        // Cores do modelo serializadas na coluna `corpo` (sem migration).
+        corpo: estiloParaCorpo(estilo),
       };
       if (modeloId) {
         await atualizarModelo(modeloId, payload);
@@ -427,6 +450,118 @@ export default function EditorModelo({
       setErro((e as Error).message || "Não foi possível salvar o modelo.");
     } finally {
       setSalvando(false);
+    }
+  }
+
+  // ---- Baixar PDF (lazy-load só no clique; paginação A4 página a página) ----
+  // Captura cada seção num canvas e monta as páginas A4: o fundo preenche a
+  // página inteira (sem branco sobrando), a quebra acontece ENTRE seções
+  // (nunca cortando o texto no meio) e toda página tem a mesma margem.
+  async function baixarPdf() {
+    const cont = conteudoRef.current;
+    if (!cont || cont.children.length === 0) return;
+    setBaixandoPdf(true);
+    setErro(null);
+    try {
+      const [{ jsPDF }, html2canvasMod] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+      const html2canvas = html2canvasMod.default;
+
+      const A4_W = 210;
+      const A4_H = 297;
+      const MX = 20; // margem lateral (mm)
+      const MTOP = 22;
+      const MBOT = 22;
+      const contentW = A4_W - 2 * MX; // 170mm
+      const limiteY = A4_H - MBOT; // y máximo do conteúdo
+      const GAP = 6.5; // espaço entre seções (≈ 1 linha, mm)
+
+      const [fr, fg, fb] = hexParaRgb(estilo.corFundo);
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+
+      let y = MTOP;
+      let primeira = true;
+      const novaPagina = () => {
+        if (!primeira) pdf.addPage();
+        primeira = false;
+        pdf.setFillColor(fr, fg, fb);
+        pdf.rect(0, 0, A4_W, A4_H, "F"); // fundo preenche a página inteira
+        y = MTOP;
+      };
+      novaPagina();
+
+      for (const el of Array.from(cont.children) as HTMLElement[]) {
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          backgroundColor: estilo.corFundo,
+          useCORS: true,
+        });
+        const hmm = (canvas.height / canvas.width) * contentW;
+
+        if (hmm <= limiteY - MTOP) {
+          // Seção cabe numa página — quebra antes se não couber no que resta.
+          if (y + hmm > limiteY && y > MTOP) novaPagina();
+          pdf.addImage(
+            canvas.toDataURL("image/jpeg", 0.95),
+            "JPEG",
+            MX,
+            y,
+            contentW,
+            hmm
+          );
+          y += hmm + GAP;
+        } else {
+          // Seção maior que a página — fatia em páginas (preenchendo o fundo).
+          const pxPorMm = canvas.height / hmm;
+          let offset = 0;
+          while (offset < canvas.height) {
+            if (y > MTOP) novaPagina();
+            const dispMm = limiteY - y;
+            const slicePx = Math.min(
+              canvas.height - offset,
+              Math.floor(dispMm * pxPorMm)
+            );
+            const tmp = document.createElement("canvas");
+            tmp.width = canvas.width;
+            tmp.height = slicePx;
+            const ctx = tmp.getContext("2d");
+            if (ctx) {
+              ctx.fillStyle = estilo.corFundo;
+              ctx.fillRect(0, 0, canvas.width, slicePx);
+              ctx.drawImage(
+                canvas,
+                0,
+                offset,
+                canvas.width,
+                slicePx,
+                0,
+                0,
+                canvas.width,
+                slicePx
+              );
+            }
+            const sliceMm = slicePx / pxPorMm;
+            pdf.addImage(
+              tmp.toDataURL("image/jpeg", 0.95),
+              "JPEG",
+              MX,
+              y,
+              contentW,
+              sliceMm
+            );
+            offset += slicePx;
+            y += sliceMm + GAP;
+          }
+        }
+      }
+
+      pdf.save(`${nome.trim() || "contrato"}.pdf`);
+    } catch {
+      setErro("Não foi possível gerar o PDF. Tente novamente.");
+    } finally {
+      setBaixandoPdf(false);
     }
   }
 
@@ -497,7 +632,52 @@ export default function EditorModelo({
         {/* Coluna esquerda: editor de seções OU preview */}
         <div className="min-w-0">
           {preview ? (
-            <PreviewSecoes secoes={secoes} />
+            <div className="flex flex-col gap-3">
+              {/* Barra de aparência: cores + baixar PDF */}
+              <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 p-3">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1"
+                  style={{ color: ACCENT }}
+                >
+                  <Palette size={13} />
+                  Aparência
+                </span>
+                <SeletorCorInline
+                  label="Fundo"
+                  cor={estilo.corFundo}
+                  presets={PRESETS_FUNDO}
+                  onChange={(c) => setEstilo((s) => ({ ...s, corFundo: c }))}
+                />
+                <SeletorCorInline
+                  label="Texto"
+                  cor={estilo.corTexto}
+                  presets={PRESETS_TEXTO}
+                  onChange={(c) => setEstilo((s) => ({ ...s, corTexto: c }))}
+                />
+                <SeletorCorInline
+                  label="Títulos"
+                  cor={estilo.corTitulo}
+                  presets={PRESETS_TITULO}
+                  onChange={(c) => setEstilo((s) => ({ ...s, corTitulo: c }))}
+                />
+                <button
+                  type="button"
+                  onClick={baixarPdf}
+                  disabled={baixandoPdf}
+                  className="btn ml-auto"
+                  style={{ backgroundColor: ACCENT, color: "#fff", opacity: baixandoPdf ? 0.6 : 1 }}
+                >
+                  <Download size={15} />
+                  {baixandoPdf ? "Gerando..." : "Baixar PDF"}
+                </button>
+              </div>
+              <PreviewSecoes
+                secoes={secoes}
+                estilo={estilo}
+                folhaRef={folhaRef}
+                conteudoRef={conteudoRef}
+              />
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
               {secoes.map((secao, index) => (
@@ -867,43 +1047,200 @@ function primeiroCampoTexto(secoes: SecaoModelo[]): Descritor | null {
   return null;
 }
 
-/** Preview do modelo com os dados de exemplo já substituídos. */
-function PreviewSecoes({ secoes }: { secoes: SecaoModelo[] }) {
-  const num = calcularNumeracao(secoes);
-  const ex = (t: string) => preencher(t, VALORES_EXEMPLO);
+/** Hex (#rrggbb) → [r, g, b] pra preencher o fundo da página no jsPDF. */
+function hexParaRgb(hex: string): [number, number, number] {
+  const m = hex.replace("#", "");
+  return [
+    parseInt(m.slice(0, 2), 16) || 0,
+    parseInt(m.slice(2, 4), 16) || 0,
+    parseInt(m.slice(4, 6), 16) || 0,
+  ];
+}
+
+// Presets de cor (4 + a opção RGB custom via ColorPicker) pra cada parte.
+// branco · off-white · cinza escuro · preto (+ RGB no botão "+")
+const PRESETS_FUNDO = ["#ffffff", "#f8f7f4", "#404040", "#000000"];
+// preto · branco · cinza · azul escuro (+ RGB)
+const PRESETS_TEXTO = ["#111111", "#ffffff", "#6b7280", "#1e3a8a"];
+// título: mesma escala do texto
+const PRESETS_TITULO = ["#111111", "#ffffff", "#6b7280", "#1e3a8a"];
+
+/**
+ * Seletor de cor compacto (mesma ideia do seletor do artista): 4 swatches de
+ * preset + um botão de cor personalizada que abre o ColorPicker (RGB/HSV).
+ */
+function SeletorCorInline({
+  label,
+  cor,
+  presets,
+  onChange,
+}: {
+  label: string;
+  cor: string;
+  presets: string[];
+  onChange: (c: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const ativo = (p: string) => p.toLowerCase() === cor.toLowerCase();
+  const ehCustom = !presets.some(ativo);
 
   return (
-    <div className="card">
-      <p className="section-subtitle mb-5">Preview com dados de exemplo</p>
-      {!temConteudo(secoes) ? (
-        <p className="text-sm text-muted italic">
-          Nada para mostrar ainda — adicione seções e preencha o conteúdo.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {secoes.map((secao) => (
-            <div key={secao.id}>{renderPreviewSecao(secao, num, ex)}</div>
-          ))}
-        </div>
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-muted">{label}</span>
+      {presets.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => onChange(p)}
+          title={p}
+          aria-label={`${label} ${p}`}
+          className="h-6 w-6 rounded-md transition-transform hover:scale-110"
+          style={{
+            backgroundColor: p,
+            border: "1px solid var(--border-color)",
+            boxShadow: ativo(p)
+              ? "0 0 0 2px var(--bg-surface), 0 0 0 3px var(--text-primary)"
+              : undefined,
+          }}
+        />
+      ))}
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setAberto(true)}
+        title="Cor personalizada (RGB)"
+        className="h-6 w-6 rounded-md flex items-center justify-center transition-transform hover:scale-110"
+        style={{
+          backgroundColor: ehCustom ? cor : "transparent",
+          border: `1px ${ehCustom ? "solid" : "dashed"} ${
+            ehCustom ? "var(--text-primary)" : "var(--border-color)"
+          }`,
+          color: "var(--text-muted)",
+          boxShadow: ehCustom
+            ? "0 0 0 2px var(--bg-surface), 0 0 0 3px var(--text-primary)"
+            : undefined,
+        }}
+      >
+        {!ehCustom && <Plus size={12} />}
+      </button>
+      {aberto && (
+        <ColorPicker
+          cor={cor}
+          onApply={(c) => {
+            onChange(c);
+            setAberto(false);
+          }}
+          onClose={() => setAberto(false)}
+          anchorRef={anchorRef}
+        />
       )}
     </div>
   );
 }
 
+/**
+ * Preview do modelo numa FOLHA A4 (210×297mm), com as cores escolhidas
+ * (fundo / texto / título) e dados de exemplo já substituídos. O `folhaRef`
+ * aponta pra folha — é o nó capturado na geração do PDF.
+ */
+function PreviewSecoes({
+  secoes,
+  estilo,
+  folhaRef,
+  conteudoRef,
+}: {
+  secoes: SecaoModelo[];
+  estilo: EstiloModelo;
+  folhaRef: Ref<HTMLDivElement>;
+  conteudoRef: Ref<HTMLDivElement>;
+}) {
+  const num = calcularNumeracao(secoes);
+  const ex = (t: string) => preencher(t, VALORES_EXEMPLO);
+
+  return (
+    <div
+      className="overflow-auto rounded-md p-4"
+      style={{
+        background: "var(--bg-main)",
+        border: "1px solid var(--border-color)",
+      }}
+    >
+      <div
+        ref={folhaRef}
+        style={{
+          width: "210mm",
+          minHeight: "297mm",
+          margin: "0 auto",
+          padding: "22mm 20mm",
+          background: estilo.corFundo,
+          color: estilo.corTexto,
+          boxShadow: "0 6px 28px rgba(0,0,0,0.45)",
+          fontFamily: "'Times New Roman', Georgia, serif",
+          fontSize: "11pt",
+          lineHeight: 1.6,
+        }}
+      >
+        {!temConteudo(secoes) ? (
+          <p style={{ fontStyle: "italic", opacity: 0.55 }}>
+            Nada para mostrar ainda — adicione seções e preencha o conteúdo.
+          </p>
+        ) : (
+          <div
+            ref={conteudoRef}
+            style={{ display: "flex", flexDirection: "column", gap: "18pt" }}
+          >
+            {secoes.map((secao) => (
+              <div key={secao.id}>{renderPreviewSecao(secao, num, ex, estilo)}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Estilo de um título centralizado (usa a cor de título do modelo). */
+function estiloTitulo(cor: string): CSSProperties {
+  return {
+    color: cor,
+    fontSize: "11pt",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.03em",
+    textAlign: "center",
+    marginBottom: "6pt",
+  };
+}
+
 function renderPreviewSecao(
   secao: SecaoModelo,
   num: ReturnType<typeof calcularNumeracao>,
-  ex: (t: string) => string
+  ex: (t: string) => string,
+  estilo: EstiloModelo
 ) {
+  const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
+
   switch (secao.tipo) {
     case "titulo":
       return (
-        <div className="text-center">
+        <div style={{ textAlign: "center" }}>
           {secao.titulo.trim() && (
-            <h2 className="text-lg font-bold tracking-wide">{ex(secao.titulo)}</h2>
+            <h2
+              style={{
+                color: estilo.corTitulo,
+                fontSize: "15pt",
+                fontWeight: 700,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {ex(secao.titulo)}
+            </h2>
           )}
           {secao.subtitulo.trim() && (
-            <p className="text-sm text-secondary mt-1">{ex(secao.subtitulo)}</p>
+            <p style={{ fontSize: "11pt", marginTop: "4pt", opacity: 0.85 }}>
+              {ex(secao.subtitulo)}
+            </p>
           )}
         </div>
       );
@@ -911,20 +1248,12 @@ function renderPreviewSecao(
     case "partes":
       return (
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide mb-2"
-            style={{ color: ACCENT }}
-          >
-            Das partes
-          </h3>
-          <div className="flex flex-col gap-3">
+          <h3 style={estiloTitulo(estilo.corTitulo)}>Das partes</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
               .filter((t) => t.trim())
               .map((t, i) => (
-                <div
-                  key={i}
-                  className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
-                >
+                <div key={i} style={corpo}>
                   {ex(t)}
                 </div>
               ))}
@@ -935,18 +1264,12 @@ function renderPreviewSecao(
     case "clausula":
       return (
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide mb-2"
-            style={{ color: ACCENT }}
-          >
-            {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
+          <h3 style={estiloTitulo(estilo.corTitulo)}>
+            CLÁUSULA {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
           </h3>
-          <div className="flex flex-col gap-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {secao.itens.map((item) => (
-              <div
-                key={item.id}
-                className="text-sm text-secondary leading-relaxed whitespace-pre-wrap"
-              >
+              <div key={item.id} style={corpo}>
                 {item.tipo === "subclausula"
                   ? `${num.itens[item.id]} ${ex(item.texto)}`
                   : ex(item.texto)}
@@ -965,17 +1288,42 @@ function renderPreviewSecao(
         blocos.push({ nome: t.nome, doc: t.documento, papel: `Testemunha ${i + 1}` });
       });
       return (
-        <div className="flex flex-col gap-6 pt-2">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "26pt",
+            paddingTop: "14pt",
+          }}
+        >
           {blocos.map((b, i) => (
-            <div key={i} className="flex flex-col items-center text-center">
-              <div className="w-64 border-t border-strong" />
-              {b.nome && (
-                <span className="text-sm text-secondary mt-1">{b.nome}</span>
-              )}
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{ width: "70mm", borderTop: `1px solid ${estilo.corTexto}` }}
+              />
+              {b.nome && <span style={{ marginTop: "3pt" }}>{b.nome}</span>}
               {b.doc && b.doc.trim() && (
-                <span className="text-xs text-muted mt-0.5">{b.doc}</span>
+                <span style={{ fontSize: "9pt", opacity: 0.7, marginTop: "1pt" }}>
+                  {b.doc}
+                </span>
               )}
-              <span className="text-xs text-muted uppercase tracking-wide mt-0.5">
+              <span
+                style={{
+                  fontSize: "9pt",
+                  opacity: 0.7,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  marginTop: "1pt",
+                }}
+              >
                 {b.papel}
               </span>
             </div>
@@ -987,15 +1335,8 @@ function renderPreviewSecao(
     case "anexo":
       return (
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide mb-2"
-            style={{ color: ACCENT }}
-          >
-            {ex(secao.titulo)}
-          </h3>
-          <div className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
-            {ex(secao.conteudo)}
-          </div>
+          <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          <div style={corpo}>{ex(secao.conteudo)}</div>
         </div>
       );
   }

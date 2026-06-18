@@ -13,6 +13,13 @@ export type ArtistaRow = {
   cidade_ibge_id: string | null;
   cidade_nome: string | null;
   cidade_uf: string | null;
+  // Dados do contratado p/ contrato (migração 37)
+  nome_legal: string | null;
+  documento_tipo: string | null;
+  documento: string | null;
+  razao_social: string | null;
+  endereco: string | null;
+  telefone: string | null;
   taxa_modo: TaxaAgenciaModo | null;
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
@@ -89,6 +96,13 @@ export function rowParaDj(row: ArtistaRow): DJ {
   if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
   if (row.cidade_nome) dj.cidadeNome = row.cidade_nome;
   if (row.cidade_uf) dj.cidadeUf = row.cidade_uf;
+  if (row.nome_legal) dj.nomeLegal = row.nome_legal;
+  if (row.documento_tipo === "cpf" || row.documento_tipo === "cnpj")
+    dj.documentoTipo = row.documento_tipo;
+  if (row.documento) dj.documento = row.documento;
+  if (row.razao_social) dj.razaoSocial = row.razao_social;
+  if (row.endereco) dj.endereco = row.endereco;
+  if (row.telefone) dj.telefone = row.telefone;
   if (row.taxa_valor !== null && row.taxa_valor !== undefined) {
     const n = Number(row.taxa_valor);
     if (Number.isFinite(n)) dj.taxaValor = n;
@@ -105,6 +119,12 @@ export type ArtistaEscrita = {
   cidade_ibge_id?: string | null;
   cidade_nome?: string | null;
   cidade_uf?: string | null;
+  nome_legal?: string | null;
+  documento_tipo?: string | null;
+  documento?: string | null;
+  razao_social?: string | null;
+  endereco?: string | null;
+  telefone?: string | null;
   taxa_modo?: TaxaAgenciaModo;
   taxa_valor?: number | null;
   rider_camarim?: string[];

@@ -13,6 +13,7 @@ import { useAuth } from "./auth-context";
 import type {
   ContratoModelo,
   ContratoModeloTipo,
+  SecaoModelo,
 } from "@/lib/mappers/contratoModelo";
 
 /** Payload de criação de um modelo (camelCase no app). */
@@ -20,6 +21,7 @@ export type NovoModeloInput = {
   nome: string;
   tipo?: ContratoModeloTipo;
   corpo?: string | null;
+  secoes?: SecaoModelo[];
   arquivoUrl?: string | null;
   arquivoNome?: string | null;
 };
@@ -55,6 +57,7 @@ function modeloParaApi(m: Partial<NovoModeloInput>): Record<string, unknown> {
   if (m.nome !== undefined) out.nome = m.nome;
   if (m.tipo !== undefined) out.tipo = m.tipo;
   if (m.corpo !== undefined) out.corpo = m.corpo ?? null;
+  if (m.secoes !== undefined) out.secoes = m.secoes;
   if (m.arquivoUrl !== undefined) out.arquivo_url = m.arquivoUrl ?? null;
   if (m.arquivoNome !== undefined) out.arquivo_nome = m.arquivoNome ?? null;
   return out;

@@ -29,6 +29,11 @@ import {
   EyeOff,
   Search,
   Users,
+  FileText,
+  User,
+  Home,
+  Phone,
+  Building2,
 } from "lucide-react";
 import Toast from "../Toast";
 import CidadeIBGEAutocomplete, {
@@ -42,6 +47,11 @@ import {
   type NovoArtistaInput,
 } from "@/lib/workspace-context";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
+import {
+  splitEndereco,
+  joinEndereco,
+  formatEndereco,
+} from "@/lib/endereco";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import {
@@ -53,6 +63,7 @@ import {
   LIMITE_RIDER_EFEITOS,
   LIMITE_RIDER_TECNICO,
   type TaxaAgenciaModo,
+  type DocumentoTipo,
 } from "@/types";
 
 /**
@@ -94,6 +105,12 @@ type ArtistaParaEdicao = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  nomeLegal?: string;
+  documentoTipo?: DocumentoTipo;
+  documento?: string;
+  razaoSocial?: string;
+  endereco?: string;
+  telefone?: string;
   taxaModo: TaxaAgenciaModo;
   taxaValor?: number;
   riderCamarim: string[];
@@ -651,6 +668,47 @@ export default function AbaArtistas() {
                     <span className="font-mono uppercase">{djSelecionado.color}</span>
                   </span>
                 </div>
+                {/* Dados para contrato — logo abaixo do nome */}
+                {(djSelecionado.nomeLegal ||
+                  djSelecionado.razaoSocial ||
+                  djSelecionado.documento ||
+                  djSelecionado.endereco ||
+                  djSelecionado.telefone) && (
+                  <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-muted mt-1.5">
+                    {djSelecionado.nomeLegal && (
+                      <span className="inline-flex items-center gap-1">
+                        <User size={11} />
+                        {djSelecionado.nomeLegal}
+                      </span>
+                    )}
+                    {djSelecionado.documentoTipo === "cnpj" &&
+                      djSelecionado.razaoSocial && (
+                        <span className="inline-flex items-center gap-1">
+                          <Building2 size={11} />
+                          {djSelecionado.razaoSocial}
+                        </span>
+                      )}
+                    {djSelecionado.documento && (
+                      <span className="inline-flex items-center gap-1">
+                        <FileText size={11} />
+                        {djSelecionado.documentoTipo === "cnpj" ? "CNPJ" : "CPF"}{" "}
+                        {djSelecionado.documento}
+                      </span>
+                    )}
+                    {djSelecionado.endereco && (
+                      <span className="inline-flex items-center gap-1">
+                        <Home size={11} />
+                        {formatEndereco(djSelecionado.endereco)}
+                      </span>
+                    )}
+                    {djSelecionado.telefone && (
+                      <span className="inline-flex items-center gap-1">
+                        <Phone size={11} />
+                        {djSelecionado.telefone}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Ações */}
@@ -688,6 +746,12 @@ export default function AbaArtistas() {
                         cidadeIbgeId: djSelecionado.cidadeIbgeId,
                         cidadeNome: djSelecionado.cidadeNome,
                         cidadeUf: djSelecionado.cidadeUf,
+                        nomeLegal: djSelecionado.nomeLegal,
+                        documentoTipo: djSelecionado.documentoTipo,
+                        documento: djSelecionado.documento,
+                        razaoSocial: djSelecionado.razaoSocial,
+                        endereco: djSelecionado.endereco,
+                        telefone: djSelecionado.telefone,
                         taxaModo: djSelecionado.taxaModo ?? "sem-taxa",
                         taxaValor: djSelecionado.taxaValor,
                         riderCamarim: djSelecionado.riderCamarim ?? [],
@@ -1348,6 +1412,14 @@ export function ModalNovoArtista({
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>([]);
   const [riderTecnico, setRiderTecnico] = useState<string[]>([]);
 
+  // Seção — Dados para contrato (CONTRATADO)
+  const [nomeLegal, setNomeLegal] = useState("");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
+  const [documento, setDocumento] = useState("");
+  const [razaoSocial, setRazaoSocial] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [telefone, setTelefone] = useState("");
+
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   // Feedback do botão de copiar username completo.
@@ -1404,6 +1476,13 @@ export function ModalNovoArtista({
     if (colisaoUsername === "lixeira")
       return "Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.";
     if (!cidade) return "Informe a cidade onde o artista reside.";
+    const erroContrato = validarDadosContrato(
+      nomeLegal,
+      documentoTipo,
+      documento,
+      razaoSocial
+    );
+    if (erroContrato) return erroContrato;
     // Taxa obrigatória nos modos fixos
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
       const v = parseFloat(taxaValor.replace(",", "."));
@@ -1443,6 +1522,15 @@ export function ModalNovoArtista({
       if (riderCamarim.length > 0) input.riderCamarim = riderCamarim;
       if (riderEfeitos.length > 0) input.riderEfeitos = riderEfeitos;
       if (riderTecnico.length > 0) input.riderTecnico = riderTecnico;
+
+      // Dados do CONTRATADO (obrigatórios — validados acima)
+      input.nomeLegal = nomeLegal.trim();
+      input.documento = documento.trim();
+      input.documentoTipo = documentoTipo;
+      if (documentoTipo === "cnpj" && razaoSocial.trim())
+        input.razaoSocial = razaoSocial.trim();
+      if (endereco.trim()) input.endereco = endereco.trim();
+      if (telefone.trim()) input.telefone = telefone.trim();
 
       const resultado = await adicionarArtista(input);
       onCriado({
@@ -1530,6 +1618,22 @@ export function ModalNovoArtista({
               />
             </Campo>
           </Secao>
+
+          {/* Seção — Dados para contrato (CONTRATADO) */}
+          <SecaoDadosContrato
+            nomeLegal={nomeLegal}
+            setNomeLegal={setNomeLegal}
+            documentoTipo={documentoTipo}
+            setDocumentoTipo={setDocumentoTipo}
+            documento={documento}
+            setDocumento={setDocumento}
+            razaoSocial={razaoSocial}
+            setRazaoSocial={setRazaoSocial}
+            endereco={endereco}
+            setEndereco={setEndereco}
+            telefone={telefone}
+            setTelefone={setTelefone}
+          />
 
           {/* Seção 2 — Acesso ao sistema */}
           <Secao titulo="Acesso ao sistema">
@@ -1884,6 +1988,16 @@ function ModalEditarArtista({
   const [riderTecnico, setRiderTecnico] = useState<string[]>(artista.riderTecnico);
   const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
 
+  // Dados para contrato (CONTRATADO) — pré-preenchidos do artista.
+  const [nomeLegal, setNomeLegal] = useState(artista.nomeLegal ?? "");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
+    artista.documentoTipo ?? "cpf"
+  );
+  const [documento, setDocumento] = useState(artista.documento ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(artista.razaoSocial ?? "");
+  const [endereco, setEndereco] = useState(artista.endereco ?? "");
+  const [telefone, setTelefone] = useState(artista.telefone ?? "");
+
   // Dados da conta (email + verificado) — async ao abrir
   const [conta, setConta] = useState<DadosConta | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(true);
@@ -1970,6 +2084,13 @@ function ModalEditarArtista({
     if (colisaoNome === "lixeira")
       return `Existe um artista na lixeira com esse nome ("${n}"). Restaure ou apague antes de reutilizar.`;
     if (!cidade) return "Informe a cidade onde o artista reside.";
+    const erroContrato = validarDadosContrato(
+      nomeLegal,
+      documentoTipo,
+      documento,
+      razaoSocial
+    );
+    if (erroContrato) return erroContrato;
     if (!usernameValido)
       return "Username inválido (3+ chars, letras/números/hífen).";
     if (colisaoUsername === "ativo")
@@ -2015,6 +2136,13 @@ function ModalEditarArtista({
         riderEfeitos,
         riderTecnico,
         privacidade,
+        // Dados do CONTRATADO (sempre enviados — validados acima).
+        nomeLegal: nomeLegal.trim(),
+        documento: documento.trim(),
+        documentoTipo,
+        razaoSocial: documentoTipo === "cnpj" ? razaoSocial.trim() : "",
+        endereco: endereco.trim(),
+        telefone: telefone.trim(),
       };
       // Username e email só se mudaram (evita trabalho desnecessário no backend)
       if (usernameMudou) {
@@ -2092,6 +2220,22 @@ function ModalEditarArtista({
               />
             </Campo>
           </Secao>
+
+          {/* Seção — Dados para contrato (CONTRATADO) */}
+          <SecaoDadosContrato
+            nomeLegal={nomeLegal}
+            setNomeLegal={setNomeLegal}
+            documentoTipo={documentoTipo}
+            setDocumentoTipo={setDocumentoTipo}
+            documento={documento}
+            setDocumento={setDocumento}
+            razaoSocial={razaoSocial}
+            setRazaoSocial={setRazaoSocial}
+            endereco={endereco}
+            setEndereco={setEndereco}
+            telefone={telefone}
+            setTelefone={setTelefone}
+          />
 
           {/* Seção 2 — Acesso */}
           <Secao titulo="Acesso ao sistema">
@@ -2724,16 +2868,85 @@ function ModalEditarArtista({
             </div>
           </div>
 
-          {/* Corpo do header: cor + cidade */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Corpo do header: Cor (linha toda) + grid 2-col.
+              Esquerda: nome + documento (tipo / número).
+              Direita: cidade, endereço, telefone.
+              Razão social ocupa a linha toda e só aparece quando CNPJ. */}
+          <div className="flex flex-col gap-4">
             <SeletorDeCor cor={cor} onChange={setCor} />
-            <Campo label="Cidade onde reside">
-              <CidadeIBGEAutocomplete
-                value={cidade}
-                onChange={setCidade}
-                placeholder="Cidade onde reside"
-              />
-            </Campo>
+            <div className="border-t border-border" />
+            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+              {/* Linha 1: Nome | Cidade */}
+              <Campo label="Nome completo (civil)">
+                <input
+                  value={nomeLegal}
+                  onChange={(e) => setNomeLegal(e.target.value)}
+                  placeholder="Ex: João da Silva"
+                  className="campo-input"
+                />
+              </Campo>
+              <Campo label="Cidade onde reside">
+                <CidadeIBGEAutocomplete
+                  value={cidade}
+                  onChange={setCidade}
+                  placeholder="Cidade onde reside"
+                />
+              </Campo>
+
+              {/* Linha 2: Tipo de documento | Endereço */}
+              <Campo label="Tipo de documento">
+                <ToggleTipoDocumento
+                  documentoTipo={documentoTipo}
+                  setDocumentoTipo={setDocumentoTipo}
+                  documento={documento}
+                  setDocumento={setDocumento}
+                />
+              </Campo>
+              <Campo label="Endereço (opcional)">
+                <CamposEndereco value={endereco} onChange={setEndereco} />
+              </Campo>
+
+              {/* Linha 3: número do CPF/CNPJ | Telefone */}
+              <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
+                <input
+                  value={documento}
+                  onChange={(e) =>
+                    setDocumento(mascararDocumento(e.target.value, documentoTipo))
+                  }
+                  inputMode="numeric"
+                  placeholder={
+                    documentoTipo === "cpf"
+                      ? "000.000.000-00"
+                      : "00.000.000/0000-00"
+                  }
+                  className="campo-input font-mono"
+                />
+              </Campo>
+              <Campo label="Telefone (opcional)">
+                <input
+                  value={telefone}
+                  onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
+                  inputMode="tel"
+                  placeholder="(11) 98888-7777"
+                  className="campo-input"
+                />
+              </Campo>
+
+              {/* Razão social — linha inteira, só quando CNPJ */}
+              {documentoTipo === "cnpj" && (
+                <Campo
+                  label="Razão social / Nome da empresa"
+                  className="md:col-span-2"
+                >
+                  <input
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(e.target.value)}
+                    placeholder="Ex: Silva Produções Artísticas LTDA"
+                    className="campo-input"
+                  />
+                </Campo>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -3654,6 +3867,254 @@ function SeletorDeCor({
 // Helpers de UI
 // ============================================================
 
+// ---- Documento (CPF/CNPJ) + telefone: máscara e validação ----
+
+/** Formata CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) conforme digita. */
+function mascararDocumento(valor: string, tipo: DocumentoTipo): string {
+  const d = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
+  if (tipo === "cpf") {
+    if (d.length > 9)
+      return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+    if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+    if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
+    return d;
+  }
+  if (d.length > 12)
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(
+      8,
+      12
+    )}-${d.slice(12)}`;
+  if (d.length > 8)
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return d;
+}
+
+/** Valida só a contagem de dígitos (11=CPF, 14=CNPJ) — não faz checksum. */
+function documentoValido(valor: string, tipo: DocumentoTipo): boolean {
+  return valor.replace(/\D/g, "").length === (tipo === "cpf" ? 11 : 14);
+}
+
+/** Máscara leve de telefone BR: (11) 98888-7777. */
+function mascararTelefone(valor: string): string {
+  const d = valor.replace(/\D/g, "").slice(0, 11);
+  if (d.length > 10) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length > 6) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (d.length > 2) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length > 0) return `(${d}`;
+  return "";
+}
+
+/**
+ * Validação dos dados do CONTRATADO (obrigatórios pro contrato): nome
+ * completo + documento sempre; razão social quando CNPJ. Devolve a 1ª
+ * mensagem de erro, ou null se tudo certo.
+ */
+function validarDadosContrato(
+  nomeLegal: string,
+  documentoTipo: DocumentoTipo,
+  documento: string,
+  razaoSocial: string
+): string | null {
+  if (!nomeLegal.trim()) return "Informe o nome completo (civil) do artista.";
+  if (!documentoValido(documento, documentoTipo))
+    return documentoTipo === "cpf"
+      ? "CPF inválido — precisa de 11 dígitos."
+      : "CNPJ inválido — precisa de 14 dígitos.";
+  if (documentoTipo === "cnpj" && !razaoSocial.trim())
+    return "Informe a razão social / nome da empresa (CNPJ).";
+  return null;
+}
+
+/**
+ * Endereço em 3 inputs (Rua 70% · Número 10%, até 5 dígitos · Complemento 20%)
+ * sobre uma única string `value` (formato interno "rua||numero||complemento").
+ * Cada alteração rejunta as 3 partes — o estado `endereco` do form não muda.
+ */
+function CamposEndereco({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { rua, numero, complemento } = splitEndereco(value);
+  return (
+    <div className="flex gap-2">
+      <input
+        value={rua}
+        onChange={(e) => onChange(joinEndereco(e.target.value, numero, complemento))}
+        placeholder="Rua / Avenida"
+        className="campo-input flex-[7] min-w-0"
+      />
+      <input
+        value={numero}
+        onChange={(e) =>
+          onChange(
+            joinEndereco(
+              rua,
+              e.target.value.replace(/\D/g, "").slice(0, 5),
+              complemento
+            )
+          )
+        }
+        inputMode="numeric"
+        maxLength={5}
+        placeholder="Nº"
+        className="campo-input flex-[1] min-w-[3rem] text-center px-1"
+      />
+      <input
+        value={complemento}
+        onChange={(e) => onChange(joinEndereco(rua, numero, e.target.value))}
+        placeholder="Compl."
+        className="campo-input flex-[2] min-w-0"
+      />
+    </div>
+  );
+}
+
+/**
+ * Toggle CPF / CNPJ. Reaproveita o visual do `.pill` mas com cantos
+ * QUADRADOS (6px) pra acompanhar os outros campos (campo-input) — sem mexer
+ * no `.pill` global (usado nos filtros). Trocar o tipo re-aplica a máscara.
+ */
+function ToggleTipoDocumento({
+  documentoTipo,
+  setDocumentoTipo,
+  documento,
+  setDocumento,
+}: {
+  documentoTipo: DocumentoTipo;
+  setDocumentoTipo: (v: DocumentoTipo) => void;
+  documento: string;
+  setDocumento: (v: string) => void;
+}) {
+  return (
+    <div className="pill-group !rounded-md">
+      {(["cpf", "cnpj"] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => {
+            setDocumentoTipo(t);
+            setDocumento(mascararDocumento(documento, t));
+          }}
+          className={`pill !rounded-[4px] ${documentoTipo === t ? "active" : ""}`}
+        >
+          {t === "cpf" ? "CPF (pessoa física)" : "CNPJ (empresa)"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Campos do CONTRATADO (sem wrapper) — reusados na Seção (cadastro / edição
+ * em modal) e no card do perfil editável inline. O `nome` do artista é o
+ * nome artístico; aqui ficam os dados legais que vão pro contrato.
+ */
+function CamposDadosContrato({
+  nomeLegal,
+  setNomeLegal,
+  documentoTipo,
+  setDocumentoTipo,
+  documento,
+  setDocumento,
+  razaoSocial,
+  setRazaoSocial,
+  endereco,
+  setEndereco,
+  telefone,
+  setTelefone,
+}: {
+  nomeLegal: string;
+  setNomeLegal: (v: string) => void;
+  documentoTipo: DocumentoTipo;
+  setDocumentoTipo: (v: DocumentoTipo) => void;
+  documento: string;
+  setDocumento: (v: string) => void;
+  razaoSocial: string;
+  setRazaoSocial: (v: string) => void;
+  endereco: string;
+  setEndereco: (v: string) => void;
+  telefone: string;
+  setTelefone: (v: string) => void;
+}) {
+  return (
+    <>
+      <Campo label="Nome completo (civil)" className="md:col-span-2">
+        <input
+          value={nomeLegal}
+          onChange={(e) => setNomeLegal(e.target.value)}
+          placeholder="Ex: João da Silva"
+          className="campo-input"
+        />
+      </Campo>
+
+      <Campo label="Tipo de documento">
+        <ToggleTipoDocumento
+          documentoTipo={documentoTipo}
+          setDocumentoTipo={setDocumentoTipo}
+          documento={documento}
+          setDocumento={setDocumento}
+        />
+      </Campo>
+
+      <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
+        <input
+          value={documento}
+          onChange={(e) =>
+            setDocumento(mascararDocumento(e.target.value, documentoTipo))
+          }
+          inputMode="numeric"
+          placeholder={
+            documentoTipo === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"
+          }
+          className="campo-input font-mono"
+        />
+      </Campo>
+
+      {documentoTipo === "cnpj" && (
+        <Campo
+          label="Razão social / Nome da empresa"
+          className="md:col-span-2"
+        >
+          <input
+            value={razaoSocial}
+            onChange={(e) => setRazaoSocial(e.target.value)}
+            placeholder="Ex: Silva Produções Artísticas LTDA"
+            className="campo-input"
+          />
+        </Campo>
+      )}
+
+      <Campo label="Endereço (opcional)">
+        <CamposEndereco value={endereco} onChange={setEndereco} />
+      </Campo>
+
+      <Campo label="Telefone (opcional)">
+        <input
+          value={telefone}
+          onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
+          inputMode="tel"
+          placeholder="(11) 98888-7777"
+          className="campo-input"
+        />
+      </Campo>
+    </>
+  );
+}
+
+/** Wrapper em <Secao> dos campos do contratado (cadastro / edição em modal). */
+function SecaoDadosContrato(props: Parameters<typeof CamposDadosContrato>[0]) {
+  return (
+    <Secao titulo="Dados para contrato">
+      <CamposDadosContrato {...props} />
+    </Secao>
+  );
+}
+
 function Secao({
   titulo,
   children,
@@ -3674,12 +4135,15 @@ function Secao({
 function Campo({
   label,
   children,
+  className,
 }: {
   label: string;
   children: React.ReactNode;
+  /** Classes extras no wrapper — ex: "md:col-span-2" pra ocupar a linha toda num grid. */
+  className?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className={`flex flex-col gap-1${className ? ` ${className}` : ""}`}>
       <span className="text-xs font-medium text-secondary">{label}</span>
       {children}
     </label>

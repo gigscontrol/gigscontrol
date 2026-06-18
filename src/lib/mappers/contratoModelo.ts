@@ -82,6 +82,51 @@ export type SecaoModelo =
   | SecaoAssinaturas
   | SecaoAnexo;
 
+// ---------------- Estilo (cores do modelo) ----------------
+
+/** Cores do modelo aplicadas no preview e no PDF (folha A4). */
+export type EstiloModelo = {
+  corFundo: string;
+  corTexto: string;
+  corTitulo: string;
+};
+
+export const ESTILO_PADRAO: EstiloModelo = {
+  corFundo: "#ffffff",
+  corTexto: "#111111",
+  corTitulo: "#111111",
+};
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * Estilo guardado SEM migration: serializado como JSON na coluna `corpo`
+ * (legado — modelos editáveis não usam essa coluna). Lê com fallback seguro
+ * pro padrão, inclusive se `corpo` tiver texto antigo (não-JSON).
+ */
+export function estiloValido(corpo: unknown): EstiloModelo {
+  if (typeof corpo !== "string" || !corpo.trim()) return { ...ESTILO_PADRAO };
+  try {
+    const o = JSON.parse(corpo) as Record<string, unknown>;
+    const cor = (k: keyof EstiloModelo): string =>
+      typeof o[k] === "string" && HEX.test(o[k] as string)
+        ? (o[k] as string)
+        : ESTILO_PADRAO[k];
+    return {
+      corFundo: cor("corFundo"),
+      corTexto: cor("corTexto"),
+      corTitulo: cor("corTitulo"),
+    };
+  } catch {
+    return { ...ESTILO_PADRAO };
+  }
+}
+
+/** Serializa o estilo pra guardar na coluna `corpo`. */
+export function estiloParaCorpo(estilo: EstiloModelo): string {
+  return JSON.stringify(estilo);
+}
+
 // ---------------- Linha / modelo ----------------
 
 export type ContratoModeloRow = {
@@ -105,6 +150,7 @@ export type ContratoModelo = {
   tipo: ContratoModeloTipo;
   corpo: string | null;
   secoes: SecaoModelo[];
+  estilo: EstiloModelo;
   arquivoUrl: string | null;
   arquivoNome: string | null;
   criadoEm: string;
@@ -198,6 +244,7 @@ export function rowParaModelo(row: ContratoModeloRow): ContratoModelo {
     tipo: tipoValido(row.tipo),
     corpo: row.corpo ?? null,
     secoes: secoesValidas(row.secoes),
+    estilo: estiloValido(row.corpo),
     arquivoUrl: row.arquivo_url ?? null,
     arquivoNome: row.arquivo_nome ?? null,
     criadoEm: row.criado_em ?? "",

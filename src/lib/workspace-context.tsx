@@ -9,7 +9,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DJ, TaxaAgenciaModo } from "@/types";
+import type { DJ, TaxaAgenciaModo, DocumentoTipo } from "@/types";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
@@ -41,6 +41,13 @@ export type NovoArtistaInput = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  /** Dados do CONTRATADO (para contratos). */
+  nomeLegal?: string;
+  documento?: string;
+  documentoTipo?: DocumentoTipo;
+  razaoSocial?: string;
+  endereco?: string;
+  telefone?: string;
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
@@ -389,6 +396,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
       if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
       if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.nomeLegal) payload.nome_legal = input.nomeLegal;
+      if (input.documento) payload.documento = input.documento;
+      if (input.documentoTipo) payload.documento_tipo = input.documentoTipo;
+      if (input.razaoSocial) payload.razao_social = input.razaoSocial;
+      if (input.endereco) payload.endereco = input.endereco;
+      if (input.telefone) payload.telefone = input.telefone;
       if (input.taxaModo) payload.taxa_modo = input.taxaModo;
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
@@ -425,6 +438,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.nomeLegal !== undefined) payload.nome_legal = patch.nomeLegal;
+      if (patch.documento !== undefined) payload.documento = patch.documento;
+      if (patch.documentoTipo !== undefined)
+        payload.documento_tipo = patch.documentoTipo;
+      if (patch.razaoSocial !== undefined) payload.razao_social = patch.razaoSocial;
+      if (patch.endereco !== undefined) payload.endereco = patch.endereco;
+      if (patch.telefone !== undefined) payload.telefone = patch.telefone;
       if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
