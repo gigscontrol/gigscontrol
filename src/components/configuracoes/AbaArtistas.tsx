@@ -48,8 +48,10 @@ import {
   LABELS_TAXA_MODO,
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
+  CATALOGO_TECNICO,
   LIMITE_RIDER_CAMARIM,
   LIMITE_RIDER_EFEITOS,
+  LIMITE_RIDER_TECNICO,
   type TaxaAgenciaModo,
 } from "@/types";
 
@@ -96,6 +98,7 @@ type ArtistaParaEdicao = {
   taxaValor?: number;
   riderCamarim: string[];
   riderEfeitos: string[];
+  riderTecnico: string[];
   privacidade: PrivacidadeDj;
 };
 
@@ -689,6 +692,7 @@ export default function AbaArtistas() {
                         taxaValor: djSelecionado.taxaValor,
                         riderCamarim: djSelecionado.riderCamarim ?? [],
                         riderEfeitos: djSelecionado.riderEfeitos ?? [],
+                        riderTecnico: djSelecionado.riderTecnico ?? [],
                         privacidade: djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
                       })
                     }
@@ -1049,6 +1053,28 @@ export default function AbaArtistas() {
               )}
             </div>
 
+            {/* Rider técnico */}
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Rider técnico ({(djSelecionado.riderTecnico ?? []).length}/
+                {LIMITE_RIDER_TECNICO})
+              </div>
+              {(djSelecionado.riderTecnico ?? []).length === 0 ? (
+                <div className="text-sm text-muted">Nenhum item configurado.</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {(djSelecionado.riderTecnico ?? []).map((item, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Taxa de agência */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
@@ -1317,9 +1343,10 @@ export function ModalNovoArtista({
   const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>("sem-taxa");
   const [taxaValor, setTaxaValor] = useState<string>("");
 
-  // Seção 4 e 5 — rider (apenas nomes; quantidade vai no orçamento)
+  // Seção 4, 5 e 6 — rider (apenas nomes; quantidade vai no orçamento)
   const [riderCamarim, setRiderCamarim] = useState<string[]>([]);
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>([]);
+  const [riderTecnico, setRiderTecnico] = useState<string[]>([]);
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -1415,6 +1442,7 @@ export function ModalNovoArtista({
       }
       if (riderCamarim.length > 0) input.riderCamarim = riderCamarim;
       if (riderEfeitos.length > 0) input.riderEfeitos = riderEfeitos;
+      if (riderTecnico.length > 0) input.riderTecnico = riderTecnico;
 
       const resultado = await adicionarArtista(input);
       onCriado({
@@ -1701,6 +1729,17 @@ export function ModalNovoArtista({
             />
           </Secao>
 
+          {/* Seção 6 — Rider técnico */}
+          <Secao titulo={`Rider técnico (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}>
+            <ListaRider
+              itens={riderTecnico}
+              onChange={setRiderTecnico}
+              catalogoSugestoes={CATALOGO_TECNICO}
+              placeholderItem="Ex: CDJ-3000"
+              limite={LIMITE_RIDER_TECNICO}
+            />
+          </Secao>
+
           {erro && (
             <div
               className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
@@ -1842,6 +1881,7 @@ function ModalEditarArtista({
   );
   const [riderCamarim, setRiderCamarim] = useState<string[]>(artista.riderCamarim);
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>(artista.riderEfeitos);
+  const [riderTecnico, setRiderTecnico] = useState<string[]>(artista.riderTecnico);
   const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
 
   // Dados da conta (email + verificado) — async ao abrir
@@ -1973,6 +2013,7 @@ function ModalEditarArtista({
             : undefined,
         riderCamarim,
         riderEfeitos,
+        riderTecnico,
         privacidade,
       };
       // Username e email só se mudaram (evita trabalho desnecessário no backend)
@@ -2439,7 +2480,20 @@ function ModalEditarArtista({
             />
           </Secao>
 
-          {/* Seção 7 — Privacidade (permissões do DJ) */}
+          {/* Seção 7 — Rider técnico */}
+          <Secao
+            titulo={`Rider técnico (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}
+          >
+            <ListaRider
+              itens={riderTecnico}
+              onChange={setRiderTecnico}
+              catalogoSugestoes={CATALOGO_TECNICO}
+              placeholderItem="Ex: CDJ-3000"
+              limite={LIMITE_RIDER_TECNICO}
+            />
+          </Secao>
+
+          {/* Seção 8 — Privacidade (permissões do DJ) */}
           <Secao titulo="Privacidade — o que ele pode ver/fazer">
             <div className="flex flex-col gap-1.5">
               <TogglePriv
@@ -3117,6 +3171,20 @@ function ModalEditarArtista({
             catalogoSugestoes={CATALOGO_EFEITOS}
             placeholderItem="Ex: CO²"
             limite={LIMITE_RIDER_EFEITOS}
+          />
+        </div>
+
+        {/* Rider técnico */}
+        <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Rider técnico ({riderTecnico.length}/{LIMITE_RIDER_TECNICO})
+          </div>
+          <ListaRider
+            itens={riderTecnico}
+            onChange={setRiderTecnico}
+            catalogoSugestoes={CATALOGO_TECNICO}
+            placeholderItem="Ex: CDJ-3000"
+            limite={LIMITE_RIDER_TECNICO}
           />
         </div>
 

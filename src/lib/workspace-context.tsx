@@ -47,6 +47,7 @@ export type NovoArtistaInput = {
   /** Rider salvo no artista — só nomes. Quantidade vai no orçamento. */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  riderTecnico?: string[];
   /** Privacidade do DJ — gravada direto no jsonb artists.privacidade. */
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
@@ -392,6 +393,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
       if (input.riderEfeitos) payload.rider_efeitos = input.riderEfeitos;
+      if (input.riderTecnico) payload.rider_tecnico = input.riderTecnico;
       if (input.privacidade !== undefined) payload.privacidade = input.privacidade;
 
       const res = await fetch("/api/artistas", {
@@ -427,6 +429,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
+      if (patch.riderTecnico !== undefined) payload.rider_tecnico = patch.riderTecnico;
       if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
 
       const res = await fetch(`/api/artistas/${id}`, {

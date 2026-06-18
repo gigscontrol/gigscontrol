@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { LIMITE_RIDER_CAMARIM, LIMITE_RIDER_EFEITOS } from "@/types";
+import {
+  LIMITE_RIDER_CAMARIM,
+  LIMITE_RIDER_EFEITOS,
+  LIMITE_RIDER_TECNICO,
+} from "@/types";
 
 /**
  * Item do rider salvo no artista: só o NOME do item.
@@ -61,6 +65,13 @@ export const artistaCreateSchema = z.object({
     .max(
       LIMITE_RIDER_EFEITOS,
       `Máximo ${LIMITE_RIDER_EFEITOS} itens no rider de efeitos.`
+    )
+    .optional(),
+  rider_tecnico: z
+    .array(itemRiderSchema)
+    .max(
+      LIMITE_RIDER_TECNICO,
+      `Máximo ${LIMITE_RIDER_TECNICO} itens no rider técnico.`
     )
     .optional(),
   // Privacidade do DJ — cada campo é opcional; o merge com o padrão é

@@ -33,6 +33,7 @@ export const LABELS_TAXA_MODO: Record<TaxaAgenciaModo, string> = {
  */
 export const LIMITE_RIDER_CAMARIM = 10;
 export const LIMITE_RIDER_EFEITOS = 15;
+export const LIMITE_RIDER_TECNICO = 20;
 
 export type DJ = {
   id: string;
@@ -57,6 +58,7 @@ export type DJ = {
    */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  riderTecnico?: string[];
   /**
    * Privacidade do DJ — o que este artista pode ver/fazer. Configurado
    * pelo admin, persistido em artists.privacidade. Sempre vem completo
@@ -250,6 +252,21 @@ export const CATALOGO_EFEITOS = [
   "Momentos de Silver Jet",
   "Momentos de Micro Mine",
   "Fire Machine",
+] as const;
+
+export const CATALOGO_TECNICO = [
+  "CDJ-3000",
+  "CDJ-2000NXS2",
+  "DJM-900NXS2",
+  "DJM-V10",
+  "Pioneer XDJ-XZ",
+  "Mesa de som",
+  "Monitor de palco",
+  "Sistema de PA",
+  "Cabo XLR",
+  "Mesa/suporte para equipamento",
+  "Tomada 110/220v",
+  "Fone de ouvido",
 ] as const;
 
 export const CATALOGO_HOTEL = [

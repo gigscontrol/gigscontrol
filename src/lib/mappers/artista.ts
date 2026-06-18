@@ -17,6 +17,7 @@ export type ArtistaRow = {
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
   rider_efeitos: unknown;
+  rider_tecnico: unknown;
   // Privacidade do DJ (migração 33) — jsonb. Default '{}' no banco;
   // o objeto completo vem do merge em privacidadeValida.
   privacidade?: unknown;
@@ -82,6 +83,7 @@ export function rowParaDj(row: ArtistaRow): DJ {
     taxaModo: row.taxa_modo ?? "sem-taxa",
     riderCamarim: normalizarRider(row.rider_camarim),
     riderEfeitos: normalizarRider(row.rider_efeitos),
+    riderTecnico: normalizarRider(row.rider_tecnico),
     privacidade: privacidadeValida(row.privacidade),
   };
   if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
@@ -107,6 +109,7 @@ export type ArtistaEscrita = {
   taxa_valor?: number | null;
   rider_camarim?: string[];
   rider_efeitos?: string[];
+  rider_tecnico?: string[];
   posicao?: number;
   // Aceita parcial: o que o admin manda é gravado direto no jsonb; o
   // objeto completo é reconstruído na leitura por privacidadeValida

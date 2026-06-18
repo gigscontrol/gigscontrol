@@ -4,7 +4,7 @@ import type { ArtistaRow, ArtistaEscrita } from "@/lib/mappers/artista";
 const COLS =
   "id, workspace_id, nome, cor, acesso_suspenso, deletado_em, criado_em, " +
   "cidade_ibge_id, cidade_nome, cidade_uf, taxa_modo, taxa_valor, " +
-  "rider_camarim, rider_efeitos, posicao, privacidade";
+  "rider_camarim, rider_efeitos, rider_tecnico, posicao, privacidade";
 
 /** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */
 export async function listarArtistas(
