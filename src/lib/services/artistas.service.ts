@@ -146,10 +146,19 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   if (input.cidade_ibge_id !== undefined) out.cidade_ibge_id = input.cidade_ibge_id ?? null;
   if (input.cidade_nome !== undefined) out.cidade_nome = input.cidade_nome ?? null;
   if (input.cidade_uf !== undefined) out.cidade_uf = input.cidade_uf ?? null;
+  if (input.nome_legal !== undefined) out.nome_legal = input.nome_legal ?? null;
+  if (input.documento !== undefined) out.documento = input.documento ?? null;
+  if (input.documento_tipo !== undefined)
+    out.documento_tipo = input.documento_tipo ?? null;
+  if (input.razao_social !== undefined)
+    out.razao_social = input.razao_social ?? null;
+  if (input.endereco !== undefined) out.endereco = input.endereco ?? null;
+  if (input.telefone !== undefined) out.telefone = input.telefone ?? null;
   if (input.taxa_modo !== undefined) out.taxa_modo = input.taxa_modo;
   if (input.taxa_valor !== undefined) out.taxa_valor = input.taxa_valor ?? null;
   if (input.rider_camarim !== undefined) out.rider_camarim = input.rider_camarim;
   if (input.rider_efeitos !== undefined) out.rider_efeitos = input.rider_efeitos;
+  if (input.rider_tecnico !== undefined) out.rider_tecnico = input.rider_tecnico;
   if (input.privacidade !== undefined) out.privacidade = input.privacidade;
   return out;
 }
@@ -257,9 +266,16 @@ export async function criarArtistaCompleto(
     if (input.cidade_ibge_id) escrita.cidade_ibge_id = input.cidade_ibge_id;
     if (input.cidade_nome) escrita.cidade_nome = input.cidade_nome;
     if (input.cidade_uf) escrita.cidade_uf = input.cidade_uf;
+    if (input.nome_legal) escrita.nome_legal = input.nome_legal;
+    if (input.documento) escrita.documento = input.documento;
+    if (input.documento_tipo) escrita.documento_tipo = input.documento_tipo;
+    if (input.razao_social) escrita.razao_social = input.razao_social;
+    if (input.endereco) escrita.endereco = input.endereco;
+    if (input.telefone) escrita.telefone = input.telefone;
     if (input.taxa_valor !== undefined) escrita.taxa_valor = input.taxa_valor;
     if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
     if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;
+    if (input.rider_tecnico) escrita.rider_tecnico = input.rider_tecnico;
     if (input.privacidade !== undefined) escrita.privacidade = input.privacidade;
     // Novo artista vai pro FIM da lista — admin reordena depois se quiser
     escrita.posicao = await proximaPosicaoArtista(admin, workspaceId);

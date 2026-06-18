@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { LIMITE_RIDER_CAMARIM, LIMITE_RIDER_EFEITOS } from "@/types";
+import {
+  LIMITE_RIDER_CAMARIM,
+  LIMITE_RIDER_EFEITOS,
+  LIMITE_RIDER_TECNICO,
+} from "@/types";
 
 /**
  * Item do rider salvo no artista: só o NOME do item.
@@ -39,6 +43,15 @@ export const artistaCreateSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/, "Cor deve ser um hex no formato #rrggbb")
     .optional(),
   acesso_suspenso: z.boolean().optional(),
+  // Dados do CONTRATADO (para contratos). nome_legal + documento são
+  // obrigatórios; razao_social só faz sentido quando documento_tipo='cnpj'
+  // (regra condicional aplicada no formulário). endereco/telefone opcionais.
+  nome_legal: z.string().min(1, "Nome completo obrigatório.").max(120),
+  documento: z.string().min(1, "CPF/CNPJ obrigatório.").max(20),
+  documento_tipo: z.enum(["cpf", "cnpj"]).optional(),
+  razao_social: z.string().max(140).optional(),
+  endereco: z.string().max(200).optional(),
+  telefone: z.string().max(30).optional(),
   // Acesso ao sistema (criado junto)
   username_raiz: usernameRaizSchema,
   // Cidade onde reside (referência IBGE)
@@ -61,6 +74,13 @@ export const artistaCreateSchema = z.object({
     .max(
       LIMITE_RIDER_EFEITOS,
       `Máximo ${LIMITE_RIDER_EFEITOS} itens no rider de efeitos.`
+    )
+    .optional(),
+  rider_tecnico: z
+    .array(itemRiderSchema)
+    .max(
+      LIMITE_RIDER_TECNICO,
+      `Máximo ${LIMITE_RIDER_TECNICO} itens no rider técnico.`
     )
     .optional(),
   // Privacidade do DJ — cada campo é opcional; o merge com o padrão é

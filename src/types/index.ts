@@ -33,6 +33,9 @@ export const LABELS_TAXA_MODO: Record<TaxaAgenciaModo, string> = {
  */
 export const LIMITE_RIDER_CAMARIM = 10;
 export const LIMITE_RIDER_EFEITOS = 15;
+export const LIMITE_RIDER_TECNICO = 20;
+
+export type DocumentoTipo = "cpf" | "cnpj";
 
 export type DJ = {
   id: string;
@@ -47,6 +50,19 @@ export type DJ = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  // ------- Dados do CONTRATADO (para contratos / migração 37) -------
+  /** Nome civil / responsável — o `name` acima é só o nome artístico. */
+  nomeLegal?: string;
+  /** 'cpf' | 'cnpj' — define se mostramos razão social. */
+  documentoTipo?: DocumentoTipo;
+  /** Número do CPF/CNPJ (guardado já com máscara). */
+  documento?: string;
+  /** Razão social / nome da empresa — preenchido quando documentoTipo='cnpj'. */
+  razaoSocial?: string;
+  /** Endereço completo (opcional). */
+  endereco?: string;
+  /** Telefone de contato (opcional). */
+  telefone?: string;
   /** Modo de taxa de agência. Default 'sem-taxa'. */
   taxaModo?: TaxaAgenciaModo;
   /** Em modos perc-*: percentual (ex 15 = 15%). Em modos valor-*: R$. */
@@ -57,6 +73,7 @@ export type DJ = {
    */
   riderCamarim?: string[];
   riderEfeitos?: string[];
+  riderTecnico?: string[];
   /**
    * Privacidade do DJ — o que este artista pode ver/fazer. Configurado
    * pelo admin, persistido em artists.privacidade. Sempre vem completo
@@ -250,6 +267,21 @@ export const CATALOGO_EFEITOS = [
   "Momentos de Silver Jet",
   "Momentos de Micro Mine",
   "Fire Machine",
+] as const;
+
+export const CATALOGO_TECNICO = [
+  "CDJ-3000",
+  "CDJ-2000NXS2",
+  "DJM-900NXS2",
+  "DJM-V10",
+  "Pioneer XDJ-XZ",
+  "Mesa de som",
+  "Monitor de palco",
+  "Sistema de PA",
+  "Cabo XLR",
+  "Mesa/suporte para equipamento",
+  "Tomada 110/220v",
+  "Fone de ouvido",
 ] as const;
 
 export const CATALOGO_HOTEL = [
