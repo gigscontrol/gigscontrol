@@ -3,8 +3,10 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarSignatariosDoContrato,
   definirSignatarios,
+  preencherUrls,
 } from "@/lib/services/contratoSignatarios.service";
 import { definirSignatariosSchema } from "@/lib/validators/contratoSignatarios.schema";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
 export async function GET(
   _request: Request,
@@ -17,7 +19,8 @@ export async function GET(
       r.sessao.supabase,
       params.id
     );
-    return NextResponse.json({ signatarios });
+    const comUrls = await preencherUrls(criarClienteAdmin(), signatarios);
+    return NextResponse.json({ signatarios: comUrls });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao listar signatários." },

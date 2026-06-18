@@ -29,6 +29,24 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
   facial: false,
 };
 
+/** Caminhos das fotos no Storage (Fase 2). Quando exibidas, viram URLs assinadas. */
+export type ArquivosSignatario = {
+  fotoCpf?: string;
+  fotoDocumento?: string;
+  selfie?: string;
+};
+
+export function arquivosValido(raw: unknown): ArquivosSignatario {
+  if (!raw || typeof raw !== "object") return {};
+  const o = raw as Record<string, unknown>;
+  const out: ArquivosSignatario = {};
+  if (typeof o.fotoCpf === "string" && o.fotoCpf) out.fotoCpf = o.fotoCpf;
+  if (typeof o.fotoDocumento === "string" && o.fotoDocumento)
+    out.fotoDocumento = o.fotoDocumento;
+  if (typeof o.selfie === "string" && o.selfie) out.selfie = o.selfie;
+  return out;
+}
+
 export type SignatarioStatus = "pendente" | "assinado";
 
 export type SignatarioRow = {
@@ -41,6 +59,7 @@ export type SignatarioRow = {
   ordem: number | null;
   token: string;
   exige: unknown;
+  arquivos: unknown;
   status: string;
   assinatura: string | null;
   documento: string | null;
@@ -60,6 +79,9 @@ export type Signatario = {
   ordem: number;
   token: string;
   exige: ExigenciasSignatario;
+  arquivos: ArquivosSignatario;
+  /** URLs assinadas das fotos (preenchidas só quando a agência lista). */
+  arquivosUrls?: ArquivosSignatario;
   status: SignatarioStatus;
   assinatura: string | null;
   documento: string | null;
@@ -101,6 +123,7 @@ export function rowParaSignatario(row: SignatarioRow): Signatario {
     ordem: row.ordem ?? 0,
     token: row.token,
     exige: exigeValido(row.exige),
+    arquivos: arquivosValido(row.arquivos),
     status: statusValido(row.status),
     assinatura: row.assinatura ?? null,
     documento: row.documento ?? null,
@@ -121,6 +144,7 @@ export type SignatarioEscrita = {
   ordem?: number;
   token?: string;
   exige?: ExigenciasSignatario;
+  arquivos?: ArquivosSignatario;
   status?: SignatarioStatus;
   assinatura?: string | null;
   documento?: string | null;

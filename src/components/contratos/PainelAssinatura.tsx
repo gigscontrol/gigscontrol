@@ -54,15 +54,16 @@ type LinhaForm = {
   exige: ExigenciasSignatario;
 };
 
-/** Exigências que viram checkboxes "em breve" (Fases 2/3 — sempre false). */
-const EXIGENCIAS_FUTURAS: {
+/** Exigências opcionais. Foto/selfie já funcionam (Fase 2); facial é Fase 3. */
+const EXIGENCIAS_OPCIONAIS: {
   chave: keyof ExigenciasSignatario;
   rotulo: string;
+  disponivel: boolean;
 }[] = [
-  { chave: "fotoCpf", rotulo: "Foto do CPF" },
-  { chave: "fotoDocumento", rotulo: "Foto do documento" },
-  { chave: "selfie", rotulo: "Selfie" },
-  { chave: "facial", rotulo: "Reconhecimento facial" },
+  { chave: "fotoCpf", rotulo: "Foto do CPF", disponivel: true },
+  { chave: "fotoDocumento", rotulo: "Foto do documento", disponivel: true },
+  { chave: "selfie", rotulo: "Selfie", disponivel: true },
+  { chave: "facial", rotulo: "Reconhecimento facial", disponivel: false },
 ];
 
 /** ISO → DD/MM/AAAA (vazio se não houver data). */
@@ -84,6 +85,9 @@ function paraAssinaturaInfo(s: Signatario): AssinaturaInfo {
     dispositivo: s.dispositivo,
     assinadoEm: s.assinadoEm,
     assinatura: s.assinatura,
+    fotoCpfUrl: s.arquivosUrls?.fotoCpf,
+    fotoDocumentoUrl: s.arquivosUrls?.fotoDocumento,
+    selfieUrl: s.arquivosUrls?.selfie,
   };
 }
 
@@ -192,12 +196,12 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
     }
     setSalvando(true);
     try {
-      // Na Fase 1 as exigências são sempre as padrão (assinaturaTela + cpfCnpj).
+      // assinaturaTela + cpfCnpj sempre (do padrão); foto/selfie conforme marcado.
       const rows: EntradaSignatarioUI[] = linhas.map((l) => ({
         nome: l.nome.trim(),
         email: l.email.trim(),
         papel: l.papel.trim(),
-        exige: { ...EXIGENCIAS_PADRAO },
+        exige: { ...EXIGENCIAS_PADRAO, ...l.exige },
       }));
       const lista = await definirSignatarios(contrato.id, rows);
       setSignatarios(lista);
@@ -369,15 +373,32 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     <input type="checkbox" checked disabled readOnly />
                     CPF/CNPJ
                   </label>
-                  {/* Fases 2/3 — desabilitadas, sempre false. */}
-                  {EXIGENCIAS_FUTURAS.map((ex) => (
+                  {/* Foto/selfie já funcionam (Fase 2); facial é Fase 3. */}
+                  {EXIGENCIAS_OPCIONAIS.map((ex) => (
                     <label
                       key={ex.chave}
-                      className="flex items-center gap-2 text-sm text-muted"
+                      className={`flex items-center gap-2 text-sm ${
+                        ex.disponivel ? "text-secondary" : "text-muted"
+                      }`}
                     >
-                      <input type="checkbox" checked={false} disabled readOnly />
+                      <input
+                        type="checkbox"
+                        checked={ex.disponivel ? linha.exige[ex.chave] : false}
+                        disabled={!ex.disponivel}
+                        onChange={(e) =>
+                          ex.disponivel &&
+                          alterarLinha(idx, {
+                            exige: {
+                              ...linha.exige,
+                              [ex.chave]: e.target.checked,
+                            },
+                          })
+                        }
+                      />
                       {ex.rotulo}
-                      <span className="text-xs opacity-70">(em breve)</span>
+                      {!ex.disponivel && (
+                        <span className="text-xs opacity-70">(em breve)</span>
+                      )}
                     </label>
                   ))}
                 </div>

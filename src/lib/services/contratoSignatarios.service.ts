@@ -4,7 +4,9 @@ import type {
   Signatario,
   SignatarioEscrita,
   ExigenciasSignatario,
+  ArquivosSignatario,
 } from "@/lib/mappers/contratoSignatario";
+import { uploadFoto, urlAssinada } from "@/lib/db/storage-assinaturas";
 import {
   rowParaSignatario,
   exigeValido,
@@ -110,9 +112,42 @@ export async function registrarAssinatura(
     ip: string | null;
     geolocalizacao: string | null;
     dispositivo: string | null;
+    fotoCpf?: string | null;
+    fotoDocumento?: string | null;
+    selfie?: string | null;
   }
 ): Promise<Signatario | null> {
-  const row = await registrarAssinaturaPorToken(admin, token, dados);
+  // Confere antes de subir foto (evita upload pra link já assinado/inválido).
+  const sigRow = await buscarPorToken(admin, token);
+  if (!sigRow || sigRow.status === "assinado") return null;
+
+  const base = `${sigRow.contrato_id}/${sigRow.id}`;
+  const arquivos: ArquivosSignatario = {};
+  if (dados.fotoCpf) {
+    const p = await uploadFoto(admin, `${base}/foto-cpf.jpg`, dados.fotoCpf);
+    if (p) arquivos.fotoCpf = p;
+  }
+  if (dados.fotoDocumento) {
+    const p = await uploadFoto(
+      admin,
+      `${base}/foto-documento.jpg`,
+      dados.fotoDocumento
+    );
+    if (p) arquivos.fotoDocumento = p;
+  }
+  if (dados.selfie) {
+    const p = await uploadFoto(admin, `${base}/selfie.jpg`, dados.selfie);
+    if (p) arquivos.selfie = p;
+  }
+
+  const row = await registrarAssinaturaPorToken(admin, token, {
+    assinatura: dados.assinatura,
+    documento: dados.documento,
+    ip: dados.ip,
+    geolocalizacao: dados.geolocalizacao,
+    dispositivo: dados.dispositivo,
+    arquivos,
+  });
   if (!row) return null;
   const todos = await listarPorContratoAdmin(admin, row.contrato_id);
   const todosAssinados =
@@ -121,4 +156,24 @@ export async function registrarAssinatura(
     status: todosAssinados ? "assinado" : "enviado",
   });
   return rowParaSignatario(row);
+}
+
+/** Preenche URLs assinadas (temporárias) das fotos — pra agência exibir. */
+export async function preencherUrls(
+  admin: SupabaseClient,
+  signatarios: Signatario[]
+): Promise<Signatario[]> {
+  return Promise.all(
+    signatarios.map(async (s) => {
+      const { fotoCpf, fotoDocumento, selfie } = s.arquivos;
+      if (!fotoCpf && !fotoDocumento && !selfie) return s;
+      const urls: ArquivosSignatario = {};
+      if (fotoCpf) urls.fotoCpf = (await urlAssinada(admin, fotoCpf)) ?? undefined;
+      if (fotoDocumento)
+        urls.fotoDocumento =
+          (await urlAssinada(admin, fotoDocumento)) ?? undefined;
+      if (selfie) urls.selfie = (await urlAssinada(admin, selfie)) ?? undefined;
+      return { ...s, arquivosUrls: urls };
+    })
+  );
 }
