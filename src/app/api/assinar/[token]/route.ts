@@ -81,6 +81,9 @@ export async function POST(
       ip: ipDaRequest(request),
       dispositivo: request.headers.get("user-agent"),
       geolocalizacao: parsed.data.geolocalizacao || null,
+      fotoCpf: parsed.data.fotoCpf || null,
+      fotoDocumento: parsed.data.fotoDocumento || null,
+      selfie: parsed.data.selfie || null,
     });
     if (!sig) {
       return NextResponse.json(

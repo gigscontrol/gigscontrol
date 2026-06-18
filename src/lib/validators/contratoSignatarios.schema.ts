@@ -38,6 +38,10 @@ export const assinarSchema = z.object({
   assinatura: z.string().min(1, "Assinatura obrigatória."),
   documento: z.string().max(40).optional().or(z.literal("")),
   geolocalizacao: z.string().max(160).optional().or(z.literal("")),
+  // Fotos (data URLs base64, já reduzidas no cliente) — só quando exigidas.
+  fotoCpf: z.string().optional().or(z.literal("")),
+  fotoDocumento: z.string().optional().or(z.literal("")),
+  selfie: z.string().optional().or(z.literal("")),
 });
 
 export type DefinirSignatariosInput = z.infer<typeof definirSignatariosSchema>;

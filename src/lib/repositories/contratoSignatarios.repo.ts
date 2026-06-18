@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   SignatarioRow,
   SignatarioEscrita,
+  ArquivosSignatario,
 } from "@/lib/mappers/contratoSignatario";
 
 const COLS = `
@@ -93,6 +94,7 @@ export async function registrarAssinaturaPorToken(
     ip: string | null;
     geolocalizacao: string | null;
     dispositivo: string | null;
+    arquivos: ArquivosSignatario;
   }
 ): Promise<SignatarioRow | null> {
   const { data, error } = await admin
@@ -104,6 +106,7 @@ export async function registrarAssinaturaPorToken(
       ip: dados.ip,
       geolocalizacao: dados.geolocalizacao,
       dispositivo: dados.dispositivo,
+      arquivos: dados.arquivos,
       assinado_em: new Date().toISOString(),
     })
     .eq("token", token)

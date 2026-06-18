@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
+import CapturaFoto from "@/components/contratos/CapturaFoto";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import type { ExigenciasSignatario } from "@/lib/mappers/contratoSignatario";
 
@@ -51,6 +52,9 @@ export default function AssinarPage({
 
   const [documento, setDocumento] = useState("");
   const [assinatura, setAssinatura] = useState<string | null>(null);
+  const [fotoCpf, setFotoCpf] = useState<string | null>(null);
+  const [fotoDocumento, setFotoDocumento] = useState<string | null>(null);
+  const [selfie, setSelfie] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
@@ -106,6 +110,18 @@ export default function AssinarPage({
       setErro("Desenhe sua assinatura no quadro.");
       return;
     }
+    if (ex.fotoCpf && !fotoCpf) {
+      setErro("Envie a foto do seu CPF.");
+      return;
+    }
+    if (ex.fotoDocumento && !fotoDocumento) {
+      setErro("Envie a foto do seu documento de identidade.");
+      return;
+    }
+    if (ex.selfie && !selfie) {
+      setErro("Envie a selfie.");
+      return;
+    }
     setEnviando(true);
     setErro(null);
     try {
@@ -117,6 +133,9 @@ export default function AssinarPage({
           assinatura: assinatura ?? "",
           documento,
           geolocalizacao,
+          fotoCpf: fotoCpf ?? "",
+          fotoDocumento: fotoDocumento ?? "",
+          selfie: selfie ?? "",
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -268,13 +287,34 @@ export default function AssinarPage({
               </div>
             )}
 
-            {(signatario.exige.fotoCpf ||
-              signatario.exige.fotoDocumento ||
-              signatario.exige.selfie ||
-              signatario.exige.facial) && (
+            {signatario.exige.fotoCpf && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-secondary">
+                  Foto do CPF
+                </span>
+                <CapturaFoto label="Foto do CPF" onChange={setFotoCpf} />
+              </div>
+            )}
+            {signatario.exige.fotoDocumento && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-secondary">
+                  Foto do documento de identidade
+                </span>
+                <CapturaFoto
+                  label="Foto do documento"
+                  onChange={setFotoDocumento}
+                />
+              </div>
+            )}
+            {signatario.exige.selfie && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-secondary">Selfie</span>
+                <CapturaFoto label="Selfie" onChange={setSelfie} selfie />
+              </div>
+            )}
+            {signatario.exige.facial && (
               <p className="text-xs text-muted">
-                Envio de foto/selfie e reconhecimento facial serão habilitados em
-                breve — por enquanto a assinatura segue com os demais campos.
+                Reconhecimento facial será habilitado em breve.
               </p>
             )}
 

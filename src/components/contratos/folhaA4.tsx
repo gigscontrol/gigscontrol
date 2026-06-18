@@ -170,6 +170,10 @@ export type AssinaturaInfo = {
   dispositivo: string | null;
   assinadoEm: string | null;
   assinatura: string | null; // PNG data URL
+  // URLs (assinadas) das fotos — Fase 2.
+  fotoCpfUrl?: string;
+  fotoDocumentoUrl?: string;
+  selfieUrl?: string;
 };
 
 /** Acha a assinatura que combina com o papel do bloco (contratante/contratado). */
@@ -248,6 +252,40 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                   </div>
                 )}
               </div>
+              {(a.fotoCpfUrl || a.fotoDocumentoUrl || a.selfieUrl) && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "4mm",
+                    marginTop: "5pt",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {[
+                    { url: a.fotoCpfUrl, leg: "CPF" },
+                    { url: a.fotoDocumentoUrl, leg: "Documento" },
+                    { url: a.selfieUrl, leg: "Selfie" },
+                  ]
+                    .filter((f) => f.url)
+                    .map((f, j) => (
+                      <div key={j} style={{ textAlign: "center" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={f.url as string}
+                          alt=""
+                          style={{
+                            height: "22mm",
+                            borderRadius: "2pt",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <div style={{ fontSize: "7pt", opacity: 0.7 }}>
+                          {f.leg}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
             {a.assinatura && (
               <div style={{ width: "52mm", textAlign: "center", flexShrink: 0 }}>
