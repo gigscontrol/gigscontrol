@@ -6,7 +6,7 @@ import type {
 
 const COLS = `
   id, workspace_id, nome, tipo,
-  corpo, arquivo_url, arquivo_nome,
+  corpo, secoes, arquivo_url, arquivo_nome,
   criado_em, atualizado_em
 `;
 

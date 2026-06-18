@@ -23,6 +23,7 @@ function entradaParaEscrita(
   if (input.nome !== undefined) out.nome = input.nome;
   if (input.tipo !== undefined) out.tipo = input.tipo;
   if (input.corpo !== undefined) out.corpo = input.corpo ?? null;
+  if (input.secoes !== undefined) out.secoes = input.secoes;
   if (input.arquivo_url !== undefined) out.arquivo_url = input.arquivo_url ?? null;
   if (input.arquivo_nome !== undefined)
     out.arquivo_nome = input.arquivo_nome ?? null;

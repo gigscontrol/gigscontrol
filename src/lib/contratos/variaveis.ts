@@ -36,7 +36,8 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   { token: "endereco_local", label: "Endereço do local", grupo: "Evento" },
   { token: "cidade", label: "Cidade", grupo: "Evento" },
   { token: "data", label: "Data do show", grupo: "Evento" },
-  { token: "horario", label: "Horário", grupo: "Evento" },
+  { token: "horario", label: "Horário (início)", grupo: "Evento" },
+  { token: "horario_fim", label: "Horário (fim)", grupo: "Evento" },
 
   // Valores
   { token: "cache", label: "Cachê", grupo: "Valores" },
@@ -119,7 +120,8 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   endereco_local: "Av. Beira-Mar, 1500 — Praia Grande/SP",
   cidade: "Praia Grande/SP",
   data: "31/12/2026",
-  horario: "23h00 às 04h00",
+  horario: "23h00",
+  horario_fim: "04h00",
 
   // Valores
   cache: "R$ 8.000,00",
