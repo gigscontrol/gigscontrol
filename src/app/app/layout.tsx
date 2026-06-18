@@ -24,6 +24,7 @@ import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
+import { ModelosProvider } from "@/lib/modelos-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
@@ -51,12 +52,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <ShowsProvider>
             <OrcamentosProvider>
               <VendasProvider>
-                <AuthGuard>
-                  <NavProvider>
-                    <AppRoot />
-                    {children}
-                  </NavProvider>
-                </AuthGuard>
+                <ModelosProvider>
+                  <AuthGuard>
+                    <NavProvider>
+                      <AppRoot />
+                      {children}
+                    </NavProvider>
+                  </AuthGuard>
+                </ModelosProvider>
               </VendasProvider>
             </OrcamentosProvider>
           </ShowsProvider>
