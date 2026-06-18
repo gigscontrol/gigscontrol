@@ -31,6 +31,7 @@ import Configuracoes from "@/components/configuracoes/Configuracoes";
 import AbaArtistas from "@/components/configuracoes/AbaArtistas";
 import AbaEquipe from "@/components/configuracoes/AbaEquipe";
 import EmConstrucao from "@/components/EmConstrucao";
+import ModelosPage from "@/components/contratos/ModelosPage";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 
@@ -540,7 +541,7 @@ function AppRoot() {
             <EmConstrucao titulo="Novo Contrato" cor={MODULE_THEMES.contratos.color} />
           )}
           {activeTab === "contratos" && activePage === "contratos-modelos" && (
-            <EmConstrucao titulo="Modelos de Contrato" cor={MODULE_THEMES.contratos.color} />
+            <ModelosPage />
           )}
           {activeTab === "contratos" && activePage === "contratos-historico" && (
             <EmConstrucao titulo="Histórico de Contratos" cor={MODULE_THEMES.contratos.color} />
