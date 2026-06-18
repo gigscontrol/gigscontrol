@@ -65,7 +65,7 @@ function novaSecao(tipo: TipoSecao): SecaoModelo {
         itens: [{ id: crypto.randomUUID(), tipo: "subclausula", texto: "" }],
       };
     case "assinaturas":
-      return { id, tipo: "assinaturas", testemunhas: 0 };
+      return { id, tipo: "assinaturas", testemunhas: [] };
     case "anexo":
       return { id, tipo: "anexo", titulo: "", conteudo: "" };
   }
@@ -234,11 +234,49 @@ export default function EditorModelo({
     );
   }
 
-  /** Define o número de testemunhas de uma seção de assinaturas. */
-  function setTestemunhas(secaoId: string, n: number) {
+  /** Adiciona uma testemunha (manual) numa seção de assinaturas — máx. 2. */
+  function adicionarTestemunha(secaoId: string) {
     setSecoes((prev) =>
       prev.map((s) =>
-        s.id === secaoId && s.tipo === "assinaturas" ? { ...s, testemunhas: n } : s
+        s.id === secaoId && s.tipo === "assinaturas" && s.testemunhas.length < 2
+          ? {
+              ...s,
+              testemunhas: [
+                ...s.testemunhas,
+                { id: crypto.randomUUID(), nome: "", documento: "" },
+              ],
+            }
+          : s
+      )
+    );
+  }
+
+  function removerTestemunha(secaoId: string, testemunhaId: string) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "assinaturas"
+          ? { ...s, testemunhas: s.testemunhas.filter((t) => t.id !== testemunhaId) }
+          : s
+      )
+    );
+  }
+
+  function atualizarTestemunha(
+    secaoId: string,
+    testemunhaId: string,
+    campo: "nome" | "documento",
+    valor: string
+  ) {
+    setSecoes((prev) =>
+      prev.map((s) =>
+        s.id === secaoId && s.tipo === "assinaturas"
+          ? {
+              ...s,
+              testemunhas: s.testemunhas.map((t) =>
+                t.id === testemunhaId ? { ...t, [campo]: valor } : t
+              ),
+            }
+          : s
       )
     );
   }
@@ -646,30 +684,66 @@ export default function EditorModelo({
 
                   {secao.tipo === "assinaturas" && (
                     <div className="flex flex-col gap-3">
-                      <div className="pill-group">
-                        {[
-                          { n: 0, label: "Sem testemunha" },
-                          { n: 1, label: "1 testemunha" },
-                          { n: 2, label: "2 testemunhas" },
-                        ].map((opt) => (
-                          <button
-                            key={opt.n}
-                            type="button"
-                            onClick={() => setTestemunhas(secao.id, opt.n)}
-                            className={`pill ${secao.testemunhas === opt.n ? "active" : ""}`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
                       <p className="section-subtitle">
-                        Serão gerados blocos de assinatura para: Contratante, Contratado
-                        {secao.testemunhas > 0 &&
-                          ` e ${secao.testemunhas} testemunha${
-                            secao.testemunhas === 1 ? "" : "s"
-                          }`}
-                        .
+                        Blocos de <strong>Contratante</strong> e{" "}
+                        <strong>Contratado</strong> são automáticos (dados do
+                        contrato). Testemunhas são preenchidas manualmente:
                       </p>
+
+                      {secao.testemunhas.map((t, i) => (
+                        <div
+                          key={t.id}
+                          className="bg-surface border border-border rounded p-3 flex flex-col gap-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+                              Testemunha {i + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removerTestemunha(secao.id, t.id)}
+                              className="btn-ghost p-1 rounded text-muted hover:text-danger"
+                              title="Remover testemunha"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={t.nome}
+                            onChange={(e) =>
+                              atualizarTestemunha(secao.id, t.id, "nome", e.target.value)
+                            }
+                            placeholder="Nome da testemunha"
+                            className="campo-input"
+                          />
+                          <input
+                            type="text"
+                            value={t.documento}
+                            onChange={(e) =>
+                              atualizarTestemunha(
+                                secao.id,
+                                t.id,
+                                "documento",
+                                e.target.value
+                              )
+                            }
+                            placeholder="CPF / documento"
+                            className="campo-input"
+                          />
+                        </div>
+                      ))}
+
+                      {secao.testemunhas.length < 2 && (
+                        <button
+                          type="button"
+                          onClick={() => adicionarTestemunha(secao.id)}
+                          className="btn-ghost text-xs inline-flex items-center gap-1.5 self-start"
+                          style={{ color: "var(--module-contratos)" }}
+                        >
+                          <Plus size={13} /> Testemunha
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -883,13 +957,13 @@ function renderPreviewSecao(
       );
 
     case "assinaturas": {
-      const blocos: { nome: string; papel: string }[] = [
-        { nome: ex("{{contratante}}"), papel: "CONTRATANTE" },
+      const blocos: { nome: string; doc?: string; papel: string }[] = [
+        { nome: ex("{{contratante}}"), doc: ex("{{documento}}"), papel: "CONTRATANTE" },
         { nome: ex("{{artista}}"), papel: "CONTRATADO" },
       ];
-      for (let i = 1; i <= secao.testemunhas; i++) {
-        blocos.push({ nome: "", papel: `Testemunha ${i}` });
-      }
+      secao.testemunhas.forEach((t, i) => {
+        blocos.push({ nome: t.nome, doc: t.documento, papel: `Testemunha ${i + 1}` });
+      });
       return (
         <div className="flex flex-col gap-6 pt-2">
           {blocos.map((b, i) => (
@@ -897,6 +971,9 @@ function renderPreviewSecao(
               <div className="w-64 border-t border-strong" />
               {b.nome && (
                 <span className="text-sm text-secondary mt-1">{b.nome}</span>
+              )}
+              {b.doc && b.doc.trim() && (
+                <span className="text-xs text-muted mt-0.5">{b.doc}</span>
               )}
               <span className="text-xs text-muted uppercase tracking-wide mt-0.5">
                 {b.papel}

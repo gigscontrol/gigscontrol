@@ -150,6 +150,6 @@ export const SECOES_MODELO_EXEMPLO: SecaoModelo[] = [
   {
     id: "assinaturas",
     tipo: "assinaturas",
-    testemunhas: 0,
+    testemunhas: [],
   },
 ];

@@ -31,7 +31,11 @@ const secaoSchema = z.discriminatedUnion("tipo", [
   z.object({
     id: z.string(),
     tipo: z.literal("assinaturas"),
-    testemunhas: z.number().int().min(0).max(2),
+    testemunhas: z
+      .array(
+        z.object({ id: z.string(), nome: z.string(), documento: z.string() })
+      )
+      .max(2),
   }),
   z.object({
     id: z.string(),

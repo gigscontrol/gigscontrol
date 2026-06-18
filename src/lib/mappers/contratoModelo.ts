@@ -48,11 +48,24 @@ export type SecaoClausula = {
   itens: ItemClausula[];
 };
 
+/**
+ * Testemunha — preenchida MANUALMENTE (não temos os dados dela no sistema,
+ * já que não é contratante nem contratado).
+ */
+export type Testemunha = {
+  id: string;
+  nome: string;
+  documento: string;
+};
+
 export type SecaoAssinaturas = {
   id: string;
   tipo: "assinaturas";
-  /** 0, 1 ou 2 testemunhas. Contratante e contratado estão sempre presentes. */
-  testemunhas: number;
+  /**
+   * Testemunhas (0 a 2), cada uma preenchida manualmente. Contratante e
+   * contratado vêm automáticos dos dados do contrato.
+   */
+  testemunhas: Testemunha[];
 };
 
 export type SecaoAnexo = {
@@ -142,8 +155,17 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
         break;
       }
       case "assinaturas": {
-        const t = typeof o.testemunhas === "number" ? Math.floor(o.testemunhas) : 0;
-        out.push({ id, tipo: "assinaturas", testemunhas: Math.max(0, Math.min(2, t)) });
+        const testemunhas: Testemunha[] = Array.isArray(o.testemunhas)
+          ? o.testemunhas
+              .filter((t): t is Record<string, unknown> => !!t && typeof t === "object")
+              .slice(0, 2)
+              .map((t) => ({
+                id: texto(t.id),
+                nome: texto(t.nome),
+                documento: texto(t.documento),
+              }))
+          : [];
+        out.push({ id, tipo: "assinaturas", testemunhas });
         break;
       }
       case "anexo":
