@@ -52,7 +52,6 @@ export default function AssinarPage({
 
   const [documento, setDocumento] = useState("");
   const [assinatura, setAssinatura] = useState<string | null>(null);
-  const [fotoCpf, setFotoCpf] = useState<string | null>(null);
   const [fotoDocumento, setFotoDocumento] = useState<string | null>(null);
   const [fotoDocumentoVerso, setFotoDocumentoVerso] = useState<string | null>(
     null
@@ -113,16 +112,12 @@ export default function AssinarPage({
       setErro("Desenhe sua assinatura no quadro.");
       return;
     }
-    if (ex.fotoCpf && !fotoCpf) {
-      setErro("Envie a foto do seu CPF.");
-      return;
-    }
     if ((ex.fotoDocumento || ex.facial) && !fotoDocumento) {
-      setErro("Envie a foto da frente do seu documento de identidade.");
+      setErro("Envie a foto da frente do seu documento (CNH ou RG).");
       return;
     }
     if (ex.fotoDocumento && !fotoDocumentoVerso) {
-      setErro("Envie a foto do verso do seu documento de identidade.");
+      setErro("Envie a foto do verso do seu documento (CNH ou RG).");
       return;
     }
     if ((ex.selfie || ex.facial) && !selfie) {
@@ -140,7 +135,6 @@ export default function AssinarPage({
           assinatura: assinatura ?? "",
           documento,
           geolocalizacao,
-          fotoCpf: fotoCpf ?? "",
           fotoDocumento: fotoDocumento ?? "",
           fotoDocumentoVerso: fotoDocumentoVerso ?? "",
           selfie: selfie ?? "",
@@ -295,18 +289,15 @@ export default function AssinarPage({
               </div>
             )}
 
-            {signatario.exige.fotoCpf && (
-              <CapturaFoto label="Foto do CPF" onChange={setFotoCpf} />
-            )}
             {(signatario.exige.fotoDocumento || signatario.exige.facial) && (
               <CapturaFoto
-                label="Documento de identidade — frente"
+                label="Documento (CNH ou RG) — frente"
                 onChange={setFotoDocumento}
               />
             )}
             {signatario.exige.fotoDocumento && (
               <CapturaFoto
-                label="Documento de identidade — verso"
+                label="Documento (CNH ou RG) — verso"
                 onChange={setFotoDocumentoVerso}
               />
             )}

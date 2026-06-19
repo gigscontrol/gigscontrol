@@ -60,10 +60,9 @@ const EXIGENCIAS_OPCIONAIS: {
   rotulo: string;
   disponivel: boolean;
 }[] = [
-  { chave: "fotoCpf", rotulo: "Foto do CPF", disponivel: true },
   {
     chave: "fotoDocumento",
-    rotulo: "Foto do documento (frente e verso)",
+    rotulo: "Verificação de documento avançado com foto (CNH ou RG)",
     disponivel: true,
   },
   { chave: "selfie", rotulo: "Selfie", disponivel: true },
