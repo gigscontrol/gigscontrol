@@ -65,8 +65,11 @@ const EXIGENCIAS_OPCIONAIS: {
     rotulo: "Verificação de documento avançado com foto (CNH ou RG)",
     disponivel: true,
   },
-  { chave: "selfie", rotulo: "Selfie", disponivel: true },
-  { chave: "facial", rotulo: "Reconhecimento facial", disponivel: true },
+  {
+    chave: "facial",
+    rotulo: "Verificação facial avançada (selfie)",
+    disponivel: true,
+  },
 ];
 
 /** ISO → DD/MM/AAAA (vazio se não houver data). */

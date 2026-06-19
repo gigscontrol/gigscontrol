@@ -8,10 +8,12 @@ import {
   Download,
   PenLine,
   ShieldCheck,
+  ScanFace,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
+import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import type { ExigenciasSignatario } from "@/lib/mappers/contratoSignatario";
 
@@ -56,7 +58,7 @@ export default function AssinarPage({
   const [fotoDocumentoVerso, setFotoDocumentoVerso] = useState<string | null>(
     null
   );
-  const [selfie, setSelfie] = useState<string | null>(null);
+  const [mostrarCamera, setMostrarCamera] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
@@ -101,7 +103,12 @@ export default function AssinarPage({
     });
   }
 
-  async function assinar() {
+  /**
+   * Valida os campos. Se a verificação facial/selfie for exigida, abre a
+   * câmera ao vivo (o envio acontece depois, quando a selfie é capturada).
+   * Caso contrário, envia direto.
+   */
+  function assinar() {
     if (!dados) return;
     const ex = dados.signatario.exige;
     if (ex.cpfCnpj && !documento.trim()) {
@@ -112,7 +119,7 @@ export default function AssinarPage({
       setErro("Desenhe sua assinatura no quadro.");
       return;
     }
-    if ((ex.fotoDocumento || ex.facial) && !fotoDocumento) {
+    if (ex.fotoDocumento && !fotoDocumento) {
       setErro("Envie a foto da frente do seu documento (CNH ou RG).");
       return;
     }
@@ -120,10 +127,18 @@ export default function AssinarPage({
       setErro("Envie a foto do verso do seu documento (CNH ou RG).");
       return;
     }
-    if ((ex.selfie || ex.facial) && !selfie) {
-      setErro("Envie a selfie.");
+    setErro(null);
+    // Selfie de verificação é tirada AO VIVO: abre a câmera e envia na captura.
+    if (ex.selfie || ex.facial) {
+      setMostrarCamera(true);
       return;
     }
+    void enviarAssinatura(null);
+  }
+
+  async function enviarAssinatura(selfie: string | null) {
+    if (!dados) return;
+    setMostrarCamera(false);
     setEnviando(true);
     setErro(null);
     try {
@@ -289,7 +304,7 @@ export default function AssinarPage({
               </div>
             )}
 
-            {(signatario.exige.fotoDocumento || signatario.exige.facial) && (
+            {signatario.exige.fotoDocumento && (
               <CapturaFoto
                 label="Documento (CNH ou RG) — frente"
                 onChange={setFotoDocumento}
@@ -302,14 +317,21 @@ export default function AssinarPage({
               />
             )}
             {(signatario.exige.selfie || signatario.exige.facial) && (
-              <CapturaFoto label="Selfie" onChange={setSelfie} selfie />
-            )}
-            {signatario.exige.facial && (
-              <p className="text-xs text-muted inline-flex items-start gap-1.5 leading-relaxed">
-                <ShieldCheck size={13} className="flex-shrink-0 mt-0.5" />
-                Ao assinar, comparamos sua selfie com a foto do documento
-                (reconhecimento facial) e registramos o resultado.
-              </p>
+              <div className="flex items-start gap-2.5 rounded-lg border border-dashed border-border bg-surface-2 p-3 text-xs text-muted">
+                <ScanFace
+                  size={20}
+                  className="flex-shrink-0"
+                  style={{ color: "var(--module-contratos)" }}
+                />
+                <span className="leading-relaxed">
+                  Ao tocar em <strong>Assinar contrato</strong>, abriremos a
+                  câmera para você tirar uma <strong>selfie ao vivo</strong> de
+                  verificação
+                  {signatario.exige.facial
+                    ? " — comparamos com a foto do seu documento (reconhecimento facial) e registramos o resultado."
+                    : "."}
+                </span>
+              </div>
             )}
 
             {erro && (
@@ -347,6 +369,13 @@ export default function AssinarPage({
           </div>
         )}
       </div>
+
+      {mostrarCamera && (
+        <SelfieAoVivo
+          onCapturar={(dataUrl) => void enviarAssinatura(dataUrl)}
+          onCancelar={() => setMostrarCamera(false)}
+        />
+      )}
     </div>
   );
 }
