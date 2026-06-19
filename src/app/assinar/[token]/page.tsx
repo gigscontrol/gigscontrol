@@ -14,6 +14,7 @@ import { FolhaA4, gerarPdfFolha } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
+import { formatarCpfCnpj, documentoValido } from "@/lib/documento";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import type { ExigenciasSignatario } from "@/lib/mappers/contratoSignatario";
 
@@ -75,7 +76,9 @@ export default function AssinarPage({
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
       setDados(body as Dados);
       if ((body as Dados).signatario.documento)
-        setDocumento((body as Dados).signatario.documento ?? "");
+        setDocumento(
+          formatarCpfCnpj((body as Dados).signatario.documento ?? "")
+        );
     } catch (e) {
       setErroCarga((e as Error).message);
     } finally {
@@ -113,6 +116,10 @@ export default function AssinarPage({
     const ex = dados.signatario.exige;
     if (ex.cpfCnpj && !documento.trim()) {
       setErro("Informe seu CPF ou CNPJ.");
+      return;
+    }
+    if (ex.cpfCnpj && !documentoValido(documento)) {
+      setErro("Documento inválido: informe um CPF (11 dígitos) ou CNPJ (14 dígitos).");
       return;
     }
     if (ex.assinaturaTela && !assinatura) {
@@ -287,8 +294,9 @@ export default function AssinarPage({
                 </span>
                 <input
                   value={documento}
-                  onChange={(e) => setDocumento(e.target.value)}
+                  onChange={(e) => setDocumento(formatarCpfCnpj(e.target.value))}
                   inputMode="numeric"
+                  maxLength={18}
                   placeholder="000.000.000-00"
                   className="campo-input font-mono"
                 />
