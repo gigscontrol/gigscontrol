@@ -173,6 +173,7 @@ export type AssinaturaInfo = {
   // URLs (assinadas) das fotos — Fase 2.
   fotoCpfUrl?: string;
   fotoDocumentoUrl?: string;
+  fotoDocumentoVersoUrl?: string;
   selfieUrl?: string;
   // Reconhecimento facial — Fase 3.
   facialSimilaridade?: number;
@@ -261,7 +262,10 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                   </div>
                 )}
               </div>
-              {(a.fotoCpfUrl || a.fotoDocumentoUrl || a.selfieUrl) && (
+              {(a.fotoCpfUrl ||
+                a.fotoDocumentoUrl ||
+                a.fotoDocumentoVersoUrl ||
+                a.selfieUrl) && (
                 <div
                   style={{
                     display: "flex",
@@ -272,7 +276,8 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                 >
                   {[
                     { url: a.fotoCpfUrl, leg: "CPF" },
-                    { url: a.fotoDocumentoUrl, leg: "Documento" },
+                    { url: a.fotoDocumentoUrl, leg: "Documento (frente)" },
+                    { url: a.fotoDocumentoVersoUrl, leg: "Documento (verso)" },
                     { url: a.selfieUrl, leg: "Selfie" },
                   ]
                     .filter((f) => f.url)

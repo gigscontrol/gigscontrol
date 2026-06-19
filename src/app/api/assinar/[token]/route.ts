@@ -83,6 +83,7 @@ export async function POST(
       geolocalizacao: parsed.data.geolocalizacao || null,
       fotoCpf: parsed.data.fotoCpf || null,
       fotoDocumento: parsed.data.fotoDocumento || null,
+      fotoDocumentoVerso: parsed.data.fotoDocumentoVerso || null,
       selfie: parsed.data.selfie || null,
     });
     if (!sig) {

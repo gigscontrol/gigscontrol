@@ -37,6 +37,7 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
 export type ArquivosSignatario = {
   fotoCpf?: string;
   fotoDocumento?: string;
+  fotoDocumentoVerso?: string;
   selfie?: string;
   /** Similaridade selfie × documento (0..100), do AWS Rekognition. */
   facialSimilaridade?: number;
@@ -50,6 +51,8 @@ export function arquivosValido(raw: unknown): ArquivosSignatario {
   if (typeof o.fotoCpf === "string" && o.fotoCpf) out.fotoCpf = o.fotoCpf;
   if (typeof o.fotoDocumento === "string" && o.fotoDocumento)
     out.fotoDocumento = o.fotoDocumento;
+  if (typeof o.fotoDocumentoVerso === "string" && o.fotoDocumentoVerso)
+    out.fotoDocumentoVerso = o.fotoDocumentoVerso;
   if (typeof o.selfie === "string" && o.selfie) out.selfie = o.selfie;
   if (typeof o.facialSimilaridade === "number")
     out.facialSimilaridade = o.facialSimilaridade;

@@ -115,6 +115,7 @@ export async function registrarAssinatura(
     dispositivo: string | null;
     fotoCpf?: string | null;
     fotoDocumento?: string | null;
+    fotoDocumentoVerso?: string | null;
     selfie?: string | null;
   }
 ): Promise<Signatario | null> {
@@ -135,6 +136,14 @@ export async function registrarAssinatura(
       dados.fotoDocumento
     );
     if (p) arquivos.fotoDocumento = p;
+  }
+  if (dados.fotoDocumentoVerso) {
+    const p = await uploadFoto(
+      admin,
+      `${base}/foto-documento-verso.jpg`,
+      dados.fotoDocumentoVerso
+    );
+    if (p) arquivos.fotoDocumentoVerso = p;
   }
   if (dados.selfie) {
     const p = await uploadFoto(admin, `${base}/selfie.jpg`, dados.selfie);
@@ -176,13 +185,17 @@ export async function preencherUrls(
 ): Promise<Signatario[]> {
   return Promise.all(
     signatarios.map(async (s) => {
-      const { fotoCpf, fotoDocumento, selfie } = s.arquivos;
-      if (!fotoCpf && !fotoDocumento && !selfie) return s;
+      const { fotoCpf, fotoDocumento, fotoDocumentoVerso, selfie } = s.arquivos;
+      if (!fotoCpf && !fotoDocumento && !fotoDocumentoVerso && !selfie)
+        return s;
       const urls: ArquivosSignatario = {};
       if (fotoCpf) urls.fotoCpf = (await urlAssinada(admin, fotoCpf)) ?? undefined;
       if (fotoDocumento)
         urls.fotoDocumento =
           (await urlAssinada(admin, fotoDocumento)) ?? undefined;
+      if (fotoDocumentoVerso)
+        urls.fotoDocumentoVerso =
+          (await urlAssinada(admin, fotoDocumentoVerso)) ?? undefined;
       if (selfie) urls.selfie = (await urlAssinada(admin, selfie)) ?? undefined;
       return { ...s, arquivosUrls: urls };
     })
