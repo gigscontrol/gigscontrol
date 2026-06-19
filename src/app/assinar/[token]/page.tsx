@@ -54,6 +54,9 @@ export default function AssinarPage({
   const [assinatura, setAssinatura] = useState<string | null>(null);
   const [fotoCpf, setFotoCpf] = useState<string | null>(null);
   const [fotoDocumento, setFotoDocumento] = useState<string | null>(null);
+  const [fotoDocumentoVerso, setFotoDocumentoVerso] = useState<string | null>(
+    null
+  );
   const [selfie, setSelfie] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -115,7 +118,11 @@ export default function AssinarPage({
       return;
     }
     if ((ex.fotoDocumento || ex.facial) && !fotoDocumento) {
-      setErro("Envie a foto do seu documento de identidade.");
+      setErro("Envie a foto da frente do seu documento de identidade.");
+      return;
+    }
+    if (ex.fotoDocumento && !fotoDocumentoVerso) {
+      setErro("Envie a foto do verso do seu documento de identidade.");
       return;
     }
     if ((ex.selfie || ex.facial) && !selfie) {
@@ -135,6 +142,7 @@ export default function AssinarPage({
           geolocalizacao,
           fotoCpf: fotoCpf ?? "",
           fotoDocumento: fotoDocumento ?? "",
+          fotoDocumentoVerso: fotoDocumentoVerso ?? "",
           selfie: selfie ?? "",
         }),
       });
@@ -292,8 +300,14 @@ export default function AssinarPage({
             )}
             {(signatario.exige.fotoDocumento || signatario.exige.facial) && (
               <CapturaFoto
-                label="Foto do documento de identidade"
+                label="Documento de identidade — frente"
                 onChange={setFotoDocumento}
+              />
+            )}
+            {signatario.exige.fotoDocumento && (
+              <CapturaFoto
+                label="Documento de identidade — verso"
+                onChange={setFotoDocumentoVerso}
               />
             )}
             {(signatario.exige.selfie || signatario.exige.facial) && (

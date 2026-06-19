@@ -41,6 +41,7 @@ export const assinarSchema = z.object({
   // Fotos (data URLs base64, já reduzidas no cliente) — só quando exigidas.
   fotoCpf: z.string().optional().or(z.literal("")),
   fotoDocumento: z.string().optional().or(z.literal("")),
+  fotoDocumentoVerso: z.string().optional().or(z.literal("")),
   selfie: z.string().optional().or(z.literal("")),
 });
 
