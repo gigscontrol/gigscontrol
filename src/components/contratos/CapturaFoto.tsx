@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { Camera, Upload, Trash2 } from "lucide-react";
+import { Camera, Upload, Check, X, RefreshCw, ScanFace } from "lucide-react";
 
 type CapturaFotoProps = {
   label: string;
@@ -113,8 +113,10 @@ export default function CapturaFoto({
     onChange(null);
   }, [disabled, onChange]);
 
+  const Icone = selfie ? ScanFace : Camera;
+
   return (
-    <div className={`border border-border rounded-md p-2 flex items-center gap-3 ${disabled ? "opacity-50" : ""}`}>
+    <div className={disabled ? "opacity-50" : ""}>
       <input
         ref={inputRef}
         type="file"
@@ -126,51 +128,72 @@ export default function CapturaFoto({
       />
 
       {preview ? (
-        <>
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 p-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
             alt={label}
-            className="h-20 w-auto rounded border border-border object-cover"
+            className="h-14 w-14 flex-shrink-0 rounded-md border border-border object-cover"
           />
           <div className="min-w-0 flex-1">
-            <div className="text-sm text-foreground/80 truncate">{label}</div>
-            <div className="text-xs text-success">Foto adicionada</div>
+            <div className="truncate text-sm font-medium text-primary">
+              {label}
+            </div>
+            <div
+              className="inline-flex items-center gap-1 text-xs"
+              style={{ color: "var(--success)" }}
+            >
+              <Check size={12} /> Enviada
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={abrirSeletor}
+            disabled={disabled}
+            className="btn-ghost rounded px-2 py-1 text-xs"
+            title="Trocar foto"
+          >
+            <RefreshCw size={13} /> Trocar
+          </button>
           <button
             type="button"
             onClick={remover}
             disabled={disabled}
-            title="Remover foto"
             aria-label="Remover foto"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:text-danger hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn-ghost rounded p-1.5 hover:text-danger"
           >
-            <Trash2 className="h-4 w-4" />
-            Remover
+            <X size={16} />
           </button>
-        </>
+        </div>
       ) : (
-        <>
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded border border-dashed border-border text-zinc-400">
-            <Camera className="h-6 w-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm text-foreground/80 truncate">{label}</div>
-            {erro ? (
-              <div className="text-xs text-danger">{erro}</div>
-            ) : (
-              <button
-                type="button"
-                onClick={abrirSeletor}
-                disabled={disabled}
-                className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Upload className="h-4 w-4" />
-                Selecionar / tirar foto
-              </button>
-            )}
-          </div>
-        </>
+        <button
+          type="button"
+          onClick={abrirSeletor}
+          disabled={disabled}
+          className="flex w-full items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 p-3 text-left transition-colors hover:border-border-strong disabled:cursor-not-allowed"
+        >
+          <span
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-elevated"
+            style={{ color: "var(--module-contratos)" }}
+          >
+            <Icone size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-primary">{label}</span>
+            <span className="block text-xs text-muted">
+              {selfie
+                ? "Toque para tirar a selfie"
+                : "Toque para tirar ou enviar a foto"}
+            </span>
+          </span>
+          <Upload size={16} className="flex-shrink-0 text-muted" />
+        </button>
+      )}
+
+      {erro && (
+        <div className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
+          {erro}
+        </div>
       )}
     </div>
   );
