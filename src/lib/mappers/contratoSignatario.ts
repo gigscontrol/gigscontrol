@@ -29,11 +29,18 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
   facial: false,
 };
 
-/** Caminhos das fotos no Storage (Fase 2). Quando exibidas, viram URLs assinadas. */
+/**
+ * Caminhos das fotos no Storage (Fase 2) + resultado do reconhecimento facial
+ * (Fase 3). Quando exibidas, as fotos viram URLs assinadas. Guardado tudo no
+ * jsonb `arquivos` pra não precisar de migração nova.
+ */
 export type ArquivosSignatario = {
   fotoCpf?: string;
   fotoDocumento?: string;
   selfie?: string;
+  /** Similaridade selfie × documento (0..100), do AWS Rekognition. */
+  facialSimilaridade?: number;
+  facialMatch?: boolean;
 };
 
 export function arquivosValido(raw: unknown): ArquivosSignatario {
@@ -44,6 +51,9 @@ export function arquivosValido(raw: unknown): ArquivosSignatario {
   if (typeof o.fotoDocumento === "string" && o.fotoDocumento)
     out.fotoDocumento = o.fotoDocumento;
   if (typeof o.selfie === "string" && o.selfie) out.selfie = o.selfie;
+  if (typeof o.facialSimilaridade === "number")
+    out.facialSimilaridade = o.facialSimilaridade;
+  if (typeof o.facialMatch === "boolean") out.facialMatch = o.facialMatch;
   return out;
 }
 
