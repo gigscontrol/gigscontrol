@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 type Props = {
   onCapturar: (dataUrl: string) => void;
@@ -34,6 +35,11 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
   const [pronto, setPronto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // URL desta própria página de assinatura — vira QR pra abrir no celular
+  // quando o dispositivo não tem câmera.
+  const [url] = useState(() =>
+    typeof window !== "undefined" ? window.location.href : ""
+  );
 
   const parar = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -130,13 +136,28 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
       {/* Câmera / preview */}
       <div className="relative flex-1 overflow-hidden bg-black">
         {erro ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-white">
-            <AlertCircle size={34} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto p-6 text-center text-white">
+            <AlertCircle size={30} className="flex-shrink-0" />
             <p className="max-w-xs text-sm leading-relaxed opacity-90">{erro}</p>
+            {url && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-sm font-semibold">
+                  Continue a verificação no celular
+                </div>
+                <div className="rounded-xl bg-white p-3">
+                  <QRCodeSVG value={url} size={176} />
+                </div>
+                <p className="max-w-[15rem] text-xs leading-relaxed opacity-75">
+                  Aponte a câmera do celular para o código, abra o link e conclua
+                  a assinatura por lá. Esta tela atualiza sozinha quando você
+                  assinar.
+                </p>
+              </div>
+            )}
             <button
               type="button"
               onClick={cancelar}
-              className="btn btn-secondary mt-2"
+              className="btn btn-secondary"
             >
               Fechar
             </button>

@@ -91,6 +91,28 @@ export default function AssinarPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Enquanto a câmera está aberta (inclusive na tela de QR, quando o
+  // dispositivo não tem câmera), fica escutando: se a pessoa concluir a
+  // assinatura em outro aparelho (pelo celular via QR), o desktop detecta e
+  // já mostra o estado "assinado".
+  useEffect(() => {
+    if (!mostrarCamera) return;
+    const id = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/assinar/${params.token}`);
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && (body as Dados).signatario?.status === "assinado") {
+          setDados(body as Dados);
+          setMostrarCamera(false);
+        }
+      } catch {
+        /* silencioso — tenta de novo no próximo ciclo */
+      }
+    }, 4000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mostrarCamera]);
+
   function pegarGeo(): Promise<string> {
     return new Promise((resolve) => {
       if (typeof navigator === "undefined" || !navigator.geolocation)
