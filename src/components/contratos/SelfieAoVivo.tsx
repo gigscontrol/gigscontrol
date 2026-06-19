@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { X, RefreshCw, Check, AlertCircle, Smartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 type Props = {
@@ -35,6 +35,8 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
   const [pronto, setPronto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // QR exibido por erro de câmera OU quando a pessoa pede ("usar o celular").
+  const [mostrarQr, setMostrarQr] = useState(false);
   // URL desta própria página de assinatura — vira QR pra abrir no celular
   // quando o dispositivo não tem câmera.
   const [url] = useState(() =>
@@ -117,6 +119,15 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
     onCancelar();
   }, [parar, onCancelar]);
 
+  // A pessoa diz que não tem câmera: encerra o stream e mostra o QR na hora.
+  const usarCelular = useCallback(() => {
+    parar();
+    setMostrarQr(true);
+  }, [parar]);
+
+  // Tela de QR: por erro de câmera ou por escolha ("usar o celular").
+  const telaQr = !!erro || mostrarQr;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
       {/* Topo */}
@@ -135,10 +146,18 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
 
       {/* Câmera / preview */}
       <div className="relative flex-1 overflow-hidden bg-black">
-        {erro ? (
+        {telaQr ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-y-auto p-6 text-center text-white">
-            <AlertCircle size={30} className="flex-shrink-0" />
-            <p className="max-w-xs text-sm leading-relaxed opacity-90">{erro}</p>
+            {erro ? (
+              <>
+                <AlertCircle size={30} className="flex-shrink-0" />
+                <p className="max-w-xs text-sm leading-relaxed opacity-90">
+                  {erro}
+                </p>
+              </>
+            ) : (
+              <Smartphone size={30} className="flex-shrink-0 opacity-90" />
+            )}
             {url && (
               <div className="flex flex-col items-center gap-3">
                 <div className="text-sm font-semibold">
@@ -216,44 +235,56 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
       </div>
 
       {/* Controles */}
-      {!erro && (
-        <div className="flex items-center justify-center gap-10 bg-black px-4 py-6">
-          {preview ? (
-            <>
-              <button
-                type="button"
-                onClick={refazer}
-                className="flex flex-col items-center gap-1.5 text-xs text-white"
-              >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/40">
-                  <RefreshCw size={20} />
-                </span>
-                Refazer
-              </button>
-              <button
-                type="button"
-                onClick={confirmar}
-                className="flex flex-col items-center gap-1.5 text-xs text-white"
-              >
-                <span
-                  className="flex h-16 w-16 items-center justify-center rounded-full"
-                  style={{ background: ACCENT }}
+      {!telaQr && (
+        <div className="flex flex-col items-center gap-4 bg-black px-4 py-6">
+          <div className="flex items-center justify-center gap-10">
+            {preview ? (
+              <>
+                <button
+                  type="button"
+                  onClick={refazer}
+                  className="flex flex-col items-center gap-1.5 text-xs text-white"
                 >
-                  <Check size={30} />
-                </span>
-                Usar foto
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/40">
+                    <RefreshCw size={20} />
+                  </span>
+                  Refazer
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmar}
+                  className="flex flex-col items-center gap-1.5 text-xs text-white"
+                >
+                  <span
+                    className="flex h-16 w-16 items-center justify-center rounded-full"
+                    style={{ background: ACCENT }}
+                  >
+                    <Check size={30} />
+                  </span>
+                  Usar foto
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={capturar}
+                disabled={!pronto}
+                aria-label="Tirar selfie"
+                className="relative h-[74px] w-[74px] rounded-full disabled:opacity-40"
+              >
+                <span className="absolute inset-0 rounded-full border-[3px] border-white/90" />
+                <span className="absolute inset-[6px] rounded-full bg-white" />
               </button>
-            </>
-          ) : (
+            )}
+          </div>
+          {!preview && (
             <button
               type="button"
-              onClick={capturar}
-              disabled={!pronto}
-              aria-label="Tirar selfie"
-              className="relative h-[74px] w-[74px] rounded-full disabled:opacity-40"
+              onClick={usarCelular}
+              className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-white"
             >
-              <span className="absolute inset-0 rounded-full border-[3px] border-white/90" />
-              <span className="absolute inset-[6px] rounded-full bg-white" />
+              <Smartphone size={13} />
+              Não tenho câmera · usar o celular
             </button>
           )}
         </div>
