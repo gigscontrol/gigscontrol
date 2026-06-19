@@ -114,11 +114,11 @@ export default function AssinarPage({
       setErro("Envie a foto do seu CPF.");
       return;
     }
-    if (ex.fotoDocumento && !fotoDocumento) {
+    if ((ex.fotoDocumento || ex.facial) && !fotoDocumento) {
       setErro("Envie a foto do seu documento de identidade.");
       return;
     }
-    if (ex.selfie && !selfie) {
+    if ((ex.selfie || ex.facial) && !selfie) {
       setErro("Envie a selfie.");
       return;
     }
@@ -295,7 +295,7 @@ export default function AssinarPage({
                 <CapturaFoto label="Foto do CPF" onChange={setFotoCpf} />
               </div>
             )}
-            {signatario.exige.fotoDocumento && (
+            {(signatario.exige.fotoDocumento || signatario.exige.facial) && (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-secondary">
                   Foto do documento de identidade
@@ -306,15 +306,17 @@ export default function AssinarPage({
                 />
               </div>
             )}
-            {signatario.exige.selfie && (
+            {(signatario.exige.selfie || signatario.exige.facial) && (
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-secondary">Selfie</span>
                 <CapturaFoto label="Selfie" onChange={setSelfie} selfie />
               </div>
             )}
             {signatario.exige.facial && (
-              <p className="text-xs text-muted">
-                Reconhecimento facial será habilitado em breve.
+              <p className="text-xs text-muted inline-flex items-start gap-1.5 leading-relaxed">
+                <ShieldCheck size={13} className="flex-shrink-0 mt-0.5" />
+                Ao assinar, comparamos sua selfie com a foto do documento
+                (reconhecimento facial) e registramos o resultado.
               </p>
             )}
 

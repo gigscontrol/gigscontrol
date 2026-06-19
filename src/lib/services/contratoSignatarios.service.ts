@@ -7,6 +7,7 @@ import type {
   ArquivosSignatario,
 } from "@/lib/mappers/contratoSignatario";
 import { uploadFoto, urlAssinada } from "@/lib/db/storage-assinaturas";
+import { compararFaces } from "@/lib/db/rekognition";
 import {
   rowParaSignatario,
   exigeValido,
@@ -138,6 +139,16 @@ export async function registrarAssinatura(
   if (dados.selfie) {
     const p = await uploadFoto(admin, `${base}/selfie.jpg`, dados.selfie);
     if (p) arquivos.selfie = p;
+  }
+
+  // Reconhecimento facial (Fase 3): se exigido e temos selfie + documento.
+  const exige = exigeValido(sigRow.exige);
+  if (exige.facial && dados.selfie && dados.fotoDocumento) {
+    const r = await compararFaces(dados.selfie, dados.fotoDocumento);
+    if (r) {
+      arquivos.facialSimilaridade = r.similaridade;
+      arquivos.facialMatch = r.match;
+    }
   }
 
   const row = await registrarAssinaturaPorToken(admin, token, {

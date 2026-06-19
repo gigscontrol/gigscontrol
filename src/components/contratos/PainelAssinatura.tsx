@@ -63,7 +63,7 @@ const EXIGENCIAS_OPCIONAIS: {
   { chave: "fotoCpf", rotulo: "Foto do CPF", disponivel: true },
   { chave: "fotoDocumento", rotulo: "Foto do documento", disponivel: true },
   { chave: "selfie", rotulo: "Selfie", disponivel: true },
-  { chave: "facial", rotulo: "Reconhecimento facial", disponivel: false },
+  { chave: "facial", rotulo: "Reconhecimento facial", disponivel: true },
 ];
 
 /** ISO → DD/MM/AAAA (vazio se não houver data). */
@@ -88,6 +88,8 @@ function paraAssinaturaInfo(s: Signatario): AssinaturaInfo {
     fotoCpfUrl: s.arquivosUrls?.fotoCpf,
     fotoDocumentoUrl: s.arquivosUrls?.fotoDocumento,
     selfieUrl: s.arquivosUrls?.selfie,
+    facialSimilaridade: s.arquivos.facialSimilaridade,
+    facialMatch: s.arquivos.facialMatch,
   };
 }
 

@@ -174,6 +174,9 @@ export type AssinaturaInfo = {
   fotoCpfUrl?: string;
   fotoDocumentoUrl?: string;
   selfieUrl?: string;
+  // Reconhecimento facial — Fase 3.
+  facialSimilaridade?: number;
+  facialMatch?: boolean;
 };
 
 /** Acha a assinatura que combina com o papel do bloco (contratante/contratado). */
@@ -249,6 +252,12 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                 {a.dispositivo && (
                   <div style={{ wordBreak: "break-word" }}>
                     Dispositivo: {a.dispositivo}
+                  </div>
+                )}
+                {typeof a.facialSimilaridade === "number" && (
+                  <div>
+                    Reconhecimento facial: {a.facialSimilaridade}%{" "}
+                    {a.facialMatch ? "(compatível)" : "(divergente)"}
                   </div>
                 )}
               </div>
