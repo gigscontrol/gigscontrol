@@ -288,29 +288,16 @@ export default function AssinarPage({
             )}
 
             {signatario.exige.fotoCpf && (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-secondary">
-                  Foto do CPF
-                </span>
-                <CapturaFoto label="Foto do CPF" onChange={setFotoCpf} />
-              </div>
+              <CapturaFoto label="Foto do CPF" onChange={setFotoCpf} />
             )}
             {(signatario.exige.fotoDocumento || signatario.exige.facial) && (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-secondary">
-                  Foto do documento de identidade
-                </span>
-                <CapturaFoto
-                  label="Foto do documento"
-                  onChange={setFotoDocumento}
-                />
-              </div>
+              <CapturaFoto
+                label="Foto do documento de identidade"
+                onChange={setFotoDocumento}
+              />
             )}
             {(signatario.exige.selfie || signatario.exige.facial) && (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-secondary">Selfie</span>
-                <CapturaFoto label="Selfie" onChange={setSelfie} selfie />
-              </div>
+              <CapturaFoto label="Selfie" onChange={setSelfie} selfie />
             )}
             {signatario.exige.facial && (
               <p className="text-xs text-muted inline-flex items-start gap-1.5 leading-relaxed">
