@@ -61,7 +61,16 @@ export default function PlanosPage() {
       </nav>
 
       {/* HEADER */}
-      <section className="max-w-[1200px] mx-auto px-6 pt-16 pb-8 text-center">
+      <section className="relative overflow-hidden max-w-[1200px] mx-auto px-6 pt-16 pb-8 text-center">
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(600px circle at 50% -10%, rgba(168,85,247,0.16), transparent 60%)",
+          }}
+        />
+        <div className="relative">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-6"
@@ -113,6 +122,7 @@ export default function PlanosPage() {
             Planos anuais são cobrados uma vez ao ano. Preço exibido por mês.
           </p>
         )}
+        </div>
       </section>
 
       {/* CARROSSEL DE PLANOS */}

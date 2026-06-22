@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Lock, User, AlertCircle } from "lucide-react";
+import { ArrowRight, Lock, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import BotoesOAuth from "@/components/BotoesOAuth";
+import AuthShell from "@/components/auth/AuthShell";
 
 export default function LoginPage() {
   return (
@@ -45,54 +46,14 @@ function LoginInner() {
   }
 
   return (
-    <div className="min-h-screen bg-main text-primary flex flex-col">
-      {/* Glow de fundo */}
-      <div
-        className="fixed inset-0 opacity-40 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
-        }}
-      />
-
-      {/* Nav simples */}
-      <nav className="relative border-b border-border">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
-            >
-              G
-            </div>
-            <span className="font-bold tracking-tight text-base">
-              GIGS<span className="text-muted"> CONTROL</span>
-            </span>
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
-          >
-            <ArrowLeft size={13} />
-            Voltar ao site
-          </Link>
-        </div>
-      </nav>
-
-      {/* Formulário */}
-      <div className="relative flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[380px]">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">Entrar na conta</h1>
-            <p className="mt-1.5 text-sm text-secondary">
-              Acesse o painel da sua agência
-            </p>
-          </div>
-
-          {/* OAuth — Google + Facebook */}
-          <div className="card mb-3">
-            <BotoesOAuth prefixo="Entrar com" />
-          </div>
+    <AuthShell
+      titulo="Entrar na conta"
+      subtitulo="Acesse o painel da sua agência"
+    >
+      {/* OAuth — Google + Facebook */}
+      <div className="card mb-3">
+        <BotoesOAuth prefixo="Entrar com" />
+      </div>
 
           {/* Divisor */}
           <div className="relative my-3">
@@ -184,8 +145,6 @@ function LoginInner() {
               </Link>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </AuthShell>
   );
 }
