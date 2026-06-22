@@ -11,10 +11,11 @@
  */
 
 const COR = {
-  agenda: "var(--module-agenda)",
-  vendas: "var(--module-vendas)",
-  financeiro: "var(--module-financeiro)",
-  contatos: "var(--module-contatos)",
+  agenda: "#3b82f6",
+  vendas: "#a855f7",
+  financeiro: "#22c55e",
+  contratos: "#14b8a6",
+  contatos: "#f97316",
 };
 
 /* Barra lateral simplificada, comum a todos os mockups */
@@ -23,6 +24,7 @@ function MiniSidebar({ ativo }: { ativo: keyof typeof COR }) {
     { k: "agenda", label: "Agenda" },
     { k: "vendas", label: "Vendas" },
     { k: "financeiro", label: "Financeiro" },
+    { k: "contratos", label: "Contratos" },
     { k: "contatos", label: "Contatos" },
   ];
   return (
@@ -333,6 +335,132 @@ export function MockFinanceiro() {
               </span>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   MOCKUP — Contratos / Assinatura
+   ============================================================ */
+function MiniCheck({ cor }: { cor: string }) {
+  return (
+    <span
+      className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0"
+      style={{ backgroundColor: `${cor}22`, color: cor }}
+    >
+      <svg
+        width="9"
+        height="9"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    </span>
+  );
+}
+
+export function MockContratos() {
+  const sig = [
+    { nome: "Studio Eventos", papel: "Contratante" },
+    { nome: "DJ CZ", papel: "Contratado" },
+  ];
+  return (
+    <div className="flex h-[300px] sm:h-[360px] text-left">
+      <MiniSidebar ativo="contratos" />
+      <div className="flex-1 p-3 sm:p-4 overflow-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-sm font-bold">Contrato CTR-0001</div>
+            <div className="text-[0.6rem] text-muted">Festival Verão · DJ CZ</div>
+          </div>
+          <span
+            className="h-6 px-2 rounded text-[0.6rem] flex items-center text-white font-semibold"
+            style={{ backgroundColor: COR.contratos }}
+          >
+            Assinado
+          </span>
+        </div>
+
+        <div className="flex gap-3">
+          {/* Folha do contrato (representa a A4) */}
+          <div className="flex-1 rounded-md border border-border bg-white p-2.5 hidden sm:block">
+            <div
+              className="text-[0.6rem] font-bold text-center mb-2"
+              style={{ color: "#0f172a" }}
+            >
+              CONTRATO DE SHOW
+            </div>
+            {[100, 92, 96, 72, 88].map((w, i) => (
+              <div
+                key={i}
+                className="h-1 rounded mb-1.5"
+                style={{ width: `${w}%`, backgroundColor: "#e2e8f0" }}
+              />
+            ))}
+            <div className="flex gap-3 mt-4">
+              {["Contratante", "Contratado"].map((p) => (
+                <div key={p} className="flex-1">
+                  <div className="h-px bg-[#cbd5e1] mb-1" />
+                  <div
+                    className="text-[0.45rem] text-center"
+                    style={{ color: "#64748b" }}
+                  >
+                    {p}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Painel de assinaturas */}
+          <div className="w-full sm:w-44 flex-shrink-0">
+            <div className="text-[0.55rem] text-muted mb-1.5 uppercase tracking-wide">
+              Assinaturas
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {sig.map((s, i) => (
+                <div
+                  key={i}
+                  className="rounded-md border border-border bg-surface p-1.5 flex items-center gap-1.5"
+                >
+                  <MiniCheck cor={COR.financeiro} />
+                  <div className="min-w-0">
+                    <div className="text-[0.6rem] font-medium text-primary truncate">
+                      {s.nome}
+                    </div>
+                    <div
+                      className="text-[0.5rem]"
+                      style={{ color: COR.financeiro }}
+                    >
+                      {s.papel} · assinado
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 rounded-md border border-border bg-surface p-1.5 flex items-center gap-1.5">
+              <MiniCheck cor={COR.contratos} />
+              <div className="min-w-0">
+                <div className="text-[0.6rem] font-medium text-primary">
+                  Verificação
+                </div>
+                <div
+                  className="text-[0.5rem]"
+                  style={{ color: COR.contratos }}
+                >
+                  Selfie + facial
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

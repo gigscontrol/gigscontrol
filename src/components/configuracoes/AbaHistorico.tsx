@@ -35,13 +35,13 @@ const MODULOS: {
   cor: string;
 }[] = [
   { id: "todos", label: "Todos", icon: History, cor: "var(--text-secondary)" },
-  { id: "venda", label: "Vendas", icon: ShoppingBag, cor: "var(--module-vendas)" },
-  { id: "orcamento", label: "Orçamentos", icon: FileText, cor: "var(--module-vendas)" },
-  { id: "parcela", label: "Parcelas", icon: Wallet, cor: "var(--module-financeiro)" },
-  { id: "artista", label: "Artistas", icon: Music, cor: "var(--module-agenda)" },
-  { id: "equipe", label: "Equipe", icon: Users, cor: "var(--module-contatos)" },
+  { id: "venda", label: "Vendas", icon: ShoppingBag, cor: "#a855f7" },
+  { id: "orcamento", label: "Orçamentos", icon: FileText, cor: "#a855f7" },
+  { id: "parcela", label: "Parcelas", icon: Wallet, cor: "#22c55e" },
+  { id: "artista", label: "Artistas", icon: Music, cor: "#3b82f6" },
+  { id: "equipe", label: "Equipe", icon: Users, cor: "#f97316" },
   { id: "lixeira", label: "Lixeira", icon: Trash2, cor: "var(--text-muted)" },
-  { id: "aparencia", label: "Aparência", icon: Palette, cor: "var(--module-vendas)" },
+  { id: "aparencia", label: "Aparência", icon: Palette, cor: "#a855f7" },
 ];
 
 const LIMIT = 50;
@@ -91,7 +91,7 @@ export default function AbaHistorico() {
       {/* Cabeçalho */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <History size={16} style={{ color: "var(--module-vendas)" }} />
+          <History size={16} style={{ color: "#a855f7" }} />
           <div className="section-title">Histórico de ações</div>
         </div>
         <div className="section-subtitle">

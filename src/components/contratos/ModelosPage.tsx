@@ -16,7 +16,7 @@ import {
   SECOES_MODELO_EXEMPLO,
 } from "@/lib/contratos/modeloExemplo";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 type Vista = "lista" | "editor";
 

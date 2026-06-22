@@ -56,7 +56,7 @@ export default function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative w-full bg-surface border border-border rounded-lg overflow-hidden animate-in"
+        className="relative w-full bg-surface border border-border rounded-lg overflow-hidden animate-modal"
         style={{ maxWidth, boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
         onClick={(e) => e.stopPropagation()}
       >

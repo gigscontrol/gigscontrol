@@ -404,10 +404,10 @@ export type ModuleTheme = {
 };
 
 export const MODULE_THEMES: Record<ActiveTab, ModuleTheme> = {
-  agenda: { key: "agenda", label: "Agenda", color: "var(--module-agenda)" },
-  vendas: { key: "vendas", label: "Vendas", color: "var(--module-vendas)" },
-  financeiro: { key: "financeiro", label: "Financeiro", color: "var(--module-financeiro)" },
-  contratos: { key: "contratos", label: "Contratos", color: "var(--module-contratos)" },
-  contatos: { key: "contatos", label: "Contatos", color: "var(--module-contatos)" },
-  agencia: { key: "agencia", label: "Agência", color: "var(--module-agencia)" },
+  agenda: { key: "agenda", label: "Agenda", color: "#3b82f6" },
+  vendas: { key: "vendas", label: "Vendas", color: "#a855f7" },
+  financeiro: { key: "financeiro", label: "Financeiro", color: "#22c55e" },
+  contratos: { key: "contratos", label: "Contratos", color: "#14b8a6" },
+  contatos: { key: "contatos", label: "Contatos", color: "#f97316" },
+  agencia: { key: "agencia", label: "Agência", color: "#6366f1" },
 };

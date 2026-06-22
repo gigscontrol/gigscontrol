@@ -35,14 +35,14 @@ const META_SUBABA: Record<
   TipoLixeira,
   { label: string; icon: typeof Music; cor: string }
 > = {
-  artista:     { label: "Artistas",     icon: Music,         cor: "var(--module-agenda)" },
-  usuario:     { label: "Equipe",       icon: Users,         cor: "var(--module-contatos)" },
-  orcamento:   { label: "Orçamentos",   icon: FileText,      cor: "var(--module-vendas)" },
-  venda:       { label: "Vendas",       icon: ShoppingBag,   cor: "var(--module-vendas)" },
-  contratante: { label: "Contratantes", icon: UserCircle,    cor: "var(--module-contatos)" },
-  casa:        { label: "Casas",        icon: Building2,     cor: "var(--module-contatos)" },
-  cidade:      { label: "Cidades",      icon: MapPin,        cor: "var(--module-contatos)" },
-  show:        { label: "Shows",        icon: CalendarRange, cor: "var(--module-agenda)" },
+  artista:     { label: "Artistas",     icon: Music,         cor: "#3b82f6" },
+  usuario:     { label: "Equipe",       icon: Users,         cor: "#f97316" },
+  orcamento:   { label: "Orçamentos",   icon: FileText,      cor: "#a855f7" },
+  venda:       { label: "Vendas",       icon: ShoppingBag,   cor: "#a855f7" },
+  contratante: { label: "Contratantes", icon: UserCircle,    cor: "#f97316" },
+  casa:        { label: "Casas",        icon: Building2,     cor: "#f97316" },
+  cidade:      { label: "Cidades",      icon: MapPin,        cor: "#f97316" },
+  show:        { label: "Shows",        icon: CalendarRange, cor: "#3b82f6" },
 };
 
 export default function AbaLixeira() {
@@ -169,7 +169,7 @@ export default function AbaLixeira() {
         i.usuario.nome,
         i.usuario.email,
         i.diasRestantes,
-        "var(--module-contatos)",
+        "#f97316",
         i.usuario.nome.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
       )
     ),
@@ -181,7 +181,7 @@ export default function AbaLixeira() {
         i.orcamento.numero,
         i.orcamento.tipoEvento ?? null,
         i.diasRestantes,
-        "var(--module-vendas)",
+        "#a855f7",
         "OR"
       )
     ),
@@ -193,7 +193,7 @@ export default function AbaLixeira() {
         i.venda.numero,
         i.venda.nomeEvento ?? null,
         i.diasRestantes,
-        "var(--module-vendas)",
+        "#a855f7",
         "VN"
       )
     ),
@@ -205,7 +205,7 @@ export default function AbaLixeira() {
         i.contratante.nome,
         i.contratante.email ?? null,
         i.diasRestantes,
-        "var(--module-contatos)",
+        "#f97316",
         i.contratante.nome.charAt(0).toUpperCase()
       )
     ),
@@ -217,7 +217,7 @@ export default function AbaLixeira() {
         i.casa.nome,
         null,
         i.diasRestantes,
-        "var(--module-contatos)",
+        "#f97316",
         i.casa.nome.charAt(0).toUpperCase()
       )
     ),
@@ -229,7 +229,7 @@ export default function AbaLixeira() {
         `${i.cidade.nome}, ${i.cidade.estado}`,
         null,
         i.diasRestantes,
-        "var(--module-contatos)",
+        "#f97316",
         i.cidade.nome.charAt(0).toUpperCase()
       )
     ),
@@ -241,7 +241,7 @@ export default function AbaLixeira() {
         `${i.show.dj} • ${i.show.data ?? "sem data"}`,
         i.show.venue || i.show.location || null,
         i.diasRestantes,
-        "var(--module-agenda)",
+        "#3b82f6",
         "SH"
       )
     ),
@@ -254,7 +254,7 @@ export default function AbaLixeira() {
     <div className="flex flex-col gap-5 max-w-3xl">
       <div className="card">
         <div className="flex items-center gap-2 mb-1">
-          <Trash2 size={16} style={{ color: "var(--module-financeiro)" }} />
+          <Trash2 size={16} style={{ color: "#22c55e" }} />
           <div className="section-title">Lixeira</div>
         </div>
         <div className="section-subtitle">

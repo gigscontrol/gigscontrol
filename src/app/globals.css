@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -75,6 +76,13 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Fonte de display nos títulos em todo o app (headings sem classe própria
+     também herdam). Utilitários font-* do Tailwind ainda têm prioridade. */
+  h1, h2, h3 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
   /* Força a renderização de emoji colorido nas bandeiras (Windows não tem por padrão) */
   .flag-emoji {
     font-family:
@@ -98,6 +106,12 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
   ::selection { background: rgba(59, 130, 246, 0.3); }
+
+  /* Foco visível consistente em todo o app (acessibilidade). */
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
@@ -107,7 +121,8 @@
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     padding: 20px;
-    transition: border-color 200ms var(--ease);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
   }
   .card:hover { border-color: var(--border-hover); }
 
@@ -117,11 +132,14 @@
     border-radius: var(--radius);
     padding: 20px;
     cursor: pointer;
-    transition: border-color 200ms var(--ease), transform 200ms var(--ease);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: border-color 200ms var(--ease), transform 200ms var(--ease),
+      box-shadow 200ms var(--ease);
   }
   .card-interactive:hover {
     border-color: var(--border-strong);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.55);
   }
 
   /* Badges */
@@ -175,9 +193,11 @@
     background-color: var(--bg-elevated);
     color: var(--text-primary);
   }
+  .btn:active { transform: translateY(1px); }
 
   /* Typography helpers */
   .stat-value {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-size: 1.875rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -192,8 +212,10 @@
     color: var(--text-secondary);
   }
   .section-title {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-size: 1rem;
     font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--text-primary);
   }
   .section-subtitle {
@@ -201,6 +223,7 @@
     color: var(--text-muted);
   }
   .page-title {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -265,12 +288,27 @@
 }
 
 @layer utilities {
+  /* Fonte de display dos títulos da landing pública — não altera o resto do app. */
+  .font-display {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
   .animate-in {
     animation: fadeUp 300ms var(--ease) both;
   }
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Entrada de modal — fade + leve scale (continuidade espacial). */
+  .animate-modal {
+    animation: modalIn 200ms var(--ease) both;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .animate-fade {
     animation: fade 200ms var(--ease) both;

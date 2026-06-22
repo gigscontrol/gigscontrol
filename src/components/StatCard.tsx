@@ -34,7 +34,9 @@ export default function StatCard({
         <div
           className="h-8 w-8 rounded-md flex items-center justify-center transition-colors"
           style={{
-            backgroundColor: accentColor ? `${accentColor}15` : "var(--bg-elevated)",
+            backgroundColor: accentColor
+              ? `color-mix(in srgb, ${accentColor} 13%, transparent)`
+              : "var(--bg-elevated)",
             color: accentColor ?? "var(--text-primary)",
           }}
         >

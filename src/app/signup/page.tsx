@@ -15,6 +15,7 @@ import {
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import type { PlanoId } from "@/lib/planos";
 import BotoesOAuth from "@/components/BotoesOAuth";
+import AuthShell from "@/components/auth/AuthShell";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
 
@@ -149,57 +150,27 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-main text-primary flex flex-col">
-      <div
-        className="fixed inset-0 opacity-40 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
-        }}
+    <AuthShell
+      titulo="Criar conta"
+      subtitulo="7 dias grátis. Sem cartão de crédito."
+    >
+      <FormCadastro
+        nome={nome}
+        setNome={setNome}
+        nomeAgencia={nomeAgencia}
+        setNomeAgencia={setNomeAgencia}
+        email={email}
+        setEmail={setEmail}
+        emailStatus={emailStatus}
+        senha={senha}
+        setSenha={setSenha}
+        aceitouTermos={aceitouTermos}
+        setAceitouTermos={setAceitouTermos}
+        erro={erro}
+        enviando={enviando}
+        onSubmit={handleSubmit}
       />
-
-      <nav className="relative border-b border-border">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
-            >
-              G
-            </div>
-            <span className="font-bold tracking-tight text-base">
-              GIGS<span className="text-muted"> CONTROL</span>
-            </span>
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
-          >
-            Já tenho conta
-            <ArrowRight size={13} />
-          </Link>
-        </div>
-      </nav>
-
-      <div className="relative flex-1 flex items-start justify-center px-6 py-10">
-        <FormCadastro
-          nome={nome}
-          setNome={setNome}
-          nomeAgencia={nomeAgencia}
-          setNomeAgencia={setNomeAgencia}
-          email={email}
-          setEmail={setEmail}
-          emailStatus={emailStatus}
-          senha={senha}
-          setSenha={setSenha}
-          aceitouTermos={aceitouTermos}
-          setAceitouTermos={setAceitouTermos}
-          erro={erro}
-          enviando={enviando}
-          onSubmit={handleSubmit}
-        />
-      </div>
-    </div>
+    </AuthShell>
   );
 }
 
@@ -246,14 +217,7 @@ function FormCadastro({
     nomeAgencia.trim().length > 0 &&
     !enviando;
   return (
-    <div className="w-full max-w-[440px]">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Criar conta</h1>
-        <p className="mt-1 text-sm text-secondary">
-          7 dias grátis. Sem cartão de crédito.
-        </p>
-      </div>
-
+    <>
       {/* OAuth — atalho rápido */}
       <div className="card mb-3">
         <BotoesOAuth prefixo="Cadastrar com" />
@@ -346,7 +310,7 @@ function FormCadastro({
           </Link>
         </div>
       </form>
-    </div>
+    </>
   );
 }
 
