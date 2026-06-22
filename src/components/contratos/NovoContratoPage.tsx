@@ -26,7 +26,7 @@ import {
 import { VARIAVEIS_CONTRATO } from "@/lib/contratos/variaveis";
 import type { Contrato } from "@/lib/mappers/contrato";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 // Tokens que costumam ser longos → textarea.
 const LONGOS = new Set([

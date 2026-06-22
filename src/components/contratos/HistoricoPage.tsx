@@ -16,7 +16,7 @@ import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 /** Status na ordem em que aparecem no pill-group de troca de status. */
 const STATUS_ORDEM: ContratoStatus[] = [

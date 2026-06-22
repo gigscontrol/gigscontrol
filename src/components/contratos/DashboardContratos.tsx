@@ -13,7 +13,7 @@ import PageHeader from "../PageHeader";
 import { useContratos } from "@/lib/contratos-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 /** Rótulo + classe de badge por status (espelha as cores pedidas). */
 const STATUS_INFO: Record<

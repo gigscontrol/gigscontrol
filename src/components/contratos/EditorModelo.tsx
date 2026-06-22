@@ -41,7 +41,7 @@ import {
   type VariavelContrato,
 } from "@/lib/contratos/variaveis";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 type Props = {
   /** Quando presente, o editor atualiza um modelo existente; senão cria um novo. */

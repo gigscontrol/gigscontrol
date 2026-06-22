@@ -11,11 +11,11 @@
  */
 
 const COR = {
-  agenda: "var(--module-agenda)",
-  vendas: "var(--module-vendas)",
-  financeiro: "var(--module-financeiro)",
-  contratos: "var(--module-contratos)",
-  contatos: "var(--module-contatos)",
+  agenda: "#3b82f6",
+  vendas: "#a855f7",
+  financeiro: "#22c55e",
+  contratos: "#14b8a6",
+  contatos: "#f97316",
 };
 
 /* Barra lateral simplificada, comum a todos os mockups */

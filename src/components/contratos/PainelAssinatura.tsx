@@ -44,7 +44,7 @@ import type { Contrato } from "@/lib/mappers/contrato";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 
-const ACCENT = "var(--module-contratos)";
+const ACCENT = "#14b8a6";
 
 /** Linha editável do form de definição (papel é texto livre). */
 type LinhaForm = {

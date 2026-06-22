@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 
-const VENDAS = "var(--module-vendas)";
+const VENDAS = "#a855f7";
 
 const PONTOS = [
   "Agenda de shows de todos os artistas",

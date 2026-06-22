@@ -23,11 +23,11 @@ import {
   MockContratos,
 } from "@/components/landing/Mockups";
 
-const VENDAS = "var(--module-vendas)";
-const AGENDA = "var(--module-agenda)";
-const FINANCEIRO = "var(--module-financeiro)";
-const CONTRATOS = "var(--module-contratos)";
-const CONTATOS = "var(--module-contatos)";
+const VENDAS = "#a855f7";
+const AGENDA = "#3b82f6";
+const FINANCEIRO = "#22c55e";
+const CONTRATOS = "#14b8a6";
+const CONTATOS = "#f97316";
 
 /** Anel de foco visível para teclado (acessibilidade), na cor da marca. */
 const FOCO =
