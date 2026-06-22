@@ -7,16 +7,16 @@
 
 @layer base {
   :root {
-    /* Backgrounds — dark roxo/violeta */
-    --bg-main: #0d0a1a;
-    --bg-surface: #17122a;
-    --bg-surface-2: #201838;
-    --bg-elevated: #2b2249;
+    /* Backgrounds */
+    --bg-main: #0a0a0b;
+    --bg-surface: #111113;
+    --bg-surface-2: #18181b;
+    --bg-elevated: #1f1f23;
 
-    /* Borders — roxo-acinzentado */
-    --border-color: #2b2249;
-    --border-hover: #3b2f62;
-    --border-strong: #4e407a;
+    /* Borders */
+    --border-color: #1f1f23;
+    --border-hover: #2a2a2f;
+    --border-strong: #3a3a40;
 
     /* Text */
     --text-primary: #fafafa;
@@ -105,7 +105,7 @@
   ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
-  ::selection { background: rgba(168, 85, 247, 0.3); }
+  ::selection { background: rgba(59, 130, 246, 0.3); }
 
   /* Foco visível consistente em todo o app (acessibilidade). */
   :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
