@@ -224,10 +224,18 @@ export default function Sidebar({
                       flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                       transition-all duration-150 ease-smooth
                       ${isActive
-                        ? "bg-elevated text-primary"
+                        ? "text-primary"
                         : "text-secondary hover:bg-elevated hover:text-primary"
                       }
                     `}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+                            boxShadow: `inset 2px 0 0 ${color}`,
+                          }
+                        : undefined
+                    }
                   >
                     <Icon size={16} style={{ color: isActive ? color : undefined }} />
                     <span>{mod.label}</span>
