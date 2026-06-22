@@ -301,6 +301,15 @@
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Entrada de modal — fade + leve scale (continuidade espacial). */
+  .animate-modal {
+    animation: modalIn 200ms var(--ease) both;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .animate-fade {
     animation: fade 200ms var(--ease) both;
   }
