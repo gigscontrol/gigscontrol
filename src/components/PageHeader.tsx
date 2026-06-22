@@ -11,8 +11,15 @@ type Props = {
 
 export default function PageHeader({ title, subtitle, actions, accentColor }: Props) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-      <div className="flex items-start gap-3 min-w-0">
+    <div className="relative flex flex-wrap items-end justify-between gap-4 mb-8">
+      {accentColor && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-4 -top-10 h-28 w-72 rounded-full opacity-[0.13] blur-3xl"
+          style={{ backgroundColor: accentColor }}
+        />
+      )}
+      <div className="relative flex items-start gap-3 min-w-0">
         {accentColor && (
           <div
             className="h-10 w-1 rounded-full mt-1 flex-shrink-0"
@@ -24,7 +31,7 @@ export default function PageHeader({ title, subtitle, actions, accentColor }: Pr
           {subtitle && <p className="page-subtitle mt-0.5">{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex-shrink-0">{actions}</div>}
+      {actions && <div className="relative flex-shrink-0">{actions}</div>}
     </div>
   );
 }
