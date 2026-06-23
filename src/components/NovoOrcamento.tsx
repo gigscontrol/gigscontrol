@@ -15,6 +15,9 @@ import {
   Plus,
   Trash2,
   User,
+  Users,
+  AlertCircle,
+  Pencil,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -41,6 +44,7 @@ import {
   type LogisticaSelecao,
   type TipoEvento,
   type DJ,
+  type Contratante,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 
@@ -85,7 +89,7 @@ function novoBlocoDj(djId: string): DjBlock {
 
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes } = useContatos();
+  const { contratantes, updateContratante } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
 
@@ -98,6 +102,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [novoNome, setNovoNome] = useState("");
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [telDigits, setTelDigits] = useState("");
+  // Quando o telefone "novo" bate com um contato já cadastrado e o usuário opta
+  // por reusá-lo (corrigindo o nome) — guarda o id, sem criar duplicado.
+  const [vinculadoId, setVinculadoId] = useState<string | null>(null);
   const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
 
   // ----- ETAPA 2 -----
@@ -185,6 +192,34 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     return c?.telefone ?? "";
   }
 
+  /** Contato já cadastrado com o telefone digitado (modo novo) — evita duplicar. */
+  function contratanteDuplicado(): Contratante | null {
+    if (contratanteMode !== "novo" || vinculadoId) return null;
+    if (contarDigitos(telDigits) < country.minDigits) return null;
+    const e164 = montarTelefoneE164(country, telDigits);
+    return contratantes.find((c) => c.telefone && c.telefone === e164) ?? null;
+  }
+
+  /** Usa o contato existente como está (passa pro modo "existente"). */
+  function usarContratanteExistente(c: Contratante) {
+    setContratanteMode("existente");
+    setContratanteId(c.id);
+    setVinculadoId(null);
+    setErrors((p) => ({
+      ...p,
+      contratanteNome: "",
+      contratanteTel: "",
+      contratante: "",
+    }));
+  }
+
+  /** Reusa o contato existente (sem duplicar), mas deixa corrigir o nome. */
+  function usarEVincular(c: Contratante) {
+    setVinculadoId(c.id);
+    setNovoNome(c.nome);
+    setErrors((p) => ({ ...p, contratanteNome: "" }));
+  }
+
   // ----- Salvar todos os blocos -----
   async function handleSubmit() {
     if (!validateStep1()) { setStep(1); return; }
@@ -201,16 +236,31 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       return;
     }
 
+    // Telefone "novo" vinculado a um contato existente: reusa o id (sem
+    // duplicar) e corrige o nome no contato salvo se foi alterado.
+    if (contratanteMode === "novo" && vinculadoId) {
+      const existente = contratantes.find((c) => c.id === vinculadoId);
+      if (existente && novoNome.trim() && novoNome.trim() !== existente.nome) {
+        try {
+          await updateContratante(vinculadoId, { nome: novoNome.trim() });
+        } catch {
+          /* não bloqueia o orçamento se a atualização do nome falhar */
+        }
+      }
+    }
+
     const contratanteInputInicial: ContratanteInput =
       contratanteMode === "existente"
         ? { tipo: "existente", id: contratanteId! }
-        : {
-            tipo: "novo",
-            dados: {
-              nome: novoNome,
-              telefone: montarTelefoneE164(country, telDigits),
-            },
-          };
+        : vinculadoId
+          ? { tipo: "existente", id: vinculadoId }
+          : {
+              tipo: "novo",
+              dados: {
+                nome: novoNome,
+                telefone: montarTelefoneE164(country, telDigits),
+              },
+            };
 
     const casaInput: CasaInput = { tipo: "nenhuma" };
 
@@ -506,27 +556,120 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               newLabel="Novo contratante"
               onSwitchToNew={() => setContratanteMode("novo")}
               onSwitchToExisting={() => setContratanteMode("existente")}
-              newFormChildren={
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Nome" required error={errors.contratanteNome}>
-                    <TextInput
-                      value={novoNome}
-                      onChange={(e) => setNovoNome(e.target.value)}
-                      placeholder="Marcos Lima"
-                      autoFocus
-                    />
-                  </Field>
-                  <Field label="Telefone (WhatsApp)" required>
-                    <PhoneInput
-                      country={country}
-                      onCountryChange={setCountry}
-                      value={telDigits}
-                      onChange={setTelDigits}
-                      error={errors.contratanteTel}
-                    />
-                  </Field>
-                </div>
-              }
+              newFormChildren={(() => {
+                const dup = contratanteDuplicado();
+                const vinc = vinculadoId
+                  ? contratantes.find((c) => c.id === vinculadoId)
+                  : null;
+                return (
+                  <>
+                    {vinc && (
+                      <div
+                        className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
+                        style={{
+                          borderColor: `${accent}55`,
+                          backgroundColor: `${accent}14`,
+                        }}
+                      >
+                        <Check
+                          size={14}
+                          className="flex-shrink-0 mt-0.5"
+                          style={{ color: accent }}
+                        />
+                        <span className="flex-1 text-secondary">
+                          Vinculado ao contato{" "}
+                          <strong className="text-primary">{vinc.nome}</strong> — sem
+                          criar duplicado. Corrija o nome abaixo se precisar (será
+                          atualizado no contato).
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVinculadoId(null);
+                            setNovoNome("");
+                            setTelDigits("");
+                          }}
+                          className="btn-ghost rounded px-1.5 py-0.5 text-xs flex-shrink-0"
+                        >
+                          Desvincular
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Nome" required error={errors.contratanteNome}>
+                        <TextInput
+                          value={novoNome}
+                          onChange={(e) => setNovoNome(e.target.value)}
+                          placeholder="Marcos Lima"
+                          autoFocus
+                        />
+                      </Field>
+                      <Field label="Telefone (WhatsApp)" required>
+                        <PhoneInput
+                          country={country}
+                          onCountryChange={setCountry}
+                          value={telDigits}
+                          onChange={(v) => {
+                            setTelDigits(v);
+                            if (vinculadoId) setVinculadoId(null);
+                          }}
+                          error={errors.contratanteTel}
+                        />
+                      </Field>
+                    </div>
+
+                    {dup && (
+                      <div
+                        className="rounded-md border px-3 py-2.5"
+                        style={{
+                          borderColor: "var(--warning)",
+                          backgroundColor: "rgba(245,158,11,0.08)",
+                        }}
+                      >
+                        <div className="flex items-start gap-2 text-xs text-secondary">
+                          <AlertCircle
+                            size={14}
+                            className="flex-shrink-0 mt-0.5"
+                            style={{ color: "var(--warning)" }}
+                          />
+                          <span>
+                            Esse número já está cadastrado como{" "}
+                            <strong className="text-primary">{dup.nome}</strong>. Quer
+                            usar esse contato em vez de criar outro?
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-2.5">
+                          <button
+                            type="button"
+                            onClick={() => usarContratanteExistente(dup)}
+                            className="btn btn-secondary text-xs py-1.5"
+                          >
+                            <Check size={13} /> Usar {dup.nome}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => usarEVincular(dup)}
+                            className="btn-ghost text-xs py-1.5 inline-flex items-center gap-1.5"
+                          >
+                            <Pencil size={13} /> Usar e corrigir o nome
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!vinculadoId && (
+                      <button
+                        type="button"
+                        onClick={() => setContratanteMode("existente")}
+                        className="btn btn-secondary w-full justify-center text-sm"
+                      >
+                        <Users size={15} /> Usar um contratante já cadastrado
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             />
             {errors.contratante && <p className="text-xs text-danger mt-2">{errors.contratante}</p>}
           </div>
