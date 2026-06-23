@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, Search } from "lucide-react";
-import { Field } from "./Field";
 import SearchableSelect from "./SearchableSelect";
 
 type Option = { id: string; label: string; sublabel?: string };
@@ -21,8 +20,9 @@ type Props = {
 };
 
 /**
- * Bloco "selecionar existente ou criar novo".
- * Mostra o seletor com busca OU o formulário inline conforme o modo.
+ * Bloco "selecionar existente ou criar novo". Os dois modos compartilham a
+ * MESMA moldura (card interno + título no topo) pra os boxes terem a mesma
+ * altura ao alternar. Novo: formulário inline. Existente: seletor com busca.
  */
 export default function ExistenteOuNovo({
   label,
@@ -36,47 +36,52 @@ export default function ExistenteOuNovo({
   newFormChildren,
   onPesquisaAvancada,
 }: Props) {
-  if (mode === "novo") {
-    return (
-      <div className="rounded-md border border-border bg-elevated/40 p-4">
-        <div className="mb-3">
-          <span className="text-sm font-semibold text-primary">{newLabel}</span>
-        </div>
-        <div className="flex flex-col gap-3">{newFormChildren}</div>
-      </div>
-    );
-  }
+  const titulo =
+    mode === "novo" ? newLabel : `${label} cadastrado`;
 
   return (
-    <Field label={label} required={required}>
-      <div className="flex gap-2">
-        <SearchableSelect
-          options={options}
-          value={selectedId}
-          onChange={onSelectExisting}
-          placeholder={`Buscar ${label.toLowerCase()}…`}
-          className="flex-1"
-        />
-        <button
-          type="button"
-          onClick={onSwitchToNew}
-          className="btn btn-secondary flex-shrink-0"
-          title={`Cadastrar ${label.toLowerCase()} novo`}
-        >
-          <Plus size={14} />
-          Novo
-        </button>
+    <div className="rounded-md border border-border bg-elevated/40 p-4">
+      <div className="mb-3">
+        <span className="text-sm font-semibold text-primary">
+          {titulo}
+          {required && <span className="text-danger"> *</span>}
+        </span>
       </div>
-      {onPesquisaAvancada && (
-        <button
-          type="button"
-          onClick={onPesquisaAvancada}
-          className="btn btn-secondary mt-2 w-full justify-center text-sm"
-        >
-          <Search size={15} />
-          Pesquisa avançada nos contatos
-        </button>
+
+      {mode === "novo" ? (
+        <div className="flex flex-col gap-3">{newFormChildren}</div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <SearchableSelect
+              options={options}
+              value={selectedId}
+              onChange={onSelectExisting}
+              placeholder={`Buscar ${label.toLowerCase()}…`}
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={onSwitchToNew}
+              className="btn btn-secondary flex-shrink-0"
+              title={`Cadastrar ${label.toLowerCase()} novo`}
+            >
+              <Plus size={14} />
+              Novo
+            </button>
+          </div>
+          {onPesquisaAvancada && (
+            <button
+              type="button"
+              onClick={onPesquisaAvancada}
+              className="btn btn-secondary w-full justify-center text-sm"
+            >
+              <Search size={15} />
+              Pesquisa avançada nos contatos
+            </button>
+          )}
+        </div>
       )}
-    </Field>
+    </div>
   );
 }
