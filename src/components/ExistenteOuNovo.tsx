@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Search } from "lucide-react";
+import { Field } from "./Field";
 import SearchableSelect from "./SearchableSelect";
 
 type Option = { id: string; label: string; sublabel?: string };
@@ -52,24 +53,26 @@ export default function ExistenteOuNovo({
         <div className="flex flex-col gap-3">{newFormChildren}</div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div className="flex gap-2">
-            <SearchableSelect
-              options={options}
-              value={selectedId}
-              onChange={onSelectExisting}
-              placeholder={`Buscar ${label.toLowerCase()}…`}
-              className="flex-1"
-            />
-            <button
-              type="button"
-              onClick={onSwitchToNew}
-              className="btn btn-secondary flex-shrink-0"
-              title={`Cadastrar ${label.toLowerCase()} novo`}
-            >
-              <Plus size={14} />
-              Novo
-            </button>
-          </div>
+          <Field label="Nome ou telefone" required={required}>
+            <div className="flex gap-2">
+              <SearchableSelect
+                options={options}
+                value={selectedId}
+                onChange={onSelectExisting}
+                placeholder={`Buscar ${label.toLowerCase()}…`}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={onSwitchToNew}
+                className="btn btn-secondary flex-shrink-0"
+                title={`Cadastrar ${label.toLowerCase()} novo`}
+              >
+                <Plus size={14} />
+                Novo
+              </button>
+            </div>
+          </Field>
           {onPesquisaAvancada && (
             <button
               type="button"
