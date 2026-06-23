@@ -24,6 +24,7 @@ import Modal from "./Modal";
 import Stepper from "./Stepper";
 import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
+import ContratanteBuscaModal from "./ContratanteBuscaModal";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
 import { resolverCidadeIbge } from "@/lib/cidade-helpers";
@@ -105,6 +106,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // Quando o telefone "novo" bate com um contato já cadastrado e o usuário opta
   // por reusá-lo (corrigindo o nome) — guarda o id, sem criar duplicado.
   const [vinculadoId, setVinculadoId] = useState<string | null>(null);
+  const [buscaAberta, setBuscaAberta] = useState(false);
   const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
 
   // ----- ETAPA 2 -----
@@ -559,7 +561,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               mode={contratanteMode}
               newLabel="Novo contratante"
               onSwitchToNew={() => setContratanteMode("novo")}
-              onSwitchToExisting={() => setContratanteMode("existente")}
+              onPesquisaAvancada={() => setBuscaAberta(true)}
               newFormChildren={(() => {
                 const dup = contratanteDuplicado();
                 const vinc = vinculadoId
@@ -677,6 +679,20 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             />
             {errors.contratante && <p className="text-xs text-danger mt-2">{errors.contratante}</p>}
           </div>
+
+          <ContratanteBuscaModal
+            isOpen={buscaAberta}
+            onClose={() => setBuscaAberta(false)}
+            contratantes={contratantes}
+            cidades={cidades}
+            selectedId={contratanteId}
+            onSelect={(id) => {
+              setContratanteMode("existente");
+              setContratanteId(id);
+              setVinculadoId(null);
+              setBuscaAberta(false);
+            }}
+          />
 
           <div className="card">
             <div className="section-title mb-3">

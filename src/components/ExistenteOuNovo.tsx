@@ -1,7 +1,6 @@
 "use client";
 
-;
-import { Plus, ArrowLeft } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Field } from "./Field";
 import SearchableSelect from "./SearchableSelect";
 
@@ -17,12 +16,13 @@ type Props = {
   mode: "existente" | "novo";
   newLabel: string;
   newFormChildren: React.ReactNode;
-  onSwitchToExisting: () => void;
+  /** Abre uma busca avançada (modal). Opcional — só renderiza o botão se vier. */
+  onPesquisaAvancada?: () => void;
 };
 
 /**
  * Bloco "selecionar existente ou criar novo".
- * Mostra dropdown OU formulário inline conforme o modo.
+ * Mostra o seletor com busca OU o formulário inline conforme o modo.
  */
 export default function ExistenteOuNovo({
   label,
@@ -34,20 +34,13 @@ export default function ExistenteOuNovo({
   mode,
   newLabel,
   newFormChildren,
-  onSwitchToExisting,
+  onPesquisaAvancada,
 }: Props) {
   if (mode === "novo") {
     return (
       <div className="rounded-md border border-border bg-elevated/40 p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3">
           <span className="text-sm font-semibold text-primary">{newLabel}</span>
-          <button
-            type="button"
-            onClick={onSwitchToExisting}
-            className="btn-ghost text-xs inline-flex items-center gap-1.5"
-          >
-            <ArrowLeft size={12} /> Usar existente
-          </button>
         </div>
         <div className="flex flex-col gap-3">{newFormChildren}</div>
       </div>
@@ -74,6 +67,16 @@ export default function ExistenteOuNovo({
           Novo
         </button>
       </div>
+      {onPesquisaAvancada && (
+        <button
+          type="button"
+          onClick={onPesquisaAvancada}
+          className="btn btn-secondary mt-2 w-full justify-center text-sm"
+        >
+          <Search size={15} />
+          Pesquisa avançada nos contatos
+        </button>
+      )}
     </Field>
   );
 }
