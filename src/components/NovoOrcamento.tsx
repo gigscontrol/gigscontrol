@@ -89,7 +89,7 @@ function novoBlocoDj(djId: string): DjBlock {
 
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, updateContratante } = useContatos();
+  const { contratantes, updateContratante, cidades } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
 
@@ -545,11 +545,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             <ExistenteOuNovo
               label="Contratante"
               required
-              options={contratantes.map((c) => ({
-                id: c.id,
-                label: c.nome,
-                sublabel: c.telefone ? `+${c.telefone}` : undefined,
-              }))}
+              options={contratantes.map((c) => {
+                const cid = cidades.find(
+                  (x) => String(x.id) === String(c.cidadeId)
+                );
+                const sub = [c.telefone ? `+${c.telefone}` : null, cid?.nome]
+                  .filter(Boolean)
+                  .join(" · ");
+                return { id: c.id, label: c.nome, sublabel: sub || undefined };
+              })}
               selectedId={contratanteId}
               onSelectExisting={(id) => setContratanteId(id)}
               mode={contratanteMode}

@@ -2,7 +2,8 @@
 
 ;
 import { Plus, ArrowLeft } from "lucide-react";
-import { Field, Select } from "./Field";
+import { Field } from "./Field";
+import SearchableSelect from "./SearchableSelect";
 
 type Option = { id: string; label: string; sublabel?: string };
 
@@ -56,22 +57,13 @@ export default function ExistenteOuNovo({
   return (
     <Field label={label} required={required}>
       <div className="flex gap-2">
-        <Select
-          value={selectedId ?? ""}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v) onSelectExisting(v);
-          }}
+        <SearchableSelect
+          options={options}
+          value={selectedId}
+          onChange={onSelectExisting}
+          placeholder={`Buscar ${label.toLowerCase()}…`}
           className="flex-1"
-        >
-          <option value="">Selecione...</option>
-          {options.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-              {o.sublabel ? ` — ${o.sublabel}` : ""}
-            </option>
-          ))}
-        </Select>
+        />
         <button
           type="button"
           onClick={onSwitchToNew}
