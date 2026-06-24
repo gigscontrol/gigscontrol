@@ -14,6 +14,20 @@ const logisticaSchema = z.object({
   transladoTerrestre: z.boolean(),
 });
 
+const detalhesEventoSchema = z
+  .object({
+    nomeEvento: z.string(),
+    instagram: z.string(),
+    nomeLocal: z.string(),
+    capacidade: z.number().nonnegative(),
+    enderecoLocal: z.string(),
+    dataShow: z.string(),
+    horarioInicio: z.string(),
+    horarioFim: z.string(),
+    terminoDiaSeguinte: z.boolean(),
+  })
+  .partial();
+
 export const orcamentoCreateSchema = z.object({
   status: statusSchema.optional(),
   tipo_evento: tipoEventoSchema.optional(),
@@ -30,6 +44,7 @@ export const orcamentoCreateSchema = z.object({
   logistica: logisticaSchema.optional(),
   observacoes: z.string().nullable().optional(),
   info_extra: z.string().nullable().optional(),
+  detalhes_evento: detalhesEventoSchema.nullable().optional(),
   data_show: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "data_show deve ser YYYY-MM-DD")

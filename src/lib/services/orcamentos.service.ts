@@ -52,6 +52,8 @@ function entradaParaEscrita(
   if (input.logistica !== undefined) out.logistica = input.logistica;
   if (input.observacoes !== undefined) out.observacoes = input.observacoes;
   if (input.info_extra !== undefined) out.info_extra = input.info_extra;
+  if (input.detalhes_evento !== undefined)
+    out.detalhes_evento = input.detalhes_evento;
   if (input.data_show !== undefined) out.data_show = input.data_show;
   if (input.horario !== undefined) out.horario = input.horario;
   if (input.validade !== undefined) out.validade = input.validade;

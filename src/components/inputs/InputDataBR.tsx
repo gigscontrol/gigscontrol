@@ -58,7 +58,7 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
       type="text"
       inputMode="numeric"
       autoComplete="off"
-      placeholder={placeholder ?? "DD/MM/AAAA"}
+      placeholder={placeholder ?? "dd/mm/aaaa"}
       maxLength={10}
       value={displayed}
       onChange={(e) => {

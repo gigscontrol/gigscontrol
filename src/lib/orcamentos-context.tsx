@@ -19,6 +19,7 @@ import type {
   ItemQuantidade,
   LogisticaSelecao,
   TipoEvento,
+  DetalhesEvento,
 } from "@/types";
 
 export type ContratanteInput =
@@ -57,6 +58,8 @@ export type NovoOrcamentoInput = {
   observacoes?: string;
   /** Texto livre opcional anexado ao fim do orçamento. */
   infoExtra?: string;
+  /** Orçamento detalhado: infos do evento (não vão pro WhatsApp). */
+  detalhesEvento?: DetalhesEvento;
 };
 
 type OrcamentosContextValue = {
@@ -106,6 +109,8 @@ function orcamentoParaApi(o: Partial<Orcamento>): Record<string, unknown> {
   if (o.logistica !== undefined) out.logistica = o.logistica;
   if (o.observacoes !== undefined) out.observacoes = o.observacoes || null;
   if (o.infoExtra !== undefined) out.info_extra = o.infoExtra || null;
+  if (o.detalhesEvento !== undefined)
+    out.detalhes_evento = o.detalhesEvento ?? null;
   if (o.dataShow !== undefined) out.data_show = o.dataShow || null;
   if (o.horario !== undefined) out.horario = o.horario || null;
   if (o.validade !== undefined) out.validade = o.validade || null;
@@ -202,6 +207,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         validade: input.validade ?? null,
         observacoes: input.observacoes ?? null,
         info_extra: input.infoExtra ?? null,
+        detalhes_evento: input.detalhesEvento ?? null,
       };
 
       const res = await fetch("/api/orcamentos", {
@@ -301,6 +307,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         logistica: original.logistica,
         validade: original.validade ?? null,
         observacoes: original.observacoes ?? null,
+        detalhes_evento: original.detalhesEvento ?? null,
         status: "pendente",
       };
       const res = await fetch("/api/orcamentos", {

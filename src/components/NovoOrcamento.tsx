@@ -18,6 +18,8 @@ import {
   Users,
   AlertCircle,
   Pencil,
+  Zap,
+  ClipboardList,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -27,6 +29,8 @@ import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
+import InputHora from "./inputs/InputHora";
+import InputDataBR from "./inputs/InputDataBR";
 import { resolverCidadeIbge } from "@/lib/cidade-helpers";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
@@ -46,6 +50,7 @@ import {
   type TipoEvento,
   type DJ,
   type Contratante,
+  type DetalhesEvento,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 
@@ -88,6 +93,17 @@ function novoBlocoDj(djId: string): DjBlock {
   };
 }
 
+/** Data ISO (YYYY-MM-DD) + offset de dias → "DD/MM/YYYY" (vazio se inválida). */
+function formatarDataOffset(iso: string, offsetDias: number): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return "";
+  const dt = new Date(y, m - 1, d + offsetDias);
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${dt.getFullYear()}`;
+}
+
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, updateContratante, cidades } = useContatos();
@@ -108,6 +124,19 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [vinculadoId, setVinculadoId] = useState<string | null>(null);
   const [buscaAberta, setBuscaAberta] = useState(false);
   const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
+
+  // Orçamento simples (padrão) x detalhado. No detalhado capturamos infos do
+  // evento que NÃO vão pro WhatsApp — ficam salvas pra pré-preencher a venda.
+  const [modoOrcamento, setModoOrcamento] = useState<"simples" | "detalhado">("simples");
+  const [evNome, setEvNome] = useState("");
+  const [evInstagram, setEvInstagram] = useState("");
+  const [evLocal, setEvLocal] = useState("");
+  const [evCapacidade, setEvCapacidade] = useState("");
+  const [evEndereco, setEvEndereco] = useState("");
+  const [evData, setEvData] = useState("");
+  const [evInicio, setEvInicio] = useState("");
+  const [evFim, setEvFim] = useState("");
+  const [evTerminoDiaSeguinte, setEvTerminoDiaSeguinte] = useState(false);
 
   // ----- ETAPA 2 -----
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);
@@ -222,6 +251,26 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     setErrors((p) => ({ ...p, contratanteNome: "" }));
   }
 
+  /**
+   * Monta os detalhes do evento (orçamento detalhado). Só inclui os campos
+   * preenchidos; retorna undefined no modo simples ou se nada foi informado.
+   */
+  function montarDetalhesEvento(): DetalhesEvento | undefined {
+    if (modoOrcamento !== "detalhado") return undefined;
+    const d: DetalhesEvento = {};
+    if (evNome.trim()) d.nomeEvento = evNome.trim();
+    if (evInstagram.trim()) d.instagram = evInstagram.trim();
+    if (evLocal.trim()) d.nomeLocal = evLocal.trim();
+    const cap = parseInt(evCapacidade.replace(/\D/g, ""), 10);
+    if (!isNaN(cap) && cap > 0) d.capacidade = cap;
+    if (evEndereco.trim()) d.enderecoLocal = evEndereco.trim();
+    if (evData) d.dataShow = evData;
+    if (evInicio) d.horarioInicio = evInicio;
+    if (evFim) d.horarioFim = evFim;
+    if (evFim && evTerminoDiaSeguinte) d.terminoDiaSeguinte = true;
+    return Object.keys(d).length > 0 ? d : undefined;
+  }
+
   // ----- Salvar todos os blocos -----
   async function handleSubmit() {
     if (!validateStep1()) { setStep(1); return; }
@@ -275,6 +324,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     let contratanteIdResolvido: string | null = null;
     let cidadeIdResolvido: string | null = null;
 
+    // Mesmos detalhes de evento pra todos os DJs — o evento é o mesmo, muda só o DJ.
+    const detalhesEvento = montarDetalhesEvento();
+
     // for-of sequencial — precisamos resolver contratante/cidade do bloco 0
     // antes de criar os próximos, e cada criação é async (API).
     for (let idx = 0; idx < blocos.length; idx++) {
@@ -309,6 +361,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         hotel: b.hotel,
         logistica: b.logistica,
         infoExtra: b.infoExtra.trim() || undefined,
+        detalhesEvento,
       });
 
       if (idx === 0) {
@@ -505,6 +558,55 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       {/* ============ ETAPA 1 ============ */}
       {step === 1 && (
         <div className="flex flex-col gap-4">
+          {/* Modo do orçamento: simples (padrão) x detalhado */}
+          <div className="card">
+            <div className="section-title mb-3">Tipo de orçamento</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  value: "simples" as const,
+                  icon: Zap,
+                  label: "Orçamento simples",
+                  desc: "Rápido — contato, cidade e valores. O que você já usa hoje.",
+                },
+                {
+                  value: "detalhado" as const,
+                  icon: ClipboardList,
+                  label: "Orçamento detalhado",
+                  desc: "Inclui infos do evento (local, data, horários) pra pré-preencher a venda.",
+                },
+              ].map(({ value, icon: Icon, label, desc }) => {
+                const isActive = modoOrcamento === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setModoOrcamento(value)}
+                    className="card-interactive flex items-start gap-3 text-left"
+                    style={{
+                      borderColor: isActive ? accent : undefined,
+                      boxShadow: isActive ? `0 0 0 1px ${accent}` : undefined,
+                    }}
+                  >
+                    <div
+                      className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor: isActive ? `${accent}20` : "var(--bg-elevated)",
+                        color: isActive ? accent : "var(--text-secondary)",
+                      }}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-primary">{label}</div>
+                      <div className="text-xs text-muted">{desc}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="card">
             <div className="section-title mb-3">
               Tipo de evento <span className="text-danger">*</span>
@@ -694,22 +796,146 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             }}
           />
 
-          <div className="card">
-            <div className="section-title mb-3">
-              Cidade do evento <span className="text-danger">*</span>
+          {/* Cidade — no modo simples fica num card próprio; no detalhado ela
+              entra no painel "Informações do Evento" (abaixo), pra ser um só. */}
+          {modoOrcamento === "simples" && (
+            <div className="card">
+              <div className="section-title mb-3">
+                Cidade do evento <span className="text-danger">*</span>
+              </div>
+              <CidadeIBGEAutocomplete
+                value={cidadeIbge}
+                onChange={(c) => {
+                  setCidadeIbge(c);
+                  if (c) setErrors((p) => ({ ...p, cidade: "" }));
+                }}
+                placeholder="Ex: São Paulo, Belo Horizonte..."
+              />
+              {errors.cidade && (
+                <p className="text-xs text-danger mt-1">{errors.cidade}</p>
+              )}
             </div>
-            <CidadeIBGEAutocomplete
-              value={cidadeIbge}
-              onChange={(c) => {
-                setCidadeIbge(c);
-                if (c) setErrors((p) => ({ ...p, cidade: "" }));
-              }}
-              placeholder="Ex: São Paulo, Belo Horizonte..."
-            />
-            {errors.cidade && (
-              <p className="text-xs text-danger mt-1">{errors.cidade}</p>
-            )}
-          </div>
+          )}
+
+          {/* Informações do Evento — só no modo detalhado. Inclui a cidade
+              (obrigatória) no topo + campos opcionais que não vão pro WhatsApp. */}
+          {modoOrcamento === "detalhado" && (
+            <div className="card">
+              <div className="section-title mb-1">Informações do Evento</div>
+              <p className="text-xs text-muted mb-4">
+                A cidade é obrigatória. Os demais campos são opcionais e não
+                aparecem no WhatsApp — ficam salvos pra pré-preencher a venda.
+              </p>
+
+              <div className="mb-3">
+                <Field label="Cidade do evento" required error={errors.cidade}>
+                  <CidadeIBGEAutocomplete
+                    value={cidadeIbge}
+                    onChange={(c) => {
+                      setCidadeIbge(c);
+                      if (c) setErrors((p) => ({ ...p, cidade: "" }));
+                    }}
+                    placeholder="Ex: São Paulo, Belo Horizonte..."
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Nome do evento">
+                  <TextInput
+                    value={evNome}
+                    onChange={(e) => setEvNome(e.target.value)}
+                    placeholder="Ex: Réveillon 2027"
+                  />
+                </Field>
+                <Field label="@ Instagram do evento">
+                  <TextInput
+                    value={evInstagram}
+                    onChange={(e) => setEvInstagram(e.target.value)}
+                    placeholder="@nomedoevento"
+                  />
+                </Field>
+                <Field label="Nome do local">
+                  <TextInput
+                    value={evLocal}
+                    onChange={(e) => setEvLocal(e.target.value)}
+                    placeholder="Ex: Club XYZ"
+                  />
+                </Field>
+                <Field label="Capacidade do público">
+                  <TextInput
+                    type="text"
+                    inputMode="numeric"
+                    value={evCapacidade}
+                    onChange={(e) => setEvCapacidade(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Ex: 500"
+                  />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Endereço do local">
+                    <TextInput
+                      value={evEndereco}
+                      onChange={(e) => setEvEndereco(e.target.value)}
+                      placeholder="Rua, número, bairro…"
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Data do evento">
+                    <InputDataBR value={evData} onChange={setEvData} />
+                  </Field>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-medium text-secondary">
+                      Data da apresentação
+                    </span>
+                    <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+                      {[
+                        { v: false, label: "Mesmo dia do evento" },
+                        { v: true, label: "Dia seguinte ao evento" },
+                      ].map((opt, i) => {
+                        const ativo = evTerminoDiaSeguinte === opt.v;
+                        return (
+                          <button
+                            key={String(opt.v)}
+                            type="button"
+                            aria-pressed={ativo}
+                            onClick={() => setEvTerminoDiaSeguinte(opt.v)}
+                            className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                              i === 1 ? "border-l border-border" : ""
+                            }`}
+                            style={
+                              ativo
+                                ? {
+                                    color: accent,
+                                    background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                                  }
+                                : { color: "var(--text-muted)" }
+                            }
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs text-muted">
+                      {evData
+                        ? `Apresentação em ${formatarDataOffset(
+                            evData,
+                            evTerminoDiaSeguinte ? 1 : 0
+                          )}.`
+                        : "Dia seguinte = vira a madrugada (depois da meia-noite)."}
+                    </span>
+                  </div>
+                  <Field label="Início da apresentação">
+                    <InputHora value={evInicio} onChange={setEvInicio} accent={accent} />
+                  </Field>
+                  <Field label="Término da apresentação">
+                    <InputHora value={evFim} onChange={setEvFim} accent={accent} />
+                  </Field>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

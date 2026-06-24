@@ -21,9 +21,9 @@ type Props = {
 };
 
 /**
- * Bloco "selecionar existente ou criar novo". Os dois modos compartilham a
- * MESMA moldura (card interno + título no topo) pra os boxes terem a mesma
- * altura ao alternar. Novo: formulário inline. Existente: seletor com busca.
+ * Bloco "selecionar existente ou criar novo". Sem moldura própria — flui
+ * direto dentro do card do pai (evita borda dupla); os dois modos só
+ * compartilham o título no topo. Novo: formulário inline. Existente: seletor.
  */
 export default function ExistenteOuNovo({
   label,
@@ -41,12 +41,10 @@ export default function ExistenteOuNovo({
     mode === "novo" ? newLabel : `${label} cadastrado`;
 
   return (
-    <div className="rounded-md border border-border bg-elevated/40 p-4">
-      <div className="mb-3">
-        <span className="text-sm font-semibold text-primary">
-          {titulo}
-          {required && <span className="text-danger"> *</span>}
-        </span>
+    <div>
+      <div className="section-title mb-3">
+        {titulo}
+        {required && <span className="text-danger"> *</span>}
       </div>
 
       {mode === "novo" ? (

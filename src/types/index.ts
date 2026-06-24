@@ -209,6 +209,20 @@ export const LOGISTICA_VAZIA: LogisticaSelecao = {
 export const TEXTO_TRANSLADO =
   "Translado Terrestre de Motorista Executivo ou Van para o artista e equipe (Aeroporto > Hotel > Evento > Hotel > Aeroporto)";
 
+/** Infos do evento de um orçamento detalhado (todas opcionais) — pré-preenche a venda. */
+export type DetalhesEvento = {
+  nomeEvento?: string;
+  instagram?: string;
+  nomeLocal?: string;
+  capacidade?: number;
+  enderecoLocal?: string;
+  dataShow?: string; // YYYY-MM-DD
+  horarioInicio?: string; // HH:mm
+  horarioFim?: string; // HH:mm
+  /** Término no dia seguinte à data do evento (set que vira a madrugada). */
+  terminoDiaSeguinte?: boolean;
+};
+
 export type Orcamento = {
   id: string;
   numero: string;
@@ -243,6 +257,8 @@ export type Orcamento = {
   observacoes?: string;
   /** Texto livre opcional anexado ao fim do orçamento (WhatsApp + detalhe). */
   infoExtra?: string;
+  /** Orçamento detalhado: infos do evento pra pré-preencher a venda. */
+  detalhesEvento?: DetalhesEvento;
   showId?: string;
   criadoEm: string;
   atualizadoEm: string;
