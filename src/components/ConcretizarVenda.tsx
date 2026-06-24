@@ -22,6 +22,7 @@ import { Field, TextInput, TextArea } from "./Field";
 import InputCpfCnpj from "./inputs/InputCpfCnpj";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
+import InputHora from "./inputs/InputHora";
 import { apenasDigitos } from "@/lib/formatters";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
 import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
@@ -66,6 +67,17 @@ function calcularDuracao(inicio: string, fim: string): { horas: number; minutos:
   return { horas, minutos };
 }
 
+/** Data ISO (YYYY-MM-DD) + offset de dias → "DD/MM/YYYY" (vazio se inválida). */
+function formatarDataOffset(iso: string, offsetDias: number): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return "";
+  const dt = new Date(y, m - 1, d + offsetDias);
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${dt.getFullYear()}`;
+}
+
 export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Props) {
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, casas, cidades } = useContatos();
@@ -77,6 +89,9 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   const contratanteOrc = orc ? contratantes.find((c) => c.id === orc.contratanteId) : undefined;
   const cidadeOrc = orc ? cidades.find((c) => c.id === orc.cidadeId) : undefined;
   const casaOrc = orc?.casaId ? casas.find((c) => c.id === orc.casaId) : undefined;
+  // Orçamento detalhado: as infos do evento preenchidas lá têm prioridade no
+  // pré-preenchimento (caem pra casa/base do orçamento quando não informadas).
+  const det = orc?.detalhesEvento;
 
   // -------------------- Estado --------------------
 
@@ -93,19 +108,30 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   const [contratanteDocumento, setContratanteDocumento] = useState(contratanteOrc?.documento ?? "");
   const [contratanteEndereco, setContratanteEndereco] = useState("");
 
-  // Evento
-  const [nomeEvento, setNomeEvento] = useState("");
-  const [eventoInstagram, setEventoInstagram] = useState("");
-  const [nomeLocal, setNomeLocal] = useState(casaOrc?.nome ?? "");
+  // Evento — detalhes do orçamento detalhado (det) primeiro; senão casa/base.
+  const [nomeEvento, setNomeEvento] = useState(det?.nomeEvento ?? "");
+  const [eventoInstagram, setEventoInstagram] = useState(det?.instagram ?? "");
+  const [nomeLocal, setNomeLocal] = useState(det?.nomeLocal ?? casaOrc?.nome ?? "");
   const [capacidadePublico, setCapacidadePublico] = useState<string>(
-    casaOrc?.capacidade ? String(casaOrc.capacidade) : ""
+    det?.capacidade
+      ? String(det.capacidade)
+      : casaOrc?.capacidade
+        ? String(casaOrc.capacidade)
+        : ""
   );
-  const [enderecoLocal, setEnderecoLocal] = useState(casaOrc?.endereco ?? "");
-  const [dataShow, setDataShow] = useState(orc?.dataShow ?? "");
+  const [enderecoLocal, setEnderecoLocal] = useState(
+    det?.enderecoLocal ?? casaOrc?.endereco ?? ""
+  );
+  const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? "");
 
   // Horário início e fim
-  const [horarioInicio, setHorarioInicio] = useState(orc?.horario ?? "");
-  const [horarioFim, setHorarioFim] = useState("");
+  const [horarioInicio, setHorarioInicio] = useState(
+    det?.horarioInicio ?? orc?.horario ?? ""
+  );
+  const [horarioFim, setHorarioFim] = useState(det?.horarioFim ?? "");
+  const [terminoDiaSeguinte, setTerminoDiaSeguinte] = useState(
+    det?.terminoDiaSeguinte ?? false
+  );
 
   // Cidade — pré-popula a partir do orçamento se ele tiver ibge_id
   const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
@@ -209,11 +235,14 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       if (contratanteOrc?.email) set.add("contratanteEmail");
       if (contratanteOrc?.telefone) set.add("contratanteTelefone");
       if (contratanteOrc?.documento) set.add("contratanteDocumento");
-      if (casaOrc?.nome) set.add("nomeLocal");
-      if (casaOrc?.capacidade) set.add("capacidadePublico");
-      if (casaOrc?.endereco) set.add("enderecoLocal");
-      if (orc.dataShow) set.add("dataShow");
-      if (orc.horario) set.add("horarioInicio");
+      if (det?.nomeEvento) set.add("nomeEvento");
+      if (det?.instagram) set.add("eventoInstagram");
+      if (det?.nomeLocal || casaOrc?.nome) set.add("nomeLocal");
+      if (det?.capacidade || casaOrc?.capacidade) set.add("capacidadePublico");
+      if (det?.enderecoLocal || casaOrc?.endereco) set.add("enderecoLocal");
+      if (det?.dataShow || orc.dataShow) set.add("dataShow");
+      if (det?.horarioInicio || orc.horario) set.add("horarioInicio");
+      if (det?.horarioFim) set.add("horarioFim");
       if (cidadeOrc) set.add("cidade");
       if (orc.djId) set.add("djId");
       set.add("cache");
@@ -455,7 +484,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
       {/* ============ 🖋️ INFORMAÇÕES DO CONTRATANTE ============ */}
       <SectionCard icon={<User size={16} />} title="Informações do Contratante" accent={accent}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldWithAuto
             label="Nome do Contratante / Empresa"
             required
@@ -540,8 +569,27 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
       {/* ============ 📌 INFORMAÇÕES DO EVENTO ============ */}
       <SectionCard icon={<MapPin size={16} />} title="Informações do Evento" accent={accent}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Nome do Evento" required error={errors.nomeEvento}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
+            <FieldWithAuto
+              label="Cidade do evento"
+              required
+              error={errors.cidade}
+              showAuto={showAutoBadge("cidade")}
+            >
+              <CidadeIBGEAutocomplete
+                value={cidadeIbge}
+                onChange={(c) => {
+                  setCidadeIbge(c);
+                  marcarEditado("cidade");
+                  if (c) setErrors((p) => ({ ...p, cidade: "" }));
+                }}
+                placeholder="Ex: São Paulo, Belo Horizonte..."
+              />
+            </FieldWithAuto>
+          </div>
+
+          <Field label="Nome do evento" required error={errors.nomeEvento}>
             <TextInput
               value={nomeEvento}
               onChange={(e) => setNomeEvento(e.target.value)}
@@ -549,7 +597,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             />
           </Field>
 
-          <Field label="Instagram do evento" hint="Opcional">
+          <Field label="@ Instagram do evento" hint="Opcional">
             <TextInput
               value={eventoInstagram}
               onChange={(e) => setEventoInstagram(e.target.value)}
@@ -558,7 +606,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           </Field>
 
           <FieldWithAuto
-            label="Nome do Local"
+            label="Nome do local"
             required
             error={errors.nomeLocal}
             showAuto={showAutoBadge("nomeLocal")}
@@ -574,7 +622,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           </FieldWithAuto>
 
           <FieldWithAuto
-            label="Capacidade de público"
+            label="Capacidade do público"
             showAuto={showAutoBadge("capacidadePublico")}
           >
             <InputCapacidade
@@ -606,7 +654,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           </div>
 
           <FieldWithAuto
-            label="Data"
+            label="Data do evento"
             required
             error={errors.dataShow}
             showAuto={showAutoBadge("dataShow")}
@@ -620,69 +668,90 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             />
           </FieldWithAuto>
 
-          <div className="sm:col-span-2">
-            <div className="grid grid-cols-2 gap-3">
-              <FieldWithAuto
-                label="Horário de início"
-                required
-                error={errors.horarioInicio}
-                showAuto={showAutoBadge("horarioInicio")}
-              >
-                <TextInput
-                  type="time"
-                  value={horarioInicio}
-                  onChange={(e) => {
-                    setHorarioInicio(e.target.value);
-                    marcarEditado("horarioInicio");
-                    setDuracaoOverride(false);
-                  }}
-                />
-              </FieldWithAuto>
-
-              <Field label="Horário de fim" required error={errors.horarioFim}>
-                <TextInput
-                  type="time"
-                  value={horarioFim}
-                  onChange={(e) => {
-                    setHorarioFim(e.target.value);
-                    setDuracaoOverride(false);
-                  }}
-                />
-              </Field>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">
+              Data da apresentação
+            </span>
+            <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+              {[
+                { v: false, label: "Mesmo dia do evento" },
+                { v: true, label: "Dia seguinte ao evento" },
+              ].map((opt, i) => {
+                const ativo = terminoDiaSeguinte === opt.v;
+                return (
+                  <button
+                    key={String(opt.v)}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => setTerminoDiaSeguinte(opt.v)}
+                    className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                      i === 1 ? "border-l border-border" : ""
+                    }`}
+                    style={
+                      ativo
+                        ? {
+                            color: accent,
+                            background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                          }
+                        : { color: "var(--text-muted)" }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
-            {duracaoAuto && (
-              <p className="text-xs text-muted mt-1.5">
-                Duração calculada:{" "}
-                <span className="font-semibold text-secondary">
-                  {formatarDuracao(duracaoAuto.horas, duracaoAuto.minutos)}
-                </span>
-                {duracaoOverride && (
-                  <span className="ml-2 text-warning">
-                    (substituída manualmente — limpe os horários ou ajuste para recalcular)
-                  </span>
-                )}
-              </p>
-            )}
+            <span className="text-xs text-muted">
+              {dataShow
+                ? `Apresentação em ${formatarDataOffset(
+                    dataShow,
+                    terminoDiaSeguinte ? 1 : 0
+                  )}.`
+                : "Dia seguinte = vira a madrugada (depois da meia-noite)."}
+            </span>
           </div>
 
-          <div className="sm:col-span-2">
-            <FieldWithAuto
-              label="Cidade"
-              required
-              error={errors.cidade}
-              showAuto={showAutoBadge("cidade")}
-            >
-              <CidadeIBGEAutocomplete
-                value={cidadeIbge}
-                onChange={(c) => {
-                  setCidadeIbge(c);
-                  marcarEditado("cidade");
-                  if (c) setErrors((p) => ({ ...p, cidade: "" }));
-                }}
-                placeholder="Ex: São Paulo, Belo Horizonte..."
-              />
-            </FieldWithAuto>
-          </div>
+          <FieldWithAuto
+            label="Início da apresentação"
+            required
+            error={errors.horarioInicio}
+            showAuto={showAutoBadge("horarioInicio")}
+          >
+            <InputHora
+              value={horarioInicio}
+              accent={accent}
+              onChange={(v) => {
+                setHorarioInicio(v);
+                marcarEditado("horarioInicio");
+                setDuracaoOverride(false);
+              }}
+            />
+          </FieldWithAuto>
+
+          <Field label="Término da apresentação" required error={errors.horarioFim}>
+            <InputHora
+              value={horarioFim}
+              accent={accent}
+              onChange={(v) => {
+                setHorarioFim(v);
+                setDuracaoOverride(false);
+              }}
+            />
+          </Field>
+
+          {duracaoAuto && (
+            <p className="text-xs text-muted sm:col-span-2 -mt-1">
+              Duração calculada:{" "}
+              <span className="font-semibold text-secondary">
+                {formatarDuracao(duracaoAuto.horas, duracaoAuto.minutos)}
+              </span>
+              {duracaoOverride && (
+                <span className="ml-2 text-warning">
+                  (substituída manualmente — limpe os horários ou ajuste para recalcular)
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </SectionCard>
 

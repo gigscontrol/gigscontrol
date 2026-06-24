@@ -5,6 +5,7 @@ import type {
   ItemQuantidade,
   LogisticaSelecao,
   TaxaAgenciaModo,
+  DetalhesEvento,
 } from "@/types";
 import { LOGISTICA_VAZIA } from "@/types";
 
@@ -40,6 +41,8 @@ export type OrcamentoRow = {
   taxa_modo_aplicado: TaxaAgenciaModo | null;
   /** Texto livre opcional anexado ao fim do orçamento. Ver migration 29. */
   info_extra: string | null;
+  /** Infos do evento (orçamento detalhado). Ver migration 40. */
+  detalhes_evento: DetalhesEvento | null;
 };
 
 function statusValido(s: string | null | undefined): OrcamentoStatus {
@@ -99,6 +102,10 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
         : undefined,
     taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
     infoExtra: row.info_extra ?? undefined,
+    detalhesEvento:
+      row.detalhes_evento && typeof row.detalhes_evento === "object"
+        ? row.detalhes_evento
+        : undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -134,4 +141,5 @@ export type OrcamentoEscrita = {
   taxa_agencia_valor?: number | null;
   taxa_modo_aplicado?: TaxaAgenciaModo | null;
   info_extra?: string | null;
+  detalhes_evento?: DetalhesEvento | null;
 };
