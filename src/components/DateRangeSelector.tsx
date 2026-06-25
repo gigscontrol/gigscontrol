@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 
 type Props<T extends string> = {
   options: readonly T[];
@@ -57,6 +58,7 @@ export default function DateRangeSelector<T extends string>({
   setSelectedCustomYear,
   accountCreatedAt,
 }: Props<T>) {
+  const t = useT();
   const [isCustomMenuOpen, setIsCustomMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -133,7 +135,7 @@ export default function DateRangeSelector<T extends string>({
               else setIsCustomMenuOpen(false);
             }}
           >
-            {range}
+            {t(range)}
           </button>
         ))}
       </div>
@@ -144,14 +146,14 @@ export default function DateRangeSelector<T extends string>({
           style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="stat-label">Selecione o ano</span>
+            <span className="stat-label">{t("Selecione o ano")}</span>
             {yearsOcultos.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowMoreYears((v) => !v)}
                 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
               >
-                {showMoreYears ? "Recolher" : "+ Mostrar mais"}
+                {showMoreYears ? t("Recolher") : t("+ Mostrar mais")}
               </button>
             )}
           </div>
@@ -180,7 +182,7 @@ export default function DateRangeSelector<T extends string>({
             })}
           </div>
 
-          <div className="stat-label mb-2">Selecione o mês</div>
+          <div className="stat-label mb-2">{t("Selecione o mês")}</div>
           <div className="grid grid-cols-6 gap-1.5 mb-4">
             {ALL_MONTHS.map((month, idx) => {
               const isSel = selectedCustomMonth === month;
@@ -200,7 +202,7 @@ export default function DateRangeSelector<T extends string>({
                       : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
                     }
                   `}
-                  title={isDisabled ? "Mês anterior à criação da conta" : undefined}
+                  title={isDisabled ? t("Mês anterior à criação da conta") : undefined}
                 >
                   {month}
                 </button>
@@ -213,7 +215,7 @@ export default function DateRangeSelector<T extends string>({
             className="btn btn-primary w-full"
             disabled={selectedCustomMonth === null || selectedCustomYear === null}
           >
-            Confirmar período
+            {t("Confirmar período")}
           </button>
         </div>
       )}

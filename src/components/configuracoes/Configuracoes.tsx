@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
   Settings,
@@ -42,6 +43,7 @@ const ABAS_USUARIO: AbaDef[] = [
 ];
 
 export default function Configuracoes({ onSair }: { onSair: () => void }) {
+  const t = useT();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
 
@@ -56,17 +58,17 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-3"
       >
         <ArrowLeft size={13} />
-        Voltar para a dashboard
+        {t("Voltar para a dashboard")}
       </button>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold">
-          {isAdmin ? "Configurações" : "Minha conta"}
+          {isAdmin ? t("Configurações") : t("Minha conta")}
         </h1>
         <p className="text-sm text-muted">
           {isAdmin
-            ? "Personalize a aparência e gerencie a conta da sua agência. Artistas e equipe agora ficam no módulo Agência."
-            : "Configurações da sua conta."}
+            ? t("Personalize a aparência e gerencie a conta da sua agência. Artistas e equipe agora ficam no módulo Agência.")
+            : t("Configurações da sua conta.")}
         </p>
       </div>
 
@@ -91,7 +93,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
                 }}
               >
                 <Icon size={14} />
-                {a.label}
+                {t(a.label)}
               </button>
             );
           })}

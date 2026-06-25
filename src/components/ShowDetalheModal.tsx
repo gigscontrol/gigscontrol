@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Building2,
   MapPin,
@@ -57,6 +58,7 @@ export default function ShowDetalheModal({
   onAbrirOrcamento,
   onAbrirVenda,
 }: Props) {
+  const t = useT();
   const { shows, updateShow } = useShows();
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
@@ -81,7 +83,7 @@ export default function ShowDetalheModal({
     if (
       !cancelado &&
       !window.confirm(
-        "Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser)."
+        t("Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).")
       )
     ) {
       return;
@@ -92,7 +94,7 @@ export default function ShowDetalheModal({
         status: cancelado ? "confirmado" : "cancelado",
       });
     } catch (e) {
-      window.alert((e as Error).message ?? "Falha ao atualizar o show.");
+      window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {
       setProcessando(false);
     }
@@ -200,9 +202,9 @@ export default function ShowDetalheModal({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-base font-bold text-primary truncate">
-              {dj?.name ?? "Sem DJ"}
+              {dj?.name ?? t("Sem DJ")}
             </div>
-            <div className="text-xs text-secondary capitalize">{dataLegivel || "Data não definida"}</div>
+            <div className="text-xs text-secondary capitalize">{dataLegivel || t("Data não definida")}</div>
           </div>
         </div>
 
@@ -215,17 +217,17 @@ export default function ShowDetalheModal({
           {venda && (
             <span className="badge badge-success">
               <CalendarCheck2 size={11} />
-              Venda concretizada
+              {t("Venda concretizada")}
             </span>
           )}
           {!venda && orcamento && (
             <span className={`badge ${LABELS_STATUS_ORCAMENTO[orcamento.status].badge}`}>
               <FileText size={11} />
-              Orçamento {LABELS_STATUS_ORCAMENTO[orcamento.status].label}
+              {t("Orçamento")} {t(LABELS_STATUS_ORCAMENTO[orcamento.status].label)}
             </span>
           )}
           {tipoEvento && (
-            <span className="badge badge-neutral">{LABELS_TIPO_EVENTO[tipoEvento]}</span>
+            <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[tipoEvento])}</span>
           )}
         </div>
       </div>
@@ -234,7 +236,7 @@ export default function ShowDetalheModal({
       <div className="flex items-center justify-between gap-2 mb-5">
         {cancelado ? (
           <span className="badge badge-danger inline-flex items-center gap-1">
-            <AlertTriangle size={11} /> Show cancelado
+            <AlertTriangle size={11} /> {t("Show cancelado")}
           </span>
         ) : (
           <span />
@@ -247,17 +249,17 @@ export default function ShowDetalheModal({
           style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
         >
           {processando
-            ? "Salvando…"
+            ? t("Salvando…")
             : cancelado
-            ? "Reativar show"
-            : "Cancelar show"}
+            ? t("Reativar show")
+            : t("Cancelar show")}
         </button>
       </div>
 
       <div className="flex flex-col gap-5">
         {/* ===== CONTRATANTE ===== */}
         {(contNome || contTelefone) && (
-          <Bloco icon={<User size={14} />} title="Contratante">
+          <Bloco icon={<User size={14} />} title={t("Contratante")}>
             {contNome && (
               <Linha icon={<User size={13} />} bold>
                 {contNome}
@@ -282,7 +284,7 @@ export default function ShowDetalheModal({
 
         {/* ===== LOCAL / EVENTO ===== */}
         {(nomeLocal || cidadeNome || enderecoLocal) && (
-          <Bloco icon={<Building2 size={14} />} title="Local do evento">
+          <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
             {nomeLocal && (
               <Linha icon={<Building2 size={13} />} bold>
                 {nomeLocal}
@@ -302,14 +304,14 @@ export default function ShowDetalheModal({
             )}
             {capacidade !== undefined && (
               <Linha icon={<Users size={13} />}>
-                Capacidade: {capacidade.toLocaleString("pt-BR")} pessoas
+                {t("Capacidade:")} {capacidade.toLocaleString("pt-BR")} {t("pessoas")}
               </Linha>
             )}
           </Bloco>
         )}
 
         {/* ===== SHOW: horário, duração, cachê ===== */}
-        <Bloco icon={<Music size={14} />} title="Detalhes do show">
+        <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
           {horarioInicio && (
             <Linha icon={<Clock size={13} />} bold>
               {horarioFim ? `${horarioInicio} — ${horarioFim}` : horarioInicio}
@@ -319,19 +321,19 @@ export default function ShowDetalheModal({
             </Linha>
           )}
           {!horarioInicio && duracao && (
-            <Linha icon={<Clock size={13} />}>Duração: {duracao}</Linha>
+            <Linha icon={<Clock size={13} />}>{t("Duração:")} {duracao}</Linha>
           )}
           {cache !== undefined && cache > 0 && (
             <Linha icon={<DollarSign size={13} />} bold>
               <span className="tabular-nums">{formatBRL(cache)}</span>
-              <span className="text-xs text-muted font-normal"> de cachê</span>
+              <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
             </Linha>
           )}
         </Bloco>
 
         {/* ===== LINE-UP ===== */}
         {lineUp && lineUp.length > 0 && (
-          <Bloco icon={<Music size={14} />} title="Line-Up (outros artistas)">
+          <Bloco icon={<Music size={14} />} title={t("Line-Up (outros artistas)")}>
             <div className="flex flex-wrap gap-1.5">
               {lineUp.map((nome, idx) => (
                 <span
@@ -347,47 +349,47 @@ export default function ShowDetalheModal({
 
         {/* ===== CAMARIM ===== */}
         {camarim.length > 0 && (
-          <Bloco icon={<GlassWater size={14} />} title="Camarim / Consumação">
+          <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
             <ItensGrid items={camarim} />
           </Bloco>
         )}
 
         {/* ===== EFEITOS ===== */}
         {efeitos.length > 0 && (
-          <Bloco icon={<Sparkles size={14} />} title="Efeitos">
+          <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
             <ItensGrid items={efeitos} />
           </Bloco>
         )}
 
         {/* ===== HOTEL ===== */}
         {hotelItens.length > 0 && (
-          <Bloco icon={<Hotel size={14} />} title="Hotel">
+          <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
             <ItensGrid items={hotelItens} />
           </Bloco>
         )}
 
         {/* ===== LOGÍSTICA ===== */}
         {logistica && (
-          <Bloco icon={<Plane size={14} />} title="Logística">
+          <Bloco icon={<Plane size={14} />} title={t("Logística")}>
             {logistica.aereaQtd === 0 && !logistica.transladoTerrestre && (
               <Linha icon={<Plane size={13} />} subtle>
-                Já inclusa do cachê
+                {t("Já inclusa do cachê")}
               </Linha>
             )}
             {logistica.aereaQtd > 0 && (
               <Linha icon={<Plane size={13} />}>
-                {logistica.aereaQtd}× Logística Aérea (Ida e Volta)
+                {t("{n}× Logística Aérea (Ida e Volta)", { n: logistica.aereaQtd })}
               </Linha>
             )}
             {logistica.transladoTerrestre && (
-              <Linha icon={<Car size={13} />}>{TEXTO_TRANSLADO}</Linha>
+              <Linha icon={<Car size={13} />}>{t(TEXTO_TRANSLADO)}</Linha>
             )}
           </Bloco>
         )}
 
         {/* ===== PAGAMENTO ===== */}
         {venda && venda.parcelas.length > 0 && (
-          <Bloco icon={<CreditCard size={14} />} title="Pagamento">
+          <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
             {(() => {
               const total = venda.parcelas.reduce((a, p) => a + p.valor, 0);
               const pago = venda.parcelas
@@ -402,20 +404,20 @@ export default function ShowDetalheModal({
                   {/* Resumo */}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-sm">
                     <span className="text-secondary">
-                      Recebido:{" "}
+                      {t("Recebido:")}{" "}
                       <span className="font-semibold" style={{ color: "var(--success)" }}>
                         {formatBRL(pago)}
                       </span>
                     </span>
                     <span className="text-secondary">
-                      A receber:{" "}
+                      {t("A receber:")}{" "}
                       <span className="font-semibold text-primary">
                         {formatBRL(restante)}
                       </span>
                     </span>
                     {atrasado > 0 && (
                       <span className="text-secondary">
-                        Atrasado:{" "}
+                        {t("Atrasado:")}{" "}
                         <span className="font-semibold" style={{ color: "var(--danger)" }}>
                           {formatBRL(atrasado)}
                         </span>
@@ -434,20 +436,20 @@ export default function ShowDetalheModal({
                       >
                         <div className="min-w-0">
                           <span className="text-primary font-medium">
-                            Parcela {idx + 1}/{venda.parcelas.length}
+                            {t("Parcela")} {idx + 1}/{venda.parcelas.length}
                           </span>
                           <span className="text-muted text-xs ml-1.5">
                             ({p.percentual.toFixed(0)}%)
                           </span>
                           <div className="text-xs text-muted">
-                            Vence{" "}
+                            {t("Vence")}{" "}
                             {new Date(
                               p.dataVencimento + "T12:00:00"
                             ).toLocaleDateString("pt-BR")}
                             {p.dataPagamento && (
                               <span style={{ color: "var(--success)" }}>
                                 {" "}
-                                · pago em{" "}
+                                · {t("pago em")}{" "}
                                 {new Date(
                                   p.dataPagamento + "T12:00:00"
                                 ).toLocaleDateString("pt-BR")}
@@ -463,7 +465,7 @@ export default function ShowDetalheModal({
                             {st === "pago" && <CheckCircle2 size={10} />}
                             {st === "pendente" && <Clock size={10} />}
                             {st === "atrasado" && <AlertTriangle size={10} />}
-                            {label.label}
+                            {t(label.label)}
                           </span>
                         </div>
                       </div>
@@ -477,20 +479,20 @@ export default function ShowDetalheModal({
 
         {/* ===== OBSERVAÇÕES ===== */}
         {observacoes && (
-          <Bloco icon={<StickyNote size={14} />} title="Observações internas">
+          <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
             <p className="text-sm text-secondary whitespace-pre-wrap">{observacoes}</p>
           </Bloco>
         )}
 
         {/* ===== ORIGEM (links) ===== */}
         {(orcamento || venda) && (
-          <Bloco icon={<Hash size={14} />} title="Documentos vinculados">
+          <Bloco icon={<Hash size={14} />} title={t("Documentos vinculados")}>
             {venda && (
               <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="badge badge-success">
                     <CalendarCheck2 size={11} />
-                    Venda
+                    {t("Venda")}
                   </span>
                   <span
                     className="font-mono text-sm font-bold tabular-nums"
@@ -508,7 +510,7 @@ export default function ShowDetalheModal({
                     }}
                     className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
                   >
-                    Abrir
+                    {t("Abrir")}
                     <ExternalLink size={11} />
                   </button>
                 )}
@@ -519,7 +521,7 @@ export default function ShowDetalheModal({
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="badge badge-neutral">
                     <FileText size={11} />
-                    Orçamento
+                    {t("Orçamento")}
                   </span>
                   <span
                     className="font-mono text-sm font-bold tabular-nums"
@@ -537,7 +539,7 @@ export default function ShowDetalheModal({
                     }}
                     className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
                   >
-                    Abrir
+                    {t("Abrir")}
                     <ExternalLink size={11} />
                   </button>
                 )}
@@ -548,7 +550,7 @@ export default function ShowDetalheModal({
 
         {!temAlgumDado && (
           <div className="text-sm text-muted italic text-center py-4">
-            Este show ainda não tem informações detalhadas cadastradas.
+            {t("Este show ainda não tem informações detalhadas cadastradas.")}
           </div>
         )}
       </div>

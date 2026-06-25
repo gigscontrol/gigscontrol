@@ -3,6 +3,7 @@
 import { Plus, Search } from "lucide-react";
 import { Field } from "./Field";
 import SearchableSelect from "./SearchableSelect";
+import { useT } from "@/lib/i18n";
 
 type Option = { id: string; label: string; sublabel?: string };
 
@@ -37,8 +38,9 @@ export default function ExistenteOuNovo({
   newFormChildren,
   onPesquisaAvancada,
 }: Props) {
+  const t = useT();
   const titulo =
-    mode === "novo" ? newLabel : `${label} cadastrado`;
+    mode === "novo" ? newLabel : t("{label} cadastrado", { label });
 
   return (
     <div>
@@ -57,17 +59,17 @@ export default function ExistenteOuNovo({
                 options={options}
                 value={selectedId}
                 onChange={onSelectExisting}
-                placeholder={`Buscar ${label.toLowerCase()}…`}
+                placeholder={t("Buscar {x}…", { x: t(label).toLowerCase() })}
                 className="flex-1"
               />
               <button
                 type="button"
                 onClick={onSwitchToNew}
                 className="btn btn-secondary flex-shrink-0"
-                title={`Cadastrar ${label.toLowerCase()} novo`}
+                title={t("Cadastrar {label} novo", { label: label.toLowerCase() })}
               >
                 <Plus size={14} />
-                Novo
+                {t("Novo")}
               </button>
             </div>
           </Field>
@@ -78,7 +80,7 @@ export default function ExistenteOuNovo({
               className="btn btn-secondary w-full justify-center text-sm"
             >
               <Search size={15} />
-              Pesquisa avançada nos contatos
+              {t("Pesquisa avançada nos contatos")}
             </button>
           )}
         </div>

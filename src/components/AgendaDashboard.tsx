@@ -23,6 +23,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   selectedDJs: string[];
@@ -77,6 +78,7 @@ function resolverMes(
 }
 
 export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.agenda.color;
   const { shows } = useShows();
   const { cidades, casas } = useContatos();
@@ -179,15 +181,15 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     [showsMes, vendas, hoje]
   );
   const subtitlePendencia = useMemo(() => {
-    if (showsComPendencia.length === 0) return "Tudo resolvido";
+    if (showsComPendencia.length === 0) return t("Tudo resolvido");
     const tipos = new Set<string>();
     showsComPendencia.forEach((s) =>
-      pendenciasDoShow(s).forEach((t) => tipos.add(t))
+      pendenciasDoShow(s).forEach((tipo) => tipos.add(tipo))
     );
-    const txt = Array.from(tipos).join(", ");
+    const txt = Array.from(tipos).map((tipo) => t(tipo)).join(", ");
     return txt.charAt(0).toUpperCase() + txt.slice(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showsComPendencia]);
+  }, [showsComPendencia, t]);
 
   // ---- 2) Próximas viagens (fora da cidade natal do DJ) ----
   const viagens = useMemo(() => {
@@ -323,7 +325,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       const ddmm = `${String(dia).padStart(2, "0")}/${String(mes + 1).padStart(2, "0")}`;
       const showsNoDia = showsMes.filter((s) => s.data === dISO && s.djId === djId);
       if (showsNoDia.length === 0) {
-        linhas.push(`${DIAS_SEMANA[wd]} ${ddmm} - Qualquer horário`);
+        linhas.push(`${t(DIAS_SEMANA[wd])} ${ddmm} - ${t("Qualquer horário")}`);
       } else {
         const cidadesDia = Array.from(
           new Set(
@@ -336,13 +338,13 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           )
         ).join(", ");
         linhas.push(
-          `${DIAS_SEMANA[wd]} ${ddmm} - Disponível para região de ${cidadesDia} — checar disponibilidade de horário`
+          `${t(DIAS_SEMANA[wd])} ${ddmm} - ${t("Disponível para região de {cidade} — checar disponibilidade de horário", { cidade: cidadesDia })}`
         );
       }
     }
-    const header = `*Datas disponíveis (${djNome}) em ${MESES_LONGO[mes]}*`;
+    const header = `*${t("Datas disponíveis ({djNome}) em {mes}", { djNome, mes: t(MESES_LONGO[mes]) })}*`;
     if (linhas.length === 0) {
-      return `${header}\n\nNenhuma data importante disponível neste mês.`;
+      return `${header}\n\n${t("Nenhuma data importante disponível neste mês.")}`;
     }
     return [header, "", ...linhas].join("\n");
   };
@@ -379,7 +381,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           <div className="text-lg font-bold tabular-nums leading-none text-primary">
             {diaMes}
           </div>
-          <div className="text-[0.6rem] uppercase text-muted">{MESES_CURTO[mes]}</div>
+          <div className="text-[0.6rem] uppercase text-muted">{t(MESES_CURTO[mes])}</div>
         </div>
         <span
           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
@@ -389,7 +391,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-primary truncate">
-            {headline}
+            {headline === "Local a definir" ? t("Local a definir") : headline}
           </div>
           {sub && <div className="text-xs text-muted truncate">{sub}</div>}
         </div>
@@ -397,7 +399,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           <span className="flex flex-wrap gap-1 justify-end max-w-[180px]">
             {pendenciasDoShow(show).map((p) => (
               <span key={p} className="badge badge-warning">
-                {p}
+                {t(p)}
               </span>
             ))}
           </span>
@@ -411,7 +413,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 : "badge-warning"
             }`}
           >
-            {show.status}
+            {t(show.status)}
           </span>
         )}
         <ChevronRight size={14} className="text-muted flex-shrink-0" />
@@ -444,24 +446,24 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <ClickableStat
           onClick={() =>
             setLista({
-              titulo: "Shows confirmados",
+              titulo: t("Shows confirmados"),
               subtitulo: tituloMes,
               shows: confirmadosList,
             })
           }
         >
           <StatCard
-            title="Shows confirmados"
+            title={t("Shows confirmados")}
             value={confirmados}
             icon={<Music size={16} />}
             accentColor={accent}
-            subtitle={`Em ${MESES_LONGO[mes]}`}
+            subtitle={t("Em {mes}", { mes: t(MESES_LONGO[mes]) })}
           />
         </ClickableStat>
         <ClickableStat
           onClick={() =>
             setLista({
-              titulo: "Shows com pendências",
+              titulo: t("Shows com pendências"),
               subtitulo: tituloMes,
               shows: showsComPendencia,
               pendencias: true,
@@ -469,7 +471,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           }
         >
           <StatCard
-            title="Com pendências"
+            title={t("Com pendências")}
             value={showsComPendencia.length}
             icon={<AlertTriangle size={16} />}
             accentColor="var(--warning)"
@@ -479,39 +481,39 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <ClickableStat
           onClick={() =>
             setLista({
-              titulo: "Shows realizados",
+              titulo: t("Shows realizados"),
               subtitulo: tituloMes,
               shows: realizados.lista,
             })
           }
         >
           <StatCard
-            title="Shows realizados"
+            title={t("Shows realizados")}
             value={realizados.total}
             icon={<CheckCircle2 size={16} />}
             accentColor="var(--success)"
             subtitle={
               realizados.comPendencia.length > 0
-                ? `${realizados.comPendencia.length} com pendência`
-                : "Tudo certo"
+                ? t("{n} com pendência", { n: realizados.comPendencia.length })
+                : t("Tudo certo")
             }
           />
         </ClickableStat>
         <ClickableStat
           onClick={() =>
             setLista({
-              titulo: "Shows a realizar",
+              titulo: t("Shows a realizar"),
               subtitulo: tituloMes,
               shows: aRealizarList,
             })
           }
         >
           <StatCard
-            title="A realizar"
+            title={t("A realizar")}
             value={aRealizar}
             icon={<Clock size={16} />}
             accentColor="var(--warning)"
-            subtitle="Shows que ainda vão acontecer"
+            subtitle={t("Shows que ainda vão acontecer")}
           />
         </ClickableStat>
       </div>
@@ -522,17 +524,17 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           <div className="flex items-center justify-between mb-4">
             <div className="section-title flex items-center gap-2">
               <CalendarDays size={16} style={{ color: accent }} />
-              Ocupação do mês
+              {t("Ocupação do mês")}
             </div>
             <button
               onClick={() => setOcupacaoAberta(true)}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Datas disponíveis <ChevronRight size={12} />
+              {t("Datas disponíveis")} <ChevronRight size={12} />
             </button>
           </div>
           {ocupacao.length === 0 ? (
-            <div className="text-sm text-muted text-center py-6">Sem dias no mês.</div>
+            <div className="text-sm text-muted text-center py-6">{t("Sem dias no mês.")}</div>
           ) : (
             <div className="flex flex-col gap-2.5">
               {ocupacao.map((row) => {
@@ -542,7 +544,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 return (
                   <div key={row.label}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-secondary">{row.label}</span>
+                      <span className="text-secondary">{t(row.label)}</span>
                       <span
                         className="tabular-nums font-semibold"
                         style={{ color: cheio ? "var(--success)" : "var(--text-primary)" }}
@@ -570,11 +572,11 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <div className="card">
           <div className="section-title mb-4 flex items-center gap-2">
             <Plane size={16} style={{ color: accent }} />
-            Próximas viagens
+            {t("Próximas viagens")}
           </div>
           {viagens.length === 0 ? (
             <div className="text-sm text-muted text-center py-6">
-              Nenhuma viagem no mês (só shows na cidade local).
+              {t("Nenhuma viagem no mês (só shows na cidade local).")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -596,9 +598,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                   </span>
                   <span className="text-xs font-semibold tabular-nums" style={{ color: accent }}>
                     {v.dias > 0
-                      ? `em ${v.dias} dia${v.dias > 1 ? "s" : ""}`
+                      ? t("em {n} dia{s}", { n: v.dias, s: v.dias > 1 ? "s" : "" })
                       : v.dias === 0
-                      ? "hoje"
+                      ? t("hoje")
                       : v.data.split("-").reverse().slice(0, 2).join("/")}
                   </span>
                 </button>
@@ -610,23 +612,23 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         {/* Próximos shows */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">Próximos shows</div>
+            <div className="section-title">{t("Próximos shows")}</div>
             <button
               onClick={() =>
                 setLista({
-                  titulo: "Próximos shows",
+                  titulo: t("Próximos shows"),
                   subtitulo: tituloMes,
                   shows: proximosShowsFull,
                 })
               }
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todos <ChevronRight size={12} />
+              {t("Ver todos")} <ChevronRight size={12} />
             </button>
           </div>
           {proximosShows.length === 0 ? (
             <div className="text-sm text-muted text-center py-6">
-              Nenhum show próximo.
+              {t("Nenhum show próximo.")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -647,7 +649,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-primary truncate">
-                        {show.venue || "Local a definir"}
+                        {show.venue || t("Local a definir")}
                       </div>
                       <div className="text-xs text-muted truncate">
                         {dj?.name} ·{" "}
@@ -665,7 +667,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                           : "badge-warning"
                       }`}
                     >
-                      {show.status}
+                      {t(show.status)}
                     </span>
                   </button>
                 );
@@ -678,13 +680,13 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <div className="card">
           <div className="section-title mb-4 flex items-center gap-2">
             <AlertTriangle size={16} style={{ color: "var(--warning)" }} />
-            Realizados com pendência
+            {t("Realizados com pendência")}
           </div>
           {realizados.comPendencia.length === 0 ? (
             <div className="text-sm text-muted text-center py-6">
               {realizados.total === 0
-                ? "Nenhum show realizado no mês."
-                : "Todos os shows realizados estão quitados. ✓"}
+                ? t("Nenhum show realizado no mês.")
+                : t("Todos os shows realizados estão quitados. ✓")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -706,7 +708,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-primary truncate">
-                        {localDoEvento(show) || cid?.nome || "Show"}
+                        {localDoEvento(show) || cid?.nome || t("Show")}
                       </div>
                       <div className="text-xs text-muted truncate">
                         {dj?.name}
@@ -714,7 +716,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                         {show.data ? ` · ${show.data.split("-").reverse().slice(0, 2).join("/")}` : ""}
                       </div>
                     </div>
-                    <span className="badge badge-warning">pagamento</span>
+                    <span className="badge badge-warning">{t("pagamento")}</span>
                   </button>
                 );
               })}
@@ -728,20 +730,20 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <div className="flex items-center justify-between mb-4">
           <div className="section-title flex items-center gap-2">
             <ListChecks size={16} style={{ color: accent }} />
-            Resumo do mês ({resumo.length} {resumo.length === 1 ? "show" : "shows"})
+            {t("Resumo do mês ({n} {show})", { n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
           </div>
           {resumo.length > 0 && (
             <button
               onClick={() => setResumoAberto(true)}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver resumo completo <ChevronRight size={12} />
+              {t("Ver resumo completo")} <ChevronRight size={12} />
             </button>
           )}
         </div>
         {resumo.length === 0 ? (
           <div className="text-sm text-muted text-center py-8">
-            Nenhum show em {tituloMes} para os DJs selecionados.
+            {t("Nenhum show em {mes} para os DJs selecionados.", { mes: tituloMes })}
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-border">
@@ -751,7 +753,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 onClick={() => setResumoAberto(true)}
                 className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
               >
-                + {resumo.length - 5} shows — ver resumo completo
+                {t("+ {n} shows — ver resumo completo", { n: resumo.length - 5 })}
               </button>
             )}
           </div>
@@ -762,13 +764,13 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       <Modal
         isOpen={resumoAberto}
         onClose={() => setResumoAberto(false)}
-        title={`Resumo de ${tituloMes}`}
-        subtitle={`${resumo.length} ${resumo.length === 1 ? "show" : "shows"} no mês`}
+        title={t("Resumo de {mes}", { mes: tituloMes })}
+        subtitle={t("{n} {show} no mês", { n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
         maxWidth={640}
       >
         {resumo.length === 0 ? (
           <div className="text-sm text-muted text-center py-8">
-            Nenhum show no mês.
+            {t("Nenhum show no mês.")}
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-border max-h-[65vh] overflow-y-auto">
@@ -787,7 +789,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       >
         {!lista || lista.shows.length === 0 ? (
           <div className="text-sm text-muted text-center py-8">
-            Nenhum show nesta categoria em {tituloMes}.
+            {t("Nenhum show nesta categoria em {mes}.", { mes: tituloMes })}
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-border max-h-[65vh] overflow-y-auto">
@@ -802,8 +804,8 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       <Modal
         isOpen={ocupacaoAberta}
         onClose={() => setOcupacaoAberta(false)}
-        title={`Ocupação — ${tituloMes}`}
-        subtitle="Resumo da ocupação e datas disponíveis pro cliente"
+        title={t("Ocupação — {mes}", { mes: tituloMes })}
+        subtitle={t("Resumo da ocupação e datas disponíveis pro cliente")}
         maxWidth={560}
       >
         <div className="flex flex-col gap-4">
@@ -811,7 +813,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           <div className="flex flex-col gap-2.5">
             {ocupacao.length === 0 ? (
               <div className="text-sm text-muted text-center py-2">
-                Sem dias no mês.
+                {t("Sem dias no mês.")}
               </div>
             ) : (
               ocupacao.map((row) => {
@@ -821,7 +823,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 return (
                   <div key={row.label}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-secondary">{row.label}</span>
+                      <span className="text-secondary">{t(row.label)}</span>
                       <span
                         className="tabular-nums font-semibold"
                         style={{ color: cheio ? "var(--success)" : "var(--text-primary)" }}
@@ -844,40 +846,40 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           {/* Datas disponíveis pro WhatsApp — um bloco por DJ selecionado */}
           <div className="border-t border-border pt-4 flex flex-col gap-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="stat-label">Lista de datas disponíveis</span>
+              <span className="stat-label">{t("Lista de datas disponíveis")}</span>
               <div className="pill-group flex-wrap">
                 <button
                   type="button"
                   className={`pill ${incluir.sex ? "active" : ""}`}
                   onClick={() => toggleInclui("sex")}
                 >
-                  Sex
+                  {t("Sex")}
                 </button>
                 <button
                   type="button"
                   className={`pill ${incluir.sab ? "active" : ""}`}
                   onClick={() => toggleInclui("sab")}
                 >
-                  Sáb
+                  {t("Sáb")}
                 </button>
                 <button
                   type="button"
                   className={`pill ${incluir.dom ? "active" : ""}`}
                   onClick={() => toggleInclui("dom")}
                 >
-                  Dom
+                  {t("Dom")}
                 </button>
                 <button
                   type="button"
                   className={`pill ${incluir.feriado ? "active" : ""}`}
                   onClick={() => toggleInclui("feriado")}
                 >
-                  Feriados
+                  {t("Feriados")}
                 </button>
               </div>
             </div>
             {artistas.filter((d) => selectedDJs.includes(d.id)).length === 0 ? (
-              <div className="text-sm text-muted">Nenhum DJ selecionado.</div>
+              <div className="text-sm text-muted">{t("Nenhum DJ selecionado.")}</div>
             ) : (
               artistas
                 .filter((d) => selectedDJs.includes(d.id))
@@ -900,7 +902,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                         ) : (
                           <Copy size={14} />
                         )}
-                        {copiado === dj.id ? "Copiado!" : "Copiar"}
+                        {copiado === dj.id ? t("Copiado!") : t("Copiar")}
                       </button>
                     </div>
                     <pre className="text-xs text-secondary bg-elevated border border-border rounded-md p-3 whitespace-pre-wrap font-sans max-h-[35vh] overflow-y-auto leading-relaxed">

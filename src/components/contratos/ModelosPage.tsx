@@ -5,6 +5,7 @@ import { Plus, Copy, Pencil, Trash2, FileText, Sparkles, Loader2 } from "lucide-
 import PageHeader from "../PageHeader";
 import EditorModelo from "./EditorModelo";
 import { useModelos } from "@/lib/modelos-context";
+import { useT } from "@/lib/i18n";
 import type {
   ContratoModelo,
   SecaoModelo,
@@ -80,6 +81,7 @@ function copiarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
 }
 
 export default function ModelosPage() {
+  const t = useT();
   const { modelos, carregando, removerModelo } = useModelos();
 
   const [vista, setVista] = useState<Vista>("lista");
@@ -123,13 +125,13 @@ export default function ModelosPage() {
   }
 
   async function excluir(modelo: ContratoModelo) {
-    if (!window.confirm(`Excluir o modelo "${modelo.nome}"? Esta ação não pode ser desfeita.`)) {
+    if (!window.confirm(t("Excluir o modelo \"{nome}\"? Esta ação não pode ser desfeita.", { nome: modelo.nome }))) {
       return;
     }
     try {
       await removerModelo(modelo.id);
     } catch (e) {
-      window.alert((e as Error).message || "Não foi possível excluir o modelo.");
+      window.alert((e as Error).message || t("Não foi possível excluir o modelo."));
     }
   }
 
@@ -173,14 +175,12 @@ export default function ModelosPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="badge" style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
-                      Comece por aqui
+                      {t("Comece por aqui")}
                     </span>
                   </div>
                   <div className="section-title mt-1.5">{NOME_MODELO_EXEMPLO}</div>
                   <p className="section-subtitle mt-1 max-w-2xl">
-                    Modelo pronto de apresentação artística, com seções automáticas
-                    (variáveis já posicionadas) e cláusulas para você completar.
-                    Duplique e ajuste do seu jeito.
+                    {t("Modelo pronto de apresentação artística, com seções automáticas (variáveis já posicionadas) e cláusulas para você completar. Duplique e ajuste do seu jeito.")}
                   </p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export default function ModelosPage() {
                 style={{ backgroundColor: ACCENT, color: "#fff" }}
               >
                 <Copy size={15} />
-                Duplicar e editar
+                {t("Duplicar e editar")}
               </button>
             </div>
           </div>
@@ -200,27 +200,27 @@ export default function ModelosPage() {
           <div>
             <button type="button" onClick={abrirNovoEmBranco} className="btn btn-secondary">
               <Plus size={15} />
-              Novo modelo em branco
+              {t("Novo modelo em branco")}
             </button>
           </div>
 
           {/* Lista dos modelos do workspace */}
           <div>
-            <div className="stat-label mb-3">Seus modelos</div>
+            <div className="stat-label mb-3">{t("Seus modelos")}</div>
 
             {carregando ? (
               <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">
                 <Loader2 size={16} className="animate-spin" />
-                Carregando modelos...
+                {t("Carregando modelos...")}
               </div>
             ) : editaveis.length === 0 ? (
               <div className="card flex flex-col items-center justify-center py-12 text-center">
                 <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
                   <FileText size={18} className="text-muted" />
                 </div>
-                <div className="section-title mb-1">Nenhum modelo ainda</div>
+                <div className="section-title mb-1">{t("Nenhum modelo ainda")}</div>
                 <div className="section-subtitle">
-                  Duplique o modelo de exemplo acima ou crie um do zero.
+                  {t("Duplique o modelo de exemplo acima ou crie um do zero.")}
                 </div>
               </div>
             ) : (
@@ -240,7 +240,7 @@ export default function ModelosPage() {
                         </div>
                         <span className="badge badge-neutral mt-1.5">
                           {modelo.secoes.length}{" "}
-                          {modelo.secoes.length === 1 ? "seção" : "seções"}
+                          {modelo.secoes.length === 1 ? t("seção") : t("seções")}
                         </span>
                       </div>
                     </div>
@@ -252,13 +252,13 @@ export default function ModelosPage() {
                         className="btn btn-secondary flex-1"
                       >
                         <Pencil size={14} />
-                        Editar
+                        {t("Editar")}
                       </button>
                       <button
                         type="button"
                         onClick={() => excluir(modelo)}
-                        title="Excluir modelo"
-                        aria-label="Excluir modelo"
+                        title={t("Excluir modelo")}
+                        aria-label={t("Excluir modelo")}
                         className="btn-ghost p-2 rounded hover:text-danger"
                       >
                         <Trash2 size={15} />

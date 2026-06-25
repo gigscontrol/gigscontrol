@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { ChevronDown, Search, Check } from "lucide-react";
 import {
   COUNTRIES,
@@ -29,6 +30,7 @@ export default function PhoneInput({
   autoFocus,
   error,
 }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ export default function PhoneInput({
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="flex items-center gap-2 px-3 border-r border-border hover:bg-surface-2 transition-colors rounded-l-md text-sm flex-shrink-0"
-          aria-label={`País: ${country.name}`}
+          aria-label={t("País: {name}", { name: country.name })}
         >
           <span className="text-lg leading-none">{country.flag}</span>
           <span className="font-medium tabular-nums">+{country.ddi}</span>
@@ -87,7 +89,7 @@ export default function PhoneInput({
           value={masked}
           onChange={handleChange}
           autoFocus={autoFocus}
-          placeholder={country.mask ? country.mask.replace(/X/g, "_") : "Digite o número"}
+          placeholder={country.mask ? country.mask.replace(/X/g, "_") : t("Digite o número")}
           className="flex-1 bg-transparent px-3 py-2 text-sm text-primary outline-none placeholder:text-muted min-w-0"
         />
       </div>
@@ -105,7 +107,7 @@ export default function PhoneInput({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar país ou DDI..."
+                placeholder={t("Buscar país ou DDI...")}
                 className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
               />
             </div>
@@ -113,7 +115,7 @@ export default function PhoneInput({
 
           <div className="overflow-y-auto flex-1">
             {sugestoes.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted">Nenhum país encontrado</div>
+              <div className="p-6 text-center text-sm text-muted">{t("Nenhum país encontrado")}</div>
             ) : (
               sugestoes.map((p) => {
                 const isActive = p.code === country.code;
@@ -155,7 +157,7 @@ export default function PhoneInput({
       {error && <span className="text-xs text-danger">{error}</span>}
       {!error && value.length > 0 && contarDigitos(value) < country.minDigits && (
         <span className="text-xs text-muted">
-          Faltam {country.minDigits - contarDigitos(value)} dígitos
+          {t("Faltam {n} dígitos", { n: country.minDigits - contarDigitos(value) })}
         </span>
       )}
     </div>

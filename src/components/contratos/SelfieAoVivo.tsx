@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, RefreshCw, Check, AlertCircle, Smartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   onCapturar: (dataUrl: string) => void;
@@ -30,6 +31,7 @@ const QUALIDADE = 0.8;
 const ACCENT = "#14b8a6";
 
 export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
+  const t = useT();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -77,10 +79,10 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
         const err = e as Error;
         setErro(
           err.name === "NotAllowedError" || err.name === "SecurityError"
-            ? "Permissão de câmera negada. Libere a câmera no navegador e tente de novo."
+            ? t("Permissão de câmera negada. Libere a câmera no navegador e tente de novo.")
             : err.name === "NotFoundError"
-              ? "Nenhuma câmera encontrada neste dispositivo."
-              : err.message || "Não foi possível abrir a câmera."
+              ? t("Nenhuma câmera encontrada neste dispositivo.")
+              : err.message || t("Não foi possível abrir a câmera.")
         );
       }
     }
@@ -135,12 +137,12 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
         <button
           type="button"
           onClick={cancelar}
-          aria-label="Fechar câmera"
+          aria-label={t("Fechar câmera")}
           className="rounded-full p-2 hover:bg-white/10"
         >
           <X size={22} />
         </button>
-        <span className="text-sm font-medium">Selfie de verificação</span>
+        <span className="text-sm font-medium">{t("Selfie de verificação")}</span>
         <span className="w-9" />
       </div>
 
@@ -161,15 +163,13 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
             {url && (
               <div className="flex flex-col items-center gap-3">
                 <div className="text-sm font-semibold">
-                  Continue a verificação no celular
+                  {t("Continue a verificação no celular")}
                 </div>
                 <div className="rounded-xl bg-white p-3">
                   <QRCodeSVG value={url} size={176} />
                 </div>
                 <p className="max-w-[15rem] text-xs leading-relaxed opacity-75">
-                  Aponte a câmera do celular para o código, abra o link e conclua
-                  a assinatura por lá. Esta tela atualiza sozinha quando você
-                  assinar.
+                  {t("Aponte a câmera do celular para o código, abra o link e conclua a assinatura por lá. Esta tela atualiza sozinha quando você assinar.")}
                 </p>
               </div>
             )}
@@ -178,7 +178,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
               onClick={cancelar}
               className="btn btn-secondary"
             >
-              Fechar
+              {t("Fechar")}
             </button>
           </div>
         ) : (
@@ -199,7 +199,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={preview}
-                alt="Selfie capturada"
+                alt={t("Selfie capturada")}
                 className="h-full w-full object-cover"
                 style={{ transform: "scaleX(-1)" }}
               />
@@ -225,8 +225,8 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
               <div className="absolute inset-x-0 bottom-6 flex justify-center">
                 <span className="rounded-full bg-black/55 px-3 py-1 text-xs text-white">
                   {pronto
-                    ? "Posicione seu rosto dentro do oval"
-                    : "Abrindo a câmera…"}
+                    ? t("Posicione seu rosto dentro do oval")
+                    : t("Abrindo a câmera…")}
                 </span>
               </div>
             )}
@@ -248,7 +248,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
                   <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/40">
                     <RefreshCw size={20} />
                   </span>
-                  Refazer
+                  {t("Refazer")}
                 </button>
                 <button
                   type="button"
@@ -261,7 +261,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
                   >
                     <Check size={30} />
                   </span>
-                  Usar foto
+                  {t("Usar foto")}
                 </button>
               </>
             ) : (
@@ -269,7 +269,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
                 type="button"
                 onClick={capturar}
                 disabled={!pronto}
-                aria-label="Tirar selfie"
+                aria-label={t("Tirar selfie")}
                 className="relative h-[74px] w-[74px] rounded-full disabled:opacity-40"
               >
                 <span className="absolute inset-0 rounded-full border-[3px] border-white/90" />
@@ -284,7 +284,7 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
               className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-white"
             >
               <Smartphone size={13} />
-              Não tenho câmera · usar o celular
+              {t("Não tenho câmera · usar o celular")}
             </button>
           )}
         </div>

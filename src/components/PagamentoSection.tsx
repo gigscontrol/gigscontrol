@@ -6,6 +6,7 @@ import { TextInput } from "./Field";
 import InputDataBR from "./inputs/InputDataBR";
 import { formatBRL } from "@/lib/whatsapp";
 import type { Parcela } from "@/types";
+import { useT } from "@/lib/i18n";
 
 /**
  * Editor de parcelas de pagamento.
@@ -47,6 +48,7 @@ export default function PagamentoSection({
   accent,
   error,
 }: Props) {
+  const t = useT();
   const somaPercentual = useMemo(
     () => parcelas.reduce((acc, p) => acc + (p.percentual || 0), 0),
     [parcelas]
@@ -97,7 +99,7 @@ export default function PagamentoSection({
     <div>
       {/* Seletor de modo */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-muted">Dividir por:</span>
+        <span className="text-xs text-muted">{t("Dividir por:")}</span>
         <div className="pill-group">
           <button
             type="button"
@@ -105,7 +107,7 @@ export default function PagamentoSection({
             onClick={() => onModoChange("percentual")}
           >
             <Percent size={11} />
-            Porcentagem
+            {t("Porcentagem")}
           </button>
           <button
             type="button"
@@ -113,7 +115,7 @@ export default function PagamentoSection({
             onClick={() => onModoChange("valor")}
           >
             <DollarSign size={11} />
-            Valor R$
+            {t("Valor R$")}
           </button>
         </div>
       </div>
@@ -121,7 +123,7 @@ export default function PagamentoSection({
       {cacheTotal <= 0 && (
         <div className="text-xs text-warning mb-3 flex items-center gap-1.5">
           <AlertTriangle size={12} />
-          Preencha o cachê acima para calcular as parcelas.
+          {t("Preencha o cachê acima para calcular as parcelas.")}
         </div>
       )}
 
@@ -185,7 +187,7 @@ export default function PagamentoSection({
               disabled={parcelas.length === 1}
               className="btn-ghost p-1.5 rounded disabled:opacity-30"
               style={{ color: "var(--danger)" }}
-              aria-label="Remover parcela"
+              aria-label={t("Remover parcela")}
             >
               <Trash2 size={14} />
             </button>
@@ -200,7 +202,7 @@ export default function PagamentoSection({
         className="mt-2 btn btn-secondary text-sm"
       >
         <Plus size={14} />
-        Adicionar parcela
+        {t("Adicionar parcela")}
       </button>
 
       {/* Resumo */}
@@ -212,7 +214,7 @@ export default function PagamentoSection({
         }}
       >
         <span className="text-secondary">
-          {parcelas.length} {parcelas.length === 1 ? "parcela" : "parcelas"}
+          {t("{n} {parcela}", { n: parcelas.length, parcela: parcelas.length === 1 ? t("parcela") : t("parcelas") })}
         </span>
         <span className="flex items-center gap-2">
           <span className="tabular-nums font-semibold text-primary">
@@ -229,8 +231,8 @@ export default function PagamentoSection({
       {!tudoOk && (
         <p className="text-xs text-danger mt-1.5">
           {modo === "percentual"
-            ? `A soma das parcelas deve ser 100% (está ${somaPercentual.toFixed(0)}%)`
-            : `A soma deve ser ${formatBRL(cacheTotal)} (está ${formatBRL(somaValor)})`}
+            ? t("A soma das parcelas deve ser 100% (está {pct}%)", { pct: somaPercentual.toFixed(0) })
+            : t("A soma deve ser {total} (está {atual})", { total: formatBRL(cacheTotal), atual: formatBRL(somaValor) })}
         </p>
       )}
       {error && <p className="text-xs text-danger mt-1">{error}</p>}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea, Select } from "../Field";
 import InputCapacidade from "../inputs/InputCapacidade";
 import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
+  const t = useT();
   const { cidades, addCasa, updateCasa } = useContatos();
 
   // Pré-popula a cidade IBGE a partir da cidade atual da casa (se ela
@@ -47,9 +49,9 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
 
   const handleSave = async () => {
     const errs: Record<string, string> = {};
-    if (!nome.trim()) errs.nome = "Nome obrigatório";
-    if (!cidadeIbge) errs.cidade = "Selecione uma cidade";
-    if (capacidade && isNaN(Number(capacidade))) errs.capacidade = "Capacidade deve ser número";
+    if (!nome.trim()) errs.nome = t("Nome obrigatório");
+    if (!cidadeIbge) errs.cidade = t("Selecione uma cidade");
+    if (capacidade && isNaN(Number(capacidade))) errs.capacidade = t("Capacidade deve ser número");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -95,8 +97,8 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
         </Field>
         <Field label="Tipo" required>
           <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoCasa)}>
-            {TIPOS.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+            {TIPOS.map((tipo) => (
+              <option key={tipo.value} value={tipo.value}>{t(tipo.label)}</option>
             ))}
           </Select>
         </Field>
@@ -107,7 +109,7 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
               setCidadeIbge(c);
               if (c) setErrors((p) => ({ ...p, cidade: "" }));
             }}
-            placeholder="Ex: São Paulo, Belo Horizonte..."
+            placeholder={t("Ex: São Paulo, Belo Horizonte...")}
           />
         </Field>
         <Field label="Capacidade" hint="Quantidade de pessoas" error={errors.capacidade}>
@@ -134,9 +136,9 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
       </Field>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button onClick={onCancel} className="btn btn-secondary">Cancelar</button>
+        <button onClick={onCancel} className="btn btn-secondary">{t("Cancelar")}</button>
         <button onClick={handleSave} className="btn btn-primary">
-          {initial ? "Salvar alterações" : "Cadastrar casa"}
+          {initial ? t("Salvar alterações") : t("Cadastrar casa")}
         </button>
       </div>
     </div>

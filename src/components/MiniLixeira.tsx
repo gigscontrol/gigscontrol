@@ -5,6 +5,7 @@ import { Trash2, RotateCcw } from "lucide-react";
 import Toast from "./Toast";
 import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   /** Categoria que esta mini-lixeira mostra. Shows ficam só na AbaLixeira
@@ -26,6 +27,7 @@ type Props = {
  * AbaEquipe e não passam por esse componente.
  */
 export default function MiniLixeira({ tipo }: Props) {
+  const t = useT();
   const { sessao } = useAuth();
   const {
     lixeiraOrcamentos,
@@ -126,7 +128,7 @@ export default function MiniLixeira({ tipo }: Props) {
     setAcao(`restaurar-${id}`);
     try {
       await restaurarDaLixeira(tipo, id);
-      setToast({ msg: `${nome} restaurado.`, tipo: "sucesso" });
+      setToast({ msg: t("{nome} restaurado.", { nome }), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     } finally {
@@ -141,10 +143,10 @@ export default function MiniLixeira({ tipo }: Props) {
           <div className="flex items-center gap-2">
             <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
             <div className="section-title">
-              Na lixeira ({dados.itens.length})
+              {t("Na lixeira ({n})", { n: dados.itens.length })}
             </div>
           </div>
-          <span className="text-xs text-muted">Recuperáveis por 30 dias</span>
+          <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
         </div>
         <div className="divide-y divide-border">
           {dados.itens.map((item) => {
@@ -174,8 +176,8 @@ export default function MiniLixeira({ tipo }: Props) {
                     }}
                   >
                     {item.diasRestantes === 0
-                      ? "Expira hoje"
-                      : `${item.diasRestantes} dia${item.diasRestantes === 1 ? "" : "s"} restantes`}
+                      ? t("Expira hoje")
+                      : t("{n} dia{s} restantes", { n: item.diasRestantes, s: item.diasRestantes === 1 ? "" : "s" })}
                   </div>
                 </div>
                 <button
@@ -185,7 +187,7 @@ export default function MiniLixeira({ tipo }: Props) {
                   style={{ color: "var(--success)" }}
                 >
                   <RotateCcw size={13} />
-                  Restaurar
+                  {t("Restaurar")}
                 </button>
               </div>
             );

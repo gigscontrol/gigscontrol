@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
+import { useT } from "@/lib/i18n";
 
 type Provider = "google" | "facebook";
 
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
+  const t = useT();
   const [carregando, setCarregando] = useState<Provider | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
         className="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-sm font-medium disabled:opacity-60"
       >
         <IconeGoogle />
-        {carregando === "google" ? "Conectando..." : `${prefixo} Google`}
+        {carregando === "google" ? t("Conectando...") : `${prefixo} Google`}
       </button>
 
       <button
@@ -73,7 +75,7 @@ export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
         className="flex items-center justify-center gap-2.5 w-full py-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-sm font-medium disabled:opacity-60"
       >
         <IconeFacebook />
-        {carregando === "facebook" ? "Conectando..." : `${prefixo} Facebook`}
+        {carregando === "facebook" ? t("Conectando...") : `${prefixo} Facebook`}
       </button>
 
       {erro && (

@@ -10,6 +10,7 @@ import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
+import { useT } from "@/lib/i18n";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -62,13 +63,14 @@ const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: stri
 };
 
 function StatusBadge({ status }: { status: ShowStatus }) {
+  const t = useT();
   const st = STATUS_STYLES[status];
   return (
     <span
       className="text-[0.6rem] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
       style={{ backgroundColor: st.bg, color: st.color }}
     >
-      {st.label}
+      {t(st.label)}
     </span>
   );
 }
@@ -122,6 +124,7 @@ type Props = {
 };
 
 export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda }: Props) {
+  const t = useT();
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
   const artistas = useArtistas();
@@ -302,7 +305,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Agenda de Shows"
-        subtitle={`Visão dinâmica — ${activeDateRange}`}
+        subtitle={`${t("Visão dinâmica")} — ${t(activeDateRange)}`}
         accentColor={accent}
         actions={
           <DateRangeSelector
@@ -335,7 +338,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             key={d}
             className="text-[0.7rem] uppercase tracking-wider font-bold text-muted text-center"
           >
-            {d}
+            {t(d)}
           </div>
         ))}
       </div>
@@ -407,6 +410,7 @@ function DayCellComponent({
   accent: string;
   onShowClick: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <div
       id={day.isToday ? "day-card-today" : undefined}
@@ -423,12 +427,12 @@ function DayCellComponent({
     >
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
         <div className="text-[0.7rem] uppercase font-bold tracking-wider text-muted flex items-center gap-1">
-          {day.name.slice(0, 3)}
+          {t(day.name).slice(0, 3)}
           {day.isQuente && !day.isOtherMonth && (
             <span
               className="text-sm leading-none animate-flame select-none"
-              aria-label="Dia de pico"
-              title="Dia de pico"
+              aria-label={t("Dia de pico")}
+              title={t("Dia de pico")}
             >
               🔥
             </span>
@@ -453,11 +457,18 @@ function DayCellComponent({
             />
           ))
         ) : (
-          <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md text-[0.7rem] text-muted">
-            Sem shows
-          </div>
+          <DayCellEmptySlot />
         )}
       </div>
+    </div>
+  );
+}
+
+function DayCellEmptySlot() {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md text-[0.7rem] text-muted">
+      {t("Sem shows")}
     </div>
   );
 }
@@ -475,6 +486,7 @@ function MobileDayCard({
   accent: string;
   onShowClick: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <div
       className="card"
@@ -486,7 +498,7 @@ function MobileDayCard({
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
         <div>
           <div className="text-[0.7rem] uppercase tracking-wider text-muted font-bold">
-            {day.name}
+            {t(day.name)}
           </div>
           <div
             className="text-lg font-bold tabular-nums"
@@ -498,8 +510,8 @@ function MobileDayCard({
         {day.isQuente && (
           <span
             className="text-lg leading-none animate-flame select-none"
-            aria-label="Dia de pico"
-            title="Dia de pico"
+            aria-label={t("Dia de pico")}
+            title={t("Dia de pico")}
           >
             🔥
           </span>
@@ -515,22 +527,30 @@ function MobileDayCard({
           />
         ))
       ) : (
-        <div className="flex items-center justify-center h-16 border border-dashed border-border rounded-md text-xs text-muted">
-          Sem shows agendados
-        </div>
+        <MobileDayEmptySlot />
       )}
     </div>
   );
 }
 
+function MobileDayEmptySlot() {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-center h-16 border border-dashed border-border rounded-md text-xs text-muted">
+      {t("Sem shows agendados")}
+    </div>
+  );
+}
+
 function EmptyState() {
+  const t = useT();
   return (
     <div className="card flex flex-col items-center justify-center py-12 text-center">
       <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
         <Calendar size={20} className="text-muted" />
       </div>
-      <div className="section-title mb-1">Nenhum show no período</div>
-      <div className="section-subtitle">Ajuste os filtros ou cadastre novos eventos</div>
+      <div className="section-title mb-1">{t("Nenhum show no período")}</div>
+      <div className="section-subtitle">{t("Ajuste os filtros ou cadastre novos eventos")}</div>
     </div>
   );
 }

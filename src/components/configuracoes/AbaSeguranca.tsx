@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Eye, EyeOff, ShieldCheck, Lock } from "lucide-react";
 import Toast from "../Toast";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
@@ -17,6 +18,7 @@ import { useAuth } from "@/lib/auth-context";
  *  3. Toast de sucesso e form limpo.
  */
 export default function AbaSeguranca() {
+  const t = useT();
   const { sessao } = useAuth();
   const supabase = useMemo(() => criarClienteBrowser(), []);
 
@@ -39,7 +41,7 @@ export default function AbaSeguranca() {
   async function salvar() {
     if (!podeSalvar) return;
     if (!sessao?.usuario?.email) {
-      setToast({ msg: "Sessão sem e-mail. Faça login novamente.", tipo: "erro" });
+      setToast({ msg: t("Sessão sem e-mail. Faça login novamente."), tipo: "erro" });
       return;
     }
     setSalvando(true);
@@ -50,7 +52,7 @@ export default function AbaSeguranca() {
         password: atual,
       });
       if (errAtual) {
-        setToast({ msg: "Senha atual incorreta.", tipo: "erro" });
+        setToast({ msg: t("Senha atual incorreta."), tipo: "erro" });
         return;
       }
 
@@ -75,7 +77,7 @@ export default function AbaSeguranca() {
         // ignora — flag é cosmética, não impede o sucesso da troca.
       }
 
-      setToast({ msg: "Senha alterada com sucesso.", tipo: "sucesso" });
+      setToast({ msg: t("Senha alterada com sucesso."), tipo: "sucesso" });
       setAtual("");
       setNova("");
       setConfirma("");
@@ -91,17 +93,17 @@ export default function AbaSeguranca() {
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} style={{ color: "var(--module-financeiro)" }} />
-          <div className="section-title">Alterar senha</div>
+          <div className="section-title">{t("Alterar senha")}</div>
         </div>
         <div className="section-subtitle mb-4">
-          A senha de acesso à sua dashboard. Use ao menos 8 caracteres.
+          {t("A senha de acesso à sua dashboard. Use ao menos 8 caracteres.")}
         </div>
 
         <div className="flex flex-col gap-3">
           {/* Senha atual */}
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-secondary">
-              Senha atual
+              {t("Senha atual")}
             </span>
             <div className="relative">
               <input
@@ -109,7 +111,7 @@ export default function AbaSeguranca() {
                 value={atual}
                 onChange={(e) => setAtual(e.target.value)}
                 className="campo-input pr-9"
-                placeholder="Digite sua senha atual"
+                placeholder={t("Digite sua senha atual")}
                 autoComplete="current-password"
               />
               <Lock
@@ -122,7 +124,7 @@ export default function AbaSeguranca() {
           {/* Nova senha */}
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-secondary">
-              Nova senha
+              {t("Nova senha")}
             </span>
             <div className="relative">
               <input
@@ -130,21 +132,21 @@ export default function AbaSeguranca() {
                 value={nova}
                 onChange={(e) => setNova(e.target.value)}
                 className="campo-input pr-9"
-                placeholder="Mínimo de 8 caracteres"
+                placeholder={t("Mínimo de 8 caracteres")}
                 autoComplete="new-password"
               />
               <button
                 type="button"
                 onClick={() => setVerSenha((v) => !v)}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
-                aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
+                aria-label={verSenha ? t("Ocultar senha") : t("Mostrar senha")}
               >
                 {verSenha ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
             {novaCurta && (
               <span className="text-xs" style={{ color: "var(--danger)" }}>
-                A senha deve ter pelo menos 8 caracteres.
+                {t("A senha deve ter pelo menos 8 caracteres.")}
               </span>
             )}
           </label>
@@ -152,19 +154,19 @@ export default function AbaSeguranca() {
           {/* Confirmar */}
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-secondary">
-              Confirmar nova senha
+              {t("Confirmar nova senha")}
             </span>
             <input
               type={verSenha ? "text" : "password"}
               value={confirma}
               onChange={(e) => setConfirma(e.target.value)}
               className="campo-input"
-              placeholder="Repita a nova senha"
+              placeholder={t("Repita a nova senha")}
               autoComplete="new-password"
             />
             {naoConfere && (
               <span className="text-xs" style={{ color: "var(--danger)" }}>
-                As senhas não coincidem.
+                {t("As senhas não coincidem.")}
               </span>
             )}
           </label>
@@ -175,7 +177,7 @@ export default function AbaSeguranca() {
           disabled={!podeSalvar}
           className="btn btn-primary text-sm w-full justify-center mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {salvando ? "Alterando..." : "Alterar senha"}
+          {salvando ? t("Alterando...") : t("Alterar senha")}
         </button>
       </section>
 

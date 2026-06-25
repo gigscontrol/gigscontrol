@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, Check, Loader2, Plug, Unplug } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 
 /**
  * Card "Google Calendar" no perfil do artista (read-only console).
@@ -16,6 +17,7 @@ import { useAuth } from "@/lib/auth-context";
 type Estado = "carregando" | "conectado" | "desconectado";
 
 export default function CardGoogleCalendar({ artistaId }: { artistaId: string }) {
+  const t = useT();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
 
@@ -61,7 +63,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
       });
       const d = await res.json();
       if (!res.ok || !d?.url) {
-        throw new Error(d?.erro ?? "Falha ao iniciar a conexão.");
+        throw new Error(d?.erro ?? t("Falha ao iniciar a conexão."));
       }
       // Redireciona pro consentimento do Google (volta pelo /callback).
       window.location.href = d.url as string;
@@ -74,7 +76,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
   async function desconectar() {
     if (
       !window.confirm(
-        "Desconectar o Google Calendar deste artista? Os próximos shows não serão mais sincronizados."
+        t("Desconectar o Google Calendar deste artista? Os próximos shows não serão mais sincronizados.")
       )
     ) {
       return;
@@ -88,7 +90,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
       );
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d?.erro ?? "Falha ao desconectar.");
+        throw new Error(d?.erro ?? t("Falha ao desconectar."));
       }
       await carregar();
     } catch (e) {
@@ -107,7 +109,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
 
       {estado === "carregando" ? (
         <div className="text-sm text-muted inline-flex items-center gap-2">
-          <Loader2 size={14} className="animate-spin" /> Verificando…
+          <Loader2 size={14} className="animate-spin" /> {t("Verificando…")}
         </div>
       ) : estado === "conectado" ? (
         <>
@@ -119,15 +121,14 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
               <Check size={14} />
             </span>
             <div className="min-w-0">
-              <div className="text-sm font-medium text-primary">Conectado</div>
+              <div className="text-sm font-medium text-primary">{t("Conectado")}</div>
               <div className="text-xs text-muted truncate" title={email ?? undefined}>
-                {email ?? "conta Google"}
+                {email ?? t("conta Google")}
               </div>
             </div>
           </div>
           <p className="text-xs text-muted">
-            Os shows deste artista entram no Google Agenda automaticamente ao
-            concretizar a venda.
+            {t("Os shows deste artista entram no Google Agenda automaticamente ao concretizar a venda.")}
           </p>
           {isAdmin && (
             <button
@@ -138,15 +139,14 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
               style={{ color: "var(--danger)" }}
             >
               {ocupado ? <Loader2 size={13} className="animate-spin" /> : <Unplug size={13} />}
-              Desconectar
+              {t("Desconectar")}
             </button>
           )}
         </>
       ) : (
         <>
           <p className="text-sm text-secondary">
-            Conecte uma conta Google pra sincronizar os shows deste artista
-            automaticamente.
+            {t("Conecte uma conta Google pra sincronizar os shows deste artista automaticamente.")}
           </p>
           {isAdmin ? (
             <button
@@ -157,10 +157,10 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
               style={{ borderColor: "var(--module-agencia)", color: "var(--module-agencia)" }}
             >
               {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
-              Conectar conta Google
+              {t("Conectar conta Google")}
             </button>
           ) : (
-            <p className="text-xs text-muted">Só o admin pode conectar.</p>
+            <p className="text-xs text-muted">{t("Só o admin pode conectar.")}</p>
           )}
         </>
       )}

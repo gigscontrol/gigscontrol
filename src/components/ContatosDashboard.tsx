@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Users,
   Building2,
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export default function ContatosDashboard({ onAbrirCategoria }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.contatos.color;
   const { contratantes, casas, cidades } = useContatos();
   const { shows } = useShows();
@@ -79,7 +81,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <UserPlus size={14} />
-            Gerenciar Contatos
+            {t("Gerenciar Contatos")}
           </button>
         }
       />
@@ -88,29 +90,29 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <ClickableStat onClick={() => onAbrirCategoria?.("contratantes")}>
           <StatCard
-            title="Contratantes"
+            title={t("Contratantes")}
             value={contratantes.length}
             icon={<Users size={16} />}
             accentColor={accent}
-            subtitle="Toque para gerenciar"
+            subtitle={t("Toque para gerenciar")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => onAbrirCategoria?.("casas")}>
           <StatCard
-            title="Casas / Locais"
+            title={t("Casas / Locais")}
             value={casas.length}
             icon={<Building2 size={16} />}
             accentColor={accent}
-            subtitle="Clubs, festivais, bares"
+            subtitle={t("Clubs, festivais, bares")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => onAbrirCategoria?.("cidades")}>
           <StatCard
-            title="Cidades"
+            title={t("Cidades")}
             value={cidades.length}
             icon={<MapPin size={16} />}
             accentColor={accent}
-            subtitle={`${cidadesAtivas} com shows`}
+            subtitle={t("{n} com shows", { n: cidadesAtivas })}
           />
         </ClickableStat>
       </div>
@@ -121,20 +123,20 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp size={16} style={{ color: accent }} />
-              <div className="section-title">Principais contratantes</div>
+              <div className="section-title">{t("Principais contratantes")}</div>
             </div>
             <button
               onClick={() => onAbrirCategoria?.("contratantes")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todos
+              {t("Ver todos")}
               <ChevronRight size={12} />
             </button>
           </div>
 
           {rankingContratantes.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhum contratante cadastrado.
+              {t("Nenhum contratante cadastrado.")}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -162,8 +164,8 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
                     />
                   </div>
                   <div className="text-xs text-muted mt-0.5">
-                    {r.totalShows} {r.totalShows === 1 ? "show" : "shows"} ·{" "}
-                    {r.totalVendas} {r.totalVendas === 1 ? "venda" : "vendas"}
+                    {r.totalShows} {r.totalShows === 1 ? t("show") : t("shows")} ·{" "}
+                    {r.totalVendas} {r.totalVendas === 1 ? t("venda") : t("vendas")}
                   </div>
                 </button>
               ))}
@@ -176,20 +178,20 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Building2 size={16} style={{ color: accent }} />
-              <div className="section-title">Casas mais usadas</div>
+              <div className="section-title">{t("Casas mais usadas")}</div>
             </div>
             <button
               onClick={() => onAbrirCategoria?.("casas")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todas
+              {t("Ver todas")}
               <ChevronRight size={12} />
             </button>
           </div>
 
           {rankingCasas.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhuma casa cadastrada.
+              {t("Nenhuma casa cadastrada.")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -214,12 +216,12 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
                       <div className="text-xs text-muted truncate">
                         {cidade ? `${cidade.nome}/${cidade.estado}` : "—"}
                         {r.casa.capacidade
-                          ? ` · ${r.casa.capacidade.toLocaleString("pt-BR")} pessoas`
+                          ? ` · ${r.casa.capacidade.toLocaleString("pt-BR")} ${t("pessoas")}`
                           : ""}
                       </div>
                     </div>
                     <span className="text-xs text-secondary tabular-nums flex-shrink-0">
-                      {r.totalShows} {r.totalShows === 1 ? "show" : "shows"}
+                      {r.totalShows} {r.totalShows === 1 ? t("show") : t("shows")}
                     </span>
                     <ChevronRight size={14} className="text-muted flex-shrink-0" />
                   </button>
@@ -234,19 +236,19 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
         <AtalhoCard
           icon={<Users size={16} />}
-          label="Novo contratante"
+          label={t("Novo contratante")}
           accent={accent}
           onClick={() => onAbrirCategoria?.("contratantes")}
         />
         <AtalhoCard
           icon={<Building2 size={16} />}
-          label="Nova casa"
+          label={t("Nova casa")}
           accent={accent}
           onClick={() => onAbrirCategoria?.("casas")}
         />
         <AtalhoCard
           icon={<MapPin size={16} />}
-          label="Nova cidade"
+          label={t("Nova cidade")}
           accent={accent}
           onClick={() => onAbrirCategoria?.("cidades")}
         />

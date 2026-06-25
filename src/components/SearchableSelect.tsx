@@ -9,6 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, ChevronDown, Check } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export type SearchOption = { id: string; label: string; sublabel?: string };
 
@@ -25,6 +26,7 @@ export default function SearchableSelect({
   placeholder?: string;
   className?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -86,13 +88,13 @@ export default function SearchableSelect({
             setOpen(true);
             setQuery("");
           }}
-          placeholder={placeholder}
+          placeholder={t(placeholder)}
           className="input flex-1"
         />
         <button
           type="button"
           tabIndex={-1}
-          aria-label={open ? "Fechar lista" : "Abrir lista"}
+          aria-label={open ? t("Fechar lista") : t("Abrir lista")}
           onClick={() => {
             if (open) {
               setOpen(false);
@@ -120,7 +122,7 @@ export default function SearchableSelect({
           <div className="max-h-[280px] overflow-y-auto py-1">
             {visiveis.length === 0 ? (
               <div className="px-3 py-5 text-center text-sm text-muted">
-                Nenhum resultado.
+                {t("Nenhum resultado.")}
               </div>
             ) : (
               visiveis.map((o) => (
@@ -155,7 +157,7 @@ export default function SearchableSelect({
             )}
             {filtrados.length > visiveis.length && (
               <div className="px-3 py-2 text-center text-xs text-muted">
-                +{filtrados.length - visiveis.length} resultados — refine a busca
+                {t("+{n} resultados — refine a busca", { n: filtrados.length - visiveis.length })}
               </div>
             )}
           </div>

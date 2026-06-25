@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda } = useVendas();
   const { orcamentos } = useOrcamentos();
@@ -78,7 +80,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Histórico de Vendas"
-        subtitle={`${vendas.length} ${vendas.length === 1 ? "venda concretizada" : "vendas concretizadas"} · Total ${formatBRL(totalCache)}`}
+        subtitle={`${vendas.length} ${vendas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${formatBRL(totalCache)}`}
         accentColor={accent}
         actions={
           <button
@@ -87,7 +89,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Plus size={14} />
-            Nova venda direta
+            {t("Nova venda direta")}
           </button>
         }
       />
@@ -99,7 +101,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nº, contratante, evento, local..."
+            placeholder={t("Buscar por nº, contratante, evento, local...")}
             className="input"
           />
         </div>
@@ -110,7 +112,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             className={`pill ${filtroDJ === "todos" ? "active" : ""}`}
             onClick={() => setFiltroDJ("todos")}
           >
-            Todos DJs
+            {t("Todos DJs")}
           </button>
           {artistas.map((d) => (
             <button
@@ -132,12 +134,12 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               <CalendarCheck2 size={18} className="text-muted" />
             </div>
             <div className="section-title mb-1">
-              {vendas.length === 0 ? "Nenhuma venda concretizada ainda" : "Nenhum resultado"}
+              {vendas.length === 0 ? t("Nenhuma venda concretizada ainda") : t("Nenhum resultado")}
             </div>
             <div className="section-subtitle mb-4">
               {vendas.length === 0
-                ? "Concretize um orçamento aceito ou crie uma venda direta"
-                : "Ajuste os filtros ou a busca"}
+                ? t("Concretize um orçamento aceito ou crie uma venda direta")
+                : t("Ajuste os filtros ou a busca")}
             </div>
             {vendas.length === 0 && (
               <button
@@ -146,7 +148,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                 style={{ backgroundColor: accent, color: "#fff" }}
               >
                 <Plus size={14} />
-                Nova venda direta
+                {t("Nova venda direta")}
               </button>
             )}
           </div>
@@ -155,14 +157,14 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-2/40">
-                  <Th>Nº</Th>
-                  <Th>Contratante</Th>
-                  <Th>Evento</Th>
-                  <Th>DJ</Th>
-                  <Th>Cidade</Th>
-                  <Th>Data show</Th>
-                  <Th className="text-right">Cachê</Th>
-                  <Th>Origem</Th>
+                  <Th>{t("Nº")}</Th>
+                  <Th>{t("Contratante")}</Th>
+                  <Th>{t("Evento")}</Th>
+                  <Th>{t("DJ")}</Th>
+                  <Th>{t("Cidade")}</Th>
+                  <Th>{t("Data show")}</Th>
+                  <Th className="text-right">{t("Cachê")}</Th>
+                  <Th>{t("Origem")}</Th>
                   <Th className="w-[1%]"></Th>
                 </tr>
               </thead>
@@ -210,7 +212,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                             {orc.numero}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted italic">direta</span>
+                          <span className="text-xs text-muted italic">{t("direta")}</span>
                         )}
                       </Td>
                       <Td>
@@ -221,14 +223,14 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           <button
                             onClick={() => onAbrir(v.id)}
                             className="btn-ghost p-1.5 rounded"
-                            title="Ver"
+                            title={t("Ver")}
                           >
                             <Eye size={14} />
                           </button>
                           <button
                             onClick={() => handleRemover(v.id)}
                             className="btn-ghost p-1.5 rounded"
-                            title="Remover"
+                            title={t("Remover")}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -249,12 +251,12 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
       <Modal
         isOpen={!!removeAlvo}
         onClose={() => setRemoveAlvo(null)}
-        title="Remover venda"
-        subtitle="Esta ação pode ser desfeita até 30 dias na Lixeira."
+        title={t("Remover venda")}
+        subtitle={t("Esta ação pode ser desfeita até 30 dias na Lixeira.")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            A venda e suas parcelas vão pra <strong className="text-primary">Lixeira</strong>. Você pode restaurar em até 30 dias. Depois disso, é apagado automaticamente.
+            {t("A venda e suas parcelas vão pra")} <strong className="text-primary">{t("Lixeira")}</strong>. {t("Você pode restaurar em até 30 dias. Depois disso, é apagado automaticamente.")}
           </p>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
@@ -262,7 +264,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               className="btn btn-secondary"
               disabled={removendo}
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={async () => {
@@ -271,7 +273,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                 try {
                   await removeVenda(removeAlvo);
                   setRemoveAlvo(null);
-                  setToastMsg({ msg: "Venda removida.", tipo: "sucesso" });
+                  setToastMsg({ msg: t("Venda removida."), tipo: "sucesso" });
                 } catch (e) {
                   setToastMsg({ msg: (e as Error).message, tipo: "erro" });
                   setRemoveAlvo(null);
@@ -283,7 +285,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               style={{ backgroundColor: "var(--danger)", color: "#fff" }}
               disabled={removendo}
             >
-              {removendo ? "Removendo..." : "Remover"}
+              {removendo ? t("Removendo...") : t("Remover")}
             </button>
           </div>
         </div>

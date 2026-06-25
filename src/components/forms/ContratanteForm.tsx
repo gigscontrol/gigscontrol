@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea } from "../Field";
 import InputCpfCnpj from "../inputs/InputCpfCnpj";
 import { apenasDigitos } from "@/lib/formatters";
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) {
+  const t = useT();
   const { cidades, addContratante, updateContratante } = useContatos();
 
   // Pré-popula a cidade IBGE a partir da cidade atual do contratante (se
@@ -37,9 +39,9 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
 
   const handleSave = async () => {
     const errs: Record<string, string> = {};
-    if (!nome.trim()) errs.nome = "Nome obrigatório";
-    if (!telefone.trim()) errs.telefone = "Telefone obrigatório";
-    if (!cidadeIbge) errs.cidade = "Selecione uma cidade";
+    if (!nome.trim()) errs.nome = t("Nome obrigatório");
+    if (!telefone.trim()) errs.telefone = t("Telefone obrigatório");
+    if (!cidadeIbge) errs.cidade = t("Selecione uma cidade");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -90,7 +92,7 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
               setCidadeIbge(c);
               if (c) setErrors((p) => ({ ...p, cidade: "" }));
             }}
-            placeholder="Ex: São Paulo, Belo Horizonte..."
+            placeholder={t("Ex: São Paulo, Belo Horizonte...")}
           />
         </Field>
         <Field label="E-mail" hint="Necessário ao converter em venda">
@@ -110,9 +112,9 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
       </Field>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button onClick={onCancel} className="btn btn-secondary">Cancelar</button>
+        <button onClick={onCancel} className="btn btn-secondary">{t("Cancelar")}</button>
         <button onClick={handleSave} className="btn btn-primary">
-          {initial ? "Salvar alterações" : "Cadastrar contratante"}
+          {initial ? t("Salvar alterações") : t("Cadastrar contratante")}
         </button>
       </div>
     </div>

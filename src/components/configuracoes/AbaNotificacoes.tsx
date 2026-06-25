@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Bell, CheckCheck } from "lucide-react";
 import type { Notificacao } from "@/lib/mappers/notificacao";
 
@@ -14,6 +15,7 @@ const LIMIT = 50;
  * mostra só 10), aqui é a visão completa.
  */
 export default function AbaNotificacoes() {
+  const t = useT();
   const [itens, setItens] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
   const [carregando, setCarregando] = useState(false);
@@ -36,7 +38,7 @@ export default function AbaNotificacoes() {
         const res = await fetch(`/api/notificacoes?${qs.toString()}`, {
           credentials: "include",
         });
-        if (!res.ok) throw new Error("Falha ao carregar.");
+        if (!res.ok) throw new Error(t("Falha ao carregar."));
         const body = await res.json();
         const novos = (body.notificacoes as Notificacao[]) ?? [];
         setItens((prev) => (resetar ? novos : [...prev, ...novos]));
@@ -93,18 +95,18 @@ export default function AbaNotificacoes() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Bell size={16} style={{ color: "var(--module-vendas)" }} />
-          <div className="section-title">Notificações</div>
+          <div className="section-title">{t("Notificações")}</div>
           {naoLidas > 0 && (
             <span
               className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded text-white"
               style={{ backgroundColor: "var(--danger)" }}
             >
-              {naoLidas} nova{naoLidas === 1 ? "" : "s"}
+              {naoLidas} {naoLidas === 1 ? t("nova") : t("novas")}
             </span>
           )}
         </div>
         <div className="section-subtitle">
-          Avisos das ações da equipe e do seu workspace.
+          {t("Avisos das ações da equipe e do seu workspace.")}
         </div>
       </div>
 
@@ -116,13 +118,13 @@ export default function AbaNotificacoes() {
               className={`pill ${!apenasNaoLidas ? "active" : ""}`}
               onClick={() => setApenasNaoLidas(false)}
             >
-              Todas
+              {t("Todas")}
             </button>
             <button
               className={`pill ${apenasNaoLidas ? "active" : ""}`}
               onClick={() => setApenasNaoLidas(true)}
             >
-              Não lidas {naoLidas > 0 && `(${naoLidas})`}
+              {t("Não lidas")} {naoLidas > 0 && `(${naoLidas})`}
             </button>
           </div>
           {naoLidas > 0 && (
@@ -131,7 +133,7 @@ export default function AbaNotificacoes() {
               className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
             >
               <CheckCheck size={12} />
-              Marcar todas como lidas
+              {t("Marcar todas como lidas")}
             </button>
           )}
         </div>
@@ -140,7 +142,7 @@ export default function AbaNotificacoes() {
       {/* Lista */}
       <div className="card p-0 overflow-hidden">
         {carregando && itens.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted">Carregando...</div>
+          <div className="py-12 text-center text-sm text-muted">{t("Carregando...")}</div>
         ) : erro ? (
           <div className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>
             {erro}
@@ -148,8 +150,8 @@ export default function AbaNotificacoes() {
         ) : itens.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
             {apenasNaoLidas
-              ? "Nenhuma notificação não lida."
-              : "Nenhuma notificação ainda."}
+              ? t("Nenhuma notificação não lida.")
+              : t("Nenhuma notificação ainda.")}
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -165,7 +167,7 @@ export default function AbaNotificacoes() {
               onClick={() => carregar(false)}
               className="btn btn-secondary text-xs"
             >
-              Carregar mais
+              {t("Carregar mais")}
             </button>
           </div>
         )}
@@ -181,6 +183,7 @@ function LinhaCompleta({
   item: Notificacao;
   onMarcarLida: () => void;
 }) {
+  const t = useT();
   const lida = !!item.lidaEm;
   const corTipo = (() => {
     switch (item.tipo) {
@@ -217,9 +220,9 @@ function LinhaCompleta({
         <button
           onClick={onMarcarLida}
           className="text-[0.65rem] text-muted hover:text-primary"
-          title="Marcar como lida"
+          title={t("Marcar como lida")}
         >
-          Marcar lida
+          {t("Marcar lida")}
         </button>
       )}
     </div>

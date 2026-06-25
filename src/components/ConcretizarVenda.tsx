@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
   User,
@@ -79,6 +80,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 }
 
 export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
@@ -279,21 +281,21 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   // ------- Validação -------
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!contratanteNome.trim()) errs.contratanteNome = "Nome obrigatório";
-    if (!contratanteEmail.trim()) errs.contratanteEmail = "E-mail obrigatório";
+    if (!contratanteNome.trim()) errs.contratanteNome = t("Nome obrigatório");
+    if (!contratanteEmail.trim()) errs.contratanteEmail = t("E-mail obrigatório");
     const dig = contarDigitos(telDigits);
-    if (dig === 0) errs.contratanteTelefone = "Telefone obrigatório";
-    else if (dig < country.minDigits) errs.contratanteTelefone = "Faltam dígitos";
-    if (!contratanteDocumento.trim()) errs.contratanteDocumento = "CPF/CNPJ obrigatório";
-    if (!contratanteEndereco.trim()) errs.contratanteEndereco = "Endereço obrigatório";
+    if (dig === 0) errs.contratanteTelefone = t("Telefone obrigatório");
+    else if (dig < country.minDigits) errs.contratanteTelefone = t("Faltam dígitos");
+    if (!contratanteDocumento.trim()) errs.contratanteDocumento = t("CPF/CNPJ obrigatório");
+    if (!contratanteEndereco.trim()) errs.contratanteEndereco = t("Endereço obrigatório");
 
-    if (!nomeEvento.trim()) errs.nomeEvento = "Nome do evento obrigatório";
-    if (!nomeLocal.trim()) errs.nomeLocal = "Nome do local obrigatório";
-    if (!enderecoLocal.trim()) errs.enderecoLocal = "Endereço do local obrigatório";
-    if (!dataShow) errs.dataShow = "Data obrigatória";
-    if (!horarioInicio) errs.horarioInicio = "Horário de início obrigatório";
-    if (!horarioFim) errs.horarioFim = "Horário de fim obrigatório";
-    if (!cidadeIbge) errs.cidade = "Cidade obrigatória";
+    if (!nomeEvento.trim()) errs.nomeEvento = t("Nome do evento obrigatório");
+    if (!nomeLocal.trim()) errs.nomeLocal = t("Nome do local obrigatório");
+    if (!enderecoLocal.trim()) errs.enderecoLocal = t("Endereço do local obrigatório");
+    if (!dataShow) errs.dataShow = t("Data obrigatória");
+    if (!horarioInicio) errs.horarioInicio = t("Horário de início obrigatório");
+    if (!horarioFim) errs.horarioFim = t("Horário de fim obrigatório");
+    if (!cidadeIbge) errs.cidade = t("Cidade obrigatória");
 
     // djId precisa apontar pra um artista ATIVO. Não basta ser != null
     // porque pode ter herdado de orçamento com id inválido (DJ deletado).
@@ -301,29 +303,29 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       djId !== null && artistas.some((d) => d.id === djId);
     if (!djIdValido) {
       errs.dj = orc?.djId
-        ? "Selecione o DJ atual da agência (o original do orçamento foi removido)."
-        : "Selecione o artista da agência";
+        ? t("Selecione o DJ atual da agência (o original do orçamento foi removido).")
+        : t("Selecione o artista da agência");
     }
     const cacheNum = parseFloat(cache.replace(",", "."));
-    if (!cache || isNaN(cacheNum) || cacheNum <= 0) errs.cache = "Cachê obrigatório";
+    if (!cache || isNaN(cacheNum) || cacheNum <= 0) errs.cache = t("Cachê obrigatório");
 
     // Parcelas — só valida no modo detalhado.
     // No modo padrão, a parcela é gerada automaticamente (100% na data do show).
     if (modoPagamento === "detalhado") {
       if (parcelas.length === 0) {
-        errs.parcelas = "Defina ao menos uma parcela";
+        errs.parcelas = t("Defina ao menos uma parcela");
       } else {
         const somaPct = parcelas.reduce((a, p) => a + (p.percentual || 0), 0);
         const somaVal = parcelas.reduce((a, p) => a + (p.valor || 0), 0);
         const pctOk = Math.abs(somaPct - 100) < 0.01;
         const valOk = Math.abs(somaVal - cacheNum) < 1;
         if (modoParcela === "percentual" && !pctOk) {
-          errs.parcelas = "A soma das parcelas deve ser 100%";
+          errs.parcelas = t("A soma das parcelas deve ser 100%");
         } else if (modoParcela === "valor" && !valOk) {
-          errs.parcelas = "A soma das parcelas deve bater com o cachê";
+          errs.parcelas = t("A soma das parcelas deve bater com o cachê");
         }
         if (parcelas.some((p) => !p.dataVencimento)) {
-          errs.parcelas = "Defina a data de vencimento de todas as parcelas";
+          errs.parcelas = t("Defina a data de vencimento de todas as parcelas");
         }
       }
     }
@@ -454,7 +456,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
         className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft size={14} />
-        Voltar
+        {t("Voltar")}
       </button>
 
       <PageHeader
@@ -474,16 +476,15 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
         >
           <Sparkles size={16} className="flex-shrink-0 mt-0.5" style={{ color: accent }} />
           <div className="text-sm text-secondary">
-            Os campos com selo{" "}
-            <span className="badge badge-neutral text-[0.6rem]">auto</span> vieram do
-            orçamento <strong>{orc.numero}</strong>. Você pode alterar qualquer um — o
-            selo some quando edita.
+            {t("Os campos com selo")}{" "}
+            <span className="badge badge-neutral text-[0.6rem]">auto</span> {t("vieram do orçamento")}{" "}
+            <strong>{orc.numero}</strong>. {t("Você pode alterar qualquer um — o selo some quando edita.")}
           </div>
         </div>
       )}
 
       {/* ============ 🖋️ INFORMAÇÕES DO CONTRATANTE ============ */}
-      <SectionCard icon={<User size={16} />} title="Informações do Contratante" accent={accent}>
+      <SectionCard icon={<User size={16} />} title={t("Informações do Contratante")} accent={accent}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldWithAuto
             label="Nome do Contratante / Empresa"
@@ -568,7 +569,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       </SectionCard>
 
       {/* ============ 📌 INFORMAÇÕES DO EVENTO ============ */}
-      <SectionCard icon={<MapPin size={16} />} title="Informações do Evento" accent={accent}>
+      <SectionCard icon={<MapPin size={16} />} title={t("Informações do Evento")} accent={accent}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2">
             <FieldWithAuto
@@ -584,7 +585,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
                   marcarEditado("cidade");
                   if (c) setErrors((p) => ({ ...p, cidade: "" }));
                 }}
-                placeholder="Ex: São Paulo, Belo Horizonte..."
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </FieldWithAuto>
           </div>
@@ -670,7 +671,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-secondary">
-              Data da apresentação
+              {t("Data da apresentação")}
             </span>
             <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
               {[
@@ -696,18 +697,15 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
                         : { color: "var(--text-muted)" }
                     }
                   >
-                    {opt.label}
+                    {t(opt.label)}
                   </button>
                 );
               })}
             </div>
             <span className="text-xs text-muted">
               {dataShow
-                ? `Apresentação em ${formatarDataOffset(
-                    dataShow,
-                    terminoDiaSeguinte ? 1 : 0
-                  )}.`
-                : "Dia seguinte = vira a madrugada (depois da meia-noite)."}
+                ? t("Apresentação em {data}.", { data: formatarDataOffset(dataShow, terminoDiaSeguinte ? 1 : 0) })
+                : t("Dia seguinte = vira a madrugada (depois da meia-noite).")}
             </span>
           </div>
 
@@ -741,13 +739,13 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
           {duracaoAuto && (
             <p className="text-xs text-muted sm:col-span-2 -mt-1">
-              Duração calculada:{" "}
+              {t("Duração calculada:")}{" "}
               <span className="font-semibold text-secondary">
                 {formatarDuracao(duracaoAuto.horas, duracaoAuto.minutos)}
               </span>
               {duracaoOverride && (
                 <span className="ml-2 text-warning">
-                  (substituída manualmente — limpe os horários ou ajuste para recalcular)
+                  {t("(substituída manualmente — limpe os horários ou ajuste para recalcular)")}
                 </span>
               )}
             </p>
@@ -756,7 +754,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       </SectionCard>
 
       {/* ============ 🎵 SHOW ============ */}
-      <SectionCard icon={<Music size={16} />} title="Informações do Show" accent={accent}>
+      <SectionCard icon={<Music size={16} />} title={t("Informações do Show")} accent={accent}>
         {/* Artista da agência:
             (1) Vem de orçamento E djEfetivoOrc resolveu (bate direto
                 OU auto-fix de workspace 1-DJ) → card simples travado.
@@ -806,8 +804,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
                   className="text-xs mt-1 mb-2"
                   style={{ color: "var(--danger)" }}
                 >
-                  O DJ original do orçamento não está mais ativo. Selecione
-                  um substituto abaixo.
+                  {t("O DJ original do orçamento não está mais ativo. Selecione um substituto abaixo.")}
                 </p>
               )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
@@ -856,7 +853,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             label={
               <span className="inline-flex items-center gap-1.5">
                 <Users size={12} />
-                Line-Up <span className="text-muted font-normal">(outros artistas do evento)</span>
+                {t("Line-Up")} <span className="text-muted font-normal">{t("(outros artistas do evento)")}</span>
               </span>
             }
             hint="Não obrigatório. Use vírgula ou Enter para adicionar cada nome."
@@ -881,7 +878,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
                 className="btn btn-secondary"
               >
                 <Plus size={14} />
-                Adicionar
+                {t("Adicionar")}
               </button>
             </div>
           </Field>
@@ -898,7 +895,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
                     type="button"
                     onClick={() => removerLineUp(idx)}
                     className="text-muted hover:text-danger transition-colors"
-                    aria-label={`Remover ${nome} do line-up`}
+                    aria-label={t("Remover {nome} do line-up", { nome })}
                   >
                     <X size={12} />
                   </button>
@@ -966,15 +963,15 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
         {cache && (
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm mt-4 mb-4">
-            <span className="text-muted">Cachê:</span>{" "}
+            <span className="text-muted">{t("Cachê:")}</span>{" "}
             <span className="font-bold text-primary tabular-nums">
               {formatBRL(parseFloat(cache.replace(",", ".")) || 0)}
             </span>{" "}
             <span className="text-muted">
-              por {formatarDuracao(duracaoHoras, duracaoMinutos)}
+              {t("por")} {formatarDuracao(duracaoHoras, duracaoMinutos)}
               {djSelecionado && (
                 <>
-                  {" para "}
+                  {" "}{t("para")}{" "}
                   <span style={{ color: djSelecionado.color }} className="font-semibold">
                     {djSelecionado.name}
                   </span>
@@ -986,7 +983,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
 
         <div className="flex flex-col gap-4 mt-4">
           <SubSection
-            title="Camarim / Consumação"
+            title={t("Camarim / Consumação")}
             autoBadge={showAutoBadge("camarim")}
             items={camarim}
             onChange={(c) => {
@@ -995,7 +992,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             }}
           />
           <SubSection
-            title="Efeitos"
+            title={t("Efeitos")}
             autoBadge={showAutoBadge("efeitos")}
             items={efeitos}
             onChange={(c) => {
@@ -1004,7 +1001,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
             }}
           />
           <SubSection
-            title="Hotel"
+            title={t("Hotel")}
             autoBadge={showAutoBadge("hotel")}
             items={hotel}
             onChange={(c) => {
@@ -1026,7 +1023,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       </SectionCard>
 
       {/* ============ 💳 FORMA DE PAGAMENTO ============ */}
-      <SectionCard icon={<CreditCard size={16} />} title="Forma de Pagamento" accent={accent}>
+      <SectionCard icon={<CreditCard size={16} />} title={t("Forma de Pagamento")} accent={accent}>
         {/* Escolha: Padrão x Detalhado */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <button
@@ -1049,9 +1046,9 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <div className="text-sm font-semibold text-primary">Pagamento Padrão</div>
+              <div className="text-sm font-semibold text-primary">{t("Pagamento Padrão")}</div>
               <div className="text-xs text-muted">
-                Valor único (100%) com vencimento na data do show
+                {t("Valor único (100%) com vencimento na data do show")}
               </div>
             </div>
           </button>
@@ -1077,9 +1074,9 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
               <CreditCard size={18} />
             </div>
             <div>
-              <div className="text-sm font-semibold text-primary">Pagamento Detalhado</div>
+              <div className="text-sm font-semibold text-primary">{t("Pagamento Detalhado")}</div>
               <div className="text-xs text-muted">
-                Divida em parcelas com % ou valor e datas próprias
+                {t("Divida em parcelas com % ou valor e datas próprias")}
               </div>
             </div>
           </button>
@@ -1090,31 +1087,31 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm">
             {cacheNumAtual > 0 ? (
               <>
-                <span className="text-muted">Pagamento único de </span>
+                <span className="text-muted">{t("Pagamento único de")} </span>
                 <span className="font-bold text-primary tabular-nums">
                   {formatBRL(cacheNumAtual)}
                 </span>
                 <span className="text-muted">
                   {" "}
-                  (100%) com vencimento{" "}
+                  {t("(100%) com vencimento")}{" "}
                   {dataShow ? (
                     <>
-                      em{" "}
+                      {t("em")}{" "}
                       <span className="text-primary font-semibold">
                         {new Date(dataShow + "T12:00:00").toLocaleDateString("pt-BR")}
                       </span>{" "}
-                      (data do show)
+                      {t("(data do show)")}
                     </>
                   ) : (
                     <span className="text-warning">
-                      na data do show — preencha a data do evento acima
+                      {t("na data do show — preencha a data do evento acima")}
                     </span>
                   )}
                 </span>
               </>
             ) : (
               <span className="text-warning">
-                Preencha o cachê acima para definir o pagamento.
+                {t("Preencha o cachê acima para definir o pagamento.")}
               </span>
             )}
           </div>
@@ -1124,8 +1121,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
         {modoPagamento === "detalhado" && (
           <>
             <p className="text-xs text-muted mb-3">
-              Divida o cachê em parcelas. Cada parcela tem uma data de vencimento
-              para o controle no Financeiro.
+              {t("Divida o cachê em parcelas. Cada parcela tem uma data de vencimento para o controle no Financeiro.")}
             </p>
             <div data-has-error={!!errors.parcelas}>
               <PagamentoSection
@@ -1143,7 +1139,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       </SectionCard>
 
       {/* Observações */}
-      <SectionCard icon={null} title="Observações internas" accent={accent}>
+      <SectionCard icon={null} title={t("Observações internas")} accent={accent}>
         <TextArea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
@@ -1155,7 +1151,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
       <div className="sticky bottom-4 mt-6 flex justify-between items-center gap-2 bg-surface border border-border rounded-lg px-4 py-3 shadow-lg">
         <button onClick={onCancel} className="btn btn-secondary">
           <ArrowLeft size={14} />
-          Cancelar
+          {t("Cancelar")}
         </button>
         <button
           onClick={handleSubmit}
@@ -1164,7 +1160,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
           style={{ backgroundColor: accent, color: "#fff" }}
         >
           <CheckCircle2 size={14} />
-          {salvando ? "Concretizando..." : "Concretizar Venda"}
+          {salvando ? t("Concretizando...") : t("Concretizar Venda")}
         </button>
       </div>
     </div>
@@ -1217,18 +1213,19 @@ function FieldWithAuto({
   showAuto?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <label className="flex flex-col gap-1.5" data-has-error={!!error}>
       <span className="text-xs font-medium text-secondary inline-flex items-center gap-2">
-        {label}
+        {typeof label === "string" ? t(label) : label}
         {required && <span className="text-danger">*</span>}
         {showAuto && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
       </span>
       {children}
       {error ? (
-        <span className="text-xs text-danger">{error}</span>
+        <span className="text-xs text-danger">{t(error)}</span>
       ) : hint ? (
-        <span className="text-xs text-muted">{hint}</span>
+        <span className="text-xs text-muted">{t(hint)}</span>
       ) : null}
     </label>
   );
@@ -1245,10 +1242,11 @@ function SubSection({
   items: ItemQuantidade[];
   onChange: (next: ItemQuantidade[]) => void;
 }) {
+  const t = useT();
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <span className="stat-label">{title}</span>
+        <span className="stat-label">{t(title)}</span>
         {autoBadge && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
       </div>
       <div className="flex flex-col gap-2">
@@ -1278,14 +1276,15 @@ function LogisticaBlock({
   accent: string;
   showAuto?: boolean;
 }) {
+  const t = useT();
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <span className="stat-label">Logística</span>
+        <span className="stat-label">{t("Logística")}</span>
         {showAuto && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
       </div>
       <p className="text-xs text-muted mb-3">
-        Não marque nada se a logística estiver inclusa no cachê.
+        {t("Não marque nada se a logística estiver inclusa no cachê.")}
       </p>
       <div className="flex flex-col gap-2">
         <div
@@ -1304,7 +1303,7 @@ function LogisticaBlock({
             }
             style={{ accentColor: accent }}
           />
-          <span className="text-sm flex-1">Logística Aérea (Ida e Volta)</span>
+          <span className="text-sm flex-1">{t("Logística Aérea (Ida e Volta)")}</span>
           {value.aereaQtd > 0 && (
             <div className="flex items-center gap-2">
               <button
@@ -1342,9 +1341,9 @@ function LogisticaBlock({
             style={{ accentColor: accent }}
           />
           <span className="flex-1">
-            <span className="font-medium">Translado Terrestre</span>
+            <span className="font-medium">{t("Translado Terrestre")}</span>
             <span className="block text-xs text-muted mt-0.5">
-              Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto
+              {t("Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto")}
             </span>
           </span>
         </label>

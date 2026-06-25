@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, X, Plus, ChevronDown, Search, Check, Loader2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import {
   buscarCidades,
   carregarCidadesBR,
@@ -36,6 +37,7 @@ export default function CityAutocomplete({
   onCountryChange,
   error,
 }: Props) {
+  const t = useT();
   const { cidades: cidadesUsuario } = useContatos();
   const [input, setInput] = useState(value ? value.nome : "");
   const [ufManual, setUfManual] = useState(value?.uf ?? "");
@@ -197,7 +199,7 @@ export default function CityAutocomplete({
       {/* Seletor de país */}
       <div ref={countryRef} className="relative">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">País</span>
+          <span className="text-xs font-medium text-secondary">{t("País")}</span>
           <button
             type="button"
             onClick={() => setOpenCountry((v) => !v)}
@@ -231,14 +233,14 @@ export default function CityAutocomplete({
                   autoFocus
                   value={searchCountry}
                   onChange={(e) => setSearchCountry(e.target.value)}
-                  placeholder="Buscar país..."
+                  placeholder={t("Buscar país...")}
                   className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
                 />
               </div>
             </div>
             <div className="overflow-y-auto flex-1">
               {sugestoesPais.length === 0 ? (
-                <div className="p-6 text-center text-sm text-muted">Nenhum país</div>
+                <div className="p-6 text-center text-sm text-muted">{t("Nenhum país")}</div>
               ) : (
                 sugestoesPais.map((p) => {
                   const isActive = p.code === country.code;
@@ -282,7 +284,7 @@ export default function CityAutocomplete({
         <div ref={wrapRef} className="relative">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-secondary">
-              Cidade <span className="text-danger">*</span>
+              {t("Cidade")} <span className="text-danger">*</span>
             </span>
             <div
               className={`
@@ -302,7 +304,7 @@ export default function CityAutocomplete({
                 }}
                 onFocus={() => setOpen(true)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite a cidade..."
+                placeholder={t("Digite a cidade...")}
                 autoComplete="off"
                 className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none min-w-0"
               />
@@ -314,7 +316,7 @@ export default function CityAutocomplete({
                   type="button"
                   onClick={limpar}
                   className="text-muted hover:text-primary transition-colors flex-shrink-0"
-                  aria-label="Limpar"
+                  aria-label={t("Limpar")}
                 >
                   <X size={14} />
                 </button>
@@ -329,10 +331,10 @@ export default function CityAutocomplete({
               {value.uf ? (
                 <>
                   {value.uf} · {value.regiao}
-                  {value.id !== undefined && " · já cadastrada"}
+                  {value.id !== undefined && ` · ${t("já cadastrada")}`}
                 </>
               ) : (
-                <span className="text-warning">UF a definir</span>
+                <span className="text-warning">{t("UF a definir")}</span>
               )}
             </p>
           )}
@@ -366,7 +368,7 @@ export default function CityAutocomplete({
               {carregandoIBGE && sugestoes.length === 0 && input.length >= 2 && (
                 <div className="flex items-center justify-center gap-2 p-3 text-xs text-muted">
                   <Loader2 size={12} className="animate-spin" />
-                  Buscando municípios no IBGE...
+                  {t("Buscando municípios no IBGE...")}
                 </div>
               )}
 
@@ -383,7 +385,7 @@ export default function CityAutocomplete({
                 >
                   <Plus size={13} className="text-muted" />
                   <span>
-                    Usar &quot;<span className="font-semibold text-primary">{input.trim()}</span>&quot; como nova cidade
+                    {t("Usar")} &quot;<span className="font-semibold text-primary">{input.trim()}</span>&quot; {t("como nova cidade")}
                   </span>
                 </button>
               )}
@@ -395,7 +397,7 @@ export default function CityAutocomplete({
         <div className="grid grid-cols-3 gap-2">
           <label className="flex flex-col gap-1.5 col-span-2">
             <span className="text-xs font-medium text-secondary">
-              Cidade <span className="text-danger">*</span>
+              {t("Cidade")} <span className="text-danger">*</span>
             </span>
             <div
               className={`
@@ -411,13 +413,13 @@ export default function CityAutocomplete({
                   setInput(e.target.value);
                   atualizarManual(e.target.value, ufManual);
                 }}
-                placeholder={`Cidade em ${country.name}`}
+                placeholder={t("Cidade em {pais}", { pais: country.name })}
                 className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none min-w-0"
               />
             </div>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Estado/Província</span>
+            <span className="text-xs font-medium text-secondary">{t("Estado/Província")}</span>
             <input
               type="text"
               value={ufManual}
@@ -425,7 +427,7 @@ export default function CityAutocomplete({
                 setUfManual(e.target.value);
                 atualizarManual(input, e.target.value);
               }}
-              placeholder="Opcional"
+              placeholder={t("Opcional")}
               className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong"
             />
           </label>
