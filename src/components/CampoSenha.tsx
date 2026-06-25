@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Lock, Eye, EyeOff, AlertCircle, Check } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import {
   avaliarSenha,
   labelForca,
@@ -89,6 +90,7 @@ export default function CampoSenha({
  * `pontuacao` (0-4). Cor do segmento ativo = `corForca`.
  */
 function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
+  const t = useT();
   const { forca, pontuacao, podeUsar, motivos, comum } = avaliacao;
   const cor = corForca(forca);
 
@@ -115,7 +117,7 @@ function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
           className="text-[0.65rem] font-medium tabular-nums flex-shrink-0"
           style={{ color: cor }}
         >
-          {labelForca(forca)}
+          {t(labelForca(forca))}
         </span>
       </div>
 
@@ -130,14 +132,14 @@ function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
           ) : (
             <AlertCircle size={11} />
           )}
-          {m}
+          {t(m)}
         </span>
       ))}
 
       {/* Senhas comuns: mensagem extra de educação */}
       {comum && (
         <span className="text-[0.65rem] text-muted italic">
-          Senhas como essa são as primeiras testadas em ataques.
+          {t("Senhas como essa são as primeiras testadas em ataques.")}
         </span>
       )}
     </div>

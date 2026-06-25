@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import { mascararCpfCnpj, apenasDigitos } from "@/lib/formatters";
+import { useT } from "@/lib/i18n";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
@@ -32,13 +33,14 @@ const InputCpfCnpj = forwardRef<HTMLInputElement, Props>(function InputCpfCnpj(
   { value, onChange, className = "", placeholder, ...rest },
   ref
 ) {
+  const t = useT();
   return (
     <input
       ref={ref}
       type="text"
       inputMode="numeric"
       autoComplete="off"
-      placeholder={placeholder ?? "000.000.000-00 ou 00.000.000/0000-00"}
+      placeholder={t(placeholder ?? "000.000.000-00 ou 00.000.000/0000-00")}
       value={mascararCpfCnpj(value)}
       onChange={(e) => {
         // Mantém só os dígitos do que o usuário digitou e re-aplica máscara.

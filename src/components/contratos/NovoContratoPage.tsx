@@ -25,6 +25,7 @@ import {
 } from "@/lib/contratos/preencherSecoes";
 import { VARIAVEIS_CONTRATO } from "@/lib/contratos/variaveis";
 import type { Contrato } from "@/lib/mappers/contrato";
+import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
 
@@ -45,6 +46,7 @@ const LONGOS = new Set([
 const OCULTOS = new Set(["numero_contrato"]);
 
 export default function NovoContratoPage() {
+  const t = useT();
   const { modelos } = useModelos();
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
@@ -140,7 +142,7 @@ export default function NovoContratoPage() {
       setValores(valoresFinais);
       setGerado(atualizado);
     } catch (e) {
-      setErro((e as Error).message || "Não foi possível gerar o contrato.");
+      setErro((e as Error).message || t("Não foi possível gerar o contrato."));
     } finally {
       setGerando(false);
     }
@@ -157,7 +159,7 @@ export default function NovoContratoPage() {
         gerado?.numero || "contrato"
       );
     } catch {
-      setErro("Não foi possível gerar o PDF.");
+      setErro(t("Não foi possível gerar o PDF."));
     } finally {
       setBaixando(false);
     }
@@ -184,10 +186,9 @@ export default function NovoContratoPage() {
       {editaveis.length === 0 ? (
         <div className="card flex flex-col items-center text-center gap-3 py-16">
           <FileText size={26} style={{ color: ACCENT }} />
-          <div className="section-title">Nenhum modelo disponível</div>
+          <div className="section-title">{t("Nenhum modelo disponível")}</div>
           <p className="text-sm text-muted max-w-sm">
-            Crie um modelo de contrato primeiro (Contratos → Modelos) para poder
-            gerar contratos.
+            {t("Crie um modelo de contrato primeiro (Contratos → Modelos) para poder gerar contratos.")}
           </p>
         </div>
       ) : (
@@ -196,18 +197,18 @@ export default function NovoContratoPage() {
           <div className="flex flex-col gap-4 min-w-0">
             <div className="card flex flex-col gap-3">
               <div className="stat-label" style={{ color: ACCENT }}>
-                1. Modelo e venda
+                {t("1. Modelo e venda")}
               </div>
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-secondary">
-                  Modelo de contrato
+                  {t("Modelo de contrato")}
                 </span>
                 <select
                   value={modeloId}
                   onChange={(e) => setModeloId(e.target.value)}
                   className="campo-input"
                 >
-                  <option value="">Selecione um modelo…</option>
+                  <option value="">{t("Selecione um modelo…")}</option>
                   {editaveis.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nome}
@@ -217,14 +218,14 @@ export default function NovoContratoPage() {
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-secondary">
-                  Venda (opcional — pré-preenche os dados)
+                  {t("Venda (opcional — pré-preenche os dados)")}
                 </span>
                 <select
                   value={vendaId}
                   onChange={(e) => setVendaId(e.target.value)}
                   className="campo-input"
                 >
-                  <option value="">Sem venda (preencher manual)</option>
+                  <option value="">{t("Sem venda (preencher manual)")}</option>
                   {vendas.map((v) => {
                     const dj = artistas.find((a) => a.id === v.djId);
                     return (
@@ -242,20 +243,19 @@ export default function NovoContratoPage() {
             {modelo && (
               <div className="card flex flex-col gap-4">
                 <div className="stat-label" style={{ color: ACCENT }}>
-                  2. Dados do contrato
+                  {t("2. Dados do contrato")}
                 </div>
                 <p className="text-xs text-muted -mt-2">
-                  Pré-preenchido pela venda. Edite o que precisar; o que ficar
-                  vazio aparece como <code>{"{{token}}"}</code> no contrato.
+                  {t("Pré-preenchido pela venda. Edite o que precisar; o que ficar vazio aparece como")}{" "}<code>{"{{token}}"}</code>{" "}{t("no contrato.")}
                 </p>
                 {grupos.map(([grupo, vars]) => (
                   <div key={grupo} className="flex flex-col gap-2">
                     <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted">
-                      {grupo}
+                      {t(grupo)}
                     </div>
                     {vars.map((v) => (
                       <label key={v.token} className="flex flex-col gap-1">
-                        <span className="text-xs text-secondary">{v.label}</span>
+                        <span className="text-xs text-secondary">{t(v.label)}</span>
                         {LONGOS.has(v.token) ? (
                           <textarea
                             value={valores[v.token] ?? ""}
@@ -284,10 +284,9 @@ export default function NovoContratoPage() {
             {!modelo ? (
               <div className="card flex flex-col items-center text-center gap-3 py-16">
                 <FileSignature size={26} style={{ color: ACCENT }} />
-                <div className="section-title">Selecione um modelo</div>
+                <div className="section-title">{t("Selecione um modelo")}</div>
                 <p className="text-sm text-muted max-w-sm">
-                  Escolha um modelo (e opcionalmente uma venda) para ver o
-                  contrato preenchido aqui.
+                  {t("Escolha um modelo (e opcionalmente uma venda) para ver o contrato preenchido aqui.")}
                 </p>
               </div>
             ) : (
@@ -302,12 +301,11 @@ export default function NovoContratoPage() {
                       }}
                     >
                       <Check size={16} />
-                      Contrato <strong>{gerado.numero}</strong> gerado e salvo no
-                      histórico.
+                      {t("Contrato")} <strong>{gerado.numero}</strong> {t("gerado e salvo no histórico.")}
                     </div>
                   ) : (
                     <div className="flex-1 text-sm text-muted">
-                      Confira o preview e gere o contrato.
+                      {t("Confira o preview e gere o contrato.")}
                     </div>
                   )}
                   <button
@@ -322,7 +320,7 @@ export default function NovoContratoPage() {
                     ) : (
                       <Download size={15} />
                     )}
-                    {baixando ? "Gerando…" : "Baixar PDF"}
+                    {baixando ? t("Gerando…") : t("Baixar PDF")}
                   </button>
                   {gerado ? (
                     <button
@@ -336,7 +334,7 @@ export default function NovoContratoPage() {
                       style={{ backgroundColor: ACCENT, color: "#fff" }}
                     >
                       <Plus size={15} />
-                      Novo
+                      {t("Novo")}
                     </button>
                   ) : (
                     <button
@@ -355,7 +353,7 @@ export default function NovoContratoPage() {
                       ) : (
                         <FileSignature size={15} />
                       )}
-                      {gerando ? "Gerando…" : "Gerar contrato"}
+                      {gerando ? t("Gerando…") : t("Gerar contrato")}
                     </button>
                   )}
                 </div>

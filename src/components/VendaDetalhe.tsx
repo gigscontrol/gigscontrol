@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export default function VendaDetalhe({ vendaId, onBack }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, updateVenda } = useVendas();
   const { shows, updateShow } = useShows();
@@ -41,10 +43,10 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
       <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
         <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
           <ArrowLeft size={14} />
-          Voltar
+          {t("Voltar")}
         </button>
         <div className="card text-center py-12">
-          <div className="section-title">Venda não encontrada</div>
+          <div className="section-title">{t("Venda não encontrada")}</div>
         </div>
       </div>
     );
@@ -60,7 +62,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     if (
       !cancelado &&
       !window.confirm(
-        "Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser)."
+        t("Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).")
       )
     ) {
       return;
@@ -72,13 +74,13 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
       });
       setToastMsg({
         msg: cancelado
-          ? "Show reativado."
-          : "Show cancelado — evento marcado em vermelho no Google.",
+          ? t("Show reativado.")
+          : t("Show cancelado — evento marcado em vermelho no Google."),
         tipo: "sucesso",
       });
     } catch (e) {
       setToastMsg({
-        msg: (e as Error).message ?? "Falha ao atualizar o show.",
+        msg: (e as Error).message ?? t("Falha ao atualizar o show."),
         tipo: "erro",
       });
     } finally {
@@ -95,7 +97,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
       <button onClick={onBack} className="btn-ghost mb-6 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
-        Voltar para Vendas
+        {t("Voltar para Vendas")}
       </button>
 
       <PageHeader
@@ -104,13 +106,13 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
           <span className="inline-flex items-center gap-2 flex-wrap">
             <span className="badge badge-success">
               <CalendarCheck2 size={11} />
-              Concretizada
+              {t("Concretizada")}
             </span>
             {orc && (
               <>
                 <span className="text-muted">·</span>
                 <span className="text-secondary">
-                  Originada do orçamento{" "}
+                  {t("Originada do orçamento")}{" "}
                   <span className="font-mono" style={{ color: accent }}>
                     {orc.numero}
                   </span>
@@ -130,9 +132,9 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
           <div className="flex items-center gap-2">
             <Music size={14} style={{ color: cancelado ? "var(--danger)" : accent }} />
             <span className="text-sm text-secondary">
-              {cancelado ? "Show cancelado" : "Show na agenda"}
+              {cancelado ? t("Show cancelado") : t("Show na agenda")}
             </span>
-            {cancelado && <span className="badge badge-danger">Cancelado</span>}
+            {cancelado && <span className="badge badge-danger">{t("Cancelado")}</span>}
           </div>
           <button
             type="button"
@@ -142,10 +144,10 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
             style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
           >
             {processandoShow
-              ? "Salvando…"
+              ? t("Salvando…")
               : cancelado
-              ? "Reativar show"
-              : "Cancelar show"}
+              ? t("Reativar show")
+              : t("Cancelar show")}
           </button>
         </div>
       )}
@@ -154,23 +156,23 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         {/* Coluna 1 */}
         <div className="flex flex-col gap-4">
           <div className="card">
-            <SectionTitle icon={<User size={14} />} title="Contratante" accent={accent} />
-            <InfoLine label="Nome" value={venda.contratanteNome} />
-            <InfoLine label="E-mail" value={venda.contratanteEmail || "—"} />
+            <SectionTitle icon={<User size={14} />} title={t("Contratante")} accent={accent} />
+            <InfoLine label={t("Nome")} value={venda.contratanteNome} />
+            <InfoLine label={t("E-mail")} value={venda.contratanteEmail || "—"} />
             <InfoLine
-              label="Telefone"
+              label={t("Telefone")}
               value={venda.contratanteTelefone ? `+${venda.contratanteTelefone}` : "—"}
             />
-            <InfoLine label="CPF/CNPJ" value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
-            <InfoLine label="Endereço" value={venda.contratanteEndereco || "—"} />
+            <InfoLine label={t("CPF/CNPJ")} value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
+            <InfoLine label={t("Endereço")} value={venda.contratanteEndereco || "—"} />
           </div>
 
           <div className="card">
-            <SectionTitle icon={<MapPin size={14} />} title="Evento" accent={accent} />
-            <InfoLine label="Nome" value={venda.nomeEvento} bold />
+            <SectionTitle icon={<MapPin size={14} />} title={t("Evento")} accent={accent} />
+            <InfoLine label={t("Nome")} value={venda.nomeEvento} bold />
             {venda.eventoInstagram && (
               <InfoLine
-                label="Instagram"
+                label={t("Instagram")}
                 value={
                   <span className="inline-flex items-center gap-1">
                     <Instagram size={11} />
@@ -179,16 +181,16 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                 }
               />
             )}
-            <InfoLine label="Local" value={venda.nomeLocal} />
+            <InfoLine label={t("Local")} value={venda.nomeLocal} />
             {venda.capacidadePublico && (
               <InfoLine
-                label="Capacidade"
-                value={`${venda.capacidadePublico.toLocaleString("pt-BR")} pessoas`}
+                label={t("Capacidade")}
+                value={`${venda.capacidadePublico.toLocaleString("pt-BR")} ${t("pessoas")}`}
               />
             )}
-            <InfoLine label="Endereço" value={venda.enderecoLocal} />
+            <InfoLine label={t("Endereço")} value={venda.enderecoLocal} />
             <InfoLine
-              label="Data"
+              label={t("Data")}
               value={new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
                 weekday: "long",
                 day: "2-digit",
@@ -198,7 +200,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               bold
             />
             <InfoLine
-              label="Horário"
+              label={t("Horário")}
               value={
                 venda.horarioFim
                   ? `${venda.horario} — ${venda.horarioFim}`
@@ -210,7 +212,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
 
           {/* Pagamento / Parcelas */}
           <div className="card">
-            <SectionTitle icon={<CreditCard size={14} />} title="Pagamento" accent={accent} />
+            <SectionTitle icon={<CreditCard size={14} />} title={t("Pagamento")} accent={accent} />
             <div className="flex flex-col gap-2">
               {venda.parcelas.map((p, idx) => {
                 const st = statusEfetivoParcela(p);
@@ -222,18 +224,18 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-primary">
-                        Parcela {idx + 1}/{venda.parcelas.length}
+                        {t("Parcela")} {idx + 1}/{venda.parcelas.length}
                         <span className="text-muted text-xs ml-1.5">
                           ({p.percentual.toFixed(0)}%)
                         </span>
                       </div>
                       <div className="text-xs text-muted">
-                        Vence{" "}
+                        {t("Vence")}{" "}
                         {new Date(p.dataVencimento + "T12:00:00").toLocaleDateString("pt-BR")}
                         {p.dataPagamento && (
                           <span className="text-success">
                             {" "}
-                            · pago em{" "}
+                            · {t("pago em")}{" "}
                             {new Date(
                               p.dataPagamento + "T12:00:00"
                             ).toLocaleDateString("pt-BR")}
@@ -245,20 +247,20 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                       <span className="text-sm font-semibold tabular-nums text-primary">
                         {formatBRL(p.valor)}
                       </span>
-                      <span className={`badge ${label.badge}`}>{label.label}</span>
+                      <span className={`badge ${label.badge}`}>{t(label.label)}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
             <p className="text-xs text-muted mt-3">
-              Gerencie os pagamentos em Financeiro → Controle de Pagamentos.
+              {t("Gerencie os pagamentos em Financeiro → Controle de Pagamentos.")}
             </p>
           </div>
 
           {venda.observacoes && (
             <div className="card">
-              <div className="section-title mb-2">Observações internas</div>
+              <div className="section-title mb-2">{t("Observações internas")}</div>
               <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
             </div>
           )}
@@ -266,7 +268,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
           {/* Informações extras — herdadas do orçamento + editáveis */}
           <div className="card">
             <div className="flex items-center justify-between mb-2">
-              <div className="section-title">Informações extras</div>
+              <div className="section-title">{t("Informações extras")}</div>
               {!editandoInfoExtra && (
                 <button
                   type="button"
@@ -277,7 +279,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                   className="btn-ghost text-xs inline-flex items-center gap-1"
                 >
                   <Pencil size={12} />
-                  Editar
+                  {t("Editar")}
                 </button>
               )}
             </div>
@@ -288,7 +290,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                   onChange={(e) => setInfoExtraDraft(e.target.value)}
                   rows={4}
                   maxLength={1000}
-                  placeholder="Algo extra que apareceu no orçamento ou queira anotar."
+                  placeholder={t("Algo extra que apareceu no orçamento ou queira anotar.")}
                   className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
                   autoFocus
                 />
@@ -303,7 +305,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                     className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
                   >
                     <X size={13} />
-                    Cancelar
+                    {t("Cancelar")}
                   </button>
                   <button
                     type="button"
@@ -314,7 +316,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                           infoExtra: infoExtraDraft.trim() || undefined,
                         });
                         setEditandoInfoExtra(false);
-                        setToastMsg({ msg: "Informações extras atualizadas.", tipo: "sucesso" });
+                        setToastMsg({ msg: t("Informações extras atualizadas."), tipo: "sucesso" });
                       } catch (e) {
                         setToastMsg({ msg: (e as Error).message, tipo: "erro" });
                       } finally {
@@ -325,7 +327,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                     className="btn btn-primary text-sm inline-flex items-center gap-1.5"
                   >
                     <Check size={13} />
-                    {salvandoInfoExtra ? "Salvando..." : "Salvar"}
+                    {salvandoInfoExtra ? t("Salvando...") : t("Salvar")}
                   </button>
                 </div>
               </div>
@@ -333,7 +335,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               <p className="text-sm text-secondary whitespace-pre-wrap">{venda.infoExtra}</p>
             ) : (
               <p className="text-sm text-muted italic">
-                Nenhuma informação extra. Clique em &quot;Editar&quot; pra adicionar.
+                {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
               </p>
             )}
           </div>
@@ -342,10 +344,10 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         {/* Coluna 2 */}
         <div className="flex flex-col gap-4">
           <div className="card">
-            <SectionTitle icon={<Music size={14} />} title="Show" accent={accent} />
-            <InfoLine label="Artista da agência" value={dj?.name ?? "—"} bold />
+            <SectionTitle icon={<Music size={14} />} title={t("Show")} accent={accent} />
+            <InfoLine label={t("Artista da agência")} value={dj?.name ?? "—"} bold />
             <InfoLine
-              label="Cachê"
+              label={t("Cachê")}
               value={
                 <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
                   {formatBRL(venda.cache)}
@@ -353,12 +355,12 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               }
             />
             <InfoLine
-              label="Duração"
+              label={t("Duração")}
               value={formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
             />
             {venda.lineUp && venda.lineUp.length > 0 && (
               <InfoLine
-                label="Line-Up"
+                label={t("Line-Up")}
                 value={
                   <div className="flex flex-wrap gap-1">
                     {venda.lineUp.map((nome, idx) => (
@@ -376,21 +378,21 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
           </div>
 
           <div className="card">
-            <div className="section-title mb-3">Adicionais</div>
-            <ItemsList title="Camarim / Consumação" items={itensCamarim} />
-            <ItemsList title="Efeitos" items={itensEfeitos} />
-            <ItemsList title="Hotel" items={itensHotel} />
+            <div className="section-title mb-3">{t("Adicionais")}</div>
+            <ItemsList title={t("Camarim / Consumação")} items={itensCamarim} />
+            <ItemsList title={t("Efeitos")} items={itensEfeitos} />
+            <ItemsList title={t("Hotel")} items={itensHotel} />
             <div className="mt-3">
-              <div className="stat-label mb-1">Logística</div>
+              <div className="stat-label mb-1">{t("Logística")}</div>
               <div className="text-sm text-primary space-y-1">
                 {venda.logistica.aereaQtd === 0 && !venda.logistica.transladoTerrestre && (
-                  <div>Já inclusa do cachê</div>
+                  <div>{t("Já inclusa do cachê")}</div>
                 )}
                 {venda.logistica.aereaQtd > 0 && (
-                  <div>{venda.logistica.aereaQtd}× Logística Aérea (Ida e Volta)</div>
+                  <div>{t("{n}× Logística Aérea (Ida e Volta)", { n: venda.logistica.aereaQtd })}</div>
                 )}
                 {venda.logistica.transladoTerrestre && (
-                  <div className="text-secondary">{TEXTO_TRANSLADO}</div>
+                  <div className="text-secondary">{t(TEXTO_TRANSLADO)}</div>
                 )}
               </div>
             </div>
@@ -405,7 +407,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
           style={{ color: "var(--danger)" }}
         >
           <Trash2 size={14} />
-          Remover venda
+          {t("Remover venda")}
         </button>
       </div>
 
@@ -413,12 +415,12 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
       <Modal
         isOpen={confirmaRemover}
         onClose={() => setConfirmaRemover(false)}
-        title="Remover venda"
-        subtitle="Esta ação não pode ser desfeita."
+        title={t("Remover venda")}
+        subtitle={t("Esta ação não pode ser desfeita.")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            A venda <strong className="text-primary">{venda.numero}</strong> e suas parcelas serão apagadas. O <strong className="text-primary">show vinculado</strong> também será removido da agenda.
+            {t("A venda")} <strong className="text-primary">{venda.numero}</strong> {t("e suas parcelas serão apagadas. O")} <strong className="text-primary">{t("show vinculado")}</strong> {t("também será removido da agenda.")}
           </p>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
@@ -426,7 +428,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               className="btn btn-secondary"
               disabled={removendo}
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={async () => {
@@ -445,7 +447,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               style={{ backgroundColor: "var(--danger)", color: "#fff" }}
               disabled={removendo}
             >
-              {removendo ? "Removendo..." : "Remover"}
+              {removendo ? t("Removendo...") : t("Remover")}
             </button>
           </div>
         </div>

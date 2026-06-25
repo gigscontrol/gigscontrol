@@ -22,6 +22,7 @@ import {
   type Parcela,
 } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   selectedDJs: string[];
@@ -41,6 +42,7 @@ type LinhaParcela = {
 };
 
 export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.financeiro.color;
   const { vendas } = useVendas();
   const artistas = useArtistas();
@@ -116,7 +118,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Financeiro"
-        subtitle="Recebimentos, pendências e faturamento"
+        subtitle={t("Recebimentos, pendências e faturamento")}
         accentColor={accent}
         actions={
           <button
@@ -125,7 +127,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Wallet size={14} />
-            Controle de Pagamentos
+            {t("Controle de Pagamentos")}
           </button>
         }
       />
@@ -134,38 +136,38 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
           <StatCard
-            title="Total em Vendas"
+            title={t("Total em Vendas")}
             value={formatBRL(totais.total)}
             icon={<DollarSign size={16} />}
             accentColor={accent}
-            subtitle="Soma de todas as parcelas"
+            subtitle={t("Soma de todas as parcelas")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
           <StatCard
-            title="Recebido"
+            title={t("Recebido")}
             value={formatBRL(totais.recebido)}
             icon={<CheckCircle2 size={16} />}
             accentColor="var(--success)"
-            subtitle={`${pctRecebido}% do total`}
+            subtitle={t("{pct}% do total", { pct: pctRecebido })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
           <StatCard
-            title="A Receber"
+            title={t("A Receber")}
             value={formatBRL(totais.aReceber)}
             icon={<CalendarClock size={16} />}
             accentColor="var(--warning)"
-            subtitle="Parcelas pendentes"
+            subtitle={t("Parcelas pendentes")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
           <StatCard
-            title="Atrasado"
+            title={t("Atrasado")}
             value={formatBRL(totais.atrasado)}
             icon={<AlertTriangle size={16} />}
             accentColor="var(--danger)"
-            subtitle="Vencidas e não pagas"
+            subtitle={t("Vencidas e não pagas")}
           />
         </ClickableStat>
       </div>
@@ -173,7 +175,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
       {/* Barra de progresso de recebimento */}
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="section-title">Progresso de recebimento</div>
+          <div className="section-title">{t("Progresso de recebimento")}</div>
           <span className="text-sm font-bold tabular-nums" style={{ color: accent }}>
             {pctRecebido}%
           </span>
@@ -185,8 +187,8 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-muted">
-          <span>Recebido {formatBRL(totais.recebido)}</span>
-          <span>Falta {formatBRL(totais.aReceber + totais.atrasado)}</span>
+          <span>{t("Recebido")} {formatBRL(totais.recebido)}</span>
+          <span>{t("Falta")} {formatBRL(totais.aReceber + totais.atrasado)}</span>
         </div>
       </div>
 
@@ -194,18 +196,18 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
         {/* Próximos vencimentos */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">Próximos vencimentos</div>
+            <div className="section-title">{t("Próximos vencimentos")}</div>
             <button
               onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todos
+              {t("Ver todos")}
               <ChevronRight size={12} />
             </button>
           </div>
           {proximosVencimentos.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhuma parcela pendente. Tudo em dia!
+              {t("Nenhuma parcela pendente. Tudo em dia!")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -226,11 +228,11 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
                       <div className="text-sm font-medium text-primary truncate">
                         {l.contratante}
                         <span className="text-muted text-xs ml-1.5">
-                          {l.vendaNumero} · parc {l.indice}/{l.total}
+                          {l.vendaNumero} · {t("parc")} {l.indice}/{l.total}
                         </span>
                       </div>
                       <div className="text-xs text-muted">
-                        Vence{" "}
+                        {t("Vence")}{" "}
                         {new Date(
                           l.parcela.dataVencimento + "T12:00:00"
                         ).toLocaleDateString("pt-BR")}
@@ -239,7 +241,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
                     <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
                       {formatBRL(l.parcela.valor)}
                     </span>
-                    <span className={`badge ${label.badge}`}>{label.label}</span>
+                    <span className={`badge ${label.badge}`}>{t(label.label)}</span>
                   </button>
                 );
               })}
@@ -251,11 +253,11 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} style={{ color: accent }} />
-            <div className="section-title">Faturamento por DJ</div>
+            <div className="section-title">{t("Faturamento por DJ")}</div>
           </div>
           {porDJ.every((p) => p.valor === 0) ? (
             <div className="text-sm text-muted text-center py-8">
-              Sem vendas registradas.
+              {t("Sem vendas registradas.")}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -298,8 +300,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
             style={{ color: "var(--danger)" }}
           />
           <div className="flex-1 text-sm text-secondary">
-            Você tem <strong>{formatBRL(totais.atrasado)}</strong> em parcelas
-            atrasadas. Toque para resolver no Controle de Pagamentos.
+            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong> {t("em parcelas atrasadas. Toque para resolver no Controle de Pagamentos.")}
           </div>
           <ChevronRight size={16} className="text-muted flex-shrink-0" />
         </button>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 type AssinaturaCanvasProps = {
   /** dataUrl PNG quando há traço; null quando limpo/vazio */
@@ -17,6 +18,7 @@ export default function AssinaturaCanvas({
   onChange,
   disabled = false,
 }: AssinaturaCanvasProps) {
+  const t = useT();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -182,7 +184,7 @@ export default function AssinaturaCanvas({
         />
         {!temTraco && (
           <span className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-sm italic text-zinc-400 select-none">
-            assine aqui
+            {t("assine aqui")}
           </span>
         )}
       </div>
@@ -195,7 +197,7 @@ export default function AssinaturaCanvas({
           className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-foreground/80 transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Eraser className="h-4 w-4" />
-          Limpar
+          {t("Limpar")}
         </button>
       </div>
     </div>

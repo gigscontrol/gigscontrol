@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
   ArrowRight,
@@ -105,6 +106,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 }
 
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, updateContratante, cidades } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
@@ -169,16 +171,16 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
   function validateStep1(): boolean {
     const errs: Record<string, string> = {};
-    if (!tipoEvento) errs.tipoEvento = "Selecione o tipo de evento";
+    if (!tipoEvento) errs.tipoEvento = t("Selecione o tipo de evento");
     if (contratanteMode === "existente") {
-      if (!contratanteId) errs.contratante = "Selecione um contratante";
+      if (!contratanteId) errs.contratante = t("Selecione um contratante");
     } else {
-      if (!novoNome.trim()) errs.contratanteNome = "Nome obrigatório";
+      if (!novoNome.trim()) errs.contratanteNome = t("Nome obrigatório");
       const dig = contarDigitos(telDigits);
-      if (dig === 0) errs.contratanteTel = "Telefone obrigatório";
-      else if (dig < country.minDigits) errs.contratanteTel = "Faltam dígitos";
+      if (dig === 0) errs.contratanteTel = t("Telefone obrigatório");
+      else if (dig < country.minDigits) errs.contratanteTel = t("Faltam dígitos");
     }
-    if (!cidadeIbge) errs.cidade = "Selecione a cidade do evento";
+    if (!cidadeIbge) errs.cidade = t("Selecione a cidade do evento");
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -186,10 +188,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   function validateStep2(): boolean {
     const errs: Record<string, string> = {};
     blocos.forEach((b, i) => {
-      if (!b.djId) errs[`dj-${i}`] = "Selecione um DJ";
+      if (!b.djId) errs[`dj-${i}`] = t("Selecione um DJ");
       const valor = parseFloat(b.valorCache.replace(",", "."));
-      if (!b.valorCache || isNaN(valor) || valor <= 0) errs[`valor-${i}`] = "Valor obrigatório";
-      if (b.duracaoHoras < 1 && b.duracaoMinutos < 15) errs[`dur-${i}`] = "Duração mínima 15 min";
+      if (!b.valorCache || isNaN(valor) || valor <= 0) errs[`valor-${i}`] = t("Valor obrigatório");
+      if (b.duracaoHoras < 1 && b.duracaoMinutos < 15) errs[`dur-${i}`] = t("Duração mínima 15 min");
     });
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -411,7 +413,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         setCopiadoIdx(idx);
         setTimeout(() => setCopiadoIdx(null), 2000);
       } catch {
-        alert("Não foi possível copiar.");
+        alert(t("Não foi possível copiar."));
       }
       document.body.removeChild(ta);
     }
@@ -450,7 +452,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
             <div className="card mb-2">
               <div className="flex items-center justify-between mb-3">
-                <div className="section-title text-sm">Mensagem</div>
+                <div className="section-title text-sm">{t("Mensagem")}</div>
                 <button
                   onClick={() => handleCopiar(idx)}
                   className="btn btn-secondary text-xs"
@@ -463,12 +465,12 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                   {copiadoIdx === idx ? (
                     <>
                       <Check size={12} />
-                      Copiado!
+                      {t("Copiado!")}
                     </>
                   ) : (
                     <>
                       <Copy size={12} />
-                      Copiar
+                      {t("Copiar")}
                     </>
                   )}
                 </button>
@@ -487,7 +489,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                 style={{ backgroundColor: "#25D366", color: "#fff" }}
               >
                 <MessageCircle size={14} />
-                Enviar pelo WhatsApp
+                {t("Enviar pelo WhatsApp")}
               </a>
             </div>
           </div>
@@ -506,7 +508,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             </div>
             <div className="min-w-0">
               <div className="stat-label">
-                {salvos.length > 1 ? "Códigos criados" : "Código criado"}
+                {salvos.length > 1 ? t("Códigos criados") : t("Código criado")}
               </div>
               <div
                 className="font-mono font-bold tracking-wide tabular-nums text-base"
@@ -517,13 +519,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             </div>
           </div>
           <button onClick={onDone} className="btn btn-primary">
-            Concluir
+            {t("Concluir")}
           </button>
         </div>
 
         {salvos[0]?.telefoneE164 && (
           <div className="mt-3 text-xs text-muted">
-            Destino: <strong>+{salvos[0].telefoneE164}</strong>
+            {t("Destino:")}{" "}<strong>+{salvos[0].telefoneE164}</strong>
           </div>
         )}
       </div>
@@ -541,15 +543,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         accentColor={accent}
         actions={
           <button onClick={onCancel} className="btn btn-ghost">
-            Cancelar
+            {t("Cancelar")}
           </button>
         }
       />
 
       <Stepper
         steps={[
-          { num: 1, label: "Contato" },
-          { num: 2, label: "Orçamento" },
+          { num: 1, label: t("Contato") },
+          { num: 2, label: t("Orçamento") },
         ]}
         current={step}
         accent={accent}
@@ -560,7 +562,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         <div className="flex flex-col gap-4">
           {/* Modo do orçamento: simples (padrão) x detalhado */}
           <div className="card">
-            <div className="section-title mb-3">Tipo de orçamento</div>
+            <div className="section-title mb-3">{t("Tipo de orçamento")}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 {
@@ -598,8 +600,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       <Icon size={18} />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-primary">{label}</div>
-                      <div className="text-xs text-muted">{desc}</div>
+                      <div className="text-sm font-semibold text-primary">{t(label)}</div>
+                      <div className="text-xs text-muted">{t(desc)}</div>
                     </div>
                   </button>
                 );
@@ -609,7 +611,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
           <div className="card">
             <div className="section-title mb-3">
-              Tipo de evento <span className="text-danger">*</span>
+              {t("Tipo de evento")} <span className="text-danger">*</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {TIPOS_EVENTO.map(({ value, label, icon: Icon, desc }) => {
@@ -635,8 +637,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       <Icon size={18} />
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-primary">{label}</div>
-                      <div className="text-xs text-muted">{desc}</div>
+                      <div className="text-sm font-semibold text-primary">{t(label)}</div>
+                      <div className="text-xs text-muted">{t(desc)}</div>
                     </div>
                   </button>
                 );
@@ -647,7 +649,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
           <div className="card">
             <ExistenteOuNovo
-              label="Contratante"
+              label={t("Contratante")}
               required
               options={contratantes.map((c) => {
                 const cid = cidades.find(
@@ -661,7 +663,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               selectedId={contratanteId}
               onSelectExisting={(id) => setContratanteId(id)}
               mode={contratanteMode}
-              newLabel="Novo contratante"
+              newLabel={t("Novo contratante")}
               onSwitchToNew={() => setContratanteMode("novo")}
               onPesquisaAvancada={() => setBuscaAberta(true)}
               newFormChildren={(() => {
@@ -685,10 +687,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                           style={{ color: accent }}
                         />
                         <span className="flex-1 text-secondary">
-                          Vinculado ao contato{" "}
-                          <strong className="text-primary">{vinc.nome}</strong> — sem
-                          criar duplicado. Corrija o nome abaixo se precisar (será
-                          atualizado no contato).
+                          {t("Vinculado ao contato")}{" "}
+                          <strong className="text-primary">{vinc.nome}</strong> {t("— sem criar duplicado. Corrija o nome abaixo se precisar (será atualizado no contato).")}
                         </span>
                         <button
                           type="button"
@@ -699,7 +699,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                           }}
                           className="btn-ghost rounded px-1.5 py-0.5 text-xs flex-shrink-0"
                         >
-                          Desvincular
+                          {t("Desvincular")}
                         </button>
                       </div>
                     )}
@@ -742,9 +742,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                             style={{ color: "var(--warning)" }}
                           />
                           <span>
-                            Esse número já está cadastrado como{" "}
-                            <strong className="text-primary">{dup.nome}</strong>. Quer
-                            usar esse contato em vez de criar outro?
+                            {t("Esse número já está cadastrado como")}{" "}
+                            <strong className="text-primary">{dup.nome}</strong>. {t("Quer usar esse contato em vez de criar outro?")}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2 mt-2.5">
@@ -753,14 +752,14 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                             onClick={() => usarContratanteExistente(dup)}
                             className="btn btn-secondary text-xs py-1.5"
                           >
-                            <Check size={13} /> Usar {dup.nome}
+                            <Check size={13} /> {t("Usar {nome}", { nome: dup.nome })}
                           </button>
                           <button
                             type="button"
                             onClick={() => usarEVincular(dup)}
                             className="btn-ghost text-xs py-1.5 inline-flex items-center gap-1.5"
                           >
-                            <Pencil size={13} /> Usar e corrigir o nome
+                            <Pencil size={13} /> {t("Usar e corrigir o nome")}
                           </button>
                         </div>
                       </div>
@@ -772,7 +771,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                         onClick={() => setContratanteMode("existente")}
                         className="btn btn-secondary w-full justify-center text-sm"
                       >
-                        <Users size={15} /> Usar um contratante já cadastrado
+                        <Users size={15} /> {t("Usar um contratante já cadastrado")}
                       </button>
                     )}
                   </>
@@ -801,7 +800,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           {modoOrcamento === "simples" && (
             <div className="card">
               <div className="section-title mb-3">
-                Cidade do evento <span className="text-danger">*</span>
+                {t("Cidade do evento")} <span className="text-danger">*</span>
               </div>
               <CidadeIBGEAutocomplete
                 value={cidadeIbge}
@@ -809,7 +808,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                   setCidadeIbge(c);
                   if (c) setErrors((p) => ({ ...p, cidade: "" }));
                 }}
-                placeholder="Ex: São Paulo, Belo Horizonte..."
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
               {errors.cidade && (
                 <p className="text-xs text-danger mt-1">{errors.cidade}</p>
@@ -821,10 +820,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               (obrigatória) no topo + campos opcionais que não vão pro WhatsApp. */}
           {modoOrcamento === "detalhado" && (
             <div className="card">
-              <div className="section-title mb-1">Informações do Evento</div>
+              <div className="section-title mb-1">{t("Informações do Evento")}</div>
               <p className="text-xs text-muted mb-4">
-                A cidade é obrigatória. Os demais campos são opcionais e não
-                aparecem no WhatsApp — ficam salvos pra pré-preencher a venda.
+                {t("A cidade é obrigatória. Os demais campos são opcionais e não aparecem no WhatsApp — ficam salvos pra pré-preencher a venda.")}
               </p>
 
               <div className="mb-3">
@@ -835,7 +833,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       setCidadeIbge(c);
                       if (c) setErrors((p) => ({ ...p, cidade: "" }));
                     }}
-                    placeholder="Ex: São Paulo, Belo Horizonte..."
+                    placeholder={t("Ex: São Paulo, Belo Horizonte...")}
                   />
                 </Field>
               </div>
@@ -886,7 +884,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                   </Field>
                   <div className="flex flex-col gap-1.5">
                     <span className="text-xs font-medium text-secondary">
-                      Data da apresentação
+                      {t("Data da apresentação")}
                     </span>
                     <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
                       {[
@@ -912,18 +910,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                                 : { color: "var(--text-muted)" }
                             }
                           >
-                            {opt.label}
+                            {t(opt.label)}
                           </button>
                         );
                       })}
                     </div>
                     <span className="text-xs text-muted">
                       {evData
-                        ? `Apresentação em ${formatarDataOffset(
-                            evData,
-                            evTerminoDiaSeguinte ? 1 : 0
-                          )}.`
-                        : "Dia seguinte = vira a madrugada (depois da meia-noite)."}
+                        ? t("Apresentação em {data}.", { data: formatarDataOffset(evData, evTerminoDiaSeguinte ? 1 : 0) })
+                        : t("Dia seguinte = vira a madrugada (depois da meia-noite).")}
                     </span>
                   </div>
                   <Field label="Início da apresentação">
@@ -967,9 +962,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               style={{ color: accent }}
             >
               <Plus size={16} />
-              Adicionar outro DJ ao orçamento
+              {t("Adicionar outro DJ ao orçamento")}
               <span className="text-xs text-muted font-normal">
-                · gera um orçamento separado
+                {t("· gera um orçamento separado")}
               </span>
             </button>
           )}
@@ -978,8 +973,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           <Modal
             isOpen={modalAddDj}
             onClose={() => setModalAddDj(false)}
-            title="Adicionar DJ ao orçamento"
-            subtitle="Cada DJ gera um orçamento separado (ORC-XXXX)"
+            title={t("Adicionar DJ ao orçamento")}
+            subtitle={t("Cada DJ gera um orçamento separado (ORC-XXXX)")}
             maxWidth={440}
           >
             <div className="flex flex-col gap-2">
@@ -1015,12 +1010,12 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       <div className="flex justify-between items-center mt-6 gap-2">
         <button onClick={step === 1 ? onCancel : handleBack} className="btn btn-secondary">
           <ArrowLeft size={14} />
-          {step === 1 ? "Cancelar" : "Voltar"}
+          {step === 1 ? t("Cancelar") : t("Voltar")}
         </button>
 
         {step === 1 ? (
           <button onClick={handleNext} className="btn btn-primary">
-            Próximo
+            {t("Próximo")}
             <ArrowRight size={14} />
           </button>
         ) : (
@@ -1030,7 +1025,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Save size={14} />
-            Salvar {blocos.length > 1 ? `${blocos.length} orçamentos` : "orçamento"}
+            {blocos.length > 1
+              ? t("Salvar {n} orçamentos", { n: blocos.length })
+              : t("Salvar orçamento")}
           </button>
         )}
       </div>
@@ -1065,6 +1062,7 @@ function BlocoOrcamentoDj({
   nomeCidade?: string;
   tipoEvento: TipoEvento | null;
 }) {
+  const t = useT();
   const dj = artistas.find((d) => d.id === bloco.djId);
   const valor = parseFloat(bloco.valorCache.replace(",", "."));
 
@@ -1091,7 +1089,7 @@ function BlocoOrcamentoDj({
               {dj?.name ?? "—"}
             </div>
             <div className="text-[0.7rem] text-muted">
-              Orçamento {indice + 1} de {totalBlocos}
+              {t("Orçamento {n} de {m}", { n: indice + 1, m: totalBlocos })}
             </div>
           </div>
         </div>
@@ -1104,7 +1102,7 @@ function BlocoOrcamentoDj({
             style={{ color: "var(--danger)" }}
           >
             <Trash2 size={13} />
-            Remover
+            {t("Remover")}
           </button>
         )}
       </div>
@@ -1164,13 +1162,13 @@ function BlocoOrcamentoDj({
 
         {bloco.valorCache && !isNaN(valor) && (
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm">
-            <span className="text-muted">Cachê:</span>{" "}
+            <span className="text-muted">{t("Cachê:")}</span>{" "}
             <span className="font-bold text-primary tabular-nums">{formatBRL(valor)}</span>{" "}
             <span className="text-muted">
-              por {formatarDuracao(bloco.duracaoHoras, bloco.duracaoMinutos)}
+              {t("por")} {formatarDuracao(bloco.duracaoHoras, bloco.duracaoMinutos)}
               {nomeCidade && (
                 <>
-                  {" em "}
+                  {" "}{t("em")}{" "}
                   <span className="text-primary font-semibold">{nomeCidade}</span>
                   {ufCidade && `, ${ufCidade}`}
                 </>
@@ -1178,22 +1176,22 @@ function BlocoOrcamentoDj({
               {tipoEvento && (
                 <>
                   {" · "}
-                  <span style={{ color: accent }}>{LABELS_TIPO_EVENTO[tipoEvento]}</span>
+                  <span style={{ color: accent }}>{t(LABELS_TIPO_EVENTO[tipoEvento])}</span>
                 </>
               )}
             </span>
           </div>
         )}
 
-        <SectionItens title="Camarim / Consumação" items={bloco.camarim} onChange={(camarim) => onChange({ camarim })} />
-        <SectionItens title="Efeitos" items={bloco.efeitos} onChange={(efeitos) => onChange({ efeitos })} />
-        <SectionItens title="Hotel" items={bloco.hotel} onChange={(hotel) => onChange({ hotel })} />
+        <SectionItens title={t("Camarim / Consumação")} items={bloco.camarim} onChange={(camarim) => onChange({ camarim })} />
+        <SectionItens title={t("Efeitos")} items={bloco.efeitos} onChange={(efeitos) => onChange({ efeitos })} />
+        <SectionItens title={t("Hotel")} items={bloco.hotel} onChange={(hotel) => onChange({ hotel })} />
 
         {/* Logística - multi-seleção */}
         <div>
-          <div className="section-title mb-2">Logística</div>
+          <div className="section-title mb-2">{t("Logística")}</div>
           <p className="text-xs text-muted mb-3">
-            Não marque nenhuma se a logística estiver inclusa no cachê.
+            {t("Não marque nenhuma se a logística estiver inclusa no cachê.")}
           </p>
           <div className="flex flex-col gap-2">
             {/* Aérea com quantidade */}
@@ -1217,7 +1215,7 @@ function BlocoOrcamentoDj({
                 }
                 style={{ accentColor: accent }}
               />
-              <span className="text-sm flex-1">Logística Aérea (Ida e Volta)</span>
+              <span className="text-sm flex-1">{t("Logística Aérea (Ida e Volta)")}</span>
               {bloco.logistica.aereaQtd > 0 && (
                 <div className="flex items-center gap-2">
                   <button
@@ -1277,9 +1275,9 @@ function BlocoOrcamentoDj({
                 style={{ accentColor: accent }}
               />
               <span className="flex-1">
-                <span className="font-medium">Translado Terrestre</span>
+                <span className="font-medium">{t("Translado Terrestre")}</span>
                 <span className="block text-xs text-muted mt-0.5">
-                  Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto
+                  {t("Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto")}
                 </span>
               </span>
             </label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
@@ -90,6 +91,7 @@ const InputHora = forwardRef<HTMLInputElement, Props>(function InputHora(
   },
   ref
 ) {
+  const t = useT();
   const [displayed, setDisplayed] = useState(value);
   const [periodo, setPeriodo] = useState<Periodo>("");
 
@@ -163,8 +165,8 @@ const InputHora = forwardRef<HTMLInputElement, Props>(function InputHora(
               onClick={() => trocarPeriodo(ativo ? "" : p)}
               title={
                 ativo
-                  ? `${p} marcado — clique pra voltar a 24h`
-                  : `Marcar ${p} (12h)`
+                  ? t("{p} marcado — clique pra voltar a 24h", { p })
+                  : t("Marcar {p} (12h)", { p })
               }
               className={`flex items-center px-2.5 text-xs font-semibold transition-colors ${
                 i === 1 ? "border-l border-border" : ""

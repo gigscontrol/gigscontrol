@@ -24,6 +24,7 @@ import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   activeTab: ActiveTab;
@@ -141,6 +142,7 @@ export default function Sidebar({
   const { aparencia } = useWorkspace();
   const { sessao } = useAuth();
   const DJS = useArtistas();
+  const t = useT();
 
   // Plano Individual: só tem 1 artista, então o toggle de
   // mostrar/esconder não faz sentido — o usuário SEMPRE quer ver as
@@ -198,7 +200,7 @@ export default function Sidebar({
         <button
           onClick={onCloseMobile}
           className="lg:hidden btn-ghost p-1.5 rounded"
-          aria-label="Fechar menu"
+          aria-label={t("Fechar menu")}
         >
           <X size={18} />
         </button>
@@ -207,7 +209,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-6">
         {/* Módulos com submenu inline (accordion) */}
         <div>
-          <div className="px-2 mb-2 stat-label">Módulos</div>
+          <div className="px-2 mb-2 stat-label">{t("Módulos")}</div>
           <div className="flex flex-col gap-1">
             {MODULES.map((mod) => {
               // Com as Configurações abertas, nenhum módulo fica ativo
@@ -238,7 +240,7 @@ export default function Sidebar({
                     }
                   >
                     <Icon size={16} style={{ color: isActive ? color : undefined }} />
-                    <span>{mod.label}</span>
+                    <span>{t(mod.label)}</span>
                     {isActive && (
                       <span
                         className="ml-auto h-1.5 w-1.5 rounded-full"
@@ -277,7 +279,7 @@ export default function Sidebar({
                             }
                           >
                             <SubIcon size={14} />
-                            <span>{sp.label}</span>
+                            <span>{t(sp.label)}</span>
                           </button>
                         );
                       })}
@@ -304,7 +306,7 @@ export default function Sidebar({
                   onClick={toggleAll}
                   className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
                 >
-                  {allSelected ? "Limpar" : "Todos"}
+                  {allSelected ? t("Limpar") : t("Todos")}
                 </button>
               )}
             </div>
@@ -333,7 +335,7 @@ export default function Sidebar({
                     title={
                       planoIndividual
                         ? dj.name
-                        : `${isActiveDj ? "Esconder" : "Mostrar"} ${dj.name}`
+                        : `${isActiveDj ? t("Esconder") : t("Mostrar")} ${dj.name}`
                     }
                   >
                     <span
@@ -361,8 +363,8 @@ export default function Sidebar({
       <div className="border-t border-border p-4 flex-shrink-0">
         <div className="text-[0.7rem] text-muted">
           {planoIndividual
-            ? `${DJS.length} artista${DJS.length === 1 ? "" : "s"}`
-            : `${selectedDJs.length} de ${DJS.length} DJs visíveis`}
+            ? t(DJS.length === 1 ? "{n} artista" : "{n} artistas", { n: DJS.length })
+            : t("{n} de {m} DJs visíveis", { n: selectedDJs.length, m: DJS.length })}
         </div>
       </div>
     </aside>

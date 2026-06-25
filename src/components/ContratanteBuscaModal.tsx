@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { Search, Check } from "lucide-react";
 import Modal from "./Modal";
+import { useT } from "@/lib/i18n";
 import type { Contratante, Cidade } from "@/types";
 
 export default function ContratanteBuscaModal({
@@ -26,6 +27,7 @@ export default function ContratanteBuscaModal({
   onSelect: (id: string) => void;
   selectedId?: string | null;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
   const soDigitos = query.replace(/\D/g, "");
@@ -47,10 +49,11 @@ export default function ContratanteBuscaModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Buscar contratante"
-      subtitle={`${contratantes.length} ${
-        contratantes.length === 1 ? "contato" : "contatos"
-      } cadastrados`}
+      title={t("Buscar contratante")}
+      subtitle={t("{n} {contato} cadastrados", {
+        n: contratantes.length,
+        contato: contratantes.length === 1 ? t("contato") : t("contatos"),
+      })}
       maxWidth={620}
     >
       <div className="flex flex-col gap-3">
@@ -61,7 +64,7 @@ export default function ContratanteBuscaModal({
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Nome, telefone, cidade ou e-mail…"
+            placeholder={t("Nome, telefone, cidade ou e-mail…")}
             className="input flex-1"
           />
         </div>
@@ -69,7 +72,7 @@ export default function ContratanteBuscaModal({
         <div className="-mx-1 flex max-h-[55vh] flex-col divide-y divide-border overflow-y-auto">
           {filtrados.length === 0 ? (
             <div className="py-10 text-center text-sm text-muted">
-              Nenhum contato encontrado.
+              {t("Nenhum contato encontrado.")}
             </div>
           ) : (
             filtrados.map((c) => {

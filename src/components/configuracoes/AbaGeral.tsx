@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Upload,
   Trash2,
@@ -60,6 +61,7 @@ type CheckResultado = {
 };
 
 export default function AbaGeral() {
+  const t = useT();
   const { aparencia, atualizarNomeAgencia, uploadLogo, removerLogo } = useWorkspace();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
@@ -86,11 +88,11 @@ export default function AbaGeral() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setErro("Selecione um arquivo de imagem (PNG de preferência).");
+      setErro(t("Selecione um arquivo de imagem (PNG de preferência)."));
       return;
     }
     if (file.size > 4 * 1024 * 1024) {
-      setErro("Imagem muito grande. Use um arquivo de até 4 MB.");
+      setErro(t("Imagem muito grande. Use um arquivo de até 4 MB."));
       return;
     }
 
@@ -98,9 +100,9 @@ export default function AbaGeral() {
     try {
       const blob = await redimensionarParaBlob(file);
       await uploadLogo(blob);
-      setToast({ msg: "Logo atualizada.", tipo: "sucesso" });
+      setToast({ msg: t("Logo atualizada."), tipo: "sucesso" });
     } catch (err) {
-      setToast({ msg: (err as Error).message ?? "Falha ao enviar a logo.", tipo: "erro" });
+      setToast({ msg: (err as Error).message ?? t("Falha ao enviar a logo."), tipo: "erro" });
     } finally {
       setEnviandoLogo(false);
       if (inputFile.current) inputFile.current.value = "";
@@ -111,7 +113,7 @@ export default function AbaGeral() {
     setRemovendoLogo(true);
     try {
       await removerLogo();
-      setToast({ msg: "Logo removida.", tipo: "sucesso" });
+      setToast({ msg: t("Logo removida."), tipo: "sucesso" });
     } catch (err) {
       setToast({ msg: (err as Error).message, tipo: "erro" });
     } finally {
@@ -122,14 +124,14 @@ export default function AbaGeral() {
   async function salvarNome() {
     const limpo = nome.trim();
     if (!limpo) {
-      setErro("O nome da agência não pode ficar vazio.");
+      setErro(t("O nome da agência não pode ficar vazio."));
       return;
     }
     setSalvandoNome(true);
     setErro(null);
     try {
       await atualizarNomeAgencia(limpo);
-      setToast({ msg: "Nome salvo.", tipo: "sucesso" });
+      setToast({ msg: t("Nome salvo."), tipo: "sucesso" });
     } catch (err) {
       setToast({ msg: (err as Error).message, tipo: "erro" });
     } finally {
@@ -145,15 +147,14 @@ export default function AbaGeral() {
         <>
       {/* ---- Logo ---- */}
       <section className="card">
-        <div className="section-title mb-1">Logo da dashboard</div>
+        <div className="section-title mb-1">{t("Logo da dashboard")}</div>
         <div className="section-subtitle mb-4">
-          Envie um PNG (de preferência com fundo transparente). A imagem é
-          ajustada automaticamente para caber bem no topo da dashboard.
+          {t("Envie um PNG (de preferência com fundo transparente). A imagem é ajustada automaticamente para caber bem no topo da dashboard.")}
         </div>
 
         <div className="mb-4">
           <div className="text-xs font-medium text-secondary mb-2">
-            Pré-visualização
+            {t("Pré-visualização")}
           </div>
           <div
             className="rounded-md border border-border bg-elevated flex items-center px-4"
@@ -163,14 +164,14 @@ export default function AbaGeral() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={aparencia.logoUrl}
-                alt="Logo da agência"
+                alt={t("Logo da agência")}
                 style={{ height: 46, width: "auto" }}
               />
             ) : (
               <span className="font-bold text-lg text-primary">
                 {aparencia.nomeAgencia}
                 <span className="text-muted text-xs ml-2 font-normal">
-                  (sem logo — exibindo o nome)
+                  {t("(sem logo — exibindo o nome)")}
                 </span>
               </span>
             )}
@@ -193,10 +194,10 @@ export default function AbaGeral() {
           >
             <Upload size={14} />
             {enviandoLogo
-              ? "Enviando..."
+              ? t("Enviando...")
               : aparencia.logoUrl
-              ? "Trocar logo"
-              : "Enviar logo"}
+              ? t("Trocar logo")
+              : t("Enviar logo")}
           </button>
           {aparencia.logoUrl && (
             <button
@@ -206,7 +207,7 @@ export default function AbaGeral() {
               style={{ color: "var(--danger)" }}
             >
               <Trash2 size={14} />
-              {removendoLogo ? "Removendo..." : "Remover logo"}
+              {removendoLogo ? t("Removendo...") : t("Remover logo")}
             </button>
           )}
         </div>
@@ -214,27 +215,26 @@ export default function AbaGeral() {
         <div className="flex items-start gap-2 mt-4 text-xs text-muted">
           <ImageIcon size={14} className="flex-shrink-0 mt-0.5" />
           <span>
-            Formatos aceitos: PNG, JPG ou WEBP, até 4 MB.
+            {t("Formatos aceitos: PNG, JPG ou WEBP, até 4 MB.")}
           </span>
         </div>
       </section>
 
       {/* ---- Nome da agência ---- */}
       <section className="card">
-        <div className="section-title mb-1">Nome exibido</div>
+        <div className="section-title mb-1">{t("Nome exibido")}</div>
         <div className="section-subtitle mb-4">
-          Aparece no topo da dashboard quando não há logo, e também em
-          contratos e orçamentos gerados pelo sistema.
+          {t("Aparece no topo da dashboard quando não há logo, e também em contratos e orçamentos gerados pelo sistema.")}
         </div>
 
         <label className="flex flex-col gap-1 mb-3">
           <span className="text-xs font-medium text-secondary">
-            Nome da agência
+            {t("Nome da agência")}
           </span>
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex.: TWO DASH, OPUS..."
+            placeholder={t("Ex.: TWO DASH, OPUS...")}
             className="campo-input"
             maxLength={40}
           />
@@ -245,16 +245,16 @@ export default function AbaGeral() {
           disabled={salvandoNome || nome.trim() === aparencia.nomeAgencia}
           className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {salvandoNome ? "Salvando..." : <><Check size={14} /> Salvar nome</>}
+          {salvandoNome ? t("Salvando...") : <><Check size={14} /> {t("Salvar nome")}</>}
         </button>
       </section>
 
       {/* ---- E-mail cadastrado (somente leitura) ---- */}
       <section className="card">
-        <div className="section-title mb-1">E-mail cadastrado</div>
+        <div className="section-title mb-1">{t("E-mail cadastrado")}</div>
         <div className="section-subtitle mb-4">
-          E-mail principal da conta admin. Pra trocar, vá em{" "}
-          <strong className="text-primary">Segurança</strong>.
+          {t("E-mail principal da conta admin. Pra trocar, vá em")}{" "}
+          <strong className="text-primary">{t("Segurança")}</strong>.
         </div>
 
         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2.5">
@@ -309,6 +309,7 @@ function SlugSection({
   primeiroNomeAdmin: string;
   onToast: (msg: string, tipo: "sucesso" | "erro") => void;
 }) {
+  const t = useT();
   const [info, setInfo] = useState<SlugInfo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [novoSlug, setNovoSlug] = useState("");
@@ -349,12 +350,12 @@ function SlugSection({
       return;
     }
     if (info && v === info.slug) {
-      setCheck({ status: "igual", mensagem: "Esse é o seu username atual." });
+      setCheck({ status: "igual", mensagem: t("Esse é o seu username atual.") });
       return;
     }
     setCheck({ status: "checando" });
     const ctrl = new AbortController();
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
@@ -367,17 +368,17 @@ function SlugSection({
         } else if (body.erro) {
           setCheck({ status: "invalido", mensagem: body.erro });
         } else {
-          setCheck({ status: "em-uso", mensagem: "Já em uso por outra agência." });
+          setCheck({ status: "em-uso", mensagem: t("Já em uso por outra agência.") });
         }
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
-          setCheck({ status: "invalido", mensagem: "Falha na checagem." });
+          setCheck({ status: "invalido", mensagem: t("Falha na checagem.") });
         }
       }
     }, 400);
     return () => {
       ctrl.abort();
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [novoSlug, info]);
 
@@ -402,7 +403,7 @@ function SlugSection({
         throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
       }
       onToast(
-        `Username trocado. ${body.usuariosAtualizados ?? 0} login(s) atualizados.`,
+        t("Username trocado. {n} login(s) atualizados.", { n: body.usuariosAtualizados ?? 0 }),
         "sucesso"
       );
       setConfirmandoTroca(false);
@@ -421,9 +422,9 @@ function SlugSection({
   if (carregando) {
     return (
       <section className="card">
-        <div className="section-title mb-1">Username da agência</div>
+        <div className="section-title mb-1">{t("Username da agência")}</div>
         <div className="text-sm text-muted flex items-center gap-2 mt-3">
-          <Loader2 size={14} className="animate-spin" /> Carregando...
+          <Loader2 size={14} className="animate-spin" /> {t("Carregando...")}
         </div>
       </section>
     );
@@ -432,9 +433,9 @@ function SlugSection({
   if (!info) {
     return (
       <section className="card">
-        <div className="section-title mb-1">Username da agência</div>
+        <div className="section-title mb-1">{t("Username da agência")}</div>
         <p className="text-sm text-danger mt-2">
-          Não foi possível carregar. Tente recarregar a página.
+          {t("Não foi possível carregar. Tente recarregar a página.")}
         </p>
       </section>
     );
@@ -445,17 +446,17 @@ function SlugSection({
 
   return (
     <section className="card">
-      <div className="section-title mb-1">Username da agência</div>
+      <div className="section-title mb-1">{t("Username da agência")}</div>
       <div className="section-subtitle mb-4">
-        Vai pro fim do login de todo artista e da equipe (ex:{" "}
+        {t("Vai pro fim do login de todo artista e da equipe (ex:")} {" "}
         <span className="font-mono text-primary">{primeiroNomeAdmin}-{info.slug}</span>).
-        Esse identificador é único: nenhuma outra agência consegue usar.
+        {t("Esse identificador é único: nenhuma outra agência consegue usar.")}
       </div>
 
       {/* Username atual */}
       <div className="mb-4">
         <div className="text-xs font-medium text-secondary mb-1">
-          Atualmente
+          {t("Atualmente")}
         </div>
         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2.5">
           <AtSign size={14} className="text-muted flex-shrink-0" />
@@ -468,7 +469,7 @@ function SlugSection({
       {/* Novo username */}
       <label className="flex flex-col gap-1 mb-3">
         <span className="text-xs font-medium text-secondary">
-          Trocar pra
+          {t("Trocar pra")}
         </span>
         <div
           className="flex items-center gap-2 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
@@ -489,7 +490,7 @@ function SlugSection({
                 e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
               )
             }
-            placeholder="ex: twodash2026"
+            placeholder={t("ex: twodash2026")}
             disabled={semCota}
             className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted disabled:opacity-50 font-mono"
           />
@@ -522,7 +523,7 @@ function SlugSection({
         )}
         {check.status === "disponivel" && limpo && (
           <span className="text-xs text-success">
-            Disponível ✓
+            {t("Disponível ✓")}
           </span>
         )}
       </label>
@@ -545,14 +546,12 @@ function SlugSection({
           <span>
             {semCota ? (
               <>
-                Você atingiu o limite de {info.limite} trocas em 30 dias.
-                Aguarde pra trocar novamente.
+                {t("Você atingiu o limite de {n} trocas em 30 dias. Aguarde pra trocar novamente.", { n: info.limite })}
               </>
             ) : (
               <>
-                <strong>Trocas restantes:</strong> {info.trocasRestantes}/
-                {info.limite} (janela móvel de 30 dias). Cada troca muda o
-                login de TODOS os artistas e equipe — avise eles antes.
+                <strong>{t("Trocas restantes:")}</strong> {info.trocasRestantes}/
+                {info.limite} {t("(janela móvel de 30 dias). Cada troca muda o login de TODOS os artistas e equipe — avise eles antes.")}
               </>
             )}
           </span>
@@ -564,15 +563,15 @@ function SlugSection({
         disabled={!podeAbrirConfirmacao}
         className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Trocar username
+        {t("Trocar username")}
       </button>
 
       {/* Modal de confirmação */}
       <Modal
         isOpen={confirmandoTroca}
         onClose={() => !trocando && setConfirmandoTroca(false)}
-        title="Confirmar troca de username"
-        subtitle="Esta ação muda o login de todo mundo da agência"
+        title={t("Confirmar troca de username")}
+        subtitle={t("Esta ação muda o login de todo mundo da agência")}
         maxWidth={520}
       >
         <div className="flex flex-col gap-4">
@@ -592,29 +591,27 @@ function SlugSection({
               />
               <div>
                 <strong className="text-primary">
-                  TODOS os logins de artistas e equipe vão mudar.
+                  {t("TODOS os logins de artistas e equipe vão mudar.")}
                 </strong>
                 <br />
-                Exemplo:{" "}
-                <span className="font-mono">{primeiroNomeAdmin}-{info.slug}</span> vai
-                virar{" "}
+                {t("Exemplo:")}{" "}
+                <span className="font-mono">{primeiroNomeAdmin}-{info.slug}</span> {t("vai virar")}{" "}
                 <span className="font-mono">{primeiroNomeAdmin}-{limpo}</span>.
                 <br />
-                Avise sua equipe antes de confirmar — eles precisam usar o
-                login novo na próxima entrada.
+                {t("Avise sua equipe antes de confirmar — eles precisam usar o login novo na próxima entrada.")}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-xs text-muted mb-1">De</div>
+              <div className="text-xs text-muted mb-1">{t("De")}</div>
               <div className="text-sm font-mono bg-elevated border border-border rounded-md px-3 py-2">
                 -{info.slug}
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted mb-1">Para</div>
+              <div className="text-xs text-muted mb-1">{t("Para")}</div>
               <div
                 className="text-sm font-mono rounded-md px-3 py-2"
                 style={{
@@ -634,14 +631,14 @@ function SlugSection({
               disabled={trocando}
               className="btn btn-secondary text-sm"
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={confirmarTroca}
               disabled={trocando}
               className="btn btn-primary text-sm disabled:opacity-50"
             >
-              {trocando ? "Trocando..." : "Sim, trocar agora"}
+              {trocando ? t("Trocando...") : t("Sim, trocar agora")}
             </button>
           </div>
         </div>

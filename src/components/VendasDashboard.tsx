@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 import {
   FileText,
   CalendarCheck2,
@@ -72,6 +73,7 @@ export default function VendasDashboard({
   onAbrirOrcamento,
   onAbrirVenda,
 }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
@@ -180,19 +182,19 @@ export default function VendasDashboard({
   // Título/subtítulo do modal conforme o resumo aberto.
   const RESUMO_META: Record<NonNullable<ResumoTipo>, { titulo: string; subtitulo: string }> = {
     orcamentos: {
-      titulo: "Resumo de orçamentos",
-      subtitulo: `Criados em ${tituloMes}`,
+      titulo: t("Resumo de orçamentos"),
+      subtitulo: t("Criados em {mes}", { mes: tituloMes }),
     },
     vendas: {
-      titulo: "Resumo de vendas",
-      subtitulo: `Fechadas em ${tituloMes}`,
+      titulo: t("Resumo de vendas"),
+      subtitulo: t("Fechadas em {mes}", { mes: tituloMes }),
     },
     faturamento: {
-      titulo: "Resumo de faturamento",
-      subtitulo: `Vendas de ${tituloMes}`,
+      titulo: t("Resumo de faturamento"),
+      subtitulo: t("Vendas de {mes}", { mes: tituloMes }),
     },
     conversao: {
-      titulo: "Taxa de conversão",
+      titulo: t("Taxa de conversão"),
       subtitulo: tituloMes,
     },
   };
@@ -220,7 +222,7 @@ export default function VendasDashboard({
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Vendas"
-        subtitle={`${tituloMes} — por data de criação`}
+        subtitle={`${tituloMes} — ${t("por data de criação")}`}
         accentColor={accent}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -240,7 +242,7 @@ export default function VendasDashboard({
               style={{ backgroundColor: accent, color: "#fff" }}
             >
               <Plus size={14} />
-              Novo Orçamento
+              {t("Novo Orçamento")}
             </button>
           </div>
         }
@@ -250,38 +252,38 @@ export default function VendasDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <ClickableStat onClick={() => setResumo("orcamentos")}>
           <StatCard
-            title="Orçamentos"
+            title={t("Orçamentos")}
             value={stats.totalOrcamentos}
             icon={<FileText size={16} />}
             accentColor={accent}
-            subtitle={`${stats.pendentes} aguardando`}
+            subtitle={t("{n} aguardando", { n: stats.pendentes })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("vendas")}>
           <StatCard
-            title="Vendas Fechadas"
+            title={t("Vendas Fechadas")}
             value={stats.totalVendas}
             icon={<CalendarCheck2 size={16} />}
             accentColor="var(--success)"
-            subtitle="Fechadas no mês"
+            subtitle={t("Fechadas no mês")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("faturamento")}>
           <StatCard
-            title="Faturamento"
+            title={t("Faturamento")}
             value={formatBRL(stats.faturamento)}
             icon={<DollarSign size={16} />}
             accentColor={accent}
-            subtitle="Vendas do mês"
+            subtitle={t("Vendas do mês")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("conversao")}>
           <StatCard
-            title="Taxa de Conversão"
+            title={t("Taxa de Conversão")}
             value={`${stats.conversao}%`}
             icon={<Percent size={16} />}
             accentColor={accent}
-            subtitle="Orçamentos → vendas"
+            subtitle={t("Orçamentos → vendas")}
           />
         </ClickableStat>
       </div>
@@ -290,18 +292,18 @@ export default function VendasDashboard({
         {/* Orçamentos recentes */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">Orçamentos recentes</div>
+            <div className="section-title">{t("Orçamentos recentes")}</div>
             <button
               onClick={() => onNavigate?.("vendas", "vendas-historico")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todos
+              {t("Ver todos")}
               <ChevronRight size={12} />
             </button>
           </div>
           {orcamentosRecentes.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhum orçamento criado em {tituloMes}.
+              {t("Nenhum orçamento criado em {mes}.", { mes: tituloMes })}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -328,7 +330,7 @@ export default function VendasDashboard({
                         {formatBRL(o.valorCache)}
                       </div>
                     </div>
-                    <span className={`badge ${st.badge}`}>{st.label}</span>
+                    <span className={`badge ${st.badge}`}>{t(st.label)}</span>
                     <ChevronRight size={14} className="text-muted flex-shrink-0" />
                   </button>
                 );
@@ -340,18 +342,18 @@ export default function VendasDashboard({
         {/* Vendas recentes */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">Vendas recentes</div>
+            <div className="section-title">{t("Vendas recentes")}</div>
             <button
               onClick={() => onNavigate?.("vendas", "vendas-historico-vendas")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
             >
-              Ver todas
+              {t("Ver todas")}
               <ChevronRight size={12} />
             </button>
           </div>
           {vendasRecentes.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
-              Nenhuma venda fechada em {tituloMes}.
+              {t("Nenhuma venda fechada em {mes}.", { mes: tituloMes })}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -399,7 +401,7 @@ export default function VendasDashboard({
             <TrendingUp size={18} />
           </div>
           <div>
-            <div className="stat-label">Ticket médio por venda</div>
+            <div className="stat-label">{t("Ticket médio por venda")}</div>
             <div className="text-xl font-bold tabular-nums text-primary">
               {formatBRL(stats.ticketMedio)}
             </div>
@@ -417,17 +419,17 @@ export default function VendasDashboard({
         {resumo === "orcamentos" && (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label="Total" value={String(stats.totalOrcamentos)} />
-              <ResumoNumero label="Em aberto" value={String(stats.pendentes)} color={accent} />
+              <ResumoNumero label={t("Total")} value={String(stats.totalOrcamentos)} />
+              <ResumoNumero label={t("Em aberto")} value={String(stats.pendentes)} color={accent} />
             </div>
             <div className="flex flex-col gap-2">
-              <div className="stat-label">Por status</div>
+              <div className="stat-label">{t("Por status")}</div>
               {(["pendente", "negociacao", "aceito", "recusado"] as OrcamentoStatus[]).map((s) => (
                 <ResumoLinha
                   key={s}
                   left={
                     <span className={`badge ${LABELS_STATUS_ORCAMENTO[s].badge}`}>
-                      {LABELS_STATUS_ORCAMENTO[s].label}
+                      {t(LABELS_STATUS_ORCAMENTO[s].label)}
                     </span>
                   }
                   right={stats.porStatus[s]}
@@ -435,9 +437,9 @@ export default function VendasDashboard({
               ))}
             </div>
             <div className="flex flex-col gap-2">
-              <div className="stat-label">Valores</div>
-              <ResumoLinha left="Em aberto (pendentes + negociação)" right={formatBRL(stats.valorEmAberto)} />
-              <ResumoLinha left="Valor total" right={formatBRL(stats.valorTotalOrc)} />
+              <div className="stat-label">{t("Valores")}</div>
+              <ResumoLinha left={t("Em aberto (pendentes + negociação)")} right={formatBRL(stats.valorEmAberto)} />
+              <ResumoLinha left={t("Valor total")} right={formatBRL(stats.valorTotalOrc)} />
             </div>
             <ResumoFooter
               onClick={() => {
@@ -445,7 +447,7 @@ export default function VendasDashboard({
                 onNavigate?.("vendas", "vendas-historico");
               }}
             >
-              Ver histórico de orçamentos
+              {t("Ver histórico de orçamentos")}
             </ResumoFooter>
           </div>
         )}
@@ -453,13 +455,13 @@ export default function VendasDashboard({
         {resumo === "vendas" && (
           <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label="Vendas fechadas" value={String(stats.totalVendas)} />
-              <ResumoNumero label="Faturamento" value={formatBRL(stats.faturamento)} color="var(--success)" />
+              <ResumoNumero label={t("Vendas fechadas")} value={String(stats.totalVendas)} />
+              <ResumoNumero label={t("Faturamento")} value={formatBRL(stats.faturamento)} color="var(--success)" />
             </div>
             <div className="flex flex-col gap-2">
-              <ResumoLinha left="Ticket médio" right={formatBRL(stats.ticketMedio)} />
-              <ResumoLinha left="Próximas (a realizar)" right={stats.proximas} />
-              <ResumoLinha left="Já realizadas" right={stats.realizadas} />
+              <ResumoLinha left={t("Ticket médio")} right={formatBRL(stats.ticketMedio)} />
+              <ResumoLinha left={t("Próximas (a realizar)")} right={stats.proximas} />
+              <ResumoLinha left={t("Já realizadas")} right={stats.realizadas} />
             </div>
             <ResumoFooter
               onClick={() => {
@@ -467,51 +469,51 @@ export default function VendasDashboard({
                 onNavigate?.("vendas", "vendas-historico-vendas");
               }}
             >
-              Ver histórico de vendas
+              {t("Ver histórico de vendas")}
             </ResumoFooter>
           </div>
         )}
 
         {resumo === "faturamento" && (
           <div className="flex flex-col gap-4">
-            <ResumoNumero label="Faturamento total" value={formatBRL(stats.faturamento)} color="var(--success)" />
+            <ResumoNumero label={t("Faturamento total")} value={formatBRL(stats.faturamento)} color="var(--success)" />
             <div className="flex flex-col gap-2">
-              <div className="stat-label">Pagamentos</div>
-              <ResumoLinha left="Recebido" right={formatBRL(stats.recebido)} rightColor="var(--success)" />
-              <ResumoLinha left="A receber" right={formatBRL(stats.aReceber)} rightColor={accent} />
-              <ResumoLinha left="Em atraso" right={formatBRL(stats.atrasado)} rightColor="var(--danger)" />
+              <div className="stat-label">{t("Pagamentos")}</div>
+              <ResumoLinha left={t("Recebido")} right={formatBRL(stats.recebido)} rightColor="var(--success)" />
+              <ResumoLinha left={t("A receber")} right={formatBRL(stats.aReceber)} rightColor={accent} />
+              <ResumoLinha left={t("Em atraso")} right={formatBRL(stats.atrasado)} rightColor="var(--danger)" />
             </div>
-            <ResumoLinha left="Ticket médio por venda" right={formatBRL(stats.ticketMedio)} />
+            <ResumoLinha left={t("Ticket médio por venda")} right={formatBRL(stats.ticketMedio)} />
             <ResumoFooter
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico-vendas");
               }}
             >
-              Ver histórico de vendas
+              {t("Ver histórico de vendas")}
             </ResumoFooter>
           </div>
         )}
 
         {resumo === "conversao" && (
           <div className="flex flex-col gap-4">
-            <ResumoNumero label="Taxa de conversão" value={`${stats.conversao}%`} color={accent} />
+            <ResumoNumero label={t("Taxa de conversão")} value={`${stats.conversao}%`} color={accent} />
             <p className="text-sm text-secondary">
-              {stats.totalVendas} {stats.totalVendas === 1 ? "venda" : "vendas"} de{" "}
-              {stats.totalOrcamentos + stats.totalVendas} oportunidades no mês
-              (orçamentos e vendas criados no mês).
+              {stats.totalVendas} {stats.totalVendas === 1 ? t("venda") : t("vendas")} {t("de")}{" "}
+              {stats.totalOrcamentos + stats.totalVendas} {t("oportunidades no mês")}
+              {" "}({t("orçamentos e vendas criados no mês")}).
             </p>
             <div className="flex flex-col gap-2">
-              <div className="stat-label">Orçamentos</div>
+              <div className="stat-label">{t("Orçamentos")}</div>
               <ResumoLinha
-                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.aceito.badge}`}>Aceito</span>}
+                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.aceito.badge}`}>{t("Aceito")}</span>}
                 right={stats.porStatus.aceito}
               />
               <ResumoLinha
-                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.recusado.badge}`}>Recusado</span>}
+                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.recusado.badge}`}>{t("Recusado")}</span>}
                 right={stats.porStatus.recusado}
               />
-              <ResumoLinha left="Em aberto (pendentes + negociação)" right={stats.pendentes} />
+              <ResumoLinha left={t("Em aberto (pendentes + negociação)")} right={stats.pendentes} />
             </div>
             <ResumoFooter
               onClick={() => {
@@ -519,7 +521,7 @@ export default function VendasDashboard({
                 onNavigate?.("vendas", "vendas-historico");
               }}
             >
-              Ver histórico de orçamentos
+              {t("Ver histórico de orçamentos")}
             </ResumoFooter>
           </div>
         )}

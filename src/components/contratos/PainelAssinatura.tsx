@@ -43,6 +43,7 @@ import {
 import type { Contrato } from "@/lib/mappers/contrato";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
 
@@ -101,6 +102,7 @@ function paraAssinaturaInfo(s: Signatario): AssinaturaInfo {
 }
 
 export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
+  const t = useT();
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
 
@@ -161,7 +163,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         }
       })
       .catch((e) => {
-        if (vivo) setErro((e as Error).message || "Falha ao carregar signatários.");
+        if (vivo) setErro((e as Error).message || t("Falha ao carregar signatários."));
       })
       .finally(() => {
         if (vivo) setCarregando(false);
@@ -200,7 +202,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   async function gerarLinks() {
     setErroForm(null);
     if (linhas.some((l) => !l.nome.trim())) {
-      setErroForm("Cada signatário precisa de um nome.");
+      setErroForm(t("Cada signatário precisa de um nome."));
       return;
     }
     setSalvando(true);
@@ -216,7 +218,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
       setSignatarios(lista);
       setModoDefinir(false);
     } catch (e) {
-      setErroForm((e as Error).message || "Não foi possível gerar os links.");
+      setErroForm((e as Error).message || t("Não foi possível gerar os links."));
     } finally {
       setSalvando(false);
     }
@@ -278,9 +280,9 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           <PenLine size={18} />
         </div>
         <div className="min-w-0">
-          <div className="section-title">Assinatura</div>
+          <div className="section-title">{t("Assinatura")}</div>
           <p className="section-subtitle mt-1">
-            Defina quem assina e envie o link de assinatura para cada pessoa.
+            {t("Defina quem assina e envie o link de assinatura para cada pessoa.")}
           </p>
         </div>
       </div>
@@ -289,7 +291,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         {carregando ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
             <Loader2 size={16} className="animate-spin" />
-            Carregando signatários...
+            {t("Carregando signatários...")}
           </div>
         ) : erro ? (
           <div className="flex items-start gap-2 rounded-md p-3 text-sm text-danger bg-elevated">
@@ -327,33 +329,33 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
               <div className="flex items-start gap-2">
                 <div className="grid flex-1 gap-2 sm:grid-cols-3">
                   <div>
-                    <label className="stat-label mb-1 block">Nome</label>
+                    <label className="stat-label mb-1 block">{t("Nome")}</label>
                     <input
                       type="text"
                       className="campo-input"
                       value={linha.nome}
                       onChange={(e) => alterarLinha(idx, { nome: e.target.value })}
-                      placeholder="Nome completo"
+                      placeholder={t("Nome completo")}
                     />
                   </div>
                   <div>
-                    <label className="stat-label mb-1 block">E-mail</label>
+                    <label className="stat-label mb-1 block">{t("E-mail")}</label>
                     <input
                       type="email"
                       className="campo-input"
                       value={linha.email}
                       onChange={(e) => alterarLinha(idx, { email: e.target.value })}
-                      placeholder="email@exemplo.com"
+                      placeholder={t("email@exemplo.com")}
                     />
                   </div>
                   <div>
-                    <label className="stat-label mb-1 block">Papel</label>
+                    <label className="stat-label mb-1 block">{t("Papel")}</label>
                     <input
                       type="text"
                       className="campo-input"
                       value={linha.papel}
                       onChange={(e) => alterarLinha(idx, { papel: e.target.value })}
-                      placeholder="Contratante, Testemunha..."
+                      placeholder={t("Contratante, Testemunha...")}
                     />
                   </div>
                 </div>
@@ -361,8 +363,8 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                   type="button"
                   onClick={() => removerLinha(idx)}
                   disabled={linhas.length <= 1}
-                  title="Remover signatário"
-                  aria-label="Remover signatário"
+                  title={t("Remover signatário")}
+                  aria-label={t("Remover signatário")}
                   className="btn-ghost p-2 rounded hover:text-danger disabled:opacity-40 disabled:cursor-not-allowed mt-6"
                 >
                   <Trash2 size={15} />
@@ -371,16 +373,16 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
 
               {/* Exigências */}
               <div className="mt-3">
-                <div className="stat-label mb-1.5">O que será exigido</div>
+                <div className="stat-label mb-1.5">{t("O que será exigido")}</div>
                 <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
                   {/* Obrigatórias na Fase 1 — sempre marcadas e desabilitadas. */}
                   <label className="flex items-center gap-2 text-sm text-secondary">
                     <input type="checkbox" checked disabled readOnly />
-                    Assinatura na tela
+                    {t("Assinatura na tela")}
                   </label>
                   <label className="flex items-center gap-2 text-sm text-secondary">
                     <input type="checkbox" checked disabled readOnly />
-                    CPF/CNPJ
+                    {t("CPF/CNPJ")}
                   </label>
                   {/* Foto/selfie já funcionam (Fase 2); facial é Fase 3. */}
                   {EXIGENCIAS_OPCIONAIS.map((ex) => (
@@ -404,9 +406,9 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                           })
                         }
                       />
-                      {ex.rotulo}
+                      {t(ex.rotulo)}
                       {!ex.disponivel && (
-                        <span className="text-xs opacity-70">(em breve)</span>
+                        <span className="text-xs opacity-70">{t("(em breve)")}</span>
                       )}
                     </label>
                   ))}
@@ -419,7 +421,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         <div>
           <button type="button" onClick={adicionarLinha} className="btn btn-secondary">
             <Plus size={15} />
-            Adicionar signatário
+            {t("Adicionar signatário")}
           </button>
         </div>
 
@@ -443,7 +445,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
             ) : (
               <PenLine size={15} />
             )}
-            {salvando ? "Gerando..." : "Gerar links"}
+            {salvando ? t("Gerando...") : t("Gerar links")}
           </button>
           {signatarios.length > 0 && (
             <button
@@ -452,7 +454,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
               disabled={salvando}
               className="btn btn-secondary"
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
           )}
         </div>
@@ -480,7 +482,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     s.status === "assinado" ? "badge-success" : "badge-warning"
                   }`}
                 >
-                  {s.status === "assinado" ? "Assinado" : "Pendente"}
+                  {s.status === "assinado" ? t("Assinado") : t("Pendente")}
                 </span>
               </div>
 
@@ -488,8 +490,8 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                 <div className="mt-2 flex items-center gap-2 text-sm text-success">
                   <CheckCircle2 size={16} className="flex-shrink-0" />
                   <span>
-                    assinou
-                    {s.assinadoEm ? ` em ${dataBr(s.assinadoEm)}` : ""}
+                    {t("assinou")}
+                    {s.assinadoEm ? ` ${t("em")} ${dataBr(s.assinadoEm)}` : ""}
                   </span>
                 </div>
               ) : (
@@ -505,16 +507,16 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     type="button"
                     onClick={() => copiar(s.token)}
                     className="btn btn-secondary"
-                    title="Copiar link"
+                    title={t("Copiar link")}
                   >
                     {copiado === s.token ? <Check size={14} /> : <Copy size={14} />}
-                    {copiado === s.token ? "Copiado" : "Copiar"}
+                    {copiado === s.token ? t("Copiado") : t("Copiar")}
                   </button>
                   <button
                     type="button"
                     onClick={() => abrirWhatsApp(s.token)}
                     className="btn btn-secondary"
-                    title="Enviar pelo WhatsApp"
+                    title={t("Enviar pelo WhatsApp")}
                   >
                     <MessageCircle size={14} />
                     WhatsApp
@@ -539,17 +541,17 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
               ) : (
                 <Download size={15} />
               )}
-              {gerandoPdf ? "Gerando..." : "Baixar contrato assinado (PDF)"}
+              {gerandoPdf ? t("Gerando...") : t("Baixar contrato assinado (PDF)")}
             </button>
           )}
           <button
             type="button"
             onClick={abrirRedefinir}
             className="btn btn-secondary"
-            title="Substitui os links pendentes por novos signatários"
+            title={t("Substitui os links pendentes por novos signatários")}
           >
             <PenLine size={14} />
-            Redefinir signatários
+            {t("Redefinir signatários")}
           </button>
         </div>
       </div>

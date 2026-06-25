@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Info, AlertTriangle, XCircle, X } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export type ToastTipo = "sucesso" | "info" | "alerta" | "erro";
 
@@ -41,6 +42,7 @@ export default function Toast({
   onAcao,
   onClose,
 }: Props) {
+  const t = useT();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -81,7 +83,7 @@ export default function Toast({
       )}
       <button
         onClick={onClose}
-        aria-label="Fechar"
+        aria-label={t("Fechar")}
         className="text-muted hover:text-primary transition-colors flex-shrink-0"
       >
         <X size={14} />

@@ -12,6 +12,7 @@ import {
 import PageHeader from "../PageHeader";
 import { useContratos } from "@/lib/contratos-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
+import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
 
@@ -71,6 +72,7 @@ function StatCard({
 }
 
 export default function DashboardContratos() {
+  const t = useT();
   const { contratos, carregando, erro } = useContratos();
 
   // Total + contagem por status, em uma única passada.
@@ -101,7 +103,7 @@ export default function DashboardContratos() {
       {carregando ? (
         <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
-          Carregando contratos...
+          {t("Carregando contratos...")}
         </div>
       ) : erro ? (
         <div className="card flex items-center justify-center py-12 text-center text-sm text-danger">
@@ -112,9 +114,9 @@ export default function DashboardContratos() {
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <FileText size={18} className="text-muted" />
           </div>
-          <div className="section-title mb-1">Nenhum contrato ainda</div>
+          <div className="section-title mb-1">{t("Nenhum contrato ainda")}</div>
           <div className="section-subtitle">
-            Gere o primeiro em Novo Contrato.
+            {t("Gere o primeiro em Novo Contrato.")}
           </div>
         </div>
       ) : (
@@ -122,31 +124,31 @@ export default function DashboardContratos() {
           {/* Cards de estatística: Total + um por status */}
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
             <StatCard
-              label="Total"
+              label={t("Total")}
               valor={total}
               cor={ACCENT}
               icon={<FileText size={20} />}
             />
             <StatCard
-              label={STATUS_INFO.rascunho.label}
+              label={t(STATUS_INFO.rascunho.label)}
               valor={porStatus.rascunho}
               cor={STATUS_INFO.rascunho.color}
               icon={<FileSignature size={20} />}
             />
             <StatCard
-              label={STATUS_INFO.enviado.label}
+              label={t(STATUS_INFO.enviado.label)}
               valor={porStatus.enviado}
               cor={STATUS_INFO.enviado.color}
               icon={<Send size={20} />}
             />
             <StatCard
-              label={STATUS_INFO.assinado.label}
+              label={t(STATUS_INFO.assinado.label)}
               valor={porStatus.assinado}
               cor={STATUS_INFO.assinado.color}
               icon={<CheckCircle2 size={20} />}
             />
             <StatCard
-              label={STATUS_INFO.cancelado.label}
+              label={t(STATUS_INFO.cancelado.label)}
               valor={porStatus.cancelado}
               cor={STATUS_INFO.cancelado.color}
               icon={<XCircle size={20} />}
@@ -155,7 +157,7 @@ export default function DashboardContratos() {
 
           {/* Contratos recentes */}
           <div>
-            <div className="stat-label mb-3">Contratos recentes</div>
+            <div className="stat-label mb-3">{t("Contratos recentes")}</div>
             <div className="card p-0 overflow-hidden">
               <ul className="divide-y divide-border">
                 {recentes.map((c) => {
@@ -177,12 +179,12 @@ export default function DashboardContratos() {
                             {c.numero}
                           </div>
                           <div className="section-subtitle">
-                            Emissão: {formatarData(c.dataEmissao)}
+                            {t("Emissão:")} {formatarData(c.dataEmissao)}
                           </div>
                         </div>
                       </div>
                       <span className={`badge ${info.badge} flex-shrink-0`}>
-                        {info.label}
+                        {t(info.label)}
                       </span>
                     </li>
                   );

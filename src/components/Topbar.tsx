@@ -15,6 +15,8 @@ import { useAuth } from "@/lib/auth-context";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
 import SinoNotificacoes from "./SinoNotificacoes";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -29,6 +31,7 @@ export default function Topbar({
 }: Props) {
   const theme = MODULE_THEMES[activeTab];
   const { sessao, logout } = useAuth();
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -63,21 +66,21 @@ export default function Topbar({
         <button
           onClick={onOpenSidebar}
           className="lg:hidden btn-ghost p-2 rounded"
-          aria-label="Abrir menu"
+          aria-label={t("Abrir menu")}
         >
           <Menu size={18} />
         </button>
 
         <div className="hidden sm:flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.color }} />
-          <span className="text-sm font-medium text-secondary">{theme.label}</span>
+          <span className="text-sm font-medium text-secondary">{t(theme.label)}</span>
         </div>
 
         <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 ml-auto sm:ml-4 max-w-[400px] flex-1 sm:flex-initial sm:w-[280px] hover:border-border-hover transition-colors focus-within:border-border-strong">
           <Search size={15} className="text-muted flex-shrink-0" />
           <input
             type="text"
-            placeholder="Buscar shows, DJs, contratantes…"
+            placeholder={t("Buscar shows, DJs, contratantes…")}
             className="input"
           />
           <kbd className="hidden md:inline text-[0.65rem] text-muted bg-elevated px-1.5 py-0.5 rounded border border-border">
@@ -87,6 +90,7 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        <LanguageSwitcher />
         <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
 
         {/* Menu de perfil */}
@@ -142,7 +146,7 @@ export default function Topbar({
               <div className="p-3 border-b border-border flex flex-col gap-2">
                 {papel && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted">Papel</span>
+                    <span className="text-xs text-muted">{t("Papel")}</span>
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded"
                       style={{ backgroundColor: `${papel.cor}22`, color: papel.cor }}
@@ -153,7 +157,7 @@ export default function Topbar({
                 )}
                 {plano && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted">Plano</span>
+                    <span className="text-xs text-muted">{t("Plano")}</span>
                     <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
                       <BadgeCheck size={12} style={{ color: "var(--module-financeiro)" }} />
                       {plano.nome}
@@ -162,7 +166,7 @@ export default function Topbar({
                 )}
                 {workspace && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted">Conta</span>
+                    <span className="text-xs text-muted">{t("Conta")}</span>
                     <span className="text-xs text-secondary truncate max-w-[140px]">
                       {workspace.nome}
                     </span>
@@ -180,7 +184,7 @@ export default function Topbar({
                   className="w-full flex items-center gap-2 px-4 py-3 text-sm text-secondary hover:bg-elevated hover:text-primary transition-colors border-b border-border"
                 >
                   <Settings size={15} />
-                  {usuario?.papel === "admin" ? "Configurações" : "Minha conta"}
+                  {usuario?.papel === "admin" ? t("Configurações") : t("Minha conta")}
                 </button>
               )}
 
@@ -190,7 +194,7 @@ export default function Topbar({
                 className="w-full flex items-center gap-2 px-4 py-3 text-sm text-secondary hover:bg-elevated hover:text-danger transition-colors"
               >
                 <LogOut size={15} />
-                Sair da conta
+                {t("Sair da conta")}
               </button>
             </div>
           )}

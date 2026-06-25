@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useT } from "@/lib/i18n";
 
 /**
  * Em modo visitante (super-admin visualizando a dashboard de um cliente),
@@ -63,6 +64,7 @@ export default function SomenteLeitura({
   children: React.ReactNode;
 }) {
   const { modoVisitante } = useAuth();
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,19 +72,21 @@ export default function SomenteLeitura({
     const node = ref.current;
     if (!node) return;
 
+    const msg = t("Modo visualização — criar e editar estão desativados.");
+
     function bloquear(e: Event) {
       const alvo = e.target as HTMLElement;
       if (!alvo) return;
       if (ehAcaoDeEscrita(alvo)) {
         e.preventDefault();
         e.stopPropagation();
-        avisar();
+        avisar(msg);
       }
     }
     function bloquearSubmit(e: Event) {
       e.preventDefault();
       e.stopPropagation();
-      avisar();
+      avisar(msg);
     }
 
     // Fase de captura — intercepta antes de qualquer handler do React
@@ -104,7 +108,7 @@ export default function SomenteLeitura({
 // ---- Aviso flutuante (toast simples, sem dependências) ----
 let avisoTimeout: ReturnType<typeof setTimeout> | null = null;
 
-function avisar() {
+function avisar(msg: string) {
   const ID = "gigscontrol-aviso-visitante";
   let el = document.getElementById(ID);
   if (!el) {
@@ -126,10 +130,9 @@ function avisar() {
       "pointer-events:none",
       "transition:opacity .2s ease",
     ].join(";");
-    el.textContent =
-      "Modo visualização — criar e editar estão desativados.";
     document.body.appendChild(el);
   }
+  el.textContent = msg;
   el.style.opacity = "1";
   if (avisoTimeout) clearTimeout(avisoTimeout);
   avisoTimeout = setTimeout(() => {

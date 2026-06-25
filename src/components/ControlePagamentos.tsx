@@ -24,6 +24,7 @@ import {
   type StatusParcela,
   type Parcela,
 } from "@/types";
+import { useT } from "@/lib/i18n";
 
 /** Linha achatada: uma parcela + dados da venda dona */
 type LinhaParcela = {
@@ -40,6 +41,7 @@ type LinhaParcela = {
 };
 
 export default function ControlePagamentos() {
+  const t = useT();
   const accent = MODULE_THEMES.financeiro.color;
   const { vendas, atualizarParcela } = useVendas();
   const { modoVisitante } = useAuth();
@@ -138,32 +140,34 @@ export default function ControlePagamentos() {
         accentColor={accent}
       />
 
+
       {/* Cards de totais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
-          title="Total em vendas"
+          title={t("Total em vendas")}
           value={formatBRL(totais.total)}
           icon={<DollarSign size={18} />}
           accentColor={accent}
         />
         <StatCard
-          title="Recebido"
+          title={t("Recebido")}
           value={formatBRL(totais.recebido)}
           icon={<CheckCircle2 size={18} />}
           accentColor="var(--success)"
         />
         <StatCard
-          title="A receber"
+          title={t("A receber")}
           value={formatBRL(totais.aReceber)}
           icon={<CalendarClock size={18} />}
           accentColor="var(--warning)"
         />
         <StatCard
-          title="Atrasado"
+          title={t("Atrasado")}
           value={formatBRL(totais.atrasado)}
           icon={<AlertTriangle size={18} />}
           accentColor="var(--danger)"
         />
+
       </div>
 
       {/* Filtros */}
@@ -174,7 +178,7 @@ export default function ControlePagamentos() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por venda, contratante, evento, DJ..."
+            placeholder={t("Buscar por venda, contratante, evento, DJ...")}
             className="input"
           />
         </div>
@@ -185,7 +189,7 @@ export default function ControlePagamentos() {
             className={`pill ${filtroStatus === "todos" ? "active" : ""}`}
             onClick={() => setFiltroStatus("todos")}
           >
-            Todas ({todasParcelas.length})
+            {t("Todas ({n})", { n: todasParcelas.length })}
           </button>
           <button
             type="button"
@@ -193,7 +197,7 @@ export default function ControlePagamentos() {
             onClick={() => setFiltroStatus("pendente")}
           >
             <Clock size={11} />
-            Pendentes ({contadores.pendente})
+            {t("Pendentes ({n})", { n: contadores.pendente })}
           </button>
           <button
             type="button"
@@ -201,7 +205,7 @@ export default function ControlePagamentos() {
             onClick={() => setFiltroStatus("atrasado")}
           >
             <AlertTriangle size={11} />
-            Atrasadas ({contadores.atrasado})
+            {t("Atrasadas ({n})", { n: contadores.atrasado })}
           </button>
           <button
             type="button"
@@ -209,7 +213,7 @@ export default function ControlePagamentos() {
             onClick={() => setFiltroStatus("pago")}
           >
             <CheckCircle2 size={11} />
-            Pagas ({contadores.pago})
+            {t("Pagas ({n})", { n: contadores.pago })}
           </button>
         </div>
       </div>
@@ -223,13 +227,13 @@ export default function ControlePagamentos() {
             </div>
             <div className="section-title mb-1">
               {todasParcelas.length === 0
-                ? "Nenhuma parcela registrada"
-                : "Nenhum resultado"}
+                ? t("Nenhuma parcela registrada")
+                : t("Nenhum resultado")}
             </div>
             <div className="section-subtitle">
               {todasParcelas.length === 0
-                ? "As parcelas aparecem aqui quando você concretiza uma venda"
-                : "Ajuste os filtros ou a busca"}
+                ? t("As parcelas aparecem aqui quando você concretiza uma venda")
+                : t("Ajuste os filtros ou a busca")}
             </div>
           </div>
         ) : (
@@ -237,13 +241,13 @@ export default function ControlePagamentos() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-2/40">
-                  <Th>Vencimento</Th>
-                  <Th>Venda</Th>
-                  <Th>Parcela</Th>
-                  <Th>Contratante / Evento</Th>
-                  <Th>DJ</Th>
-                  <Th className="text-right">Valor</Th>
-                  <Th>Status</Th>
+                  <Th>{t("Vencimento")}</Th>
+                  <Th>{t("Venda")}</Th>
+                  <Th>{t("Parcela")}</Th>
+                  <Th>{t("Contratante / Evento")}</Th>
+                  <Th>{t("DJ")}</Th>
+                  <Th className="text-right">{t("Valor")}</Th>
+                  <Th>{t("Status")}</Th>
                   <Th className="w-[1%]"></Th>
                 </tr>
               </thead>
@@ -264,7 +268,7 @@ export default function ControlePagamentos() {
                         </div>
                         {l.parcela.dataPagamento && (
                           <div className="text-[0.7rem] text-success">
-                            pago em{" "}
+                            {t("pago em")}{" "}
                             {new Date(
                               l.parcela.dataPagamento + "T12:00:00"
                             ).toLocaleDateString("pt-BR")}
@@ -307,7 +311,7 @@ export default function ControlePagamentos() {
                           {l.status === "pago" && <CheckCircle2 size={11} />}
                           {l.status === "pendente" && <Clock size={11} />}
                           {l.status === "atrasado" && <AlertTriangle size={11} />}
-                          {st.label}
+                          {t(st.label)}
                         </span>
                       </Td>
                       <Td>
@@ -318,10 +322,10 @@ export default function ControlePagamentos() {
                             <button
                               onClick={() => desfazerPago(l)}
                               className="btn-ghost text-xs inline-flex items-center gap-1"
-                              title="Desfazer pagamento"
+                              title={t("Desfazer pagamento")}
                             >
                               <Undo2 size={13} />
-                              Desfazer
+                              {t("Desfazer")}
                             </button>
                           ) : (
                             <button
@@ -333,7 +337,7 @@ export default function ControlePagamentos() {
                               }}
                             >
                               <CheckCircle2 size={13} />
-                              Informar pagamento
+                              {t("Informar pagamento")}
                             </button>
                           )}
                         </div>
@@ -361,10 +365,7 @@ export default function ControlePagamentos() {
             style={{ color: "var(--danger)" }}
           />
           <div className="text-sm text-secondary">
-            Você tem <strong>{formatBRL(totais.atrasado)}</strong> em parcelas
-            atrasadas ({contadores.atrasado}{" "}
-            {contadores.atrasado === 1 ? "parcela" : "parcelas"}). Filtre por
-            &quot;Atrasadas&quot; para ver e cobrar.
+            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong> {t("em parcelas atrasadas ({n} {parcela}). Filtre por \"Atrasadas\" para ver e cobrar.", { n: contadores.atrasado, parcela: contadores.atrasado === 1 ? t("parcela") : t("parcelas") })}
           </div>
         </div>
       )}

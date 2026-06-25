@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Trash2,
   RotateCcw,
@@ -44,8 +45,10 @@ const META_SUBABA: Record<
   cidade:      { label: "Cidades",      icon: MapPin,        cor: "#f97316" },
   show:        { label: "Shows",        icon: CalendarRange, cor: "#3b82f6" },
 };
+// Labels are translated at render sites via t(m.label)
 
 export default function AbaLixeira() {
+  const t = useT();
   const {
     lixeiraArtistas,
     lixeiraUsuarios,
@@ -89,14 +92,14 @@ export default function AbaLixeira() {
   const totalItens = Object.values(contagens).reduce((a, b) => a + b, 0);
 
   const subabasComItens = (Object.keys(META_SUBABA) as TipoLixeira[]).filter(
-    (t) => contagens[t] > 0
+    (tipo) => contagens[tipo] > 0
   );
 
   async function aoRestaurar(tipo: TipoLixeira, id: string, nome: string) {
     setAcao(`restaurar-${id}`);
     try {
       await restaurarDaLixeira(tipo, id);
-      setToast({ msg: `${nome} restaurado.`, tipo: "sucesso" });
+      setToast({ msg: t("{nome} restaurado.", { nome }), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     } finally {
@@ -131,8 +134,8 @@ export default function AbaLixeira() {
             style={{ color: urgente ? "var(--danger)" : "var(--warning)" }}
           >
             {diasRestantes === 0
-              ? "Expira hoje"
-              : `${diasRestantes} dia${diasRestantes === 1 ? "" : "s"} restantes`}
+              ? t("Expira hoje")
+              : t("{n} dia{s} restantes", { n: diasRestantes, s: diasRestantes === 1 ? "" : "s" })}
           </div>
         </div>
         <button
@@ -142,7 +145,7 @@ export default function AbaLixeira() {
           style={{ color: "var(--success)" }}
         >
           <RotateCcw size={13} />
-          Restaurar
+          {t("Restaurar")}
         </button>
       </div>
     );
@@ -255,13 +258,11 @@ export default function AbaLixeira() {
       <div className="card">
         <div className="flex items-center gap-2 mb-1">
           <Trash2 size={16} style={{ color: "#22c55e" }} />
-          <div className="section-title">Lixeira</div>
+          <div className="section-title">{t("Lixeira")}</div>
         </div>
         <div className="section-subtitle">
-          Itens removidos ficam aqui por{" "}
-          <strong className="text-primary">30 dias</strong> e depois são
-          apagados automaticamente. Você pode restaurar a qualquer momento
-          durante esse período.
+          {t("Itens removidos ficam aqui por")}{" "}
+          <strong className="text-primary">{t("30 dias")}</strong> {t("e depois são apagados automaticamente. Você pode restaurar a qualquer momento durante esse período.")}
         </div>
       </div>
 
@@ -273,21 +274,21 @@ export default function AbaLixeira() {
             className={`pill ${subAba === "todos" ? "active" : ""}`}
             onClick={() => setSubAba("todos")}
           >
-            Todos ({totalItens})
+            {t("Todos")} ({totalItens})
           </button>
-          {subabasComItens.map((t) => {
-            const m = META_SUBABA[t];
+          {subabasComItens.map((tipo) => {
+            const m = META_SUBABA[tipo];
             const Icon = m.icon;
             return (
               <button
-                key={t}
+                key={tipo}
                 type="button"
-                className={`pill ${subAba === t ? "active" : ""}`}
-                onClick={() => setSubAba(t)}
+                className={`pill ${subAba === tipo ? "active" : ""}`}
+                onClick={() => setSubAba(tipo)}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
               >
                 <Icon size={12} />
-                {m.label} ({contagens[t]})
+                {t(m.label)} ({contagens[tipo]})
               </button>
             );
           })}
@@ -297,28 +298,28 @@ export default function AbaLixeira() {
       {/* Conteúdo */}
       {carregandoLixeira ? (
         <div className="card py-12 text-center text-sm text-muted">
-          Carregando lixeira...
+          {t("Carregando lixeira...")}
         </div>
       ) : totalItens === 0 ? (
         <div className="card py-12 text-center text-sm text-muted">
-          Lixeira vazia.
+          {t("Lixeira vazia.")}
         </div>
       ) : (
-        tiposParaExibir.map((t) => {
-          const m = META_SUBABA[t];
+        tiposParaExibir.map((tipo) => {
+          const m = META_SUBABA[tipo];
           const Icon = m.icon;
-          const linhas = linhasPorTipo[t];
+          const linhas = linhasPorTipo[tipo];
           if (linhas.length === 0) return null;
           return (
-            <div key={t} className="card p-0 overflow-hidden">
+            <div key={tipo} className="card p-0 overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Icon size={14} style={{ color: m.cor }} />
                   <div className="section-title">
-                    {m.label} ({linhas.length})
+                    {t(m.label)} ({linhas.length})
                   </div>
                 </div>
-                <span className="text-xs text-muted">Recuperáveis por 30 dias</span>
+                <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
               </div>
               <div className="divide-y divide-border">{linhas}</div>
             </div>

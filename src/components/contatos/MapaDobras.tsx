@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { MapPin, Building2, Users, Search } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import type { Cidade, Casa, Contratante } from "@/types";
 
 /**
- * Mapa de Dobras — busca de contatos por raio (km) a partir de uma
+ * Coverage Map — busca de contatos por raio (km) a partir de uma
  * cidade de referência.
  *
  * Versão funcional (sem mapa visual). Lista cidades, casas e contratantes
@@ -27,6 +28,7 @@ export default function MapaDobras({
   casas?: Casa[];
   contratantes?: Contratante[];
 } = {}) {
+  const t = useT();
   const ctx = useContatos();
   const cidades = cidadesProp ?? ctx.cidades;
   const casas = casasProp ?? ctx.casas;
@@ -97,18 +99,18 @@ export default function MapaDobras({
       <div className="card">
         <div className="section-title mb-4 flex items-center gap-2">
           <Search size={14} />
-          Busca por raio
+          {t("Busca por raio")}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-muted block mb-1">Cidade de referência</label>
+            <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
             <select
               value={cidadeBaseId}
               onChange={(e) => setCidadeBaseId(e.target.value)}
               className="w-full bg-elevated border border-border rounded-md px-3 py-2 text-sm"
             >
               {cidadesComCoord.length === 0 && (
-                <option value="">Nenhuma cidade com coordenadas</option>
+                <option value="">{t("Nenhuma cidade com coordenadas")}</option>
               )}
               {cidadesComCoord.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -119,7 +121,7 @@ export default function MapaDobras({
           </div>
           <div>
             <label className="text-xs text-muted block mb-1">
-              Raio: <span className="font-semibold text-primary">{raioKm} km</span>
+              {t("Raio:")}{" "}<span className="font-semibold text-primary">{raioKm} km</span>
             </label>
             <input
               type="range"
@@ -139,7 +141,7 @@ export default function MapaDobras({
 
         {cidadesSemCoord > 0 && (
           <div className="mt-3 text-xs text-muted">
-            {cidadesSemCoord} cidade(s) sem coordenadas — fique de fora da busca.
+            {t("{n} cidade(s) sem coordenadas — fique de fora da busca.", { n: cidadesSemCoord })}
           </div>
         )}
       </div>
@@ -150,10 +152,10 @@ export default function MapaDobras({
         <section className="card">
           <div className="section-title mb-3 flex items-center gap-2">
             <MapPin size={14} />
-            Cidades no raio ({cidadesNoRaio.length})
+            {t("Cidades no raio ({n})", { n: cidadesNoRaio.length })}
           </div>
           {cidadesNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">Nenhuma cidade no raio.</div>
+            <div className="text-sm text-muted py-3">{t("Nenhuma cidade no raio.")}</div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {cidadesNoRaio.map(({ cidade, distancia }) => (
@@ -178,10 +180,10 @@ export default function MapaDobras({
         <section className="card">
           <div className="section-title mb-3 flex items-center gap-2">
             <Building2 size={14} />
-            Casas ({casasNoRaio.length})
+            {t("Casas ({n})", { n: casasNoRaio.length })}
           </div>
           {casasNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">Nenhuma casa no raio.</div>
+            <div className="text-sm text-muted py-3">{t("Nenhuma casa no raio.")}</div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {casasNoRaio.map(({ casa, cidade, distancia }) => (
@@ -212,10 +214,10 @@ export default function MapaDobras({
         <section className="card">
           <div className="section-title mb-3 flex items-center gap-2">
             <Users size={14} />
-            Contratantes ({contratantesNoRaio.length})
+            {t("Contratantes ({n})", { n: contratantesNoRaio.length })}
           </div>
           {contratantesNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">Nenhum contratante no raio.</div>
+            <div className="text-sm text-muted py-3">{t("Nenhum contratante no raio.")}</div>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {contratantesNoRaio.map(({ contratante, cidade, distancia }) => (

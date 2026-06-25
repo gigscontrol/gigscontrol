@@ -11,6 +11,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { Camera, Upload, Check, X, RefreshCw, ScanFace } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 type CapturaFotoProps = {
   label: string;
@@ -76,6 +77,7 @@ export default function CapturaFoto({
   selfie = false,
   disabled = false,
 }: CapturaFotoProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export default function CapturaFoto({
         onChange(dataUrl);
       } catch {
         setPreview(null);
-        setErro("Não foi possível usar essa imagem. Tente outra.");
+        setErro(t("Não foi possível usar essa imagem. Tente outra."));
         onChange(null);
       }
     },
@@ -143,7 +145,7 @@ export default function CapturaFoto({
               className="inline-flex items-center gap-1 text-xs"
               style={{ color: "var(--success)" }}
             >
-              <Check size={12} /> Enviada
+              <Check size={12} /> {t("Enviada")}
             </div>
           </div>
           <button
@@ -151,15 +153,15 @@ export default function CapturaFoto({
             onClick={abrirSeletor}
             disabled={disabled}
             className="btn-ghost rounded px-2 py-1 text-xs"
-            title="Trocar foto"
+            title={t("Trocar foto")}
           >
-            <RefreshCw size={13} /> Trocar
+            <RefreshCw size={13} /> {t("Trocar")}
           </button>
           <button
             type="button"
             onClick={remover}
             disabled={disabled}
-            aria-label="Remover foto"
+            aria-label={t("Remover foto")}
             className="btn-ghost rounded p-1.5 hover:text-danger"
           >
             <X size={16} />
@@ -182,8 +184,8 @@ export default function CapturaFoto({
             <span className="block text-sm font-medium text-primary">{label}</span>
             <span className="block text-xs text-muted">
               {selfie
-                ? "Toque para tirar a selfie"
-                : "Toque para tirar ou enviar a foto"}
+                ? t("Toque para tirar a selfie")
+                : t("Toque para tirar ou enviar a foto")}
             </span>
           </span>
           <Upload size={16} className="flex-shrink-0 text-muted" />

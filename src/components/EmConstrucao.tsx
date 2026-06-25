@@ -1,6 +1,7 @@
 "use client";
 
 import { Hammer } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
  * Tela placeholder "em construção" — usada por módulos/telas cuja
@@ -16,6 +17,7 @@ export default function EmConstrucao({
   subtitulo?: string;
   cor?: string;
 }) {
+  const t = useT();
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <div className="mb-6">
@@ -36,9 +38,9 @@ export default function EmConstrucao({
         >
           <Hammer size={22} />
         </div>
-        <div className="section-title">Em construção</div>
+        <div className="section-title">{t("Em construção")}</div>
         <p className="text-sm text-muted max-w-sm">
-          Este módulo está sendo desenvolvido e estará disponível em breve.
+          {t("Este módulo está sendo desenvolvido e estará disponível em breve.")}
         </p>
       </div>
     </div>

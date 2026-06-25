@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Plus,
   Trash2,
@@ -47,6 +48,7 @@ function inferirPapelPrimario(funcoes: Funcoes): PapelEquipe {
  * Single role por usuário. Persistência via /api/usuarios.
  */
 export default function AbaEquipe() {
+  const t = useT();
   const {
     equipe,
     carregandoEquipe,
@@ -84,7 +86,7 @@ export default function AbaEquipe() {
     setAcaoLixeira(`restaurar-${id}`);
     try {
       await restaurarDaLixeira("usuario", id);
-      setToast({ msg: `${nomeUsr} restaurado.`, tipo: "sucesso" });
+      setToast({ msg: t("{nome} restaurado.", { nome: nomeUsr }), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     } finally {
@@ -129,7 +131,7 @@ export default function AbaEquipe() {
       if (dados.funcoes) patch.papel = inferirPapelPrimario(dados.funcoes);
       await atualizarUsuario(id, patch);
       setEditando(null);
-      setToast({ msg: "Usuário atualizado.", tipo: "sucesso" });
+      setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     }
@@ -141,7 +143,7 @@ export default function AbaEquipe() {
     try {
       await removerUsuario(confirmarRemover.id);
       setConfirmarRemover(null);
-      setToast({ msg: "Usuário removido.", tipo: "sucesso" });
+      setToast({ msg: t("Usuário removido."), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     } finally {
@@ -164,11 +166,11 @@ export default function AbaEquipe() {
       <div className="card">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="section-title">Equipe da agência</div>
+            <div className="section-title">{t("Equipe da agência")}</div>
             <div className="section-subtitle">
               {plano
-                ? `Seu plano ${plano.nome} permite até ${limite} usuários adicionais (fora você e os artistas).`
-                : "Crie os logins da sua equipe."}
+                ? t("Seu plano {nome} permite até {limite} usuários adicionais (fora você e os artistas).", { nome: plano.nome, limite })
+                : t("Crie os logins da sua equipe.")}
             </div>
           </div>
           <div className="text-right">
@@ -176,7 +178,7 @@ export default function AbaEquipe() {
               {usados}
               <span className="text-muted text-base font-normal"> / {limite}</span>
             </div>
-            <div className="text-xs text-muted">em uso</div>
+            <div className="text-xs text-muted">{t("em uso")}</div>
           </div>
         </div>
         <div className="mt-3 h-1.5 rounded-full bg-elevated overflow-hidden">
@@ -197,8 +199,7 @@ export default function AbaEquipe() {
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
-            Limite de usuários do plano {plano?.nome} atingido. Faça upgrade
-            ou remova um usuário para adicionar outro.
+            {t("Limite de usuários do plano {nome} atingido. Faça upgrade ou remova um usuário para adicionar outro.", { nome: plano?.nome ?? "" })}
           </span>
         </div>
       )}
@@ -206,22 +207,22 @@ export default function AbaEquipe() {
       {/* Lista */}
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="section-title">Usuários</div>
+          <div className="section-title">{t("Usuários")}</div>
           <button
             onClick={() => setCriando(true)}
             disabled={noLimite}
             className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={14} />
-            Criar usuário
+            {t("Criar usuário")}
           </button>
         </div>
 
         {carregandoEquipe ? (
-          <div className="py-12 text-center text-sm text-muted">Carregando...</div>
+          <div className="py-12 text-center text-sm text-muted">{t("Carregando...")}</div>
         ) : equipe.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
-            Nenhum usuário na equipe ainda.
+            {t("Nenhum usuário na equipe ainda.")}
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -249,7 +250,7 @@ export default function AbaEquipe() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-primary truncate">
-                      {u.nome} {!u.ativo && <span className="text-warning text-xs">(bloqueado)</span>}
+                      {u.nome} {!u.ativo && <span className="text-warning text-xs">({t("bloqueado")})</span>}
                     </div>
                     <div className="text-xs text-muted truncate">{u.email}</div>
                   </div>
@@ -262,7 +263,7 @@ export default function AbaEquipe() {
                           color: info?.cor ?? "#888",
                         }}
                       >
-                        {info?.nome ?? u.papel}
+                        {t(info?.nome ?? u.papel)}
                       </span>
                     ) : (
                       funcoesAtivas.map((f) => {
@@ -276,9 +277,9 @@ export default function AbaEquipe() {
                               backgroundColor: `${fInfo.cor}22`,
                               color: fInfo.cor,
                             }}
-                            title={`${qtd} DJ(s) atendido(s)`}
+                            title={t("{n} DJ(s) atendido(s)", { n: qtd })}
                           >
-                            {fInfo.nome} · {qtd}
+                            {t(fInfo.nome)} · {qtd}
                           </span>
                         );
                       })
@@ -287,15 +288,15 @@ export default function AbaEquipe() {
                   <button
                     onClick={() => aoResetarSenha(u)}
                     className="btn-ghost p-1.5 rounded"
-                    aria-label="Resetar senha"
-                    title="Resetar senha"
+                    aria-label={t("Resetar senha")}
+                    title={t("Resetar senha")}
                   >
                     <KeyRound size={14} />
                   </button>
                   <button
                     onClick={() => setEditando(u)}
                     className="btn-ghost p-1.5 rounded"
-                    aria-label="Editar usuário"
+                    aria-label={t("Editar usuário")}
                   >
                     <Pencil size={14} />
                   </button>
@@ -303,7 +304,7 @@ export default function AbaEquipe() {
                     onClick={() => setConfirmarRemover(u)}
                     className="btn-ghost p-1.5 rounded"
                     style={{ color: "var(--danger)" }}
-                    aria-label="Remover usuário"
+                    aria-label={t("Remover usuário")}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -322,11 +323,11 @@ export default function AbaEquipe() {
             <div className="flex items-center gap-2">
               <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
               <div className="section-title">
-                Na lixeira ({lixeiraUsuarios.length})
+                {t("Na lixeira ({n})", { n: lixeiraUsuarios.length })}
               </div>
             </div>
             <span className="text-xs text-muted">
-              Recuperáveis por 30 dias
+              {t("Recuperáveis por 30 dias")}
             </span>
           </div>
           <div className="divide-y divide-border">
@@ -362,8 +363,8 @@ export default function AbaEquipe() {
                       }}
                     >
                       {item.diasRestantes === 0
-                        ? "Expira hoje"
-                        : `${item.diasRestantes} dia${item.diasRestantes === 1 ? "" : "s"} restantes`}
+                        ? t("Expira hoje")
+                        : t("{n} dia{s} restantes", { n: item.diasRestantes, s: item.diasRestantes === 1 ? "" : "s" })}
                     </div>
                   </div>
                   <button
@@ -373,7 +374,7 @@ export default function AbaEquipe() {
                     style={{ color: "var(--success)" }}
                   >
                     <RotateCcw size={13} />
-                    Restaurar
+                    {t("Restaurar")}
                   </button>
                 </div>
               );
@@ -409,8 +410,8 @@ export default function AbaEquipe() {
       <Modal
         isOpen={!!confirmarRemover}
         onClose={() => setConfirmarRemover(null)}
-        title="Remover usuário"
-        subtitle="Esta ação não pode ser desfeita."
+        title={t("Remover usuário")}
+        subtitle={t("Esta ação não pode ser desfeita.")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
@@ -423,7 +424,7 @@ export default function AbaEquipe() {
               className="btn btn-secondary"
               disabled={removendo}
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={aoRemover}
@@ -431,7 +432,7 @@ export default function AbaEquipe() {
               style={{ backgroundColor: "var(--danger)", color: "#fff" }}
               disabled={removendo}
             >
-              {removendo ? "Removendo..." : "Remover"}
+              {removendo ? t("Removendo...") : t("Remover")}
             </button>
           </div>
         </div>
@@ -441,13 +442,13 @@ export default function AbaEquipe() {
       <Modal
         isOpen={!!senhaNova}
         onClose={() => setSenhaNova(null)}
-        title="Senha temporária gerada"
-        subtitle={`Para ${senhaNova?.nome}`}
+        title={t("Senha temporária gerada")}
+        subtitle={`${t("Para")} ${senhaNova?.nome}`}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            Repasse esta senha para o usuário por um canal seguro. Por
-            segurança, ela <strong className="text-primary">não será exibida novamente</strong>.
+            {t("Repasse esta senha para o usuário por um canal seguro. Por segurança, ela")}{" "}
+            <strong className="text-primary">{t("não será exibida novamente")}</strong>.
           </p>
           <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2.5">
             <code className="font-mono text-base text-primary flex-1 select-all">
@@ -458,24 +459,24 @@ export default function AbaEquipe() {
                 if (senhaNova?.senha) {
                   navigator.clipboard
                     .writeText(senhaNova.senha)
-                    .then(() => setToast({ msg: "Senha copiada.", tipo: "sucesso" }))
+                    .then(() => setToast({ msg: t("Senha copiada."), tipo: "sucesso" }))
                     .catch(() =>
-                      setToast({ msg: "Não foi possível copiar.", tipo: "erro" })
+                      setToast({ msg: t("Não foi possível copiar."), tipo: "erro" })
                     );
                 }
               }}
               className="btn btn-secondary text-xs"
             >
               <Copy size={14} />
-              Copiar
+              {t("Copiar")}
             </button>
           </div>
           <p className="text-xs text-muted">
-            O usuário deve trocar a senha pela aba <strong>Segurança</strong> no primeiro acesso.
+            {t("O usuário deve trocar a senha pela aba")} <strong>{t("Segurança")}</strong> {t("no primeiro acesso.")}
           </p>
           <div className="flex justify-end pt-2 border-t border-border">
             <button onClick={() => setSenhaNova(null)} className="btn btn-primary">
-              Entendi
+              {t("Entendi")}
             </button>
           </div>
         </div>
@@ -525,6 +526,7 @@ function ModalUsuario({
   /** Só passado no modo editar. Reseta a senha do usuário. */
   onResetarSenha?: () => void | Promise<void>;
 }) {
+  const t = useT();
   const artistas = useArtistas();
   const [nome, setNome] = useState(inicial?.nome ?? "");
   const [email, setEmail] = useState(inicial?.email ?? "");
@@ -592,24 +594,24 @@ function ModalUsuario({
 
   async function salvar() {
     if (!nome.trim()) {
-      setErro("Informe o nome do usuário.");
+      setErro(t("Informe o nome do usuário."));
       return;
     }
     if (modo === "criar" && (!email.trim() || !email.includes("@"))) {
-      setErro("Informe um e-mail válido.");
+      setErro(t("Informe um e-mail válido."));
       return;
     }
     // Valida: pelo menos 1 função marcada + cada função marcada precisa
     // ter pelo menos 1 DJ.
     const funcoesAtivas = FUNCOES_DISPONIVEIS.filter((f) => f in funcoes);
     if (funcoesAtivas.length === 0) {
-      setErro("Selecione pelo menos uma função para o usuário.");
+      setErro(t("Selecione pelo menos uma função para o usuário."));
       return;
     }
     for (const f of funcoesAtivas) {
       if ((funcoes[f] ?? []).length === 0) {
         setErro(
-          `Selecione pelo menos um DJ para a função "${LABELS_PAPEL_EQUIPE[f].nome}".`
+          t("Selecione pelo menos um DJ para a função \"{nome}\".", { nome: LABELS_PAPEL_EQUIPE[f].nome })
         );
         return;
       }
@@ -643,16 +645,16 @@ function ModalUsuario({
     <Modal
       isOpen
       onClose={onFechar}
-      title={modo === "criar" ? "Criar usuário" : "Editar usuário"}
+      title={modo === "criar" ? t("Criar usuário") : t("Editar usuário")}
       maxWidth={520}
     >
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-secondary">Nome</span>
+          <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Nome completo"
+            placeholder={t("Nome completo")}
             className="campo-input"
             autoFocus
           />
@@ -660,11 +662,11 @@ function ModalUsuario({
 
         {modo === "criar" && (
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-secondary">E-mail de acesso</span>
+            <span className="text-xs font-medium text-secondary">{t("E-mail de acesso")}</span>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@agencia.com"
+              placeholder={t("email@agencia.com")}
               className="campo-input"
               type="email"
             />
@@ -673,12 +675,10 @@ function ModalUsuario({
 
         <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-secondary">
-            Funções e DJs atendidos
+            {t("Funções e DJs atendidos")}
           </span>
           <p className="text-[0.7rem] text-muted -mt-1">
-            Marque cada função que o usuário desempenha e, dentro dela,
-            quais DJs ele atende. As escolhas são independentes (ex.:
-            vendedor do DJ Z e financeiro do DJ Y).
+            {t("Marque cada função que o usuário desempenha e, dentro dela, quais DJs ele atende. As escolhas são independentes (ex.: vendedor do DJ Z e financeiro do DJ Y).")}
           </p>
           {FUNCOES_DISPONIVEIS.map((f) => {
             const info = LABELS_PAPEL_EQUIPE[f];
@@ -709,16 +709,16 @@ function ModalUsuario({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="text-sm font-medium text-primary block">
-                      {info.nome}
+                      {t(info.nome)}
                     </span>
-                    <span className="text-xs text-muted">{info.descricao}</span>
+                    <span className="text-xs text-muted">{t(info.descricao)}</span>
                   </span>
                 </button>
                 {ativoFuncao && (
                   <div className="px-2.5 pb-2.5 border-t border-border pt-2.5 mt-0">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted">
-                        DJs atendidos ({djsSelecionados.length} de {artistas.length})
+                        {t("DJs atendidos ({n} de {total})", { n: djsSelecionados.length, total: artistas.length })}
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -726,21 +726,21 @@ function ModalUsuario({
                           onClick={() => selecionarTodosDjs(f)}
                           className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
                         >
-                          Todos
+                          {t("Todos")}
                         </button>
                         <button
                           type="button"
                           onClick={() => limparDjs(f)}
                           className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
                         >
-                          Limpar
+                          {t("Limpar")}
                         </button>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {artistas.length === 0 && (
                         <span className="text-xs text-muted">
-                          Nenhum DJ cadastrado ainda. Cadastre na aba Artistas.
+                          {t("Nenhum DJ cadastrado ainda. Cadastre na aba Artistas.")}
                         </span>
                       )}
                       {artistas.map((dj) => {
@@ -773,27 +773,27 @@ function ModalUsuario({
           <div className="flex items-center gap-1.5">
             <ShieldCheck size={14} style={{ color: "var(--module-financeiro)" }} />
             <span className="text-xs font-medium text-secondary">
-              Privacidade e permissões
+              {t("Privacidade e permissões")}
             </span>
           </div>
           <LinhaEscopo
-            label="Ver todos os contatos"
-            descricaoLigado="Enxerga todos os contatos da agência"
-            descricaoDesligado="Vê apenas os contatos que ele mesmo criou"
+            label={t("Ver todos os contatos")}
+            descricaoLigado={t("Enxerga todos os contatos da agência")}
+            descricaoDesligado={t("Vê apenas os contatos que ele mesmo criou")}
             valor={escopo.verTodosContatos}
             onChange={(v) => setEscopo((s) => ({ ...s, verTodosContatos: v }))}
           />
           <LinhaEscopo
-            label="Ver todas as vendas e orçamentos"
-            descricaoLigado="Enxerga todas as vendas e orçamentos da agência"
-            descricaoDesligado="Vê apenas as vendas e orçamentos que ele mesmo criou"
+            label={t("Ver todas as vendas e orçamentos")}
+            descricaoLigado={t("Enxerga todas as vendas e orçamentos da agência")}
+            descricaoDesligado={t("Vê apenas as vendas e orçamentos que ele mesmo criou")}
             valor={escopo.verTodasVendas}
             onChange={(v) => setEscopo((s) => ({ ...s, verTodasVendas: v }))}
           />
           <LinhaEscopo
-            label="Editar todos os eventos"
-            descricaoLigado="Pode editar qualquer evento da agência"
-            descricaoDesligado="Edita apenas os eventos que ele mesmo criou"
+            label={t("Editar todos os eventos")}
+            descricaoLigado={t("Pode editar qualquer evento da agência")}
+            descricaoDesligado={t("Edita apenas os eventos que ele mesmo criou")}
             valor={escopo.editarTodosEventos}
             onChange={(v) => setEscopo((s) => ({ ...s, editarTodosEventos: v }))}
           />
@@ -801,9 +801,9 @@ function ModalUsuario({
 
         {modo === "editar" && (
           <LinhaEscopo
-            label="Acesso ativo"
-            descricaoLigado="O usuário pode entrar normalmente"
-            descricaoDesligado="O usuário está bloqueado e não consegue entrar"
+            label={t("Acesso ativo")}
+            descricaoLigado={t("O usuário pode entrar normalmente")}
+            descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
             valor={ativo}
             onChange={setAtivo}
           />
@@ -814,16 +814,16 @@ function ModalUsuario({
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <div className="flex items-center gap-1.5">
               <Lock size={14} style={{ color: "var(--module-financeiro)" }} />
-              <span className="text-xs font-medium text-secondary">Senha</span>
+              <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
             </div>
             {carregandoConta ? (
               <div className="flex items-center gap-2 text-sm text-muted py-2">
                 <Loader2 size={14} className="animate-spin" />
-                Carregando dados da conta...
+                {t("Carregando dados da conta...")}
               </div>
             ) : !conta ? (
               <p className="text-xs text-danger">
-                Não foi possível carregar a conta.
+                {t("Não foi possível carregar a conta.")}
               </p>
             ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
               <>
@@ -847,7 +847,7 @@ function ModalUsuario({
                         });
                     }}
                     className="btn-ghost p-1.5 rounded"
-                    aria-label="Copiar senha"
+                    aria-label={t("Copiar senha")}
                   >
                     {copiouSenhaPadrao ? (
                       <CheckCircle2
@@ -864,7 +864,7 @@ function ModalUsuario({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Senha padrão gerada pelo sistema — usuário ainda não trocou.
+                  {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
                 </div>
               </>
             ) : conta.senhaPadrao ? (
@@ -878,10 +878,8 @@ function ModalUsuario({
               >
                 <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                 <span>
-                  Usuário ainda está com a <strong>senha padrão</strong>{" "}
-                  gerada pelo sistema, mas o valor não está disponível
-                  (usuário criado antes desta versão). Gere uma nova abaixo
-                  pra conseguir copiar.
+                  {t("Usuário ainda está com a")}{" "}<strong>{t("senha padrão")}</strong>{" "}
+                  {t("gerada pelo sistema, mas o valor não está disponível (usuário criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
                 </span>
               </div>
             ) : (
@@ -894,7 +892,7 @@ function ModalUsuario({
                 }}
               >
                 <Lock size={13} className="flex-shrink-0" />
-                <span>Senha já foi alterada pelo usuário.</span>
+                <span>{t("Senha já foi alterada pelo usuário.")}</span>
               </div>
             )}
 
@@ -904,7 +902,7 @@ function ModalUsuario({
                 onClick={() => {
                   if (
                     confirm(
-                      `Gerar uma nova senha aleatória pro usuário ${nome || inicial?.nome || ""}?`
+                      t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
                     )
                   ) {
                     void onResetarSenha();
@@ -917,7 +915,7 @@ function ModalUsuario({
                 }}
               >
                 <KeyRound size={14} />
-                Gerar nova senha aleatória
+                {t("Gerar nova senha aleatória")}
               </button>
             )}
           </div>
@@ -931,10 +929,10 @@ function ModalUsuario({
 
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
           <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
-            Cancelar
+            {t("Cancelar")}
           </button>
           <button onClick={salvar} className="btn btn-primary" disabled={salvando}>
-            {salvando ? "Salvando..." : (<><Check size={14} /> Salvar</>)}
+            {salvando ? t("Salvando...") : (<><Check size={14} /> {t("Salvar")}</>)}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MapPin, X, Loader2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
  * Autocomplete de cidades do Brasil usando o catálogo do IBGE (via
@@ -32,6 +33,7 @@ export default function CidadeIBGEAutocomplete({
   onChange,
   placeholder = "Digite a cidade...",
 }: Props) {
+  const t = useT();
   const [input, setInput] = useState(value ? `${value.nome} - ${value.uf}` : "");
   const [open, setOpen] = useState(false);
   const [sugestoes, setSugestoes] = useState<CidadeIBGE[]>([]);
@@ -143,7 +145,7 @@ export default function CidadeIBGEAutocomplete({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={t(placeholder)}
           autoComplete="off"
           className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none min-w-0"
         />
@@ -155,7 +157,7 @@ export default function CidadeIBGEAutocomplete({
             type="button"
             onClick={limpar}
             className="text-muted hover:text-primary transition-colors flex-shrink-0"
-            aria-label="Limpar"
+            aria-label={t("Limpar")}
             tabIndex={-1}
           >
             <X size={14} />
@@ -190,7 +192,7 @@ export default function CidadeIBGEAutocomplete({
 
       {open && !buscando && input.trim().length >= 2 && sugestoes.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md shadow-xl z-40 px-3 py-3 text-xs text-muted">
-          Nenhuma cidade encontrada.
+          {t("Nenhuma cidade encontrada.")}
         </div>
       )}
     </div>

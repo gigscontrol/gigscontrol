@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Compass } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -41,6 +42,7 @@ export default function Contatos({
   categoriaInicial?: ContatoCategoria;
   selectedDJs?: string[];
 }) {
+  const t = useT();
   const accent = MODULE_THEMES.contatos.color;
   const { contratantes, casas, cidades, removeContratante, removeCasa, removeCidade } = useContatos();
   const { shows } = useShows();
@@ -206,7 +208,7 @@ export default function Contatos({
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Plus size={16} />
-            Novo {categoria === "contratantes" ? "contratante" : categoria === "casas" ? "casa" : "cidade"}
+            {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
           </button>
         }
       />
@@ -215,7 +217,7 @@ export default function Contatos({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <SummaryTile
           icon={<Users size={16} />}
-          label="Contratantes"
+          label={t("Contratantes")}
           value={contratantesFiltrados.length}
           active={categoria === "contratantes"}
           accent={accent}
@@ -223,7 +225,7 @@ export default function Contatos({
         />
         <SummaryTile
           icon={<Building2 size={16} />}
-          label="Casas / Eventos"
+          label={t("Casas / Eventos")}
           value={casasFiltradas.length}
           active={categoria === "casas"}
           accent={accent}
@@ -231,7 +233,7 @@ export default function Contatos({
         />
         <SummaryTile
           icon={<MapPin size={16} />}
-          label="Cidades"
+          label={t("Cidades")}
           value={cidadesFiltradas.length}
           active={categoria === "cidades"}
           accent={accent}
@@ -239,7 +241,7 @@ export default function Contatos({
         />
         <SummaryTile
           icon={<Compass size={16} />}
-          label="Mapa de Dobras"
+          label={t("Mapa de Dobras")}
           value={cidadesFiltradas.filter((c) => c.latitude !== undefined).length}
           active={categoria === "mapa"}
           accent={accent}
@@ -255,12 +257,12 @@ export default function Contatos({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={`Buscar em ${categoria}...`}
+            placeholder={t("Buscar em {categoria}...", { categoria })}
             className="input"
           />
           {search && (
             <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
-              Limpar
+              {t("Limpar")}
             </button>
           )}
         </div>
@@ -284,7 +286,7 @@ export default function Contatos({
             onSelect={(item) => setSelecionado({ tipo: "contratante", item })}
             onEdit={(item) => setModal({ type: "edit-contratante", item })}
             onRemove={(id) => {
-              if (confirm("Remover este contratante?")) removeContratante(id);
+              if (confirm(t("Remover este contratante?"))) removeContratante(id);
             }}
           />
         )}
@@ -295,7 +297,7 @@ export default function Contatos({
             onSelect={(item) => setSelecionado({ tipo: "casa", item })}
             onEdit={(item) => setModal({ type: "edit-casa", item })}
             onRemove={(id) => {
-              if (confirm("Remover esta casa?")) removeCasa(id);
+              if (confirm(t("Remover esta casa?"))) removeCasa(id);
             }}
           />
         )}
@@ -306,7 +308,7 @@ export default function Contatos({
             onSelect={(item) => setSelecionado({ tipo: "cidade", item })}
             onEdit={(item) => setModal({ type: "edit-cidade", item })}
             onRemove={(id) => {
-              if (confirm("Remover esta cidade?")) removeCidade(id);
+              if (confirm(t("Remover esta cidade?"))) removeCidade(id);
             }}
           />
         )}
@@ -323,8 +325,8 @@ export default function Contatos({
       <Modal
         isOpen={modal?.type === "novo-contratante" || modal?.type === "edit-contratante"}
         onClose={() => setModal(null)}
-        title={modal?.type === "edit-contratante" ? "Editar contratante" : "Novo contratante"}
-        subtitle="Cliente que contrata os DJs da agência"
+        title={modal?.type === "edit-contratante" ? t("Editar contratante") : t("Novo contratante")}
+        subtitle={t("Cliente que contrata os DJs da agência")}
       >
         <ContratanteForm
           initial={modal?.type === "edit-contratante" ? modal.item : undefined}
@@ -336,8 +338,8 @@ export default function Contatos({
       <Modal
         isOpen={modal?.type === "novo-casa" || modal?.type === "edit-casa"}
         onClose={() => setModal(null)}
-        title={modal?.type === "edit-casa" ? "Editar casa / evento" : "Nova casa / evento"}
-        subtitle="Local onde os shows acontecem"
+        title={modal?.type === "edit-casa" ? t("Editar casa / evento") : t("Nova casa / evento")}
+        subtitle={t("Local onde os shows acontecem")}
         maxWidth={640}
       >
         <CasaForm
@@ -350,8 +352,8 @@ export default function Contatos({
       <Modal
         isOpen={modal?.type === "novo-cidade" || modal?.type === "edit-cidade"}
         onClose={() => setModal(null)}
-        title={modal?.type === "edit-cidade" ? "Editar cidade" : "Nova cidade"}
-        subtitle="Cidades onde a agência atua"
+        title={modal?.type === "edit-cidade" ? t("Editar cidade") : t("Nova cidade")}
+        subtitle={t("Cidades onde a agência atua")}
       >
         <CidadeForm
           initial={modal?.type === "edit-cidade" ? modal.item : undefined}
@@ -420,21 +422,22 @@ function TabelaContratantes({
   onEdit: (c: Contratante) => void;
   onRemove: (id: string) => void;
 }) {
+  const t = useT();
   const { cidades } = useContatos();
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
-  if (items.length === 0) return <EmptyTable label="Nenhum contratante encontrado" />;
+  if (items.length === 0) return <EmptyTable label={t("Nenhum contratante encontrado")} />;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-surface-2/40">
-            <Th>Nome</Th>
-            <Th>Cidade</Th>
-            <Th>Contato</Th>
-            <Th className="text-right">Orçamentos</Th>
-            <Th className="text-right">Shows</Th>
+            <Th>{t("Nome")}</Th>
+            <Th>{t("Cidade")}</Th>
+            <Th>{t("Contato")}</Th>
+            <Th className="text-right">{t("Orçamentos")}</Th>
+            <Th className="text-right">{t("Shows")}</Th>
             <Th className="w-[1%]"></Th>
           </tr>
         </thead>
@@ -450,7 +453,7 @@ function TabelaContratantes({
                 <Td className="font-medium text-primary">{c.nome}</Td>
                 <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
                 <Td className="text-secondary">
-                  <div className="text-xs">{c.email || <span className="text-muted italic">sem e-mail</span>}</div>
+                  <div className="text-xs">{c.email || <span className="text-muted italic">{t("sem e-mail")}</span>}</div>
                   <div className="text-xs text-muted">{c.telefone}</div>
                 </Td>
                 <Td className="text-right tabular-nums font-semibold">{stats.totalOrcamentos}</Td>
@@ -478,21 +481,22 @@ function TabelaCasas({
   onEdit: (c: Casa) => void;
   onRemove: (id: string) => void;
 }) {
+  const t = useT();
   const { cidades } = useContatos();
   const { shows } = useShows();
-  if (items.length === 0) return <EmptyTable label="Nenhuma casa encontrada" />;
+  if (items.length === 0) return <EmptyTable label={t("Nenhuma casa encontrada")} />;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-surface-2/40">
-            <Th>Nome</Th>
-            <Th>Tipo</Th>
-            <Th>Cidade</Th>
-            <Th className="text-right">Capacidade</Th>
-            <Th className="text-right">Shows</Th>
-            <Th className="text-right">Faturado</Th>
+            <Th>{t("Nome")}</Th>
+            <Th>{t("Tipo")}</Th>
+            <Th>{t("Cidade")}</Th>
+            <Th className="text-right">{t("Capacidade")}</Th>
+            <Th className="text-right">{t("Shows")}</Th>
+            <Th className="text-right">{t("Faturado")}</Th>
             <Th className="w-[1%]"></Th>
           </tr>
         </thead>
@@ -507,7 +511,7 @@ function TabelaCasas({
               >
                 <Td className="font-medium text-primary">{c.nome}</Td>
                 <Td>
-                  <span className="badge badge-neutral">{TIPO_CASA_LABEL[c.tipo]}</span>
+                  <span className="badge badge-neutral">{t(TIPO_CASA_LABEL[c.tipo] ?? c.tipo)}</span>
                 </Td>
                 <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
                 <Td className="text-right tabular-nums">
@@ -540,21 +544,22 @@ function TabelaCidades({
   onEdit: (c: Cidade) => void;
   onRemove: (id: string) => void;
 }) {
+  const t = useT();
   const { shows } = useShows();
-  if (items.length === 0) return <EmptyTable label="Nenhuma cidade encontrada" />;
+  if (items.length === 0) return <EmptyTable label={t("Nenhuma cidade encontrada")} />;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-surface-2/40">
-            <Th>Cidade</Th>
-            <Th>UF</Th>
-            <Th>Região</Th>
-            <Th className="text-right">Casas</Th>
-            <Th className="text-right">Shows</Th>
-            <Th className="text-right">Faturado</Th>
-            <Th>Top DJ</Th>
+            <Th>{t("Cidade")}</Th>
+            <Th>{t("UF")}</Th>
+            <Th>{t("Região")}</Th>
+            <Th className="text-right">{t("Casas")}</Th>
+            <Th className="text-right">{t("Shows")}</Th>
+            <Th className="text-right">{t("Faturado")}</Th>
+            <Th>{t("Top DJ")}</Th>
             <Th className="w-[1%]"></Th>
           </tr>
         </thead>
@@ -614,12 +619,13 @@ function Td({ children, className = "" }: { children?: React.ReactNode; classNam
 }
 
 function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-      <button onClick={onEdit} className="btn-ghost p-1.5 rounded" aria-label="Editar">
+      <button onClick={onEdit} className="btn-ghost p-1.5 rounded" aria-label={t("Editar")}>
         <Pencil size={14} />
       </button>
-      <button onClick={onRemove} className="btn-ghost p-1.5 rounded hover:text-danger" aria-label="Remover">
+      <button onClick={onRemove} className="btn-ghost p-1.5 rounded hover:text-danger" aria-label={t("Remover")}>
         <Trash2 size={14} />
       </button>
     </div>
@@ -627,13 +633,14 @@ function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => 
 }
 
 function EmptyTable({ label }: { label: string }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
         <Search size={18} className="text-muted" />
       </div>
       <div className="section-title mb-1">{label}</div>
-      <div className="section-subtitle">Ajuste a busca ou cadastre um novo registro</div>
+      <div className="section-subtitle">{t("Ajuste a busca ou cadastre um novo registro")}</div>
     </div>
   );
 }

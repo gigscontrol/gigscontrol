@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n";
 
 /**
  * Navegação não-bloqueante do app.
@@ -86,12 +87,13 @@ export function useNavegacao(): NavCtx {
  */
 export function NavOverlay() {
   const { navegando } = useNavegacao();
+  const t = useT();
   if (!navegando) return null;
   return (
     <div
       className="nav-overlay animate-fade-slow absolute inset-0 z-20 flex items-center justify-center"
       role="status"
-      aria-label="Carregando"
+      aria-label={t("Carregando")}
     >
       <div className="spinner spinner-sm" style={{ color: "var(--brand)" }} />
     </div>

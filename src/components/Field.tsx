@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   label: ReactNode;
@@ -11,17 +12,18 @@ type Props = {
 };
 
 export function Field({ label, required, hint, error, children }: Props) {
+  const t = useT();
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-secondary">
-        {label}
+        {typeof label === "string" ? t(label) : label}
         {required && <span className="text-danger ml-0.5">*</span>}
       </span>
       {children}
       {error ? (
-        <span className="text-xs text-danger">{error}</span>
+        <span className="text-xs text-danger">{t(error)}</span>
       ) : hint ? (
-        <span className="text-xs text-muted">{hint}</span>
+        <span className="text-xs text-muted">{t(hint)}</span>
       ) : null}
     </label>
   );
@@ -30,14 +32,31 @@ export function Field({ label, required, hint, error, children }: Props) {
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
 
-export function TextInput({ className = "", ...rest }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={`${INPUT_BASE} ${className}`} />;
+export function TextInput({
+  className = "",
+  placeholder,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  const t = useT();
+  return (
+    <input
+      {...rest}
+      placeholder={placeholder ? t(placeholder) : placeholder}
+      className={`${INPUT_BASE} ${className}`}
+    />
+  );
 }
 
-export function TextArea({ className = "", ...rest }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextArea({
+  className = "",
+  placeholder,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const t = useT();
   return (
     <textarea
       {...rest}
+      placeholder={placeholder ? t(placeholder) : placeholder}
       className={`${INPUT_BASE} resize-none min-h-[72px] ${className}`}
     />
   );

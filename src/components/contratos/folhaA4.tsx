@@ -9,6 +9,7 @@
 import { type CSSProperties, type Ref } from "react";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
+import { useT } from "@/lib/i18n";
 
 function temConteudo(secoes: SecaoModelo[]): boolean {
   return secoes.some((s) => {
@@ -205,12 +206,12 @@ function dataHoraRel(iso: string | null): string {
 }
 
 /** Página "Relatório de Assinaturas" (estilo ZapSign), anexada ao final. */
-function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
+function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo, tr: (s: string) => string) {
   return (
     <div
       style={{ borderTop: `2px solid ${estilo.corTitulo}`, paddingTop: "10pt" }}
     >
-      <h3 style={estiloTitulo(estilo.corTitulo)}>Relatório de Assinaturas</h3>
+      <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Relatório de Assinaturas")}</h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "14pt" }}>
         {assinaturas.map((a, i) => (
           <div
@@ -220,7 +221,7 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700 }}>
                 {a.nome}
-                {a.assinadoEm ? " — Assinou" : " — Pendente"}
+                {a.assinadoEm ? ` — ${tr("Assinou")}` : ` — ${tr("Pendente")}`}
               </div>
               {a.papel && (
                 <div
@@ -242,23 +243,23 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                   lineHeight: 1.55,
                 }}
               >
-                {a.documento && <div>Documento: {a.documento}</div>}
+                {a.documento && <div>{tr("Documento:")} {a.documento}</div>}
                 {a.assinadoEm && (
-                  <div>Data/hora: {dataHoraRel(a.assinadoEm)}</div>
+                  <div>{tr("Data/hora:")} {dataHoraRel(a.assinadoEm)}</div>
                 )}
                 {a.ip && <div>IP: {a.ip}</div>}
                 {a.geolocalizacao && (
-                  <div>Geolocalização: {a.geolocalizacao}</div>
+                  <div>{tr("Geolocalização:")} {a.geolocalizacao}</div>
                 )}
                 {a.dispositivo && (
                   <div style={{ wordBreak: "break-word" }}>
-                    Dispositivo: {a.dispositivo}
+                    {tr("Dispositivo:")} {a.dispositivo}
                   </div>
                 )}
                 {typeof a.facialSimilaridade === "number" && (
                   <div>
-                    Reconhecimento facial: {a.facialSimilaridade}%{" "}
-                    {a.facialMatch ? "(compatível)" : "(divergente)"}
+                    {tr("Reconhecimento facial:")} {a.facialSimilaridade}%{" "}
+                    {a.facialMatch ? `(${tr("compatível")})` : `(${tr("divergente")})`}
                   </div>
                 )}
               </div>
@@ -276,9 +277,9 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
                 >
                   {[
                     { url: a.fotoCpfUrl, leg: "CPF" },
-                    { url: a.fotoDocumentoUrl, leg: "Documento (frente)" },
-                    { url: a.fotoDocumentoVersoUrl, leg: "Documento (verso)" },
-                    { url: a.selfieUrl, leg: "Selfie" },
+                    { url: a.fotoDocumentoUrl, leg: tr("Documento (frente)") },
+                    { url: a.fotoDocumentoVersoUrl, leg: tr("Documento (verso)") },
+                    { url: a.selfieUrl, leg: tr("Selfie") },
                   ]
                     .filter((f) => f.url)
                     .map((f, j) => (
@@ -335,8 +336,9 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo) {
 function renderSecao(
   secao: SecaoModelo,
   num: ReturnType<typeof calcularNumeracao>,
-  ex: (t: string) => string,
+  ex: (s: string) => string,
   estilo: EstiloModelo,
+  tr: (s: string) => string,
   assinaturas?: AssinaturaInfo[]
 ) {
   const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
@@ -368,13 +370,13 @@ function renderSecao(
     case "partes":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>Das partes</h3>
+          <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Das partes")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
-              .filter((t) => t.trim())
-              .map((t, i) => (
+              .filter((s) => s.trim())
+              .map((s, i) => (
                 <div key={i} style={corpo}>
-                  {ex(t)}
+                  {ex(s)}
                 </div>
               ))}
           </div>
@@ -385,7 +387,7 @@ function renderSecao(
       return (
         <div>
           <h3 style={estiloTitulo(estilo.corTitulo)}>
-            CLÁUSULA {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
+            {tr("CLÁUSULA")} {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {secao.itens.map((item) => (
@@ -404,15 +406,15 @@ function renderSecao(
         {
           nome: ex("{{contratante}}"),
           doc: ex("{{documento}}"),
-          papel: "CONTRATANTE",
+          papel: tr("CONTRATANTE"),
         },
-        { nome: ex("{{artista}}"), papel: "CONTRATADO" },
+        { nome: ex("{{artista}}"), papel: tr("CONTRATADO") },
       ];
-      secao.testemunhas.forEach((t, i) => {
+      secao.testemunhas.forEach((testemunha, i) => {
         blocos.push({
-          nome: t.nome,
-          doc: t.documento,
-          papel: `Testemunha ${i + 1}`,
+          nome: testemunha.nome,
+          doc: testemunha.documento,
+          papel: `${tr("Testemunha")} ${i + 1}`,
         });
       });
       return (
@@ -506,11 +508,12 @@ export function FolhaA4({
   estilo: EstiloModelo;
   folhaRef: Ref<HTMLDivElement>;
   conteudoRef: Ref<HTMLDivElement>;
-  transformarTexto?: (t: string) => string;
+  transformarTexto?: (s: string) => string;
   assinaturas?: AssinaturaInfo[];
 }) {
+  const tr = useT();
   const num = calcularNumeracao(secoes);
-  const ex = transformarTexto ?? ((t: string) => t);
+  const ex = transformarTexto ?? ((s: string) => s);
 
   return (
     <div
@@ -537,7 +540,7 @@ export function FolhaA4({
       >
         {!temConteudo(secoes) ? (
           <p style={{ fontStyle: "italic", opacity: 0.55 }}>
-            Nada para mostrar ainda.
+            {tr("Nada para mostrar ainda.")}
           </p>
         ) : (
           <div
@@ -546,12 +549,12 @@ export function FolhaA4({
           >
             {secoes.map((secao) => (
               <div key={secao.id}>
-                {renderSecao(secao, num, ex, estilo, assinaturas)}
+                {renderSecao(secao, num, ex, estilo, tr, assinaturas)}
               </div>
             ))}
             {assinaturas &&
               assinaturas.some((a) => a.assinatura || a.assinadoEm) && (
-                <div>{renderRelatorio(assinaturas, estilo)}</div>
+                <div>{renderRelatorio(assinaturas, estilo, tr)}</div>
               )}
           </div>
         )}

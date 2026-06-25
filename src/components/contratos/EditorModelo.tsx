@@ -26,6 +26,7 @@ import {
   Palette,
 } from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
+import { useT } from "@/lib/i18n";
 import ColorPicker from "../ColorPicker";
 import type {
   SecaoModelo,
@@ -157,6 +158,7 @@ export default function EditorModelo({
   onVoltar,
   onSalvo,
 }: Props) {
+  const t = useT();
   const { criarModelo, atualizarModelo } = useModelos();
 
   const [nome, setNome] = useState(nomeInicial);
@@ -201,7 +203,7 @@ export default function EditorModelo({
 
   function removerSecao(id: string) {
     if (temConteudo(secoes.filter((s) => s.id === id)) &&
-        !window.confirm("Remover esta seção? O conteúdo será perdido.")) {
+        !window.confirm(t("Remover esta seção? O conteúdo será perdido."))) {
       return;
     }
     setSecoes((prev) => prev.filter((s) => s.id !== id));
@@ -335,7 +337,7 @@ export default function EditorModelo({
     const item =
       secao?.tipo === "clausula" ? secao.itens.find((i) => i.id === itemId) : null;
     if (item?.texto.trim() &&
-        !window.confirm("Remover este item? O conteúdo será perdido.")) {
+        !window.confirm(t("Remover este item? O conteúdo será perdido."))) {
       return;
     }
     setSecoes((prev) =>
@@ -447,7 +449,7 @@ export default function EditorModelo({
       }
       onSalvo();
     } catch (e) {
-      setErro((e as Error).message || "Não foi possível salvar o modelo.");
+      setErro((e as Error).message || t("Não foi possível salvar o modelo."));
     } finally {
       setSalvando(false);
     }
@@ -559,7 +561,7 @@ export default function EditorModelo({
 
       pdf.save(`${nome.trim() || "contrato"}.pdf`);
     } catch {
-      setErro("Não foi possível gerar o PDF. Tente novamente.");
+      setErro(t("Não foi possível gerar o PDF. Tente novamente."));
     } finally {
       setBaixandoPdf(false);
     }
@@ -587,14 +589,14 @@ export default function EditorModelo({
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <button type="button" onClick={onVoltar} className="btn btn-ghost">
           <ArrowLeft size={15} />
-          Voltar
+          {t("Voltar")}
         </button>
 
         <input
           type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome do modelo"
+          placeholder={t("Nome do modelo")}
           className="campo-input flex-1 min-w-[220px] max-w-md font-medium"
         />
 
@@ -606,7 +608,7 @@ export default function EditorModelo({
             aria-pressed={preview}
           >
             {preview ? <EyeOff size={15} /> : <Eye size={15} />}
-            {preview ? "Editar" : "Preview"}
+            {preview ? t("Editar") : t("Preview")}
           </button>
           <button
             type="button"
@@ -616,7 +618,7 @@ export default function EditorModelo({
             style={{ backgroundColor: ACCENT, color: "#fff", opacity: salvando ? 0.6 : 1 }}
           >
             <Save size={15} />
-            {salvando ? "Salvando..." : "Salvar"}
+            {salvando ? t("Salvando...") : t("Salvar")}
           </button>
         </div>
       </div>
@@ -640,22 +642,22 @@ export default function EditorModelo({
                   style={{ color: ACCENT }}
                 >
                   <Palette size={13} />
-                  Aparência
+                  {t("Aparência")}
                 </span>
                 <SeletorCorInline
-                  label="Fundo"
+                  label={t("Fundo")}
                   cor={estilo.corFundo}
                   presets={PRESETS_FUNDO}
                   onChange={(c) => setEstilo((s) => ({ ...s, corFundo: c }))}
                 />
                 <SeletorCorInline
-                  label="Texto"
+                  label={t("Texto")}
                   cor={estilo.corTexto}
                   presets={PRESETS_TEXTO}
                   onChange={(c) => setEstilo((s) => ({ ...s, corTexto: c }))}
                 />
                 <SeletorCorInline
-                  label="Títulos"
+                  label={t("Títulos")}
                   cor={estilo.corTitulo}
                   presets={PRESETS_TITULO}
                   onChange={(c) => setEstilo((s) => ({ ...s, corTitulo: c }))}
@@ -668,7 +670,7 @@ export default function EditorModelo({
                   style={{ backgroundColor: ACCENT, color: "#fff", opacity: baixandoPdf ? 0.6 : 1 }}
                 >
                   <Download size={15} />
-                  {baixandoPdf ? "Gerando..." : "Baixar PDF"}
+                  {baixandoPdf ? t("Gerando...") : t("Baixar PDF")}
                 </button>
               </div>
               <PreviewSecoes
@@ -685,15 +687,15 @@ export default function EditorModelo({
                   {/* Cabeçalho do card: rótulo do tipo + mover/remover */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="stat-label" style={{ color: ACCENT }}>
-                      {TIPOS_SECAO.find((t) => t.tipo === secao.tipo)?.label ?? secao.tipo}
+                      {t(TIPOS_SECAO.find((tp) => tp.tipo === secao.tipo)?.label ?? secao.tipo)}
                     </span>
                     <div className="flex items-center gap-0.5 flex-shrink-0 ml-auto">
                       <button
                         type="button"
                         onClick={() => moverSecao(index, -1)}
                         disabled={index === 0}
-                        title="Mover para cima"
-                        aria-label="Mover para cima"
+                        title={t("Mover para cima")}
+                        aria-label={t("Mover para cima")}
                         className="btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <ArrowUp size={15} />
@@ -702,8 +704,8 @@ export default function EditorModelo({
                         type="button"
                         onClick={() => moverSecao(index, 1)}
                         disabled={index === secoes.length - 1}
-                        title="Mover para baixo"
-                        aria-label="Mover para baixo"
+                        title={t("Mover para baixo")}
+                        aria-label={t("Mover para baixo")}
                         className="btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <ArrowDown size={15} />
@@ -711,8 +713,8 @@ export default function EditorModelo({
                       <button
                         type="button"
                         onClick={() => removerSecao(secao.id)}
-                        title="Remover seção"
-                        aria-label="Remover seção"
+                        title={t("Remover seção")}
+                        aria-label={t("Remover seção")}
                         className="btn-ghost p-1.5 rounded hover:text-danger"
                       >
                         <Trash2 size={15} />
@@ -728,7 +730,7 @@ export default function EditorModelo({
                         {...campoProps({ secaoId: secao.id, campo: "titulo" })}
                         value={secao.titulo}
                         onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
-                        placeholder="Título do contrato"
+                        placeholder={t("Título do contrato")}
                         className="campo-input font-semibold"
                       />
                       <input
@@ -736,7 +738,7 @@ export default function EditorModelo({
                         {...campoProps({ secaoId: secao.id, campo: "subtitulo" })}
                         value={secao.subtitulo}
                         onChange={(e) => setCampo(secao.id, "subtitulo", e.target.value)}
-                        placeholder="Subtítulo"
+                        placeholder={t("Subtítulo")}
                         className="campo-input"
                       />
                     </div>
@@ -745,34 +747,34 @@ export default function EditorModelo({
                   {secao.tipo === "partes" && (
                     <div className="flex flex-col gap-3">
                       <label className="flex flex-col gap-1">
-                        <span className="stat-label">Contratante</span>
+                        <span className="stat-label">{t("Contratante")}</span>
                         <textarea
                           {...campoProps({ secaoId: secao.id, campo: "contratante" })}
                           value={secao.contratante}
                           onChange={(e) => setCampo(secao.id, "contratante", e.target.value)}
-                          placeholder="Identificação do contratante. Use as variáveis ao lado."
+                          placeholder={t("Identificação do contratante. Use as variáveis ao lado.")}
                           className="campo-input min-h-[70px] resize-y leading-relaxed"
                           style={{ whiteSpace: "pre-wrap" }}
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="stat-label">Contratado</span>
+                        <span className="stat-label">{t("Contratado")}</span>
                         <textarea
                           {...campoProps({ secaoId: secao.id, campo: "contratado" })}
                           value={secao.contratado}
                           onChange={(e) => setCampo(secao.id, "contratado", e.target.value)}
-                          placeholder="Identificação do contratado. Use as variáveis ao lado."
+                          placeholder={t("Identificação do contratado. Use as variáveis ao lado.")}
                           className="campo-input min-h-[70px] resize-y leading-relaxed"
                           style={{ whiteSpace: "pre-wrap" }}
                         />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="stat-label">Parágrafo</span>
+                        <span className="stat-label">{t("Parágrafo")}</span>
                         <textarea
                           {...campoProps({ secaoId: secao.id, campo: "paragrafo" })}
                           value={secao.paragrafo}
                           onChange={(e) => setCampo(secao.id, "paragrafo", e.target.value)}
-                          placeholder="Parágrafo de abertura (ex: 'As partes acima têm, entre si...')."
+                          placeholder={t("Parágrafo de abertura (ex: 'As partes acima têm, entre si...').")}
                           className="campo-input min-h-[70px] resize-y leading-relaxed"
                           style={{ whiteSpace: "pre-wrap" }}
                         />
@@ -787,14 +789,14 @@ export default function EditorModelo({
                           className="badge flex-shrink-0"
                           style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
                         >
-                          Cláusula {num.clausulas[secao.id]}
+                          {t("Cláusula")} {num.clausulas[secao.id]}
                         </span>
                         <input
                           type="text"
                           {...campoProps({ secaoId: secao.id, campo: "titulo" })}
                           value={secao.titulo}
                           onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
-                          placeholder="Título da cláusula (ex: DO OBJETO)"
+                          placeholder={t("Título da cláusula (ex: DO OBJETO)")}
                           className="campo-input font-semibold"
                         />
                       </div>
@@ -808,7 +810,7 @@ export default function EditorModelo({
                                 color:
                                   item.tipo === "subclausula" ? ACCENT : "var(--text-muted)",
                               }}
-                              title={item.tipo === "subclausula" ? "Sub-cláusula" : "Parágrafo"}
+                              title={item.tipo === "subclausula" ? t("Sub-cláusula") : t("Parágrafo")}
                             >
                               {item.tipo === "subclausula" ? num.itens[item.id] : "¶"}
                             </span>
@@ -822,8 +824,8 @@ export default function EditorModelo({
                               onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
                               placeholder={
                                 item.tipo === "subclausula"
-                                  ? "Sub-cláusula numerada automaticamente."
-                                  : "Parágrafo (sem número)."
+                                  ? t("Sub-cláusula numerada automaticamente.")
+                                  : t("Parágrafo (sem número).")
                               }
                               className="campo-input min-h-[80px] resize-y leading-relaxed flex-1"
                               style={{ whiteSpace: "pre-wrap" }}
@@ -831,8 +833,8 @@ export default function EditorModelo({
                             <button
                               type="button"
                               onClick={() => removerItem(secao.id, item.id)}
-                              title="Remover item"
-                              aria-label="Remover item"
+                              title={t("Remover item")}
+                              aria-label={t("Remover item")}
                               className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
                             >
                               <X size={14} />
@@ -847,7 +849,7 @@ export default function EditorModelo({
                             className="btn btn-ghost text-xs px-2 py-1"
                           >
                             <Plus size={13} />
-                            Cláusula
+                            {t("Cláusula")}
                           </button>
                           <button
                             type="button"
@@ -855,7 +857,7 @@ export default function EditorModelo({
                             className="btn btn-ghost text-xs px-2 py-1"
                           >
                             <Plus size={13} />
-                            Parágrafo
+                            {t("Parágrafo")}
                           </button>
                         </div>
                       </div>
@@ -865,50 +867,49 @@ export default function EditorModelo({
                   {secao.tipo === "assinaturas" && (
                     <div className="flex flex-col gap-3">
                       <p className="section-subtitle">
-                        Blocos de <strong>Contratante</strong> e{" "}
-                        <strong>Contratado</strong> são automáticos (dados do
-                        contrato). Testemunhas são preenchidas manualmente:
+                        {t("Blocos de")} <strong>{t("Contratante")}</strong> {t("e")}{" "}
+                        <strong>{t("Contratado")}</strong> {t("são automáticos (dados do contrato). Testemunhas são preenchidas manualmente:")}
                       </p>
 
-                      {secao.testemunhas.map((t, i) => (
+                      {secao.testemunhas.map((testemunha, i) => (
                         <div
-                          key={t.id}
+                          key={testemunha.id}
                           className="bg-surface border border-border rounded p-3 flex flex-col gap-2"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted uppercase tracking-wide">
-                              Testemunha {i + 1}
+                              {t("Testemunha")} {i + 1}
                             </span>
                             <button
                               type="button"
-                              onClick={() => removerTestemunha(secao.id, t.id)}
+                              onClick={() => removerTestemunha(secao.id, testemunha.id)}
                               className="btn-ghost p-1 rounded text-muted hover:text-danger"
-                              title="Remover testemunha"
+                              title={t("Remover testemunha")}
                             >
                               <X size={13} />
                             </button>
                           </div>
                           <input
                             type="text"
-                            value={t.nome}
+                            value={testemunha.nome}
                             onChange={(e) =>
-                              atualizarTestemunha(secao.id, t.id, "nome", e.target.value)
+                              atualizarTestemunha(secao.id, testemunha.id, "nome", e.target.value)
                             }
-                            placeholder="Nome da testemunha"
+                            placeholder={t("Nome da testemunha")}
                             className="campo-input"
                           />
                           <input
                             type="text"
-                            value={t.documento}
+                            value={testemunha.documento}
                             onChange={(e) =>
                               atualizarTestemunha(
                                 secao.id,
-                                t.id,
+                                testemunha.id,
                                 "documento",
                                 e.target.value
                               )
                             }
-                            placeholder="CPF / documento"
+                            placeholder={t("CPF / documento")}
                             className="campo-input"
                           />
                         </div>
@@ -921,7 +922,7 @@ export default function EditorModelo({
                           className="btn-ghost text-xs inline-flex items-center gap-1.5 self-start"
                           style={{ color: "var(--module-contratos)" }}
                         >
-                          <Plus size={13} /> Testemunha
+                          <Plus size={13} /> {t("Testemunha")}
                         </button>
                       )}
                     </div>
@@ -934,14 +935,14 @@ export default function EditorModelo({
                         {...campoProps({ secaoId: secao.id, campo: "titulo" })}
                         value={secao.titulo}
                         onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
-                        placeholder="Título do anexo (ex: ANEXO — RIDER TÉCNICO)"
+                        placeholder={t("Título do anexo (ex: ANEXO — RIDER TÉCNICO)")}
                         className="campo-input font-semibold"
                       />
                       <textarea
                         {...campoProps({ secaoId: secao.id, campo: "conteudo" })}
                         value={secao.conteudo}
                         onChange={(e) => setCampo(secao.id, "conteudo", e.target.value)}
-                        placeholder="Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}."
+                        placeholder={t("Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.")}
                         className="campo-input min-h-[110px] resize-y leading-relaxed"
                         style={{ whiteSpace: "pre-wrap" }}
                       />
@@ -960,7 +961,7 @@ export default function EditorModelo({
                   aria-expanded={menuAberto}
                 >
                   <Plus size={15} />
-                  Adicionar seção
+                  {t("Adicionar seção")}
                 </button>
                 {menuAberto && (
                   <div
@@ -980,7 +981,7 @@ export default function EditorModelo({
                         className="btn-ghost w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left"
                       >
                         <Icon size={15} style={{ color: ACCENT }} />
-                        {label}
+                        {t(label)}
                       </button>
                     ))}
                   </div>
@@ -993,14 +994,14 @@ export default function EditorModelo({
         {/* Coluna direita: paleta de variáveis (sticky) */}
         <aside className="lg:sticky lg:top-6 self-start">
           <div className="card p-4">
-            <div className="section-title mb-1">Variáveis</div>
+            <div className="section-title mb-1">{t("Variáveis")}</div>
             <p className="section-subtitle mb-4">
-              Clique para inserir no ponto do cursor.
+              {t("Clique para inserir no ponto do cursor.")}
             </p>
             <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
               {GRUPOS_VARIAVEIS.map((g) => (
                 <div key={g.grupo}>
-                  <div className="stat-label mb-2">{g.grupo}</div>
+                  <div className="stat-label mb-2">{t(g.grupo)}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {g.itens.map((v) => (
                       <button
@@ -1011,7 +1012,7 @@ export default function EditorModelo({
                         className="badge badge-neutral hover:text-primary transition-colors"
                         style={{ cursor: "pointer" }}
                       >
-                        {v.label}
+                        {t(v.label)}
                       </button>
                     ))}
                   </div>
@@ -1080,6 +1081,7 @@ function SeletorCorInline({
   presets: string[];
   onChange: (c: string) => void;
 }) {
+  const t = useT();
   const [aberto, setAberto] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const ativo = (p: string) => p.toLowerCase() === cor.toLowerCase();
@@ -1109,7 +1111,7 @@ function SeletorCorInline({
         ref={anchorRef}
         type="button"
         onClick={() => setAberto(true)}
-        title="Cor personalizada (RGB)"
+        title={t("Cor personalizada (RGB)")}
         className="h-6 w-6 rounded-md flex items-center justify-center transition-transform hover:scale-110"
         style={{
           backgroundColor: ehCustom ? cor : "transparent",
@@ -1155,8 +1157,9 @@ function PreviewSecoes({
   folhaRef: Ref<HTMLDivElement>;
   conteudoRef: Ref<HTMLDivElement>;
 }) {
+  const translate = useT();
   const num = calcularNumeracao(secoes);
-  const ex = (t: string) => preencher(t, VALORES_EXEMPLO);
+  const ex = (s: string) => preencher(s, VALORES_EXEMPLO);
 
   return (
     <div
@@ -1183,7 +1186,7 @@ function PreviewSecoes({
       >
         {!temConteudo(secoes) ? (
           <p style={{ fontStyle: "italic", opacity: 0.55 }}>
-            Nada para mostrar ainda — adicione seções e preencha o conteúdo.
+            {translate("Nada para mostrar ainda — adicione seções e preencha o conteúdo.")}
           </p>
         ) : (
           <div
@@ -1191,7 +1194,7 @@ function PreviewSecoes({
             style={{ display: "flex", flexDirection: "column", gap: "18pt" }}
           >
             {secoes.map((secao) => (
-              <div key={secao.id}>{renderPreviewSecao(secao, num, ex, estilo)}</div>
+              <div key={secao.id}>{renderPreviewSecao(secao, num, ex, estilo, translate)}</div>
             ))}
           </div>
         )}
@@ -1216,8 +1219,9 @@ function estiloTitulo(cor: string): CSSProperties {
 function renderPreviewSecao(
   secao: SecaoModelo,
   num: ReturnType<typeof calcularNumeracao>,
-  ex: (t: string) => string,
-  estilo: EstiloModelo
+  ex: (s: string) => string,
+  estilo: EstiloModelo,
+  tr: (s: string) => string
 ) {
   const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
 
@@ -1248,13 +1252,13 @@ function renderPreviewSecao(
     case "partes":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>Das partes</h3>
+          <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Das partes")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
-              .filter((t) => t.trim())
-              .map((t, i) => (
+              .filter((s) => s.trim())
+              .map((s, i) => (
                 <div key={i} style={corpo}>
-                  {ex(t)}
+                  {ex(s)}
                 </div>
               ))}
           </div>
@@ -1265,7 +1269,7 @@ function renderPreviewSecao(
       return (
         <div>
           <h3 style={estiloTitulo(estilo.corTitulo)}>
-            CLÁUSULA {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
+            {tr("CLÁUSULA")} {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {secao.itens.map((item) => (
@@ -1281,11 +1285,11 @@ function renderPreviewSecao(
 
     case "assinaturas": {
       const blocos: { nome: string; doc?: string; papel: string }[] = [
-        { nome: ex("{{contratante}}"), doc: ex("{{documento}}"), papel: "CONTRATANTE" },
-        { nome: ex("{{artista}}"), papel: "CONTRATADO" },
+        { nome: ex("{{contratante}}"), doc: ex("{{documento}}"), papel: tr("CONTRATANTE") },
+        { nome: ex("{{artista}}"), papel: tr("CONTRATADO") },
       ];
-      secao.testemunhas.forEach((t, i) => {
-        blocos.push({ nome: t.nome, doc: t.documento, papel: `Testemunha ${i + 1}` });
+      secao.testemunhas.forEach((testemunha, i) => {
+        blocos.push({ nome: testemunha.nome, doc: testemunha.documento, papel: `${tr("Testemunha")} ${i + 1}` });
       });
       return (
         <div

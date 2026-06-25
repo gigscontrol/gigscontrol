@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { Field, TextInput, Select } from "../Field";
 import { useContatos } from "@/lib/contatos-context";
 import type { Cidade } from "@/types";
@@ -26,6 +27,7 @@ type Props = {
  * podem ser editadas — útil pra corrigir grafia ou UF errados.
  */
 export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
+  const t = useT();
   const { updateCidade } = useContatos();
 
   const [nome, setNome] = useState(initial?.nome ?? "");
@@ -46,18 +48,15 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
         >
           <Info size={18} style={{ color: "var(--module-vendas)" }} className="flex-shrink-0 mt-0.5" />
           <div className="text-sm text-secondary leading-relaxed">
-            Cidades agora são adicionadas <strong className="text-primary">automaticamente</strong> a
-            partir do catálogo nacional do IBGE quando aparecem em um
-            orçamento, venda, casa ou contratante.
+            {t("Cidades agora são adicionadas")} <strong className="text-primary">{t("automaticamente")}</strong> {t("a partir do catálogo nacional do IBGE quando aparecem em um orçamento, venda, casa ou contratante.")}
             <br />
             <br />
-            Não precisa criar manualmente — basta usar o autocomplete de
-            cidade nos formulários e a cidade fica salva aqui.
+            {t("Não precisa criar manualmente — basta usar o autocomplete de cidade nos formulários e a cidade fica salva aqui.")}
           </div>
         </div>
         <div className="flex justify-end pt-2 border-t border-border">
           <button onClick={onCancel} className="btn btn-primary">
-            Entendi
+            {t("Entendi")}
           </button>
         </div>
       </div>
@@ -67,8 +66,8 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
   // Modo EDIÇÃO: permite ajustar cidade existente (legada ou IBGE)
   const handleSave = () => {
     const errs: Record<string, string> = {};
-    if (!nome.trim()) errs.nome = "Nome obrigatório";
-    if (!estado.trim() || estado.length !== 2) errs.estado = "UF com 2 letras (ex: SP)";
+    if (!nome.trim()) errs.nome = t("Nome obrigatório");
+    if (!estado.trim() || estado.length !== 2) errs.estado = t("UF com 2 letras (ex: SP)");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -99,16 +98,16 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
         <Field label="Região" required>
           <Select value={regiao} onChange={(e) => setRegiao(e.target.value as Cidade["regiao"])}>
             {REGIOES.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>{t(r)}</option>
             ))}
           </Select>
         </Field>
       </div>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button onClick={onCancel} className="btn btn-secondary">Cancelar</button>
+        <button onClick={onCancel} className="btn btn-secondary">{t("Cancelar")}</button>
         <button onClick={handleSave} className="btn btn-primary">
-          Salvar alterações
+          {t("Salvar alterações")}
         </button>
       </div>
     </div>

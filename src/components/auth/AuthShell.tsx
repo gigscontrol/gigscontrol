@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 const VENDAS = "#a855f7";
 
@@ -29,6 +30,7 @@ export default function AuthShell({
   subtitulo?: string;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="min-h-screen bg-main text-primary lg:grid lg:grid-cols-2">
       {/* ===== Painel de marca (desktop) ===== */}
@@ -55,11 +57,11 @@ export default function AuthShell({
 
         <div className="relative max-w-md">
           <h2 className="font-display text-3xl xl:text-4xl font-extrabold leading-[1.1]">
-            A operação da sua{" "}
+            {t("A operação da sua")}{" "}
             <span className="bg-gradient-to-r from-[var(--module-vendas)] to-[var(--module-contratos)] bg-clip-text text-transparent">
-              agência musical
+              {t("agência musical")}
             </span>{" "}
-            em um só lugar
+            {t("em um só lugar")}
           </h2>
           <ul className="mt-8 flex flex-col gap-3.5">
             {PONTOS.map((p) => (
@@ -70,7 +72,7 @@ export default function AuthShell({
                 >
                   <Check size={12} strokeWidth={3} />
                 </span>
-                <span className="text-sm text-secondary">{p}</span>
+                <span className="text-sm text-secondary">{t(p)}</span>
               </li>
             ))}
           </ul>
@@ -110,7 +112,7 @@ export default function AuthShell({
             className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
           >
             <ArrowLeft size={13} />
-            Voltar ao site
+            {t("Voltar ao site")}
           </Link>
         </div>
 

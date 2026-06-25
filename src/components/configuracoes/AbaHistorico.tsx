@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   History,
   ShoppingBag,
@@ -47,6 +48,7 @@ const MODULOS: {
 const LIMIT = 50;
 
 export default function AbaHistorico() {
+  const t = useT();
   const { carregarHistorico } = useWorkspace();
   const [itens, setItens] = useState<HistoricoAcao[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -92,11 +94,10 @@ export default function AbaHistorico() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <History size={16} style={{ color: "#a855f7" }} />
-          <div className="section-title">Histórico de ações</div>
+          <div className="section-title">{t("Histórico de ações")}</div>
         </div>
         <div className="section-subtitle">
-          Trilha de auditoria do workspace — quem fez o quê e quando. Visível
-          apenas para o admin.
+          {t("Trilha de auditoria do workspace — quem fez o quê e quando. Visível apenas para o admin.")}
         </div>
       </div>
 
@@ -104,7 +105,7 @@ export default function AbaHistorico() {
       <div className="card flex flex-col gap-3">
         <div>
           <div className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
-            Período
+            {t("Período")}
           </div>
           <div className="pill-group flex-wrap">
             {PERIODOS.map((p) => (
@@ -113,7 +114,7 @@ export default function AbaHistorico() {
                 onClick={() => setPeriodo(p.id)}
                 className={`pill ${periodo === p.id ? "active" : ""}`}
               >
-                {p.label}
+                {t(p.label)}
               </button>
             ))}
           </div>
@@ -121,7 +122,7 @@ export default function AbaHistorico() {
 
         <div>
           <div className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
-            Módulo
+            {t("Módulo")}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {MODULOS.map((m) => {
@@ -139,7 +140,7 @@ export default function AbaHistorico() {
                   }}
                 >
                   <Icon size={12} />
-                  {m.label}
+                  {t(m.label)}
                 </button>
               );
             })}
@@ -150,14 +151,14 @@ export default function AbaHistorico() {
       {/* Lista */}
       <div className="card p-0 overflow-hidden">
         {carregando && itens.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted">Carregando...</div>
+          <div className="py-12 text-center text-sm text-muted">{t("Carregando...")}</div>
         ) : erro ? (
           <div className="py-12 text-center text-sm" style={{ color: "var(--danger)" }}>
             {erro}
           </div>
         ) : itens.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
-            Nenhuma ação registrada no período/módulo selecionado.
+            {t("Nenhuma ação registrada no período/módulo selecionado.")}
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -173,7 +174,7 @@ export default function AbaHistorico() {
               onClick={() => carregar(false)}
               className="btn btn-secondary text-xs"
             >
-              Carregar mais
+              {t("Carregar mais")}
             </button>
           </div>
         )}
@@ -187,6 +188,7 @@ export default function AbaHistorico() {
 // ============================================================
 
 function LinhaAcao({ item }: { item: HistoricoAcao }) {
+  const t = useT();
   const moduloInfo = useMemo(
     () => MODULOS.find((m) => m.id === item.modulo) ?? MODULOS[0],
     [item.modulo]
@@ -206,27 +208,27 @@ function LinhaAcao({ item }: { item: HistoricoAcao }) {
         <div className="flex items-center gap-2 mt-0.5 text-xs text-muted">
           <UserCircle size={11} />
           <span className="truncate">
-            {item.actorNome ?? item.actorEmail ?? "Sistema"}
+            {item.actorNome ?? item.actorEmail ?? t("Sistema")}
           </span>
           <span>·</span>
           <CalendarRange size={11} />
-          <span>{formatarTempoRelativo(item.criadoEm)}</span>
+          <span>{formatarTempoRelativo(item.criadoEm, t)}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function formatarTempoRelativo(iso: string): string {
+function formatarTempoRelativo(iso: string, t: (s: string, p?: Record<string, string | number>) => string): string {
   const data = new Date(iso);
   const diffMs = Date.now() - data.getTime();
   const minutos = Math.floor(diffMs / 60000);
-  if (minutos < 1) return "agora há pouco";
-  if (minutos < 60) return `há ${minutos} min`;
+  if (minutos < 1) return t("agora há pouco");
+  if (minutos < 60) return t("há {n} min", { n: minutos });
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `há ${horas}h`;
+  if (horas < 24) return t("há {n}h", { n: horas });
   const dias = Math.floor(horas / 24);
-  if (dias < 7) return `há ${dias} dia${dias === 1 ? "" : "s"}`;
+  if (dias < 7) return t("há {n} dia{s}", { n: dias, s: dias === 1 ? "" : "s" });
   return data.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",

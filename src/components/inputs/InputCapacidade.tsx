@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import { mascararCapacidade } from "@/lib/formatters";
+import { useT } from "@/lib/i18n";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
@@ -27,13 +28,14 @@ const InputCapacidade = forwardRef<HTMLInputElement, Props>(
     { value, onChange, className = "", placeholder, ...rest },
     ref
   ) {
+    const t = useT();
     return (
       <input
         ref={ref}
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        placeholder={placeholder ?? "Ex: 500"}
+        placeholder={placeholder ?? t("Ex: 500")}
         value={mascararCapacidade(value)}
         onChange={(e) => {
           onChange(mascararCapacidade(e.target.value));

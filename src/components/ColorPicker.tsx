@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Check, X } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
  * Color picker custom no tema do GIGS CONTROL.
@@ -88,6 +89,7 @@ function hsvPuro(h: number): string {
 // ---------- Componente ----------
 
 export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props) {
+  const t = useT();
   const [hsv, setHsv] = useState<HSV>(() => hexParaHsv(cor));
   const [hexInput, setHexInput] = useState(cor.toUpperCase());
   const popRef = useRef<HTMLDivElement>(null);
@@ -190,13 +192,13 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
       {/* Header com X */}
       <div className="flex items-center justify-between -mb-1">
         <span className="text-[0.65rem] uppercase tracking-wider text-muted font-semibold">
-          Cor personalizada
+          {t("Cor personalizada")}
         </span>
         <button
           type="button"
           onClick={onClose}
           className="text-muted hover:text-primary transition-colors"
-          aria-label="Fechar"
+          aria-label={t("Fechar")}
         >
           <X size={14} />
         </button>
@@ -306,7 +308,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
         style={{ backgroundColor: "var(--module-vendas)" }}
       >
         <Check size={14} />
-        Aplicar
+        {t("Aplicar")}
       </button>
     </div>
   );

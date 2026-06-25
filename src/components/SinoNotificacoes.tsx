@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell, CheckCheck, X } from "lucide-react";
 import type { Notificacao } from "@/lib/mappers/notificacao";
+import { useT } from "@/lib/i18n";
+import type { Traduzir } from "@/lib/i18n";
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -22,6 +24,7 @@ type Props = {
  * passar pelo workspace-context (mantém o context mais enxuto).
  */
 export default function SinoNotificacoes({ onVerTodas }: Props) {
+  const t = useT();
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
@@ -114,7 +117,7 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
       <button
         onClick={() => setAberto((v) => !v)}
         className="btn-ghost relative p-2 rounded"
-        aria-label="Notificações"
+        aria-label={t("Notificações")}
         aria-haspopup="true"
         aria-expanded={aberto}
       >
@@ -138,13 +141,13 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
           <div className="flex items-center justify-between p-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Bell size={14} className="text-secondary" />
-              <span className="text-sm font-semibold text-primary">Notificações</span>
+              <span className="text-sm font-semibold text-primary">{t("Notificações")}</span>
               {naoLidas > 0 && (
                 <span
                   className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded text-white"
                   style={{ backgroundColor: "var(--danger)" }}
                 >
-                  {naoLidas} nova{naoLidas === 1 ? "" : "s"}
+                  {t("{n} nova{s}", { n: naoLidas, s: naoLidas === 1 ? "" : "s" })}
                 </span>
               )}
             </div>
@@ -152,10 +155,10 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
               <button
                 onClick={aoMarcarTodas}
                 className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
-                title="Marcar todas como lidas"
+                title={t("Marcar todas como lidas")}
               >
                 <CheckCheck size={12} />
-                Marcar todas
+                {t("Marcar todas")}
               </button>
             )}
           </div>
@@ -163,10 +166,10 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
           {/* Lista */}
           <div className="max-h-[400px] overflow-y-auto divide-y divide-border">
             {carregando && notificacoes.length === 0 ? (
-              <div className="py-8 text-center text-xs text-muted">Carregando...</div>
+              <div className="py-8 text-center text-xs text-muted">{t("Carregando...")}</div>
             ) : notificacoes.length === 0 ? (
               <div className="py-8 text-center text-xs text-muted">
-                Nenhuma notificação ainda.
+                {t("Nenhuma notificação ainda.")}
               </div>
             ) : (
               notificacoes.map((n) => (
@@ -189,7 +192,7 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
                 }}
                 className="text-xs text-muted hover:text-primary"
               >
-                Ver todas em Configurações → Notificações
+                {t("Ver todas em Configurações → Notificações")}
               </button>
             </div>
           )}
@@ -206,6 +209,7 @@ function LinhaNotificacao({
   notificacao: Notificacao;
   onMarcarLida: () => void;
 }) {
+  const t = useT();
   const lida = !!notificacao.lidaEm;
 
   const corTipo = (() => {
@@ -234,15 +238,15 @@ function LinhaNotificacao({
           {notificacao.mensagem}
         </div>
         <div className="text-[0.65rem] text-muted mt-1">
-          {formatarTempoRelativo(notificacao.criadoEm)}
+          {formatarTempoRelativo(notificacao.criadoEm, t)}
         </div>
       </div>
       {!lida && (
         <button
           onClick={onMarcarLida}
           className="btn-ghost p-1 rounded text-muted hover:text-primary flex-shrink-0"
-          title="Marcar como lida"
-          aria-label="Marcar como lida"
+          title={t("Marcar como lida")}
+          aria-label={t("Marcar como lida")}
         >
           <X size={12} />
         </button>
@@ -251,16 +255,16 @@ function LinhaNotificacao({
   );
 }
 
-function formatarTempoRelativo(iso: string): string {
+function formatarTempoRelativo(iso: string, t: Traduzir): string {
   const data = new Date(iso);
   const diffMs = Date.now() - data.getTime();
   const minutos = Math.floor(diffMs / 60000);
-  if (minutos < 1) return "agora há pouco";
-  if (minutos < 60) return `há ${minutos} min`;
+  if (minutos < 1) return t("agora há pouco");
+  if (minutos < 60) return t("há {n} min", { n: minutos });
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `há ${horas}h`;
+  if (horas < 24) return t("há {n}h", { n: horas });
   const dias = Math.floor(horas / 24);
-  if (dias < 7) return `há ${dias} dia${dias === 1 ? "" : "s"}`;
+  if (dias < 7) return t("há {n} dia{s}", { n: dias, s: dias === 1 ? "" : "s" });
   return data.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",

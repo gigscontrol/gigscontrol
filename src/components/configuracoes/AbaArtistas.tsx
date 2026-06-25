@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import {
   Music,
   Plus,
@@ -128,6 +129,7 @@ const MODOS_TAXA: TaxaAgenciaModo[] = [
 ];
 
 export default function AbaArtistas() {
+  const t = useT();
   const {
     artistas,
     adicionarArtista,
@@ -202,7 +204,7 @@ export default function AbaArtistas() {
     setAcaoLixeira(`restaurar-${id}`);
     try {
       await restaurarDaLixeira("artista", id);
-      setToast({ msg: `${nomeArt} restaurado.`, tipo: "sucesso" });
+      setToast({ msg: t("{nome} restaurado.", { nome: nomeArt }), tipo: "sucesso" });
     } catch (e) {
       setToast({ msg: (e as Error).message, tipo: "erro" });
     } finally {
@@ -239,12 +241,12 @@ export default function AbaArtistas() {
     if (g === "ok") {
       const email = params.get("email");
       setToast({
-        msg: email ? `Google conectado: ${email}` : "Google conectado!",
+        msg: email ? t("Google conectado: {email}", { email }) : t("Google conectado!"),
         tipo: "sucesso",
       });
     } else {
       setToast({
-        msg: params.get("msg") ?? "Falha ao conectar o Google.",
+        msg: params.get("msg") ?? t("Falha ao conectar o Google."),
         tipo: "erro",
       });
     }
@@ -325,7 +327,7 @@ export default function AbaArtistas() {
   }, [artistas, modoReordenar, muitosDJs, filtroStatus, busca]);
 
   function resetarSenhaDoPerfil(id: string, nome: string) {
-    if (!confirm(`Gerar uma nova senha aleatória pro artista ${nome}?`)) return;
+    if (!confirm(t("Gerar uma nova senha aleatória pro artista {nome}?", { nome }))) return;
     resetarSenhaArtista(id)
       .then((nova) =>
         setCredenciaisGeradas({ nomeArtista: nome, username: "—", senha: nova })
@@ -345,11 +347,11 @@ export default function AbaArtistas() {
             <Music size={20} />
           </div>
           <div>
-            <div className="page-title">Artistas</div>
+            <div className="page-title">{t("Artistas")}</div>
             <div className="page-subtitle">
               {plano
-                ? `Plano ${plano.nome} — ${usados} de ${limite} em uso`
-                : "Artistas da sua agência"}
+                ? t("Plano {nome} — {usados} de {limite} em uso", { nome: plano.nome, usados, limite })
+                : t("Artistas da sua agência")}
             </div>
           </div>
         </div>
@@ -377,8 +379,7 @@ export default function AbaArtistas() {
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
-            Você atingiu o limite de artistas do plano {plano?.nome}. Para
-            adicionar mais, faça upgrade do plano ou remova um artista.
+            {t("Você atingiu o limite de artistas do plano {nome}. Para adicionar mais, faça upgrade do plano ou remova um artista.", { nome: plano?.nome ?? "" })}
           </span>
         </div>
       )}
@@ -479,7 +480,7 @@ export default function AbaArtistas() {
               type="button"
               onClick={() => setCriando(true)}
               disabled={noLimite}
-              title={noLimite ? "Limite do plano atingido" : "Adicionar artista"}
+              title={noLimite ? t("Limite do plano atingido") : t("Adicionar artista")}
               className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: "var(--module-agencia)" }}
             >
@@ -495,7 +496,7 @@ export default function AbaArtistas() {
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar"
+                  placeholder={t("Buscar")}
                   className="bg-transparent outline-none text-sm text-primary placeholder:text-muted w-full min-w-0"
                 />
               </div>
@@ -507,7 +508,7 @@ export default function AbaArtistas() {
                     onClick={() => setFiltroStatus(f)}
                     className={`pill ${filtroStatus === f ? "active" : ""}`}
                   >
-                    {f === "todos" ? "Todos" : f === "ativos" ? "Ativos" : "Suspensos"}
+                    {f === "todos" ? t("Todos") : f === "ativos" ? t("Ativos") : t("Suspensos")}
                   </button>
                 ))}
               </div>
@@ -530,12 +531,12 @@ export default function AbaArtistas() {
               {modoReordenar ? (
                 <>
                   <Check size={14} />
-                  Concluir
+                  {t("Concluir")}
                 </>
               ) : (
                 <>
                   <GripVertical size={14} />
-                  Reordenar
+                  {t("Reordenar")}
                 </>
               )}
             </button>
@@ -543,7 +544,7 @@ export default function AbaArtistas() {
         </div>
         {modoReordenar && (
           <p className="text-xs text-muted mt-2">
-            Arraste os avatares pra reordenar — reflete na sidebar e nos filtros do app.
+            {t("Arraste os avatares pra reordenar — reflete na sidebar e nos filtros do app.")}
           </p>
         )}
       </div>
@@ -557,16 +558,16 @@ export default function AbaArtistas() {
           >
             <Music size={22} />
           </div>
-          <div className="section-title">Nenhum artista cadastrado</div>
+          <div className="section-title">{t("Nenhum artista cadastrado")}</div>
           <p className="text-sm text-muted max-w-sm">
-            Cadastre o primeiro artista da sua agência pra começar.
+            {t("Cadastre o primeiro artista da sua agência pra começar.")}
           </p>
           <button
             onClick={() => setCriando(true)}
             disabled={noLimite}
             className="btn btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus size={14} /> Adicionar artista
+            <Plus size={14} /> {t("Adicionar artista")}
           </button>
         </div>
       ) : editando && editando.id === djSelecionado.id ? (
@@ -577,7 +578,7 @@ export default function AbaArtistas() {
           onCancelar={() => setEditando(null)}
           onSalvo={() => {
             setEditando(null);
-            setToast({ msg: "Artista atualizado.", tipo: "sucesso" });
+            setToast({ msg: t("Artista atualizado."), tipo: "sucesso" });
           }}
           onResetarSenha={async () => {
             const novaSenha = await resetarSenhaArtista(editando.id);
@@ -630,7 +631,7 @@ export default function AbaArtistas() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="page-title">{djSelecionado.name}</div>
                   {djSelecionado.acessoSuspenso && (
-                    <span className="badge badge-warning">Acesso suspenso</span>
+                    <span className="badge badge-warning">{t("Acesso suspenso")}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap text-xs text-muted mt-1.5">
@@ -639,7 +640,7 @@ export default function AbaArtistas() {
                       type="button"
                       onClick={() => copiarUsername(djSelecionado.username!)}
                       className="inline-flex items-center gap-1 hover:text-primary transition-colors group"
-                      title="Copiar login"
+                      title={t("Copiar login")}
                     >
                       <AtSign size={11} />
                       <span className="font-mono">{djSelecionado.username}</span>
@@ -715,7 +716,7 @@ export default function AbaArtistas() {
               {removendo === djSelecionado.id ? (
                 <div className="ml-auto flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-muted">
-                    Remover {djSelecionado.name}?
+                    {t("Remover {nome}?", { nome: djSelecionado.name })}
                   </span>
                   <button
                     onClick={() => {
@@ -725,13 +726,13 @@ export default function AbaArtistas() {
                     className="btn text-xs px-2.5 py-1"
                     style={{ backgroundColor: "var(--danger)", color: "#fff" }}
                   >
-                    Sim
+                    {t("Sim")}
                   </button>
                   <button
                     onClick={() => setRemovendo(null)}
                     className="btn-ghost text-xs px-2.5 py-1"
                   >
-                    Não
+                    {t("Não")}
                   </button>
                 </div>
               ) : (
@@ -762,7 +763,7 @@ export default function AbaArtistas() {
                     }
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
                   >
-                    <Pencil size={13} /> Editar
+                    <Pencil size={13} /> {t("Editar")}
                   </button>
                   <button
                     onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
@@ -775,11 +776,11 @@ export default function AbaArtistas() {
                   >
                     {djSelecionado.acessoSuspenso ? (
                       <>
-                        <PlayCircle size={14} /> Reativar
+                        <PlayCircle size={14} /> {t("Reativar")}
                       </>
                     ) : (
                       <>
-                        <PauseCircle size={14} /> Suspender
+                        <PauseCircle size={14} /> {t("Suspender")}
                       </>
                     )}
                   </button>
@@ -790,13 +791,13 @@ export default function AbaArtistas() {
                     className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
                     style={{ color: "var(--module-agencia)" }}
                   >
-                    <KeyRound size={14} /> Resetar senha
+                    <KeyRound size={14} /> {t("Resetar senha")}
                   </button>
                   <button
                     onClick={() => setRemovendo(djSelecionado.id)}
                     className="btn-ghost p-1.5 rounded"
                     style={{ color: "var(--danger)" }}
-                    aria-label="Remover artista"
+                    aria-label={t("Remover artista")}
                   >
                     <Trash2 size={15} />
                   </button>
@@ -811,11 +812,11 @@ export default function AbaArtistas() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
-                Acesso ao sistema
+                {t("Acesso ao sistema")}
               </div>
               {djSelecionado.username && (
                 <div>
-                  <div className="text-[0.7rem] text-muted mb-1">Login</div>
+                  <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
                   <button
                     type="button"
                     onClick={() => copiarUsername(djSelecionado.username!)}
@@ -835,21 +836,21 @@ export default function AbaArtistas() {
               {carregandoConta ? (
                 <div className="flex items-center gap-2 text-sm text-muted py-1">
                   <Loader2 size={14} className="animate-spin" />
-                  Carregando dados da conta…
+                  {t("Carregando dados da conta…")}
                 </div>
               ) : !conta ? (
                 <p className="text-xs" style={{ color: "var(--danger)" }}>
-                  Não foi possível carregar a conta.
+                  {t("Não foi possível carregar a conta.")}
                 </p>
               ) : (
                 <>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">E-mail</div>
+                    <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
                     {conta.emailFakeInterno ? (
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                         <Mail size={14} className="text-muted flex-shrink-0" />
                         <span className="flex-1 text-sm text-muted italic">
-                          Usuário não cadastrou nenhum email
+                          {t("Usuário não cadastrou nenhum email")}
                         </span>
                       </div>
                     ) : (
@@ -866,14 +867,14 @@ export default function AbaArtistas() {
                               className="inline-flex items-center gap-1"
                               style={{ color: "var(--success)" }}
                             >
-                              <ShieldCheck size={11} /> Verificado
+                              <ShieldCheck size={11} /> {t("Verificado")}
                             </span>
                           ) : (
                             <span
                               className="inline-flex items-center gap-1"
                               style={{ color: "var(--warning)" }}
                             >
-                              <AlertTriangle size={11} /> Não verificado
+                              <AlertTriangle size={11} /> {t("Não verificado")}
                             </span>
                           )}
                         </div>
@@ -881,7 +882,7 @@ export default function AbaArtistas() {
                     )}
                   </div>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">Senha</div>
+                    <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
                     {conta.senhaPadrao && conta.senhaPadraoValor ? (
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -897,8 +898,8 @@ export default function AbaArtistas() {
                             type="button"
                             onClick={() => setSenhaReveladaCard((v) => !v)}
                             className="btn-ghost p-1 rounded flex-shrink-0"
-                            aria-label={senhaReveladaCard ? "Ocultar senha" : "Revelar senha"}
-                            title={senhaReveladaCard ? "Ocultar senha" : "Revelar senha"}
+                            aria-label={senhaReveladaCard ? t("Ocultar senha") : t("Revelar senha")}
+                            title={senhaReveladaCard ? t("Ocultar senha") : t("Revelar senha")}
                           >
                             {senhaReveladaCard ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
@@ -913,7 +914,7 @@ export default function AbaArtistas() {
                                 });
                             }}
                             className="btn-ghost p-1 rounded flex-shrink-0"
-                            aria-label="Copiar senha"
+                            aria-label={t("Copiar senha")}
                           >
                             {copiouSenhaCard ? (
                               <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
@@ -926,7 +927,7 @@ export default function AbaArtistas() {
                           className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
                           style={{ color: "var(--warning)" }}
                         >
-                          <AlertTriangle size={11} /> Senha padrão — usuário ainda não trocou.
+                          <AlertTriangle size={11} /> {t("Senha padrão — usuário ainda não trocou.")}
                         </div>
                       </>
                     ) : conta.senhaPadrao ? (
@@ -940,7 +941,7 @@ export default function AbaArtistas() {
                       >
                         <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                         <span>
-                          Senha padrão sem valor disponível. Use “Resetar senha” pra gerar uma nova.
+                          {t('Senha padrão sem valor disponível. Use “Resetar senha” pra gerar uma nova.')}
                         </span>
                       </div>
                     ) : (
@@ -953,7 +954,7 @@ export default function AbaArtistas() {
                         }}
                       >
                         <Lock size={13} className="flex-shrink-0" />
-                        <span>Senha já alterada pelo usuário.</span>
+                        <span>{t("Senha já alterada pelo usuário.")}</span>
                       </div>
                     )}
                   </div>
@@ -965,20 +966,20 @@ export default function AbaArtistas() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
-                Privacidade
+                {t("Privacidade")}
               </div>
               {(() => {
                 const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
                 const grupos = [
-                  { label: "Orçamentos", ver: priv.orcamentosVer, agiu: priv.orcamentosCriar, agirLabel: "Vê e cria" },
-                  { label: "Vendas", ver: priv.vendasVer, agiu: priv.vendasCriar, agirLabel: "Vê e fecha" },
-                  { label: "Financeiro", ver: priv.financeiroVer, agiu: priv.financeiroInformar, agirLabel: "Vê e informa" },
-                  { label: "Contratos", ver: priv.contratosVer, agiu: priv.contratosCriar, agirLabel: "Vê e cria" },
+                  { label: t("Orçamentos"), ver: priv.orcamentosVer, agiu: priv.orcamentosCriar, agirLabel: t("Vê e cria") },
+                  { label: t("Vendas"), ver: priv.vendasVer, agiu: priv.vendasCriar, agirLabel: t("Vê e fecha") },
+                  { label: t("Financeiro"), ver: priv.financeiroVer, agiu: priv.financeiroInformar, agirLabel: t("Vê e informa") },
+                  { label: t("Contratos"), ver: priv.contratosVer, agiu: priv.contratosCriar, agirLabel: t("Vê e cria") },
                 ];
                 return (
                   <div className="flex flex-col gap-2">
                     {grupos.map((g) => {
-                      const txt = g.agiu ? g.agirLabel : g.ver ? "Só vê" : "Não vê";
+                      const txt = g.agiu ? g.agirLabel : g.ver ? t("Só vê") : t("Não vê");
                       const cls = g.agiu ? "badge-success" : g.ver ? "badge-info" : "badge-neutral";
                       return (
                         <div key={g.label} className="flex items-center justify-between gap-2">
@@ -993,18 +994,18 @@ export default function AbaArtistas() {
                       );
                     })}
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-secondary">Contatos</span>
+                      <span className="text-sm text-secondary">{t("Contatos")}</span>
                       <span
                         className={`badge ${priv.contatos === "todos" ? "badge-info" : "badge-neutral"}`}
                       >
-                        {priv.contatos === "todos" ? "Toda a agência" : "Só dos shows dele"}
+                        {priv.contatos === "todos" ? t("Toda a agência") : t("Só dos shows dele")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-secondary inline-flex items-center gap-1">
-                        <Lock size={11} /> Agenda
+                        <Lock size={11} /> {t("Agenda")}
                       </span>
-                      <span className="text-xs text-muted">Sempre só a dele</span>
+                      <span className="text-xs text-muted">{t("Sempre só a dele")}</span>
                     </div>
                   </div>
                 );
@@ -1015,7 +1016,7 @@ export default function AbaArtistas() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--module-agencia)" }} />
-                Membros da equipe
+                {t("Membros da equipe")}
               </div>
               {(() => {
                 const membros = equipe.filter(
@@ -1028,7 +1029,7 @@ export default function AbaArtistas() {
                 if (membros.length === 0)
                   return (
                     <div className="text-sm text-muted">
-                      Nenhum membro da equipe atende este artista ainda.
+                      {t("Nenhum membro da equipe atende este artista ainda.")}
                     </div>
                   );
                 return (
@@ -1057,7 +1058,7 @@ export default function AbaArtistas() {
                                     color: LABELS_PAPEL_EQUIPE[p].cor,
                                   }}
                                 >
-                                  {LABELS_PAPEL_EQUIPE[p].nome}
+                                  {t(LABELS_PAPEL_EQUIPE[p].nome)}
                                 </span>
                               ))}
                             </div>
@@ -1076,11 +1077,11 @@ export default function AbaArtistas() {
             {/* Rider de camarim */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Rider de camarim ({(djSelecionado.riderCamarim ?? []).length}/
+                {t("Rider de camarim")} ({(djSelecionado.riderCamarim ?? []).length}/
                 {LIMITE_RIDER_CAMARIM})
               </div>
               {(djSelecionado.riderCamarim ?? []).length === 0 ? (
-                <div className="text-sm text-muted">Nenhum item configurado.</div>
+                <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {(djSelecionado.riderCamarim ?? []).map((item, i) => (
@@ -1098,11 +1099,11 @@ export default function AbaArtistas() {
             {/* Rider de efeitos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Rider de efeitos ({(djSelecionado.riderEfeitos ?? []).length}/
+                {t("Rider de efeitos")} ({(djSelecionado.riderEfeitos ?? []).length}/
                 {LIMITE_RIDER_EFEITOS})
               </div>
               {(djSelecionado.riderEfeitos ?? []).length === 0 ? (
-                <div className="text-sm text-muted">Nenhum item configurado.</div>
+                <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {(djSelecionado.riderEfeitos ?? []).map((item, i) => (
@@ -1120,11 +1121,11 @@ export default function AbaArtistas() {
             {/* Rider técnico */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Rider técnico ({(djSelecionado.riderTecnico ?? []).length}/
+                {t("Rider técnico")} ({(djSelecionado.riderTecnico ?? []).length}/
                 {LIMITE_RIDER_TECNICO})
               </div>
               {(djSelecionado.riderTecnico ?? []).length === 0 ? (
-                <div className="text-sm text-muted">Nenhum item configurado.</div>
+                <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {(djSelecionado.riderTecnico ?? []).map((item, i) => (
@@ -1147,12 +1148,12 @@ export default function AbaArtistas() {
                 ) : (
                   <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
                 )}
-                Taxa de agência
+                {t("Taxa de agência")}
               </div>
               {(() => {
                 const modo = djSelecionado.taxaModo ?? "sem-taxa";
                 if (modo === "sem-taxa")
-                  return <div className="text-sm text-muted">Sem taxa</div>;
+                  return <div className="text-sm text-muted">{t("Sem taxa")}</div>;
                 const val = djSelecionado.taxaValor;
                 const sufixo =
                   modo === "perc-fixa" && val !== undefined
@@ -1163,12 +1164,12 @@ export default function AbaArtistas() {
                 return (
                   <div>
                     <div className="text-base font-semibold text-primary">
-                      {LABELS_TAXA_MODO[modo]}
+                      {t(LABELS_TAXA_MODO[modo])}
                       {sufixo}
                     </div>
                     {(modo === "perc-variavel" || modo === "valor-variavel") && (
                       <div className="text-xs text-muted mt-0.5">
-                        Valor definido a cada orçamento.
+                        {t("Valor definido a cada orçamento.")}
                       </div>
                     )}
                   </div>
@@ -1186,10 +1187,10 @@ export default function AbaArtistas() {
             <div className="flex items-center gap-2">
               <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
               <div className="section-title">
-                Na lixeira ({lixeiraArtistas.length})
+                {t("Na lixeira ({n})", { n: lixeiraArtistas.length })}
               </div>
             </div>
-            <span className="text-xs text-muted">Recuperáveis por 30 dias</span>
+            <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
           </div>
           <div className="divide-y divide-border">
             {lixeiraArtistas.map((item) => {
@@ -1216,8 +1217,8 @@ export default function AbaArtistas() {
                       }}
                     >
                       {item.diasRestantes === 0
-                        ? "Expira hoje"
-                        : `${item.diasRestantes} dia${item.diasRestantes === 1 ? "" : "s"} restantes`}
+                        ? t("Expira hoje")
+                        : t("{n} dia{s} restantes", { n: item.diasRestantes, s: item.diasRestantes === 1 ? "" : "s" })}
                     </div>
                   </div>
                   <button
@@ -1227,7 +1228,7 @@ export default function AbaArtistas() {
                     style={{ color: "var(--success)" }}
                   >
                     <RotateCcw size={13} />
-                    Restaurar
+                    {t("Restaurar")}
                   </button>
                 </div>
               );
@@ -1237,28 +1238,22 @@ export default function AbaArtistas() {
       )}
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
-        <strong className="text-primary">Ordem:</strong> clique em{" "}
+        <strong className="text-primary">{t("Ordem:")}</strong> {t("clique em")}{" "}
         <span className="inline-flex items-center gap-0.5 font-medium">
-          <GripVertical size={11} /> Reordenar
+          <GripVertical size={11} /> {t("Reordenar")}
         </span>{" "}
-        na barra de cima e arraste os avatares — a ordem reflete na sidebar
-        de DJs e em todos os filtros do app.
+        {t("na barra de cima e arraste os avatares — a ordem reflete na sidebar de DJs e em todos os filtros do app.")}
         <br />
-        <strong className="text-primary">Login do artista:</strong> aparece
-        ao lado do nome (clique pra copiar). Fica salvo no sistema e você
-        consegue acessar sempre que precisar.{" "}
+        <strong className="text-primary">{t("Login do artista:")}</strong> {t("aparece ao lado do nome (clique pra copiar). Fica salvo no sistema e você consegue acessar sempre que precisar.")}{" "}
         <br />
-        <strong className="text-primary">Senha:</strong> só aparece uma vez
-        ao criar. Se o artista perder, abra{" "}
+        <strong className="text-primary">{t("Senha:")}</strong> {t("só aparece uma vez ao criar. Se o artista perder, abra")}{" "}
         <span className="inline-flex items-center gap-1 font-medium">
-          <Pencil size={11} /> Editar
+          <Pencil size={11} /> {t("Editar")}
         </span>{" "}
-        e gere uma nova lá dentro.{" "}
+        {t("e gere uma nova lá dentro.")}{" "}
         <br />
-        <strong className="text-primary">Suspender:</strong> artista fica
-        visível mas em cinza e sem editar nada.{" "}
-        <strong className="text-primary">Remover:</strong> manda pra
-        Lixeira (recuperável por 30 dias).
+        <strong className="text-primary">{t("Suspender:")}</strong> {t("artista fica visível mas em cinza e sem editar nada.")}{" "}
+        <strong className="text-primary">{t("Remover:")}</strong> {t("manda pra Lixeira (recuperável por 30 dias).")}
       </div>
 
       <Toast
@@ -1392,6 +1387,7 @@ export function ModalNovoArtista({
   usernamesNaLixeira,
   modoInline = false,
 }: Props) {
+  const t = useT();
   // Seção 1 — dados básicos
   const [nome, setNome] = useState("");
   const [cor, setCor] = useState(CORES[0]);
@@ -1464,33 +1460,34 @@ export function ModalNovoArtista({
   // `nomesExistentes` chega do parent já escopado pelo workspace atual.
   function validarTudo(): string | null {
     const n = nome.trim();
-    if (!n) return "Informe o nome do artista.";
+    if (!n) return t("Informe o nome do artista.");
     if (colisaoNome === "ativo")
-      return "Já existe um artista com esse nome na sua agência.";
+      return t("Já existe um artista com esse nome na sua agência.");
     if (colisaoNome === "lixeira")
-      return `Existe um artista na lixeira com esse nome ("${n}"). Restaure ou apague antes de reutilizar.`;
+      return t("Existe um artista na lixeira com esse nome (\"{n}\"). Restaure ou apague antes de reutilizar.", { n });
     if (!usernameValido)
-      return "Username inválido (3+ chars, letras/números/hífen).";
+      return t("Username inválido (3+ chars, letras/números/hífen).");
     if (colisaoUsername === "ativo")
-      return "Esse login já está em uso por outro artista da sua agência.";
+      return t("Esse login já está em uso por outro artista da sua agência.");
     if (colisaoUsername === "lixeira")
-      return "Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.";
-    if (!cidade) return "Informe a cidade onde o artista reside.";
+      return t("Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.");
+    if (!cidade) return t("Informe a cidade onde o artista reside.");
     const erroContrato = validarDadosContrato(
       nomeLegal,
       documentoTipo,
       documento,
-      razaoSocial
+      razaoSocial,
+      t
     );
     if (erroContrato) return erroContrato;
     // Taxa obrigatória nos modos fixos
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
       const v = parseFloat(taxaValor.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
-        return `Informe o valor da taxa (${LABELS_TAXA_MODO[taxaModo]}).`;
+        return t("Informe o valor da taxa ({modo}).", { modo: LABELS_TAXA_MODO[taxaModo] });
       }
       if (taxaModo === "perc-fixa" && v > 100) {
-        return "Porcentagem não pode ser maior que 100%.";
+        return t("Porcentagem não pode ser maior que 100%.");
       }
     }
     return null;
@@ -1560,7 +1557,7 @@ export function ModalNovoArtista({
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <Music size={16} style={{ color: "var(--module-vendas)" }} />
-            <div className="section-title">Novo artista</div>
+            <div className="section-title">{t("Novo artista")}</div>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
             <X size={18} />
@@ -1570,8 +1567,8 @@ export function ModalNovoArtista({
 
         <div className="p-4 flex flex-col gap-5">
           {/* Seção 1 — Dados básicos */}
-          <Secao titulo="Dados básicos">
-            <Campo label="Nome do artista">
+          <Secao titulo={t("Dados básicos")}>
+            <Campo label={t("Nome do artista")}>
               <input
                 value={nome}
                 onChange={(e) => {
@@ -1583,7 +1580,7 @@ export function ModalNovoArtista({
                     setUsernameRaiz(normalizarUsername(v));
                   }
                 }}
-                placeholder="Ex.: DJ Lunar"
+                placeholder={t("Ex.: DJ Lunar")}
                 className="campo-input"
                 autoFocus
               />
@@ -1593,7 +1590,7 @@ export function ModalNovoArtista({
                   style={{ color: "var(--danger)" }}
                 >
                   <AlertCircle size={11} />
-                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                  {t("Já existe um artista ATIVO com esse nome. Escolha outro.")}
                 </p>
               )}
               {colisaoNome === "lixeira" && (
@@ -1602,19 +1599,18 @@ export function ModalNovoArtista({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Existe um artista na <strong>lixeira</strong> com esse nome.
-                  Restaure ou apague pra reutilizar.
+                  {t("Existe um artista na")} <strong>{t("lixeira")}</strong> {t("com esse nome. Restaure ou apague pra reutilizar.")}
                 </p>
               )}
             </Campo>
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label="Cidade onde reside">
+            <Campo label={t("Cidade onde reside")}>
               <CidadeIBGEAutocomplete
                 value={cidade}
                 onChange={setCidade}
-                placeholder="Ex: São Paulo, Belo Horizonte..."
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
           </Secao>
@@ -1636,8 +1632,8 @@ export function ModalNovoArtista({
           />
 
           {/* Seção 2 — Acesso ao sistema */}
-          <Secao titulo="Acesso ao sistema">
-            <Campo label="Login (username)">
+          <Secao titulo={t("Acesso ao sistema")}>
+            <Campo label={t("Login (username)")}>
               <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
                 {/* Input cresce conforme o usuário digita (largura em `ch`
                     casa com a font-mono — sem espaço sobrando entre o
@@ -1677,11 +1673,11 @@ export function ModalNovoArtista({
                   }}
                   disabled={!usernameValido}
                   className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Copiar username completo"
+                  aria-label={t("Copiar username completo")}
                   title={
                     usernameValido
-                      ? "Copiar username completo"
-                      : "Preencha um username válido pra copiar"
+                      ? t("Copiar username completo")
+                      : t("Preencha um username válido pra copiar")
                   }
                 >
                   {copiouUsername ? (
@@ -1699,7 +1695,7 @@ export function ModalNovoArtista({
                   className="text-xs mt-1"
                   style={{ color: "var(--danger)" }}
                 >
-                  Use 3+ chars (letras, números, hífen)
+                  {t("Use 3+ chars (letras, números, hífen)")}
                 </p>
               )}
               {usernameValido && colisaoUsername === "ativo" && (
@@ -1708,7 +1704,7 @@ export function ModalNovoArtista({
                   style={{ color: "var(--danger)" }}
                 >
                   <AlertCircle size={11} />
-                  Esse login já está em uso por outro artista ATIVO.
+                  {t("Esse login já está em uso por outro artista ATIVO.")}
                 </p>
               )}
               {usernameValido && colisaoUsername === "lixeira" && (
@@ -1717,8 +1713,8 @@ export function ModalNovoArtista({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Esse login pertence a um artista na <strong>lixeira</strong>.
-                  Restaure ou apague pra reutilizar.
+                  {t("Esse login pertence a um artista na")} <strong>{t("lixeira")}</strong>.
+                  {t("Restaure ou apague pra reutilizar.")}
                 </p>
               )}
               {usernameValido && !colisaoUsername && usernameCompleto && (
@@ -1726,7 +1722,7 @@ export function ModalNovoArtista({
                   className="text-xs mt-1"
                   style={{ color: "var(--success)" }}
                 >
-                  Login completo:{" "}
+                  {t("Login completo:")}{" "}
                   <strong className="font-mono text-primary">
                     {usernameCompleto}
                   </strong>
@@ -1741,22 +1737,18 @@ export function ModalNovoArtista({
                 color: "var(--text-secondary)",
               }}
             >
-              <strong>Login:</strong> fica salvo e você consegue ver
-              depois na lista de artistas.
+              <strong>{t("Login:")}</strong> {t("fica salvo e você consegue ver depois na lista de artistas.")}
               <br />
-              <strong>Senha:</strong> será gerada automaticamente (algo
-              tipo <span className="font-mono">Lyra-Bravo-7421</span>) e
-              mostrada <strong>só uma vez</strong> ao final pra você
-              copiar. Se perder, dá pra gerar uma nova clicando em{" "}
+              <strong>{t("Senha:")}</strong> {t("será gerada automaticamente (algo tipo")} <span className="font-mono">Lyra-Bravo-7421</span>) {t("e mostrada")} <strong>{t("só uma vez")}</strong> {t("ao final pra você copiar. Se perder, dá pra gerar uma nova clicando em")}{" "}
               <span className="inline-flex items-center gap-1 font-medium">
-                <KeyRound size={11} /> Senha
+                <KeyRound size={11} /> {t("Senha")}
               </span>{" "}
-              na lista.
+              {t("na lista.")}
             </div>
           </Secao>
 
           {/* Seção 3 — Taxa de agência */}
-          <Secao titulo="Taxa de agência">
+          <Secao titulo={t("Taxa de agência")}>
             <div className="flex flex-col gap-1.5">
               {MODOS_TAXA.map((m) => {
                 const sel = taxaModo === m;
@@ -1781,7 +1773,7 @@ export function ModalNovoArtista({
                       }}
                       className="mt-0"
                     />
-                    <span className="text-sm flex-1">{LABELS_TAXA_MODO[m]}</span>
+                    <span className="text-sm flex-1">{t(LABELS_TAXA_MODO[m])}</span>
                     {sel && (m === "perc-fixa" || m === "valor-fixo") && (
                       <div className="flex items-center gap-1">
                         {m === "valor-fixo" && (
@@ -1806,13 +1798,12 @@ export function ModalNovoArtista({
               })}
             </div>
             <p className="text-xs text-muted mt-1 leading-relaxed">
-              Nos modos <strong>variáveis</strong>, vendedor/admin define o
-              valor da taxa a cada orçamento.
+              {t("Nos modos")} <strong>{t("variáveis")}</strong>, {t("vendedor/admin define o valor da taxa a cada orçamento.")}
             </p>
           </Secao>
 
           {/* Seção 4 — Rider de camarim */}
-          <Secao titulo={`Rider de camarim (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}>
+          <Secao titulo={`${t("Rider de camarim")} (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}>
             <ListaRider
               itens={riderCamarim}
               onChange={setRiderCamarim}
@@ -1823,7 +1814,7 @@ export function ModalNovoArtista({
           </Secao>
 
           {/* Seção 5 — Rider de efeitos */}
-          <Secao titulo={`Rider de efeitos (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}>
+          <Secao titulo={`${t("Rider de efeitos")} (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}>
             <ListaRider
               itens={riderEfeitos}
               onChange={setRiderEfeitos}
@@ -1834,7 +1825,7 @@ export function ModalNovoArtista({
           </Secao>
 
           {/* Seção 6 — Rider técnico */}
-          <Secao titulo={`Rider técnico (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}>
+          <Secao titulo={`${t("Rider técnico")} (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}>
             <ListaRider
               itens={riderTecnico}
               onChange={setRiderTecnico}
@@ -1868,7 +1859,7 @@ export function ModalNovoArtista({
         >
           {!modoInline && (
             <button onClick={onCancelar} className="btn btn-secondary text-sm">
-              Cancelar
+              {t("Cancelar")}
             </button>
           )}
           <button
@@ -1877,14 +1868,14 @@ export function ModalNovoArtista({
             className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             title={
               temColisao
-                ? "Resolva os avisos de nome/login antes de cadastrar"
+                ? t("Resolva os avisos de nome/login antes de cadastrar")
                 : undefined
             }
           >
             <Plus size={14} />
             {enviando
-              ? "Cadastrando..."
-              : `Cadastrar em ${nomeAgencia || "agência"}`}
+              ? t("Cadastrando...")
+              : t("Cadastrar em {nome}", { nome: nomeAgencia || t("agência") })}
           </button>
         </div>
       </div>
@@ -1947,6 +1938,7 @@ function ModalEditarArtista({
   usernamesNaLixeira,
   modoInline = false,
 }: EditarProps) {
+  const t = useT();
   const { atualizarArtista } = useWorkspace();
 
   // Username "raiz" — o que aparece antes do "-slug". Derivado do
@@ -2078,35 +2070,36 @@ function ModalEditarArtista({
 
   function validar(): string | null {
     const n = nome.trim();
-    if (!n) return "Informe o nome do artista.";
+    if (!n) return t("Informe o nome do artista.");
     if (colisaoNome === "ativo")
-      return "Já existe um artista com esse nome na sua agência.";
+      return t("Já existe um artista com esse nome na sua agência.");
     if (colisaoNome === "lixeira")
-      return `Existe um artista na lixeira com esse nome ("${n}"). Restaure ou apague antes de reutilizar.`;
-    if (!cidade) return "Informe a cidade onde o artista reside.";
+      return t("Existe um artista na lixeira com esse nome (\"{n}\"). Restaure ou apague antes de reutilizar.", { n });
+    if (!cidade) return t("Informe a cidade onde o artista reside.");
     const erroContrato = validarDadosContrato(
       nomeLegal,
       documentoTipo,
       documento,
-      razaoSocial
+      razaoSocial,
+      t
     );
     if (erroContrato) return erroContrato;
     if (!usernameValido)
-      return "Username inválido (3+ chars, letras/números/hífen).";
+      return t("Username inválido (3+ chars, letras/números/hífen).");
     if (colisaoUsername === "ativo")
-      return "Esse login já está em uso por outro artista da sua agência.";
+      return t("Esse login já está em uso por outro artista da sua agência.");
     if (colisaoUsername === "lixeira")
-      return "Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.";
+      return t("Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.");
     if (emailEditavel.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEditavel.trim())) {
-      return "E-mail inválido.";
+      return t("E-mail inválido.");
     }
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
       const v = parseFloat(taxaValor.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
-        return `Informe o valor da taxa (${LABELS_TAXA_MODO[taxaModo]}).`;
+        return t("Informe o valor da taxa ({modo}).", { modo: LABELS_TAXA_MODO[taxaModo] });
       }
       if (taxaModo === "perc-fixa" && v > 100) {
-        return "Porcentagem não pode ser maior que 100%.";
+        return t("Porcentagem não pode ser maior que 100%.");
       }
     }
     return null;
@@ -2173,7 +2166,7 @@ function ModalEditarArtista({
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <Pencil size={16} style={{ color: "var(--module-agencia)" }} />
-            <div className="section-title">Editar {artista.nome}</div>
+            <div className="section-title">{t("Editar {nome}", { nome: artista.nome })}</div>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
             <X size={18} />
@@ -2182,8 +2175,8 @@ function ModalEditarArtista({
 
         <div className="p-4 flex flex-col gap-5">
           {/* Seção 1 — Dados básicos */}
-          <Secao titulo="Dados básicos">
-            <Campo label="Nome do artista">
+          <Secao titulo={t("Dados básicos")}>
+            <Campo label={t("Nome do artista")}>
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
@@ -2195,7 +2188,7 @@ function ModalEditarArtista({
                   style={{ color: "var(--danger)" }}
                 >
                   <AlertCircle size={11} />
-                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                  {t("Já existe um artista ATIVO com esse nome. Escolha outro.")}
                 </p>
               )}
               {colisaoNome === "lixeira" && (
@@ -2204,19 +2197,18 @@ function ModalEditarArtista({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Existe um artista na <strong>lixeira</strong> com esse nome.
-                  Restaure ou apague pra reutilizar.
+                  {t("Existe um artista na")} <strong>{t("lixeira")}</strong> {t("com esse nome. Restaure ou apague pra reutilizar.")}
                 </p>
               )}
             </Campo>
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label="Cidade onde reside">
+            <Campo label={t("Cidade onde reside")}>
               <CidadeIBGEAutocomplete
                 value={cidade}
                 onChange={setCidade}
-                placeholder="Ex: São Paulo, Belo Horizonte..."
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
           </Secao>
@@ -2238,8 +2230,8 @@ function ModalEditarArtista({
           />
 
           {/* Seção 2 — Acesso */}
-          <Secao titulo="Acesso ao sistema">
-            <Campo label="Login (username)">
+          <Secao titulo={t("Acesso ao sistema")}>
+            <Campo label={t("Login (username)")}>
               <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
                 {/* Input com largura dinâmica (em ch + font-mono) — o
                     sufixo da agência fica colado na ponta do que foi
@@ -2276,11 +2268,11 @@ function ModalEditarArtista({
                   }}
                   disabled={!usernameValido}
                   className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Copiar username completo"
+                  aria-label={t("Copiar username completo")}
                   title={
                     usernameValido
-                      ? "Copiar username completo"
-                      : "Preencha um username válido pra copiar"
+                      ? t("Copiar username completo")
+                      : t("Preencha um username válido pra copiar")
                   }
                 >
                   {copiouUsername ? (
@@ -2295,7 +2287,7 @@ function ModalEditarArtista({
               </div>
               {!usernameValido && usernameRaiz.length > 0 && (
                 <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
-                  Use 3+ chars (letras, números, hífen).
+                  {t("Use 3+ chars (letras, números, hífen)")}.
                 </p>
               )}
               {usernameValido && colisaoUsername === "ativo" && (
@@ -2304,7 +2296,7 @@ function ModalEditarArtista({
                   style={{ color: "var(--danger)" }}
                 >
                   <AlertCircle size={11} />
-                  Esse login já está em uso por outro artista ATIVO.
+                  {t("Esse login já está em uso por outro artista ATIVO.")}
                 </p>
               )}
               {usernameValido && colisaoUsername === "lixeira" && (
@@ -2313,8 +2305,8 @@ function ModalEditarArtista({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Esse login pertence a um artista na <strong>lixeira</strong>.
-                  Restaure ou apague pra reutilizar.
+                  {t("Esse login pertence a um artista na")} <strong>{t("lixeira")}</strong>.
+                  {t("Restaure ou apague pra reutilizar.")}
                 </p>
               )}
               {usernameMudou && usernameValido && !colisaoUsername && (
@@ -2328,7 +2320,7 @@ function ModalEditarArtista({
                 >
                   <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
                   <span>
-                    O artista vai precisar usar este novo login na próxima entrada.
+                    {t("O artista vai precisar usar este novo login na próxima entrada.")}
                   </span>
                 </div>
               )}
@@ -2336,19 +2328,19 @@ function ModalEditarArtista({
           </Secao>
 
           {/* Seção 3 — Conta */}
-          <Secao titulo="Conta">
+          <Secao titulo={t("Conta")}>
             {carregandoConta ? (
               <div className="flex items-center gap-2 text-sm text-muted py-2">
                 <Loader2 size={14} className="animate-spin" />
-                Carregando dados da conta...
+                {t("Carregando dados da conta...")}
               </div>
             ) : !conta ? (
               <p className="text-xs text-danger">
-                Não foi possível carregar os dados da conta.
+                {t("Não foi possível carregar os dados da conta.")}
               </p>
             ) : (
               <>
-                <Campo label="E-mail cadastrado">
+                <Campo label={t("E-mail cadastrado")}>
                   {editandoEmail ? (
                     <>
                       {/* Modo edição: input + cancelar */}
@@ -2358,7 +2350,7 @@ function ModalEditarArtista({
                           type="email"
                           value={emailEditavel}
                           onChange={(e) => setEmailEditavel(e.target.value)}
-                          placeholder="email@exemplo.com"
+                          placeholder={t("email@exemplo.com")}
                           className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
                           autoFocus
                         />
@@ -2375,7 +2367,7 @@ function ModalEditarArtista({
                           }}
                           className="text-[0.7rem] text-muted hover:text-secondary underline"
                         >
-                          Cancelar
+                          {t("Cancelar")}
                         </button>
                         {emailMudou && (
                           <span
@@ -2383,7 +2375,7 @@ function ModalEditarArtista({
                             style={{ color: "var(--warning)" }}
                           >
                             <AlertTriangle size={11} />
-                            Salve o modal pra confirmar a troca.
+                            {t("Salve o modal pra confirmar a troca.")}
                           </span>
                         )}
                       </div>
@@ -2394,7 +2386,7 @@ function ModalEditarArtista({
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                         <Mail size={14} className="text-muted flex-shrink-0" />
                         <span className="flex-1 text-sm text-muted italic">
-                          Usuário não cadastrou nenhum email
+                          {t("Usuário não cadastrou nenhum email")}
                         </span>
                       </div>
                       <button
@@ -2403,7 +2395,7 @@ function ModalEditarArtista({
                         className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
                         style={{ color: "var(--module-vendas)" }}
                       >
-                        <Pencil size={11} /> Definir e-mail
+                        <Pencil size={11} /> {t("Definir e-mail")}
                       </button>
                     </>
                   ) : (
@@ -2422,7 +2414,7 @@ function ModalEditarArtista({
                             style={{ color: "var(--success)" }}
                           >
                             <ShieldCheck size={11} />
-                            Verificado
+                            {t("Verificado")}
                           </span>
                         ) : (
                           <span
@@ -2430,7 +2422,7 @@ function ModalEditarArtista({
                             style={{ color: "var(--warning)" }}
                           >
                             <AlertTriangle size={11} />
-                            Não verificado
+                            {t("Não verificado")}
                           </span>
                         )}
                         <button
@@ -2439,7 +2431,7 @@ function ModalEditarArtista({
                           className="inline-flex items-center gap-1 hover:underline"
                           style={{ color: "var(--module-vendas)" }}
                         >
-                          <Pencil size={11} /> Editar
+                          <Pencil size={11} /> {t("Editar")}
                         </button>
                       </div>
                     </>
@@ -2447,7 +2439,7 @@ function ModalEditarArtista({
                 </Campo>
 
                 {/* ---- Senha ---- */}
-                <Campo label="Senha">
+                <Campo label={t("Senha")}>
                   {conta.senhaPadrao && conta.senhaPadraoValor ? (
                     <>
                       {/* Senha padrão conhecida: mostra + botão copiar */}
@@ -2470,7 +2462,7 @@ function ModalEditarArtista({
                               });
                           }}
                           className="btn-ghost p-1.5 rounded"
-                          aria-label="Copiar senha"
+                          aria-label={t("Copiar senha")}
                         >
                           {copiouSenhaPadrao ? (
                             <CheckCircle2
@@ -2487,8 +2479,7 @@ function ModalEditarArtista({
                         style={{ color: "var(--warning)" }}
                       >
                         <AlertTriangle size={11} />
-                        Senha padrão gerada pelo sistema — usuário ainda não
-                        trocou.
+                        {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
                       </div>
                     </>
                   ) : conta.senhaPadrao ? (
@@ -2502,10 +2493,8 @@ function ModalEditarArtista({
                     >
                       <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                       <span>
-                        Usuário ainda está com a <strong>senha padrão</strong>{" "}
-                        gerada pelo sistema, mas o valor não está disponível
-                        (artista criado antes desta versão). Gere uma nova
-                        abaixo pra conseguir copiar.
+                        {t("Usuário ainda está com a")} <strong>{t("senha padrão")}</strong>{" "}
+                        {t("gerada pelo sistema, mas o valor não está disponível (artista criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
                       </span>
                     </div>
                   ) : (
@@ -2518,7 +2507,7 @@ function ModalEditarArtista({
                       }}
                     >
                       <Lock size={13} className="flex-shrink-0" />
-                      <span>Senha já foi alterada pelo usuário.</span>
+                      <span>{t("Senha já foi alterada pelo usuário.")}</span>
                     </div>
                   )}
                 </Campo>
@@ -2528,7 +2517,7 @@ function ModalEditarArtista({
                   onClick={() => {
                     if (
                       confirm(
-                        `Gerar uma nova senha aleatória pro artista ${artista.nome}?`
+                        t("Gerar uma nova senha aleatória pro artista {nome}?", { nome: artista.nome })
                       )
                     ) {
                       void onResetarSenha();
@@ -2541,14 +2530,14 @@ function ModalEditarArtista({
                   }}
                 >
                   <KeyRound size={14} />
-                  Gerar nova senha aleatória
+                  {t("Gerar nova senha aleatória")}
                 </button>
               </>
             )}
           </Secao>
 
           {/* Seção 4 — Taxa de agência */}
-          <Secao titulo="Taxa de agência">
+          <Secao titulo={t("Taxa de agência")}>
             <div className="flex flex-col gap-1.5">
               {MODOS_TAXA.map((m) => {
                 const sel = taxaModo === m;
@@ -2572,7 +2561,7 @@ function ModalEditarArtista({
                         }
                       }}
                     />
-                    <span className="text-sm flex-1">{LABELS_TAXA_MODO[m]}</span>
+                    <span className="text-sm flex-1">{t(LABELS_TAXA_MODO[m])}</span>
                     {sel && (m === "perc-fixa" || m === "valor-fixo") && (
                       <div className="flex items-center gap-1">
                         {m === "valor-fixo" && (
@@ -2600,7 +2589,7 @@ function ModalEditarArtista({
 
           {/* Seção 5 — Rider de camarim */}
           <Secao
-            titulo={`Rider de camarim (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}
+            titulo={`${t("Rider de camarim")} (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}
           >
             <ListaRider
               itens={riderCamarim}
@@ -2613,7 +2602,7 @@ function ModalEditarArtista({
 
           {/* Seção 6 — Rider de efeitos */}
           <Secao
-            titulo={`Rider de efeitos (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}
+            titulo={`${t("Rider de efeitos")} (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}
           >
             <ListaRider
               itens={riderEfeitos}
@@ -2626,7 +2615,7 @@ function ModalEditarArtista({
 
           {/* Seção 7 — Rider técnico */}
           <Secao
-            titulo={`Rider técnico (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}
+            titulo={`${t("Rider técnico")} (${riderTecnico.length}/${LIMITE_RIDER_TECNICO})`}
           >
             <ListaRider
               itens={riderTecnico}
@@ -2638,11 +2627,11 @@ function ModalEditarArtista({
           </Secao>
 
           {/* Seção 8 — Privacidade (permissões do DJ) */}
-          <Secao titulo="Privacidade — o que ele pode ver/fazer">
+          <Secao titulo={t("Privacidade — o que ele pode ver/fazer")}>
             <div className="flex flex-col gap-1.5">
               <TogglePriv
-                label="Ver orçamentos"
-                sub="Vê os orçamentos dele"
+                label={t("Ver orçamentos")}
+                sub={t("Vê os orçamentos dele")}
                 valor={privacidade.orcamentosVer}
                 onChange={(v) =>
                   setPrivacidade((p) => ({
@@ -2653,15 +2642,15 @@ function ModalEditarArtista({
                 }
               />
               <TogglePriv
-                label="Criar orçamentos"
-                sub="Pode gerar orçamento"
+                label={t("Criar orçamentos")}
+                sub={t("Pode gerar orçamento")}
                 valor={privacidade.orcamentosCriar}
                 disabled={!privacidade.orcamentosVer}
                 onChange={(v) => setPrivacidade((p) => ({ ...p, orcamentosCriar: v }))}
               />
               <TogglePriv
-                label="Ver vendas"
-                sub="Vê o histórico de vendas dele"
+                label={t("Ver vendas")}
+                sub={t("Vê o histórico de vendas dele")}
                 valor={privacidade.vendasVer}
                 onChange={(v) =>
                   setPrivacidade((p) => ({
@@ -2672,15 +2661,15 @@ function ModalEditarArtista({
                 }
               />
               <TogglePriv
-                label="Fechar vendas"
-                sub="Pode concretizar venda"
+                label={t("Fechar vendas")}
+                sub={t("Pode concretizar venda")}
                 valor={privacidade.vendasCriar}
                 disabled={!privacidade.vendasVer}
                 onChange={(v) => setPrivacidade((p) => ({ ...p, vendasCriar: v }))}
               />
               <TogglePriv
-                label="Ver financeiro"
-                sub="Vê o financeiro dele"
+                label={t("Ver financeiro")}
+                sub={t("Vê o financeiro dele")}
                 valor={privacidade.financeiroVer}
                 onChange={(v) =>
                   setPrivacidade((p) => ({
@@ -2691,15 +2680,15 @@ function ModalEditarArtista({
                 }
               />
               <TogglePriv
-                label="Informar pagamento"
-                sub="Pode registrar pagamento no financeiro"
+                label={t("Informar pagamento")}
+                sub={t("Pode registrar pagamento no financeiro")}
                 valor={privacidade.financeiroInformar}
                 disabled={!privacidade.financeiroVer}
                 onChange={(v) => setPrivacidade((p) => ({ ...p, financeiroInformar: v }))}
               />
               <TogglePriv
-                label="Ver contratos"
-                sub="Vê os contratos dele"
+                label={t("Ver contratos")}
+                sub={t("Vê os contratos dele")}
                 valor={privacidade.contratosVer}
                 onChange={(v) =>
                   setPrivacidade((p) => ({
@@ -2710,8 +2699,8 @@ function ModalEditarArtista({
                 }
               />
               <TogglePriv
-                label="Criar contratos"
-                sub="Pode gerar contrato"
+                label={t("Criar contratos")}
+                sub={t("Pode gerar contrato")}
                 valor={privacidade.contratosCriar}
                 disabled={!privacidade.contratosVer}
                 onChange={(v) => setPrivacidade((p) => ({ ...p, contratosCriar: v }))}
@@ -2720,7 +2709,7 @@ function ModalEditarArtista({
               {/* Contatos */}
               <div className="p-2.5 rounded-md border border-border bg-elevated">
                 <div className="text-sm font-medium text-primary mb-2">
-                  Contatos que ele enxerga
+                  {t("Contatos que ele enxerga")}
                 </div>
                 <div className="pill-group">
                   <button
@@ -2728,14 +2717,14 @@ function ModalEditarArtista({
                     onClick={() => setPrivacidade((p) => ({ ...p, contatos: "proprios" }))}
                     className={`pill ${privacidade.contatos === "proprios" ? "active" : ""}`}
                   >
-                    Só dos shows dele
+                    {t("Só dos shows dele")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setPrivacidade((p) => ({ ...p, contatos: "todos" }))}
                     className={`pill ${privacidade.contatos === "todos" ? "active" : ""}`}
                   >
-                    Toda a agência
+                    {t("Toda a agência")}
                   </button>
                 </div>
               </div>
@@ -2744,14 +2733,12 @@ function ModalEditarArtista({
               <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
                 <Lock size={13} className="text-muted flex-shrink-0" />
                 <span className="text-sm text-secondary">
-                  Agenda — ele sempre vê só a própria (trava do sistema).
+                  {t("Agenda — ele sempre vê só a própria (trava do sistema).")}
                 </span>
               </div>
             </div>
             <p className="text-xs text-muted mt-2 leading-relaxed">
-              Por enquanto isso <strong className="text-secondary">configura</strong> as
-              permissões. A restrição efetiva no acesso do DJ (esconder/bloquear de fato)
-              entra numa próxima etapa.
+              {t("Por enquanto isso")} <strong className="text-secondary">{t("configura")}</strong> {t("as permissões. A restrição efetiva no acesso do DJ (esconder/bloquear de fato) entra numa próxima etapa.")}
             </p>
           </Secao>
 
@@ -2772,7 +2759,7 @@ function ModalEditarArtista({
 
         <div className="flex justify-end gap-2 p-4 border-t border-border sticky bottom-0 bg-surface">
           <button onClick={onCancelar} className="btn btn-secondary text-sm">
-            Cancelar
+            {t("Cancelar")}
           </button>
           <button
             onClick={salvar}
@@ -2780,12 +2767,12 @@ function ModalEditarArtista({
             className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             title={
               temColisao
-                ? "Resolva os avisos de nome/login antes de salvar"
+                ? t("Resolva os avisos de nome/login antes de salvar")
                 : undefined
             }
           >
             <Check size={14} />
-            {enviando ? "Salvando..." : "Salvar alterações"}
+            {enviando ? t("Salvando...") : t("Salvar alterações")}
           </button>
         </div>
       </div>
@@ -2820,7 +2807,7 @@ function ModalEditarArtista({
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                placeholder="Nome do artista"
+                placeholder={t("Nome do artista")}
                 className="campo-input text-xl font-bold"
               />
               {colisaoNome === "ativo" && (
@@ -2829,7 +2816,7 @@ function ModalEditarArtista({
                   style={{ color: "var(--danger)" }}
                 >
                   <AlertCircle size={11} />
-                  Já existe um artista ATIVO com esse nome. Escolha outro.
+                  {t("Já existe um artista ATIVO com esse nome. Escolha outro.")}
                 </p>
               )}
               {colisaoNome === "lixeira" && (
@@ -2838,8 +2825,7 @@ function ModalEditarArtista({
                   style={{ color: "var(--warning)" }}
                 >
                   <AlertTriangle size={11} />
-                  Existe um artista na <strong>lixeira</strong> com esse nome.
-                  Restaure ou apague pra reutilizar.
+                  {t("Existe um artista na")} <strong>{t("lixeira")}</strong> {t("com esse nome. Restaure ou apague pra reutilizar.")}
                 </p>
               )}
             </div>
@@ -2850,7 +2836,7 @@ function ModalEditarArtista({
                 onClick={onCancelar}
                 className="btn btn-secondary text-sm"
               >
-                Cancelar
+                {t("Cancelar")}
               </button>
               <button
                 onClick={salvar}
@@ -2858,12 +2844,12 @@ function ModalEditarArtista({
                 className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
                 title={
                   temColisao
-                    ? "Resolva os avisos de nome/login antes de salvar"
+                    ? t("Resolva os avisos de nome/login antes de salvar")
                     : undefined
                 }
               >
                 <Check size={14} />
-                {enviando ? "Salvando..." : "Salvar alterações"}
+                {enviando ? t("Salvando...") : t("Salvar alterações")}
               </button>
             </div>
           </div>
@@ -2877,24 +2863,24 @@ function ModalEditarArtista({
             <div className="border-t border-border" />
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
               {/* Linha 1: Nome | Cidade */}
-              <Campo label="Nome completo (civil)">
+              <Campo label={t("Nome completo (civil)")}>
                 <input
                   value={nomeLegal}
                   onChange={(e) => setNomeLegal(e.target.value)}
-                  placeholder="Ex: João da Silva"
+                  placeholder={t("Ex: João da Silva")}
                   className="campo-input"
                 />
               </Campo>
-              <Campo label="Cidade onde reside">
+              <Campo label={t("Cidade onde reside")}>
                 <CidadeIBGEAutocomplete
                   value={cidade}
                   onChange={setCidade}
-                  placeholder="Cidade onde reside"
+                  placeholder={t("Cidade onde reside")}
                 />
               </Campo>
 
               {/* Linha 2: Tipo de documento | Endereço */}
-              <Campo label="Tipo de documento">
+              <Campo label={t("Tipo de documento")}>
                 <ToggleTipoDocumento
                   documentoTipo={documentoTipo}
                   setDocumentoTipo={setDocumentoTipo}
@@ -2902,7 +2888,7 @@ function ModalEditarArtista({
                   setDocumento={setDocumento}
                 />
               </Campo>
-              <Campo label="Endereço (opcional)">
+              <Campo label={t("Endereço (opcional)")}>
                 <CamposEndereco value={endereco} onChange={setEndereco} />
               </Campo>
 
@@ -2922,7 +2908,7 @@ function ModalEditarArtista({
                   className="campo-input font-mono"
                 />
               </Campo>
-              <Campo label="Telefone (opcional)">
+              <Campo label={t("Telefone (opcional)")}>
                 <input
                   value={telefone}
                   onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
@@ -2935,13 +2921,13 @@ function ModalEditarArtista({
               {/* Razão social — linha inteira, só quando CNPJ */}
               {documentoTipo === "cnpj" && (
                 <Campo
-                  label="Razão social / Nome da empresa"
+                  label={t("Razão social / Nome da empresa")}
                   className="md:col-span-2"
                 >
                   <input
                     value={razaoSocial}
                     onChange={(e) => setRazaoSocial(e.target.value)}
-                    placeholder="Ex: Silva Produções Artísticas LTDA"
+                    placeholder={t("Ex: Silva Produções Artísticas LTDA")}
                     className="campo-input"
                   />
                 </Campo>
@@ -2957,11 +2943,11 @@ function ModalEditarArtista({
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
-            Acesso ao sistema
+            {t("Acesso ao sistema")}
           </div>
 
           {/* Login (username) */}
-          <Campo label="Login (username)">
+          <Campo label={t("Login (username)")}>
             <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
               {/* Input com largura dinâmica (em ch + font-mono) — o
                   sufixo da agência fica colado na ponta do que foi
@@ -2998,11 +2984,11 @@ function ModalEditarArtista({
                 }}
                 disabled={!usernameValido}
                 className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Copiar username completo"
+                aria-label={t("Copiar username completo")}
                 title={
                   usernameValido
-                    ? "Copiar username completo"
-                    : "Preencha um username válido pra copiar"
+                    ? t("Copiar username completo")
+                    : t("Preencha um username válido pra copiar")
                 }
               >
                 {copiouUsername ? (
@@ -3014,7 +3000,7 @@ function ModalEditarArtista({
             </div>
             {!usernameValido && usernameRaiz.length > 0 && (
               <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
-                Use 3+ chars (letras, números, hífen).
+                {t("Use 3+ chars (letras, números, hífen)")}.
               </p>
             )}
             {usernameValido && colisaoUsername === "ativo" && (
@@ -3023,7 +3009,7 @@ function ModalEditarArtista({
                 style={{ color: "var(--danger)" }}
               >
                 <AlertCircle size={11} />
-                Esse login já está em uso por outro artista ATIVO.
+                {t("Esse login já está em uso por outro artista ATIVO.")}
               </p>
             )}
             {usernameValido && colisaoUsername === "lixeira" && (
@@ -3032,8 +3018,8 @@ function ModalEditarArtista({
                 style={{ color: "var(--warning)" }}
               >
                 <AlertTriangle size={11} />
-                Esse login pertence a um artista na <strong>lixeira</strong>.
-                Restaure ou apague pra reutilizar.
+                {t("Esse login pertence a um artista na")} <strong>{t("lixeira")}</strong>.
+                {t("Restaure ou apague pra reutilizar.")}
               </p>
             )}
             {usernameMudou && usernameValido && !colisaoUsername && (
@@ -3047,7 +3033,7 @@ function ModalEditarArtista({
               >
                 <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
                 <span>
-                  O artista vai precisar usar este novo login na próxima entrada.
+                  {t("O artista vai precisar usar este novo login na próxima entrada.")}
                 </span>
               </div>
             )}
@@ -3057,15 +3043,15 @@ function ModalEditarArtista({
           {carregandoConta ? (
             <div className="flex items-center gap-2 text-sm text-muted py-2">
               <Loader2 size={14} className="animate-spin" />
-              Carregando dados da conta...
+              {t("Carregando dados da conta...")}
             </div>
           ) : !conta ? (
             <p className="text-xs text-danger">
-              Não foi possível carregar os dados da conta.
+              {t("Não foi possível carregar os dados da conta.")}
             </p>
           ) : (
             <>
-              <Campo label="E-mail cadastrado">
+              <Campo label={t("E-mail cadastrado")}>
                 {editandoEmail ? (
                   <>
                     {/* Modo edição: input + cancelar */}
@@ -3075,7 +3061,7 @@ function ModalEditarArtista({
                         type="email"
                         value={emailEditavel}
                         onChange={(e) => setEmailEditavel(e.target.value)}
-                        placeholder="email@exemplo.com"
+                        placeholder={t("email@exemplo.com")}
                         className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
                         autoFocus
                       />
@@ -3092,7 +3078,7 @@ function ModalEditarArtista({
                         }}
                         className="text-[0.7rem] text-muted hover:text-secondary underline"
                       >
-                        Cancelar
+                        {t("Cancelar")}
                       </button>
                       {emailMudou && (
                         <span
@@ -3100,7 +3086,7 @@ function ModalEditarArtista({
                           style={{ color: "var(--warning)" }}
                         >
                           <AlertTriangle size={11} />
-                          Salve pra confirmar a troca.
+                          {t("Salve pra confirmar a troca.")}
                         </span>
                       )}
                     </div>
@@ -3111,7 +3097,7 @@ function ModalEditarArtista({
                     <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                       <Mail size={14} className="text-muted flex-shrink-0" />
                       <span className="flex-1 text-sm text-muted italic">
-                        Usuário não cadastrou nenhum email
+                        {t("Usuário não cadastrou nenhum email")}
                       </span>
                     </div>
                     <button
@@ -3120,7 +3106,7 @@ function ModalEditarArtista({
                       className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
                       style={{ color: "var(--module-vendas)" }}
                     >
-                      <Pencil size={11} /> Definir e-mail
+                      <Pencil size={11} /> {t("Definir e-mail")}
                     </button>
                   </>
                 ) : (
@@ -3139,7 +3125,7 @@ function ModalEditarArtista({
                           style={{ color: "var(--success)" }}
                         >
                           <ShieldCheck size={11} />
-                          Verificado
+                          {t("Verificado")}
                         </span>
                       ) : (
                         <span
@@ -3147,7 +3133,7 @@ function ModalEditarArtista({
                           style={{ color: "var(--warning)" }}
                         >
                           <AlertTriangle size={11} />
-                          Não verificado
+                          {t("Não verificado")}
                         </span>
                       )}
                       <button
@@ -3156,7 +3142,7 @@ function ModalEditarArtista({
                         className="inline-flex items-center gap-1 hover:underline"
                         style={{ color: "var(--module-vendas)" }}
                       >
-                        <Pencil size={11} /> Editar
+                        <Pencil size={11} /> {t("Editar")}
                       </button>
                     </div>
                   </>
@@ -3164,7 +3150,7 @@ function ModalEditarArtista({
               </Campo>
 
               {/* ---- Senha ---- */}
-              <Campo label="Senha">
+              <Campo label={t("Senha")}>
                 {conta.senhaPadrao && conta.senhaPadraoValor ? (
                   <>
                     {/* Senha padrão conhecida: mostra + botão copiar */}
@@ -3187,7 +3173,7 @@ function ModalEditarArtista({
                             });
                         }}
                         className="btn-ghost p-1.5 rounded"
-                        aria-label="Copiar senha"
+                        aria-label={t("Copiar senha")}
                       >
                         {copiouSenhaPadrao ? (
                           <CheckCircle2
@@ -3204,8 +3190,7 @@ function ModalEditarArtista({
                       style={{ color: "var(--warning)" }}
                     >
                       <AlertTriangle size={11} />
-                      Senha padrão gerada pelo sistema — usuário ainda não
-                      trocou.
+                      {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
                     </div>
                   </>
                 ) : conta.senhaPadrao ? (
@@ -3219,10 +3204,8 @@ function ModalEditarArtista({
                   >
                     <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
                     <span>
-                      Usuário ainda está com a <strong>senha padrão</strong>{" "}
-                      gerada pelo sistema, mas o valor não está disponível
-                      (artista criado antes desta versão). Gere uma nova
-                      abaixo pra conseguir copiar.
+                      {t("Usuário ainda está com a")} <strong>{t("senha padrão")}</strong>{" "}
+                      {t("gerada pelo sistema, mas o valor não está disponível (artista criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
                     </span>
                   </div>
                 ) : (
@@ -3235,7 +3218,7 @@ function ModalEditarArtista({
                     }}
                   >
                     <Lock size={13} className="flex-shrink-0" />
-                    <span>Senha já foi alterada pelo usuário.</span>
+                    <span>{t("Senha já foi alterada pelo usuário.")}</span>
                   </div>
                 )}
               </Campo>
@@ -3245,7 +3228,7 @@ function ModalEditarArtista({
                 onClick={() => {
                   if (
                     confirm(
-                      `Gerar uma nova senha aleatória pro artista ${artista.nome}?`
+                      t("Gerar uma nova senha aleatória pro artista {nome}?", { nome: artista.nome })
                     )
                   ) {
                     void onResetarSenha();
@@ -3258,7 +3241,7 @@ function ModalEditarArtista({
                 }}
               >
                 <KeyRound size={14} />
-                Gerar nova senha aleatória
+                {t("Gerar nova senha aleatória")}
               </button>
             </>
           )}
@@ -3268,20 +3251,19 @@ function ModalEditarArtista({
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
-            Privacidade
+            {t("Privacidade")}
           </div>
           <p className="text-xs text-muted -mt-1">
-            Escolha o nível de cada área. Cada opção diz exatamente o que o DJ
-            pode fazer.
+            {t("Escolha o nível de cada área. Cada opção diz exatamente o que o DJ pode fazer.")}
           </p>
           <div className="flex flex-col gap-4">
             <SegmentedChoice
-              titulo="Orçamentos"
+              titulo={t("Orçamentos")}
               valor={nivelDe(privacidade.orcamentosVer, privacidade.orcamentosCriar)}
               opcoes={[
-                { val: "nenhum", label: "Não vê" },
-                { val: "ver", label: "Só vê" },
-                { val: "agir", label: "Vê e cria" },
+                { val: "nenhum", label: t("Não vê") },
+                { val: "ver", label: t("Só vê") },
+                { val: "agir", label: t("Vê e cria") },
               ]}
               onChange={(n) =>
                 setPrivacidade((p) => ({
@@ -3292,12 +3274,12 @@ function ModalEditarArtista({
               }
             />
             <SegmentedChoice
-              titulo="Vendas"
+              titulo={t("Vendas")}
               valor={nivelDe(privacidade.vendasVer, privacidade.vendasCriar)}
               opcoes={[
-                { val: "nenhum", label: "Não vê" },
-                { val: "ver", label: "Só vê" },
-                { val: "agir", label: "Vê e fecha" },
+                { val: "nenhum", label: t("Não vê") },
+                { val: "ver", label: t("Só vê") },
+                { val: "agir", label: t("Vê e fecha") },
               ]}
               onChange={(n) =>
                 setPrivacidade((p) => ({
@@ -3308,12 +3290,12 @@ function ModalEditarArtista({
               }
             />
             <SegmentedChoice
-              titulo="Financeiro"
+              titulo={t("Financeiro")}
               valor={nivelDe(privacidade.financeiroVer, privacidade.financeiroInformar)}
               opcoes={[
-                { val: "nenhum", label: "Não vê" },
-                { val: "ver", label: "Só vê" },
-                { val: "agir", label: "Vê e informa" },
+                { val: "nenhum", label: t("Não vê") },
+                { val: "ver", label: t("Só vê") },
+                { val: "agir", label: t("Vê e informa") },
               ]}
               onChange={(n) =>
                 setPrivacidade((p) => ({
@@ -3324,12 +3306,12 @@ function ModalEditarArtista({
               }
             />
             <SegmentedChoice
-              titulo="Contratos"
+              titulo={t("Contratos")}
               valor={nivelDe(privacidade.contratosVer, privacidade.contratosCriar)}
               opcoes={[
-                { val: "nenhum", label: "Não vê" },
-                { val: "ver", label: "Só vê" },
-                { val: "agir", label: "Vê e cria" },
+                { val: "nenhum", label: t("Não vê") },
+                { val: "ver", label: t("Só vê") },
+                { val: "agir", label: t("Vê e cria") },
               ]}
               onChange={(n) =>
                 setPrivacidade((p) => ({
@@ -3340,11 +3322,11 @@ function ModalEditarArtista({
               }
             />
             <SegmentedChoice
-              titulo="Contatos"
+              titulo={t("Contatos")}
               valor={privacidade.contatos}
               opcoes={[
-                { val: "proprios", label: "Só dos shows dele" },
-                { val: "todos", label: "Toda a agência" },
+                { val: "proprios", label: t("Só dos shows dele") },
+                { val: "todos", label: t("Toda a agência") },
               ]}
               onChange={(c) => setPrivacidade((p) => ({ ...p, contatos: c }))}
             />
@@ -3353,7 +3335,7 @@ function ModalEditarArtista({
             <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
               <Lock size={13} className="text-muted flex-shrink-0" />
               <span className="text-sm text-secondary">
-                Agenda — ele sempre vê só a própria (trava do sistema).
+                {t("Agenda — ele sempre vê só a própria (trava do sistema).")}
               </span>
             </div>
           </div>
@@ -3362,7 +3344,7 @@ function ModalEditarArtista({
         {/* Rider de camarim */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Rider de camarim ({riderCamarim.length}/{LIMITE_RIDER_CAMARIM})
+            {t("Rider de camarim ({n}/{max})", { n: riderCamarim.length, max: LIMITE_RIDER_CAMARIM })}
           </div>
           <ListaRider
             itens={riderCamarim}
@@ -3376,7 +3358,7 @@ function ModalEditarArtista({
         {/* Rider de efeitos */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Rider de efeitos ({riderEfeitos.length}/{LIMITE_RIDER_EFEITOS})
+            {t("Rider de efeitos ({n}/{max})", { n: riderEfeitos.length, max: LIMITE_RIDER_EFEITOS })}
           </div>
           <ListaRider
             itens={riderEfeitos}
@@ -3390,7 +3372,7 @@ function ModalEditarArtista({
         {/* Rider técnico */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Rider técnico ({riderTecnico.length}/{LIMITE_RIDER_TECNICO})
+            {t("Rider técnico ({n}/{max})", { n: riderTecnico.length, max: LIMITE_RIDER_TECNICO })}
           </div>
           <ListaRider
             itens={riderTecnico}
@@ -3409,7 +3391,7 @@ function ModalEditarArtista({
             ) : (
               <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
             )}
-            Taxa de agência
+            {t("Taxa de agência")}
           </div>
           <div className="flex flex-col gap-1.5">
             {MODOS_TAXA.map((m) => {
@@ -3434,7 +3416,7 @@ function ModalEditarArtista({
                       }
                     }}
                   />
-                  <span className="text-sm flex-1">{LABELS_TAXA_MODO[m]}</span>
+                  <span className="text-sm flex-1">{t(LABELS_TAXA_MODO[m])}</span>
                   {sel && (m === "perc-fixa" || m === "valor-fixo") && (
                     <div className="flex items-center gap-1">
                       {m === "valor-fixo" && (
@@ -3611,6 +3593,7 @@ export function ModalCredenciais({
   senha: string;
   onFechar: () => void;
 }) {
+  const t = useT();
   const [copiou, setCopiou] = useState<"user" | "pass" | "ambos" | null>(null);
   const mostraUsuario = username !== "—";
 
@@ -3648,19 +3631,19 @@ export function ModalCredenciais({
             <CheckCircle2 size={24} />
           </div>
           <div className="section-title">
-            {mostraUsuario ? "Artista cadastrado" : "Senha redefinida"}
+            {mostraUsuario ? t("Artista cadastrado") : t("Senha redefinida")}
           </div>
           <div className="text-xs text-secondary mt-1">
             {mostraUsuario
-              ? `Copie e mande pro ${nomeArtista}. Aparece só uma vez.`
-              : `Nova senha do ${nomeArtista}. Copie agora — aparece só uma vez.`}
+              ? t("Copie e mande pro {nome}. Aparece só uma vez.", { nome: nomeArtista })
+              : t("Nova senha do {nome}. Copie agora — aparece só uma vez.", { nome: nomeArtista })}
           </div>
         </div>
 
         <div className="p-5 flex flex-col gap-3">
           {mostraUsuario && (
             <div>
-              <div className="text-xs font-medium text-secondary mb-1">Login</div>
+              <div className="text-xs font-medium text-secondary mb-1">{t("Login")}</div>
               <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                 <span className="font-mono text-sm text-primary flex-1 break-all">
                   {username}
@@ -3680,7 +3663,7 @@ export function ModalCredenciais({
           )}
 
           <div>
-            <div className="text-xs font-medium text-secondary mb-1">Senha</div>
+            <div className="text-xs font-medium text-secondary mb-1">{t("Senha")}</div>
             <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
               <span className="font-mono text-sm text-primary flex-1 break-all">
                 {senha}
@@ -3706,8 +3689,7 @@ export function ModalCredenciais({
               border: "1px solid rgba(245,158,11,0.2)",
             }}
           >
-            <strong>Importante:</strong> essas credenciais não ficam salvas.
-            Se fechar essa janela, vai precisar gerar nova senha.
+            <strong>{t("Importante:")}</strong> {t("essas credenciais não ficam salvas. Se fechar essa janela, vai precisar gerar nova senha.")}
           </div>
         </div>
 
@@ -3720,17 +3702,17 @@ export function ModalCredenciais({
             {copiou === "ambos" ? (
               <>
                 <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
-                Copiado!
+                {t("Copiado!")}
               </>
             ) : (
               <>
                 <Copy size={14} />
-                {mostraUsuario ? "Copiar login + senha" : "Copiar senha"}
+                {mostraUsuario ? t("Copiar login + senha") : t("Copiar senha")}
               </>
             )}
           </button>
           <button onClick={onFechar} className="btn btn-primary text-sm">
-            Entendi, fechar
+            {t("Entendi, fechar")}
           </button>
         </div>
       </div>
@@ -3754,6 +3736,7 @@ function SeletorDeCor({
   cor: string;
   onChange: (cor: string) => void;
 }) {
+  const t = useT();
   // A cor atual está nas predefinidas? Se não, é "personalizada".
   const ePersonalizada = !CORES.includes(cor);
   const [pickerAberto, setPickerAberto] = useState(false);
@@ -3763,7 +3746,7 @@ function SeletorDeCor({
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-secondary">
-        Cor de identificação
+        {t("Cor de identificação")}
       </span>
 
       <div className="relative flex flex-wrap gap-2 items-center">
@@ -3801,8 +3784,8 @@ function SeletorDeCor({
           ref={botaoPickerRef}
           type="button"
           onClick={() => setPickerAberto((v) => !v)}
-          aria-label="Escolher cor personalizada"
-          title="Cor personalizada"
+          aria-label={t("Escolher cor personalizada")}
+          title={t("Cor personalizada")}
           className="relative h-8 w-8 rounded-full transition-all hover:scale-110 flex items-center justify-center overflow-hidden"
           style={{
             // Quando personalizada está ativa: mostra a cor escolhida
@@ -3856,8 +3839,8 @@ function SeletorDeCor({
       {/* Dica sutil */}
       <p className="text-[0.65rem] text-muted mt-0.5">
         {ePersonalizada
-          ? "Cor personalizada — clique pra trocar"
-          : "Clique no + pra escolher uma cor personalizada"}
+          ? t("Cor personalizada — clique pra trocar")
+          : t("Clique no + pra escolher uma cor personalizada")}
       </p>
     </div>
   );
@@ -3915,15 +3898,16 @@ function validarDadosContrato(
   nomeLegal: string,
   documentoTipo: DocumentoTipo,
   documento: string,
-  razaoSocial: string
+  razaoSocial: string,
+  t: (s: string) => string
 ): string | null {
-  if (!nomeLegal.trim()) return "Informe o nome completo (civil) do artista.";
+  if (!nomeLegal.trim()) return t("Informe o nome completo (civil) do artista.");
   if (!documentoValido(documento, documentoTipo))
     return documentoTipo === "cpf"
-      ? "CPF inválido — precisa de 11 dígitos."
-      : "CNPJ inválido — precisa de 14 dígitos.";
+      ? t("CPF inválido — precisa de 11 dígitos.")
+      : t("CNPJ inválido — precisa de 14 dígitos.");
   if (documentoTipo === "cnpj" && !razaoSocial.trim())
-    return "Informe a razão social / nome da empresa (CNPJ).";
+    return t("Informe a razão social / nome da empresa (CNPJ).");
   return null;
 }
 
@@ -3939,13 +3923,14 @@ function CamposEndereco({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const t = useT();
   const { rua, numero, complemento } = splitEndereco(value);
   return (
     <div className="flex gap-2">
       <input
         value={rua}
         onChange={(e) => onChange(joinEndereco(e.target.value, numero, complemento))}
-        placeholder="Rua / Avenida"
+        placeholder={t("Rua / Avenida")}
         className="campo-input flex-[7] min-w-0"
       />
       <input
@@ -3961,13 +3946,13 @@ function CamposEndereco({
         }
         inputMode="numeric"
         maxLength={5}
-        placeholder="Nº"
+        placeholder={t("Nº")}
         className="campo-input flex-[1] min-w-[3rem] text-center px-1"
       />
       <input
         value={complemento}
         onChange={(e) => onChange(joinEndereco(rua, numero, e.target.value))}
-        placeholder="Compl."
+        placeholder={t("Compl.")}
         className="campo-input flex-[2] min-w-0"
       />
     </div>
@@ -3990,19 +3975,20 @@ function ToggleTipoDocumento({
   documento: string;
   setDocumento: (v: string) => void;
 }) {
+  const t = useT();
   return (
     <div className="pill-group !rounded-md">
-      {(["cpf", "cnpj"] as const).map((t) => (
+      {(["cpf", "cnpj"] as const).map((tipo) => (
         <button
-          key={t}
+          key={tipo}
           type="button"
           onClick={() => {
-            setDocumentoTipo(t);
-            setDocumento(mascararDocumento(documento, t));
+            setDocumentoTipo(tipo);
+            setDocumento(mascararDocumento(documento, tipo));
           }}
-          className={`pill !rounded-[4px] ${documentoTipo === t ? "active" : ""}`}
+          className={`pill !rounded-[4px] ${documentoTipo === tipo ? "active" : ""}`}
         >
-          {t === "cpf" ? "CPF (pessoa física)" : "CNPJ (empresa)"}
+          {tipo === "cpf" ? t("CPF (pessoa física)") : t("CNPJ (empresa)")}
         </button>
       ))}
     </div>
@@ -4041,18 +4027,19 @@ function CamposDadosContrato({
   telefone: string;
   setTelefone: (v: string) => void;
 }) {
+  const t = useT();
   return (
     <>
-      <Campo label="Nome completo (civil)" className="md:col-span-2">
+      <Campo label={t("Nome completo (civil)")} className="md:col-span-2">
         <input
           value={nomeLegal}
           onChange={(e) => setNomeLegal(e.target.value)}
-          placeholder="Ex: João da Silva"
+          placeholder={t("Ex: João da Silva")}
           className="campo-input"
         />
       </Campo>
 
-      <Campo label="Tipo de documento">
+      <Campo label={t("Tipo de documento")}>
         <ToggleTipoDocumento
           documentoTipo={documentoTipo}
           setDocumentoTipo={setDocumentoTipo}
@@ -4077,23 +4064,23 @@ function CamposDadosContrato({
 
       {documentoTipo === "cnpj" && (
         <Campo
-          label="Razão social / Nome da empresa"
+          label={t("Razão social / Nome da empresa")}
           className="md:col-span-2"
         >
           <input
             value={razaoSocial}
             onChange={(e) => setRazaoSocial(e.target.value)}
-            placeholder="Ex: Silva Produções Artísticas LTDA"
+            placeholder={t("Ex: Silva Produções Artísticas LTDA")}
             className="campo-input"
           />
         </Campo>
       )}
 
-      <Campo label="Endereço (opcional)">
+      <Campo label={t("Endereço (opcional)")}>
         <CamposEndereco value={endereco} onChange={setEndereco} />
       </Campo>
 
-      <Campo label="Telefone (opcional)">
+      <Campo label={t("Telefone (opcional)")}>
         <input
           value={telefone}
           onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
@@ -4108,8 +4095,9 @@ function CamposDadosContrato({
 
 /** Wrapper em <Secao> dos campos do contratado (cadastro / edição em modal). */
 function SecaoDadosContrato(props: Parameters<typeof CamposDadosContrato>[0]) {
+  const t = useT();
   return (
-    <Secao titulo="Dados para contrato">
+    <Secao titulo={t("Dados para contrato")}>
       <CamposDadosContrato {...props} />
     </Secao>
   );
@@ -4168,6 +4156,7 @@ function ListaRider({
   placeholderItem: string;
   limite: number;
 }) {
+  const t = useT();
   const [novoNome, setNovoNome] = useState("");
   const cheio = itens.length >= limite;
 
@@ -4194,8 +4183,7 @@ function ListaRider({
     <div className="flex flex-col gap-2">
       {/* Mensagem explicativa */}
       <p className="text-[0.7rem] text-muted leading-relaxed">
-        Liste apenas os itens. A <strong>quantidade</strong> é definida em
-        cada orçamento (varia por evento).
+        {t("Liste apenas os itens. A")} <strong>{t("quantidade")}</strong> {t("é definida em cada orçamento (varia por evento).")}
       </p>
 
       {/* Itens já adicionados */}
@@ -4206,12 +4194,12 @@ function ListaRider({
               key={nome}
               className="inline-flex items-center gap-1.5 bg-elevated border border-border rounded-md pl-3 pr-1.5 py-1 text-sm text-primary"
             >
-              {nome}
+              {t(nome)}
               <button
                 type="button"
                 onClick={() => remover(idx)}
                 className="hover:text-danger transition-colors"
-                aria-label="Remover item"
+                aria-label={t("Remover item")}
               >
                 <X size={12} />
               </button>
@@ -4225,7 +4213,7 @@ function ListaRider({
         <input
           value={novoNome}
           onChange={(e) => setNovoNome(e.target.value)}
-          placeholder={cheio ? `Limite de ${limite} atingido` : placeholderItem}
+          placeholder={cheio ? t("Limite de {n} atingido", { n: limite }) : t(placeholderItem)}
           disabled={cheio}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -4249,7 +4237,7 @@ function ListaRider({
       {!cheio && sugestoes.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1">
           <span className="text-[0.65rem] text-muted self-center">
-            Sugestões:
+            {t("Sugestões:")}
           </span>
           {sugestoes.map((s) => (
             <button
@@ -4258,7 +4246,7 @@ function ListaRider({
               onClick={() => adicionar(s)}
               className="text-[0.7rem] px-2 py-0.5 rounded-full border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
             >
-              + {s}
+              + {t(s)}
             </button>
           ))}
         </div>

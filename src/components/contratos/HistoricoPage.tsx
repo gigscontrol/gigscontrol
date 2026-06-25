@@ -15,6 +15,7 @@ import PainelAssinatura from "./PainelAssinatura";
 import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
+import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
 
@@ -50,6 +51,7 @@ function formatarData(iso: string | null): string {
 }
 
 export default function HistoricoPage() {
+  const t = useT();
   const { contratos, carregando, erro, atualizarContrato, removerContrato } =
     useContratos();
   const { modelos } = useModelos();
@@ -97,7 +99,7 @@ export default function HistoricoPage() {
         contrato.numero
       );
     } catch (e) {
-      window.alert((e as Error).message || "Não foi possível gerar o PDF.");
+      window.alert((e as Error).message || t("Não foi possível gerar o PDF."));
     } finally {
       setGerandoPdf(false);
     }
@@ -109,7 +111,7 @@ export default function HistoricoPage() {
     try {
       await atualizarContrato(contrato.id, { status });
     } catch (e) {
-      window.alert((e as Error).message || "Não foi possível alterar o status.");
+      window.alert((e as Error).message || t("Não foi possível alterar o status."));
     } finally {
       setSalvandoStatus(false);
     }
@@ -118,7 +120,7 @@ export default function HistoricoPage() {
   async function excluir(contrato: Contrato) {
     if (
       !window.confirm(
-        `Excluir o contrato ${contrato.numero}? Esta ação não pode ser desfeita.`
+        t("Excluir o contrato {numero}? Esta ação não pode ser desfeita.", { numero: contrato.numero })
       )
     ) {
       return;
@@ -128,7 +130,7 @@ export default function HistoricoPage() {
       // Se estava aberto no detalhe, volta pra lista.
       setSelecionadoId((atual) => (atual === contrato.id ? null : atual));
     } catch (e) {
-      window.alert((e as Error).message || "Não foi possível excluir o contrato.");
+      window.alert((e as Error).message || t("Não foi possível excluir o contrato."));
     }
   }
 
@@ -141,7 +143,7 @@ export default function HistoricoPage() {
       {carregando ? (
         <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
-          Carregando contratos...
+          {t("Carregando contratos...")}
         </div>
       ) : erro ? (
         <div
@@ -168,9 +170,9 @@ export default function HistoricoPage() {
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <FileText size={18} className="text-muted" />
           </div>
-          <div className="section-title mb-1">Nenhum contrato gerado ainda</div>
+          <div className="section-title mb-1">{t("Nenhum contrato gerado ainda")}</div>
           <div className="section-subtitle">
-            Crie um em <span className="font-medium">Novo Contrato</span>.
+            {t("Crie um em")}{" "}<span className="font-medium">{t("Novo Contrato")}</span>.
           </div>
         </div>
       ) : (
@@ -198,17 +200,18 @@ function ListaContratos({
   onAbrir: (c: Contrato) => void;
   onExcluir: (c: Contrato) => void;
 }) {
+  const t = useT();
   return (
     <div className="card p-0 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="text-left text-muted">
-              <th className="font-medium px-4 py-3">Número</th>
-              <th className="font-medium px-4 py-3">Status</th>
-              <th className="font-medium px-4 py-3">Emissão</th>
-              <th className="font-medium px-4 py-3">Modelo</th>
-              <th className="font-medium px-4 py-3 text-right">Seções</th>
+              <th className="font-medium px-4 py-3">{t("Número")}</th>
+              <th className="font-medium px-4 py-3">{t("Status")}</th>
+              <th className="font-medium px-4 py-3">{t("Emissão")}</th>
+              <th className="font-medium px-4 py-3">{t("Modelo")}</th>
+              <th className="font-medium px-4 py-3 text-right">{t("Seções")}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -232,7 +235,7 @@ function ListaContratos({
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${STATUS_BADGE[c.status]}`}>
-                    {STATUS_LABEL[c.status]}
+                    {t(STATUS_LABEL[c.status])}
                   </span>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-secondary">
@@ -251,8 +254,8 @@ function ListaContratos({
                       e.stopPropagation();
                       onExcluir(c);
                     }}
-                    title="Excluir contrato"
-                    aria-label="Excluir contrato"
+                    title={t("Excluir contrato")}
+                    aria-label={t("Excluir contrato")}
                     className="btn-ghost p-2 rounded hover:text-danger"
                   >
                     <Trash2 size={15} />
@@ -290,6 +293,7 @@ function DetalheContrato({
   onMudarStatus: (status: ContratoStatus) => void;
   onExcluir: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-5">
       {/* Barra de ações do detalhe */}
@@ -300,7 +304,7 @@ function DetalheContrato({
           className="btn btn-secondary"
         >
           <ArrowLeft size={15} />
-          Voltar
+          {t("Voltar")}
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -314,12 +318,12 @@ function DetalheContrato({
             {gerandoPdf ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
-                Gerando…
+                {t("Gerando…")}
               </>
             ) : (
               <>
                 <Download size={15} />
-                Baixar PDF
+                {t("Baixar PDF")}
               </>
             )}
           </button>
@@ -330,7 +334,7 @@ function DetalheContrato({
             className="btn btn-secondary hover:text-danger"
           >
             <Trash2 size={15} />
-            Excluir
+            {t("Excluir")}
           </button>
         </div>
       </div>
@@ -343,15 +347,15 @@ function DetalheContrato({
             <span className="section-title">{contrato.numero}</span>
           </div>
           <div className="section-subtitle mt-1">
-            Emissão {formatarData(contrato.dataEmissao)}
+            {t("Emissão")} {formatarData(contrato.dataEmissao)}
             {contrato.dataAssinatura
-              ? ` · Assinatura ${formatarData(contrato.dataAssinatura)}`
+              ? ` · ${t("Assinatura")} ${formatarData(contrato.dataAssinatura)}`
               : ""}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="stat-label">Status</span>
+          <span className="stat-label">{t("Status")}</span>
           <div
             className="inline-flex rounded-md p-0.5 gap-0.5"
             style={{ backgroundColor: "var(--bg-elevated)" }}
@@ -373,7 +377,7 @@ function DetalheContrato({
                       : undefined
                   }
                 >
-                  {STATUS_LABEL[s]}
+                  {t(STATUS_LABEL[s])}
                 </button>
               );
             })}

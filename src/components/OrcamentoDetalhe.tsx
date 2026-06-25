@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
@@ -53,10 +55,10 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
       <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
         <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
           <ArrowLeft size={14} />
-          Voltar
+          {t("Voltar")}
         </button>
         <div className="card text-center py-12">
-          <div className="section-title">Orçamento não encontrado</div>
+          <div className="section-title">{t("Orçamento não encontrado")}</div>
         </div>
       </div>
     );
@@ -77,27 +79,27 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
 
   // Quais dados faltam para virar venda?
   const camposFaltantes: string[] = [];
-  if (!orc.dataShow) camposFaltantes.push("Data do show");
-  if (!orc.horario) camposFaltantes.push("Horário");
-  if (!orc.casaId) camposFaltantes.push("Casa / Local");
-  if (!cont?.email) camposFaltantes.push("E-mail do contratante");
-  if (!cont?.documento) camposFaltantes.push("CPF / CNPJ do contratante");
+  if (!orc.dataShow) camposFaltantes.push(t("Data do show"));
+  if (!orc.horario) camposFaltantes.push(t("Horário"));
+  if (!orc.casaId) camposFaltantes.push(t("Casa / Local"));
+  if (!cont?.email) camposFaltantes.push(t("E-mail do contratante"));
+  if (!cont?.documento) camposFaltantes.push(t("CPF / CNPJ do contratante"));
 
   return (
     <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
       <button onClick={onBack} className="btn-ghost mb-6 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
-        Voltar para Histórico
+        {t("Voltar para Histórico")}
       </button>
 
       <PageHeader
         title={`Orçamento ${orc.numero}`}
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
-            <span className={`badge ${st.badge}`}>{st.label}</span>
-            <span className="badge badge-neutral">{LABELS_TIPO_EVENTO[orc.tipoEvento]}</span>
+            <span className={`badge ${st.badge}`}>{t(st.label)}</span>
+            <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[orc.tipoEvento])}</span>
             <span className="text-muted">·</span>
-            <span>Criado em {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}</span>
+            <span>{t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}</span>
           </span>
         }
         accentColor={accent}
@@ -110,7 +112,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             style={{ backgroundColor: "#25D366", color: "#fff" }}
           >
             <MessageCircle size={14} />
-            Enviar pelo WhatsApp
+            {t("Enviar pelo WhatsApp")}
           </a>
         }
       />
@@ -124,14 +126,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           <AlertCircle size={18} className="text-warning flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-primary text-sm mb-1">
-              Dados pendentes para converter em venda
+              {t("Dados pendentes para converter em venda")}
             </div>
             <div className="text-xs text-secondary">
               {camposFaltantes.join(" · ")}
             </div>
             <div className="text-xs text-muted mt-1">
-              Você pode aceitar e enviar pelo WhatsApp normalmente; esses dados serão
-              necessários quando o orçamento virar venda fechada.
+              {t("Você pode aceitar e enviar pelo WhatsApp normalmente; esses dados serão necessários quando o orçamento virar venda fechada.")}
             </div>
           </div>
         </div>
@@ -146,22 +147,22 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <CalendarCheck2 size={14} />
-            Transformar em Venda
+            {t("Transformar em Venda")}
           </button>
         )}
         {orc.status !== "aceito" && (
           <button
             onClick={() => {
               const msg = !orc.dataShow
-                ? "Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso."
-                : "Aceitar este orçamento? Um show será criado automaticamente na agenda.";
+                ? t("Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso.")
+                : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
               if (confirm(msg)) aceitarOrcamento(orc.id);
             }}
             className="btn btn-secondary"
             style={{ color: "var(--success)" }}
           >
             <CheckCircle2 size={14} />
-            Marcar aceito
+            {t("Marcar aceito")}
           </button>
         )}
         {orc.status !== "negociacao" && orc.status !== "aceito" && (
@@ -171,7 +172,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             style={{ color: "var(--warning)" }}
           >
             <Clock size={14} />
-            Em negociação
+            {t("Em negociação")}
           </button>
         )}
         {orc.status !== "recusado" && orc.status !== "aceito" && (
@@ -181,7 +182,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             style={{ color: "var(--danger)" }}
           >
             <XCircle size={14} />
-            Recusar
+            {t("Recusar")}
           </button>
         )}
         <button
@@ -189,11 +190,11 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           className="btn btn-secondary"
         >
           <Copy size={14} />
-          Duplicar
+          {t("Duplicar")}
         </button>
         <button
           onClick={() => {
-            if (confirm("Remover este orçamento permanentemente?")) {
+            if (confirm(t("Remover este orçamento permanentemente?"))) {
               removeOrcamento(orc.id);
               onBack();
             }
@@ -202,7 +203,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           style={{ color: "var(--danger)" }}
         >
           <Trash2 size={14} />
-          Remover
+          {t("Remover")}
         </button>
       </div>
 
@@ -210,17 +211,17 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {/* Coluna 1: Informações */}
         <div className="flex flex-col gap-4">
           <div className="card">
-            <div className="section-title mb-4">Dados do show</div>
+            <div className="section-title mb-4">{t("Dados do show")}</div>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <InfoItem label="DJ" value={dj?.name ?? "—"} />
+              <InfoItem label={t("DJ")} value={dj?.name ?? "—"} />
               <InfoItem
-                label="Valor do cachê"
+                label={t("Valor do cachê")}
                 value={formatBRL(orc.valorCache)}
                 bold
                 accent={accent}
               />
               <InfoItem
-                label="Data"
+                label={t("Data")}
                 value={
                   orc.dataShow
                     ? new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
@@ -233,10 +234,10 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 }
                 missing={!orc.dataShow}
               />
-              <InfoItem label="Horário" value={orc.horario || "—"} missing={!orc.horario} />
-              <InfoItem label="Duração" value={formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)} />
+              <InfoItem label={t("Horário")} value={orc.horario || "—"} missing={!orc.horario} />
+              <InfoItem label={t("Duração")} value={formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)} />
               <InfoItem
-                label="Validade"
+                label={t("Validade")}
                 value={
                   orc.validade
                     ? new Date(orc.validade + "T12:00:00").toLocaleDateString("pt-BR")
@@ -248,31 +249,31 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           </div>
 
           <div className="card">
-            <div className="section-title mb-4">Contratante</div>
+            <div className="section-title mb-4">{t("Contratante")}</div>
             <div className="flex flex-col gap-2 text-sm">
-              <InfoItem label="Nome" value={cont?.nome ?? "—"} />
-              <InfoItem label="Telefone" value={cont?.telefone ?? "—"} />
-              <InfoItem label="E-mail" value={cont?.email || "—"} missing={!cont?.email} />
-              <InfoItem label="Documento" value={mascararCpfCnpj(cont?.documento) || "—"} missing={!cont?.documento} />
+              <InfoItem label={t("Nome")} value={cont?.nome ?? "—"} />
+              <InfoItem label={t("Telefone")} value={cont?.telefone ?? "—"} />
+              <InfoItem label={t("E-mail")} value={cont?.email || "—"} missing={!cont?.email} />
+              <InfoItem label={t("Documento")} value={mascararCpfCnpj(cont?.documento) || "—"} missing={!cont?.documento} />
             </div>
           </div>
 
           <div className="card">
-            <div className="section-title mb-4">Local</div>
+            <div className="section-title mb-4">{t("Local")}</div>
             <div className="flex flex-col gap-2 text-sm">
-              <InfoItem label="Tipo de evento" value={LABELS_TIPO_EVENTO[orc.tipoEvento]} />
+              <InfoItem label={t("Tipo de evento")} value={t(LABELS_TIPO_EVENTO[orc.tipoEvento])} />
               <InfoItem
-                label="Casa / Evento"
+                label={t("Casa / Evento")}
                 value={cs?.nome ?? "—"}
                 missing={!cs}
               />
-              <InfoItem label="Cidade" value={cid ? `${cid.nome} — ${cid.estado}` : "—"} />
+              <InfoItem label={t("Cidade")} value={cid ? `${cid.nome} — ${cid.estado}` : "—"} />
             </div>
           </div>
 
           {orc.observacoes && (
             <div className="card">
-              <div className="section-title mb-3">Observações internas</div>
+              <div className="section-title mb-3">{t("Observações internas")}</div>
               <p className="text-sm text-secondary whitespace-pre-wrap">{orc.observacoes}</p>
             </div>
           )}
@@ -282,9 +283,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           <div className="card">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <div className="section-title">Informações extras</div>
+                <div className="section-title">{t("Informações extras")}</div>
                 <div className="text-xs text-muted mt-0.5">
-                  Aparece no fim do texto enviado pelo WhatsApp.
+                  {t("Aparece no fim do texto enviado pelo WhatsApp.")}
                 </div>
               </div>
               {!editandoInfoExtra && (
@@ -297,7 +298,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                   className="btn-ghost text-xs inline-flex items-center gap-1"
                 >
                   <Pencil size={12} />
-                  Editar
+                  {t("Editar")}
                 </button>
               )}
             </div>
@@ -308,7 +309,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                   onChange={(e) => setInfoExtraDraft(e.target.value)}
                   rows={4}
                   maxLength={1000}
-                  placeholder="Ex: Promoção especial — desconto de 10% se confirmar até amanhã."
+                  placeholder={t("Ex: Promoção especial — desconto de 10% se confirmar até amanhã.")}
                   className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
                   autoFocus
                 />
@@ -323,7 +324,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                     className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
                   >
                     <X size={13} />
-                    Cancelar
+                    {t("Cancelar")}
                   </button>
                   <button
                     type="button"
@@ -334,7 +335,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                           infoExtra: infoExtraDraft.trim() || undefined,
                         });
                         setEditandoInfoExtra(false);
-                        setToast({ msg: "Informações extras atualizadas.", tipo: "sucesso" });
+                        setToast({ msg: t("Informações extras atualizadas."), tipo: "sucesso" });
                       } catch (e) {
                         setToast({ msg: (e as Error).message, tipo: "erro" });
                       } finally {
@@ -345,7 +346,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                     className="btn btn-primary text-sm inline-flex items-center gap-1.5"
                   >
                     <Check size={13} />
-                    {salvandoInfoExtra ? "Salvando..." : "Salvar"}
+                    {salvandoInfoExtra ? t("Salvando...") : t("Salvar")}
                   </button>
                 </div>
               </div>
@@ -355,7 +356,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               </p>
             ) : (
               <p className="text-sm text-muted italic">
-                Nenhuma informação extra. Clique em &quot;Editar&quot; pra adicionar.
+                {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
               </p>
             )}
           </div>
@@ -364,24 +365,24 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {/* Coluna 2: Itens + preview */}
         <div className="flex flex-col gap-4">
           <div className="card">
-            <div className="section-title mb-4">Adicionais</div>
+            <div className="section-title mb-4">{t("Adicionais")}</div>
             <div className="flex flex-col gap-4 text-sm">
-              <ItemsBlock title="Camarim / Consumação" items={itensCamarim} />
-              <ItemsBlock title="Efeitos" items={itensEfeitos} />
-              <ItemsBlock title="Hotel" items={itensHotel} />
+              <ItemsBlock title={t("Camarim / Consumação")} items={itensCamarim} />
+              <ItemsBlock title={t("Efeitos")} items={itensEfeitos} />
+              <ItemsBlock title={t("Hotel")} items={itensHotel} />
               <div>
-                <div className="stat-label mb-1">Logística</div>
+                <div className="stat-label mb-1">{t("Logística")}</div>
                 <div className="text-primary text-sm space-y-1">
                   {orc.logistica.aereaQtd === 0 && !orc.logistica.transladoTerrestre && (
-                    <div>Já inclusa do cachê</div>
+                    <div>{t("Já inclusa do cachê")}</div>
                   )}
                   {orc.logistica.aereaQtd > 0 && (
                     <div>
-                      {orc.logistica.aereaQtd}× Logística Aérea (Ida e Volta)
+                      {t("{n}× Logística Aérea (Ida e Volta)", { n: orc.logistica.aereaQtd })}
                     </div>
                   )}
                   {orc.logistica.transladoTerrestre && (
-                    <div className="text-secondary">{TEXTO_TRANSLADO}</div>
+                    <div className="text-secondary">{t(TEXTO_TRANSLADO)}</div>
                   )}
                 </div>
               </div>
@@ -389,12 +390,12 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           </div>
 
           <div className="card">
-            <div className="section-title mb-3">Pré-visualização do WhatsApp</div>
+            <div className="section-title mb-3">{t("Pré-visualização do WhatsApp")}</div>
             <pre className="bg-elevated border border-border rounded-md p-3 text-xs text-primary whitespace-pre-wrap font-sans">
               {texto}
             </pre>
             <div className="text-xs text-muted mt-2">
-              * Asteriscos viram <strong>negrito</strong> no WhatsApp.
+              * {t("Asteriscos viram")} <strong>{t("negrito")}</strong> {t("no WhatsApp.")}
             </div>
           </div>
         </div>
@@ -404,14 +405,14 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
       <Modal
         isOpen={confirmaDuplicar}
         onClose={() => setConfirmaDuplicar(false)}
-        title="Duplicar orçamento"
-        subtitle={`Criar uma cópia de ${orc.numero}?`}
+        title={t("Duplicar orçamento")}
+        subtitle={t("Criar uma cópia de {num}?", { num: orc.numero })}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            Vamos gerar um novo orçamento com os mesmos dados, em status{" "}
-            <strong className="text-primary">Pendente</strong>. O número
-            ({orc.numero}) atual continua intacto.
+            {t("Vamos gerar um novo orçamento com os mesmos dados, em status")}{" "}
+            <strong className="text-primary">{t("Pendente")}</strong>. {t("O número")}
+            ({orc.numero}) {t("atual continua intacto.")}
           </p>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
@@ -419,7 +420,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               className="btn btn-secondary"
               disabled={duplicando}
             >
-              Cancelar
+              {t("Cancelar")}
             </button>
             <button
               onClick={async () => {
@@ -429,9 +430,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                   setConfirmaDuplicar(false);
                   if (novo) {
                     setToast({
-                      msg: `Orçamento duplicado em ${novo.numero}.`,
+                      msg: t("Orçamento duplicado em {num}.", { num: novo.numero }),
                       tipo: "sucesso",
-                      acaoLabel: "Abrir",
+                      acaoLabel: t("Abrir"),
                       onAcao: () => {
                         setToast(null);
                         onAbrir?.(novo.id);
@@ -449,7 +450,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               style={{ backgroundColor: accent, color: "#fff" }}
               disabled={duplicando}
             >
-              {duplicando ? "Duplicando..." : "Duplicar"}
+              {duplicando ? t("Duplicando...") : t("Duplicar")}
             </button>
           </div>
         </div>
@@ -481,12 +482,13 @@ function InfoItem({
   accent?: string;
   missing?: boolean;
 }) {
+  const t = useT();
   return (
     <div>
       <div className="stat-label mb-0.5 flex items-center gap-1">
         {label}
         {missing && (
-          <span className="text-warning" title="Será necessário para conversão em venda">
+          <span className="text-warning" title={t("Será necessário para conversão em venda")}>
             ●
           </span>
         )}
@@ -508,11 +510,12 @@ function ItemsBlock({
   title: string;
   items: { nome: string; qtd: number }[];
 }) {
+  const t = useT();
   return (
     <div>
       <div className="stat-label mb-2">{title}</div>
       {items.length === 0 ? (
-        <div className="text-xs text-muted italic">Nenhum item selecionado</div>
+        <div className="text-xs text-muted italic">{t("Nenhum item selecionado")}</div>
       ) : (
         <ul className="flex flex-col gap-1">
           {items.map((i) => (

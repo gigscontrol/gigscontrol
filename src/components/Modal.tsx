@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function Modal({
   children,
   maxWidth = 560,
 }: Props) {
+  const t = useT();
   // Garante que só rendemos no client (Next.js SSR pode quebrar com Portal)
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function Modal({
       style={{ zIndex: 9999 }}
     >
       <button
-        aria-label="Fechar"
+        aria-label={t("Fechar")}
         onClick={onClose}
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
       />
@@ -69,7 +71,7 @@ export default function Modal({
             <button
               onClick={onClose}
               className="btn-ghost p-1.5 rounded flex-shrink-0"
-              aria-label="Fechar modal"
+              aria-label={t("Fechar modal")}
             >
               <X size={18} />
             </button>
@@ -79,7 +81,7 @@ export default function Modal({
           <button
             onClick={onClose}
             className="absolute top-3 right-3 z-10 btn-ghost p-1.5 rounded-full bg-surface/80 backdrop-blur-sm"
-            aria-label="Fechar modal"
+            aria-label={t("Fechar modal")}
           >
             <X size={18} />
           </button>

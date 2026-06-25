@@ -13,6 +13,7 @@ import {
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { MODULE_THEMES } from "@/types";
+import { useT } from "@/lib/i18n";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import type { Contratante, Casa, Cidade } from "@/types";
 
@@ -43,6 +44,7 @@ const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
 };
 
 export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
+  const t = useT();
   const accent = MODULE_THEMES.contatos.color;
   const { cidades } = useContatos();
   const { shows } = useShows();
@@ -55,7 +57,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
         className="btn-ghost mb-6 inline-flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft size={14} />
-        Voltar para Contatos
+        {t("Voltar para Contatos")}
       </button>
 
       {selecionado.tipo === "contratante" && (
@@ -87,7 +89,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           title={item.nome}
           subtitle={
             <span className="inline-flex items-center gap-2">
-              <Users size={12} /> Contratante · cadastrado em{" "}
+              <Users size={12} /> {t("Contratante")} · {t("cadastrado em")}{" "}
               {new Date(item.criadoEm).toLocaleDateString("pt-BR")}
             </span>
           }
@@ -95,21 +97,21 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           actions={
             <button onClick={onEdit} className="btn btn-secondary">
               <Pencil size={14} />
-              Editar
+              {t("Editar")}
             </button>
           }
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          <MetricTile label="Orçamentos" value={stats.totalOrcamentos.toString()} accent={accent} icon={<FileText size={14} />} />
-          <MetricTile label="Total de shows" value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label="Ticket médio" value={stats.ticketMedio > 0 ? formatBRL(stats.ticketMedio) : "—"} icon={<Hash size={14} />} />
+          <MetricTile label={t("Orçamentos")} value={stats.totalOrcamentos.toString()} accent={accent} icon={<FileText size={14} />} />
+          <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
+          <MetricTile label={t("Ticket médio")} value={stats.ticketMedio > 0 ? formatBRL(stats.ticketMedio) : "—"} icon={<Hash size={14} />} />
           <MetricTile
-            label="Último show"
+            label={t("Último show")}
             value={
               stats.ultimoShow
-                ? `Dia ${stats.ultimoShow.dayId} — ${stats.ultimoShow.venue}`
-                : "Nenhum ainda"
+                ? t("Dia {n} — {venue}", { n: stats.ultimoShow.dayId, venue: stats.ultimoShow.venue })
+                : t("Nenhum ainda")
             }
             icon={<Calendar size={14} />}
             small
@@ -119,17 +121,17 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
           {/* Informações */}
           <div className="card">
-            <div className="section-title mb-4">Informações</div>
+            <div className="section-title mb-4">{t("Informações")}</div>
             <div className="flex flex-col gap-3 text-sm">
-              <InfoRow icon={<Hash size={13} />} label="Documento" value={mascararCpfCnpj(item.documento) || "—"} />
-              <InfoRow icon={<Mail size={13} />} label="E-mail" value={item.email || "—"} mono />
-              <InfoRow icon={<Phone size={13} />} label="Telefone" value={item.telefone} />
-              <InfoRow icon={<MapPin size={13} />} label="Cidade" value={getCidadeNome(item.cidadeId, cidades)} />
+              <InfoRow icon={<Hash size={13} />} label={t("Documento")} value={mascararCpfCnpj(item.documento) || "—"} />
+              <InfoRow icon={<Mail size={13} />} label={t("E-mail")} value={item.email || "—"} mono />
+              <InfoRow icon={<Phone size={13} />} label={t("Telefone")} value={item.telefone} />
+              <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(item.cidadeId, cidades)} />
               {item.observacoes && (
                 <div className="mt-2 pt-3 border-t border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
                     <FileText size={13} />
-                    Observações
+                    {t("Observações")}
                   </div>
                   <div className="text-sm text-secondary whitespace-pre-wrap">{item.observacoes}</div>
                 </div>
@@ -139,10 +141,10 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
 
           {/* Histórico de shows */}
           <div className="card">
-            <div className="section-title mb-4">Histórico de shows</div>
+            <div className="section-title mb-4">{t("Histórico de shows")}</div>
             {showsContratante.length === 0 ? (
               <div className="text-sm text-muted py-6 text-center">
-                Este contratante ainda não fechou nenhum show.
+                {t("Este contratante ainda não fechou nenhum show.")}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -159,15 +161,15 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-primary">{show.dj}</span>
-                          <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
-                          {show.venue} · {show.location} · Dia {show.dayId} · {show.time}
+                          {show.venue} · {show.location} · {t("Dia {n}", { n: show.dayId })} · {show.time}
                         </div>
                       </div>
                       {show.valor && (
                         <div className="text-right">
-                          <div className="text-xs text-muted">Valor</div>
+                          <div className="text-xs text-muted">{t("Valor")}</div>
                           <div className="text-sm font-semibold tabular-nums">{formatBRL(show.valor)}</div>
                         </div>
                       )}
@@ -191,7 +193,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           title={item.nome}
           subtitle={
             <span className="inline-flex items-center gap-2">
-              <Building2 size={12} /> {TIPO_CASA_LABEL[item.tipo]} ·{" "}
+              <Building2 size={12} /> {t(TIPO_CASA_LABEL[item.tipo])} ·{" "}
               {getCidadeNome(item.cidadeId, cidades)}
             </span>
           }
@@ -199,34 +201,34 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           actions={
             <button onClick={onEdit} className="btn btn-secondary">
               <Pencil size={14} />
-              Editar
+              {t("Editar")}
             </button>
           }
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          <MetricTile label="Total de shows" value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label="Faturamento" value={formatBRL(stats.faturamento)} accent={accent} icon={<Banknote size={14} />} />
-          <MetricTile label="Capacidade" value={item.capacidade?.toLocaleString("pt-BR") ?? "—"} icon={<Users size={14} />} />
-          <MetricTile label="DJs que tocaram" value={stats.djsQueTocaram.length.toString()} icon={<Music size={14} />} />
+          <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
+          <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} accent={accent} icon={<Banknote size={14} />} />
+          <MetricTile label={t("Capacidade")} value={item.capacidade?.toLocaleString("pt-BR") ?? "—"} icon={<Users size={14} />} />
+          <MetricTile label={t("DJs que tocaram")} value={stats.djsQueTocaram.length.toString()} icon={<Music size={14} />} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
           <div className="card">
-            <div className="section-title mb-4">Informações</div>
+            <div className="section-title mb-4">{t("Informações")}</div>
             <div className="flex flex-col gap-3 text-sm">
-              <InfoRow icon={<Hash size={13} />} label="Tipo" value={TIPO_CASA_LABEL[item.tipo]} />
-              <InfoRow icon={<MapPin size={13} />} label="Cidade" value={getCidadeNome(item.cidadeId, cidades)} />
-              {item.endereco && <InfoRow icon={<MapPin size={13} />} label="Endereço" value={item.endereco} />}
+              <InfoRow icon={<Hash size={13} />} label={t("Tipo")} value={t(TIPO_CASA_LABEL[item.tipo])} />
+              <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(item.cidadeId, cidades)} />
+              {item.endereco && <InfoRow icon={<MapPin size={13} />} label={t("Endereço")} value={item.endereco} />}
               {item.contatoResponsavel && (
-                <InfoRow icon={<Users size={13} />} label="Responsável" value={item.contatoResponsavel} />
+                <InfoRow icon={<Users size={13} />} label={t("Responsável")} value={item.contatoResponsavel} />
               )}
-              {item.telefone && <InfoRow icon={<Phone size={13} />} label="Telefone" value={item.telefone} />}
+              {item.telefone && <InfoRow icon={<Phone size={13} />} label={t("Telefone")} value={item.telefone} />}
               {item.observacoes && (
                 <div className="mt-2 pt-3 border-t border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
                     <FileText size={13} />
-                    Observações
+                    {t("Observações")}
                   </div>
                   <div className="text-sm text-secondary whitespace-pre-wrap">{item.observacoes}</div>
                 </div>
@@ -236,7 +238,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
             {stats.djsQueTocaram.length > 0 && (
               <div className="mt-5 pt-5 border-t border-border">
                 <div className="text-xs text-muted mb-2 uppercase tracking-wider font-semibold">
-                  DJs que já tocaram aqui
+                  {t("DJs que já tocaram aqui")}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {stats.djsQueTocaram.map((dj) => (
@@ -248,10 +250,10 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           </div>
 
           <div className="card">
-            <div className="section-title mb-4">Shows realizados</div>
+            <div className="section-title mb-4">{t("Shows realizados")}</div>
             {showsCasa.length === 0 ? (
               <div className="text-sm text-muted py-6 text-center">
-                Nenhum show registrado nesta casa ainda.
+                {t("Nenhum show registrado nesta casa ainda.")}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -265,10 +267,10 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-primary">{show.dj}</span>
-                          <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
-                          Dia {show.dayId} · {show.time}
+                          {t("Dia {n}", { n: show.dayId })} · {show.time}
                         </div>
                       </div>
                       {show.valor && (
@@ -304,17 +306,17 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           actions={
             <button onClick={onEdit} className="btn btn-secondary">
               <Pencil size={14} />
-              Editar
+              {t("Editar")}
             </button>
           }
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          <MetricTile label="Casas cadastradas" value={stats.totalCasas.toString()} accent={accent} icon={<Building2 size={14} />} />
-          <MetricTile label="Total de shows" value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label="Faturamento" value={formatBRL(stats.faturamento)} icon={<Banknote size={14} />} />
+          <MetricTile label={t("Casas cadastradas")} value={stats.totalCasas.toString()} accent={accent} icon={<Building2 size={14} />} />
+          <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
+          <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} icon={<Banknote size={14} />} />
           <MetricTile
-            label="Top DJ"
+            label={t("Top DJ")}
             value={stats.topDJ ? `${stats.topDJ.nome} (${stats.topDJ.shows})` : "—"}
             icon={<Music size={14} />}
             small
@@ -323,16 +325,16 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card">
-            <div className="section-title mb-4">Casas nesta cidade</div>
+            <div className="section-title mb-4">{t("Casas nesta cidade")}</div>
             {casasAqui.length === 0 ? (
-              <div className="text-sm text-muted py-6 text-center">Nenhuma casa cadastrada aqui.</div>
+              <div className="text-sm text-muted py-6 text-center">{t("Nenhuma casa cadastrada aqui.")}</div>
             ) : (
               <div className="flex flex-col gap-2">
                 {casasAqui.map((c) => (
                   <div key={c.id} className="bg-elevated border border-border rounded-md p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-medium text-primary">{c.nome}</div>
-                      <div className="text-xs text-muted">{TIPO_CASA_LABEL[c.tipo]}</div>
+                      <div className="text-xs text-muted">{t(TIPO_CASA_LABEL[c.tipo])}</div>
                     </div>
                     {c.capacidade && (
                       <div className="text-xs text-secondary flex items-center gap-1 flex-shrink-0">
@@ -347,9 +349,9 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           </div>
 
           <div className="card">
-            <div className="section-title mb-4">Shows nesta cidade</div>
+            <div className="section-title mb-4">{t("Shows nesta cidade")}</div>
             {showsCidade.length === 0 ? (
-              <div className="text-sm text-muted py-6 text-center">Nenhum show realizado aqui ainda.</div>
+              <div className="text-sm text-muted py-6 text-center">{t("Nenhum show realizado aqui ainda.")}</div>
             ) : (
               <div className="flex flex-col gap-2">
                 {showsCidade.map((show) => {
@@ -362,10 +364,10 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-primary">{show.dj}</span>
-                          <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
-                          {show.venue} · Dia {show.dayId}
+                          {show.venue} · {t("Dia {n}", { n: show.dayId })}
                         </div>
                       </div>
                       {show.valor && (

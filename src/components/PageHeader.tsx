@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n";
 
 type Props = {
   title: string;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export default function PageHeader({ title, subtitle, actions, accentColor }: Props) {
+  const t = useT();
   return (
     <div className="relative flex flex-wrap items-end justify-between gap-4 mb-8">
       {accentColor && (
@@ -27,8 +29,12 @@ export default function PageHeader({ title, subtitle, actions, accentColor }: Pr
           />
         )}
         <div className="min-w-0">
-          <h1 className="page-title">{title}</h1>
-          {subtitle && <p className="page-subtitle mt-0.5">{subtitle}</p>}
+          <h1 className="page-title">{t(title)}</h1>
+          {subtitle && (
+            <p className="page-subtitle mt-0.5">
+              {typeof subtitle === "string" ? t(subtitle) : subtitle}
+            </p>
+          )}
         </div>
       </div>
       {actions && <div className="relative flex-shrink-0">{actions}</div>}
