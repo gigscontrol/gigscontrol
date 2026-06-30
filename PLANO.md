@@ -41,15 +41,11 @@ como "depois").
 ---
 
 ## 🎯 DECISÕES TRAVADAS
-- **Pagamento:** gateway BR (PIX + boleto + cartão) **+** Stripe (cartão internacional).
-- **Gateway BR escolhido: Mercado Pago.** (PIX + boleto + cartão; Checkout Pro
-  ou API de Assinaturas/Preapproval pra recorrência.)
+- **Pagamento: Stripe — Assinaturas recorrentes (Subscriptions).** Checkout
+  hospedado (modo `subscription`, cartão), renovação automática via webhook.
 - **Plano persistido** neste arquivo (`PLANO.md`), versionado no repo.
 
 ## ❓ SUB-DECISÕES EM ABERTO
-- [ ] Mercado Pago: **Checkout Pro** (redirect, mais simples) vs **Assinaturas/
-      Preapproval** (recorrência nativa) vs Checkout transparente (mais trabalho).
-- [ ] Cobrança recorrente automática ou renovação manual no 1º momento?
 - [ ] Trial de quantos dias? (onboarding hoje assume 7)
 
 ---
@@ -92,36 +88,42 @@ como "depois").
 
 ---
 
-## FASE 1 — Pagamento real (Mercado Pago Checkout Pro) 🔴
-> **Decidido:** Checkout Pro (redirect, PIX+boleto+cartão, paga por ciclo).
-> Recorrência automática (Preapproval) e Stripe ficam pra depois.
-> Muita fundação JÁ existe: tabela `subscriptions`, 5 planos, onboarding
-> Etapa 2, `/pagamento` (mock), endpoints escolher/ativar-plano e trial.
+## FASE 1 — Pagamento real (Stripe Subscriptions) 🔴
+> **Decidido:** Checkout hospedado em modo `subscription` (cartão, recorrência
+> automática). Preços resolvidos por `lookup_key = ${plano}_${ciclo}`.
+> Reaproveita a fundação existente: tabela `subscriptions`, `pagamento_eventos`
+> (idempotência por `event.id` da Stripe), 5 planos, onboarding Etapa 2,
+> `/pagamento`, endpoints escolher/ativar-plano e trial. SEM migration nova —
+> as colunas `mp_*` guardam ids da Stripe (subscription/customer/event).
 
 ### Você (em paralelo, antes de testar)
-- [ ] Criar aplicação no Mercado Pago Developers → pegar **Access Token**
-      e **Public Key** (modo TESTE primeiro)
-- [ ] Pôr as chaves no `.env.local` (dev) e na Vercel (prod) — Claude
-      não manuseia chave secreta
+- [ ] No Stripe Dashboard (modo TESTE): criar um **Price recorrente por
+      plano+ciclo** com `lookup_key = ${plano}_${ciclo}`
+      (ex.: `equipe_mensal`, `agencia-plus_anual`) — moeda BRL
+- [ ] Pegar a **Secret Key** (`sk_test_…`) e pôr em `.env.local`/Vercel —
+      Claude não manuseia chave secreta
+- [ ] Criar o **endpoint do webhook** (Developers → Webhooks) apontando pra
+      `…/api/webhooks/stripe` e copiar o **signing secret** (`whsec_…`)
 
 ### Build (Claude) — feito, falta testar
-- [x] **31 — schema**: colunas MP em subscriptions + tabela
-      `pagamento_eventos` (idempotência)
-- [x] **SDK + env**: `mercadopago@3.1.0` + .env.example
-- [x] **mercadopago.service**: criarPreferenceCheckout + buscarPagamento
-- [x] **POST /api/checkout/mercadopago**: cria a preference, grava ref
-- [x] **/pagamento**: resumo + botão "Pagar com Mercado Pago" → init_point
-- [x] **/pagamento/retorno**: back_url, polling até ativar
-- [x] **POST /api/webhooks/mercadopago**: ativa no payment.approved,
-      x-signature gated, idempotente, proxima_cobranca por ciclo
+- [x] **SDK + env**: `stripe` + `.env.example` (STRIPE_SECRET_KEY/WEBHOOK_SECRET)
+- [x] **stripe.service**: resolverPriceId (lookup_key) + obterOuCriarCustomer
+      + criarCheckoutAssinatura + construirEvento
+- [x] **POST /api/checkout/stripe**: cria a Checkout Session (subscription),
+      grava customer id, devolve `url`
+- [x] **/pagamento**: resumo + botão "Assinar" → redireciona pra Stripe
+- [x] **/pagamento/retorno**: success/cancel, polling até ativar
+- [x] **POST /api/webhooks/stripe**: ativa em `checkout.session.completed`,
+      renova em `invoice.paid`, suspende em `payment_failed`, cancela em
+      `subscription.deleted/updated`; assinatura verificada + idempotente
 
 ### Testar (precisa de ação tua)
-- [ ] Rodar **migration 31** no Supabase (DEV)
-- [ ] `.env.local`: garantir MP keys + `NEXT_PUBLIC_APP_URL=http://localhost:3000`
-- [ ] Restart do dev server (Claude faz) + testar o botão → checkout MP
-- [ ] **Webhook em dev**: MP não alcança localhost. Pra testar ativação
-      precisa de túnel (ngrok/cloudflared) OU deploy na Vercel preview.
-      Configurar o webhook no painel MP apontando pra essa URL.
+- [ ] `.env.local`: STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET +
+      `NEXT_PUBLIC_APP_URL=http://localhost:3000`
+- [ ] Restart do dev server + testar o botão → checkout da Stripe
+- [ ] **Webhook em dev**: usar `stripe listen --forward-to
+      localhost:3000/api/webhooks/stripe` (a CLI imprime o `whsec_…`), OU
+      deploy na Vercel preview com o endpoint configurado no painel.
 
 ---
 

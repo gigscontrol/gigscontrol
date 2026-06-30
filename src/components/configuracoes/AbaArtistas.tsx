@@ -37,6 +37,7 @@ import {
   Building2,
 } from "lucide-react";
 import Toast from "../Toast";
+import PageHeader from "../PageHeader";
 import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
 } from "../CidadeIBGEAutocomplete";
@@ -337,40 +338,33 @@ export default function AbaArtistas() {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      {/* Header da página */}
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div
-            className="h-10 w-10 rounded flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: "rgba(99,102,241,0.12)", color: "var(--module-agencia)" }}
-          >
-            <Music size={20} />
-          </div>
-          <div>
-            <div className="page-title">{t("Artistas")}</div>
-            <div className="page-subtitle">
-              {plano
-                ? t("Plano {nome} — {usados} de {limite} em uso", { nome: plano.nome, usados, limite })
-                : t("Artistas da sua agência")}
+      {/* Header padrão do site — barra de uso no slot actions. */}
+      <PageHeader
+        title="Artistas"
+        subtitle={
+          plano
+            ? t("Plano {nome} — {usados} de {limite} em uso", { nome: plano.nome, usados, limite })
+            : t("Artistas da sua agência")
+        }
+        accentColor="var(--module-agencia)"
+        actions={
+          <div className="min-w-[160px]">
+            <div className="text-right">
+              <span className="text-2xl font-bold tabular-nums text-primary">{usados}</span>
+              <span className="text-muted text-base font-normal"> / {limite}</span>
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-elevated overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
+                  backgroundColor: noLimite ? "var(--danger)" : "var(--module-agencia)",
+                }}
+              />
             </div>
           </div>
-        </div>
-        <div className="min-w-[160px]">
-          <div className="text-right">
-            <span className="text-2xl font-bold tabular-nums text-primary">{usados}</span>
-            <span className="text-muted text-base font-normal"> / {limite}</span>
-          </div>
-          <div className="mt-1.5 h-1.5 rounded-full bg-elevated overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                backgroundColor: noLimite ? "var(--danger)" : "var(--module-agencia)",
-              }}
-            />
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {noLimite && (
         <div

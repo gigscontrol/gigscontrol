@@ -7,6 +7,7 @@ import { ArrowRight, Lock, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
+import { useT } from "@/lib/i18n";
 
 export default function LoginPage() {
   return (
@@ -18,6 +19,7 @@ export default function LoginPage() {
 
 function LoginInner() {
   const router = useRouter();
+  const t = useT();
   const { sessao, login } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -41,18 +43,18 @@ function LoginInner() {
     if (res.ok) {
       router.replace(res.tipo === "super-admin" ? "/admin" : "/app");
     } else {
-      setErro(res.erro ?? "Não foi possível entrar.");
+      setErro(res.erro ?? t("Não foi possível entrar."));
     }
   }
 
   return (
     <AuthShell
-      titulo="Entrar na conta"
-      subtitulo="Acesse o painel da sua agência"
+      titulo={t("Entrar na conta")}
+      subtitulo={t("Acesse o painel da sua agência")}
     >
       {/* OAuth — Google + Facebook */}
       <div className="card mb-3">
-        <BotoesOAuth prefixo="Entrar com" />
+        <BotoesOAuth prefixo={t("Entrar com")} />
       </div>
 
           {/* Divisor */}
@@ -62,7 +64,7 @@ function LoginInner() {
             </div>
             <div className="relative flex justify-center">
               <span className="bg-main px-3 text-[0.65rem] uppercase tracking-wider text-muted">
-                ou com email
+                {t("ou com email")}
               </span>
             </div>
           </div>
@@ -71,7 +73,7 @@ function LoginInner() {
             {/* E-mail */}
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-secondary">
-                E-mail ou usuário
+                {t("E-mail ou usuário")}
               </span>
               <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
                 <User size={14} className="text-muted flex-shrink-0" />
@@ -88,7 +90,7 @@ function LoginInner() {
 
             {/* Senha */}
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-secondary">Senha</span>
+              <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
               <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
                 <Lock size={14} className="text-muted flex-shrink-0" />
                 <input
@@ -116,7 +118,7 @@ function LoginInner() {
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
               style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
             >
-              {enviando ? "Entrando…" : "Entrar"}
+              {enviando ? t("Entrando…") : t("Entrar")}
               {!enviando && <ArrowRight size={14} />}
             </button>
 
@@ -125,7 +127,7 @@ function LoginInner() {
                 href="/forgot-password"
                 className="text-xs text-muted hover:text-primary transition-colors"
               >
-                Esqueci minha senha
+                {t("Esqueci minha senha")}
               </Link>
             </div>
 
@@ -135,13 +137,13 @@ function LoginInner() {
                 className="text-sm font-medium hover:text-primary transition-colors"
                 style={{ color: "var(--module-vendas)" }}
               >
-                Criar conta agora →
+                {t("Criar conta agora →")}
               </Link>
               <Link
                 href="/planos"
                 className="text-xs text-muted hover:text-secondary transition-colors"
               >
-                Ver planos disponíveis
+                {t("Ver planos disponíveis")}
               </Link>
             </div>
           </form>

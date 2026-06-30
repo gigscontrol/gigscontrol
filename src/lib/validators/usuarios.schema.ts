@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { uuidLike } from "@/lib/validators/uuid";
+import { usernameRaizSchema } from "@/lib/validators/artistas.schema";
 
 const papelEquipeEnum = z.enum(["produtor", "vendedor", "financeiro"]);
 
@@ -34,7 +35,10 @@ const funcoesSchema = z
 
 export const usuarioCreateSchema = z.object({
   nome: z.string().min(1, "nome obrigatório").max(120),
-  email: z.string().email("e-mail inválido"),
+  // Parte do username digitada pelo admin — o backend concatena o slug
+  // da agência ("raiz-slug"), exatamente como na criação de artistas.
+  // Sem campo de e-mail: a conta nasce com um e-mail fake interno.
+  username_raiz: usernameRaizSchema,
   papel: papelEquipeEnum,
   escopo: escopoSchema.optional(),
   funcoes: funcoesSchema,

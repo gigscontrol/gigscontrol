@@ -20,10 +20,21 @@ import {
   type ReactNode,
 } from "react";
 import { EN } from "./i18n-en";
+import { ES } from "./i18n-es";
+import { FR } from "./i18n-fr";
+import { DE } from "./i18n-de";
+import { IT } from "./i18n-it";
 
-export type Lang = "pt" | "en";
+export type Lang = "pt" | "en" | "es" | "fr" | "de" | "it";
 
-const DICTS: Record<Lang, Record<string, string>> = { pt: {}, en: EN };
+const DICTS: Record<Lang, Record<string, string>> = {
+  pt: {},
+  en: EN,
+  es: ES,
+  fr: FR,
+  de: DE,
+  it: IT,
+};
 
 type TParams = Record<string, string | number>;
 export type Traduzir = (pt: string, params?: TParams) => string;
@@ -38,7 +49,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("gc-lang");
-      if (saved === "en" || saved === "pt") setLangState(saved);
+      if (saved && saved in DICTS) setLangState(saved as Lang);
     } catch {
       /* localStorage indisponível — segue em pt */
     }
@@ -55,10 +66,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback<Traduzir>(
     (pt, params) => {
-      let s = lang === "pt" ? pt : DICTS.en[pt] ?? pt;
+      let s = lang === "pt" ? pt : DICTS[lang][pt] ?? pt;
       if (params) {
         for (const k of Object.keys(params)) {
-          s = s.replace(`{${k}}`, String(params[k]));
+          // split/join troca TODAS as ocorrências (idiomas pluralizam mais de
+          // uma palavra com o mesmo {s}, ex FR "jour{s} restant{s}")
+          s = s.split(`{${k}}`).join(String(params[k]));
         }
       }
       return s;
@@ -85,7 +98,7 @@ const FALLBACK: Ctx = {
   t: (pt, params) => {
     let s = pt;
     if (params) {
-      for (const k of Object.keys(params)) s = s.replace(`{${k}}`, String(params[k]));
+      for (const k of Object.keys(params)) s = s.split(`{${k}}`).join(String(params[k]));
     }
     return s;
   },

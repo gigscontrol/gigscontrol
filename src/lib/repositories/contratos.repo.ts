@@ -20,6 +20,27 @@ export async function listarContratos(
   return (data ?? []) as unknown as ContratoRow[];
 }
 
+/**
+ * Conta os contratos (não-deletados) criados a partir de `desdeIso` (ISO) no
+ * workspace — usado pra validar o limite mensal do plano (`maxContratosMes`).
+ * `desdeIso` é o primeiro instante do mês corrente. Conta por `criado_em`,
+ * incluindo cancelados (a geração já consumiu a cota do mês).
+ */
+export async function contarContratosDesde(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  desdeIso: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("contratos")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("deletado_em", null)
+    .gte("criado_em", desdeIso);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function buscarContrato(
   supabase: SupabaseClient,
   id: string

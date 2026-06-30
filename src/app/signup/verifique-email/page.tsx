@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export default function VerifiqueEmailPage() {
   return (
@@ -14,6 +15,7 @@ export default function VerifiqueEmailPage() {
 }
 
 function VerifiqueEmailInner() {
+  const t = useT();
   const params = useSearchParams();
   const email = params.get("email");
 
@@ -55,33 +57,33 @@ function VerifiqueEmailInner() {
             <Mail size={28} />
           </div>
 
-          <h1 className="text-xl font-bold tracking-tight">Confira seu e-mail</h1>
+          <h1 className="text-xl font-bold tracking-tight">{t("Confira seu e-mail")}</h1>
           <p className="mt-2 text-sm text-secondary">
-            Enviamos um link de confirmação para
+            {t("Enviamos um link de confirmação para")}
             {email ? (
               <>
                 {" "}
                 <strong className="text-primary break-all">{email}</strong>.
               </>
             ) : (
-              " o e-mail informado."
+              <> {t("o e-mail informado.")}</>
             )}
             <br />
-            Clique no link pra ativar sua conta e entrar.
+            {t("Clique no link pra ativar sua conta e entrar.")}
           </p>
 
           <div className="mt-6 flex flex-col gap-2 text-left bg-elevated/40 rounded-md p-3 text-xs text-secondary">
             <div className="inline-flex items-start gap-2">
               <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-              Não recebeu? Verifique a caixa de spam.
+              {t("Não recebeu? Verifique a caixa de spam.")}
             </div>
             <div className="inline-flex items-start gap-2">
               <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-              O link expira em 24 horas.
+              {t("O link expira em 24 horas.")}
             </div>
             <div className="inline-flex items-start gap-2">
               <CheckCircle2 size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-              Você pode fechar essa aba — basta clicar no link do email.
+              {t("Você pode fechar essa aba — basta clicar no link do email.")}
             </div>
           </div>
 
@@ -90,7 +92,7 @@ function VerifiqueEmailInner() {
             className="mt-6 inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
           >
             <ArrowLeft size={13} />
-            Voltar pro login
+            {t("Voltar pro login")}
           </Link>
         </div>
       </div>

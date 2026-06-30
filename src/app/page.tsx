@@ -22,6 +22,8 @@ import {
   MockDashboard,
   MockContratos,
 } from "@/components/landing/Mockups";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 
 const VENDAS = "#a855f7";
 const AGENDA = "#3b82f6";
@@ -34,6 +36,7 @@ const FOCO =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--module-vendas)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)] rounded-md";
 
 export default function LandingPage() {
+  const t = useT();
   return (
     <div className="min-h-screen bg-main text-primary">
       {/* ===== NAV ===== */}
@@ -42,20 +45,21 @@ export default function LandingPage() {
           <Logo />
           <div className="flex items-center gap-1.5">
             <Link href="#recursos" className={`btn btn-ghost text-sm hidden sm:inline-flex ${FOCO}`}>
-              Recursos
+              {t("Recursos")}
             </Link>
             <Link href="/planos" className={`btn btn-ghost text-sm ${FOCO}`}>
-              Planos
+              {t("Planos")}
             </Link>
+            <LanguageSwitcher />
             <Link href="/login" className={`btn btn-secondary text-sm ${FOCO}`}>
-              Entrar
+              {t("Entrar")}
             </Link>
             <Link
               href="/planos"
               className={`btn text-sm text-white ${FOCO}`}
               style={{ backgroundColor: VENDAS }}
             >
-              Começar
+              {t("Começar")}
             </Link>
           </div>
         </div>
@@ -74,21 +78,19 @@ export default function LandingPage() {
         <div className="relative max-w-[1200px] mx-auto px-6 pt-20 pb-12 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/70 text-xs text-secondary mb-7">
             <Sparkles size={13} style={{ color: VENDAS }} />
-            Gestão completa para agências e artistas da música
+            {t("Gestão completa para agências e artistas da música")}
           </div>
 
           <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto">
-            A operação da sua{" "}
+            {t("A operação da sua")}{" "}
             <span className="bg-gradient-to-r from-[var(--module-vendas)] to-[var(--module-contratos)] bg-clip-text text-transparent">
-              agência musical
+              {t("agência musical")}
             </span>{" "}
-            em um só lugar
+            {t("em um só lugar")}
           </h1>
 
           <p className="mt-6 text-base sm:text-lg text-secondary max-w-2xl mx-auto leading-relaxed">
-            Agenda de shows, orçamentos no WhatsApp, vendas, contratos com
-            assinatura e financeiro — do primeiro contato ao recebimento do
-            cachê. Feito para DJs, cantores, MCs e agências.
+            {t("Agenda de shows, orçamentos no WhatsApp, vendas, contratos com assinatura e financeiro — do primeiro contato ao recebimento do cachê. Feito para DJs, cantores, MCs e agências.")}
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -97,27 +99,27 @@ export default function LandingPage() {
               className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(168,85,247,0.5)] ${FOCO}`}
               style={{ backgroundColor: VENDAS }}
             >
-              Ver planos
+              {t("Ver planos")}
               <ArrowRight size={16} />
             </Link>
             <Link
               href="/login"
               className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}
             >
-              Já tenho conta
+              {t("Já tenho conta")}
             </Link>
           </div>
 
           <p className="mt-4 text-xs text-muted">
-            Sem cartão de crédito para testar · Cancele quando quiser
+            {t("Sem cartão de crédito para testar · Cancele quando quiser")}
           </p>
 
           {/* Indicadores (fiéis às features, sem números inventados) */}
           <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs text-secondary">
-            <Indicador icon={<Layers size={14} />} cor={VENDAS} label="5 módulos integrados" />
-            <Indicador icon={<MessageCircle size={14} />} cor={FINANCEIRO} label="Proposta no WhatsApp" />
-            <Indicador icon={<FileSignature size={14} />} cor={CONTRATOS} label="Contrato com assinatura" />
-            <Indicador icon={<ShieldCheck size={14} />} cor={AGENDA} label="Privacidade por papel" />
+            <Indicador icon={<Layers size={14} />} cor={VENDAS} label={t("5 módulos integrados")} />
+            <Indicador icon={<MessageCircle size={14} />} cor={FINANCEIRO} label={t("Proposta no WhatsApp")} />
+            <Indicador icon={<FileSignature size={14} />} cor={CONTRATOS} label={t("Contrato com assinatura")} />
+            <Indicador icon={<ShieldCheck size={14} />} cor={AGENDA} label={t("Privacidade por papel")} />
           </div>
         </div>
 
@@ -132,7 +134,7 @@ export default function LandingPage() {
             }}
           />
           <div className="relative">
-            <BrowserFrame legenda="Painel principal — visão geral da operação">
+            <BrowserFrame legenda={t("Painel principal — visão geral da operação")}>
               <MockDashboard />
             </BrowserFrame>
           </div>
@@ -143,10 +145,10 @@ export default function LandingPage() {
       <section className="max-w-[1200px] mx-auto px-6 pb-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <span className="text-xs uppercase tracking-[0.15em] text-muted">
-            Feito para quem vive de música
+            {t("Feito para quem vive de música")}
           </span>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            {["DJ", "Cantor", "MC", "Banda", "Produtor", "Agência"].map((p) => (
+            {[t("DJ"), t("Cantor"), t("MC"), t("Banda"), t("Produtor"), t("Agência")].map((p) => (
               <span
                 key={p}
                 className="px-3 py-1 rounded-full border border-border bg-surface/60 text-xs font-medium text-secondary"
@@ -162,11 +164,10 @@ export default function LandingPage() {
       <section id="recursos" className="max-w-[1200px] mx-auto px-6 py-16 scroll-mt-20">
         <div className="text-center mb-12">
           <h2 className="font-display text-2xl sm:text-4xl font-bold">
-            Tudo que a operação precisa
+            {t("Tudo que a operação precisa")}
           </h2>
           <p className="mt-3 text-secondary max-w-xl mx-auto">
-            Cinco módulos que conversam entre si, pensados para o dia a dia da
-            música.
+            {t("Cinco módulos que conversam entre si, pensados para o dia a dia da música.")}
           </p>
         </div>
 
@@ -174,33 +175,33 @@ export default function LandingPage() {
           <FeatureCard
             icon={<CalendarRange size={20} />}
             color={AGENDA}
-            title="Agenda"
-            desc="Escala de shows, calendário e a logística completa de cada evento."
+            title={t("Agenda")}
+            desc={t("Escala de shows, calendário e a logística completa de cada evento.")}
           />
           <FeatureCard
             icon={<FileText size={20} />}
             color={VENDAS}
-            title="Vendas"
-            desc="Orçamentos profissionais, envio por WhatsApp e conversão em vendas."
+            title={t("Vendas")}
+            desc={t("Orçamentos profissionais, envio por WhatsApp e conversão em vendas.")}
           />
           <FeatureCard
             icon={<Wallet size={20} />}
             color={FINANCEIRO}
-            title="Financeiro"
-            desc="Parcelas, vencimentos e controle de quem pagou e quem está atrasado."
+            title={t("Financeiro")}
+            desc={t("Parcelas, vencimentos e controle de quem pagou e quem está atrasado.")}
           />
           <FeatureCard
             icon={<FileSignature size={20} />}
             color={CONTRATOS}
-            title="Contratos"
-            desc="Gere o contrato do show e colete a assinatura com selfie e facial."
+            title={t("Contratos")}
+            desc={t("Gere o contrato do show e colete a assinatura com selfie e facial.")}
             novo
           />
           <FeatureCard
             icon={<Users size={20} />}
             color={CONTATOS}
-            title="Contatos"
-            desc="Contratantes, casas e cidades — um CRM feito para o meio musical."
+            title={t("Contatos")}
+            desc={t("Contratantes, casas e cidades — um CRM feito para o meio musical.")}
           />
           <div className="card flex flex-col justify-center gap-2" style={{ borderColor: "var(--border-hover)" }}>
             <div
@@ -209,10 +210,9 @@ export default function LandingPage() {
             >
               <Layers size={20} />
             </div>
-            <h3 className="text-sm font-bold">Tudo integrado</h3>
+            <h3 className="text-sm font-bold">{t("Tudo integrado")}</h3>
             <p className="text-xs text-secondary leading-relaxed">
-              Um dado entra uma vez e flui por todos os módulos — do orçamento
-              ao cachê no bolso.
+              {t("Um dado entra uma vez e flui por todos os módulos — do orçamento ao cachê no bolso.")}
             </p>
           </div>
         </div>
@@ -223,11 +223,10 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-6 py-16">
           <div className="text-center mb-12">
             <h2 className="font-display text-2xl sm:text-4xl font-bold">
-              Do WhatsApp ao palco em 3 passos
+              {t("Do WhatsApp ao palco em 3 passos")}
             </h2>
             <p className="mt-3 text-secondary max-w-xl mx-auto">
-              O fluxo que a sua agência já faz — só que organizado e sem perder
-              nada pelo caminho.
+              {t("O fluxo que a sua agência já faz — só que organizado e sem perder nada pelo caminho.")}
             </p>
           </div>
 
@@ -236,22 +235,22 @@ export default function LandingPage() {
               n={1}
               cor={VENDAS}
               icon={<MessageCircle size={18} />}
-              title="Orçou, enviou"
-              desc="Monte o orçamento com um ou vários artistas e mande a proposta formatada direto no WhatsApp."
+              title={t("Orçou, enviou")}
+              desc={t("Monte o orçamento com um ou vários artistas e mande a proposta formatada direto no WhatsApp.")}
             />
             <Passo
               n={2}
               cor={AGENDA}
               icon={<Zap size={18} />}
-              title="Fechou, agendou"
-              desc="Orçamento aceito vira venda, entra como show na agenda e gera as parcelas no financeiro."
+              title={t("Fechou, agendou")}
+              desc={t("Orçamento aceito vira venda, entra como show na agenda e gera as parcelas no financeiro.")}
             />
             <Passo
               n={3}
               cor={CONTRATOS}
               icon={<FileSignature size={18} />}
-              title="Assinou, garantiu"
-              desc="Gere o contrato do show e colete a assinatura com CPF, selfie e reconhecimento facial."
+              title={t("Assinou, garantiu")}
+              desc={t("Gere o contrato do show e colete a assinatura com CPF, selfie e reconhecimento facial.")}
             />
           </div>
         </div>
@@ -260,61 +259,61 @@ export default function LandingPage() {
       {/* ===== FUNCIONALIDADES (texto + mockup) ===== */}
       <SecaoFuncionalidade
         cor={AGENDA}
-        etiqueta="Agenda de Shows"
-        titulo="Toda a escala da agência num calendário só"
-        descricao="Visualize os shows de todos os artistas de uma vez ou filtre por DJ. Cada evento traz contratante, local, line-up, camarim, hotel e logística completa — tudo num clique."
+        etiqueta={t("Agenda de Shows")}
+        titulo={t("Toda a escala da agência num calendário só")}
+        descricao={t("Visualize os shows de todos os artistas de uma vez ou filtre por DJ. Cada evento traz contratante, local, line-up, camarim, hotel e logística completa — tudo num clique.")}
         pontos={[
-          "Calendário com todos os artistas ao mesmo tempo",
-          "Detalhes completos de cada show num modal",
-          "Filtro por artista, status e período",
+          t("Calendário com todos os artistas ao mesmo tempo"),
+          t("Detalhes completos de cada show num modal"),
+          t("Filtro por artista, status e período"),
         ]}
         mockup={<MockAgenda />}
-        legenda="Agenda de Shows — escala de todos os artistas"
+        legenda={t("Agenda de Shows — escala de todos os artistas")}
         inverter={false}
       />
 
       <SecaoFuncionalidade
         cor={VENDAS}
-        etiqueta="Orçamentos & Vendas"
-        titulo="Do orçamento no WhatsApp ao show fechado"
-        descricao="Monte orçamentos profissionais com múltiplos DJs, logística e valores. Envie a proposta formatada pelo WhatsApp e, quando aceita, transforme em venda e em show na agenda."
+        etiqueta={t("Orçamentos & Vendas")}
+        titulo={t("Do orçamento no WhatsApp ao show fechado")}
+        descricao={t("Monte orçamentos profissionais com múltiplos DJs, logística e valores. Envie a proposta formatada pelo WhatsApp e, quando aceita, transforme em venda e em show na agenda.")}
         pontos={[
-          "Orçamento com vários artistas no mesmo evento",
-          "Proposta formatada enviada direto no WhatsApp",
-          "Um clique transforma orçamento aceito em venda",
+          t("Orçamento com vários artistas no mesmo evento"),
+          t("Proposta formatada enviada direto no WhatsApp"),
+          t("Um clique transforma orçamento aceito em venda"),
         ]}
         mockup={<MockVendas />}
-        legenda="Vendas — histórico de orçamentos e conversões"
+        legenda={t("Vendas — histórico de orçamentos e conversões")}
         inverter={true}
       />
 
       <SecaoFuncionalidade
         cor={FINANCEIRO}
-        etiqueta="Controle Financeiro"
-        titulo="Saiba quem pagou, quem deve e quando vence"
-        descricao="Cada venda gera as parcelas automaticamente. Acompanhe vencimentos, registre pagamentos e veja num relance o que está pago, pendente ou atrasado."
+        etiqueta={t("Controle Financeiro")}
+        titulo={t("Saiba quem pagou, quem deve e quando vence")}
+        descricao={t("Cada venda gera as parcelas automaticamente. Acompanhe vencimentos, registre pagamentos e veja num relance o que está pago, pendente ou atrasado.")}
         pontos={[
-          "Parcelas geradas automaticamente a cada venda",
-          "Status de pago, pendente e atrasado",
-          "Visão clara de recebimentos por período",
+          t("Parcelas geradas automaticamente a cada venda"),
+          t("Status de pago, pendente e atrasado"),
+          t("Visão clara de recebimentos por período"),
         ]}
         mockup={<MockFinanceiro />}
-        legenda="Financeiro — controle de parcelas e pagamentos"
+        legenda={t("Financeiro — controle de parcelas e pagamentos")}
         inverter={false}
       />
 
       <SecaoFuncionalidade
         cor={CONTRATOS}
-        etiqueta="Contratos & Assinatura"
-        titulo="Contrato pronto e assinado, sem ferramenta extra"
-        descricao="Gere o contrato direto da venda, com seus modelos e os dados já preenchidos. Envie o link de assinatura por WhatsApp e a pessoa assina pelo celular — com CPF, selfie e reconhecimento facial. No fim, um relatório de assinaturas com a prova de cada assinante."
+        etiqueta={t("Contratos & Assinatura")}
+        titulo={t("Contrato pronto e assinado, sem ferramenta extra")}
+        descricao={t("Gere o contrato direto da venda, com seus modelos e os dados já preenchidos. Envie o link de assinatura por WhatsApp e a pessoa assina pelo celular — com CPF, selfie e reconhecimento facial. No fim, um relatório de assinaturas com a prova de cada assinante.")}
         pontos={[
-          "Modelos de contrato com preenchimento automático",
-          "Assinatura pelo link, sem cadastro, no próprio celular",
-          "Selfie + reconhecimento facial e relatório de assinaturas",
+          t("Modelos de contrato com preenchimento automático"),
+          t("Assinatura pelo link, sem cadastro, no próprio celular"),
+          t("Selfie + reconhecimento facial e relatório de assinaturas"),
         ]}
         mockup={<MockContratos />}
-        legenda="Contratos — assinatura com verificação"
+        legenda={t("Contratos — assinatura com verificação")}
         inverter={true}
         novo
       />
@@ -325,26 +324,26 @@ export default function LandingPage() {
           <Destaque
             icon={<MessageCircle size={18} />}
             cor={FINANCEIRO}
-            title="Orçamento direto no WhatsApp"
-            desc="Monte e envie a proposta formatada em segundos, sem copiar e colar."
+            title={t("Orçamento direto no WhatsApp")}
+            desc={t("Monte e envie a proposta formatada em segundos, sem copiar e colar.")}
           />
           <Destaque
             icon={<ShieldCheck size={18} />}
             cor={AGENDA}
-            title="Cada um vê o que deve ver"
-            desc="Defina o que vendedores, produtores e artistas acessam. Privacidade por papel."
+            title={t("Cada um vê o que deve ver")}
+            desc={t("Defina o que vendedores, produtores e artistas acessam. Privacidade por papel.")}
           />
           <Destaque
             icon={<FileSignature size={18} />}
             cor={CONTRATOS}
-            title="Contrato com assinatura"
-            desc="Assinatura pelo celular com CPF, selfie e reconhecimento facial."
+            title={t("Contrato com assinatura")}
+            desc={t("Assinatura pelo celular com CPF, selfie e reconhecimento facial.")}
           />
           <Destaque
             icon={<Zap size={18} />}
             cor={VENDAS}
-            title="Do orçamento ao palco"
-            desc="Um orçamento aceito vira venda, show, contrato e parcelas num clique."
+            title={t("Do orçamento ao palco")}
+            desc={t("Um orçamento aceito vira venda, show, contrato e parcelas num clique.")}
           />
         </div>
       </section>
@@ -359,11 +358,10 @@ export default function LandingPage() {
           }}
         >
           <h2 className="font-display text-2xl sm:text-4xl font-bold">
-            Pronto para organizar sua agência?
+            {t("Pronto para organizar sua agência?")}
           </h2>
           <p className="mt-3 text-secondary max-w-md mx-auto">
-            Escolha o plano do tamanho da sua operação — do artista solo à
-            agência com 50 nomes.
+            {t("Escolha o plano do tamanho da sua operação — do artista solo à agência com 50 nomes.")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -371,11 +369,11 @@ export default function LandingPage() {
               className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(168,85,247,0.5)] ${FOCO}`}
               style={{ backgroundColor: VENDAS }}
             >
-              Conhecer os planos
+              {t("Conhecer os planos")}
               <ArrowRight size={16} />
             </Link>
             <Link href="/login" className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}>
-              Entrar
+              {t("Entrar")}
             </Link>
           </div>
         </div>
@@ -387,24 +385,24 @@ export default function LandingPage() {
           <div className="flex flex-col items-center sm:items-start gap-2">
             <Logo small />
             <p className="text-xs text-muted">
-              © {new Date().getFullYear()} GIGS CONTROL — Gestão para a música.
+              © {new Date().getFullYear()} GIGS CONTROL — {t("Gestão para a música.")}{" "}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted">
             <Link href="#recursos" className={`hover:text-secondary transition-colors ${FOCO}`}>
-              Recursos
+              {t("Recursos")}
             </Link>
             <Link href="/planos" className={`hover:text-secondary transition-colors ${FOCO}`}>
-              Planos
+              {t("Planos")}
             </Link>
             <Link href="/login" className={`hover:text-secondary transition-colors ${FOCO}`}>
-              Entrar
+              {t("Entrar")}
             </Link>
             <Link href="/termos" className={`hover:text-secondary transition-colors ${FOCO}`}>
-              Termos
+              {t("Termos")}
             </Link>
             <Link href="/privacidade" className={`hover:text-secondary transition-colors ${FOCO}`}>
-              Privacidade
+              {t("Privacidade")}
             </Link>
           </div>
         </div>
@@ -437,6 +435,7 @@ function SecaoFuncionalidade({
   inverter: boolean;
   novo?: boolean;
 }) {
+  const t = useT();
   return (
     <section className="max-w-[1200px] mx-auto px-6 py-16">
       <div
@@ -458,7 +457,7 @@ function SecaoFuncionalidade({
                 className="text-xs font-semibold px-2 py-1 rounded text-white"
                 style={{ backgroundColor: cor }}
               >
-                Novo
+                {t("Novo")}
               </span>
             )}
           </div>
@@ -575,6 +574,7 @@ function FeatureCard({
   desc: string;
   novo?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="card-interactive">
       <div className="flex items-center justify-between mb-3">
@@ -589,7 +589,7 @@ function FeatureCard({
             className="text-[0.65rem] font-semibold px-2 py-0.5 rounded-full"
             style={{ backgroundColor: `${color}22`, color }}
           >
-            Novo
+            {t("Novo")}
           </span>
         )}
       </div>

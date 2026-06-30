@@ -8,20 +8,25 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
- * Página /pagamento/retorno — back_url do Checkout Pro.
+ * Página /pagamento/retorno — success_url / cancel_url do Checkout da Stripe.
  *
- * O Mercado Pago redireciona pra cá depois do checkout com ?status=
- * success | pending | failure. A ativação real é assíncrona (webhook),
- * então no caso "success" a gente faz polling do status do onboarding
- * até a subscription virar 'ativa' e então segue pro /onboarding.
+ * A Stripe redireciona pra cá depois do checkout com ?status=success ou
+ * ?status=cancel. A ativação real é assíncrona (webhook), então no caso
+ * "success" a gente faz polling do status do onboarding até a subscription
+ * virar 'ativa' e então segue pro /onboarding. "cancel" é tratado como
+ * pagamento não concluído (sem cobrança).
  */
 
 function RetornoInner() {
   const router = useRouter();
+  const t = useT();
   const params = useSearchParams();
   const status = params.get("status") ?? "pending";
+  // Stripe manda "cancel"; também aceitamos "failure" por compatibilidade.
+  const cancelado = status === "cancel" || status === "failure";
 
   const [tentativas, setTentativas] = useState(0);
   const [confirmado, setConfirmado] = useState(false);
@@ -84,14 +89,14 @@ function RetornoInner() {
               style={{ color: "var(--module-vendas)" }}
             />
             <h1 className="text-lg font-bold text-primary">
-              Confirmando seu pagamento...
+              {t("Confirmando seu pagamento...")}
             </h1>
             <p className="text-sm text-secondary mt-1">
-              Só um instante — estamos validando com o Mercado Pago.
+              {t("Só um instante — estamos validando sua assinatura.")}
             </p>
             {tentativas > 3 && (
               <p className="text-xs text-muted mt-3">
-                Tá levando um pouquinho mais que o normal...
+                {t("Tá levando um pouquinho mais que o normal...")}
               </p>
             )}
           </>
@@ -110,10 +115,10 @@ function RetornoInner() {
               <CheckCircle2 size={28} />
             </div>
             <h1 className="text-lg font-bold text-primary">
-              Pagamento confirmado!
+              {t("Pagamento confirmado!")}
             </h1>
             <p className="text-sm text-secondary mt-1">
-              Redirecionando pra configuração inicial...
+              {t("Redirecionando pra configuração inicial...")}
             </p>
           </>
         )}
@@ -125,20 +130,18 @@ function RetornoInner() {
               className="mx-auto mb-4"
               style={{ color: "var(--warning)" }}
             />
-            <h1 className="text-lg font-bold text-primary">
-              Quase lá
-            </h1>
+            <h1 className="text-lg font-bold text-primary">{t("Quase lá")}</h1>
             <p className="text-sm text-secondary mt-1">
-              O pagamento foi feito, mas a confirmação do Mercado Pago está
-              demorando. Pode seguir — assim que confirmar, sua conta é
-              ativada automaticamente.
+              {t(
+                "O pagamento foi feito, mas a confirmação está demorando. Pode seguir — assim que confirmar, sua conta é ativada automaticamente."
+              )}
             </p>
             <button
               onClick={() => router.replace("/onboarding")}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
             >
-              Continuar
+              {t("Continuar")}
             </button>
           </>
         )}
@@ -151,38 +154,39 @@ function RetornoInner() {
               style={{ color: "var(--warning)" }}
             />
             <h1 className="text-lg font-bold text-primary">
-              Pagamento pendente
+              {t("Pagamento pendente")}
             </h1>
             <p className="text-sm text-secondary mt-1">
-              Se você pagou via boleto ou PIX, a confirmação pode levar um
-              tempinho. Assim que cair, sua conta é ativada automaticamente
-              e a gente te avisa.
+              {t(
+                "A confirmação pode levar um tempinho. Assim que cair, sua conta é ativada automaticamente e a gente te avisa."
+              )}
             </p>
             <button
               onClick={() => router.replace("/onboarding")}
               className="btn btn-secondary text-sm mt-5"
             >
-              Continuar mesmo assim
+              {t("Continuar mesmo assim")}
             </button>
           </>
         )}
 
-        {status === "failure" && (
+        {cancelado && (
           <>
             <XCircle size={40} className="text-danger mx-auto mb-4" />
             <h1 className="text-lg font-bold text-primary">
-              Pagamento não concluído
+              {t("Pagamento não concluído")}
             </h1>
             <p className="text-sm text-secondary mt-1">
-              Algo deu errado ou o pagamento foi recusado. Pode tentar de
-              novo — nenhuma cobrança foi feita.
+              {t(
+                "Algo deu errado ou o pagamento foi cancelado. Pode tentar de novo — nenhuma cobrança foi feita."
+              )}
             </p>
             <button
               onClick={() => router.replace("/pagamento")}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
             >
-              Tentar de novo
+              {t("Tentar de novo")}
             </button>
           </>
         )}

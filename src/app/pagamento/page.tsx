@@ -7,21 +7,21 @@ import {
   Loader2,
   Sparkles,
   AlertTriangle,
-  QrCode,
   CreditCard,
-  Barcode,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 /**
- * Página /pagamento — Checkout Pro do Mercado Pago.
+ * Página /pagamento — Checkout de assinatura (Stripe).
  *
- * Aparece na primeira entrada do admin que escolheu um plano pago. Em
- * vez de coletar cartão aqui, cria a "preference" no Mercado Pago e
- * redireciona pro ambiente hospedado deles (PIX, boleto ou cartão). A
- * ATIVAÇÃO da assinatura acontece de forma assíncrona via webhook
- * quando o pagamento aprova — por isso o retorno cai em /pagamento/retorno,
- * que aguarda a confirmação.
+ * Aparece na primeira entrada do admin que escolheu um plano pago. Em vez
+ * de coletar cartão aqui, cria a Checkout Session de assinatura na Stripe
+ * e redireciona pro ambiente seguro hospedado deles. A ATIVAÇÃO da
+ * assinatura acontece de forma assíncrona via webhook quando o pagamento
+ * aprova — por isso o retorno cai em /pagamento/retorno, que aguarda a
+ * confirmação.
  */
 
 type OnboardingStatus = {
@@ -38,6 +38,7 @@ type OnboardingStatus = {
 
 export default function PagamentoPage() {
   const router = useRouter();
+  const t = useT();
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
@@ -67,18 +68,18 @@ export default function PagamentoPage() {
     setErro(null);
     setIndo(true);
     try {
-      const res = await fetch("/api/checkout/mercadopago", {
+      const res = await fetch("/api/checkout/stripe", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plano: status.plano.id, ciclo: "mensal" }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.initPoint) {
+      if (!res.ok || !body.url) {
         throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
       }
-      // Redireciona pro checkout hospedado do Mercado Pago.
-      window.location.href = body.initPoint as string;
+      // Redireciona pro checkout seguro hospedado da Stripe.
+      window.location.href = body.url as string;
     } catch (e) {
       setErro((e as Error).message);
       setIndo(false);
@@ -90,7 +91,7 @@ export default function PagamentoPage() {
       <div className="min-h-screen bg-main flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
-          Carregando...
+          {t("Carregando...")}
         </div>
       </div>
     );
@@ -101,9 +102,11 @@ export default function PagamentoPage() {
       <div className="min-h-screen bg-main flex items-center justify-center p-4">
         <div className="card max-w-md text-center">
           <AlertTriangle size={28} className="text-danger mx-auto mb-3" />
-          <h1 className="text-lg font-bold text-primary">Erro ao carregar</h1>
+          <h1 className="text-lg font-bold text-primary">
+            {t("Erro ao carregar")}
+          </h1>
           <p className="text-sm text-secondary mt-1">
-            {erroCarregamento ?? "Tente recarregar a página."}
+            {erroCarregamento ?? t("Tente recarregar a página.")}
           </p>
         </div>
       </div>
@@ -143,7 +146,7 @@ export default function PagamentoPage() {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted">
             <Lock size={12} />
-            Pagamento seguro via Mercado Pago
+            {t("Pagamento seguro")}
           </div>
         </div>
       </nav>
@@ -154,29 +157,37 @@ export default function PagamentoPage() {
           <div>
             <div className="mb-6">
               <h1 className="text-2xl font-bold tracking-tight">
-                Confirme seu plano
+                {t("Confirme seu plano")}
               </h1>
               <p className="mt-1 text-sm text-secondary">
-                Falta só um passinho.{" "}
+                {t("Falta só um passinho.")}{" "}
                 <strong className="text-primary">{status.nomeAgencia}</strong>{" "}
-                vai começar a usar o GIGS CONTROL.
+                {t("vai começar a usar o GIGS CONTROL.")}
               </p>
             </div>
 
             <div className="card">
               <div className="section-title mb-1 flex items-center gap-2">
                 <ShieldCheck size={16} style={{ color: "var(--module-vendas)" }} />
-                Pagamento pelo Mercado Pago
+                {t("Pagamento por cartão")}
               </div>
               <p className="text-sm text-secondary mb-4">
-                Você vai pro ambiente seguro do Mercado Pago pra concluir.
-                Escolha como pagar:
+                {t(
+                  "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
+                )}
               </p>
 
-              <div className="grid grid-cols-3 gap-2 mb-5">
-                <MetodoCard icon={<QrCode size={18} />} label="PIX" hint="na hora" />
-                <MetodoCard icon={<CreditCard size={18} />} label="Cartão" hint="crédito" />
-                <MetodoCard icon={<Barcode size={18} />} label="Boleto" hint="1-2 dias" />
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                <MetodoCard
+                  icon={<CreditCard size={18} />}
+                  label={t("Cartão")}
+                  hint={t("crédito")}
+                />
+                <MetodoCard
+                  icon={<RefreshCw size={18} />}
+                  label={t("Renovação")}
+                  hint={t("automática")}
+                />
               </div>
 
               {erro && (
@@ -202,19 +213,20 @@ export default function PagamentoPage() {
                 {indo ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    Abrindo o Mercado Pago...
+                    {t("Abrindo o pagamento seguro...")}
                   </>
                 ) : (
                   <>
                     <Lock size={14} />
-                    Pagar {precoFormatado} com Mercado Pago
+                    {t("Assinar por {preco}", { preco: precoFormatado })}
                   </>
                 )}
               </button>
 
               <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
-                Você pode cancelar a qualquer momento em Configurações.
-                Sem fidelidade.
+                {t(
+                  "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
+                )}
               </p>
             </div>
           </div>
@@ -232,13 +244,13 @@ export default function PagamentoPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={14} style={{ color: "var(--module-vendas)" }} />
                 <span className="text-xs uppercase tracking-wider text-muted font-semibold">
-                  Resumo do pedido
+                  {t("Resumo do pedido")}
                 </span>
               </div>
               {plano ? (
                 <>
                   <div className="text-lg font-bold text-primary">
-                    Plano {plano.nome}
+                    {t("Plano")} {plano.nome}
                   </div>
                   {plano.tagline && (
                     <div className="text-xs text-secondary mt-0.5">
@@ -247,24 +259,25 @@ export default function PagamentoPage() {
                   )}
                   <div className="border-t border-border my-3" />
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-secondary">Mensalidade</span>
+                    <span className="text-secondary">{t("Mensalidade")}</span>
                     <span className="font-mono text-primary">{precoFormatado}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-secondary">Hoje</span>
+                    <span className="text-secondary">{t("Hoje")}</span>
                     <span className="font-mono font-bold text-primary">
                       {precoFormatado}
                     </span>
                   </div>
                   <div className="border-t border-border my-3" />
                   <div className="text-[0.7rem] text-muted leading-relaxed">
-                    Cobrança mensal. Pode trocar de plano em Configurações a
-                    qualquer momento.
+                    {t(
+                      "Cobrança mensal recorrente. Pode trocar de plano em Configurações a qualquer momento."
+                    )}
                   </div>
                 </>
               ) : (
                 <p className="text-sm text-danger">
-                  Plano não encontrado. Volte ao cadastro pra escolher um.
+                  {t("Plano não encontrado. Volte ao cadastro pra escolher um.")}
                 </p>
               )}
             </div>

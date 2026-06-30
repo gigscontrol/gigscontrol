@@ -9,11 +9,13 @@ const COLS =
 
 /** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */
 export async function listarArtistas(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<ArtistaRow[]> {
   const { data, error } = await supabase
     .from("artists")
     .select(COLS)
+    .eq("workspace_id", workspaceId)
     .is("deletado_em", null)
     // Posição manual primeiro (drag&drop em Configurações), nome como
     // desempate. Linhas com posicao NULL (não devem existir após
@@ -26,11 +28,13 @@ export async function listarArtistas(
 
 /** Lista só os que estão na lixeira. */
 export async function listarArtistasDeletados(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<ArtistaRow[]> {
   const { data, error } = await supabase
     .from("artists")
     .select(COLS)
+    .eq("workspace_id", workspaceId)
     .not("deletado_em", "is", null)
     .order("deletado_em", { ascending: false });
   if (error) throw error;
@@ -52,11 +56,13 @@ export async function buscarArtista(
 
 /** Conta só ativos — usado no enforce do limite do plano. */
 export async function contarArtistas(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<number> {
   const { count, error } = await supabase
     .from("artists")
     .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
     .is("deletado_em", null);
   if (error) throw error;
   return count ?? 0;
@@ -106,12 +112,14 @@ export async function moverArtistaParaLixeira(
 /** Restaura — zera deletado_em. */
 export async function restaurarArtista(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  workspaceId: string
 ): Promise<void> {
   const { error } = await supabase
     .from("artists")
     .update({ deletado_em: null })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("workspace_id", workspaceId);
   if (error) throw error;
 }
 

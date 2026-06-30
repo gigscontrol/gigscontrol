@@ -17,7 +17,6 @@ import {
   Palette,
   AtSign,
   Lock,
-  Mail,
   AlertTriangle,
   Check,
 } from "lucide-react";
@@ -38,6 +37,8 @@ import {
   ModalNovoArtista,
   ModalCredenciais,
 } from "@/components/configuracoes/AbaArtistas";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 
 /**
  * /onboarding — wizard linear de 5 etapas pra novos admins.
@@ -85,6 +86,24 @@ const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 5, label: "Equipe", descricao: "Convidar membro" },
 ];
 
+/**
+ * Etapa em que o onboarding deve RETOMAR — a 1ª não concluída. Sem isso o
+ * wizard voltava pro passo do plano depois de pagar (loop). "Plano feito"
+ * = assinatura ATIVA (pagou) OU trial de verdade (status trial + data de
+ * término) — o registro "trial sem data" que o checkout cria antes do
+ * pagamento NÃO conta, pra não pular o passo sem concluir o pagamento.
+ */
+function etapaInicial(d: Status): number {
+  const planoOk =
+    d.subscriptionStatus === "ativa" ||
+    (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
+  if (!planoOk) return 2;
+  if (!d.checklist.agenciaConfigurada) return 3;
+  if (!d.checklist.temArtista) return 4;
+  if (!d.checklist.temEquipe) return 5;
+  return 5;
+}
+
 export default function OnboardingPage() {
   return (
     <AuthProvider>
@@ -97,6 +116,7 @@ export default function OnboardingPage() {
 
 function OnboardingInner() {
   const router = useRouter();
+  const t = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [etapa, setEtapa] = useState(1);
@@ -122,6 +142,9 @@ function OnboardingInner() {
         return;
       }
       setStatus(d);
+      // Só no carregamento inicial: retoma na 1ª etapa pendente (não
+      // reseta a etapa nos refetches que acontecem após salvar um passo).
+      if (opts?.inicial) setEtapa(etapaInicial(d));
     } finally {
       if (opts?.inicial) setCarregando(false);
     }
@@ -160,7 +183,7 @@ function OnboardingInner() {
       <div className="min-h-screen bg-main flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
-          Carregando...
+          {t("Carregando...")}
         </div>
       </div>
     );
@@ -191,13 +214,16 @@ function OnboardingInner() {
               GIGS<span className="text-muted"> CONTROL</span>
             </span>
           </div>
-          <button
-            onClick={concluir}
-            disabled={finalizando}
-            className="text-xs text-muted hover:text-secondary transition-colors disabled:opacity-50"
-          >
-            Pular tudo
-          </button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <button
+              onClick={concluir}
+              disabled={finalizando}
+              className="text-xs text-muted hover:text-secondary transition-colors disabled:opacity-50"
+            >
+              {t("Pular tudo")}
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -245,6 +271,7 @@ function OnboardingInner() {
             )}
             {etapa === 5 && (
               <Etapa5Equipe
+                status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
@@ -259,10 +286,10 @@ function OnboardingInner() {
               className="text-xs text-muted hover:text-secondary disabled:opacity-30 inline-flex items-center gap-1"
             >
               <ArrowLeft size={12} />
-              Voltar
+              {t("Voltar")}
             </button>
             <span className="text-xs text-muted">
-              Etapa {etapa} de {ETAPAS.length}
+              {t("Etapa {n} de {total}", { n: etapa, total: ETAPAS.length })}
             </span>
           </div>
         </div>
@@ -337,6 +364,7 @@ function Etapa1Bemvindo({
   nomeAgencia: string;
   onAvancar: () => void;
 }) {
+  const t = useT();
   return (
     <div className="text-center">
       <div
@@ -350,12 +378,12 @@ function Etapa1Bemvindo({
         <PartyPopper size={28} />
       </div>
       <h1 className="text-2xl font-bold tracking-tight">
-        Bem-vindo ao GIGS CONTROL!
+        {t("Bem-vindo ao GIGS CONTROL!")}
       </h1>
       <p className="mt-2 text-sm text-secondary max-w-md mx-auto">
-        Sua conta da{" "}
-        <strong className="text-primary">{nomeAgencia}</strong> está criada.
-        Vamos configurar os essenciais em 4 passos rápidos.
+        {t("Sua conta da")}{" "}
+        <strong className="text-primary">{nomeAgencia}</strong> {t("está criada.")}{" "}
+        {t("Vamos configurar os essenciais em 4 passos rápidos.")}
       </p>
       <button
         onClick={onAvancar}
@@ -363,7 +391,7 @@ function Etapa1Bemvindo({
         style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
       >
         <Sparkles size={14} />
-        Vamos lá
+        {t("Vamos lá")}
         <ArrowRight size={14} />
       </button>
     </div>
@@ -383,6 +411,7 @@ function Etapa2Plano({
   onRecarregar: () => Promise<void>;
 }) {
   const router = useRouter();
+  const t = useT();
   const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
     planoEscolhido ?? "individual"
   );
@@ -440,11 +469,11 @@ function Etapa2Plano({
   return (
     <div>
       <div className="text-center mb-6">
-        <h2 className="text-xl font-bold tracking-tight">Escolha o plano</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("Escolha o plano")}</h2>
         <p className="mt-1 text-sm text-secondary">
-          Plano <strong className="text-warning">Individual</strong> tem{" "}
-          <strong className="text-warning">7 dias grátis</strong> sem cartão.
-          Demais planos: cobrança imediata.
+          {t("Plano")} <strong className="text-warning">Individual</strong> {t("tem")}{" "}
+          <strong className="text-warning">{t("7 dias grátis")}</strong> {t("sem cartão.")}{" "}
+          {t("Demais planos: cobrança imediata.")}
         </p>
       </div>
 
@@ -472,7 +501,7 @@ function Etapa2Plano({
                     className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
                     style={{ backgroundColor: "var(--module-vendas)" }}
                   >
-                    Mais popular
+                    {t("Mais popular")}
                   </span>
                 )}
                 {temTrial && (
@@ -480,7 +509,7 @@ function Etapa2Plano({
                     className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-black"
                     style={{ backgroundColor: "#fbbf24" }}
                   >
-                    Teste grátis 7 dias
+                    {t("Teste grátis 7 dias")}
                   </span>
                 )}
               </div>
@@ -491,7 +520,7 @@ function Etapa2Plano({
                 <span className="text-base font-bold text-primary">
                   {formatarPreco(p.precoMensal)}
                 </span>
-                <span className="text-[0.6rem] text-muted">/mês</span>
+                <span className="text-[0.6rem] text-muted">{t("/mês")}</span>
               </div>
               <ul className="flex flex-col gap-1 text-[0.65rem] text-secondary flex-1">
                 {p.recursos.slice(0, 3).map((r) => (
@@ -539,11 +568,11 @@ function Etapa2Plano({
           {acao === "pagar" ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Indo pro pagamento...
+              {t("Indo pro pagamento...")}
             </>
           ) : (
             <>
-              Continuar e pagar agora
+              {t("Continuar e pagar agora")}
               <ArrowRight size={14} />
             </>
           )}
@@ -560,12 +589,12 @@ function Etapa2Plano({
             {acao === "trial" ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Iniciando...
+                {t("Iniciando...")}
               </>
             ) : (
               <>
                 <Sparkles size={14} />
-                Começar teste grátis (7 dias)
+                {t("Começar teste grátis (7 dias)")}
               </>
             )}
           </button>
@@ -574,7 +603,7 @@ function Etapa2Plano({
         {/* Se não é Individual, lembra que não tem trial */}
         {!isIndividual && (
           <p className="text-[0.65rem] text-muted text-center">
-            Teste grátis disponível apenas no plano Individual.
+            {t("Teste grátis disponível apenas no plano Individual.")}
           </p>
         )}
       </div>
@@ -594,6 +623,7 @@ function Etapa3Agencia({
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
+  const t = useT();
   const { atualizarNomeAgencia } = useWorkspace();
   const id = status.identidade;
   const slugAtual = id.slug ?? "";
@@ -696,13 +726,13 @@ function Etapa3Agencia({
 
   async function salvar() {
     setErro(null);
-    if (!nome.trim()) return setErro("Informe o nome da agência.");
-    if (!cidade) return setErro("Informe a cidade da agência.");
+    if (!nome.trim()) return setErro(t("Informe o nome da agência."));
+    if (!cidade) return setErro(t("Informe a cidade da agência."));
     if (contarDigitos(telDigits) < country.minDigits)
-      return setErro("WhatsApp incompleto.");
-    if (!slug.trim()) return setErro("Informe o username da agência.");
+      return setErro(t("WhatsApp incompleto."));
+    if (!slug.trim()) return setErro(t("Informe o username da agência."));
     if (slug.trim() !== slugAtual && slugCheck !== "ok") {
-      return setErro("Username inválido ou em uso.");
+      return setErro(t("Username inválido ou em uso."));
     }
 
     setSalvando(true);
@@ -753,9 +783,9 @@ function Etapa3Agencia({
   return (
     <div>
       <div className="text-center mb-6">
-        <h2 className="text-xl font-bold tracking-tight">Sua agência</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("Sua agência")}</h2>
         <p className="mt-1 text-sm text-secondary">
-          Esses dados aparecem nos orçamentos e na dashboard.
+          {t("Esses dados aparecem nos orçamentos e na dashboard.")}
         </p>
       </div>
 
@@ -763,7 +793,7 @@ function Etapa3Agencia({
         {/* Nome */}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            Nome da agência <span className="text-danger">*</span>
+            {t("Nome da agência")} <span className="text-danger">*</span>
           </span>
           <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
             <Building2 size={14} className="text-muted flex-shrink-0" />
@@ -779,7 +809,7 @@ function Etapa3Agencia({
         {/* Username da agência (slug) */}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            Username da agência <span className="text-danger">*</span>
+            {t("Username da agência")} <span className="text-danger">*</span>
           </span>
           <div
             className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
@@ -826,18 +856,18 @@ function Etapa3Agencia({
             </span>
           )}
           <span className="text-[0.65rem] text-muted leading-relaxed">
-            Vai pro fim do login dos seus artistas e equipe (ex:{" "}
+            {t("Vai pro fim do login dos seus artistas e equipe (ex:")}{" "}
             <span className="font-mono text-primary">
               {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
             </span>
-            ). Cada agência tem um username único — ninguém mais pode usar.
+            {t("). Cada agência tem um username único — ninguém mais pode usar.")}
           </span>
         </label>
 
         {/* Cidade */}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            Cidade <span className="text-danger">*</span>
+            {t("Cidade")} <span className="text-danger">*</span>
           </span>
           <CidadeIBGEAutocomplete
             value={cidade}
@@ -851,6 +881,7 @@ function Etapa3Agencia({
           <span className="text-xs font-medium text-secondary">
             WhatsApp <span className="text-danger">*</span>
           </span>
+
           <PhoneInput
             country={country}
             onCountryChange={setCountry}
@@ -885,11 +916,11 @@ function Etapa3Agencia({
           {salvando ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Salvando...
+              {t("Salvando...")}
             </>
           ) : (
             <>
-              Salvar e continuar
+              {t("Salvar e continuar")}
               <ArrowRight size={14} />
             </>
           )}
@@ -915,10 +946,11 @@ function CampoCor({
   aberto: boolean;
   setAberto: (v: boolean) => void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex flex-col gap-1.5 relative">
-      <span className="text-xs font-medium text-secondary">Cor de preferência</span>
+      <span className="text-xs font-medium text-secondary">{t("Cor de preferência")}</span>
       <button
         ref={ref}
         type="button"
@@ -961,6 +993,7 @@ function Etapa4Artista({
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
+  const t = useT();
   const { artistas, adicionarArtista, recarregarArtistas } = useWorkspace();
   // Lê do status que vem do /api/workspace/onboarding (refrescado a cada
   // onRecarregar). NÃO usa useAuth().sessao.workspace.slug porque essa
@@ -991,9 +1024,9 @@ function Etapa4Artista({
             className="mx-auto mb-3"
             style={{ color: "var(--success)" }}
           />
-          <h2 className="text-xl font-bold tracking-tight">Artista cadastrado!</h2>
+          <h2 className="text-xl font-bold tracking-tight">{t("Artista cadastrado!")}</h2>
           <p className="mt-1 text-sm text-secondary">
-            Anote agora — a senha não aparece de novo.
+            {t("Anote agora — a senha não aparece de novo.")}
           </p>
         </div>
 
@@ -1019,11 +1052,10 @@ function Etapa4Artista({
           style={{ color: "var(--module-vendas)" }}
         />
         <h2 className="text-xl font-bold tracking-tight">
-          Cadastre seu primeiro artista
+          {t("Cadastre seu primeiro artista")}
         </h2>
         <p className="mt-1 text-sm text-secondary max-w-md mx-auto">
-          O cadastro completo inclui cidade, taxa de agência e rider — você
-          vai conseguir gerar orçamentos pra ele em seguida.
+          {t("O cadastro completo inclui cidade, taxa de agência e rider — você vai conseguir gerar orçamentos pra ele em seguida.")}
         </p>
       </div>
 
@@ -1054,36 +1086,69 @@ function Etapa4Artista({
 // Etapa 5 — Convidar primeiro membro da equipe
 // ============================================================
 function Etapa5Equipe({
+  status,
   onAvancar,
   onRecarregar,
 }: {
+  status: Status;
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
+  const t = useT();
   const { adicionarUsuario } = useWorkspace();
+  // Lê o slug do status (fresco a cada onRecarregar) — mesma razão da
+  // Etapa 4: useAuth().sessao.workspace.slug fica stale após a Etapa 3.
+  const slug = status.identidade.slug ?? "";
   const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
+  // Login (handle) — raiz digitada; auto-sugere a partir do nome.
+  const [usernameRaiz, setUsernameRaiz] = useState("");
+  const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
   const [papel, setPapel] = useState<"vendedor" | "produtor" | "financeiro">(
     "vendedor"
   );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [resultado, setResultado] = useState<{ senha: string; email: string } | null>(null);
+  const [resultado, setResultado] = useState<{ senha: string; login: string } | null>(null);
+
+  const usernameCompleto = usernameRaiz.trim()
+    ? `${usernameRaiz.trim().toLowerCase()}-${slug}`
+    : "";
+  const usernameValido =
+    usernameRaiz.trim().length >= 3 &&
+    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(usernameRaiz.trim());
+
+  // Auto-sugere o login a partir do nome até o admin tocar no campo.
+  useEffect(() => {
+    if (usernameFoiEditado) return;
+    setUsernameRaiz(
+      nome
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+    );
+  }, [nome, usernameFoiEditado]);
 
   async function salvar() {
     setErro(null);
-    if (!nome.trim()) return setErro("Informe o nome.");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErro("Email inválido.");
+    if (!nome.trim()) return setErro(t("Informe o nome."));
+    if (!usernameValido)
+      return setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
     setSalvando(true);
     try {
       const r = await adicionarUsuario({
         nome: nome.trim(),
-        email: email.trim(),
+        username_raiz: usernameRaiz.trim().toLowerCase(),
         papel,
         escopo: { verTodosContatos: true, verTodasVendas: true, editarTodosEventos: true },
         funcoes: {},
       });
-      setResultado({ senha: r.senhaTemporaria, email: email.trim() });
+      setResultado({
+        senha: r.senhaTemporaria,
+        login: r.usuario.username ?? usernameCompleto,
+      });
       await onRecarregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -1100,27 +1165,26 @@ function Etapa5Equipe({
           className="mx-auto mb-3"
           style={{ color: "var(--module-vendas)" }}
         />
-        <h2 className="text-xl font-bold tracking-tight">Convide a equipe</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("Convide a equipe")}</h2>
         <p className="mt-1 text-sm text-secondary">
-          Vendedor, produtor ou financeiro — adicione quem vai te ajudar a
-          tocar a agência. Pode pular se ainda tá começando sozinho.
+          {t("Vendedor, produtor ou financeiro — adicione quem vai te ajudar a tocar a agência. Pode pular se ainda tá começando sozinho.")}
         </p>
       </div>
 
       {resultado ? (
         <div className="card text-center">
           <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
-          <h3 className="text-base font-bold">Equipe convidada!</h3>
+          <h3 className="text-base font-bold">{t("Equipe convidada!")}</h3>
           <p className="text-sm text-secondary mt-1 mb-4">
-            Mande pra essa pessoa:
+            {t("Mande pra essa pessoa:")}
           </p>
           <div className="bg-elevated rounded-md p-3 text-left flex flex-col gap-2">
             <div>
-              <div className="text-[0.65rem] text-muted">E-mail</div>
-              <div className="font-mono text-sm text-primary">{resultado.email}</div>
+              <div className="text-[0.65rem] text-muted">{t("Login")}</div>
+              <div className="font-mono text-sm text-primary">{resultado.login}</div>
             </div>
             <div>
-              <div className="text-[0.65rem] text-muted">Senha temporária</div>
+              <div className="text-[0.65rem] text-muted">{t("Senha temporária")}</div>
               <div className="font-mono text-sm text-primary">{resultado.senha}</div>
             </div>
           </div>
@@ -1129,14 +1193,14 @@ function Etapa5Equipe({
             className="btn btn-primary text-sm w-full justify-center py-2.5 mt-4"
             style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
           >
-            Terminar
+            {t("Terminar")}
             <ArrowRight size={14} />
           </button>
         </div>
       ) : (
         <div className="card flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Nome completo</span>
+            <span className="text-xs font-medium text-secondary">{t("Nome completo")}</span>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
@@ -1146,21 +1210,44 @@ function Etapa5Equipe({
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">E-mail</span>
-            <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              <Mail size={14} className="text-muted" />
+            <span className="text-xs font-medium text-secondary">{t("Login (username)")}</span>
+            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="marina@email.com"
-                className="flex-1 bg-transparent outline-none text-sm text-primary"
+                value={usernameRaiz}
+                onChange={(e) => {
+                  setUsernameFoiEditado(true);
+                  setUsernameRaiz(
+                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                  );
+                }}
+                placeholder="marinasouza"
+                style={{
+                  width: `${Math.max(
+                    usernameRaiz.length || "marinasouza".length,
+                    4
+                  )}ch`,
+                }}
+                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
               />
+              <span className="text-sm text-muted font-mono whitespace-nowrap">
+                -{slug || "agencia"}
+              </span>
             </div>
+            {usernameCompleto && !usernameValido && (
+              <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
+                {t("Use 3+ caracteres (letras, números, hífen).")}
+              </span>
+            )}
+            {usernameValido && usernameCompleto && (
+              <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
+                {t("Login completo:")}{" "}
+                <strong className="font-mono text-primary">{usernameCompleto}</strong>
+              </span>
+            )}
           </label>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">Papel</span>
+            <span className="text-xs font-medium text-secondary">{t("Papel")}</span>
             <div className="grid grid-cols-3 gap-2">
               {(["vendedor", "produtor", "financeiro"] as const).map((p) => (
                 <button
@@ -1201,13 +1288,13 @@ function Etapa5Equipe({
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
               style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
             >
-              {salvando ? "Convidando..." : "Convidar"}
+              {salvando ? t("Convidando...") : t("Convidar")}
             </button>
             <button
               onClick={onAvancar}
               className="text-xs text-muted hover:text-secondary"
             >
-              Pular e finalizar
+              {t("Pular e finalizar")}
             </button>
           </div>
         </div>

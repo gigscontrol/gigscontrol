@@ -8,6 +8,7 @@ import type { PlanoId } from "@/lib/planos";
 const PLANOS_VALIDOS: PlanoId[] = [
   "individual",
   "equipe",
+  "time",
   "agencia",
   "agencia-plus",
   "agencia-max",
@@ -18,6 +19,7 @@ const schema = z.object({
   plano: z.enum([
     "individual",
     "equipe",
+    "time",
     "agencia",
     "agencia-plus",
     "agencia-max",

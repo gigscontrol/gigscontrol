@@ -27,7 +27,7 @@ const taxaModoSchema = z.enum([
  * O sufixo "-slugDaAgencia" é montado pelo service antes de salvar.
  * Regex: começa com letra/número, pode ter hífen no meio.
  */
-const usernameRaizSchema = z
+export const usernameRaizSchema = z
   .string()
   .min(3, "Username muito curto (mínimo 3 chars).")
   .max(40, "Username muito longo (máximo 40 chars).")

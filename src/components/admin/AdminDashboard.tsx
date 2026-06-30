@@ -35,7 +35,7 @@ export default function AdminDashboard() {
     for (const a of ativas) mrr += precoPorMes(getPlano(a.plano), a.ciclo);
 
     const agencias = assinaturas.filter((a) =>
-      ["equipe", "agencia", "agencia-plus", "agencia-max"].includes(a.plano)
+      ["equipe", "time", "agencia", "agencia-plus", "agencia-max"].includes(a.plano)
     ).length;
     const totalArtistas = assinaturas.reduce((s, a) => s + a.artistasEmUso, 0);
 

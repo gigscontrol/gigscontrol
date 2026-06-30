@@ -3,8 +3,10 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarModelosDoWorkspace,
   criarModeloNoWorkspace,
+  LimiteModelosError,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloCreateSchema } from "@/lib/validators/contratoModelos.schema";
+import type { PlanoId } from "@/lib/planos";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -46,14 +48,31 @@ export async function POST(request: Request) {
     );
   }
 
+  // Plano do workspace — necessário pra validar o limite de modelos.
+  const { data: ws, error: wsErr } = await r.sessao.supabase
+    .from("workspaces")
+    .select("plano")
+    .eq("id", r.sessao.workspaceId)
+    .single();
+  if (wsErr || !ws) {
+    return NextResponse.json(
+      { erro: "Workspace não encontrado." },
+      { status: 404 }
+    );
+  }
+
   try {
     const modelo = await criarModeloNoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,
+      ws.plano as PlanoId,
       parsed.data
     );
     return NextResponse.json({ modelo }, { status: 201 });
   } catch (e) {
+    if (e instanceof LimiteModelosError) {
+      return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao criar modelo." },
       { status: 500 }

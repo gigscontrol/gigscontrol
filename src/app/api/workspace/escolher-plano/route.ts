@@ -21,6 +21,7 @@ const schema = z.object({
   plano: z.enum([
     "individual",
     "equipe",
+    "time",
     "agencia",
     "agencia-plus",
     "agencia-max",

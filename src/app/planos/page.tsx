@@ -15,8 +15,11 @@ import {
   type CicloCobranca,
   type Plano,
 } from "@/lib/planos";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 
 export default function PlanosPage() {
+  const t = useT();
   const [ciclo, setCiclo] = useState<CicloCobranca>("anual");
   const [inicio, setInicio] = useState(0);
   // Quantos cards aparecem por vez — responsivo (1 no mobile, 2 em tablet, 3 desktop)
@@ -54,9 +57,12 @@ export default function PlanosPage() {
               GIGS<span className="text-muted"> CONTROL</span>
             </span>
           </Link>
-          <Link href="/login" className="btn btn-secondary text-sm">
-            Entrar
-          </Link>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Link href="/login" className="btn btn-secondary text-sm">
+              {t("Entrar")}
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -76,14 +82,13 @@ export default function PlanosPage() {
           className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-6"
         >
           <ArrowLeft size={13} />
-          Voltar
+          {t("Voltar")}
         </Link>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          Um plano para cada operação
+          {t("Um plano para cada operação")}
         </h1>
         <p className="mt-3 text-secondary text-sm max-w-lg mx-auto">
-          Do artista que gere a própria carreira à agência com 50 nomes. Todos
-          os planos incluem agenda, vendas, financeiro e contatos.
+          {t("Do artista que gere a própria carreira à agência com 50 nomes. Todos os planos incluem agenda, vendas, financeiro e contatos.")}
         </p>
 
         {/* Toggle Mensal / Anual */}
@@ -97,7 +102,7 @@ export default function PlanosPage() {
                   : "text-muted hover:text-secondary"
               }`}
             >
-              Mensal
+              {t("Mensal")}
             </button>
             <button
               onClick={() => setCiclo("anual")}
@@ -107,19 +112,19 @@ export default function PlanosPage() {
                   : "text-muted hover:text-secondary"
               }`}
             >
-              Anual
+              {t("Anual")}
               <span
                 className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full text-white"
                 style={{ backgroundColor: "var(--module-financeiro)" }}
               >
-                ECONOMIZE
+                {t("ECONOMIZE")}
               </span>
             </button>
           </div>
         </div>
         {ciclo === "anual" && (
           <p className="mt-3 text-xs text-muted">
-            Planos anuais são cobrados uma vez ao ano. Preço exibido por mês.
+            {t("Planos anuais são cobrados uma vez ao ano. Preço exibido por mês.")}
           </p>
         )}
         </div>
@@ -171,7 +176,7 @@ export default function PlanosPage() {
             <button
               key={idx}
               onClick={() => setInicio(idx)}
-              aria-label={`Ver planos a partir do ${idx + 1}`}
+              aria-label={t("Ver planos a partir do {n}", { n: idx + 1 })}
               className="h-1.5 rounded-full transition-all"
               style={{
                 width: idx === inicio ? 24 : 8,
@@ -185,18 +190,18 @@ export default function PlanosPage() {
         {/* Dica de navegação */}
         {podeAvancar && (
           <p className="text-center text-xs text-muted mt-3">
-            Navegue para o lado para ver os planos Agência Plus e Agência Max →
+            {t("Navegue para o lado para ver os planos Agência Plus e Agência Max →")}
           </p>
         )}
 
         <div className="mt-10 text-center">
           <p className="text-xs text-muted">
-            Precisa de mais de 50 artistas ou condições especiais?{" "}
+            {t("Precisa de mais de 50 artistas ou condições especiais?")}{" "}
             <Link
               href="/login"
               className="underline hover:text-secondary transition-colors"
             >
-              Fale com a gente
+              {t("Fale com a gente")}
             </Link>
             .
           </p>
@@ -206,27 +211,27 @@ export default function PlanosPage() {
       {/* FAQ */}
       <section className="border-t border-border bg-surface/50">
         <div className="max-w-[800px] mx-auto px-6 py-14">
-          <h2 className="text-xl font-bold text-center mb-8">Perguntas frequentes</h2>
+          <h2 className="text-xl font-bold text-center mb-8">{t("Perguntas frequentes")}</h2>
           <div className="flex flex-col gap-3">
             <Faq
-              p="Qual a diferença entre mensal e anual?"
-              r="No plano anual você paga uma vez ao ano com um preço por mês mais baixo. No mensal, a cobrança é mês a mês com flexibilidade total."
+              p={t("Qual a diferença entre mensal e anual?")}
+              r={t("No plano anual você paga uma vez ao ano com um preço por mês mais baixo. No mensal, a cobrança é mês a mês com flexibilidade total.")}
             />
             <Faq
-              p="O que conta como 'artista'?"
-              r="Cada DJ, cantor ou MC que você gerencia na plataforma. O plano limita quantos podem estar ativos ao mesmo tempo."
+              p={t("O que conta como 'artista'?")}
+              r={t("Cada DJ, cantor ou MC que você gerencia na plataforma. O plano limita quantos podem estar ativos ao mesmo tempo.")}
             />
             <Faq
-              p="Como funciona o limite de usuários?"
-              r="Cada plano inclui 1 admin (você), uma cota de artistas e uma cota de usuários adicionais — produtores, vendedores e financeiro. O total de logins é a soma dos três."
+              p={t("Como funciona o limite de usuários?")}
+              r={t("Cada plano inclui 1 admin (você), uma cota de artistas e uma cota de usuários adicionais — produtores, vendedores e financeiro. O total de logins é a soma dos três.")}
             />
             <Faq
-              p="Posso trocar de plano depois?"
-              r="Sim. Você pode subir ou descer de plano conforme a operação cresce, respeitando os limites de cada um."
+              p={t("Posso trocar de plano depois?")}
+              r={t("Sim. Você pode subir ou descer de plano conforme a operação cresce, respeitando os limites de cada um.")}
             />
             <Faq
-              p="Cada pessoa vê tudo?"
-              r="Não. O Admin controla o que cada papel acessa. Artistas, por exemplo, nunca veem dados de outros artistas."
+              p={t("Cada pessoa vê tudo?")}
+              r={t("Não. O Admin controla o que cada papel acessa. Artistas, por exemplo, nunca veem dados de outros artistas.")}
             />
           </div>
         </div>
@@ -235,7 +240,7 @@ export default function PlanosPage() {
       <footer className="border-t border-border">
         <div className="max-w-[1200px] mx-auto px-6 py-8 text-center">
           <p className="text-xs text-muted">
-            © {new Date().getFullYear()} GIGS CONTROL — Gestão para a música.
+            © {new Date().getFullYear()} GIGS CONTROL — {t("Gestão para a música.")}
           </p>
         </div>
       </footer>
@@ -254,11 +259,12 @@ function CarrosselBtn({
   ativo: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <button
       onClick={onClick}
       disabled={!ativo}
-      aria-label={direcao === "esquerda" ? "Planos anteriores" : "Próximos planos"}
+      aria-label={direcao === "esquerda" ? t("Planos anteriores") : t("Próximos planos")}
       className="h-10 w-10 rounded-full border flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
       style={{
         borderColor: ativo ? "var(--border-strong)" : "var(--border-color)",
@@ -275,6 +281,7 @@ function CarrosselBtn({
 }
 
 function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
+  const t = useT();
   const preco = precoPorMes(plano, ciclo);
   const desconto = descontoAnualPct(plano);
   const economia = economiaAnual(plano);
@@ -296,7 +303,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
           className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full text-white whitespace-nowrap"
           style={{ backgroundColor: "var(--module-vendas)" }}
         >
-          Mais popular
+          {t("Mais popular")}
         </span>
       )}
 
@@ -311,28 +318,28 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
           <span className="text-2xl font-bold tabular-nums">
             {formatarPreco(preco)}
           </span>
-          <span className="text-xs text-muted">/mês</span>
+          <span className="text-xs text-muted">{t("/mês")}</span>
         </div>
 
         {ciclo === "anual" ? (
           <div className="mt-1.5 flex flex-col gap-0.5">
             <span className="text-[0.7rem] text-muted line-through tabular-nums">
-              {formatarPreco(plano.precoMensal)}/mês no mensal
+              {formatarPreco(plano.precoMensal)}{t("/mês no mensal")}
             </span>
             <span
               className="text-[0.7rem] font-semibold"
               style={{ color: "var(--module-financeiro)" }}
             >
-              Economize {formatarPrecoCurto(economia)} por ano ({desconto}%)
+              {t("Economize")} {formatarPrecoCurto(economia)} {t("por ano")} ({desconto}%)
             </span>
             <span className="text-[0.7rem] text-muted">
-              {formatarPrecoCurto(totalAnual(plano))} cobrados no ano
+              {formatarPrecoCurto(totalAnual(plano))} {t("cobrados no ano")}
             </span>
           </div>
         ) : (
           <div className="mt-1.5">
             <span className="text-[0.7rem] text-muted">
-              ou {formatarPreco(plano.precoAnualPorMes)}/mês no plano anual
+              {t("ou")} {formatarPreco(plano.precoAnual / 12)}{t("/mês no plano anual")}
             </span>
           </div>
         )}
@@ -343,7 +350,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
         <div className="flex-1 bg-elevated border border-border rounded-md py-2 text-center">
           <div className="text-base font-bold tabular-nums">{plano.maxArtistas}</div>
           <div className="text-[0.6rem] text-muted uppercase tracking-wide">
-            {plano.maxArtistas === 1 ? "artista" : "artistas"}
+            {plano.maxArtistas === 1 ? t("artista") : t("artistas")}
           </div>
         </div>
         <div className="flex-1 bg-elevated border border-border rounded-md py-2 text-center">
@@ -351,14 +358,14 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
             {totalUsuarios(plano)}
           </div>
           <div className="text-[0.6rem] text-muted uppercase tracking-wide">
-            usuários
+            {t("usuários")}
           </div>
         </div>
       </div>
       <p className="text-[0.65rem] text-muted mb-4 text-center">
         1 admin + {plano.maxArtistas}{" "}
-        {plano.maxArtistas === 1 ? "artista" : "artistas"} +{" "}
-        {plano.maxUsuariosAdicionais} adicionais
+        {plano.maxArtistas === 1 ? t("artista") : t("artistas")} +{" "}
+        {plano.maxUsuariosAdicionais} {t("adicionais")}
       </p>
 
       {/* Recursos */}
@@ -388,7 +395,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
               }
         }
       >
-        Assinar
+        {t("Assinar")}
         <ArrowRight size={14} />
       </Link>
     </div>

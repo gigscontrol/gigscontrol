@@ -16,7 +16,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 // Aceita qualquer um dos 5 planos do catálogo
 const schema = z.object({
   plano: z
-    .enum(["individual", "equipe", "agencia", "agencia-plus", "agencia-max"])
+    .enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"])
     .optional(),
 });
 
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       planoFinal = (ws?.plano as
         | "individual"
         | "equipe"
+        | "time"
         | "agencia"
         | "agencia-plus"
         | "agencia-max") ?? "individual";

@@ -27,7 +27,7 @@ import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { LanguageProvider, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
 import AbaArtistas from "@/components/configuracoes/AbaArtistas";
@@ -52,7 +52,6 @@ import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <LanguageProvider>
     <AuthProvider>
       <WorkspaceProvider>
         <ContatosProvider>
@@ -75,7 +74,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </ContatosProvider>
       </WorkspaceProvider>
     </AuthProvider>
-    </LanguageProvider>
   );
 }
 

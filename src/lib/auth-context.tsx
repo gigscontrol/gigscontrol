@@ -217,8 +217,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       modoVisitante: !!sessao?.modoVisitante,
 
       login: async (email, senha) => {
+        // Aceita handle (username) OU e-mail. Sem "@" → e-mail interno
+        // determinístico (handle@interno.gigscontrol.app), o mesmo que o
+        // backend gera pra artistas e equipe. Com "@" passa direto (login
+        // por e-mail real do admin segue intacto).
+        const id = email.trim();
+        const emailAuth = id.includes("@")
+          ? id
+          : `${id.toLowerCase()}@interno.gigscontrol.app`;
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email: emailAuth,
           password: senha,
         });
 

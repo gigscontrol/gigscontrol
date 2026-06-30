@@ -62,8 +62,7 @@ export default function PrivacidadePage() {
 
         <Secao titulo="4. Compartilhamento">
           Não compartilhamos dados pessoais com terceiros, exceto:
-          processadores de pagamento (Stripe / Mercado Pago — quando
-          integrarmos), ou por exigência legal.
+          processador de pagamento (Stripe), ou por exigência legal.
         </Secao>
 
         <Secao titulo="5. Seus direitos (LGPD)">

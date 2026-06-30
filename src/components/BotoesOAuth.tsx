@@ -46,8 +46,9 @@ export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
     } catch (e) {
       const msg = (e as Error).message;
       if (msg.toLowerCase().includes("not enabled") || msg.toLowerCase().includes("disabled")) {
+        const providerNome = provider === "google" ? "Google" : "Facebook";
         setErro(
-          `Login com ${provider === "google" ? "Google" : "Facebook"} ainda está sendo configurado. Use email e senha por enquanto.`
+          t("Login com {provider} ainda está sendo configurado. Use email e senha por enquanto.", { provider: providerNome })
         );
       } else {
         setErro(msg);
