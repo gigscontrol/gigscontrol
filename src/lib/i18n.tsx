@@ -6,9 +6,10 @@
  * idioma é EN, senão o próprio PT (fallback seguro: nenhuma string some se
  * ainda não foi traduzida). Suporta interpolação simples: `t("{n} itens", {n})`.
  *
- * A preferência é salva no localStorage (`gc-lang`). Pra evitar mismatch de
- * hidratação, começa em "pt" no server/1º render e só lê o localStorage no
- * efeito (client), depois do mount.
+ * A preferência fica no cookie `gc-lang` (lido no servidor → sem flash). O
+ * idioma/moeda iniciais vêm do layout (cookie da escolha do usuário ou, na
+ * falta dele, o padrão da região por IP). `useMoeda()` devolve a moeda da
+ * região (brl no Brasil, usd fora).
  */
 
 import {
@@ -24,6 +25,7 @@ import { ES } from "./i18n-es";
 import { FR } from "./i18n-fr";
 import { DE } from "./i18n-de";
 import { IT } from "./i18n-it";
+import type { Moeda } from "./planos";
 
 export type Lang = "pt" | "en" | "es" | "fr" | "de" | "it";
 
@@ -39,26 +41,45 @@ const DICTS: Record<Lang, Record<string, string>> = {
 type TParams = Record<string, string | number>;
 export type Traduzir = (pt: string, params?: TParams) => string;
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: Traduzir };
+type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: Traduzir; moeda: Moeda };
 
 const LanguageContext = createContext<Ctx | null>(null);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("pt");
+export function LanguageProvider({
+  children,
+  initialLang = "pt",
+  initialMoeda = "brl",
+}: {
+  children: ReactNode;
+  initialLang?: Lang;
+  initialMoeda?: Moeda;
+}) {
+  // Idioma inicial vem do servidor (cookie gc-lang ou geo por IP) — sem flash.
+  const [lang, setLangState] = useState<Lang>(initialLang);
+  // Moeda é definida pela região (IP) no servidor; não muda no client.
+  const moeda = initialMoeda;
 
+  // Migração: usuários antigos guardavam a escolha no localStorage. Se ainda
+  // não há cookie (fonte nova), adota o localStorage e grava o cookie 1×.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("gc-lang");
-      if (saved && saved in DICTS) setLangState(saved as Lang);
+      if (document.cookie.includes("gc-lang=")) return;
+      const ls = localStorage.getItem("gc-lang");
+      if (ls && ls in DICTS && ls !== lang) {
+        setLangState(ls as Lang);
+        document.cookie = `gc-lang=${ls};path=/;max-age=31536000;samesite=lax`;
+      }
     } catch {
-      /* localStorage indisponível — segue em pt */
+      /* ignora */
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
-      localStorage.setItem("gc-lang", l);
+      document.cookie = `gc-lang=${l};path=/;max-age=31536000;samesite=lax`;
+      localStorage.setItem("gc-lang", l); // redundância p/ compat
     } catch {
       /* ignora */
     }
@@ -80,7 +101,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, moeda }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -94,6 +115,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
  */
 const FALLBACK: Ctx = {
   lang: "pt",
+  moeda: "brl",
   setLang: () => {},
   t: (pt, params) => {
     let s = pt;
@@ -111,4 +133,9 @@ export function useLang(): Ctx {
 /** Atalho pra só pegar a função de tradução. */
 export function useT(): Traduzir {
   return useLang().t;
+}
+
+/** Moeda da região (brl no Brasil, usd fora). */
+export function useMoeda(): Moeda {
+  return useLang().moeda;
 }

@@ -11,8 +11,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
-import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
-import { useT } from "@/lib/i18n";
+import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
+import { useT, useMoeda } from "@/lib/i18n";
 
 /**
  * Tela "Complete seu cadastro" — mostrada após primeiro login OAuth.
@@ -24,6 +24,7 @@ import { useT } from "@/lib/i18n";
 export default function CompletarCadastroPage() {
   const router = useRouter();
   const t = useT();
+  const moeda = useMoeda();
   const [carregandoUser, setCarregandoUser] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [nomeUser, setNomeUser] = useState<string | null>(null);
@@ -206,7 +207,7 @@ export default function CompletarCadastroPage() {
                       )}
                       <div className="text-sm font-bold text-primary">{p.nome}</div>
                       <div className="text-base font-bold text-primary mt-1">
-                        {formatarPreco(p.precoMensal)}
+                        {formatarPreco(valorMensal(p, moeda), moeda)}
                         <span className="text-xs text-muted font-normal">{t("/mês")}</span>
                       </div>
                       <div className="text-[0.65rem] text-muted mt-1">
