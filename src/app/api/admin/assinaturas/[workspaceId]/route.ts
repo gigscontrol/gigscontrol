@@ -5,6 +5,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   alterarStatusAssinatura,
   alterarPlanoAssinatura,
+  estenderDiasAssinatura,
 } from "@/lib/services/plataforma.service";
 
 const patchSchema = z.object({
@@ -12,6 +13,7 @@ const patchSchema = z.object({
   plano: z
     .enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"])
     .optional(),
+  dias: z.number().int().min(1).max(365).optional(),
 });
 
 type RouteCtx = { params: { workspaceId: string } };
@@ -42,6 +44,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     }
     if (parsed.data.plano) {
       await alterarPlanoAssinatura(admin, params.workspaceId, parsed.data.plano);
+    }
+    if (parsed.data.dias) {
+      await estenderDiasAssinatura(admin, params.workspaceId, parsed.data.dias);
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -24,8 +24,13 @@ export type Assinatura = {
   usuariosEmUso: number;
   /** Data de início da assinatura (ISO) */
   inicioEm: string;
-  /** Data da próxima cobrança (ISO) */
-  proximaCobranca: string;
+  /** Data da próxima cobrança (ISO), ou null (trial expirado / sem cobrança) */
+  proximaCobranca: string | null;
+  /**
+   * Dias restantes do plano (trial/graça → até o prazo; ativa → até a
+   * cobrança). Negativo = expirado. null = não aplicável.
+   */
+  diasRestantes?: number | null;
 };
 
 export const LABELS_STATUS_ASSINATURA: Record<
