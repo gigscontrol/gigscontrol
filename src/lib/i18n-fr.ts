@@ -1640,5 +1640,14 @@ export const FR: Record<string, string> = {
   "Informe seu administrador sobre a renovação do plano pra liberar o acesso.": "Prévenez votre administrateur du renouvellement du forfait pour rétablir l'accès.",
   "Pagamento pendente — a renovação do plano falhou.": "Paiement en attente — le renouvellement du forfait a échoué.",
   "Pagamento pendente — avise seu administrador ({nome}) sobre a renovação.": "Paiement en attente — prévenez votre administrateur ({nome}) du renouvellement.",
-  "Pagamento pendente — avise seu administrador sobre a renovação.": "Paiement en attente — prévenez votre administrateur du renouvellement."
+  "Pagamento pendente — avise seu administrador sobre a renovação.": "Paiement en attente — prévenez votre administrateur du renouvellement.",
+  "Nenhum usuário da equipe cadastrado": "Aucun membre de l'équipe enregistré",
+  "Caps Lock está ligado": "Caps Lock activé",
+  "Adicionar ao dia": "Ajouter au jour",
+  "Novo Show": "Nouveau Show",
+  "Venda direta neste dia": "Vente directe ce jour-là",
+  "Novo Voo": "Nouveau Vol",
+  "Novo Transporte Terrestre": "Nouveau Transport Terrestre",
+  "Novo Evento Personalizado": "Nouvel Événement Personnalisé",
+  "Em breve": "Bientôt disponible"
 };

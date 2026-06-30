@@ -1640,5 +1640,14 @@ export const DE: Record<string, string> = {
   "Informe seu administrador sobre a renovação do plano pra liberar o acesso.": "Informieren Sie Ihren Administrator über die Tarifverlängerung, um den Zugriff freizugeben.",
   "Pagamento pendente — a renovação do plano falhou.": "Zahlung ausstehend — die Tarifverlängerung ist fehlgeschlagen.",
   "Pagamento pendente — avise seu administrador ({nome}) sobre a renovação.": "Zahlung ausstehend — informieren Sie Ihren Administrator ({nome}) über die Verlängerung.",
-  "Pagamento pendente — avise seu administrador sobre a renovação.": "Zahlung ausstehend — informieren Sie Ihren Administrator über die Verlängerung."
+  "Pagamento pendente — avise seu administrador sobre a renovação.": "Zahlung ausstehend — informieren Sie Ihren Administrator über die Verlängerung.",
+  "Nenhum usuário da equipe cadastrado": "Keine Teammitglieder registriert",
+  "Caps Lock está ligado": "Caps Lock aktiv",
+  "Adicionar ao dia": "Zum Tag hinzufügen",
+  "Novo Show": "Neue Show",
+  "Venda direta neste dia": "Direktverkauf an diesem Tag",
+  "Novo Voo": "Neuer Flug",
+  "Novo Transporte Terrestre": "Neuer Bodentransport",
+  "Novo Evento Personalizado": "Neues benutzerdefiniertes Ereignis",
+  "Em breve": "Demnächst"
 };

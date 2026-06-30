@@ -2616,6 +2616,15 @@ const SWEEP14: Record<string, string> = {
     "Payment pending — let your administrator ({nome}) know about the renewal.",
   "Pagamento pendente — avise seu administrador sobre a renovação.":
     "Payment pending — let your administrator know about the renewal.",
+  "Nenhum usuário da equipe cadastrado": "No team members registered",
+  "Caps Lock está ligado": "Caps Lock is on",
+  "Adicionar ao dia": "Add to day",
+  "Novo Show": "New Show",
+  "Venda direta neste dia": "Direct sale on this day",
+  "Novo Voo": "New Flight",
+  "Novo Transporte Terrestre": "New Ground Transport",
+  "Novo Evento Personalizado": "New Custom Event",
+  "Em breve": "Coming soon",
 };
 
 export const EN: Record<string, string> = {

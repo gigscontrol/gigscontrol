@@ -49,6 +49,8 @@ export default function CampoSenha({
   mostrarForca = true,
 }: Props) {
   const [visivel, setVisivel] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+  const t = useT();
 
   const avaliacao: AvaliacaoSenha | null = useMemo(
     () => (mostrarForca && value ? avaliarSenha(value) : null),
@@ -64,6 +66,9 @@ export default function CampoSenha({
           type={visivel ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => setCapsOn(e.getModifierState("CapsLock"))}
+          onKeyUp={(e) => setCapsOn(e.getModifierState("CapsLock"))}
+          onBlur={() => setCapsOn(false)}
           placeholder={placeholder}
           autoComplete={autoComplete}
           autoFocus={autoFocus}
@@ -79,6 +84,16 @@ export default function CampoSenha({
           {visivel ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       </div>
+
+      {capsOn && (
+        <span
+          className="text-[0.7rem] flex items-center gap-1"
+          style={{ color: "var(--warning)" }}
+        >
+          <AlertCircle size={11} />
+          {t("Caps Lock está ligado")}
+        </span>
+      )}
 
       {avaliacao && <MedidorForca avaliacao={avaliacao} />}
     </label>

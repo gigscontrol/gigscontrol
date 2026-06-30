@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, Clock, Music, Calendar } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -10,6 +10,7 @@ import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
+import Modal from "./Modal";
 import { useT } from "@/lib/i18n";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -121,9 +122,11 @@ type Props = {
   selectedDJs: string[];
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
+  /** "Novo Show" no "+" de um dia → abre Nova Venda Direta com a data. */
+  onNovaVendaNoDia?: (dataISO: string) => void;
 };
 
-export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda }: Props) {
+export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
   const t = useT();
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
@@ -287,6 +290,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
+  const [novoItemDia, setNovoItemDia] = useState<DayCell | null>(null);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -331,8 +335,8 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         </div>
       )}
 
-      {/* Header dos dias da semana (desktop) */}
-      <div className="hidden md:grid grid-cols-7 gap-2 mb-2 sticky top-0 bg-main py-2 z-10">
+      {/* Header dos dias da semana (desktop) — rola junto (cada card já mostra o dia) */}
+      <div className="hidden md:grid grid-cols-7 gap-2 mb-2 py-2">
         {DAY_NAMES_SHORT.map((d) => (
           <div
             key={d}
@@ -355,6 +359,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onNovoItem={setNovoItemDia}
               />
             ))}
           </div>
@@ -376,6 +381,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onNovoItem={setNovoItemDia}
               />
             );
           })}
@@ -391,6 +397,19 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         onAbrirOrcamento={onAbrirOrcamento}
         onAbrirVenda={onAbrirVenda}
       />
+
+      {/* Menu "+" — adicionar item a um dia */}
+      {novoItemDia && (
+        <NovoItemModal
+          day={novoItemDia}
+          onClose={() => setNovoItemDia(null)}
+          onNovoShow={() => {
+            const d = novoItemDia.dataISO;
+            setNovoItemDia(null);
+            onNovaVendaNoDia?.(d);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -403,12 +422,14 @@ function DayCellComponent({
   artistas,
   accent,
   onShowClick,
+  onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
   return (
@@ -459,6 +480,7 @@ function DayCellComponent({
         ) : (
           <DayCellEmptySlot />
         )}
+        {!day.isOtherMonth && <NovoItemSlot onClick={() => onNovoItem(day)} />}
       </div>
     </div>
   );
@@ -473,18 +495,117 @@ function DayCellEmptySlot() {
   );
 }
 
+/** Retângulo pontilhado com "+" — sempre o último item da coluna do dia. */
+function NovoItemSlot({ onClick }: { onClick: () => void }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t("Adicionar ao dia")}
+      title={t("Adicionar ao dia")}
+      className="mt-2 w-full flex items-center justify-center h-9 border border-dashed border-border rounded-md text-muted hover:text-secondary hover:border-border-strong transition-colors"
+    >
+      <Plus size={15} />
+    </button>
+  );
+}
+
+const ACOES_NOVO_ITEM: {
+  key: string;
+  label: string;
+  desc: string;
+  icon: typeof Music;
+  cor: string;
+  emBreve?: boolean;
+}[] = [
+  { key: "show", label: "Novo Show", desc: "Venda direta neste dia", icon: Music, cor: "var(--module-vendas)" },
+  { key: "voo", label: "Novo Voo", desc: "Em breve", icon: Plane, cor: "var(--module-agenda)", emBreve: true },
+  {
+    key: "transporte",
+    label: "Novo Transporte Terrestre",
+    desc: "Em breve",
+    icon: Car,
+    cor: "var(--module-financeiro)",
+    emBreve: true,
+  },
+  {
+    key: "evento",
+    label: "Novo Evento Personalizado",
+    desc: "Em breve",
+    icon: Calendar,
+    cor: "var(--module-contratos)",
+    emBreve: true,
+  },
+];
+
+/** Action-sheet do "+": escolhe o tipo de item a adicionar no dia.
+ *  Usa o Modal do app (portal pra document.body) → sempre centralizado na
+ *  viewport, sem o bug de `fixed` ancorando no <main> com transform. */
+function NovoItemModal({
+  day,
+  onClose,
+  onNovoShow,
+}: {
+  day: DayCell;
+  onClose: () => void;
+  onNovoShow: () => void;
+}) {
+  const t = useT();
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Adicionar ao dia")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={400}
+    >
+      <div className="flex flex-col gap-1">
+        {ACOES_NOVO_ITEM.map((a) => {
+          const Icone = a.icon;
+          return (
+            <button
+              key={a.key}
+              type="button"
+              disabled={a.emBreve}
+              onClick={a.key === "show" ? onNovoShow : undefined}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
+            >
+              <span
+                className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${a.cor} 16%, transparent)`,
+                  color: a.cor,
+                }}
+              >
+                <Icone size={16} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-primary">{t(a.label)}</span>
+                <span className="block text-xs text-muted">{t(a.desc)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
 function MobileDayCard({
   day,
   shows,
   artistas,
   accent,
   onShowClick,
+  onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
   return (
@@ -529,6 +650,7 @@ function MobileDayCard({
       ) : (
         <MobileDayEmptySlot />
       )}
+      <NovoItemSlot onClick={() => onNovoItem(day)} />
     </div>
   );
 }

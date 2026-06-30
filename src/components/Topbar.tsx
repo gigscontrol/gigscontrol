@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import {
-  Search,
   Menu,
   LogOut,
   BadgeCheck,
@@ -61,7 +60,7 @@ export default function Topbar({
     : "—";
 
   return (
-    <header className="flex items-center justify-between gap-4 px-4 lg:px-6 h-16 border-b border-border bg-main flex-shrink-0">
+    <header className="flex items-center justify-between gap-4 px-4 lg:px-6 h-16 flex-shrink-0">
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={onOpenSidebar}
@@ -75,32 +74,20 @@ export default function Topbar({
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.color }} />
           <span className="text-sm font-medium text-secondary">{t(theme.label)}</span>
         </div>
-
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 ml-auto sm:ml-4 max-w-[400px] flex-1 sm:flex-initial sm:w-[280px] hover:border-border-hover transition-colors focus-within:border-border-strong">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input
-            type="text"
-            placeholder={t("Buscar shows, DJs, contratantes…")}
-            className="input"
-          />
-          <kbd className="hidden md:inline text-[0.65rem] text-muted bg-elevated px-1.5 py-0.5 rounded border border-border">
-            ⌘K
-          </kbd>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        <LanguageSwitcher />
         <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
+        <LanguageSwitcher />
 
         {/* Menu de perfil */}
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-md border border-border-hover transition-all hover:border-border-strong"
+            className="flex h-9 items-center gap-1.5 rounded-md border border-border pl-1 pr-2 text-secondary transition-colors hover:border-border-strong hover:text-primary"
           >
             <span
-              className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-primary"
+              className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-primary"
               style={{
                 background: papel
                   ? `linear-gradient(135deg, ${papel.cor}, ${papel.cor}99)`

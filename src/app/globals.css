@@ -266,11 +266,11 @@
     gap: 2px;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: 999px;
+    border-radius: var(--radius);
   }
   .pill {
     padding: 6px 14px;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);

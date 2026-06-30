@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Lock, User, AlertCircle } from "lucide-react";
+import { ArrowRight, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
+import CampoSenha from "@/components/CampoSenha";
 import { useT } from "@/lib/i18n";
 
 export default function LoginPage() {
@@ -88,21 +89,14 @@ function LoginInner() {
               </div>
             </label>
 
-            {/* Senha */}
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
-              <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-                <Lock size={14} className="text-muted flex-shrink-0" />
-                <input
-                  type="password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
-                />
-              </div>
-            </label>
+            {/* Senha — CampoSenha traz olho (mostrar/ocultar) + aviso de Caps Lock */}
+            <CampoSenha
+              label={t("Senha")}
+              value={senha}
+              onChange={setSenha}
+              autoComplete="current-password"
+              mostrarForca={false}
+            />
 
             {/* Erro */}
             {erro && (

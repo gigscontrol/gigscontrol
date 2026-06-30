@@ -46,6 +46,8 @@ import {
 
 type Props = {
   orcamentoId?: string;
+  /** Data ISO (YYYY-MM-DD) pré-selecionada — ex: vindo do "+" de um dia da agenda. */
+  dataInicial?: string;
   onSaved: (vendaId: string) => void;
   onCancel: () => void;
 };
@@ -79,7 +81,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
   return `${dd}/${mm}/${dt.getFullYear()}`;
 }
 
-export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Props) {
+export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, onCancel }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, casas, cidades } = useContatos();
@@ -124,7 +126,7 @@ export default function ConcretizarVenda({ orcamentoId, onSaved, onCancel }: Pro
   const [enderecoLocal, setEnderecoLocal] = useState(
     det?.enderecoLocal ?? casaOrc?.endereco ?? ""
   );
-  const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? "");
+  const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? dataInicial ?? "");
 
   // Horário início e fim
   const [horarioInicio, setHorarioInicio] = useState(
