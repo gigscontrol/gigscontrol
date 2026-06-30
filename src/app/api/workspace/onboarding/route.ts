@@ -19,16 +19,63 @@ import { getPlano, type PlanoId } from "@/lib/planos";
  *  - /onboarding — pra renderizar a checklist
  *  - /app — pra decidir se redireciona pra onboarding
  */
+/**
+ * Estado de acesso efetivo a partir do status + deadline (`trial_termina_em`,
+ * reusado também como prazo da graça). Derivado em tempo de leitura — sem cron.
+ *  - ok        → acesso normal
+ *  - graca     → período acabou há ≤ 1 dia: acesso liberado + aviso
+ *  - bloqueado → graça expirou, ou suspended/cancelled (chargeback/cancelamento)
+ */
+function calcEstado(
+  status: string,
+  trialTerminaEm: string | null
+): "ok" | "graca" | "bloqueado" {
+  const agora = Date.now();
+  const prazo = trialTerminaEm ? new Date(trialTerminaEm).getTime() : null;
+  if (status === "ativa") return "ok";
+  if (status === "suspended" || status === "cancelled") return "bloqueado";
+  if (status === "trial") {
+    if (!prazo || agora <= prazo) return "ok";
+    if (agora <= prazo + 86_400_000) return "graca"; // +1 dia de graça
+    return "bloqueado";
+  }
+  if (status === "graca") {
+    return prazo && agora <= prazo ? "graca" : "bloqueado";
+  }
+  return "ok";
+}
+
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
 
-  // Onboarding é só do admin — outros papéis pulam direto pro app
+  // Onboarding é só do admin — mas TODO usuário precisa do estado de acesso
+  // (graça/bloqueio) e de quem é o admin, pra avisar.
   if (r.sessao.papel !== "admin") {
+    const adminDb = criarClienteAdmin();
+    const wsId = r.sessao.workspaceId;
+    const [{ data: subNA }, { data: adminProfile }] = await Promise.all([
+      adminDb
+        .from("subscriptions")
+        .select("status, trial_termina_em")
+        .eq("workspace_id", wsId)
+        .maybeSingle<{ status: string; trial_termina_em: string | null }>(),
+      adminDb
+        .from("profiles")
+        .select("nome")
+        .eq("workspace_id", wsId)
+        .eq("papel", "admin")
+        .is("deletado_em", null)
+        .limit(1)
+        .maybeSingle<{ nome: string | null }>(),
+    ]);
+    const statusNA = subNA?.status ?? "ativa";
     return NextResponse.json({
       onboardingCompleto: true,
-      subscriptionStatus: "ativa",
       naoAdmin: true,
+      subscriptionStatus: statusNA,
+      estadoAcesso: calcEstado(statusNA, subNA?.trial_termina_em ?? null),
+      adminContato: adminProfile?.nome ?? null,
     });
   }
 
@@ -110,6 +157,9 @@ export async function GET() {
     return NextResponse.json({
       onboardingCompleto: !!ws.onboarding_completo,
       subscriptionStatus: sub?.status ?? "trial",
+      estadoAcesso: calcEstado(sub?.status ?? "trial", sub?.trial_termina_em ?? null),
+      adminContato: meuProfile?.nome ?? null,
+      ciclo: sub?.ciclo ?? "mensal",
       trialTerminaEm: sub?.trial_termina_em ?? null,
       plano: plano
         ? {

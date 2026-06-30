@@ -19,6 +19,8 @@ import HistoricoVendas from "@/components/HistoricoVendas";
 import VendaDetalhe from "@/components/VendaDetalhe";
 import ShowDetalheModal from "@/components/ShowDetalheModal";
 import SomenteLeitura from "@/components/SomenteLeitura";
+import BannerPagamento from "@/components/BannerPagamento";
+import BloqueioModal from "@/components/BloqueioModal";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
@@ -115,6 +117,12 @@ function AuthGuard({ children }: { children: ReactNode }) {
   const { sessao, carregando, isSuperAdmin, modoVisitante } = useAuth();
   const router = useRouter();
   const [verificandoOnboarding, setVerificandoOnboarding] = useState(true);
+  const [acesso, setAcesso] = useState<{
+    estado: "ok" | "graca" | "bloqueado";
+    adminContato: string | null;
+    plano: { id: string; nome: string } | null;
+    ciclo: string;
+  } | null>(null);
 
   useEffect(() => {
     if (carregando) return;
@@ -127,36 +135,43 @@ function AuthGuard({ children }: { children: ReactNode }) {
       router.replace("/admin");
       return;
     }
-    // Verifica onboarding só pra admin não-visitante
-    if (modoVisitante || sessao.usuario.papel !== "admin") {
+    // Modo visitante (super-admin vendo cliente) não checa pagamento.
+    if (modoVisitante) {
       setVerificandoOnboarding(false);
       return;
     }
+    // TODO usuário busca o estado de acesso (graça/bloqueio); admin também
+    // confere o onboarding.
     let ativo = true;
     fetch("/api/workspace/onboarding", { credentials: "include", cache: "no-store" })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return await r.json();
       })
-      .then((d: { subscriptionStatus?: string; onboardingCompleto?: boolean }) => {
-        if (!ativo) return;
-        // Onboarding incompleto → manda pro wizard. O wizard cuida de
-        // ativar o trial na etapa 2 — não precisa mais bloquear em
-        // /pagamento (cobrança real só vai ser pedida quando o trial
-        // expirar de fato).
-        if (!d.onboardingCompleto) {
-          router.replace("/onboarding");
-        } else if (
-          d.subscriptionStatus === "suspended" ||
-          d.subscriptionStatus === "cancelled"
-        ) {
-          // Assinatura suspensa (pagamento falho / chargeback) ou cancelada
-          // → bloqueia o app e manda reativar em /pagamento. Trial/ativa passam.
-          router.replace("/pagamento");
-        } else {
+      .then(
+        (d: {
+          onboardingCompleto?: boolean;
+          estadoAcesso?: "ok" | "graca" | "bloqueado";
+          adminContato?: string | null;
+          plano?: { id: string; nome: string } | null;
+          ciclo?: string;
+        }) => {
+          if (!ativo) return;
+          // Admin com onboarding incompleto → wizard (cobrança real só no
+          // fim do trial; o wizard ativa o trial na etapa 2).
+          if (sessao.usuario.papel === "admin" && d.onboardingCompleto === false) {
+            router.replace("/onboarding");
+            return;
+          }
+          setAcesso({
+            estado: d.estadoAcesso ?? "ok",
+            adminContato: d.adminContato ?? null,
+            plano: d.plano ?? null,
+            ciclo: d.ciclo ?? "mensal",
+          });
           setVerificandoOnboarding(false);
         }
-      })
+      )
       .catch(() => {
         // Em caso de falha, deixa entrar pra não bloquear pelo erro
         if (ativo) setVerificandoOnboarding(false);
@@ -174,7 +189,28 @@ function AuthGuard({ children }: { children: ReactNode }) {
     return <LoaderTelaCheia texto="Redirecionando…" />;
   }
 
-  return <>{children}</>;
+  const papel = sessao.usuario.papel;
+  return (
+    <>
+      {acesso?.estado === "graca" && (
+        <BannerPagamento
+          papel={papel}
+          adminContato={acesso.adminContato}
+          plano={acesso.plano}
+          ciclo={acesso.ciclo}
+        />
+      )}
+      {children}
+      {acesso?.estado === "bloqueado" && (
+        <BloqueioModal
+          papel={papel}
+          adminContato={acesso.adminContato}
+          plano={acesso.plano}
+          ciclo={acesso.ciclo}
+        />
+      )}
+    </>
+  );
 }
 
 // ----------------- Roteamento por URL -----------------
