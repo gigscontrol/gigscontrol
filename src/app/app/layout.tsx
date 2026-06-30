@@ -24,6 +24,7 @@ import BloqueioModal from "@/components/BloqueioModal";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
+import { AgendaItemsProvider } from "@/lib/agenda-items-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
@@ -58,20 +59,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <WorkspaceProvider>
         <ContatosProvider>
           <ShowsProvider>
-            <OrcamentosProvider>
-              <VendasProvider>
-                <ModelosProvider>
-                  <ContratosProvider>
-                    <AuthGuard>
-                      <NavProvider>
-                        <AppRoot />
-                        {children}
-                      </NavProvider>
-                    </AuthGuard>
-                  </ContratosProvider>
-                </ModelosProvider>
-              </VendasProvider>
-            </OrcamentosProvider>
+            <AgendaItemsProvider>
+              <OrcamentosProvider>
+                <VendasProvider>
+                  <ModelosProvider>
+                    <ContratosProvider>
+                      <AuthGuard>
+                        <NavProvider>
+                          <AppRoot />
+                          {children}
+                        </NavProvider>
+                      </AuthGuard>
+                    </ContratosProvider>
+                  </ModelosProvider>
+                </VendasProvider>
+              </OrcamentosProvider>
+            </AgendaItemsProvider>
           </ShowsProvider>
         </ContatosProvider>
       </WorkspaceProvider>

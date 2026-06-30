@@ -1649,5 +1649,18 @@ export const DE: Record<string, string> = {
   "Novo Voo": "Neuer Flug",
   "Novo Transporte Terrestre": "Neuer Bodentransport",
   "Novo Evento Personalizado": "Neues benutzerdefiniertes Ereignis",
-  "Em breve": "Demnächst"
+  "Em breve": "Demnächst",
+  "Reserva o dia ou um horário": "Reserviert den Tag oder eine Uhrzeit",
+  "Novo evento": "Neues Ereignis",
+  "Geral (sem artista)": "Allgemein (ohne Künstler)",
+  "Dia inteiro": "Ganztägig",
+  "Criar evento": "Ereignis erstellen",
+  "Informe um título.": "Geben Sie einen Titel ein.",
+  "Studio, Day Off, Férias…": "Studio, Ruhetag, Urlaub…",
+  "Excluindo…": "Wird gelöscht…",
+  "Quando": "Wann",
+  "Início": "Beginn",
+  "Fim": "Ende",
+  "Voo": "Flug",
+  "Transporte": "Transport"
 };

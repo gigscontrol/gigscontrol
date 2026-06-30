@@ -2625,6 +2625,19 @@ const SWEEP14: Record<string, string> = {
   "Novo Transporte Terrestre": "New Ground Transport",
   "Novo Evento Personalizado": "New Custom Event",
   "Em breve": "Coming soon",
+  "Reserva o dia ou um horário": "Block the day or a time slot",
+  "Novo evento": "New event",
+  "Geral (sem artista)": "General (no artist)",
+  "Dia inteiro": "All day",
+  "Criar evento": "Create event",
+  "Informe um título.": "Enter a title.",
+  "Studio, Day Off, Férias…": "Studio, Day Off, Vacation…",
+  "Excluindo…": "Deleting…",
+  "Quando": "When",
+  "Início": "Start",
+  "Fim": "End",
+  "Voo": "Flight",
+  "Transporte": "Transport",
 };
 
 export const EN: Record<string, string> = {

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2 } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
+import { useAgendaItems, type NovoAgendaItem } from "@/lib/agenda-items-context";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
-import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
+import type { AgendaDateRange, Show, ShowStatus, DJ, AgendaItem } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
 import Modal from "./Modal";
 import { useT } from "@/lib/i18n";
@@ -290,7 +291,14 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
+  const { itens: agendaItens, criar: criarItem, remover: removerItem } = useAgendaItems();
+  // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo DJ.
+  const filteredItens = agendaItens.filter(
+    (i) => !i.artistId || selectedDJs.includes(i.artistId)
+  );
   const [novoItemDia, setNovoItemDia] = useState<DayCell | null>(null);
+  const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
+  const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -356,9 +364,11 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 key={day.uniqueKey}
                 day={day}
                 shows={filteredShows.filter((s) => showNoDia(s, day))}
+                itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
               />
             ))}
@@ -372,15 +382,18 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           .filter((d) => !d.isOtherMonth)
           .map((day) => {
             const shows = filteredShows.filter((s) => showNoDia(s, day));
-            if (shows.length === 0 && !day.isToday) return null;
+            const itens = filteredItens.filter((i) => i.data === day.dataISO);
+            if (shows.length === 0 && itens.length === 0 && !day.isToday) return null;
             return (
               <MobileDayCard
                 key={day.uniqueKey}
                 day={day}
                 shows={shows}
+                itens={itens}
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
               />
             );
@@ -408,6 +421,42 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             setNovoItemDia(null);
             onNovaVendaNoDia?.(d);
           }}
+          onNovoEvento={() => {
+            const d = novoItemDia;
+            setNovoItemDia(null);
+            setEventoFormDia(d);
+          }}
+        />
+      )}
+
+      {/* Form de novo evento personalizado */}
+      {eventoFormDia && (
+        <EventoFormModal
+          day={eventoFormDia}
+          artistas={artistas}
+          defaultArtistId={selectedDJs.length === 1 ? selectedDJs[0] : ""}
+          onClose={() => setEventoFormDia(null)}
+          onCriar={async (input) => {
+            await criarItem(input);
+            setEventoFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Detalhe + excluir item */}
+      {itemDetalhe && (
+        <ItemDetalheModal
+          item={itemDetalhe}
+          artistaNome={
+            itemDetalhe.artistId
+              ? artistas.find((a) => a.id === itemDetalhe.artistId)?.name
+              : undefined
+          }
+          onClose={() => setItemDetalhe(null)}
+          onExcluir={async () => {
+            await removerItem(itemDetalhe.id);
+            setItemDetalhe(null);
+          }}
         />
       )}
     </div>
@@ -419,16 +468,20 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
 function DayCellComponent({
   day,
   shows,
+  itens,
   artistas,
   accent,
   onShowClick,
+  onItemClick,
   onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
+  itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
@@ -468,18 +521,25 @@ function DayCellComponent({
       </div>
 
       <div className="flex-1 overflow-y-auto -mr-1 pr-1">
-        {shows.length > 0 ? (
-          shows.map((show) => (
-            <EventCard
-              key={show.id}
-              show={show}
-              dj={artistas.find((d) => d.id === show.djId)}
-              onClick={() => onShowClick(show.id)}
-            />
-          ))
-        ) : (
-          <DayCellEmptySlot />
-        )}
+        {shows.map((show) => (
+          <EventCard
+            key={show.id}
+            show={show}
+            dj={artistas.find((d) => d.id === show.djId)}
+            onClick={() => onShowClick(show.id)}
+          />
+        ))}
+        {itens.map((item) => (
+          <AgendaItemCard
+            key={item.id}
+            item={item}
+            artistaNome={
+              item.artistId ? artistas.find((a) => a.id === item.artistId)?.name : undefined
+            }
+            onClick={() => onItemClick(item)}
+          />
+        ))}
+        {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
         {!day.isOtherMonth && <NovoItemSlot onClick={() => onNovoItem(day)} />}
       </div>
     </div>
@@ -532,10 +592,9 @@ const ACOES_NOVO_ITEM: {
   {
     key: "evento",
     label: "Novo Evento Personalizado",
-    desc: "Em breve",
+    desc: "Reserva o dia ou um horário",
     icon: Calendar,
     cor: "var(--module-contratos)",
-    emBreve: true,
   },
 ];
 
@@ -546,10 +605,12 @@ function NovoItemModal({
   day,
   onClose,
   onNovoShow,
+  onNovoEvento,
 }: {
   day: DayCell;
   onClose: () => void;
   onNovoShow: () => void;
+  onNovoEvento: () => void;
 }) {
   const t = useT();
   return (
@@ -568,7 +629,13 @@ function NovoItemModal({
               key={a.key}
               type="button"
               disabled={a.emBreve}
-              onClick={a.key === "show" ? onNovoShow : undefined}
+              onClick={
+                a.key === "show"
+                  ? onNovoShow
+                  : a.key === "evento"
+                    ? onNovoEvento
+                    : undefined
+              }
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
             >
               <span
@@ -592,19 +659,293 @@ function NovoItemModal({
   );
 }
 
+const META_TIPO: Record<AgendaItem["tipo"], { label: string; icon: typeof Music; cor: string }> = {
+  evento: { label: "Evento", icon: Calendar, cor: "var(--module-contratos)" },
+  voo: { label: "Voo", icon: Plane, cor: "var(--module-agenda)" },
+  transporte: { label: "Transporte", icon: Car, cor: "var(--module-financeiro)" },
+};
+
+/** "YYYY-MM-DD" → "DD/MM/YYYY". */
+function formatarDataBR(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
+/** Card compacto de um item da agenda (evento/voo/transporte) no dia. */
+function AgendaItemCard({
+  item,
+  artistaNome,
+  onClick,
+}: {
+  item: AgendaItem;
+  artistaNome?: string;
+  onClick: () => void;
+}) {
+  const t = useT();
+  const meta = META_TIPO[item.tipo];
+  const Icone = meta.icon;
+  const horario = item.diaInteiro
+    ? t("Dia inteiro")
+    : [item.horaInicio, item.horaFim].filter(Boolean).join("–");
+  const sub = [horario, artistaNome].filter(Boolean).join(" · ");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left mb-1.5 rounded-md border p-2 transition-colors hover:border-border-strong"
+      style={{
+        borderColor: "var(--border-color)",
+        backgroundColor: `color-mix(in srgb, ${meta.cor} 8%, transparent)`,
+      }}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Icone size={12} style={{ color: meta.cor, flexShrink: 0 }} />
+        <span className="text-xs font-medium text-primary truncate">
+          {item.titulo || t(meta.label)}
+        </span>
+      </div>
+      {sub && <div className="text-[0.65rem] text-muted mt-0.5 truncate">{sub}</div>}
+    </button>
+  );
+}
+
+/** Campo rotulado simples pro form. */
+function CampoForm({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-medium text-muted">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+/** Form de criação de evento personalizado (Fase 2). */
+function EventoFormModal({
+  day,
+  artistas,
+  defaultArtistId,
+  onClose,
+  onCriar,
+}: {
+  day: DayCell;
+  artistas: DJ[];
+  defaultArtistId: string;
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [titulo, setTitulo] = useState("");
+  const [artistId, setArtistId] = useState(defaultArtistId);
+  const [diaInteiro, setDiaInteiro] = useState(true);
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaFim, setHoraFim] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function submit() {
+    if (salvando) return;
+    if (!titulo.trim()) {
+      setErro(t("Informe um título."));
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onCriar({
+        tipo: "evento",
+        titulo: titulo.trim(),
+        data: day.dataISO,
+        diaInteiro,
+        horaInicio: diaInteiro ? undefined : horaInicio || undefined,
+        horaFim: diaInteiro ? undefined : horaFim || undefined,
+        artistId: artistId || null,
+        observacoes: observacoes.trim() || undefined,
+      });
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Novo evento")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={440}
+    >
+      <div className="flex flex-col gap-4">
+        <CampoForm label={t("Título")}>
+          <input
+            autoFocus
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder={t("Studio, Day Off, Férias…")}
+            className="campo-input"
+          />
+        </CampoForm>
+
+        <CampoForm label={t("Artista")}>
+          <select
+            value={artistId}
+            onChange={(e) => setArtistId(e.target.value)}
+            className="campo-input"
+          >
+            <option value="">{t("Geral (sem artista)")}</option>
+            {artistas.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </CampoForm>
+
+        <label className="flex items-center gap-2 text-sm text-secondary cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={diaInteiro}
+            onChange={(e) => setDiaInteiro(e.target.checked)}
+            style={{ accentColor: "var(--module-contratos)" }}
+          />
+          {t("Dia inteiro")}
+        </label>
+
+        {!diaInteiro && (
+          <div className="grid grid-cols-2 gap-3">
+            <CampoForm label={t("Início")}>
+              <input
+                type="time"
+                value={horaInicio}
+                onChange={(e) => setHoraInicio(e.target.value)}
+                className="campo-input"
+              />
+            </CampoForm>
+            <CampoForm label={t("Fim")}>
+              <input
+                type="time"
+                value={horaFim}
+                onChange={(e) => setHoraFim(e.target.value)}
+                className="campo-input"
+              />
+            </CampoForm>
+          </div>
+        )}
+
+        <CampoForm label={t("Observações")}>
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            rows={2}
+            className="campo-input resize-none"
+          />
+        </CampoForm>
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          <button
+            onClick={submit}
+            disabled={salvando}
+            className="btn btn-primary disabled:opacity-50"
+            style={{ backgroundColor: "var(--module-contratos)", color: "#fff" }}
+          >
+            {salvando ? t("Salvando…") : t("Criar evento")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** Linha rótulo/valor pro detalhe. */
+function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-muted flex-shrink-0">{rotulo}</span>
+      <span className="text-primary text-right">{valor}</span>
+    </div>
+  );
+}
+
+/** Detalhe de um item + excluir (Fase 2: sem edição). */
+function ItemDetalheModal({
+  item,
+  artistaNome,
+  onClose,
+  onExcluir,
+}: {
+  item: AgendaItem;
+  artistaNome?: string;
+  onClose: () => void;
+  onExcluir: () => Promise<void>;
+}) {
+  const t = useT();
+  const [excluindo, setExcluindo] = useState(false);
+  const meta = META_TIPO[item.tipo];
+  const horario = item.diaInteiro
+    ? t("Dia inteiro")
+    : [item.horaInicio, item.horaFim].filter(Boolean).join(" – ") || "—";
+
+  async function excluir() {
+    if (excluindo) return;
+    setExcluindo(true);
+    try {
+      await onExcluir();
+    } catch {
+      setExcluindo(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={item.titulo || t(meta.label)}
+      subtitle={t(meta.label)}
+      maxWidth={400}
+    >
+      <div className="flex flex-col gap-3">
+        <LinhaDetalhe rotulo={t("Quando")} valor={`${formatarDataBR(item.data)} · ${horario}`} />
+        {artistaNome && <LinhaDetalhe rotulo={t("Artista")} valor={artistaNome} />}
+        {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={excluir}
+            disabled={excluindo}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+            style={{ color: "var(--danger)" }}
+          >
+            <Trash2 size={14} />
+            {excluindo ? t("Excluindo…") : t("Excluir")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function MobileDayCard({
   day,
   shows,
+  itens,
   artistas,
   accent,
   onShowClick,
+  onItemClick,
   onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
+  itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
@@ -638,18 +979,25 @@ function MobileDayCard({
           </span>
         )}
       </div>
-      {shows.length > 0 ? (
-        shows.map((show) => (
-          <EventCard
-            key={show.id}
-            show={show}
-            dj={artistas.find((d) => d.id === show.djId)}
-            onClick={() => onShowClick(show.id)}
-          />
-        ))
-      ) : (
-        <MobileDayEmptySlot />
-      )}
+      {shows.map((show) => (
+        <EventCard
+          key={show.id}
+          show={show}
+          dj={artistas.find((d) => d.id === show.djId)}
+          onClick={() => onShowClick(show.id)}
+        />
+      ))}
+      {itens.map((item) => (
+        <AgendaItemCard
+          key={item.id}
+          item={item}
+          artistaNome={
+            item.artistId ? artistas.find((a) => a.id === item.artistId)?.name : undefined
+          }
+          onClick={() => onItemClick(item)}
+        />
+      ))}
+      {shows.length === 0 && itens.length === 0 && <MobileDayEmptySlot />}
       <NovoItemSlot onClick={() => onNovoItem(day)} />
     </div>
   );
