@@ -12,11 +12,13 @@ import {
   descontoAnualPct,
   totalAnual,
   totalUsuarios,
+  valorMensal,
+  valorAnual,
   type CicloCobranca,
   type Plano,
 } from "@/lib/planos";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useT } from "@/lib/i18n";
+import { useT, useMoeda } from "@/lib/i18n";
 
 export default function PlanosPage() {
   const t = useT();
@@ -282,9 +284,10 @@ function CarrosselBtn({
 
 function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
   const t = useT();
-  const preco = precoPorMes(plano, ciclo);
+  const moeda = useMoeda();
+  const preco = precoPorMes(plano, ciclo, moeda);
   const desconto = descontoAnualPct(plano);
-  const economia = economiaAnual(plano);
+  const economia = economiaAnual(plano, moeda);
 
   return (
     <div
@@ -316,7 +319,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
       <div className="mb-4">
         <div className="flex items-baseline gap-1">
           <span className="text-2xl font-bold tabular-nums">
-            {formatarPreco(preco)}
+            {formatarPreco(preco, moeda)}
           </span>
           <span className="text-xs text-muted">{t("/mês")}</span>
         </div>
@@ -324,22 +327,22 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
         {ciclo === "anual" ? (
           <div className="mt-1.5 flex flex-col gap-0.5">
             <span className="text-[0.7rem] text-muted line-through tabular-nums">
-              {formatarPreco(plano.precoMensal)}{t("/mês no mensal")}
+              {formatarPreco(valorMensal(plano, moeda), moeda)}{t("/mês no mensal")}
             </span>
             <span
               className="text-[0.7rem] font-semibold"
               style={{ color: "var(--module-financeiro)" }}
             >
-              {t("Economize")} {formatarPrecoCurto(economia)} {t("por ano")} ({desconto}%)
+              {t("Economize")} {formatarPrecoCurto(economia, moeda)} {t("por ano")} ({desconto}%)
             </span>
             <span className="text-[0.7rem] text-muted">
-              {formatarPrecoCurto(totalAnual(plano))} {t("cobrados no ano")}
+              {formatarPrecoCurto(totalAnual(plano, moeda), moeda)} {t("cobrados no ano")}
             </span>
           </div>
         ) : (
           <div className="mt-1.5">
             <span className="text-[0.7rem] text-muted">
-              {t("ou")} {formatarPreco(plano.precoAnual / 12)}{t("/mês no plano anual")}
+              {t("ou")} {formatarPreco(valorAnual(plano, moeda) / 12, moeda)}{t("/mês no plano anual")}
             </span>
           </div>
         )}

@@ -7,8 +7,8 @@
  * O papel "Admin" (dono da conta) é sempre 1 e NÃO conta nos limites de
  * artistas nem de usuários da equipe.
  *
- * Preços em R$ (Brasil). A cobrança em outras moedas por IP entra numa
- * etapa futura — por ora tudo é BRL.
+ * Preços em R$ (Brasil) e US$ (fora do Brasil). A moeda é escolhida por IP
+ * (cookie `gc-moeda`, definido no middleware): BR → BRL, exterior → USD.
  */
 
 export type PlanoId =
@@ -20,6 +20,9 @@ export type PlanoId =
   | "agencia-max";
 
 export type CicloCobranca = "mensal" | "anual";
+
+/** Moeda de cobrança — definida por região (IP). */
+export type Moeda = "brl" | "usd";
 
 export type Plano = {
   id: PlanoId;
@@ -40,6 +43,10 @@ export type Plano = {
   precoMensal: number;
   /** Preço TOTAL do ano no plano anual (R$) — cobrado 1× ao ano */
   precoAnual: number;
+  /** Preço por mês em US$ (cobrado fora do Brasil) */
+  precoMensalUsd: number;
+  /** Preço TOTAL do ano em US$ */
+  precoAnualUsd: number;
   destaque?: boolean;
   /** Recursos listados na página de planos */
   recursos: string[];
@@ -61,6 +68,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 8,
     precoMensal: 149,
     precoAnual: 1490,
+    precoMensalUsd: 59,
+    precoAnualUsd: 590,
     recursos: [
       "1 artista",
       "3 usuários da equipe",
@@ -80,6 +89,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 24,
     precoMensal: 367,
     precoAnual: 3670,
+    precoMensalUsd: 137,
+    precoAnualUsd: 1370,
     destaque: true,
     recursos: [
       "3 artistas",
@@ -100,6 +111,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 40,
     precoMensal: 585,
     precoAnual: 5850,
+    precoMensalUsd: 215,
+    precoAnualUsd: 2150,
     recursos: [
       "5 artistas",
       "15 usuários da equipe",
@@ -119,6 +132,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 80,
     precoMensal: 1130,
     precoAnual: 11300,
+    precoMensalUsd: 410,
+    precoAnualUsd: 4100,
     recursos: [
       "10 artistas",
       "30 usuários da equipe",
@@ -139,6 +154,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 160,
     precoMensal: 2765,
     precoAnual: 27650,
+    precoMensalUsd: 995,
+    precoAnualUsd: 9950,
     recursos: [
       "20 artistas",
       "60 usuários da equipe",
@@ -159,6 +176,8 @@ export const PLANOS: Plano[] = [
     maxContratosMes: 320,
     precoMensal: 5490,
     precoAnual: 54900,
+    precoMensalUsd: 1970,
+    precoAnualUsd: 19700,
     recursos: [
       "40 artistas",
       "120 usuários da equipe",
@@ -175,17 +194,31 @@ export function getPlano(id: PlanoId): Plano {
   return PLANOS.find((p) => p.id === id) ?? PLANOS[0];
 }
 
+/** Preço mensal cru na moeda escolhida */
+export function valorMensal(plano: Plano, moeda: Moeda = "brl"): number {
+  return moeda === "usd" ? plano.precoMensalUsd : plano.precoMensal;
+}
+
+/** Preço anual (total do ano) cru na moeda escolhida */
+export function valorAnual(plano: Plano, moeda: Moeda = "brl"): number {
+  return moeda === "usd" ? plano.precoAnualUsd : plano.precoAnual;
+}
+
 /** Preço efetivo POR MÊS conforme o ciclo (no anual = total/12). */
-export function precoPorMes(plano: Plano, ciclo: CicloCobranca): number {
-  return ciclo === "anual" ? plano.precoAnual / 12 : plano.precoMensal;
+export function precoPorMes(
+  plano: Plano,
+  ciclo: CicloCobranca,
+  moeda: Moeda = "brl"
+): number {
+  return ciclo === "anual" ? valorAnual(plano, moeda) / 12 : valorMensal(plano, moeda);
 }
 
 /** Quanto se economiza por ano ao escolher o plano anual */
-export function economiaAnual(plano: Plano): number {
-  return plano.precoMensal * 12 - plano.precoAnual;
+export function economiaAnual(plano: Plano, moeda: Moeda = "brl"): number {
+  return valorMensal(plano, moeda) * 12 - valorAnual(plano, moeda);
 }
 
-/** Percentual de desconto do plano anual frente ao mensal */
+/** Percentual de desconto do anual frente ao mensal (igual nas duas moedas) */
 export function descontoAnualPct(plano: Plano): number {
   const cheio = plano.precoMensal * 12;
   if (cheio <= 0) return 0;
@@ -193,23 +226,23 @@ export function descontoAnualPct(plano: Plano): number {
 }
 
 /** Total cobrado no plano anual (12 meses de uma vez) */
-export function totalAnual(plano: Plano): number {
-  return plano.precoAnual;
+export function totalAnual(plano: Plano, moeda: Moeda = "brl"): number {
+  return valorAnual(plano, moeda);
 }
 
-export const formatarPreco = (v: number) =>
-  v.toLocaleString("pt-BR", {
+export const formatarPreco = (v: number, moeda: Moeda = "brl") =>
+  v.toLocaleString(moeda === "usd" ? "en-US" : "pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency: moeda === "usd" ? "USD" : "BRL",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
 /** Formata sem centavos quando for valor "redondo" — usado em totais grandes */
-export const formatarPrecoCurto = (v: number) =>
-  v.toLocaleString("pt-BR", {
+export const formatarPrecoCurto = (v: number, moeda: Moeda = "brl") =>
+  v.toLocaleString(moeda === "usd" ? "en-US" : "pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency: moeda === "usd" ? "USD" : "BRL",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
-import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
+import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
 import CidadeIBGEAutocomplete, {
   type CidadeIBGE,
 } from "@/components/CidadeIBGEAutocomplete";
@@ -38,7 +38,7 @@ import {
   ModalCredenciais,
 } from "@/components/configuracoes/AbaArtistas";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useT } from "@/lib/i18n";
+import { useT, useMoeda } from "@/lib/i18n";
 
 /**
  * /onboarding — wizard linear de 5 etapas pra novos admins.
@@ -412,6 +412,7 @@ function Etapa2Plano({
 }) {
   const router = useRouter();
   const t = useT();
+  const moeda = useMoeda();
   const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
     planoEscolhido ?? "individual"
   );
@@ -518,7 +519,7 @@ function Etapa2Plano({
               <div className="text-[0.65rem] text-muted mb-2 line-clamp-2">{p.tagline}</div>
               <div className="mb-2">
                 <span className="text-base font-bold text-primary">
-                  {formatarPreco(p.precoMensal)}
+                  {formatarPreco(valorMensal(p, moeda), moeda)}
                 </span>
                 <span className="text-[0.6rem] text-muted">{t("/mês")}</span>
               </div>

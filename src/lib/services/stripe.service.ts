@@ -1,5 +1,12 @@
 import Stripe from "stripe";
-import { getPlano, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import {
+  getPlano,
+  valorMensal,
+  valorAnual,
+  type PlanoId,
+  type CicloCobranca,
+  type Moeda,
+} from "@/lib/planos";
 
 /**
  * Integração com a Stripe — Assinaturas recorrentes (Subscriptions).
@@ -42,9 +49,17 @@ function appUrl(): string {
   return u.replace(/\/+$/, "");
 }
 
-/** lookup_key do preço na Stripe pra um plano + ciclo. */
-export function lookupKey(plano: PlanoId, ciclo: CicloCobranca): string {
-  return `${plano}_${ciclo}`;
+/**
+ * lookup_key do preço na Stripe pra um plano + ciclo + moeda.
+ * BRL: `${plano}_${ciclo}` (ex. `time_mensal`); USD: + sufixo `_usd`
+ * (ex. `time_mensal_usd`).
+ */
+export function lookupKey(
+  plano: PlanoId,
+  ciclo: CicloCobranca,
+  moeda: Moeda = "brl"
+): string {
+  return `${plano}_${ciclo}${moeda === "usd" ? "_usd" : ""}`;
 }
 
 /**
@@ -52,12 +67,13 @@ export function lookupKey(plano: PlanoId, ciclo: CicloCobranca): string {
  *  - mensal: o preço mensal cheio.
  *  - anual: o preço-por-mês do anual × 12.
  */
-export function valorCobranca(planoId: PlanoId, ciclo: CicloCobranca): number {
+export function valorCobranca(
+  planoId: PlanoId,
+  ciclo: CicloCobranca,
+  moeda: Moeda = "brl"
+): number {
   const plano = getPlano(planoId);
-  if (ciclo === "anual") {
-    return plano.precoAnual; // total do ano (cobrado 1×)
-  }
-  return plano.precoMensal;
+  return ciclo === "anual" ? valorAnual(plano, moeda) : valorMensal(plano, moeda);
 }
 
 /**
@@ -66,9 +82,10 @@ export function valorCobranca(planoId: PlanoId, ciclo: CicloCobranca): number {
  */
 export async function resolverPriceId(
   plano: PlanoId,
-  ciclo: CicloCobranca
+  ciclo: CicloCobranca,
+  moeda: Moeda = "brl"
 ): Promise<string> {
-  const key = lookupKey(plano, ciclo);
+  const key = lookupKey(plano, ciclo, moeda);
   const lista = await getStripe().prices.list({
     lookup_keys: [key],
     active: true,
@@ -110,11 +127,12 @@ export async function criarCheckoutAssinatura(params: {
   plano: PlanoId;
   ciclo: CicloCobranca;
   customerId: string;
+  moeda?: Moeda;
   baseUrl?: string;
 }): Promise<Stripe.Checkout.Session> {
-  const { workspaceId, plano, ciclo, customerId } = params;
+  const { workspaceId, plano, ciclo, customerId, moeda = "brl" } = params;
   const baseUrl = params.baseUrl ?? appUrl();
-  const priceId = await resolverPriceId(plano, ciclo);
+  const priceId = await resolverPriceId(plano, ciclo, moeda);
 
   return getStripe().checkout.sessions.create({
     mode: "subscription",
@@ -124,9 +142,9 @@ export async function criarCheckoutAssinatura(params: {
     cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
     client_reference_id: workspaceId,
     subscription_data: {
-      metadata: { workspaceId, plano, ciclo },
+      metadata: { workspaceId, plano, ciclo, moeda },
     },
-    metadata: { workspaceId, plano, ciclo },
+    metadata: { workspaceId, plano, ciclo, moeda },
   });
 }
 

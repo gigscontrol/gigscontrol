@@ -11,7 +11,13 @@ import {
   ShieldCheck,
   RefreshCw,
 } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useT, useMoeda } from "@/lib/i18n";
+import {
+  getPlano,
+  valorMensal,
+  formatarPreco,
+  type PlanoId,
+} from "@/lib/planos";
 
 /**
  * Página /pagamento — Checkout de assinatura (Stripe).
@@ -39,6 +45,7 @@ type OnboardingStatus = {
 export default function PagamentoPage() {
   const router = useRouter();
   const t = useT();
+  const moeda = useMoeda();
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
@@ -114,11 +121,10 @@ export default function PagamentoPage() {
   }
 
   const plano = status.plano;
-  const precoFormatado = plano
-    ? new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(plano.precoMensal)
+  // Usa o catálogo PLANOS (tem USD) em vez do precoMensal cru da API.
+  const planoCompleto = plano ? getPlano(plano.id as PlanoId) : null;
+  const precoFormatado = planoCompleto
+    ? formatarPreco(valorMensal(planoCompleto, moeda), moeda)
     : "—";
 
   return (

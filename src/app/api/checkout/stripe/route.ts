@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { cookies, headers } from "next/headers";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { regiaoDe, resolverPais } from "@/lib/regiao";
 import {
   criarCheckoutAssinatura,
   obterOuCriarCustomer,
@@ -60,7 +62,13 @@ export async function POST(request: Request) {
   }
   const { plano, ciclo } = parsed.data;
   const workspaceId = r.sessao.workspaceId;
-  const valor = valorCobranca(plano, ciclo);
+  // Moeda pela região (mesma regra do display) — cobra USD fora do BR.
+  const pais = resolverPais(
+    headers().get("x-vercel-ip-country"),
+    cookies().get("gc-pais")?.value
+  );
+  const { moeda } = regiaoDe(pais);
+  const valor = valorCobranca(plano, ciclo, moeda);
 
   const admin = criarClienteAdmin();
 
@@ -85,6 +93,7 @@ export async function POST(request: Request) {
       plano,
       ciclo,
       customerId,
+      moeda,
     });
 
     if (!session.url) {
