@@ -2599,6 +2599,25 @@ const SWEEP13: Record<string, string> = {
   "Formatura Med — 2/2": "Med Graduation — 2/2",
 };
 
+const SWEEP14: Record<string, string> = {
+  "mês": "month",
+  "Renovar": "Renew",
+  "Renovação pendente": "Renewal pending",
+  "Pagar e renovar": "Pay and renew",
+  "Renove pra reativar o acesso do seu workspace.":
+    "Renew to reactivate your workspace access.",
+  "Informe seu administrador ({nome}) sobre a renovação do plano pra liberar o acesso.":
+    "Let your administrator ({nome}) know about the plan renewal to restore access.",
+  "Informe seu administrador sobre a renovação do plano pra liberar o acesso.":
+    "Let your administrator know about the plan renewal to restore access.",
+  "Pagamento pendente — a renovação do plano falhou.":
+    "Payment pending — the plan renewal failed.",
+  "Pagamento pendente — avise seu administrador ({nome}) sobre a renovação.":
+    "Payment pending — let your administrator ({nome}) know about the renewal.",
+  "Pagamento pendente — avise seu administrador sobre a renovação.":
+    "Payment pending — let your administrator know about the renewal.",
+};
+
 export const EN: Record<string, string> = {
   ...CHROME,
   ...VENDAS,
@@ -2620,4 +2639,5 @@ export const EN: Record<string, string> = {
   ...SWEEP11,
   ...SWEEP12,
   ...SWEEP13,
+  ...SWEEP14,
 };

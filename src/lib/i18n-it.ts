@@ -1630,5 +1630,15 @@ export const IT: Record<string, string> = {
   "Réveillon Club": "Capodanno Club",
   "Festival Verão — 1/2": "Festival d'Estate — 1/2",
   "Réveillon Club — 1/3": "Capodanno Club — 1/3",
-  "Formatura Med — 2/2": "Laurea Medicina — 2/2"
+  "Formatura Med — 2/2": "Laurea Medicina — 2/2",
+  "mês": "mese",
+  "Renovar": "Rinnova",
+  "Renovação pendente": "Rinnovo in sospeso",
+  "Pagar e renovar": "Paga e rinnova",
+  "Renove pra reativar o acesso do seu workspace.": "Rinnova per riattivare l'accesso al tuo spazio.",
+  "Informe seu administrador ({nome}) sobre a renovação do plano pra liberar o acesso.": "Informa il tuo amministratore ({nome}) sul rinnovo del piano per sbloccare l'accesso.",
+  "Informe seu administrador sobre a renovação do plano pra liberar o acesso.": "Informa il tuo amministratore sul rinnovo del piano per sbloccare l'accesso.",
+  "Pagamento pendente — a renovação do plano falhou.": "Pagamento in sospeso — il rinnovo del piano non è riuscito.",
+  "Pagamento pendente — avise seu administrador ({nome}) sobre a renovação.": "Pagamento in sospeso — informa il tuo amministratore ({nome}) sul rinnovo.",
+  "Pagamento pendente — avise seu administrador sobre a renovação.": "Pagamento in sospeso — informa il tuo amministratore sul rinnovo."
 };

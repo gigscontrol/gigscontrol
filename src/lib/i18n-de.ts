@@ -1630,5 +1630,15 @@ export const DE: Record<string, string> = {
   "Réveillon Club": "Silvester-Club",
   "Festival Verão — 1/2": "Sommerfestival — 1/2",
   "Réveillon Club — 1/3": "Silvester-Club — 1/3",
-  "Formatura Med — 2/2": "Medizin-Abschlussfeier — 2/2"
+  "Formatura Med — 2/2": "Medizin-Abschlussfeier — 2/2",
+  "mês": "Monat",
+  "Renovar": "Verlängern",
+  "Renovação pendente": "Verlängerung ausstehend",
+  "Pagar e renovar": "Bezahlen und verlängern",
+  "Renove pra reativar o acesso do seu workspace.": "Verlängern Sie, um den Zugriff auf Ihren Workspace zu reaktivieren.",
+  "Informe seu administrador ({nome}) sobre a renovação do plano pra liberar o acesso.": "Informieren Sie Ihren Administrator ({nome}) über die Tarifverlängerung, um den Zugriff freizugeben.",
+  "Informe seu administrador sobre a renovação do plano pra liberar o acesso.": "Informieren Sie Ihren Administrator über die Tarifverlängerung, um den Zugriff freizugeben.",
+  "Pagamento pendente — a renovação do plano falhou.": "Zahlung ausstehend — die Tarifverlängerung ist fehlgeschlagen.",
+  "Pagamento pendente — avise seu administrador ({nome}) sobre a renovação.": "Zahlung ausstehend — informieren Sie Ihren Administrator ({nome}) über die Verlängerung.",
+  "Pagamento pendente — avise seu administrador sobre a renovação.": "Zahlung ausstehend — informieren Sie Ihren Administrator über die Verlängerung."
 };

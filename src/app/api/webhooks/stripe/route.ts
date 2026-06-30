@@ -217,11 +217,20 @@ export async function POST(request: Request) {
         const subscriptionId = subscriptionIdDoInvoice(invoice);
         if (!subscriptionId) break;
         const resumo = await resumoDaSubscription(subscriptionId);
+        if (!resumo.workspaceId) break;
+        // Renovação falhou → 1 dia de GRAÇA (acesso + aviso) antes de bloquear.
+        // Set-once: só transiciona de ATIVA → graça. As retentativas do Stripe
+        // disparam payment_failed de novo, mas aí já está "graca" e o prazo é
+        // preservado. Uma retentativa que der certo → invoice.paid → "ativa".
+        const gracaAte = new Date(Date.now() + 86_400_000).toISOString();
         console.warn(
-          `[webhook stripe] invoice.payment_failed sub=${subscriptionId} ws=${resumo.workspaceId} — suspendendo.`
+          `[webhook stripe] invoice.payment_failed sub=${subscriptionId} ws=${resumo.workspaceId} — graça até ${gracaAte}.`
         );
-        // Mantém o workspace; só suspende a subscription.
-        await aplicarStatus(admin, resumo, "suspended");
+        await admin
+          .from("subscriptions")
+          .update({ status: "graca", trial_termina_em: gracaAte })
+          .eq("workspace_id", resumo.workspaceId)
+          .eq("status", "ativa");
         break;
       }
 
@@ -242,6 +251,11 @@ export async function POST(request: Request) {
 
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
+        if (sub.status === "past_due") {
+          // Stripe em dunning (retentando) → a graça é dona do
+          // invoice.payment_failed. Não atropela o prazo aqui.
+          break;
+        }
         const resumo: SubResumo = {
           subscriptionId: sub.id,
           customerId: idDe(sub.customer),
