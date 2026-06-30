@@ -146,6 +146,13 @@ function AuthGuard({ children }: { children: ReactNode }) {
         // expirar de fato).
         if (!d.onboardingCompleto) {
           router.replace("/onboarding");
+        } else if (
+          d.subscriptionStatus === "suspended" ||
+          d.subscriptionStatus === "cancelled"
+        ) {
+          // Assinatura suspensa (pagamento falho / chargeback) ou cancelada
+          // → bloqueia o app e manda reativar em /pagamento. Trial/ativa passam.
+          router.replace("/pagamento");
         } else {
           setVerificandoOnboarding(false);
         }

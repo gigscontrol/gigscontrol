@@ -98,9 +98,9 @@ async function aplicarStatus(
   const patch: Record<string, unknown> = {
     status: statusInterno,
     provider: "stripe",
-    // reaproveitado: mp_* guarda ids do Stripe (sem migration)
-    mp_preference_id: r.subscriptionId,
   };
+  // reaproveitado: mp_* guarda ids do Stripe (sem migration)
+  if (r.subscriptionId) patch.mp_preference_id = r.subscriptionId;
   if (r.customerId) patch.mp_payment_id = r.customerId;
   if (proxima) patch.proxima_cobranca = proxima;
   if (statusInterno === "ativa") {
@@ -254,6 +254,48 @@ export async function POST(request: Request) {
         await aplicarStatus(admin, resumo, interno, {
           espelharNoWorkspace: interno === "cancelled",
         });
+        break;
+      }
+
+      case "charge.dispute.created":
+      case "radar.early_fraud_warning.created": {
+        // Chargeback (disputa no cartão) ou alerta de fraude → suspende o
+        // acesso NA HORA, pra cortar uso de má fé. Acha o workspace pelo
+        // customer da cobrança (guardado em subscriptions.mp_payment_id).
+        const alvo = event.data.object as unknown as {
+          charge?: string | { id: string } | null;
+        };
+        const chargeId = idDe(alvo.charge ?? null);
+        if (!chargeId) break;
+        const charge = await getStripe().charges.retrieve(chargeId);
+        const customerId = idDe(charge.customer);
+        if (!customerId) break;
+
+        const { data: row } = await admin
+          .from("subscriptions")
+          .select("workspace_id, mp_preference_id")
+          .eq("mp_payment_id", customerId)
+          .maybeSingle<{
+            workspace_id: string | null;
+            mp_preference_id: string | null;
+          }>();
+        if (row?.workspace_id) {
+          console.warn(
+            `[webhook stripe] ${event.type} charge=${chargeId} ws=${row.workspace_id} — suspendendo por disputa/fraude.`
+          );
+          await aplicarStatus(
+            admin,
+            {
+              subscriptionId: row.mp_preference_id ?? "",
+              customerId,
+              workspaceId: row.workspace_id,
+              status: "disputed",
+              periodEnd: null,
+            },
+            "suspended",
+            { espelharNoWorkspace: true }
+          );
+        }
         break;
       }
 
