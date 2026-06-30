@@ -27,9 +27,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // Aceita handle (username) OU e-mail — sem "@" vira o e-mail interno
+  // determinístico que o backend gera pra artistas e equipe.
+  const emailAuth = email.includes("@")
+    ? email
+    : `${email.toLowerCase()}@interno.gigscontrol.app`;
   const supabase = criarClienteServidor();
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: emailAuth,
     password: senha,
   });
 

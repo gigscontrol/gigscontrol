@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 /**
  * Mockups das telas do GIGS CONTROL — representações estilizadas usadas
  * na landing page para mostrar como o produto é.
@@ -8,6 +10,9 @@
  * capturas de tela reais da dashboard, basta substituir cada componente
  * por uma <img src="/prints/agenda.png" .../> que a moldura (BrowserFrame)
  * continua funcionando igual.
+ *
+ * Textos passam por t() pra acompanhar o idioma do site (nomes próprios,
+ * valores em R$ e datas ficam como estão).
  */
 
 const COR = {
@@ -20,6 +25,7 @@ const COR = {
 
 /* Barra lateral simplificada, comum a todos os mockups */
 function MiniSidebar({ ativo }: { ativo: keyof typeof COR }) {
+  const t = useT();
   const itens: Array<{ k: keyof typeof COR; label: string }> = [
     { k: "agenda", label: "Agenda" },
     { k: "vendas", label: "Vendas" },
@@ -57,7 +63,7 @@ function MiniSidebar({ ativo }: { ativo: keyof typeof COR }) {
                 className="h-1.5 w-1.5 rounded-full"
                 style={{ backgroundColor: on ? COR[it.k] : "var(--border-strong)" }}
               />
-              {it.label}
+              {t(it.label)}
             </div>
           );
         })}
@@ -92,36 +98,37 @@ function MiniStat({
    MOCKUP — Painel principal (hero)
    ============================================================ */
 export function MockDashboard() {
+  const t = useT();
   return (
     <div className="flex h-[300px] sm:h-[380px] text-left">
       <MiniSidebar ativo="agenda" />
       <div className="flex-1 p-3 sm:p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm font-bold">Visão geral</div>
+            <div className="text-sm font-bold">{t("Visão geral")}</div>
             <div className="text-[0.6rem] text-muted">
-              Resumo da operação
+              {t("Resumo da operação")}
             </div>
           </div>
           <div
             className="h-6 w-16 rounded text-[0.6rem] flex items-center justify-center text-white font-semibold"
             style={{ backgroundColor: COR.vendas }}
           >
-            + Novo
+            + {t("Novo")}
           </div>
         </div>
 
         <div className="flex gap-2 mb-3">
-          <MiniStat label="Shows no mês" valor="24" cor={COR.agenda} />
-          <MiniStat label="Orçamentos" valor="18" cor={COR.vendas} />
-          <MiniStat label="A receber" valor="R$ 86k" cor={COR.financeiro} />
-          <MiniStat label="Contratantes" valor="42" cor={COR.contatos} />
+          <MiniStat label={t("Shows no mês")} valor="24" cor={COR.agenda} />
+          <MiniStat label={t("Orçamentos")} valor="18" cor={COR.vendas} />
+          <MiniStat label={t("A receber")} valor="R$ 86k" cor={COR.financeiro} />
+          <MiniStat label={t("Contratantes")} valor="42" cor={COR.contatos} />
         </div>
 
         {/* Gráfico fake */}
         <div className="rounded-md border border-border bg-surface p-3 mb-3">
           <div className="text-[0.6rem] text-muted mb-2">
-            Faturamento por mês
+            {t("Faturamento por mês")}
           </div>
           <div className="flex items-end gap-1.5 h-16">
             {[40, 65, 50, 80, 60, 95, 70, 88].map((h, i) => (
@@ -141,7 +148,7 @@ export function MockDashboard() {
         {/* Lista fake */}
         <div className="rounded-md border border-border bg-surface p-2">
           {["Show — CZ · São Paulo", "Orçamento — Dudu · Curitiba"].map(
-            (t, i) => (
+            (linha, i) => (
               <div
                 key={i}
                 className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0"
@@ -151,7 +158,7 @@ export function MockDashboard() {
                   style={{ backgroundColor: i === 0 ? COR.agenda : COR.vendas }}
                 />
                 <div className="text-[0.65rem] text-secondary truncate">
-                  {t}
+                  {t(linha)}
                 </div>
               </div>
             )
@@ -166,6 +173,7 @@ export function MockDashboard() {
    MOCKUP — Agenda de Shows
    ============================================================ */
 export function MockAgenda() {
+  const t = useT();
   const dias = Array.from({ length: 35 }, (_, i) => i - 2);
   const comShow: Record<number, string> = {
     3: COR.agenda,
@@ -180,12 +188,12 @@ export function MockAgenda() {
     <div className="flex h-[300px] sm:h-[360px] text-left">
       <MiniSidebar ativo="agenda" />
       <div className="flex-1 p-3 sm:p-4 overflow-hidden">
-        <div className="text-sm font-bold mb-0.5">Agenda de Shows</div>
-        <div className="text-[0.6rem] text-muted mb-3">Maio de 2026</div>
+        <div className="text-sm font-bold mb-0.5">{t("Agenda de Shows")}</div>
+        <div className="text-[0.6rem] text-muted mb-3">{t("Maio de 2026")}</div>
 
         {/* Cabeçalho dos dias */}
         <div className="grid grid-cols-7 gap-1 mb-1">
-          {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+          {t("D,S,T,Q,Q,S,S").split(",").map((d, i) => (
             <div
               key={i}
               className="text-[0.55rem] text-muted text-center font-medium"
@@ -234,6 +242,7 @@ export function MockAgenda() {
    MOCKUP — Vendas / Orçamentos
    ============================================================ */
 export function MockVendas() {
+  const t = useT();
   const linhas = [
     { ev: "Festival Verão", dj: "CZ", v: "R$ 12.000", st: "Aceito", c: COR.financeiro },
     { ev: "Casamento Premium", dj: "Dudu", v: "R$ 8.500", st: "Enviado", c: COR.vendas },
@@ -247,14 +256,14 @@ export function MockVendas() {
       <div className="flex-1 p-3 sm:p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm font-bold">Histórico de Orçamentos</div>
-            <div className="text-[0.6rem] text-muted">18 orçamentos</div>
+            <div className="text-sm font-bold">{t("Histórico de Orçamentos")}</div>
+            <div className="text-[0.6rem] text-muted">{t("{n} orçamentos", { n: 18 })}</div>
           </div>
           <div
             className="h-6 px-2 rounded text-[0.6rem] flex items-center text-white font-semibold"
             style={{ backgroundColor: COR.vendas }}
           >
-            + Orçamento
+            + {t("Orçamento")}
           </div>
         </div>
 
@@ -266,7 +275,7 @@ export function MockVendas() {
             >
               <div className="flex-1 min-w-0">
                 <div className="text-[0.65rem] font-medium text-primary truncate">
-                  {l.ev}
+                  {t(l.ev)}
                 </div>
                 <div className="text-[0.55rem] text-muted">{l.dj}</div>
               </div>
@@ -277,7 +286,7 @@ export function MockVendas() {
                 className="text-[0.55rem] font-semibold px-1.5 py-0.5 rounded"
                 style={{ backgroundColor: `${l.c}22`, color: l.c }}
               >
-                {l.st}
+                {t(l.st)}
               </span>
             </div>
           ))}
@@ -291,6 +300,7 @@ export function MockVendas() {
    MOCKUP — Financeiro
    ============================================================ */
 export function MockFinanceiro() {
+  const t = useT();
   const parcelas = [
     { ev: "Festival Verão — 1/2", venc: "10/05", st: "Pago", c: COR.financeiro },
     { ev: "Casamento Premium", venc: "15/05", st: "Pago", c: COR.financeiro },
@@ -302,13 +312,13 @@ export function MockFinanceiro() {
     <div className="flex h-[300px] sm:h-[360px] text-left">
       <MiniSidebar ativo="financeiro" />
       <div className="flex-1 p-3 sm:p-4 overflow-hidden">
-        <div className="text-sm font-bold mb-0.5">Controle de Pagamentos</div>
-        <div className="text-[0.6rem] text-muted mb-3">Maio de 2026</div>
+        <div className="text-sm font-bold mb-0.5">{t("Controle de Pagamentos")}</div>
+        <div className="text-[0.6rem] text-muted mb-3">{t("Maio de 2026")}</div>
 
         <div className="flex gap-2 mb-3">
-          <MiniStat label="Recebido" valor="R$ 20,5k" cor={COR.financeiro} />
-          <MiniStat label="A receber" valor="R$ 35k" cor={COR.agenda} />
-          <MiniStat label="Atrasado" valor="R$ 6k" cor="#ef4444" />
+          <MiniStat label={t("Recebido")} valor="R$ 20,5k" cor={COR.financeiro} />
+          <MiniStat label={t("A receber")} valor="R$ 35k" cor={COR.agenda} />
+          <MiniStat label={t("Atrasado")} valor="R$ 6k" cor="#ef4444" />
         </div>
 
         <div className="rounded-md border border-border bg-surface overflow-hidden">
@@ -323,15 +333,15 @@ export function MockFinanceiro() {
               />
               <div className="flex-1 min-w-0">
                 <div className="text-[0.65rem] font-medium text-primary truncate">
-                  {p.ev}
+                  {t(p.ev)}
                 </div>
               </div>
-              <div className="text-[0.55rem] text-muted">venc. {p.venc}</div>
+              <div className="text-[0.55rem] text-muted">{t("venc.")} {p.venc}</div>
               <span
                 className="text-[0.55rem] font-semibold px-1.5 py-0.5 rounded"
                 style={{ backgroundColor: `${p.c}22`, color: p.c }}
               >
-                {p.st}
+                {t(p.st)}
               </span>
             </div>
           ))}
@@ -368,6 +378,7 @@ function MiniCheck({ cor }: { cor: string }) {
 }
 
 export function MockContratos() {
+  const t = useT();
   const sig = [
     { nome: "Studio Eventos", papel: "Contratante" },
     { nome: "DJ CZ", papel: "Contratado" },
@@ -378,14 +389,14 @@ export function MockContratos() {
       <div className="flex-1 p-3 sm:p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm font-bold">Contrato CTR-0001</div>
-            <div className="text-[0.6rem] text-muted">Festival Verão · DJ CZ</div>
+            <div className="text-sm font-bold">{t("Contrato")} CTR-0001</div>
+            <div className="text-[0.6rem] text-muted">{t("Festival Verão")} · DJ CZ</div>
           </div>
           <span
             className="h-6 px-2 rounded text-[0.6rem] flex items-center text-white font-semibold"
             style={{ backgroundColor: COR.contratos }}
           >
-            Assinado
+            {t("Assinado")}
           </span>
         </div>
 
@@ -396,7 +407,7 @@ export function MockContratos() {
               className="text-[0.6rem] font-bold text-center mb-2"
               style={{ color: "#0f172a" }}
             >
-              CONTRATO DE SHOW
+              {t("CONTRATO DE SHOW")}
             </div>
             {[100, 92, 96, 72, 88].map((w, i) => (
               <div
@@ -413,7 +424,7 @@ export function MockContratos() {
                     className="text-[0.45rem] text-center"
                     style={{ color: "#64748b" }}
                   >
-                    {p}
+                    {t(p)}
                   </div>
                 </div>
               ))}
@@ -423,7 +434,7 @@ export function MockContratos() {
           {/* Painel de assinaturas */}
           <div className="w-full sm:w-44 flex-shrink-0">
             <div className="text-[0.55rem] text-muted mb-1.5 uppercase tracking-wide">
-              Assinaturas
+              {t("Assinaturas")}
             </div>
             <div className="flex flex-col gap-1.5">
               {sig.map((s, i) => (
@@ -440,7 +451,7 @@ export function MockContratos() {
                       className="text-[0.5rem]"
                       style={{ color: COR.financeiro }}
                     >
-                      {s.papel} · assinado
+                      {t(s.papel)} · {t("assinado")}
                     </div>
                   </div>
                 </div>
@@ -450,13 +461,13 @@ export function MockContratos() {
               <MiniCheck cor={COR.contratos} />
               <div className="min-w-0">
                 <div className="text-[0.6rem] font-medium text-primary">
-                  Verificação
+                  {t("Verificação")}
                 </div>
                 <div
                   className="text-[0.5rem]"
                   style={{ color: COR.contratos }}
                 >
-                  Selfie + facial
+                  {t("Selfie + facial")}
                 </div>
               </div>
             </div>

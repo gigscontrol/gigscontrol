@@ -8,11 +8,33 @@ import {
   atualizarContrato as repoAtualizar,
   removerContrato as repoRemover,
   proximoNumeroContrato,
+  contarContratosDesde,
 } from "@/lib/repositories/contratos.repo";
 import type {
   ContratoCreateInput,
   ContratoUpdateInput,
 } from "@/lib/validators/contratos.schema";
+import { getPlano, type PlanoId } from "@/lib/planos";
+
+/**
+ * Limite mensal de contratos do plano atingido (espelha LimitePlanoEquipeError).
+ * A rota traduz pra HTTP 409.
+ */
+export class LimiteContratosError extends Error {
+  status = 409;
+  constructor(public limite: number, public plano: string) {
+    super(
+      `Limite de ${limite} contratos no mês atingido no plano ${plano}. Faça upgrade ou aguarde o próximo mês.`
+    );
+    this.name = "LimiteContratosError";
+  }
+}
+
+/** Primeiro instante (ISO) do mês corrente — janela do limite mensal. */
+function inicioDoMesIso(): string {
+  const agora = new Date();
+  return new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString();
+}
 
 function entradaParaEscrita(
   input: ContratoCreateInput | ContratoUpdateInput
@@ -52,8 +74,19 @@ export async function buscarContratoPorId(
 export async function criarContratoNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
+  planoId: PlanoId,
   input: ContratoCreateInput
 ): Promise<Contrato> {
+  const plano = getPlano(planoId);
+  const usadosNoMes = await contarContratosDesde(
+    supabase,
+    workspaceId,
+    inicioDoMesIso()
+  );
+  if (usadosNoMes >= plano.maxContratosMes) {
+    throw new LimiteContratosError(plano.maxContratosMes, plano.nome);
+  }
+
   const escrita = entradaParaEscrita(input);
   escrita.numero = await proximoNumeroContrato(supabase, workspaceId);
   escrita.status = escrita.status ?? "rascunho";

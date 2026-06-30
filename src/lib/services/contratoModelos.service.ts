@@ -10,11 +10,27 @@ import {
   criarModelo as repoCriar,
   atualizarModelo as repoAtualizar,
   removerModelo as repoRemover,
+  contarModelosDoWorkspace,
 } from "@/lib/repositories/contratoModelos.repo";
 import type {
   ContratoModeloCreateInput,
   ContratoModeloUpdateInput,
 } from "@/lib/validators/contratoModelos.schema";
+import { getPlano, type PlanoId } from "@/lib/planos";
+
+/**
+ * Limite de modelos do plano atingido (espelha LimitePlanoEquipeError). A rota
+ * traduz pra HTTP 409.
+ */
+export class LimiteModelosError extends Error {
+  status = 409;
+  constructor(public limite: number, public plano: string) {
+    super(
+      `Limite de ${limite} modelos atingido no plano ${plano}. Faça upgrade ou exclua um modelo.`
+    );
+    this.name = "LimiteModelosError";
+  }
+}
 
 function entradaParaEscrita(
   input: ContratoModeloCreateInput | ContratoModeloUpdateInput
@@ -48,8 +64,15 @@ export async function buscarModeloPorId(
 export async function criarModeloNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
+  planoId: PlanoId,
   input: ContratoModeloCreateInput
 ): Promise<ContratoModelo> {
+  const plano = getPlano(planoId);
+  const total = await contarModelosDoWorkspace(supabase, workspaceId);
+  if (total >= plano.maxModelos) {
+    throw new LimiteModelosError(plano.maxModelos, plano.nome);
+  }
+
   const escrita = entradaParaEscrita(input);
   escrita.tipo = escrita.tipo ?? "editavel";
   const row = await repoCriar(supabase, workspaceId, escrita);

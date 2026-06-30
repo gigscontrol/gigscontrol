@@ -127,7 +127,7 @@ export function montarUsernameCompleto(raiz: string, slug: string): string {
  * Depois do 1º login, o artista pode trocar pelo email real dele em
  * Configurações → Segurança (ou via supabase.auth.updateUser).
  */
-function montarEmailFake(username: string): string {
+export function montarEmailFake(username: string): string {
   return `${username}@interno.gigscontrol.app`;
 }
 
@@ -164,9 +164,10 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
 }
 
 export async function listarArtistasDoWorkspace(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<DJ[]> {
-  const rows = await repoListar(supabase);
+  const rows = await repoListar(supabase, workspaceId);
   if (rows.length === 0) return [];
 
   // Carrega usernames vinculados (papel=artista) pra exibir na lista
@@ -216,7 +217,7 @@ export async function criarArtistaCompleto(
 ): Promise<{ artista: DJ; senhaTemporaria: string; usernameCompleto: string }> {
   // 1. Plano
   const plano = getPlano(planoId);
-  const total = await contarArtistas(admin);
+  const total = await contarArtistas(admin, workspaceId);
   if (total >= plano.maxArtistas) {
     throw new LimitePlanoAtingidoError(plano.maxArtistas, plano.nome);
   }

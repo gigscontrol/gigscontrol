@@ -58,7 +58,7 @@ export default function AdminPlanos() {
                     {formatarPreco(p.precoMensal)}
                   </Td>
                   <Td className="tabular-nums">
-                    {formatarPreco(p.precoAnualPorMes)}
+                    {formatarPreco(p.precoAnual / 12)}
                     <span className="text-xs text-muted">/mês</span>
                   </Td>
                   <Td className="text-xs text-secondary">
@@ -116,7 +116,7 @@ function ModalEditarPlano({
   const [nome, setNome] = useState(plano.nome);
   const [tagline, setTagline] = useState(plano.tagline);
   const [precoMensal, setPrecoMensal] = useState(String(plano.precoMensal));
-  const [precoAnual, setPrecoAnual] = useState(String(plano.precoAnualPorMes));
+  const [precoAnual, setPrecoAnual] = useState(String(plano.precoAnual));
   const [maxArtistas, setMaxArtistas] = useState(String(plano.maxArtistas));
   const [maxUsuarios, setMaxUsuarios] = useState(String(plano.maxUsuariosAdicionais));
   const [destaque, setDestaque] = useState(!!plano.destaque);
@@ -127,8 +127,8 @@ function ModalEditarPlano({
       nome: nome.trim() || plano.nome,
       tagline: tagline.trim(),
       precoMensal: parseFloat(precoMensal.replace(",", ".")) || plano.precoMensal,
-      precoAnualPorMes:
-        parseFloat(precoAnual.replace(",", ".")) || plano.precoAnualPorMes,
+      precoAnual:
+        parseFloat(precoAnual.replace(",", ".")) || plano.precoAnual,
       maxArtistas: parseInt(maxArtistas) || plano.maxArtistas,
       maxUsuariosAdicionais: parseInt(maxUsuarios) || plano.maxUsuariosAdicionais,
       destaque,

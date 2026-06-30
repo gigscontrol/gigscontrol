@@ -18,6 +18,7 @@ import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
+import { useT } from "@/lib/i18n";
 
 /**
  * Tela de cadastro (signup) — uma única etapa:
@@ -33,6 +34,7 @@ import { avaliarSenha } from "@/lib/senha-forca";
  */
 export default function SignupPage() {
   const router = useRouter();
+  const t = useT();
   // Plano fixo no signup — o usuário escolhe de verdade na Etapa 2
   // do /onboarding (com opção de trial grátis 7 dias).
   const planoFixoInicial: PlanoId = "individual";
@@ -95,14 +97,14 @@ export default function SignupPage() {
     e.preventDefault();
     setErro(null);
 
-    if (!nome.trim()) return setErro("Informe seu nome.");
-    if (!nomeAgencia.trim()) return setErro("Informe o nome da agência.");
-    if (!email.trim() || !email.includes("@")) return setErro("Email inválido.");
+    if (!nome.trim()) return setErro(t("Informe seu nome."));
+    if (!nomeAgencia.trim()) return setErro(t("Informe o nome da agência."));
+    if (!email.trim() || !email.includes("@")) return setErro(t("Email inválido."));
     const avalSenha = avaliarSenha(senha);
     if (!avalSenha.podeUsar) {
-      return setErro(avalSenha.motivos[0] ?? "Escolha uma senha mais segura.");
+      return setErro(avalSenha.motivos[0] ?? t("Escolha uma senha mais segura."));
     }
-    if (!aceitouTermos) return setErro("Você precisa aceitar os Termos de Uso.");
+    if (!aceitouTermos) return setErro(t("Você precisa aceitar os Termos de Uso."));
 
     setEnviando(true);
     try {
@@ -117,7 +119,7 @@ export default function SignupPage() {
         const body = await checkRes.json();
         if (body.existe) {
           throw new Error(
-            "Esse e-mail já tem uma conta no GIGS CONTROL. Faça login ou recupere sua senha."
+            t("Esse e-mail já tem uma conta no GIGS CONTROL. Faça login ou recupere sua senha.")
           );
         }
       }
@@ -137,7 +139,7 @@ export default function SignupPage() {
       });
       if (error) {
         if (error.message.toLowerCase().includes("already registered")) {
-          throw new Error("Esse e-mail já tem uma conta. Faça login.");
+          throw new Error(t("Esse e-mail já tem uma conta. Faça login."));
         }
         throw error;
       }
@@ -151,8 +153,8 @@ export default function SignupPage() {
 
   return (
     <AuthShell
-      titulo="Criar conta"
-      subtitulo="7 dias grátis. Sem cartão de crédito."
+      titulo={t("Criar conta")}
+      subtitulo={t("7 dias grátis. Sem cartão de crédito.")}
     >
       <FormCadastro
         nome={nome}
@@ -209,6 +211,7 @@ function FormCadastro({
   enviando: boolean;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  const t = useT();
   const podeEnviar =
     emailStatus === "ok" &&
     avaliarSenha(senha).podeUsar &&
@@ -220,7 +223,7 @@ function FormCadastro({
     <>
       {/* OAuth — atalho rápido */}
       <div className="card mb-3">
-        <BotoesOAuth prefixo="Cadastrar com" />
+        <BotoesOAuth prefixo={t("Cadastrar com")} />
       </div>
 
       {/* Divisor */}
@@ -230,7 +233,7 @@ function FormCadastro({
         </div>
         <div className="relative flex justify-center">
           <span className="bg-main px-3 text-[0.65rem] uppercase tracking-wider text-muted">
-            ou com email
+            {t("ou com email")}
           </span>
         </div>
       </div>
@@ -238,18 +241,18 @@ function FormCadastro({
       <form onSubmit={onSubmit} className="card flex flex-col gap-4">
         <Campo
           icon={<User size={14} />}
-          label="Seu nome"
+          label={t("Seu nome")}
           value={nome}
           onChange={setNome}
-          placeholder="João da Silva"
+          placeholder={t("João da Silva")}
           autoComplete="name"
         />
         <Campo
           icon={<Building2 size={14} />}
-          label="Nome da agência"
+          label={t("Nome da agência")}
           value={nomeAgencia}
           onChange={setNomeAgencia}
-          placeholder="Agência Estrela"
+          placeholder={t("Agência Estrela")}
           autoComplete="organization"
         />
         <CampoEmail
@@ -258,7 +261,7 @@ function FormCadastro({
           status={emailStatus}
         />
         <CampoSenha
-          label="Senha"
+          label={t("Senha")}
           value={senha}
           onChange={setSenha}
           autoComplete="new-password"
@@ -272,13 +275,13 @@ function FormCadastro({
             className="mt-0.5"
           />
           <span>
-            Li e aceito os{" "}
+            {t("Li e aceito os")}{" "}
             <Link href="/termos" target="_blank" className="text-primary underline">
-              Termos de Uso
+              {t("Termos de Uso")}
             </Link>{" "}
-            e a{" "}
+            {t("e a")}{" "}
             <Link href="/privacidade" target="_blank" className="text-primary underline">
-              Política de Privacidade
+              {t("Política de Privacidade")}
             </Link>
             .
           </span>
@@ -297,7 +300,7 @@ function FormCadastro({
           className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
         >
-          {enviando ? "Criando conta…" : "Criar conta e enviar verificação"}
+          {enviando ? t("Criando conta…") : t("Criar conta e enviar verificação")}
           {!enviando && <ArrowRight size={14} />}
         </button>
 
@@ -306,7 +309,7 @@ function FormCadastro({
             href="/login"
             className="text-xs text-muted hover:text-secondary transition-colors"
           >
-            Já tem conta? Entre aqui
+            {t("Já tem conta? Entre aqui")}
           </Link>
         </div>
       </form>
@@ -362,6 +365,7 @@ function CampoEmail({
   setEmail: (v: string) => void;
   status: "idle" | "invalido" | "checando" | "em-uso" | "ok";
 }) {
+  const t = useT();
   // Cor de borda + mensagem conforme status
   const borda =
     status === "em-uso" || status === "invalido"
@@ -372,7 +376,7 @@ function CampoEmail({
 
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-secondary">E-mail</span>
+      <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
       <div
         className="flex items-center gap-2 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
         style={{ borderColor: borda ?? "var(--border-color)" }}
@@ -400,25 +404,25 @@ function CampoEmail({
       {/* Mensagem inline abaixo do campo */}
       {status === "invalido" && (
         <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
-          Formato de e-mail inválido.
+          {t("Formato de e-mail inválido.")}
         </span>
       )}
       {status === "em-uso" && (
         <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
-          Esse e-mail já tem uma conta.{" "}
+          {t("Esse e-mail já tem uma conta.")}{" "}
           <Link href="/login" className="underline">
-            Entrar
+            {t("Entrar")}
           </Link>{" "}
-          ou{" "}
+          {t("ou")}{" "}
           <Link href="/forgot-password" className="underline">
-            recuperar senha
+            {t("recuperar senha")}
           </Link>
           .
         </span>
       )}
       {status === "ok" && (
         <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
-          E-mail disponível ✓
+          {t("E-mail disponível ✓")}
         </span>
       )}
     </label>

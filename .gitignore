@@ -20,3 +20,8 @@ next-env.d.ts
 scripts/
 
 gerar_contrato_dj.py
+
+# Ferramentas/temporários locais — não vão pra produção
+stripe.exe
+_i18n_tmp/
+*.log

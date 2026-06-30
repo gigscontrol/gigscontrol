@@ -1,10 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Copy, Pencil, Trash2, FileText, Sparkles, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Copy,
+  Pencil,
+  Trash2,
+  FileText,
+  Sparkles,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import PageHeader from "../PageHeader";
 import EditorModelo from "./EditorModelo";
 import { useModelos } from "@/lib/modelos-context";
+import { useAuth } from "@/lib/auth-context";
+import { getPlano } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 import type {
   ContratoModelo,
@@ -83,12 +94,20 @@ function copiarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
 export default function ModelosPage() {
   const t = useT();
   const { modelos, carregando, removerModelo } = useModelos();
+  const { sessao } = useAuth();
 
   const [vista, setVista] = useState<Vista>("lista");
   const [editando, setEditando] = useState<EditorInicial | null>(null);
 
   // Apenas modelos editáveis nesta tela (PDF é um sub-passo futuro).
   const editaveis = modelos.filter((m) => m.tipo === "editavel");
+
+  // Limite de modelos do plano (mesmo padrão da aba Equipe): usado/limite +
+  // bloqueio dos botões de criação + banner ao atingir o teto.
+  const plano = sessao?.workspace ? getPlano(sessao.workspace.plano) : null;
+  const limite = plano?.maxModelos ?? 0;
+  const usados = editaveis.length;
+  const noLimite = !!plano && usados >= limite;
 
   // ---- Aberturas do editor ----
 
@@ -141,9 +160,53 @@ export default function ModelosPage() {
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Modelos de contrato"
-        subtitle="Monte os modelos que vão gerar seus contratos"
+        subtitle={
+          plano
+            ? t("Plano {nome} — {usados} de {limite} modelos", {
+                nome: plano.nome,
+                usados,
+                limite,
+              })
+            : "Monte os modelos que vão gerar seus contratos"
+        }
         accentColor={ACCENT}
+        actions={
+          plano ? (
+            <div className="min-w-[160px]">
+              <div className="text-right">
+                <span className="text-2xl font-bold tabular-nums text-primary">
+                  {usados}
+                </span>
+                <span className="text-muted text-base font-normal"> / {limite}</span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-elevated overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
+                    backgroundColor: noLimite ? "var(--danger)" : ACCENT,
+                  }}
+                />
+              </div>
+            </div>
+          ) : undefined
+        }
       />
+
+      {vista === "lista" && noLimite && (
+        <div
+          className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5 mb-6"
+          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+        >
+          <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+          <span>
+            {t(
+              "Limite de modelos do plano {nome} atingido. Faça upgrade ou exclua um modelo para criar outro.",
+              { nome: plano?.nome ?? "" }
+            )}
+          </span>
+        </div>
+      )}
 
       {vista === "editor" && editando ? (
         <EditorModelo
@@ -187,7 +250,9 @@ export default function ModelosPage() {
               <button
                 type="button"
                 onClick={abrirExemplo}
-                className="btn flex-shrink-0"
+                disabled={noLimite}
+                title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
+                className="btn flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: ACCENT, color: "#fff" }}
               >
                 <Copy size={15} />
@@ -198,7 +263,13 @@ export default function ModelosPage() {
 
           {/* Ação: novo modelo em branco */}
           <div>
-            <button type="button" onClick={abrirNovoEmBranco} className="btn btn-secondary">
+            <button
+              type="button"
+              onClick={abrirNovoEmBranco}
+              disabled={noLimite}
+              title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
+              className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Plus size={15} />
               {t("Novo modelo em branco")}
             </button>

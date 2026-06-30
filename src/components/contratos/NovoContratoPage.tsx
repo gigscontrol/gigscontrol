@@ -25,6 +25,7 @@ import {
 } from "@/lib/contratos/preencherSecoes";
 import { VARIAVEIS_CONTRATO } from "@/lib/contratos/variaveis";
 import type { Contrato } from "@/lib/mappers/contrato";
+import { getPlano } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
@@ -51,13 +52,29 @@ export default function NovoContratoPage() {
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
   const { sessao } = useAuth();
-  const { criarContrato, atualizarContrato } = useContratos();
+  const { contratos, criarContrato, atualizarContrato } = useContratos();
 
   const editaveis = useMemo(
     () => modelos.filter((m) => m.tipo === "editavel"),
     [modelos]
   );
   const agencia = sessao?.workspace?.nome ?? "";
+
+  // Limite mensal de contratos do plano (mesmo padrão da aba Equipe). Conta
+  // os contratos gerados no mês corrente por `criadoEm` (espelha a contagem
+  // do servidor) pra mostrar usado/limite + bloquear "Gerar contrato".
+  const plano = sessao?.workspace ? getPlano(sessao.workspace.plano) : null;
+  const limiteMes = plano?.maxContratosMes ?? 0;
+  const usadosMes = useMemo(() => {
+    const agora = new Date();
+    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    return contratos.filter((c) => {
+      if (!c.criadoEm) return false;
+      const criado = new Date(c.criadoEm);
+      return !isNaN(criado.getTime()) && criado >= inicioMes;
+    }).length;
+  }, [contratos]);
+  const noLimite = !!plano && usadosMes >= limiteMes;
 
   const [modeloId, setModeloId] = useState<string>("");
   const [vendaId, setVendaId] = useState<string>("");
@@ -121,6 +138,15 @@ export default function NovoContratoPage() {
 
   async function gerar() {
     if (!modelo) return;
+    if (noLimite) {
+      setErro(
+        t(
+          "Limite de contratos do mês atingido no plano {nome}. Faça upgrade ou aguarde o próximo mês.",
+          { nome: plano?.nome ?? "" }
+        )
+      );
+      return;
+    }
     setGerando(true);
     setErro(null);
     try {
@@ -169,9 +195,56 @@ export default function NovoContratoPage() {
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Novo contrato"
-        subtitle="Una um modelo com uma venda e gere o contrato"
+        subtitle={
+          plano
+            ? t("Plano {nome} — {usados} de {limite} contratos este mês", {
+                nome: plano.nome,
+                usados: usadosMes,
+                limite: limiteMes,
+              })
+            : "Una um modelo com uma venda e gere o contrato"
+        }
         accentColor={ACCENT}
+        actions={
+          plano ? (
+            <div className="min-w-[160px]">
+              <div className="text-right">
+                <span className="text-2xl font-bold tabular-nums text-primary">
+                  {usadosMes}
+                </span>
+                <span className="text-muted text-base font-normal">
+                  {" "}
+                  / {limiteMes}
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-elevated overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${limiteMes > 0 ? Math.min(100, (usadosMes / limiteMes) * 100) : 0}%`,
+                    backgroundColor: noLimite ? "var(--danger)" : ACCENT,
+                  }}
+                />
+              </div>
+            </div>
+          ) : undefined
+        }
       />
+
+      {noLimite && (
+        <div
+          className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5 mb-6"
+          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+        >
+          <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+          <span>
+            {t(
+              "Limite de contratos do mês do plano {nome} atingido. Faça upgrade ou aguarde o próximo mês para gerar outro.",
+              { nome: plano?.nome ?? "" }
+            )}
+          </span>
+        </div>
+      )}
 
       {erro && (
         <div
@@ -340,12 +413,17 @@ export default function NovoContratoPage() {
                     <button
                       type="button"
                       onClick={gerar}
-                      disabled={gerando}
-                      className="btn"
+                      disabled={gerando || noLimite}
+                      title={
+                        noLimite
+                          ? t("Limite de contratos do mês do plano atingido")
+                          : undefined
+                      }
+                      className="btn disabled:cursor-not-allowed"
                       style={{
                         backgroundColor: ACCENT,
                         color: "#fff",
-                        opacity: gerando ? 0.6 : 1,
+                        opacity: gerando || noLimite ? 0.6 : 1,
                       }}
                     >
                       {gerando ? (

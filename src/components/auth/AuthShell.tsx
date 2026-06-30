@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const VENDAS = "#a855f7";
 
@@ -79,7 +80,7 @@ export default function AuthShell({
         </div>
 
         <p className="relative text-xs text-muted">
-          © {new Date().getFullYear()} GIGS CONTROL — Gestão para a música.
+          © {new Date().getFullYear()} GIGS CONTROL — {t("Gestão para a música.")}
         </p>
       </aside>
 
@@ -94,7 +95,7 @@ export default function AuthShell({
           }}
         />
 
-        {/* Topo: logo (mobile) + voltar ao site */}
+        {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
         <div className="relative flex items-center justify-between px-6 h-16">
           <Link href="/" className="flex items-center gap-2 lg:hidden">
             <span
@@ -107,13 +108,16 @@ export default function AuthShell({
               GIGS<span className="text-muted"> CONTROL</span>
             </span>
           </Link>
-          <Link
-            href="/"
-            className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
-          >
-            <ArrowLeft size={13} />
-            {t("Voltar ao site")}
-          </Link>
+          <div className="ml-auto flex items-center gap-3">
+            <LanguageSwitcher />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
+            >
+              <ArrowLeft size={13} />
+              {t("Voltar ao site")}
+            </Link>
+          </div>
         </div>
 
         {/* Conteúdo (form) */}

@@ -5,7 +5,7 @@ import {
   listarEquipeDoWorkspace,
   criarUsuarioDaEquipe,
   LimitePlanoEquipeError,
-  EmailEmUsoError,
+  UsernameEmUsoError,
 } from "@/lib/services/usuarios.service";
 import { usuarioCreateSchema } from "@/lib/validators/usuarios.schema";
 import type { PlanoId } from "@/lib/planos";
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(resultado, { status: 201 });
   } catch (e) {
-    if (e instanceof LimitePlanoEquipeError || e instanceof EmailEmUsoError) {
+    if (e instanceof LimitePlanoEquipeError || e instanceof UsernameEmUsoError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
     return NextResponse.json(

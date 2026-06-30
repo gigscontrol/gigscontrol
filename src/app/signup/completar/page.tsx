@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
+import { useT } from "@/lib/i18n";
 
 /**
  * Tela "Complete seu cadastro" — mostrada após primeiro login OAuth.
@@ -22,6 +23,7 @@ import { PLANOS, formatarPreco, type PlanoId } from "@/lib/planos";
  */
 export default function CompletarCadastroPage() {
   const router = useRouter();
+  const t = useT();
   const [carregandoUser, setCarregandoUser] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [nomeUser, setNomeUser] = useState<string | null>(null);
@@ -53,11 +55,11 @@ export default function CompletarCadastroPage() {
     e.preventDefault();
     setErro(null);
     if (!nomeAgencia.trim()) {
-      setErro("Informe o nome da agência.");
+      setErro(t("Informe o nome da agência."));
       return;
     }
     if (!planoId) {
-      setErro("Escolha um plano.");
+      setErro(t("Escolha um plano."));
       return;
     }
     setEnviando(true);
@@ -73,7 +75,7 @@ export default function CompletarCadastroPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.erro ?? `Falha (${res.status}).`);
+        throw new Error(body.erro ?? t("Falha ({status}).", { status: res.status }));
       }
       // Primeiro acesso (veio do OAuth) — wizard de onboarding
       router.replace("/onboarding");
@@ -93,7 +95,7 @@ export default function CompletarCadastroPage() {
   if (carregandoUser) {
     return (
       <div className="min-h-screen bg-main text-primary flex items-center justify-center">
-        <div className="text-sm text-muted">Carregando…</div>
+        <div className="text-sm text-muted">{t("Carregando…")}</div>
       </div>
     );
   }
@@ -126,7 +128,7 @@ export default function CompletarCadastroPage() {
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
           >
             <LogOut size={13} />
-            Sair
+            {t("Sair")}
           </button>
         </div>
       </nav>
@@ -135,16 +137,18 @@ export default function CompletarCadastroPage() {
         <div className="w-full max-w-[640px]">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold tracking-tight">
-              {nomeUser ? `Bem-vindo, ${nomeUser.split(" ")[0]}!` : "Bem-vindo!"}
+              {nomeUser
+                ? t("Bem-vindo, {nome}!", { nome: nomeUser.split(" ")[0] })
+                : t("Bem-vindo!")}
             </h1>
             <p className="mt-2 text-sm text-secondary">
-              Estamos quase lá. Só precisamos do nome da sua agência e do plano
-              que faz sentido pro seu time.
+              {t("Estamos quase lá. Só precisamos do nome da sua agência e do plano que faz sentido pro seu time.")}
               {email && (
                 <>
                   <br />
                   <span className="text-xs text-muted">
-                    Logado como <strong className="text-secondary">{email}</strong>
+                    {t("Logado como")}{" "}
+                    <strong className="text-secondary">{email}</strong>
                   </span>
                 </>
               )}
@@ -156,7 +160,7 @@ export default function CompletarCadastroPage() {
             <div className="card">
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-secondary">
-                  Nome da agência
+                  {t("Nome da agência")}
                 </span>
                 <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
                   <Building2 size={14} className="text-muted flex-shrink-0" />
@@ -164,7 +168,7 @@ export default function CompletarCadastroPage() {
                     type="text"
                     value={nomeAgencia}
                     onChange={(e) => setNomeAgencia(e.target.value)}
-                    placeholder="Agência Estrela"
+                    placeholder={t("Agência Estrela")}
                     autoComplete="organization"
                     autoFocus
                     className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
@@ -176,7 +180,7 @@ export default function CompletarCadastroPage() {
             {/* Plano */}
             <div>
               <div className="text-xs font-medium text-secondary mb-2">
-                Plano
+                {t("Plano")}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {PLANOS.map((p) => {
@@ -197,17 +201,17 @@ export default function CompletarCadastroPage() {
                           className="absolute -top-2 left-3 text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
                           style={{ backgroundColor: "var(--module-vendas)" }}
                         >
-                          Popular
+                          {t("Popular")}
                         </span>
                       )}
                       <div className="text-sm font-bold text-primary">{p.nome}</div>
                       <div className="text-base font-bold text-primary mt-1">
                         {formatarPreco(p.precoMensal)}
-                        <span className="text-xs text-muted font-normal">/mês</span>
+                        <span className="text-xs text-muted font-normal">{t("/mês")}</span>
                       </div>
                       <div className="text-[0.65rem] text-muted mt-1">
-                        {p.maxArtistas} artista{p.maxArtistas === 1 ? "" : "s"} ·{" "}
-                        {p.maxUsuariosAdicionais} usuário{p.maxUsuariosAdicionais === 1 ? "" : "s"}
+                        {p.maxArtistas} {p.maxArtistas === 1 ? t("artista") : t("artistas")} ·{" "}
+                        {p.maxUsuariosAdicionais} {p.maxUsuariosAdicionais === 1 ? t("usuário") : t("usuários")}
                       </div>
                       {sel && (
                         <div
@@ -236,7 +240,7 @@ export default function CompletarCadastroPage() {
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
               style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
             >
-              {enviando ? "Criando..." : "Finalizar cadastro e entrar"}
+              {enviando ? t("Criando...") : t("Finalizar cadastro e entrar")}
               {!enviando && <ArrowRight size={14} />}
             </button>
           </form>

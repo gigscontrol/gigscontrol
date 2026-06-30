@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
+import { useT } from "@/lib/i18n";
 
 /**
  * Tela de redefinição de senha.
@@ -21,6 +22,7 @@ import { avaliarSenha } from "@/lib/senha-forca";
  */
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const t = useT();
   const [temSessao, setTemSessao] = useState<boolean | null>(null);
   const [senha, setSenha] = useState("");
   const [senhaConfirm, setSenhaConfirm] = useState("");
@@ -41,11 +43,11 @@ export default function ResetPasswordPage() {
     setErro(null);
     const aval = avaliarSenha(senha);
     if (!aval.podeUsar) {
-      setErro(aval.motivos[0] ?? "Escolha uma senha mais segura.");
+      setErro(aval.motivos[0] ?? t("Escolha uma senha mais segura."));
       return;
     }
     if (senha !== senhaConfirm) {
-      setErro("As senhas não coincidem.");
+      setErro(t("As senhas não coincidem."));
       return;
     }
     setEnviando(true);
@@ -93,7 +95,7 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-[380px]">
           {temSessao === null ? (
             <div className="card text-center text-sm text-muted py-12">
-              Carregando…
+              {t("Carregando…")}
             </div>
           ) : !temSessao ? (
             // Link inválido / expirado
@@ -108,18 +110,17 @@ export default function ResetPasswordPage() {
                 <AlertCircle size={28} />
               </div>
               <h1 className="text-xl font-bold tracking-tight">
-                Link inválido ou expirado
+                {t("Link inválido ou expirado")}
               </h1>
               <p className="mt-2 text-sm text-secondary">
-                Esse link pode ter sido usado ou expirou após 1 hora. Solicite
-                um novo.
+                {t("Esse link pode ter sido usado ou expirou após 1 hora. Solicite um novo.")}
               </p>
               <Link
                 href="/forgot-password"
                 className="mt-6 inline-flex items-center gap-1.5 btn btn-primary text-sm"
                 style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
               >
-                Solicitar novo link
+                {t("Solicitar novo link")}
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -135,30 +136,30 @@ export default function ResetPasswordPage() {
                 <CheckCircle2 size={28} />
               </div>
               <h1 className="text-xl font-bold tracking-tight">
-                Senha alterada com sucesso
+                {t("Senha alterada com sucesso")}
               </h1>
               <p className="mt-2 text-sm text-secondary">
-                Redirecionando pro seu painel...
+                {t("Redirecionando pro seu painel...")}
               </p>
             </div>
           ) : (
             <>
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold tracking-tight">Nova senha</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{t("Nova senha")}</h1>
                 <p className="mt-1.5 text-sm text-secondary">
-                  Digite a senha que você quer usar de agora em diante.
+                  {t("Digite a senha que você quer usar de agora em diante.")}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
                 <CampoSenha
-                  label="Nova senha"
+                  label={t("Nova senha")}
                   value={senha}
                   onChange={setSenha}
                   autoFocus
                 />
                 <CampoSenha
-                  label="Confirmar nova senha"
+                  label={t("Confirmar nova senha")}
                   value={senhaConfirm}
                   onChange={setSenhaConfirm}
                   mostrarForca={false}
@@ -177,7 +178,7 @@ export default function ResetPasswordPage() {
                   className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
                   style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
                 >
-                  {enviando ? "Salvando..." : "Trocar senha e entrar"}
+                  {enviando ? t("Salvando...") : t("Trocar senha e entrar")}
                   {!enviando && <ArrowRight size={14} />}
                 </button>
 
@@ -187,7 +188,7 @@ export default function ResetPasswordPage() {
                     className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
                   >
                     <ArrowLeft size={13} />
-                    Cancelar e voltar pro login
+                    {t("Cancelar e voltar pro login")}
                   </Link>
                 </div>
               </form>
@@ -198,4 +199,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

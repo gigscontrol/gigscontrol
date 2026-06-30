@@ -25,6 +25,12 @@ export type ProfileRow = {
   workspace_id: string | null;
   nome: string;
   email: string;
+  /**
+   * Handle de login "raiz-slug" (ex: "raiz-twobookings"). Novos membros
+   * da equipe nascem com ele preenchido; membros antigos (criados via
+   * e-mail) têm `null` e seguem logando pelo e-mail real.
+   */
+  username: string | null;
   papel: Papel;
   is_super_admin: boolean;
   artista_id: string | null;
@@ -64,6 +70,8 @@ export type UsuarioEquipe = {
   id: string;
   nome: string;
   email: string;
+  /** Handle de login "raiz-slug". `null` em membros antigos (login por e-mail). */
+  username: string | null;
   papel: Papel;
   escopo: EscopoUsuario;
   funcoes: Funcoes;
@@ -105,6 +113,7 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
     id: row.id,
     nome: row.nome,
     email: row.email,
+    username: row.username ?? null,
     papel: row.papel,
     escopo: escopoValido(row.escopo),
     funcoes: funcoesValido(row.funcoes),
@@ -116,6 +125,8 @@ export type UsuarioEscrita = {
   workspace_id?: string;
   nome?: string;
   email?: string;
+  /** Handle de login "raiz-slug", gravado na criação de membros novos. */
+  username?: string;
   papel?: Papel;
   escopo?: EscopoUsuario;
   funcoes?: Funcoes;

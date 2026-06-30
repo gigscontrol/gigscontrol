@@ -118,7 +118,7 @@ export async function listarLixeira(
     cidadesRows,
     showsRows,
   ] = await Promise.all([
-    listarArtistasDeletados(supabase),
+    listarArtistasDeletados(supabase, workspaceId),
     listarUsuariosDeletados(supabase, workspaceId),
     listarOrcamentosDeletados(supabase, workspaceId),
     listarVendasDeletadas(supabase, workspaceId),
@@ -211,14 +211,15 @@ export async function listarLixeira(
 export async function restaurarArtistaDaLixeira(
   supabase: SupabaseClient,
   id: string,
+  workspaceId: string,
   planoId: PlanoId
 ): Promise<void> {
   const plano = getPlano(planoId);
-  const total = await contarArtistas(supabase);
+  const total = await contarArtistas(supabase, workspaceId);
   if (total >= plano.maxArtistas) {
     throw new LimitePlanoAtingidoError(plano.maxArtistas, plano.nome);
   }
-  await repoRestaurarArtista(supabase, id);
+  await repoRestaurarArtista(supabase, id, workspaceId);
 }
 
 export async function restaurarUsuarioDaLixeira(

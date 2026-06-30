@@ -22,6 +22,26 @@ export async function listarModelos(
   return (data ?? []) as unknown as ContratoModeloRow[];
 }
 
+/**
+ * Conta os modelos editáveis (não-deletados) do workspace — usado pra
+ * validar o limite do plano (`maxModelos`). Escopado por workspace_id, igual
+ * ao `contarUsuariosEquipe`. Só conta `tipo = editavel` (o PDF é um sub-passo
+ * futuro e não aparece na tela de modelos).
+ */
+export async function contarModelosDoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("contrato_modelos")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("tipo", "editavel")
+    .is("deletado_em", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function buscarModelo(
   supabase: SupabaseClient,
   id: string

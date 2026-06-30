@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { emailEhInternoFake } from "@/lib/services/artistas.service";
 
 /**
  * GET /api/usuarios/[id]/conta
@@ -65,9 +66,13 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       throw new Error(error?.message ?? "Falha ao ler conta do usuário.");
     }
     const user = data.user;
+    const email = user.email ?? "";
     return NextResponse.json({
-      email: user.email ?? "",
+      email,
       emailVerificado: !!user.email_confirmed_at,
+      // Membros novos nascem com e-mail fake interno (login por handle).
+      // A UI usa isso pra mostrar "Sem e-mail" em vez do endereço fake.
+      emailFakeInterno: emailEhInternoFake(email),
       ultimoLogin: user.last_sign_in_at ?? null,
       senhaPadrao: !!(profile as { senha_padrao?: boolean }).senha_padrao,
       senhaPadraoValor:

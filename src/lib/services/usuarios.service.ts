@@ -8,10 +8,20 @@ import {
   atualizarProfile,
   moverProfileParaLixeira,
 } from "@/lib/repositories/usuarios.repo";
+import {
+  buscarSlugWorkspace,
+  usernameJaExiste,
+} from "@/lib/repositories/artistas.repo";
+import {
+  montarUsernameCompleto,
+  montarEmailFake,
+  UsernameEmUsoError,
+} from "@/lib/services/artistas.service";
 import type {
   UsuarioCreateInput,
   UsuarioUpdateInput,
 } from "@/lib/validators/usuarios.schema";
+import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 import { getPlano, type PlanoId } from "@/lib/planos";
 
 export class LimitePlanoEquipeError extends Error {
@@ -24,27 +34,9 @@ export class LimitePlanoEquipeError extends Error {
   }
 }
 
-export class EmailEmUsoError extends Error {
-  status = 409;
-  constructor() {
-    super("Já existe um usuário com esse e-mail.");
-    this.name = "EmailEmUsoError";
-  }
-}
-
-/** Gera uma senha temporária legível (12 caracteres, alfanumérico). */
-export function gerarSenhaTemporaria(): string {
-  // Usa Web Crypto se disponível (Node 18+ e Edge runtime têm)
-  const bytes = new Uint8Array(9);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-  }
-  // Base64 sem padding e sem caracteres ambíguos
-  const b64 = Buffer.from(bytes).toString("base64").replace(/[+/=]/g, "");
-  return b64.slice(0, 12);
-}
+// Reexporta o erro de username em uso pra rota poder distingui-lo (a
+// criação da equipe agora usa o mesmo handle "raiz-slug" dos artistas).
+export { UsernameEmUsoError };
 
 export async function listarEquipeDoWorkspace(
   supabase: SupabaseClient,
@@ -55,12 +47,16 @@ export async function listarEquipeDoWorkspace(
 }
 
 /**
- * Cria um usuário da equipe:
+ * Cria um usuário da equipe — MESMO fluxo dos artistas (sem e-mail):
  *  1. Valida limite do plano.
- *  2. Cria auth user (service_role) com senha temporária.
- *  3. Insere profile vinculado ao workspace.
+ *  2. Monta o handle "raiz-slugDaAgência" e checa unicidade global
+ *     (artistas + equipe compartilham o mesmo namespace de username).
+ *  3. Cria auth user (service_role) com e-mail fake interno + senha
+ *     aleatória memorável (Word-Word-NNNN).
+ *  4. Insere profile vinculado ao workspace, com `username` preenchido.
  *
- * Devolve o usuário criado + a senha temporária (exibida UMA vez).
+ * Devolve o usuário criado (já com `username`) + a senha temporária
+ * (exibida UMA vez pro admin repassar junto do login).
  */
 export async function criarUsuarioDaEquipe(
   admin: SupabaseClient,
@@ -74,18 +70,24 @@ export async function criarUsuarioDaEquipe(
     throw new LimitePlanoEquipeError(plano.maxUsuariosAdicionais, plano.nome);
   }
 
-  const senhaTemporaria = gerarSenhaTemporaria();
+  // Handle = "raiz-slug" (idêntico ao fluxo de artistas). Unicidade
+  // checada contra TODOS os profiles (artistas + equipe).
+  const slug = await buscarSlugWorkspace(admin, workspaceId);
+  const usernameCompleto = montarUsernameCompleto(input.username_raiz, slug);
+  if (await usernameJaExiste(admin, usernameCompleto)) {
+    throw new UsernameEmUsoError(usernameCompleto);
+  }
+
+  const emailFake = montarEmailFake(usernameCompleto);
+  const senhaTemporaria = gerarSenhaAleatoria();
 
   const { data: created, error: errAuth } = await admin.auth.admin.createUser({
-    email: input.email,
+    email: emailFake,
     password: senhaTemporaria,
     email_confirm: true,
-    user_metadata: { nome: input.nome },
+    user_metadata: { nome: input.nome, username: usernameCompleto },
   });
   if (errAuth || !created.user) {
-    if (errAuth?.message?.toLowerCase().includes("already registered")) {
-      throw new EmailEmUsoError();
-    }
     throw new Error(errAuth?.message ?? "Falha ao criar usuário no Auth.");
   }
 
@@ -94,7 +96,8 @@ export async function criarUsuarioDaEquipe(
       id: created.user.id,
       workspace_id: workspaceId,
       nome: input.nome,
-      email: input.email,
+      email: emailFake,
+      username: usernameCompleto,
       papel: input.papel,
       escopo: input.escopo,
       funcoes: input.funcoes,
@@ -156,7 +159,7 @@ export async function resetarSenhaDoUsuario(
   if (atual.papel === "admin" || atual.papel === "artista") {
     throw new Error("Use a aba Segurança para alterar a própria senha.");
   }
-  const senhaTemporaria = gerarSenhaTemporaria();
+  const senhaTemporaria = gerarSenhaAleatoria();
   const { error } = await admin.auth.admin.updateUserById(id, {
     password: senhaTemporaria,
   });

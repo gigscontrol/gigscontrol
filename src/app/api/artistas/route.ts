@@ -16,7 +16,7 @@ export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
-    const artistas = await listarArtistasDoWorkspace(r.sessao.supabase);
+    const artistas = await listarArtistasDoWorkspace(r.sessao.supabase, r.sessao.workspaceId);
     return NextResponse.json({ artistas });
   } catch (e) {
     return NextResponse.json(

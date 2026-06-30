@@ -10,7 +10,7 @@ import {
 const patchSchema = z.object({
   status: z.enum(["ativa", "trial", "suspensa", "cancelada"]).optional(),
   plano: z
-    .enum(["individual", "equipe", "agencia", "agencia-plus", "agencia-max"])
+    .enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"])
     .optional(),
 });
 

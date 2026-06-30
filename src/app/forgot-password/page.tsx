@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
+import { useT } from "@/lib/i18n";
 
 /**
  * Tela "Esqueci minha senha".
@@ -14,6 +15,7 @@ import { criarClienteBrowser } from "@/lib/db/supabase-browser";
  * que o endereço não exista (evita enumeração de contas).
  */
 export default function ForgotPasswordPage() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setErro(null);
     if (!email.trim() || !email.includes("@")) {
-      setErro("Informe um e-mail válido.");
+      setErro(t("Informe um e-mail válido."));
       return;
     }
     setEnviando(true);
@@ -76,7 +78,7 @@ export default function ForgotPasswordPage() {
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
           >
             <ArrowLeft size={13} />
-            Voltar pro login
+            {t("Voltar pro login")}
           </Link>
         </div>
       </nav>
@@ -87,16 +89,16 @@ export default function ForgotPasswordPage() {
             <>
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold tracking-tight">
-                  Esqueci minha senha
+                  {t("Esqueci minha senha")}
                 </h1>
                 <p className="mt-1.5 text-sm text-secondary">
-                  Digite seu e-mail e enviaremos um link pra criar uma nova senha.
+                  {t("Digite seu e-mail e enviaremos um link pra criar uma nova senha.")}
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-secondary">E-mail</span>
+                  <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
                   <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
                     <Mail size={14} className="text-muted flex-shrink-0" />
                     <input
@@ -124,7 +126,7 @@ export default function ForgotPasswordPage() {
                   className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
                   style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
                 >
-                  {enviando ? "Enviando..." : "Enviar link de recuperação"}
+                  {enviando ? t("Enviando...") : t("Enviar link de recuperação")}
                   {!enviando && <ArrowRight size={14} />}
                 </button>
 
@@ -133,7 +135,7 @@ export default function ForgotPasswordPage() {
                     href="/login"
                     className="text-xs text-muted hover:text-secondary transition-colors"
                   >
-                    Lembrei a senha — voltar pro login
+                    {t("Lembrei a senha — voltar pro login")}
                   </Link>
                 </div>
               </form>
@@ -150,21 +152,22 @@ export default function ForgotPasswordPage() {
                 <CheckCircle2 size={28} />
               </div>
               <h1 className="text-xl font-bold tracking-tight">
-                Se a conta existir, o link foi enviado
+                {t("Se a conta existir, o link foi enviado")}
               </h1>
               <p className="mt-2 text-sm text-secondary">
-                Confira a caixa de entrada de{" "}
+                {t("Confira a caixa de entrada de")}{" "}
                 <strong className="text-primary break-all">{email}</strong>{" "}
-                (e a pasta de spam).
+                {t("(e a pasta de spam).")}
                 <br />
-                O link expira em <strong>1 hora</strong>.
+                {t("O link expira em")}{" "}
+                <strong>{t("1 hora")}</strong>.
               </p>
               <Link
                 href="/login"
                 className="mt-6 inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
               >
                 <ArrowLeft size={13} />
-                Voltar pro login
+                {t("Voltar pro login")}
               </Link>
             </div>
           )}

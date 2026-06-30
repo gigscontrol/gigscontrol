@@ -90,7 +90,7 @@ export async function POST(_request: Request, { params }: RouteCtx) {
   try {
     switch (tipo) {
       case "artista":
-        await restaurarArtistaDaLixeira(admin, params.id, planoId);
+        await restaurarArtistaDaLixeira(admin, params.id, r.sessao.workspaceId, planoId);
         break;
       case "usuario":
         await restaurarUsuarioDaLixeira(admin, params.id, r.sessao.workspaceId, planoId);

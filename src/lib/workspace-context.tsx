@@ -105,6 +105,11 @@ export type UsuarioEquipe = {
   id: string;
   nome: string;
   email: string;
+  /**
+   * Handle de login "raiz-slug". Membros novos nascem com ele; membros
+   * antigos (criados por e-mail) têm `null` e logam pelo e-mail real.
+   */
+  username: string | null;
   papel: PapelEquipe;
   escopo: EscopoUsuario;
   funcoes: Funcoes;
@@ -214,7 +219,8 @@ type WorkspaceContextValue = {
   recarregarEquipe: () => Promise<void>;
   adicionarUsuario: (dados: {
     nome: string;
-    email: string;
+    /** Parte do username digitada pelo admin — o backend concatena o slug. */
+    username_raiz: string;
     papel: PapelEquipe;
     escopo: EscopoUsuario;
     funcoes: Funcoes;
@@ -567,7 +573,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const adicionarUsuario = useCallback(
     async (dados: {
       nome: string;
-      email: string;
+      username_raiz: string;
       papel: PapelEquipe;
       escopo: EscopoUsuario;
       funcoes: Funcoes;
@@ -576,7 +582,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dados),
+        body: JSON.stringify({
+          ...dados,
+          username_raiz: dados.username_raiz.trim().toLowerCase(),
+        }),
       });
       const body = await jsonOuErro(res);
       const usuario = body.usuario as UsuarioEquipe;
