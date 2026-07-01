@@ -489,7 +489,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       {itemDetalhe && (
         <ItemDetalheModal
           item={itemDetalhe}
-          artistaLabel={labelArtistas(itemDetalhe.artistIds, artistas)}
+          artistasDoItem={artistas.filter((a) => itemDetalhe.artistIds.includes(a.id))}
           onClose={() => setItemDetalhe(null)}
           onExcluir={async () => {
             await removerItem(itemDetalhe.id);
@@ -1926,13 +1926,42 @@ function formatarBagagemExtra(raw: string, labelNao: string): string {
   return s;
 }
 
+/** Cabeçalho do detalhe: o(s) artista(s) do item em destaque, com a cor de cada um. */
+function CabecalhoArtistas({ artistas }: { artistas: DJ[] }) {
+  if (artistas.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {artistas.map((a) => (
+        <span
+          key={a.id}
+          className="inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3.5 border"
+          style={{
+            borderColor: `color-mix(in srgb, ${a.color} 40%, transparent)`,
+            backgroundColor: `color-mix(in srgb, ${a.color} 15%, transparent)`,
+          }}
+        >
+          <span
+            className="grid place-items-center h-7 w-7 rounded-full text-xs font-bold text-white flex-shrink-0"
+            style={{ backgroundColor: a.color }}
+          >
+            {a.name.trim().charAt(0).toUpperCase()}
+          </span>
+          <span className="text-sm font-semibold leading-none" style={{ color: a.color }}>
+            {a.name}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 /** Linhas específicas de um voo (a partir do `dados` do item). */
 function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const t = useT();
   const [baixando, setBaixando] = useState(false);
   const d = (dados ?? {}) as Record<string, unknown>;
   const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
-  const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
+  const rota = str("origem") && str("destino") ? `${str("origem")} → ${str("destino")}` : "";
   const voucherPath = str("voucherPath");
   const bagagemExtra = formatarBagagemExtra(str("bagagem"), t("Não"));
   const passageiros: Passageiro[] = Array.isArray(d.passageiros)
@@ -1970,10 +1999,10 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
         <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
       )}
       {passageiros.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted">{t("Passageiros")}</span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t("Passageiros")}</span>
           {passageiros.map((p, i) => (
-            <div key={i} className="text-sm text-primary leading-snug">
+            <div key={i} className="text-sm text-primary font-medium leading-snug">
               {p.nome}
               {(p.nascimento || p.bagagemExtra) && (
                 <span className="text-xs text-muted">
@@ -2022,10 +2051,10 @@ function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
       {str("empresa") && <LinhaDetalhe rotulo={t("Empresa")} valor={str("empresa")} />}
       {contato && <LinhaDetalhe rotulo={t("Motorista")} valor={contato} />}
       {passageiros.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted">{t("Passageiros")}</span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t("Passageiros")}</span>
           {passageiros.map((p, i) => (
-            <div key={i} className="text-sm text-primary leading-snug">
+            <div key={i} className="text-sm text-primary font-medium leading-snug">
               {p.nome}
             </div>
           ))}
@@ -2038,12 +2067,12 @@ function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
 /** Detalhe de um item + excluir (Fase 2: sem edição). */
 function ItemDetalheModal({
   item,
-  artistaLabel,
+  artistasDoItem,
   onClose,
   onExcluir,
 }: {
   item: AgendaItem;
-  artistaLabel?: string;
+  artistasDoItem: DJ[];
   onClose: () => void;
   onExcluir: () => Promise<void>;
 }) {
@@ -2077,6 +2106,7 @@ function ItemDetalheModal({
       maxWidth={400}
     >
       <div className="flex flex-col gap-3">
+        <CabecalhoArtistas artistas={artistasDoItem} />
         {item.tipo === "voo" ? (
           <>
             <LinhaDetalhe rotulo={t("Data")} valor={formatarDataBR(item.data)} />
@@ -2092,16 +2122,6 @@ function ItemDetalheModal({
         )}
         {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
         {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
-        {artistaLabel && (
-          <LinhaDetalhe
-            rotulo={
-              item.tipo === "voo" || item.tipo === "transporte"
-                ? t("Artista(s)")
-                : t("Artistas")
-            }
-            valor={artistaLabel}
-          />
-        )}
         {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
         {item.tipo === "voo" && (
           <div className="text-[0.7rem] text-muted pt-2 border-t border-border">
