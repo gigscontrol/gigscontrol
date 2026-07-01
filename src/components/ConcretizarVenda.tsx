@@ -20,13 +20,14 @@ import PageHeader from "./PageHeader";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
-import InputCpfCnpj from "./inputs/InputCpfCnpj";
+import InputDocumento from "./inputs/InputDocumento";
+import { normalizarDocumento, configDocumento } from "@/lib/data/documentos";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
 import { apenasDigitos } from "@/lib/formatters";
-import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
-import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -138,8 +139,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   );
 
   // Cidade — pré-popula a partir do orçamento se ele tiver ibge_id
-  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
-    cidadeParaIbge(cidadeOrc)
+  const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(
+    cidadeParaEscolhida(cidadeOrc)
   );
 
   // Show — djId é uuid do artista (workspace.artistas).
@@ -366,7 +367,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     // Resolve a cidade IBGE → UUID local (cria se ainda não existe)
     let cidadeIdResolvido: string;
     try {
-      const cid = await resolverCidadeIbge(cidadeIbge!);
+      const cid = await resolverCidade(cidadeIbge!);
       cidadeIdResolvido = cid.id;
     } catch (e) {
       setErrors((p) => ({ ...p, cidade: (e as Error).message }));
@@ -386,14 +387,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara
             // pra exibir. Mantém o banco consistente entre cadastros
             // antigos (mascarados) e novos.
-            documentoNovo: apenasDigitos(contratanteDocumento),
+            documentoNovo: normalizarDocumento(country.code, contratanteDocumento),
           }
         : {
             tipo: "novo",
             nome: contratanteNome,
             email: contratanteEmail,
             telefone: telefoneE164,
-            documento: apenasDigitos(contratanteDocumento),
+            documento: normalizarDocumento(country.code, contratanteDocumento),
             cidadeId: cidadeIdResolvido,
           },
       contratanteEndereco,
@@ -539,18 +540,18 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </FieldWithAuto>
 
           <FieldWithAuto
-            label="CPF / CNPJ"
+            label={configDocumento(country.code).label}
             required
             error={errors.contratanteDocumento}
             showAuto={showAutoBadge("contratanteDocumento")}
           >
-            <InputCpfCnpj
+            <InputDocumento
+              pais={country.code}
               value={contratanteDocumento}
               onChange={(novo) => {
                 setContratanteDocumento(novo);
                 marcarEditado("contratanteDocumento");
               }}
-              placeholder="000.000.000-00 ou 00.000.000/0000-00"
             />
           </FieldWithAuto>
 
@@ -580,7 +581,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
               error={errors.cidade}
               showAuto={showAutoBadge("cidade")}
             >
-              <CidadeIBGEAutocomplete
+              <CidadeGlobalAutocomplete
                 value={cidadeIbge}
                 onChange={(c) => {
                   setCidadeIbge(c);
