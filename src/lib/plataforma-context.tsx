@@ -37,6 +37,7 @@ type PlataformaContextValue = {
     workspaceId: string,
     plano: PlanoId
   ) => Promise<void>;
+  estenderDiasAssinatura: (workspaceId: string, dias: number) => Promise<void>;
 
   // Usuários
   usuarios: UsuarioPlataforma[];
@@ -112,11 +113,10 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ status }),
       });
       await jsonOuErro(res);
-      setAssinaturas((prev) =>
-        prev.map((a) => (a.workspaceId === workspaceId ? { ...a, status } : a))
-      );
+      // Status afeta dias/próximo pagamento — recarrega pra refletir o real.
+      await recarregarAssinaturas();
     },
-    []
+    [recarregarAssinaturas]
   );
 
   const alterarPlanoAssinatura = useCallback(
@@ -133,6 +133,20 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       );
     },
     []
+  );
+
+  const estenderDiasAssinatura = useCallback(
+    async (workspaceId: string, dias: number) => {
+      const res = await fetch(`/api/admin/assinaturas/${workspaceId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dias }),
+      });
+      await jsonOuErro(res);
+      await recarregarAssinaturas();
+    },
+    [recarregarAssinaturas]
   );
 
   const alterarStatusUsuario = useCallback(
@@ -158,6 +172,7 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       recarregarAssinaturas,
       alterarStatusAssinatura,
       alterarPlanoAssinatura,
+      estenderDiasAssinatura,
 
       usuarios,
       carregandoUsuarios,
@@ -174,6 +189,7 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       recarregarAssinaturas,
       alterarStatusAssinatura,
       alterarPlanoAssinatura,
+      estenderDiasAssinatura,
       usuarios,
       carregandoUsuarios,
       recarregarUsuarios,

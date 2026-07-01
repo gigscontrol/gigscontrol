@@ -43,7 +43,7 @@ export default function LanguageSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={aberto}
         title={atual.nome}
-        className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-sm text-secondary hover:text-primary hover:border-border-strong transition-colors"
+        className="flex h-9 items-center gap-2 rounded-md border border-border px-2.5 text-sm text-secondary hover:text-primary hover:border-border-strong transition-colors"
       >
         <Flag code={atual.pais} size={20} />
         <span className="hidden sm:inline font-medium">{atual.nome}</span>

@@ -24,6 +24,7 @@ import BloqueioModal from "@/components/BloqueioModal";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
+import { AgendaItemsProvider } from "@/lib/agenda-items-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
@@ -58,20 +59,22 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <WorkspaceProvider>
         <ContatosProvider>
           <ShowsProvider>
-            <OrcamentosProvider>
-              <VendasProvider>
-                <ModelosProvider>
-                  <ContratosProvider>
-                    <AuthGuard>
-                      <NavProvider>
-                        <AppRoot />
-                        {children}
-                      </NavProvider>
-                    </AuthGuard>
-                  </ContratosProvider>
-                </ModelosProvider>
-              </VendasProvider>
-            </OrcamentosProvider>
+            <AgendaItemsProvider>
+              <OrcamentosProvider>
+                <VendasProvider>
+                  <ModelosProvider>
+                    <ContratosProvider>
+                      <AuthGuard>
+                        <NavProvider>
+                          <AppRoot />
+                          {children}
+                        </NavProvider>
+                      </AuthGuard>
+                    </ContratosProvider>
+                  </ModelosProvider>
+                </VendasProvider>
+              </OrcamentosProvider>
+            </AgendaItemsProvider>
           </ShowsProvider>
         </ContatosProvider>
       </WorkspaceProvider>
@@ -389,6 +392,8 @@ function AppRoot() {
   // Orçamento de origem ao concretizar uma venda (não vai pra URL —
   // é preenchido só no fluxo "transformar em venda").
   const [orcamentoSendoTransformado, setOrcamentoSendoTransformado] = useState<string | null>(null);
+  // Data pré-selecionada ao abrir "Nova Venda Direta" pelo "+" de um dia da agenda.
+  const [dataShowInicial, setDataShowInicial] = useState<string | null>(null);
   // Categoria inicial ao abrir a lista de Contatos
   const [contatoCategoria, setContatoCategoria] = useState<ContatoCategoria>("contratantes");
   // Show aberto no modal (a partir de qualquer tela)
@@ -406,12 +411,14 @@ function AppRoot() {
   const handleTabChange = (tab: ActiveTab) => {
     setSidebarOpen(false);
     setOrcamentoSendoTransformado(null);
+    setDataShowInicial(null);
     irPara(urlDaTela(tab, "dashboard"));
   };
 
   const handlePageChange = (page: ActivePage) => {
     setSidebarOpen(false);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
+    setDataShowInicial(null);
     irPara(urlDaTela(activeTab, page));
   };
 
@@ -419,6 +426,7 @@ function AppRoot() {
   const navegar = (tab: ActiveTab, page: ActivePage) => {
     setSidebarOpen(false);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
+    setDataShowInicial(null);
     irPara(urlDaTela(tab, page));
   };
 
@@ -432,6 +440,14 @@ function AppRoot() {
 
   const transformarOrcamentoEmVenda = (id: string) => {
     setOrcamentoSendoTransformado(id);
+    setDataShowInicial(null);
+    irPara(urlDaTela("vendas", "vendas-nova-venda"));
+  };
+
+  /** "Novo Show" no "+" de um dia da agenda → Nova Venda Direta com a data pré-selecionada. */
+  const novaVendaNoDia = (dataISO: string) => {
+    setOrcamentoSendoTransformado(null);
+    setDataShowInicial(dataISO);
     irPara(urlDaTela("vendas", "vendas-nova-venda"));
   };
 
@@ -439,6 +455,8 @@ function AppRoot() {
     setContatoCategoria(cat);
     irPara(urlDaTela("contatos", "contatos-lista"));
   };
+
+  const corModulo = MODULE_THEMES[activeTab]?.color ?? "#a855f7";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-main">
@@ -465,7 +483,15 @@ function AppRoot() {
         configAberta={configAberta}
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div
+        className="flex flex-1 flex-col overflow-hidden"
+        style={{
+          // Glow na ZONA da topbar (cor do módulo), no nível da coluna — atrás do
+          // header transparente. Alinhado e contínuo com a "bola" do PageHeader
+          // (que vive dentro do main e é cortada): a bola parece subir pra topbar.
+          background: `radial-gradient(380px 160px at 145px -10px, ${corModulo}26, transparent 66%)`,
+        }}
+      >
         <Topbar
           onOpenSidebar={() => setSidebarOpen(true)}
           activeTab={activeTab}
@@ -532,7 +558,11 @@ function AppRoot() {
           {activeTab === "vendas" && activePage === "vendas-nova-venda" && (
             <ConcretizarVenda
               orcamentoId={orcamentoSendoTransformado ?? undefined}
-              onSaved={(vendaId) => abrirVenda(vendaId)}
+              dataInicial={dataShowInicial ?? undefined}
+              onSaved={(vendaId) => {
+                setDataShowInicial(null);
+                abrirVenda(vendaId);
+              }}
               onCancel={() =>
                 handlePageChange(
                   orcamentoSendoTransformado !== null
@@ -573,6 +603,7 @@ function AppRoot() {
               selectedDJs={selectedDJs}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
+              onNovaVendaNoDia={novaVendaNoDia}
             />
           )}
 

@@ -435,7 +435,7 @@ export default function AbaEquipe() {
           >
             <Users size={22} />
           </div>
-          <div className="section-title">{t("Nenhum usuário na equipe ainda.")}</div>
+          <div className="section-title">{t("Nenhum usuário da equipe cadastrado")}</div>
           <p className="text-sm text-muted max-w-sm">
             {t("Cadastre o primeiro usuário da sua equipe pra começar.")}
           </p>

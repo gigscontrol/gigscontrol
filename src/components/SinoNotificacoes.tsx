@@ -116,7 +116,7 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
     <div ref={popoverRef} className="relative">
       <button
         onClick={() => setAberto((v) => !v)}
-        className="btn-ghost relative p-2 rounded"
+        className="relative flex h-9 w-9 items-center justify-center rounded-md border border-border text-secondary transition-colors hover:border-border-strong hover:text-primary"
         aria-label={t("Notificações")}
         aria-haspopup="true"
         aria-expanded={aberto}

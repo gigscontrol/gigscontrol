@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { MapPin, Clock, Music, Calendar } from "lucide-react";
+import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
+import { useAgendaItems, type NovoAgendaItem } from "@/lib/agenda-items-context";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
-import type { AgendaDateRange, Show, ShowStatus, DJ } from "@/types";
+import type { AgendaDateRange, Show, ShowStatus, DJ, AgendaItem } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
+import Modal from "./Modal";
+import InputHora from "./inputs/InputHora";
 import { useT } from "@/lib/i18n";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -121,9 +124,11 @@ type Props = {
   selectedDJs: string[];
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
+  /** "Novo Show" no "+" de um dia → abre Nova Venda Direta com a data. */
+  onNovaVendaNoDia?: (dataISO: string) => void;
 };
 
-export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda }: Props) {
+export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
   const t = useT();
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
@@ -287,6 +292,16 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
+  const { itens: agendaItens, criar: criarItem, remover: removerItem } = useAgendaItems();
+  // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo DJ.
+  const filteredItens = agendaItens.filter(
+    (i) => i.artistIds.length === 0 || i.artistIds.some((id) => selectedDJs.includes(id))
+  );
+  const [novoItemDia, setNovoItemDia] = useState<DayCell | null>(null);
+  const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
+  const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
+  const [transporteFormDia, setTransporteFormDia] = useState<DayCell | null>(null);
+  const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -331,8 +346,8 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         </div>
       )}
 
-      {/* Header dos dias da semana (desktop) */}
-      <div className="hidden md:grid grid-cols-7 gap-2 mb-2 sticky top-0 bg-main py-2 z-10">
+      {/* Header dos dias da semana (desktop) — rola junto (cada card já mostra o dia) */}
+      <div className="hidden md:grid grid-cols-7 gap-2 mb-2 py-2">
         {DAY_NAMES_SHORT.map((d) => (
           <div
             key={d}
@@ -352,9 +367,12 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 key={day.uniqueKey}
                 day={day}
                 shows={filteredShows.filter((s) => showNoDia(s, day))}
+                itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onItemClick={setItemDetalhe}
+                onNovoItem={setNovoItemDia}
               />
             ))}
           </div>
@@ -367,15 +385,19 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           .filter((d) => !d.isOtherMonth)
           .map((day) => {
             const shows = filteredShows.filter((s) => showNoDia(s, day));
-            if (shows.length === 0 && !day.isToday) return null;
+            const itens = filteredItens.filter((i) => i.data === day.dataISO);
+            if (shows.length === 0 && itens.length === 0 && !day.isToday) return null;
             return (
               <MobileDayCard
                 key={day.uniqueKey}
                 day={day}
                 shows={shows}
+                itens={itens}
                 artistas={artistas}
                 accent={accent}
                 onShowClick={setShowSelecionado}
+                onItemClick={setItemDetalhe}
+                onNovoItem={setNovoItemDia}
               />
             );
           })}
@@ -391,6 +413,89 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         onAbrirOrcamento={onAbrirOrcamento}
         onAbrirVenda={onAbrirVenda}
       />
+
+      {/* Menu "+" — adicionar item a um dia */}
+      {novoItemDia && (
+        <NovoItemModal
+          day={novoItemDia}
+          onClose={() => setNovoItemDia(null)}
+          onNovoShow={() => {
+            const d = novoItemDia.dataISO;
+            setNovoItemDia(null);
+            onNovaVendaNoDia?.(d);
+          }}
+          onNovoEvento={() => {
+            const d = novoItemDia;
+            setNovoItemDia(null);
+            setEventoFormDia(d);
+          }}
+          onNovoVoo={() => {
+            const d = novoItemDia;
+            setNovoItemDia(null);
+            setVooFormDia(d);
+          }}
+          onNovoTransporte={() => {
+            const d = novoItemDia;
+            setNovoItemDia(null);
+            setTransporteFormDia(d);
+          }}
+        />
+      )}
+
+      {/* Form de novo evento personalizado */}
+      {eventoFormDia && (
+        <EventoFormModal
+          day={eventoFormDia}
+          artistas={artistas}
+          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          onClose={() => setEventoFormDia(null)}
+          onCriar={async (input) => {
+            await criarItem(input);
+            setEventoFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Form de novo voo */}
+      {vooFormDia && (
+        <VooFormModal
+          day={vooFormDia}
+          artistas={artistas}
+          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          onClose={() => setVooFormDia(null)}
+          onCriar={async (input) => {
+            await criarItem(input);
+            setVooFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Form de novo transporte terrestre */}
+      {transporteFormDia && (
+        <TransporteFormModal
+          day={transporteFormDia}
+          artistas={artistas}
+          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          onClose={() => setTransporteFormDia(null)}
+          onCriar={async (input) => {
+            await criarItem(input);
+            setTransporteFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Detalhe + excluir item */}
+      {itemDetalhe && (
+        <ItemDetalheModal
+          item={itemDetalhe}
+          artistaLabel={labelArtistas(itemDetalhe.artistIds, artistas)}
+          onClose={() => setItemDetalhe(null)}
+          onExcluir={async () => {
+            await removerItem(itemDetalhe.id);
+            setItemDetalhe(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -400,15 +505,21 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
 function DayCellComponent({
   day,
   shows,
+  itens,
   artistas,
   accent,
   onShowClick,
+  onItemClick,
+  onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
+  itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onItemClick: (item: AgendaItem) => void;
+  onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
   return (
@@ -447,18 +558,24 @@ function DayCellComponent({
       </div>
 
       <div className="flex-1 overflow-y-auto -mr-1 pr-1">
-        {shows.length > 0 ? (
-          shows.map((show) => (
-            <EventCard
-              key={show.id}
-              show={show}
-              dj={artistas.find((d) => d.id === show.djId)}
-              onClick={() => onShowClick(show.id)}
-            />
-          ))
-        ) : (
-          <DayCellEmptySlot />
-        )}
+        {shows.map((show) => (
+          <EventCard
+            key={show.id}
+            show={show}
+            dj={artistas.find((d) => d.id === show.djId)}
+            onClick={() => onShowClick(show.id)}
+          />
+        ))}
+        {itens.map((item) => (
+          <AgendaItemCard
+            key={item.id}
+            item={item}
+            artistaLabel={labelArtistas(item.artistIds, artistas)}
+            onClick={() => onItemClick(item)}
+          />
+        ))}
+        {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
+        {!day.isOtherMonth && <NovoItemSlot onClick={() => onNovoItem(day)} />}
       </div>
     </div>
   );
@@ -473,18 +590,1449 @@ function DayCellEmptySlot() {
   );
 }
 
+/** Retângulo pontilhado com "+" — sempre o último item da coluna do dia. */
+function NovoItemSlot({ onClick }: { onClick: () => void }) {
+  const t = useT();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t("Adicionar ao dia")}
+      title={t("Adicionar ao dia")}
+      className="mt-2 w-full flex items-center justify-center h-9 border border-dashed border-border rounded-md text-muted hover:text-secondary hover:border-border-strong transition-colors"
+    >
+      <Plus size={15} />
+    </button>
+  );
+}
+
+const ACOES_NOVO_ITEM: {
+  key: string;
+  label: string;
+  desc: string;
+  icon: typeof Music;
+  cor: string;
+  emBreve?: boolean;
+}[] = [
+  { key: "show", label: "Novo Show", desc: "Venda direta neste dia", icon: Music, cor: "var(--module-vendas)" },
+  { key: "voo", label: "Novo Voo", desc: "Voo com passageiros (busca por número)", icon: Plane, cor: "var(--module-agenda)" },
+  {
+    key: "transporte",
+    label: "Novo Transporte Terrestre",
+    desc: "Transfer/van com motorista",
+    icon: Car,
+    cor: "var(--module-financeiro)",
+  },
+  {
+    key: "evento",
+    label: "Novo Evento Personalizado",
+    desc: "Reserva o dia ou um horário",
+    icon: Calendar,
+    cor: "var(--module-contratos)",
+  },
+];
+
+/** Action-sheet do "+": escolhe o tipo de item a adicionar no dia.
+ *  Usa o Modal do app (portal pra document.body) → sempre centralizado na
+ *  viewport, sem o bug de `fixed` ancorando no <main> com transform. */
+function NovoItemModal({
+  day,
+  onClose,
+  onNovoShow,
+  onNovoEvento,
+  onNovoVoo,
+  onNovoTransporte,
+}: {
+  day: DayCell;
+  onClose: () => void;
+  onNovoShow: () => void;
+  onNovoEvento: () => void;
+  onNovoVoo: () => void;
+  onNovoTransporte: () => void;
+}) {
+  const t = useT();
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Adicionar ao dia")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={400}
+    >
+      <div className="flex flex-col gap-1">
+        {ACOES_NOVO_ITEM.map((a) => {
+          const Icone = a.icon;
+          return (
+            <button
+              key={a.key}
+              type="button"
+              disabled={a.emBreve}
+              onClick={
+                a.key === "show"
+                  ? onNovoShow
+                  : a.key === "evento"
+                    ? onNovoEvento
+                    : a.key === "voo"
+                      ? onNovoVoo
+                      : a.key === "transporte"
+                        ? onNovoTransporte
+                        : undefined
+              }
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
+            >
+              <span
+                className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${a.cor} 16%, transparent)`,
+                  color: a.cor,
+                }}
+              >
+                <Icone size={16} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-primary">{t(a.label)}</span>
+                <span className="block text-xs text-muted">{t(a.desc)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+const META_TIPO: Record<AgendaItem["tipo"], { label: string; icon: typeof Music; cor: string }> = {
+  evento: { label: "Evento", icon: Calendar, cor: "var(--module-contratos)" },
+  voo: { label: "Voo", icon: Plane, cor: "var(--module-agenda)" },
+  transporte: { label: "Transporte", icon: Car, cor: "var(--module-financeiro)" },
+};
+
+/** "YYYY-MM-DD" → "DD/MM/YYYY". */
+function formatarDataBR(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
+/** Nomes dos artistas (juntos) a partir dos ids; undefined se vazio. */
+function labelArtistas(ids: string[], artistas: DJ[]): string | undefined {
+  if (!ids.length) return undefined;
+  const nomes = ids
+    .map((id) => artistas.find((a) => a.id === id)?.name)
+    .filter(Boolean) as string[];
+  return nomes.length ? nomes.join(", ") : undefined;
+}
+
+/** Card compacto de um item da agenda (evento/voo/transporte) no dia. */
+function AgendaItemCard({
+  item,
+  artistaLabel,
+  onClick,
+}: {
+  item: AgendaItem;
+  artistaLabel?: string;
+  onClick: () => void;
+}) {
+  const t = useT();
+  const meta = META_TIPO[item.tipo];
+  const Icone = meta.icon;
+  const horario = item.diaInteiro
+    ? t("Dia inteiro")
+    : [item.horaInicio, item.horaFim].filter(Boolean).join("–");
+  const sub = [horario, artistaLabel].filter(Boolean).join(" · ");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left mb-1.5 rounded-md border p-2 transition-colors hover:border-border-strong"
+      style={{
+        borderColor: "var(--border-color)",
+        backgroundColor: `color-mix(in srgb, ${meta.cor} 8%, transparent)`,
+      }}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Icone size={12} style={{ color: meta.cor, flexShrink: 0 }} />
+        <span className="text-xs font-medium text-primary truncate">
+          {item.titulo || t(meta.label)}
+        </span>
+      </div>
+      {sub && <div className="text-[0.65rem] text-muted mt-0.5 truncate">{sub}</div>}
+    </button>
+  );
+}
+
+/** Campo rotulado simples pro form. */
+function CampoForm({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-medium text-muted">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+/** Seleção múltipla de artistas em chips (cor do DJ quando ativo). Reusado por
+ *  Evento (label "Artistas") e Voo (label "Passageiros"). */
+function SeletorArtistas({
+  artistas,
+  value,
+  onChange,
+  label,
+  hintVazio,
+}: {
+  artistas: DJ[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  label: string;
+  hintVazio?: string;
+}) {
+  const t = useT();
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!aberto) return;
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [aberto]);
+  const toggle = (id: string) =>
+    onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  const selecionados = artistas.filter((a) => value.includes(a.id));
+  const q = busca.trim().toLowerCase();
+  const filtrados = q ? artistas.filter((a) => a.name.toLowerCase().includes(q)) : artistas;
+  return (
+    <CampoForm label={label}>
+      <div className="relative" ref={ref}>
+        {selecionados.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {selecionados.map((a) => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+                style={{
+                  borderColor: a.color,
+                  backgroundColor: `color-mix(in srgb, ${a.color} 16%, transparent)`,
+                  color: a.color,
+                }}
+              >
+                {a.name}
+                <button type="button" onClick={() => toggle(a.id)} aria-label={t("Remover")}>
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          value={busca}
+          onChange={(e) => {
+            setBusca(e.target.value);
+            setAberto(true);
+          }}
+          onFocus={() => setAberto(true)}
+          placeholder={t("Buscar artista…")}
+          className="campo-input w-full"
+        />
+        {aberto && (
+          <div
+            className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-md"
+            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+          >
+            {filtrados.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted">{t("Nenhum artista")}</div>
+            ) : (
+              filtrados.map((a) => {
+                const ativo = value.includes(a.id);
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => toggle(a.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-elevated transition-colors"
+                  >
+                    <span
+                      className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: ativo ? a.color : "var(--border-strong)",
+                        backgroundColor: ativo ? a.color : "transparent",
+                      }}
+                    >
+                      {ativo && <Check size={11} color="#fff" />}
+                    </span>
+                    <span
+                      className="h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: a.color }}
+                    />
+                    <span className="text-primary truncate">{a.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+      {value.length === 0 && hintVazio && (
+        <div className="text-[0.7rem] text-muted mt-1.5">{hintVazio}</div>
+      )}
+    </CampoForm>
+  );
+}
+
+type Passageiro = {
+  nome: string;
+  nascimento?: string;
+  bagagemExtra?: boolean;
+};
+
+/** Lista repetível de passageiros (nome obrigatório; nascimento/bagagem opcionais). */
+function PassageirosField({
+  value,
+  onChange,
+}: {
+  value: Passageiro[];
+  onChange: (p: Passageiro[]) => void;
+}) {
+  const t = useT();
+  const setP = (i: number, patch: Partial<Passageiro>) =>
+    onChange(value.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  return (
+    <CampoForm label={t("Passageiros")}>
+      <div className="flex flex-col gap-2">
+        {value.map((p, i) => (
+          <div key={i} className="rounded-md border border-border p-2.5 flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <input
+                value={p.nome}
+                onChange={(e) => setP(i, { nome: e.target.value })}
+                placeholder={t("Nome completo")}
+                className="campo-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+                className="text-muted hover:text-danger p-1"
+                aria-label={t("Remover")}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="flex items-stretch gap-2">
+              <input
+                type="date"
+                value={p.nascimento ?? ""}
+                onChange={(e) => setP(i, { nascimento: e.target.value })}
+                className="campo-input text-sm flex-1"
+                title={t("Nascimento")}
+                aria-label={t("Nascimento")}
+              />
+              <button
+                type="button"
+                onClick={() => setP(i, { bagagemExtra: !p.bagagemExtra })}
+                aria-pressed={!!p.bagagemExtra}
+                className="shrink-0 inline-flex items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors"
+                style={
+                  p.bagagemExtra
+                    ? {
+                        color: "var(--module-agenda)",
+                        borderColor: "color-mix(in srgb, var(--module-agenda) 45%, transparent)",
+                        backgroundColor:
+                          "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
+                      }
+                    : { color: "var(--text-muted)", borderColor: "var(--border-color)" }
+                }
+              >
+                <Check size={13} style={{ opacity: p.bagagemExtra ? 1 : 0.35 }} />
+                {t("Bagagem extra")}
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...value, { nome: "" }])}
+          className="flex items-center justify-center gap-1.5 h-9 border border-dashed border-border rounded-md text-sm text-muted hover:text-secondary hover:border-border-strong transition-colors"
+        >
+          <Plus size={14} /> {t("Adicionar passageiro")}
+        </button>
+      </div>
+    </CampoForm>
+  );
+}
+
+/** "HH:mm" partida/chegada → duração "3h15" (naive; +24h se chegada no dia seguinte). */
+function calcularDuracao(partida: string, chegada: string): string {
+  const p = /^(\d{2}):(\d{2})$/.exec(partida);
+  const c = /^(\d{2}):(\d{2})$/.exec(chegada);
+  if (!p || !c) return "";
+  let min =
+    parseInt(c[1], 10) * 60 + parseInt(c[2], 10) - (parseInt(p[1], 10) * 60 + parseInt(p[2], 10));
+  if (min < 0) min += 24 * 60;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
+}
+
+/** Form de criação de evento personalizado (Fase 2). */
+function EventoFormModal({
+  day,
+  artistas,
+  defaultArtistIds,
+  onClose,
+  onCriar,
+}: {
+  day: DayCell;
+  artistas: DJ[];
+  defaultArtistIds: string[];
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [titulo, setTitulo] = useState("");
+  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
+  const [diaInteiro, setDiaInteiro] = useState(true);
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaFim, setHoraFim] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function submit() {
+    if (salvando) return;
+    if (!titulo.trim()) {
+      setErro(t("Informe um título."));
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onCriar({
+        tipo: "evento",
+        titulo: titulo.trim(),
+        data: day.dataISO,
+        diaInteiro,
+        horaInicio: diaInteiro ? undefined : horaInicio || undefined,
+        horaFim: diaInteiro ? undefined : horaFim || undefined,
+        artistIds,
+        observacoes: observacoes.trim() || undefined,
+      });
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Novo evento")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={440}
+    >
+      <div className="flex flex-col gap-4">
+        <CampoForm label={t("Título")}>
+          <input
+            autoFocus
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder={t("Studio, Day Off, Férias…")}
+            className="campo-input"
+          />
+        </CampoForm>
+
+        <SeletorArtistas
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          label={t("Artistas")}
+          hintVazio={t("Nenhum selecionado = vale para todos os artistas")}
+        />
+
+        <CampoForm label={t("Quando")}>
+          <div className="flex rounded-md border border-border overflow-hidden text-sm">
+            {[
+              { v: true, label: t("Dia inteiro") },
+              { v: false, label: t("Definir horário") },
+            ].map((op, i) => {
+              const ativo = diaInteiro === op.v;
+              return (
+                <button
+                  key={op.label}
+                  type="button"
+                  onClick={() => setDiaInteiro(op.v)}
+                  className={`flex-1 py-2 font-medium transition-colors ${
+                    i === 1 ? "border-l border-border" : ""
+                  }`}
+                  style={
+                    ativo
+                      ? {
+                          color: "var(--module-contratos)",
+                          backgroundColor:
+                            "color-mix(in srgb, var(--module-contratos) 16%, transparent)",
+                        }
+                      : { color: "var(--text-muted)" }
+                  }
+                >
+                  {op.label}
+                </button>
+              );
+            })}
+          </div>
+        </CampoForm>
+
+        {!diaInteiro && (
+          <div className="grid grid-cols-2 gap-3">
+            <CampoForm label={t("Início")}>
+              <InputHora
+                value={horaInicio}
+                onChange={setHoraInicio}
+                accent="var(--module-contratos)"
+              />
+            </CampoForm>
+            <CampoForm label={t("Fim")}>
+              <InputHora
+                value={horaFim}
+                onChange={setHoraFim}
+                accent="var(--module-contratos)"
+              />
+            </CampoForm>
+          </div>
+        )}
+
+        <CampoForm label={t("Observações")}>
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            rows={2}
+            className="campo-input resize-none"
+          />
+        </CampoForm>
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          <button
+            onClick={submit}
+            disabled={salvando}
+            className="btn btn-primary disabled:opacity-50"
+            style={{ backgroundColor: "var(--module-contratos)", color: "#fff" }}
+          >
+            {salvando ? t("Salvando…") : t("Criar evento")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** Form de criação de voo (Fase 3) — manual + autofill opcional (AviationStack). */
+/** Card de escolha de modo (visual do "Tipo de orçamento"). */
+function ModoCard({
+  ativo,
+  onClick,
+  icon: Icone,
+  titulo,
+  desc,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  icon: typeof Music;
+  titulo: string;
+  desc: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-lg border p-3 transition-colors"
+      style={{
+        borderColor: ativo ? "var(--module-agenda)" : "var(--border-color)",
+        backgroundColor: ativo
+          ? "color-mix(in srgb, var(--module-agenda) 10%, transparent)"
+          : "transparent",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
+            color: "var(--module-agenda)",
+          }}
+        >
+          <Icone size={15} />
+        </span>
+        <span className="text-sm font-semibold text-primary">{titulo}</span>
+      </div>
+      <span className="block text-xs text-muted leading-snug">{desc}</span>
+    </button>
+  );
+}
+
+function VooFormModal({
+  day,
+  artistas,
+  defaultArtistIds,
+  onClose,
+  onCriar,
+}: {
+  day: DayCell;
+  artistas: DJ[];
+  defaultArtistIds: string[];
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [modo, setModo] = useState<"manual" | "pdf">("manual");
+
+  // Form (usado pelo manual E pelo PDF de 1 voo)
+  const [dataVoo, setDataVoo] = useState(day.dataISO);
+  const [numeroVoo, setNumeroVoo] = useState("");
+  const [companhia, setCompanhia] = useState("");
+  const [origem, setOrigem] = useState("");
+  const [destino, setDestino] = useState("");
+  const [partida, setPartida] = useState("");
+  const [chegada, setChegada] = useState("");
+  const [localizador, setLocalizador] = useState("");
+  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
+  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
+  const [duracao, setDuracao] = useState("");
+  const [bagagem, setBagagem] = useState("");
+  const [pdfBase64, setPdfBase64] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  const [buscando, setBuscando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // PDF
+  const [nomeArquivo, setNomeArquivo] = useState("");
+  const [lendoPdf, setLendoPdf] = useState(false);
+  const [pdfMulti, setPdfMulti] = useState<VooExtraido[] | null>(null);
+  const [pdfOk, setPdfOk] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+
+  function aplicarVoo(v: VooExtraido) {
+    if (v.data) setDataVoo(v.data);
+    setNumeroVoo(v.numeroVoo ?? "");
+    setCompanhia(v.companhia ?? "");
+    setOrigem(v.origem ?? "");
+    setDestino(v.destino ?? "");
+    setPartida(v.partida ?? "");
+    setChegada(v.chegada ?? "");
+    setLocalizador(v.localizador ?? "");
+    setPassageiros((v.passageiros ?? []).map((n) => ({ nome: n })));
+    if (v.duracao) setDuracao(v.duracao);
+    if (v.bagagem) setBagagem(v.bagagem);
+  }
+
+  async function escolherPdf(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNomeArquivo(file.name);
+    setPdfMulti(null);
+    setPdfOk(false);
+    setPdfMsg(null);
+    setLendoPdf(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve(String(reader.result).replace(/^data:[^;]*;base64,/, ""));
+        reader.onerror = () => reject(new Error("read"));
+        reader.readAsDataURL(file);
+      });
+      setPdfBase64(base64);
+      const res = await fetch("/api/voos/importar", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: base64 }),
+      });
+      const body = await res.json();
+      if (Array.isArray(body.voos)) {
+        const achados = body.voos as VooExtraido[];
+        if (achados.length === 0) setPdfMsg(t("Nenhum voo encontrado nesse PDF."));
+        else if (achados.length === 1) {
+          aplicarVoo(achados[0]);
+          setPdfOk(true);
+        } else setPdfMulti(achados);
+      } else if (body.indisponivel) {
+        setPdfMsg(
+          t("Importação por IA indisponível — configure a chave Anthropic no servidor.")
+        );
+      } else {
+        setPdfMsg(body.erro ?? t("Não consegui ler esse voucher."));
+      }
+    } catch {
+      setPdfMsg(t("Não consegui ler esse voucher."));
+    } finally {
+      setLendoPdf(false);
+    }
+  }
+
+  async function buscar() {
+    const f = numeroVoo.trim();
+    if (!f || buscando) return;
+    setBuscando(true);
+    setAviso(null);
+    try {
+      const res = await fetch(`/api/voos/lookup?flight=${encodeURIComponent(f)}`, {
+        credentials: "include",
+      });
+      const body = await res.json();
+      if (body.voo) {
+        const v = body.voo;
+        if (v.companhia) setCompanhia(v.companhia);
+        if (v.origem) setOrigem(v.origem);
+        if (v.destino) setDestino(v.destino);
+        if (v.partida) setPartida(v.partida);
+        if (v.chegada) setChegada(v.chegada);
+        setAviso(t("Dados do voo de hoje aplicados — confira data e horário."));
+      } else if (body.indisponivel) {
+        setAviso(t("Busca automática indisponível (sem chave). Preencha manualmente."));
+      } else if (body.naoEncontrado) {
+        setAviso(t("Voo não encontrado hoje. Preencha manualmente."));
+      } else {
+        setAviso(body.erro ?? t("Não foi possível buscar agora."));
+      }
+    } catch {
+      setAviso(t("Não foi possível buscar agora."));
+    } finally {
+      setBuscando(false);
+    }
+  }
+
+  async function subirVoucher(): Promise<string> {
+    if (!pdfBase64) return "";
+    try {
+      const res = await fetch("/api/voos/voucher", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: pdfBase64 }),
+      });
+      const b = await res.json();
+      return typeof b.path === "string" ? b.path : "";
+    } catch {
+      return "";
+    }
+  }
+
+  async function submitUm() {
+    if (salvando) return;
+    if (!numeroVoo.trim() && !origem.trim() && !destino.trim()) {
+      setErro(t("Informe ao menos o número do voo ou a rota."));
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    const rota = origem && destino ? `${origem.toUpperCase()}→${destino.toUpperCase()}` : "";
+    const titulo =
+      [numeroVoo.trim().toUpperCase(), rota].filter(Boolean).join(" · ") || t("Voo");
+    try {
+      const voucherPath = await subirVoucher();
+      await onCriar({
+        tipo: "voo",
+        titulo,
+        data: dataVoo,
+        diaInteiro: false,
+        horaInicio: partida || undefined,
+        horaFim: chegada || undefined,
+        artistIds: artistIds,
+        observacoes: observacoes.trim() || undefined,
+        dados: {
+          numeroVoo: numeroVoo.trim().toUpperCase(),
+          companhia: companhia.trim(),
+          origem: origem.trim().toUpperCase(),
+          destino: destino.trim().toUpperCase(),
+          partida,
+          chegada,
+          duracao: duracao || calcularDuracao(partida, chegada),
+          bagagem: bagagem.trim(),
+          voucherPath,
+          localizador: localizador.trim(),
+          passageiros: passageiros.filter((p) => p.nome.trim()),
+        },
+      });
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  async function submitTodos() {
+    if (!pdfMulti || salvando) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      const voucherPath = await subirVoucher();
+      for (const v of pdfMulti.filter((x) => x.data)) {
+        const rota = v.origem && v.destino ? `${v.origem}→${v.destino}` : "";
+        const titulo = [v.numeroVoo, rota].filter(Boolean).join(" · ") || t("Voo");
+        await onCriar({
+          tipo: "voo",
+          titulo,
+          data: v.data as string,
+          diaInteiro: false,
+          horaInicio: v.partida || undefined,
+          horaFim: v.chegada || undefined,
+          artistIds: artistIds,
+          dados: {
+            numeroVoo: v.numeroVoo ?? "",
+            companhia: v.companhia ?? "",
+            origem: v.origem ?? "",
+            destino: v.destino ?? "",
+            partida: v.partida ?? "",
+            chegada: v.chegada ?? "",
+            duracao: v.duracao || calcularDuracao(v.partida ?? "", v.chegada ?? ""),
+            bagagem: v.bagagem ?? "",
+            voucherPath,
+            localizador: v.localizador ?? "",
+            passageiros: (v.passageiros ?? []).map((n) => ({ nome: n })),
+          },
+        });
+      }
+      onClose();
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  const multiValidos = (pdfMulti ?? []).filter((v) => v.data);
+  const mostrarForm = modo === "manual" || (modo === "pdf" && pdfOk);
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Novo voo")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={480}
+    >
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <ModoCard
+            ativo={modo === "manual"}
+            onClick={() => setModo("manual")}
+            icon={Pencil}
+            titulo={t("Preencher manual")}
+            desc={t("Digitar os dados do voo na mão.")}
+          />
+          <ModoCard
+            ativo={modo === "pdf"}
+            onClick={() => setModo("pdf")}
+            icon={FileUp}
+            titulo={t("Ler de um PDF")}
+            desc={t("Sobe o voucher e preenche sozinho.")}
+          />
+        </div>
+
+        <SeletorArtistas
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          label={t("Artista(s) — de quem é o voo")}
+          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+        />
+
+        {modo === "pdf" && (
+          <>
+            <label className="flex flex-col items-center justify-center gap-1.5 h-20 border border-dashed border-border rounded-md cursor-pointer text-sm text-muted hover:border-border-strong hover:text-secondary transition-colors">
+              <FileUp size={18} />
+              <span className="truncate max-w-full px-3">
+                {nomeArquivo || t("Escolher PDF do voucher")}
+              </span>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={escolherPdf}
+              />
+            </label>
+            {lendoPdf && <div className="text-sm text-muted">{t("Lendo o voucher…")}</div>}
+            {pdfMsg && <div className="text-xs text-secondary">{pdfMsg}</div>}
+          </>
+        )}
+
+        {modo === "pdf" && pdfMulti && (
+          <div className="flex flex-col gap-2">
+            <div className="stat-label">{t("Voos encontrados")}</div>
+            {pdfMulti.map((v, i) => (
+              <div key={i} className="rounded-md border border-border p-2.5">
+                <div className="text-sm font-medium text-primary">
+                  {[v.numeroVoo, v.origem && v.destino ? `${v.origem}→${v.destino}` : ""]
+                    .filter(Boolean)
+                    .join(" · ") || t("Voo")}
+                </div>
+                <div className="text-xs text-muted mt-0.5">
+                  {[
+                    v.companhia,
+                    v.data ? formatarDataBR(v.data) : "⚠ " + t("sem data"),
+                    [v.partida, v.chegada].filter(Boolean).join("–"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+                {(v.passageiros?.length ?? 0) > 0 && (
+                  <div className="text-xs text-muted mt-0.5">{v.passageiros!.join(", ")}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {mostrarForm && (
+          <>
+            <CampoForm label={t("Número do voo")}>
+              {modo === "manual" ? (
+                <div className="flex gap-2">
+                  <input
+                    value={numeroVoo}
+                    onChange={(e) => setNumeroVoo(e.target.value)}
+                    placeholder="LA3477"
+                    className="campo-input flex-1 uppercase placeholder:normal-case"
+                  />
+                  <button
+                    type="button"
+                    onClick={buscar}
+                    disabled={buscando || !numeroVoo.trim()}
+                    className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Search size={14} />
+                    {buscando ? t("Buscando…") : t("Buscar")}
+                  </button>
+                </div>
+              ) : (
+                <input
+                  value={numeroVoo}
+                  onChange={(e) => setNumeroVoo(e.target.value)}
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              )}
+              {aviso && <div className="text-[0.7rem] text-muted mt-1.5">{aviso}</div>}
+            </CampoForm>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Data")}>
+                <input
+                  type="date"
+                  value={dataVoo}
+                  onChange={(e) => setDataVoo(e.target.value)}
+                  className="campo-input"
+                />
+              </CampoForm>
+              <CampoForm label={t("Companhia")}>
+                <input
+                  value={companhia}
+                  onChange={(e) => setCompanhia(e.target.value)}
+                  className="campo-input"
+                />
+              </CampoForm>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Origem")}>
+                <input
+                  value={origem}
+                  onChange={(e) => setOrigem(e.target.value)}
+                  placeholder="GRU"
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              </CampoForm>
+              <CampoForm label={t("Destino")}>
+                <input
+                  value={destino}
+                  onChange={(e) => setDestino(e.target.value)}
+                  placeholder="SCL"
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              </CampoForm>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Partida")}>
+                <InputHora value={partida} onChange={setPartida} accent="var(--module-agenda)" />
+              </CampoForm>
+              <CampoForm label={t("Chegada")}>
+                <InputHora value={chegada} onChange={setChegada} accent="var(--module-agenda)" />
+              </CampoForm>
+            </div>
+
+            <CampoForm label={t("Localizador (PNR)")}>
+              <input
+                value={localizador}
+                onChange={(e) => setLocalizador(e.target.value)}
+                placeholder="ABC123"
+                className="campo-input uppercase placeholder:normal-case"
+              />
+            </CampoForm>
+
+            <PassageirosField value={passageiros} onChange={setPassageiros} />
+
+            <CampoForm label={t("Observações")}>
+              <textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={2}
+                className="campo-input resize-none"
+              />
+            </CampoForm>
+          </>
+        )}
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          {modo === "pdf" && pdfMulti
+            ? multiValidos.length > 0 && (
+                <button
+                  onClick={submitTodos}
+                  disabled={salvando}
+                  className="btn btn-primary disabled:opacity-50"
+                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                >
+                  {salvando ? t("Adicionando…") : t("Adicionar à agenda")}
+                </button>
+              )
+            : mostrarForm && (
+                <button
+                  onClick={submitUm}
+                  disabled={salvando}
+                  className="btn btn-primary disabled:opacity-50"
+                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                >
+                  {salvando ? t("Salvando…") : t("Criar voo")}
+                </button>
+              )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+const TIPOS_TRANSPORTE = ["Executivo", "Van", "Carro", "Ônibus", "Transfer", "Outro"];
+
+/** Form de criação de transporte terrestre (Fase 3, manual). */
+function TransporteFormModal({
+  day,
+  artistas,
+  defaultArtistIds,
+  onClose,
+  onCriar,
+}: {
+  day: DayCell;
+  artistas: DJ[];
+  defaultArtistIds: string[];
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
+  const [dataT, setDataT] = useState(day.dataISO);
+  const [tipo, setTipo] = useState("Executivo");
+  const [empresa, setEmpresa] = useState("");
+  const [motorista, setMotorista] = useState("");
+  const [contato, setContato] = useState("");
+  const [origem, setOrigem] = useState("");
+  const [destino, setDestino] = useState("");
+  const [horario, setHorario] = useState("");
+  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function submit() {
+    if (salvando) return;
+    if (!origem.trim() && !destino.trim() && !empresa.trim()) {
+      setErro(t("Informe ao menos a rota ou a empresa."));
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    const rota = origem && destino ? `${origem.trim()}→${destino.trim()}` : "";
+    const titulo = [t(tipo), rota].filter(Boolean).join(" · ") || t("Transporte");
+    try {
+      await onCriar({
+        tipo: "transporte",
+        titulo,
+        data: dataT,
+        diaInteiro: false,
+        horaInicio: horario || undefined,
+        artistIds,
+        observacoes: observacoes.trim() || undefined,
+        dados: {
+          tipoTransporte: tipo,
+          empresa: empresa.trim(),
+          motorista: motorista.trim(),
+          contato: contato.trim(),
+          origem: origem.trim(),
+          destino: destino.trim(),
+          passageiros: passageiros.filter((p) => p.nome.trim()),
+        },
+      });
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Novo transporte terrestre")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={480}
+    >
+      <div className="flex flex-col gap-4">
+        <SeletorArtistas
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          label={t("Artista(s) — de quem é o transporte")}
+          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Data")}>
+            <input
+              type="date"
+              value={dataT}
+              onChange={(e) => setDataT(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Horário")}>
+            <InputHora value={horario} onChange={setHorario} accent="var(--module-financeiro)" />
+          </CampoForm>
+        </div>
+
+        <CampoForm label={t("Tipo")}>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo-input">
+            {TIPOS_TRANSPORTE.map((tp) => (
+              <option key={tp} value={tp}>
+                {t(tp)}
+              </option>
+            ))}
+          </select>
+        </CampoForm>
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Origem")}>
+            <input
+              value={origem}
+              onChange={(e) => setOrigem(e.target.value)}
+              placeholder={t("Aeroporto, hotel…")}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Destino")}>
+            <input
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              placeholder={t("Local do evento…")}
+              className="campo-input"
+            />
+          </CampoForm>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Empresa")}>
+            <input
+              value={empresa}
+              onChange={(e) => setEmpresa(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Motorista")}>
+            <input
+              value={motorista}
+              onChange={(e) => setMotorista(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+        </div>
+
+        <CampoForm label={t("Contato do motorista")}>
+          <input
+            value={contato}
+            onChange={(e) => setContato(e.target.value)}
+            placeholder={t("Telefone/WhatsApp")}
+            className="campo-input"
+          />
+        </CampoForm>
+
+        <PassageirosField value={passageiros} onChange={setPassageiros} />
+
+        <CampoForm label={t("Observações")}>
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            rows={2}
+            className="campo-input resize-none"
+          />
+        </CampoForm>
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          <button
+            onClick={submit}
+            disabled={salvando}
+            className="btn btn-primary disabled:opacity-50"
+            style={{ backgroundColor: "var(--module-financeiro)", color: "#fff" }}
+          >
+            {salvando ? t("Salvando…") : t("Criar transporte")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+type VooExtraido = {
+  numeroVoo?: string;
+  companhia?: string;
+  data?: string;
+  origem?: string;
+  destino?: string;
+  partida?: string;
+  chegada?: string;
+  duracao?: string;
+  bagagem?: string;
+  localizador?: string;
+  passageiros?: string[];
+};
+
+/** Linha rótulo/valor pro detalhe. */
+function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-muted flex-shrink-0">{rotulo}</span>
+      <span className="text-primary text-right">{valor}</span>
+    </div>
+  );
+}
+
+/** Linhas específicas de um voo (a partir do `dados` do item). */
+function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
+  const t = useT();
+  const [baixando, setBaixando] = useState(false);
+  const d = (dados ?? {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
+  const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
+  const voucherPath = str("voucherPath");
+  const passageiros: Passageiro[] = Array.isArray(d.passageiros)
+    ? (d.passageiros as Passageiro[])
+    : str("passageiros")
+      ? str("passageiros")
+          .split(", ")
+          .filter(Boolean)
+          .map((nome) => ({ nome }))
+      : [];
+
+  async function baixarVoucher() {
+    if (!voucherPath || baixando) return;
+    setBaixando(true);
+    try {
+      const res = await fetch(
+        `/api/voos/voucher?path=${encodeURIComponent(voucherPath)}`,
+        { credentials: "include" }
+      );
+      const b = await res.json();
+      if (b?.url) window.open(b.url, "_blank", "noopener");
+    } catch {
+      // silencioso — download é secundário
+    } finally {
+      setBaixando(false);
+    }
+  }
+
+  return (
+    <>
+      {str("companhia") && <LinhaDetalhe rotulo={t("Companhia")} valor={str("companhia")} />}
+      {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
+      {str("bagagem") && <LinhaDetalhe rotulo={t("Bagagem")} valor={str("bagagem")} />}
+      {str("localizador") && (
+        <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
+      )}
+      {passageiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">{t("Passageiros")}</span>
+          {passageiros.map((p, i) => (
+            <div key={i} className="text-sm text-primary leading-snug">
+              {p.nome}
+              {(p.nascimento || p.bagagemExtra) && (
+                <span className="text-xs text-muted">
+                  {" · "}
+                  {[
+                    p.nascimento && formatarDataBR(p.nascimento),
+                    p.bagagemExtra && t("bagagem extra"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {voucherPath && (
+        <button
+          type="button"
+          onClick={baixarVoucher}
+          disabled={baixando}
+          className="btn btn-secondary self-start inline-flex items-center gap-1.5 text-sm disabled:opacity-50"
+        >
+          <Download size={14} />
+          {baixando ? t("Baixando…") : t("Baixar voucher")}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** Linhas específicas de um transporte terrestre. */
+function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
+  const t = useT();
+  const d = (dados ?? {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
+  const rota = str("origem") && str("destino") ? `${str("origem")} → ${str("destino")}` : "";
+  const contato = [str("motorista"), str("contato")].filter(Boolean).join(" · ");
+  const passageiros: Passageiro[] = Array.isArray(d.passageiros)
+    ? (d.passageiros as Passageiro[])
+    : [];
+  return (
+    <>
+      {str("tipoTransporte") && <LinhaDetalhe rotulo={t("Tipo")} valor={t(str("tipoTransporte"))} />}
+      {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
+      {str("empresa") && <LinhaDetalhe rotulo={t("Empresa")} valor={str("empresa")} />}
+      {contato && <LinhaDetalhe rotulo={t("Motorista")} valor={contato} />}
+      {passageiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">{t("Passageiros")}</span>
+          {passageiros.map((p, i) => (
+            <div key={i} className="text-sm text-primary leading-snug">
+              {p.nome}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Detalhe de um item + excluir (Fase 2: sem edição). */
+function ItemDetalheModal({
+  item,
+  artistaLabel,
+  onClose,
+  onExcluir,
+}: {
+  item: AgendaItem;
+  artistaLabel?: string;
+  onClose: () => void;
+  onExcluir: () => Promise<void>;
+}) {
+  const t = useT();
+  const [excluindo, setExcluindo] = useState(false);
+  const meta = META_TIPO[item.tipo];
+  const horario = item.diaInteiro
+    ? t("Dia inteiro")
+    : [item.horaInicio, item.horaFim].filter(Boolean).join(" – ") || "—";
+  const dur =
+    item.tipo === "voo" && typeof item.dados?.duracao === "string"
+      ? (item.dados.duracao as string)
+      : "";
+
+  async function excluir() {
+    if (excluindo) return;
+    setExcluindo(true);
+    try {
+      await onExcluir();
+    } catch {
+      setExcluindo(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={item.titulo || t(meta.label)}
+      subtitle={t(meta.label)}
+      maxWidth={400}
+    >
+      <div className="flex flex-col gap-3">
+        <LinhaDetalhe
+          rotulo={t("Quando")}
+          valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
+        />
+        {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
+        {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
+        {artistaLabel && (
+          <LinhaDetalhe
+            rotulo={
+              item.tipo === "voo" || item.tipo === "transporte"
+                ? t("Artista(s)")
+                : t("Artistas")
+            }
+            valor={artistaLabel}
+          />
+        )}
+        {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
+        {item.tipo === "voo" && (
+          <div className="text-[0.7rem] text-muted pt-2 border-t border-border">
+            ⚠ {t("Confira no site da companhia (pelo localizador) se o horário não mudou.")}
+          </div>
+        )}
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={excluir}
+            disabled={excluindo}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+            style={{ color: "var(--danger)" }}
+          >
+            <Trash2 size={14} />
+            {excluindo ? t("Excluindo…") : t("Excluir")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function MobileDayCard({
   day,
   shows,
+  itens,
   artistas,
   accent,
   onShowClick,
+  onItemClick,
+  onNovoItem,
 }: {
   day: DayCell;
   shows: Show[];
+  itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
   onShowClick: (id: string) => void;
+  onItemClick: (item: AgendaItem) => void;
+  onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
   return (
@@ -517,18 +2065,24 @@ function MobileDayCard({
           </span>
         )}
       </div>
-      {shows.length > 0 ? (
-        shows.map((show) => (
-          <EventCard
-            key={show.id}
-            show={show}
-            dj={artistas.find((d) => d.id === show.djId)}
-            onClick={() => onShowClick(show.id)}
-          />
-        ))
-      ) : (
-        <MobileDayEmptySlot />
-      )}
+      {shows.map((show) => (
+        <EventCard
+          key={show.id}
+          show={show}
+          dj={artistas.find((d) => d.id === show.djId)}
+          onClick={() => onShowClick(show.id)}
+        />
+      ))}
+      {itens.map((item) => (
+        <AgendaItemCard
+          key={item.id}
+          item={item}
+          artistaLabel={labelArtistas(item.artistIds, artistas)}
+          onClick={() => onItemClick(item)}
+        />
+      ))}
+      {shows.length === 0 && itens.length === 0 && <MobileDayEmptySlot />}
+      <NovoItemSlot onClick={() => onNovoItem(day)} />
     </div>
   );
 }

@@ -62,6 +62,49 @@ function calcularProximaCobranca(criadoEm: string, ciclo: CicloCobranca): string
   return proxima.toISOString().slice(0, 10);
 }
 
+/** Estado de acesso efetivo (mesma regra da rota /api/workspace/onboarding). */
+function estadoAcesso(
+  status: string,
+  trialTerminaEm: string | null
+): "ok" | "graca" | "bloqueado" {
+  const agora = Date.now();
+  const prazo = trialTerminaEm ? new Date(trialTerminaEm).getTime() : null;
+  if (status === "ativa") return "ok";
+  if (status === "suspended" || status === "cancelled") return "bloqueado";
+  if (status === "trial") {
+    if (!prazo || agora <= prazo) return "ok";
+    if (agora <= prazo + 86_400_000) return "graca";
+    return "bloqueado";
+  }
+  if (status === "graca") return prazo && agora <= prazo ? "graca" : "bloqueado";
+  return "ok";
+}
+
+/** Status interno da subscription → rótulo exibido no painel. */
+function statusAdmin(
+  subStatus: string,
+  trialTerminaEm: string | null
+): StatusAssinatura {
+  const e = estadoAcesso(subStatus, trialTerminaEm);
+  if (subStatus === "ativa") return "ativa";
+  if (subStatus === "trial") return e === "ok" ? "trial" : "suspensa"; // trial expirado
+  if (subStatus === "cancelled") return "cancelada";
+  return "suspensa"; // graca / suspended / desconhecido
+}
+
+/** Dias restantes até o prazo relevante. Negativo = expirado. */
+function diasRestantes(
+  subStatus: string,
+  trialTerminaEm: string | null,
+  proximaCobranca: string | null
+): number | null {
+  let alvo: string | null = null;
+  if (subStatus === "ativa") alvo = proximaCobranca;
+  else if (subStatus === "trial" || subStatus === "graca") alvo = trialTerminaEm;
+  if (!alvo) return null;
+  return Math.ceil((new Date(alvo).getTime() - Date.now()) / 86_400_000);
+}
+
 // ============================================================
 // Assinaturas (= workspaces + contagens)
 // ============================================================
@@ -90,6 +133,22 @@ export async function listarAssinaturas(
     .is("deletado_em", null);
   if (errArt) throw errArt;
 
+  // Subscriptions — fonte REAL de status/datas (o app gateia por ela).
+  const { data: subs } = await admin
+    .from("subscriptions")
+    .select("workspace_id, status, ciclo, inicio_em, trial_termina_em, proxima_cobranca");
+  const subByWs = new Map<
+    string,
+    {
+      status: string;
+      ciclo: string | null;
+      inicio_em: string | null;
+      trial_termina_em: string | null;
+      proxima_cobranca: string | null;
+    }
+  >();
+  for (const s of subs ?? []) subByWs.set(s.workspace_id, s);
+
   const profilesByWs = new Map<string, typeof profiles>();
   for (const p of profiles ?? []) {
     if (!p.workspace_id) continue;
@@ -110,34 +169,98 @@ export async function listarAssinaturas(
     const usuariosEquipe = ws.filter(
       (p) => p.papel !== "admin" && p.papel !== "artista"
     );
+    const sub = subByWs.get(w.id);
+    const subStatus = sub?.status ?? null;
+    const trialEm = sub?.trial_termina_em ?? null;
+    // Data exibida como "próximo pagamento":
+    //  - ativa       → data real do Stripe, ou projeção pelo ciclo (conta sem Stripe)
+    //  - trial/graça → o prazo (trial_termina_em)
+    //  - suspensa/cancelada → null ("—")
+    let proxima: string | null = null;
+    if (subStatus === "ativa") {
+      proxima =
+        sub?.proxima_cobranca ??
+        calcularProximaCobranca(
+          sub?.inicio_em ?? w.criado_em,
+          (sub?.ciclo as CicloCobranca) ?? w.ciclo
+        );
+    } else if (subStatus === "trial" || subStatus === "graca") {
+      proxima = sub?.proxima_cobranca ?? (trialEm ? trialEm.slice(0, 10) : null);
+    }
     return {
       workspaceId: w.id,
       nomeWorkspace: w.nome,
       responsavel: dono?.nome ?? "—",
       email: dono?.email ?? "",
       plano: w.plano,
-      ciclo: w.ciclo,
-      status: statusAssinaturaValido(w.status),
+      ciclo: (sub?.ciclo as CicloCobranca) ?? w.ciclo,
+      // Status/dias vêm da subscription real; sem sub, cai no campo do workspace.
+      status: subStatus ? statusAdmin(subStatus, trialEm) : statusAssinaturaValido(w.status),
+      diasRestantes: subStatus ? diasRestantes(subStatus, trialEm, proxima) : null,
       artistasEmUso: artistasCount.get(w.id) ?? 0,
       usuariosEmUso: usuariosEquipe.length,
       inicioEm: w.criado_em.slice(0, 10),
-      proximaCobranca: calcularProximaCobranca(w.criado_em, w.ciclo),
+      proximaCobranca: proxima,
     };
   });
 
   return assinaturas;
 }
 
+const STATUS_INTERNO: Record<StatusAssinatura, string> = {
+  ativa: "ativa",
+  trial: "trial",
+  suspensa: "suspended",
+  cancelada: "cancelled",
+};
+
 export async function alterarStatusAssinatura(
   admin: SupabaseClient,
   workspaceId: string,
   status: StatusAssinatura
 ): Promise<void> {
+  const interno = STATUS_INTERNO[status];
+  const patch: Record<string, unknown> = { status: interno };
+  if (status === "ativa") patch.trial_termina_em = null;
+  // "Marcar teste" pelo painel = teste fresco de 7 dias.
+  if (status === "trial") {
+    patch.trial_termina_em = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  }
+  // Fonte da verdade = subscriptions (é o que o app olha pra liberar o acesso).
   const { error } = await admin
-    .from("workspaces")
-    .update({ status })
-    .eq("id", workspaceId);
+    .from("subscriptions")
+    .update(patch)
+    .eq("workspace_id", workspaceId);
   if (error) throw error;
+  // Espelha no workspace (compat com código legado que ainda leia w.status).
+  await admin.from("workspaces").update({ status: interno }).eq("id", workspaceId);
+}
+
+/**
+ * Dá dias grátis: estende o acesso setando a assinatura como `trial` com novo
+ * prazo. Soma a partir do maior entre AGORA e o prazo atual (não perde os dias
+ * que ainda restam). É um comp LOCAL — não mexe no Stripe.
+ */
+export async function estenderDiasAssinatura(
+  admin: SupabaseClient,
+  workspaceId: string,
+  dias: number
+): Promise<void> {
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("trial_termina_em")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle<{ trial_termina_em: string | null }>();
+  const agora = Date.now();
+  const atual = sub?.trial_termina_em ? new Date(sub.trial_termina_em).getTime() : 0;
+  const base = Math.max(agora, atual);
+  const novo = new Date(base + dias * 86_400_000).toISOString();
+  const { error } = await admin
+    .from("subscriptions")
+    .update({ status: "trial", trial_termina_em: novo })
+    .eq("workspace_id", workspaceId);
+  if (error) throw error;
+  await admin.from("workspaces").update({ status: "trial" }).eq("id", workspaceId);
 }
 
 export async function alterarPlanoAssinatura(

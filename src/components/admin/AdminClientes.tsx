@@ -24,6 +24,7 @@ import {
   LABELS_STATUS_USUARIO,
   getUsoWorkspace,
   type Assinatura,
+  type StatusAssinatura,
 } from "@/lib/plataforma";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano, precoPorMes, formatarPreco } from "@/lib/planos";
@@ -135,9 +136,16 @@ export default function AdminClientes() {
                       </div>
                     </Td>
                     <Td className="text-secondary tabular-nums text-xs">
-                      {new Date(
-                        assinatura.proximaCobranca + "T12:00:00"
-                      ).toLocaleDateString("pt-BR")}
+                      <div>
+                        {assinatura.proximaCobranca
+                          ? new Date(
+                              assinatura.proximaCobranca + "T12:00:00"
+                            ).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </div>
+                      <div style={{ color: corDias(assinatura.diasRestantes) }}>
+                        {fmtDias(assinatura.diasRestantes)}
+                      </div>
                     </Td>
                     <Td>
                       <span className={`badge ${st.badge}`}>{st.label}</span>
@@ -257,6 +265,9 @@ function DetalheCliente({
         </div>
       </div>
 
+      {/* Gerenciar assinatura (ações do super-admin) */}
+      <GerenciarAssinatura assinatura={assinatura} />
+
       {/* Assinatura / pagamento */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <InfoCard
@@ -288,14 +299,14 @@ function DetalheCliente({
         <InfoCard
           icon={<CalendarClock size={16} />}
           label="Próximo pagamento"
-          value={new Date(
-            assinatura.proximaCobranca + "T12:00:00"
-          ).toLocaleDateString("pt-BR")}
-          sub={
-            assinatura.status === "ativa"
-              ? "Cobrança programada"
-              : "Assinatura " + st.label.toLowerCase()
+          value={
+            assinatura.proximaCobranca
+              ? new Date(
+                  assinatura.proximaCobranca + "T12:00:00"
+                ).toLocaleDateString("pt-BR")
+              : "—"
           }
+          sub={fmtDias(assinatura.diasRestantes)}
           color="var(--module-agenda)"
         />
         <InfoCard
@@ -426,6 +437,122 @@ function DetalheCliente({
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function fmtDias(d: number | null | undefined): string {
+  if (d == null) return "—";
+  if (d < 0) return `expirado há ${Math.abs(d)} dia${Math.abs(d) === 1 ? "" : "s"}`;
+  if (d === 0) return "expira hoje";
+  return `${d} dia${d === 1 ? "" : "s"} restante${d === 1 ? "" : "s"}`;
+}
+function corDias(d: number | null | undefined): string {
+  if (d == null) return "var(--text-muted)";
+  if (d < 0) return "var(--danger)";
+  if (d <= 3) return "var(--warning)";
+  return "var(--text-secondary)";
+}
+
+/** Painel do super-admin: ver dias restantes, dar dias grátis e mudar status. */
+function GerenciarAssinatura({ assinatura }: { assinatura: Assinatura }) {
+  const { estenderDiasAssinatura, alterarStatusAssinatura } = usePlataforma();
+  const [agindo, setAgindo] = useState<string | null>(null);
+  const [diasCustom, setDiasCustom] = useState("");
+
+  async function darDias(dias: number) {
+    if (agindo || !dias || dias <= 0) return;
+    setAgindo("d" + dias);
+    try {
+      await estenderDiasAssinatura(assinatura.workspaceId, dias);
+    } finally {
+      setAgindo(null);
+      setDiasCustom("");
+    }
+  }
+  async function mudarStatus(s: StatusAssinatura) {
+    if (agindo) return;
+    setAgindo("s" + s);
+    try {
+      await alterarStatusAssinatura(assinatura.workspaceId, s);
+    } finally {
+      setAgindo(null);
+    }
+  }
+
+  const acoes: { s: StatusAssinatura; label: string; cor: string }[] = [
+    { s: "ativa", label: "Ativar", cor: "var(--success)" },
+    { s: "suspensa", label: "Suspender", cor: "var(--warning)" },
+    { s: "cancelada", label: "Cancelar", cor: "var(--danger)" },
+  ];
+
+  return (
+    <div className="card mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <CalendarClock size={16} style={{ color: "var(--module-vendas)" }} />
+        <div className="section-title">Gerenciar assinatura</div>
+      </div>
+
+      <div className="text-sm mb-4">
+        <span className="text-muted">Dias restantes: </span>
+        <strong style={{ color: corDias(assinatura.diasRestantes) }}>
+          {fmtDias(assinatura.diasRestantes)}
+        </strong>
+      </div>
+
+      <div className="stat-label mb-2">Dar dias grátis (estende o acesso)</div>
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        {[7, 15, 30].map((d) => (
+          <button
+            key={d}
+            onClick={() => void darDias(d)}
+            disabled={!!agindo}
+            className="btn btn-secondary text-sm disabled:opacity-50"
+          >
+            {agindo === "d" + d ? "…" : `+${d} dias`}
+          </button>
+        ))}
+        <input
+          type="number"
+          min={1}
+          max={365}
+          value={diasCustom}
+          onChange={(e) => setDiasCustom(e.target.value)}
+          placeholder="nº"
+          className="w-20 bg-elevated border border-border rounded-md px-2 py-1.5 text-sm text-primary outline-none focus:border-border-strong"
+        />
+        <button
+          onClick={() => void darDias(parseInt(diasCustom, 10))}
+          disabled={!!agindo || !diasCustom}
+          className="btn btn-secondary text-sm disabled:opacity-50"
+        >
+          Aplicar
+        </button>
+      </div>
+
+      <div className="stat-label mb-2">Status</div>
+      <div className="flex flex-wrap gap-2">
+        {acoes.map(({ s, label, cor }) => {
+          const ativo = assinatura.status === s;
+          return (
+            <button
+              key={s}
+              onClick={() => void mudarStatus(s)}
+              disabled={!!agindo}
+              className="text-sm font-medium px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50"
+              style={{
+                borderColor: ativo ? cor : "var(--border-color)",
+                backgroundColor: ativo
+                  ? `color-mix(in srgb, ${cor} 16%, transparent)`
+                  : "transparent",
+                color: ativo ? cor : "var(--text-secondary)",
+              }}
+            >
+              {agindo === "s" + s ? "…" : label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

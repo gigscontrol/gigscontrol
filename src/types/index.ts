@@ -104,6 +104,28 @@ export type Show = {
   vendaId?: string;
 };
 
+export type AgendaItemTipo = "evento" | "voo" | "transporte";
+
+/** Item da agenda além de show: evento personalizado, voo ou transporte. */
+export type AgendaItem = {
+  id: string;
+  tipo: AgendaItemTipo;
+  /** Título livre ("Studio", "Day Off", "Férias"). */
+  titulo: string;
+  /** Data ISO "YYYY-MM-DD" (dia do item — casa com a grid da agenda). */
+  data: string;
+  /** Fim opcional (multi-dia: Férias, voo overnight). */
+  dataFim?: string;
+  diaInteiro: boolean;
+  horaInicio?: string;
+  horaFim?: string;
+  /** Artistas a quem o item pertence (vazio = geral; filtra por DJ). */
+  artistIds: string[];
+  observacoes?: string;
+  /** Payload específico por tipo (voo/transporte na Fase 3). */
+  dados?: Record<string, unknown>;
+};
+
 export type DateRange = "Mês atual" | "Mês passado" | "Ano" | "Personalizado";
 export type AgendaDateRange = "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
 
