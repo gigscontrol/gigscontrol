@@ -33,7 +33,7 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   if (r.sessao.papel !== "admin") {

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPlano, precoPorMes, type PlanoId, type CicloCobranca } from "@/lib/planos";
+// Fonte única da regra de acesso (mesma do onboarding e do gate de mutação).
+import { estadoAcessoDe as estadoAcesso } from "@/lib/acesso";
 import type {
   Assinatura,
   StatusAssinatura,
@@ -60,24 +62,6 @@ function calcularProximaCobranca(criadoEm: string, ciclo: CicloCobranca): string
     proxima.setMonth(proxima.getMonth() + passo);
   }
   return proxima.toISOString().slice(0, 10);
-}
-
-/** Estado de acesso efetivo (mesma regra da rota /api/workspace/onboarding). */
-function estadoAcesso(
-  status: string,
-  trialTerminaEm: string | null
-): "ok" | "graca" | "bloqueado" {
-  const agora = Date.now();
-  const prazo = trialTerminaEm ? new Date(trialTerminaEm).getTime() : null;
-  if (status === "ativa") return "ok";
-  if (status === "suspended" || status === "cancelled") return "bloqueado";
-  if (status === "trial") {
-    if (!prazo || agora <= prazo) return "ok";
-    if (agora <= prazo + 86_400_000) return "graca";
-    return "bloqueado";
-  }
-  if (status === "graca") return prazo && agora <= prazo ? "graca" : "bloqueado";
-  return "ok";
 }
 
 /** Status interno da subscription → rótulo exibido no painel. */

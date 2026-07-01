@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 import type { Papel } from "@/lib/permissoes";
 import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
+import { workspaceBloqueado } from "@/lib/acesso";
 
 /**
  * Helper compartilhado pelos Route Handlers para autenticar uma requisição
@@ -142,7 +143,9 @@ export async function autenticar(): Promise<
  * workspace selecionado, devolve 400 — chamadas de domínio precisam de
  * tenant.
  */
-export async function autenticarComWorkspace(): Promise<
+export async function autenticarComWorkspace(
+  opts?: { exigirAcesso?: boolean }
+): Promise<
   | { sessao: SessaoAutenticada & { workspaceId: string } }
   | { response: NextResponse }
 > {
@@ -154,6 +157,23 @@ export async function autenticarComWorkspace(): Promise<
       response: NextResponse.json(
         { erro: "Workspace não selecionado." },
         { status: 400 }
+      ),
+    };
+  }
+
+  // Gate de paywall server-side: rotas de MUTAÇÃO passam { exigirAcesso: true }
+  // e são barradas quando a assinatura está bloqueada (vencida/suspensa/
+  // cancelada além da graça). Leitura, onboarding e o fluxo de pagamento NÃO
+  // passam esse gate — o bloqueado ainda enxerga a conta e consegue regularizar.
+  // 'ok' e 'graca' liberam normalmente.
+  if (opts?.exigirAcesso && (await workspaceBloqueado(r.sessao.workspaceId))) {
+    return {
+      response: NextResponse.json(
+        {
+          erro: "Acesso bloqueado: regularize a assinatura para continuar.",
+          estadoAcesso: "bloqueado",
+        },
+        { status: 402 }
       ),
     };
   }

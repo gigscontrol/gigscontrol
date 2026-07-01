@@ -48,7 +48,7 @@ const META_POR_TIPO: Record<TipoLixeira, { tabela: string; colNome: string }> = 
  * os outros tipos não têm limite.
  */
 export async function POST(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   if (!TIPOS_VALIDOS.includes(params.tipo as TipoLixeira)) {

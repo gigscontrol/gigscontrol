@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { getPlano, type PlanoId } from "@/lib/planos";
+// Fonte única da regra de acesso (mesma usada pelo gate server-side de mutação).
+import { estadoAcessoDe as calcEstado } from "@/lib/acesso";
 
 /**
  * GET /api/workspace/onboarding
@@ -19,31 +21,6 @@ import { getPlano, type PlanoId } from "@/lib/planos";
  *  - /onboarding — pra renderizar a checklist
  *  - /app — pra decidir se redireciona pra onboarding
  */
-/**
- * Estado de acesso efetivo a partir do status + deadline (`trial_termina_em`,
- * reusado também como prazo da graça). Derivado em tempo de leitura — sem cron.
- *  - ok        → acesso normal
- *  - graca     → período acabou há ≤ 1 dia: acesso liberado + aviso
- *  - bloqueado → graça expirou, ou suspended/cancelled (chargeback/cancelamento)
- */
-function calcEstado(
-  status: string,
-  trialTerminaEm: string | null
-): "ok" | "graca" | "bloqueado" {
-  const agora = Date.now();
-  const prazo = trialTerminaEm ? new Date(trialTerminaEm).getTime() : null;
-  if (status === "ativa") return "ok";
-  if (status === "suspended" || status === "cancelled") return "bloqueado";
-  if (status === "trial") {
-    if (!prazo || agora <= prazo) return "ok";
-    if (agora <= prazo + 86_400_000) return "graca"; // +1 dia de graça
-    return "bloqueado";
-  }
-  if (status === "graca") {
-    return prazo && agora <= prazo ? "graca" : "bloqueado";
-  }
-  return "ok";
-}
 
 export async function GET() {
   const r = await autenticarComWorkspace();
