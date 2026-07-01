@@ -14,6 +14,9 @@ export type WorkspaceRow = {
   cidade_ibge_id: string | null;
   cidade_nome: string | null;
   cidade_uf: string | null;
+  idioma_padrao: string | null;
+  pais_padrao: string | null;
+  formato_data: string | null;
   criado_em: string | null;
 };
 
@@ -36,6 +39,10 @@ export type WorkspaceResumo = WorkspaceAparencia & {
   cidadeIbgeId: string | null;
   cidadeNome: string | null;
   cidadeUf: string | null;
+  /** Preferências da agência (migração 45): idioma, país e formato de data. */
+  idiomaPadrao: string | null;
+  paisPadrao: string | null;
+  formatoData: string | null;
   /** ISO timestamp da criação do workspace (limite inferior dos filtros de data). */
   criadoEm: string | null;
 };
@@ -54,6 +61,9 @@ export function rowParaWorkspace(row: WorkspaceRow): WorkspaceResumo {
     cidadeIbgeId: row.cidade_ibge_id,
     cidadeNome: row.cidade_nome,
     cidadeUf: row.cidade_uf,
+    idiomaPadrao: row.idioma_padrao,
+    paisPadrao: row.pais_padrao,
+    formatoData: row.formato_data,
     criadoEm: row.criado_em,
   };
 }

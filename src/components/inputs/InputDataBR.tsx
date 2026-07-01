@@ -6,6 +6,7 @@ import {
   mascararDataBR,
   parseDataBR,
 } from "@/lib/formatters";
+import { getFormatoData } from "@/lib/preferencias";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
@@ -58,7 +59,7 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
       type="text"
       inputMode="numeric"
       autoComplete="off"
-      placeholder={placeholder ?? "dd/mm/aaaa"}
+      placeholder={placeholder ?? (getFormatoData() === "mdy" ? "mm/dd/aaaa" : "dd/mm/aaaa")}
       maxLength={10}
       value={displayed}
       onChange={(e) => {

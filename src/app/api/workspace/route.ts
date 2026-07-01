@@ -7,7 +7,7 @@ import { auditAndNotify } from "@/lib/services/historico.service";
 
 const COLS =
   "id, nome, plano, ciclo, status, logo_url, slug, whatsapp, cor_acento, " +
-  "cidade_ibge_id, cidade_nome, cidade_uf, criado_em";
+  "cidade_ibge_id, cidade_nome, cidade_uf, idioma_padrao, pais_padrao, formato_data, criado_em";
 
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
@@ -71,6 +71,9 @@ export async function PATCH(request: Request) {
   if (parsed.data.cidade_ibge_id !== undefined) patch.cidade_ibge_id = parsed.data.cidade_ibge_id;
   if (parsed.data.cidade_nome !== undefined) patch.cidade_nome = parsed.data.cidade_nome;
   if (parsed.data.cidade_uf !== undefined) patch.cidade_uf = parsed.data.cidade_uf;
+  if (parsed.data.idioma_padrao !== undefined) patch.idioma_padrao = parsed.data.idioma_padrao;
+  if (parsed.data.pais_padrao !== undefined) patch.pais_padrao = parsed.data.pais_padrao;
+  if (parsed.data.formato_data !== undefined) patch.formato_data = parsed.data.formato_data;
 
   if (Object.keys(patch).length === 0) {
     // Nada pra atualizar — devolve o estado atual

@@ -18,5 +18,8 @@ export const workspaceUpdateSchema = z.object({
   cidade_ibge_id: z.string().max(20).optional().nullable(),
   cidade_nome: z.string().max(120).optional().nullable(),
   cidade_uf: z.string().length(2).optional().nullable(),
+  idioma_padrao: z.string().max(5).optional().nullable(),
+  pais_padrao: z.string().length(2).optional().nullable(),
+  formato_data: z.enum(["dmy", "mdy"]).optional().nullable(),
 });
 export type WorkspaceUpdateInput = z.infer<typeof workspaceUpdateSchema>;
