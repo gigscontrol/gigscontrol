@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea } from "../Field";
-import InputCpfCnpj from "../inputs/InputCpfCnpj";
-import { apenasDigitos } from "@/lib/formatters";
-import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
+import InputDocumento from "../inputs/InputDocumento";
+import SeletorPais from "../SeletorPais";
+import PhoneInput from "../PhoneInput";
+import { normalizarDocumento, configDocumento } from "@/lib/data/documentos";
+import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
-import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import type { Contratante } from "@/types";
 
 type Props = {
@@ -16,43 +19,56 @@ type Props = {
   onCancel: () => void;
 };
 
+function paisDe(code: string | undefined): Country {
+  if (code) {
+    const p = buscarPais(code).find((x) => x.code === code.toUpperCase());
+    if (p) return p;
+  }
+  return BRASIL;
+}
+
 export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) {
   const t = useT();
   const { cidades, addContratante, updateContratante } = useContatos();
 
-  // Pré-popula a cidade IBGE a partir da cidade atual do contratante (se
-  // ela tem ibgeId). Cidade legada (sem ibge_id) força o user a escolher
-  // do IBGE.
   const cidadeInicial = initial?.cidadeId
     ? cidades.find((c) => c.id === initial.cidadeId)
     : undefined;
-  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
-    cidadeParaIbge(cidadeInicial)
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
+    cidadeParaEscolhida(cidadeInicial)
   );
 
   const [nome, setNome] = useState(initial?.nome ?? "");
+  const [pais, setPais] = useState<Country>(paisDe(initial?.pais));
   const [documento, setDocumento] = useState(initial?.documento ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
-  const [telefone, setTelefone] = useState(initial?.telefone ?? "");
+
+  // Telefone: país (DDI) + dígitos nacionais. Prefill remove o DDI se colado.
+  const [telPais, setTelPais] = useState<Country>(paisDe(initial?.pais));
+  const [telDigits, setTelDigits] = useState(() => {
+    const digs = (initial?.telefone ?? "").replace(/\D/g, "");
+    const ddi = paisDe(initial?.pais).ddi;
+    return digs.startsWith(ddi) && digs.length > ddi.length ? digs.slice(ddi.length) : digs;
+  });
+
   const [observacoes, setObservacoes] = useState(initial?.observacoes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = t("Nome obrigatório");
-    if (!telefone.trim()) errs.telefone = t("Telefone obrigatório");
-    if (!cidadeIbge) errs.cidade = t("Selecione uma cidade");
+    if (!telDigits.trim()) errs.telefone = t("Telefone obrigatório");
+    if (!cidadeSel) errs.cidade = t("Selecione uma cidade");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    if (!cidadeIbge) return;
+    if (!cidadeSel) return;
 
     let cidadeIdResolvido: string;
     try {
-      const cid = await resolverCidadeIbge(cidadeIbge);
-      cidadeIdResolvido = cid.id;
+      cidadeIdResolvido = (await resolverCidade(cidadeSel)).id;
     } catch (e) {
       setErrors({ cidade: (e as Error).message });
       return;
@@ -60,9 +76,10 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
 
     const payload = {
       nome,
-      documento: apenasDigitos(documento),
+      pais: pais.code,
+      documento: normalizarDocumento(pais.code, documento),
       email: email || "",
-      telefone,
+      telefone: montarTelefoneE164(telPais, telDigits),
       cidadeId: cidadeIdResolvido,
       observacoes: observacoes || undefined,
     };
@@ -82,14 +99,35 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
         <Field label="Nome completo" required error={errors.nome}>
           <TextInput value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Marcos Lima" />
         </Field>
-        <Field label="Telefone (WhatsApp)" required hint="Com DDD" error={errors.telefone}>
-          <TextInput value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+        <Field label="País de origem" hint="Define o documento fiscal pedido">
+          <SeletorPais
+            value={pais}
+            onChange={(p) => {
+              setPais(p);
+              setTelPais(p);
+            }}
+          />
+        </Field>
+        <Field label="Telefone (WhatsApp)" required error={errors.telefone}>
+          <PhoneInput
+            country={telPais}
+            onCountryChange={setTelPais}
+            value={telDigits}
+            onChange={(v) => {
+              setTelDigits(v);
+              if (v) setErrors((p) => ({ ...p, telefone: "" }));
+            }}
+            error={errors.telefone}
+          />
+        </Field>
+        <Field label={configDocumento(pais.code).label} hint="Necessário ao converter em venda">
+          <InputDocumento pais={pais.code} value={documento} onChange={setDocumento} />
         </Field>
         <Field label="Cidade" required error={errors.cidade}>
-          <CidadeIBGEAutocomplete
-            value={cidadeIbge}
+          <CidadeGlobalAutocomplete
+            value={cidadeSel}
             onChange={(c) => {
-              setCidadeIbge(c);
+              setCidadeSel(c);
               if (c) setErrors((p) => ({ ...p, cidade: "" }));
             }}
             placeholder={t("Ex: São Paulo, Belo Horizonte...")}
@@ -97,9 +135,6 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
         </Field>
         <Field label="E-mail" hint="Necessário ao converter em venda">
           <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@email.com" />
-        </Field>
-        <Field label="CPF / CNPJ" hint="Necessário ao converter em venda">
-          <InputCpfCnpj value={documento} onChange={setDocumento} placeholder="000.000.000-00 ou 00.000.000/0000-00" />
         </Field>
       </div>
 
