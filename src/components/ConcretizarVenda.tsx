@@ -29,6 +29,8 @@ import { apenasDigitos } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
+import SeletorPais from "./SeletorPais";
+import { buscarPais } from "@/lib/data/countries";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
@@ -104,6 +106,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const [contratanteNome, setContratanteNome] = useState(contratanteOrc?.nome ?? "");
   const [contratanteEmail, setContratanteEmail] = useState(contratanteOrc?.email ?? "");
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  // País de origem do contratante — define o documento fiscal pedido.
+  const [paisOrigem, setPaisOrigem] = useState<Country>(() => {
+    const code = (contratanteOrc?.pais ?? "BR").toUpperCase();
+    return buscarPais(code).find((p) => p.code === code) ?? DEFAULT_COUNTRY;
+  });
   const [telDigits, setTelDigits] = useState(() => {
     const tel = contratanteOrc?.telefone ?? "";
     const digs = tel.replace(/\D/g, "");
@@ -387,14 +394,16 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara
             // pra exibir. Mantém o banco consistente entre cadastros
             // antigos (mascarados) e novos.
-            documentoNovo: normalizarDocumento(country.code, contratanteDocumento),
+            documentoNovo: normalizarDocumento(paisOrigem.code, contratanteDocumento),
+            paisNovo: paisOrigem.code,
           }
         : {
             tipo: "novo",
             nome: contratanteNome,
             email: contratanteEmail,
             telefone: telefoneE164,
-            documento: normalizarDocumento(country.code, contratanteDocumento),
+            documento: normalizarDocumento(paisOrigem.code, contratanteDocumento),
+            pais: paisOrigem.code,
             cidadeId: cidadeIdResolvido,
           },
       contratanteEndereco,
@@ -522,6 +531,16 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             />
           </FieldWithAuto>
 
+          <Field label="País de origem">
+            <SeletorPais
+              value={paisOrigem}
+              onChange={(p) => {
+                setPaisOrigem(p);
+                setCountry(p);
+              }}
+            />
+          </Field>
+
           <FieldWithAuto
             label="Telefone"
             required
@@ -540,13 +559,13 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </FieldWithAuto>
 
           <FieldWithAuto
-            label={configDocumento(country.code).label}
+            label={configDocumento(paisOrigem.code).label}
             required
             error={errors.contratanteDocumento}
             showAuto={showAutoBadge("contratanteDocumento")}
           >
             <InputDocumento
-              pais={country.code}
+              pais={paisOrigem.code}
               value={contratanteDocumento}
               onChange={(novo) => {
                 setContratanteDocumento(novo);

@@ -36,6 +36,7 @@ export type NovaVendaInput = {
         emailNovo?: string;
         telefoneNovo?: string;
         documentoNovo?: string;
+        paisNovo?: string;
         observacoesNovo?: string;
       }
     | {
@@ -44,6 +45,7 @@ export type NovaVendaInput = {
         email: string;
         telefone: string;
         documento: string;
+        pais: string;
         cidadeId: string;
       };
 
@@ -199,6 +201,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.emailNovo !== undefined) patch.email = input.contratante.emailNovo;
         if (input.contratante.telefoneNovo !== undefined) patch.telefone = input.contratante.telefoneNovo;
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
+        if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
         if (Object.keys(patch).length > 0) {
           const atual = await updateContratante(contratanteId, patch);
           contratanteSnapshot = {
@@ -214,6 +217,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
           email: input.contratante.email,
           telefone: input.contratante.telefone,
           documento: input.contratante.documento,
+          pais: input.contratante.pais,
           cidadeId: input.contratante.cidadeId,
         });
         contratanteId = novo.id;
