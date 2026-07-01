@@ -193,6 +193,8 @@ export async function infoSubscription(subscriptionId: string): Promise<{
   moeda: Moeda;
   ciclo: CicloCobranca;
   diasRestantes: number;
+  /** unix seconds do fim do período atual (quando o downgrade viraria). */
+  periodEnd: number | null;
 }> {
   const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
     expand: ["items.data.price"],
@@ -204,7 +206,7 @@ export async function infoSubscription(subscriptionId: string): Promise<{
   const diasRestantes = periodEnd
     ? Math.max(0, Math.ceil((periodEnd * 1000 - Date.now()) / 86_400_000))
     : 0;
-  return { moeda, ciclo, diasRestantes };
+  return { moeda, ciclo, diasRestantes, periodEnd };
 }
 
 /**
@@ -241,6 +243,95 @@ export async function aplicarUpgrade(params: {
     { idempotencyKey: `upgrade_${params.subscriptionId}_${novoPriceId}` }
   );
   return { subscription, moeda, ciclo };
+}
+
+/** id (string) de um campo Stripe que pode vir expandido (objeto) ou só id. */
+function idDeStripe(campo: string | { id: string } | null | undefined): string | null {
+  if (!campo) return null;
+  return typeof campo === "string" ? campo : campo.id;
+}
+
+/**
+ * Agenda um DOWNGRADE pro fim do período atual, via Subscription Schedule:
+ *  - Fase 1: preço ATUAL até o fim do período (cliente mantém os benefícios
+ *    do plano de cima até acabarem os dias já pagos).
+ *  - Fase 2: preço do plano-destino, SEM proration (não devolve dinheiro).
+ * Quando a fase 2 começa, a Stripe fatura o preço menor → `invoice.paid` →
+ * o webhook reconcilia o plano no MESMO instante (rebaixa acesso na virada).
+ *
+ * `end_behavior: 'release'` = depois da fase 2 a subscription segue sozinha
+ * no preço novo (o schedule se solta). Devolve quando vira + o valor novo.
+ */
+export async function agendarDowngrade(params: {
+  subscriptionId: string;
+  plano: PlanoId;
+}): Promise<{
+  efetivoEm: number | null;
+  ciclo: CicloCobranca;
+  moeda: Moeda;
+  valorNovo: number;
+}> {
+  const stripe = getStripe();
+  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
+    expand: ["items.data.price"],
+  });
+  const item = sub.items.data[0];
+  if (!item) throw new Error("Assinatura sem item de preço.");
+  const moeda: Moeda = item.price?.currency === "usd" ? "usd" : "brl";
+  const ciclo = cicloDoInterval(item.price?.recurring?.interval);
+  const periodEnd = item.current_period_end ?? null;
+  const precoAtualId = idDeStripe(item.price);
+  const novoPriceId = await resolverPriceId(params.plano, ciclo, moeda);
+  const workspaceId = (sub.metadata?.workspaceId as string) ?? "";
+
+  // Cria o schedule adotando a subscription atual (phases[0] = fase vigente).
+  const schedule = await stripe.subscriptionSchedules.create({
+    from_subscription: params.subscriptionId,
+  });
+  const fase0 = schedule.phases[0];
+  const qtd = fase0?.items?.[0]?.quantity ?? 1;
+
+  await stripe.subscriptionSchedules.update(schedule.id, {
+    end_behavior: "release",
+    phases: [
+      {
+        // Preserva a fase atual até o fim do período já pago.
+        items: [{ price: precoAtualId ?? novoPriceId, quantity: qtd }],
+        start_date: fase0?.start_date,
+        end_date: fase0?.end_date,
+      },
+      {
+        // Fase nova: plano-destino, sem rateio (nada é devolvido).
+        items: [{ price: novoPriceId, quantity: 1 }],
+        proration_behavior: "none",
+        metadata: { workspaceId, plano: params.plano, ciclo, moeda },
+      },
+    ],
+    metadata: { workspaceId, downgrade_para: params.plano },
+  });
+
+  return {
+    efetivoEm: periodEnd,
+    ciclo,
+    moeda,
+    valorNovo: valorCobranca(params.plano, ciclo, moeda),
+  };
+}
+
+/**
+ * Cancela um downgrade agendado: solta (release) o Subscription Schedule, o
+ * que mantém a subscription no plano ATUAL (fase 1), renovando normalmente.
+ * Devolve true se havia um schedule pra soltar.
+ */
+export async function cancelarDowngrade(params: {
+  subscriptionId: string;
+}): Promise<boolean> {
+  const stripe = getStripe();
+  const sub = await stripe.subscriptions.retrieve(params.subscriptionId);
+  const scheduleId = idDeStripe(sub.schedule);
+  if (!scheduleId) return false;
+  await stripe.subscriptionSchedules.release(scheduleId);
+  return true;
 }
 
 /**

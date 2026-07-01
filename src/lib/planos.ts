@@ -204,6 +204,62 @@ export function ehUpgrade(atual: PlanoId, novo: PlanoId): boolean {
   return tierPlano(novo) > tierPlano(atual);
 }
 
+/** true se `novo` é um plano INFERIOR ao `atual` (downgrade). */
+export function ehDowngrade(atual: PlanoId, novo: PlanoId): boolean {
+  return tierPlano(novo) < tierPlano(atual);
+}
+
+/** Uma dimensão de limite estourada ao tentar caber num plano-destino. */
+export type ExcedenteLimite = {
+  dimensao: "artistas" | "usuarios" | "modelos";
+  usoAtual: number;
+  limite: number;
+  /** Quantos precisa remover pra caber. */
+  remover: number;
+};
+
+/**
+ * Verifica se o uso atual (estoque de artistas/usuários/modelos) CABE nos
+ * limites do plano-destino. Devolve a lista de dimensões estouradas (vazia =
+ * cabe). Usado pra recusar um downgrade que deixaria o workspace acima do
+ * limite do plano menor. (maxContratosMes é fluxo mensal — reseta no novo
+ * período — então não entra aqui.)
+ */
+export function cabeNoPlano(params: {
+  destino: PlanoId;
+  artistas: number;
+  usuarios: number;
+  modelos: number;
+}): ExcedenteLimite[] {
+  const p = getPlano(params.destino);
+  const out: ExcedenteLimite[] = [];
+  if (params.artistas > p.maxArtistas) {
+    out.push({
+      dimensao: "artistas",
+      usoAtual: params.artistas,
+      limite: p.maxArtistas,
+      remover: params.artistas - p.maxArtistas,
+    });
+  }
+  if (params.usuarios > p.maxUsuariosAdicionais) {
+    out.push({
+      dimensao: "usuarios",
+      usoAtual: params.usuarios,
+      limite: p.maxUsuariosAdicionais,
+      remover: params.usuarios - p.maxUsuariosAdicionais,
+    });
+  }
+  if (params.modelos > p.maxModelos) {
+    out.push({
+      dimensao: "modelos",
+      usoAtual: params.modelos,
+      limite: p.maxModelos,
+      remover: params.modelos - p.maxModelos,
+    });
+  }
+  return out;
+}
+
 /**
  * Estimativa do valor a pagar AGORA ao dar upgrade, por rateio linear:
  * a diferença de preço (novo − atual) × fração do ciclo ainda não usada.

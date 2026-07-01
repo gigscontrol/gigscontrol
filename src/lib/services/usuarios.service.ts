@@ -23,6 +23,7 @@ import type {
 } from "@/lib/validators/usuarios.schema";
 import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 import { getPlano, type PlanoId } from "@/lib/planos";
+import { planoEfetivoParaLimites } from "@/lib/services/limites";
 
 export class LimitePlanoEquipeError extends Error {
   status = 409;
@@ -64,7 +65,7 @@ export async function criarUsuarioDaEquipe(
   planoId: PlanoId,
   input: UsuarioCreateInput
 ): Promise<{ usuario: UsuarioEquipe; senhaTemporaria: string }> {
-  const plano = getPlano(planoId);
+  const plano = getPlano(await planoEfetivoParaLimites(admin, workspaceId, planoId));
   const total = await contarUsuariosEquipe(admin, workspaceId);
   if (total >= plano.maxUsuariosAdicionais) {
     throw new LimitePlanoEquipeError(plano.maxUsuariosAdicionais, plano.nome);

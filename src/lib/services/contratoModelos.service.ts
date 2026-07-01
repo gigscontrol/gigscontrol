@@ -17,6 +17,7 @@ import type {
   ContratoModeloUpdateInput,
 } from "@/lib/validators/contratoModelos.schema";
 import { getPlano, type PlanoId } from "@/lib/planos";
+import { planoEfetivoParaLimites } from "@/lib/services/limites";
 
 /**
  * Limite de modelos do plano atingido (espelha LimitePlanoEquipeError). A rota
@@ -67,7 +68,7 @@ export async function criarModeloNoWorkspace(
   planoId: PlanoId,
   input: ContratoModeloCreateInput
 ): Promise<ContratoModelo> {
-  const plano = getPlano(planoId);
+  const plano = getPlano(await planoEfetivoParaLimites(supabase, workspaceId, planoId));
   const total = await contarModelosDoWorkspace(supabase, workspaceId);
   if (total >= plano.maxModelos) {
     throw new LimiteModelosError(plano.maxModelos, plano.nome);

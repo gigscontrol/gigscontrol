@@ -161,6 +161,19 @@ async function aplicarStatus(
   }
   await q;
 
+  // Se o plano reconciliado é o MESMO que estava agendado como downgrade, o
+  // downgrade VIROU (renovou no preço menor) → limpa o registro pendente pra o
+  // aviso sumir e liberar novo agendamento. O `.eq("downgrade_para", r.plano)`
+  // garante que só limpa quando o alvo chegou (não ao renovar ainda no plano de
+  // cima). Se a coluna não existir (pré-migration 46), o erro volta silencioso.
+  if (reconciliaPlano && r.plano) {
+    await admin
+      .from("subscriptions")
+      .update({ downgrade_para: null, downgrade_efetivo_em: null })
+      .eq("workspace_id", r.workspaceId)
+      .eq("downgrade_para", r.plano);
+  }
+
   // workspaces.plano é a fonte da verdade dos limites → tem que refletir o
   // plano reconciliado (independente de espelhar o status).
   if (opts.espelharNoWorkspace || reconciliaPlano) {

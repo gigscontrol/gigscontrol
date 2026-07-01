@@ -20,6 +20,7 @@ import type {
   ArtistaUpdateInput,
 } from "@/lib/validators/artistas.schema";
 import { getPlano, type PlanoId } from "@/lib/planos";
+import { planoEfetivoParaLimites } from "@/lib/services/limites";
 import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 
 /** Erro lançado quando o workspace atinge o limite do plano. */
@@ -215,8 +216,8 @@ export async function criarArtistaCompleto(
   planoId: PlanoId,
   input: ArtistaCreateInput
 ): Promise<{ artista: DJ; senhaTemporaria: string; usernameCompleto: string }> {
-  // 1. Plano
-  const plano = getPlano(planoId);
+  // 1. Plano — usa o plano-destino se há downgrade agendado (trava o excesso).
+  const plano = getPlano(await planoEfetivoParaLimites(admin, workspaceId, planoId));
   const total = await contarArtistas(admin, workspaceId);
   if (total >= plano.maxArtistas) {
     throw new LimitePlanoAtingidoError(plano.maxArtistas, plano.nome);
