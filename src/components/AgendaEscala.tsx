@@ -13,6 +13,7 @@ import type { AgendaDateRange, Show, ShowStatus, DJ, AgendaItem } from "@/types"
 import ShowDetalheModal from "./ShowDetalheModal";
 import Modal from "./Modal";
 import InputHora from "./inputs/InputHora";
+import InputDataBR from "./inputs/InputDataBR";
 import { useT } from "@/lib/i18n";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -919,11 +920,10 @@ function PassageirosField({
               </button>
             </div>
             <div className="flex items-stretch gap-2">
-              <input
-                type="date"
+              <InputDataBR
                 value={p.nascimento ?? ""}
-                onChange={(e) => setP(i, { nascimento: e.target.value })}
-                className="campo-input text-sm flex-1"
+                onChange={(iso) => setP(i, { nascimento: iso })}
+                className="flex-1"
                 title={t("Nascimento")}
                 aria-label={t("Nascimento")}
               />
@@ -1521,11 +1521,10 @@ function VooFormModal({
 
             <div className="grid grid-cols-2 gap-3">
               <CampoForm label={t("Data")}>
-                <input
-                  type="date"
+                <InputDataBR
                   value={dataVoo}
-                  onChange={(e) => setDataVoo(e.target.value)}
-                  className="campo-input"
+                  onChange={setDataVoo}
+                  className="w-full"
                 />
               </CampoForm>
               <CampoForm label={t("Companhia")}>
@@ -1705,11 +1704,10 @@ function TransporteFormModal({
 
         <div className="grid grid-cols-2 gap-3">
           <CampoForm label={t("Data")}>
-            <input
-              type="date"
+            <InputDataBR
               value={dataT}
-              onChange={(e) => setDataT(e.target.value)}
-              className="campo-input"
+              onChange={setDataT}
+              className="w-full"
             />
           </CampoForm>
           <CampoForm label={t("Horário")}>
