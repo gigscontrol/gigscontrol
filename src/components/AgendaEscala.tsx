@@ -1907,6 +1907,25 @@ function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
+/**
+ * Normaliza a franquia de bagagem pra exibição como "Bagagem extra":
+ * - "" quando o voucher não fala de bagagem (esconde a linha);
+ * - `labelNao` (ex: "Não") quando é só bagagem de mão / sem mala despachada;
+ * - o texto original quando há bagagem despachada de fato ("2x 32kg").
+ */
+function formatarBagagemExtra(raw: string, labelNao: string): string {
+  const s = raw.trim();
+  if (!s) return "";
+  const low = s.toLowerCase();
+  // Tem bagagem despachada de fato (peso/quantidade)?
+  if (/\d\s*(kg|quilo|mala|peç|pec|piece|pc\b|x\s)/.test(low)) return s;
+  // Frases que indicam ausência de bagagem despachada.
+  if (/(sem mala|sem baga|s[oó]\s|apenas|somente|de m[aã]o|carry.?on|hand luggage|no checked|nenhum|n[aã]o)/.test(low)) {
+    return labelNao;
+  }
+  return s;
+}
+
 /** Linhas específicas de um voo (a partir do `dados` do item). */
 function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const t = useT();
@@ -1915,6 +1934,7 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
   const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
   const voucherPath = str("voucherPath");
+  const bagagemExtra = formatarBagagemExtra(str("bagagem"), t("Não"));
   const passageiros: Passageiro[] = Array.isArray(d.passageiros)
     ? (d.passageiros as Passageiro[])
     : str("passageiros")
@@ -1945,7 +1965,7 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
     <>
       {str("companhia") && <LinhaDetalhe rotulo={t("Companhia")} valor={str("companhia")} />}
       {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
-      {str("bagagem") && <LinhaDetalhe rotulo={t("Bagagem")} valor={str("bagagem")} />}
+      {bagagemExtra && <LinhaDetalhe rotulo={t("Bagagem extra")} valor={bagagemExtra} />}
       {str("localizador") && (
         <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
       )}
@@ -2057,10 +2077,19 @@ function ItemDetalheModal({
       maxWidth={400}
     >
       <div className="flex flex-col gap-3">
-        <LinhaDetalhe
-          rotulo={t("Quando")}
-          valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
-        />
+        {item.tipo === "voo" ? (
+          <>
+            <LinhaDetalhe rotulo={t("Data")} valor={formatarDataBR(item.data)} />
+            {item.horaInicio && <LinhaDetalhe rotulo={t("Partida")} valor={item.horaInicio} />}
+            {item.horaFim && <LinhaDetalhe rotulo={t("Chegada")} valor={item.horaFim} />}
+            {dur && <LinhaDetalhe rotulo={t("Tempo de voo")} valor={dur} />}
+          </>
+        ) : (
+          <LinhaDetalhe
+            rotulo={t("Quando")}
+            valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
+          />
+        )}
         {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
         {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
         {artistaLabel && (

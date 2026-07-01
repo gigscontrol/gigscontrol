@@ -1710,6 +1710,7 @@ export const IT: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Seleziona almeno 1 artista per mostrarlo nella sua agenda.",
   "Artista(s)": "Artista/i",
   "bagagem extra": "bagaglio extra",
+  "Tempo de voo": "Durata del volo",
   "Para qual artista?": "Per quale artista?",
   "Todos os artistas": "Tutti gli artisti",
   "Bagagem": "Bagaglio",
