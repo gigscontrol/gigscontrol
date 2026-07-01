@@ -2732,6 +2732,7 @@ const SWEEP14: Record<string, string> = {
 };
 
 export const EN: Record<string, string> = {
+  "Personalizar contrato": "Customize contract",
   // ---- Plano & Assinatura (upgrade/downgrade) ----
   "Plano atual": "Current plan",
   "Fazer upgrade": "Upgrade",

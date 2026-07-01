@@ -13,8 +13,6 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  Eye,
-  EyeOff,
   Save,
   X,
   Heading,
@@ -607,8 +605,8 @@ export default function EditorModelo({
             className="btn btn-secondary"
             aria-pressed={preview}
           >
-            {preview ? <EyeOff size={15} /> : <Eye size={15} />}
-            {preview ? t("Editar") : t("Preview")}
+            {preview ? <PenLine size={15} /> : <Palette size={15} />}
+            {preview ? t("Editar") : t("Personalizar contrato")}
           </button>
           <button
             type="button"

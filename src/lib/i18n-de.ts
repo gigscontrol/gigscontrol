@@ -3,6 +3,7 @@
  * i18n-en.ts. Gerado por tradução. O que faltar cai no fallback (mostra PT).
  */
 export const DE: Record<string, string> = {
+  "Personalizar contrato": "Vertrag anpassen",
   // ---- Plano & Assinatura (upgrade/downgrade) ----
   "Plano atual": "Aktueller Plan",
   "Fazer upgrade": "Upgrade durchführen",
