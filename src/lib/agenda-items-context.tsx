@@ -35,6 +35,7 @@ type AgendaItemsContextValue = {
   carregando: boolean;
   recarregar: () => Promise<void>;
   criar: (i: NovoAgendaItem) => Promise<AgendaItem>;
+  editar: (id: string, i: NovoAgendaItem) => Promise<AgendaItem>;
   remover: (id: string) => Promise<void>;
 };
 
@@ -98,6 +99,25 @@ export function AgendaItemsProvider({ children }: { children: ReactNode }) {
     return item;
   }, []);
 
+  const editar = useCallback(
+    async (id: string, input: NovoAgendaItem): Promise<AgendaItem> => {
+      const res = await fetch(`/api/agenda-items/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paraApi(input)),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { erro?: string }).erro ?? `HTTP ${res.status}`);
+      }
+      const { item } = (await res.json()) as { item: AgendaItem };
+      setItens((prev) => prev.map((i) => (i.id === id ? item : i)));
+      return item;
+    },
+    []
+  );
+
   const remover = useCallback(async (id: string): Promise<void> => {
     const res = await fetch(`/api/agenda-items/${id}`, {
       method: "DELETE",
@@ -111,8 +131,8 @@ export function AgendaItemsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AgendaItemsContextValue>(
-    () => ({ itens, carregando, recarregar, criar, remover }),
-    [itens, carregando, recarregar, criar, remover]
+    () => ({ itens, carregando, recarregar, criar, editar, remover }),
+    [itens, carregando, recarregar, criar, editar, remover]
   );
 
   return (

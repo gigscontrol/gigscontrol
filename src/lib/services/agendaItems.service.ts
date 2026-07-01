@@ -4,6 +4,7 @@ import { rowParaAgendaItem, type AgendaItemEscrita } from "@/lib/mappers/agendaI
 import {
   listarAgendaItems as repoListar,
   criarAgendaItem as repoCriar,
+  atualizarAgendaItem as repoAtualizar,
   removerAgendaItem as repoRemover,
 } from "@/lib/repositories/agendaItems.repo";
 import type { AgendaItemCreateInput } from "@/lib/validators/agendaItems.schema";
@@ -38,6 +39,15 @@ export async function criarAgendaItemNoWorkspace(
   input: AgendaItemCreateInput
 ): Promise<AgendaItem> {
   const row = await repoCriar(supabase, workspaceId, entradaParaEscrita(input));
+  return rowParaAgendaItem(row);
+}
+
+export async function atualizarAgendaItemNoWorkspace(
+  supabase: SupabaseClient,
+  id: string,
+  input: AgendaItemCreateInput
+): Promise<AgendaItem> {
+  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
   return rowParaAgendaItem(row);
 }
 

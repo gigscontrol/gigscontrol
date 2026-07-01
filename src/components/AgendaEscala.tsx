@@ -293,7 +293,8 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
-  const { itens: agendaItens, criar: criarItem, remover: removerItem } = useAgendaItems();
+  const { itens: agendaItens, criar: criarItem, editar: editarItem, remover: removerItem } =
+    useAgendaItems();
   // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo DJ.
   const filteredItens = agendaItens.filter(
     (i) => i.artistIds.length === 0 || i.artistIds.some((id) => selectedDJs.includes(id))
@@ -303,6 +304,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
   const [transporteFormDia, setTransporteFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
+  const [editandoItem, setEditandoItem] = useState<AgendaItem | null>(null);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -485,12 +487,58 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         />
       )}
 
+      {/* Edição de item (reusa os forms em modo edição) */}
+      {editandoItem && (
+        <>
+          {editandoItem.tipo === "evento" && (
+            <EventoFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+          {editandoItem.tipo === "voo" && (
+            <VooFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+          {editandoItem.tipo === "transporte" && (
+            <TransporteFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+        </>
+      )}
+
       {/* Detalhe + excluir item */}
       {itemDetalhe && (
         <ItemDetalheModal
           item={itemDetalhe}
           artistasDoItem={artistas.filter((a) => itemDetalhe.artistIds.includes(a.id))}
           onClose={() => setItemDetalhe(null)}
+          onEditar={() => {
+            setEditandoItem(itemDetalhe);
+            setItemDetalhe(null);
+          }}
           onExcluir={async () => {
             await removerItem(itemDetalhe.id);
             setItemDetalhe(null);
@@ -953,6 +1001,13 @@ type Passageiro = {
   bagagemExtra?: boolean;
 };
 
+/** Passageiros guardados (array de objeto OU string) → array do form. */
+function passageirosDe(item?: AgendaItem): Passageiro[] {
+  const arr = item?.dados?.passageiros;
+  if (!Array.isArray(arr)) return [];
+  return arr.map((p) => (typeof p === "string" ? { nome: p } : (p as Passageiro)));
+}
+
 /** Lista repetível de passageiros (nome obrigatório; nascimento/bagagem opcionais). */
 function PassageirosField({
   value,
@@ -1045,25 +1100,34 @@ function EventoFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
-  const [titulo, setTitulo] = useState("");
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [diaInteiro, setDiaInteiro] = useState(true);
-  const [horaInicio, setHoraInicio] = useState("");
-  const [horaFim, setHoraFim] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+  const editando = !!itemEditar;
+  const dataISO = itemEditar?.data ?? day?.dataISO ?? "";
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const [titulo, setTitulo] = useState(itemEditar?.titulo ?? "");
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [diaInteiro, setDiaInteiro] = useState(itemEditar ? itemEditar.diaInteiro : true);
+  const [horaInicio, setHoraInicio] = useState(itemEditar?.horaInicio ?? "");
+  const [horaFim, setHoraFim] = useState(itemEditar?.horaFim ?? "");
+  const [observacoes, setObservacoes] = useState(itemEditar?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [etapa, setEtapa] = useState<1 | 2>(1);
+  const [etapa, setEtapa] = useState<1 | 2>(itemEditar ? 2 : 1);
 
   async function submit() {
     if (salvando) return;
@@ -1077,7 +1141,7 @@ function EventoFormModal({
       await onCriar({
         tipo: "evento",
         titulo: titulo.trim(),
-        data: day.dataISO,
+        data: dataISO,
         diaInteiro,
         horaInicio: diaInteiro ? undefined : horaInicio || undefined,
         horaFim: diaInteiro ? undefined : horaFim || undefined,
@@ -1094,8 +1158,8 @@ function EventoFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo evento")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar evento") : t("Novo evento")}
+      subtitle={subtitulo}
       maxWidth={440}
     >
       {etapa === 1 ? (
@@ -1192,7 +1256,7 @@ function EventoFormModal({
             className="btn btn-primary disabled:opacity-50"
             style={{ backgroundColor: "var(--module-contratos)", color: "#fff" }}
           >
-            {salvando ? t("Salvando…") : t("Criar evento")}
+            {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar evento")}
           </button>
         </div>
       </div>
@@ -1249,31 +1313,42 @@ function VooFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
+  const editando = !!itemEditar;
+  const dadosE = (itemEditar?.dados ?? {}) as Record<string, unknown>;
+  const strE = (k: string) => (typeof dadosE[k] === "string" ? (dadosE[k] as string) : "");
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const voucherPathExistente = strE("voucherPath");
   const [modo, setModo] = useState<"manual" | "pdf">("manual");
 
   // Form (usado pelo manual E pelo PDF de 1 voo)
-  const [dataVoo, setDataVoo] = useState(day.dataISO);
-  const [numeroVoo, setNumeroVoo] = useState("");
-  const [companhia, setCompanhia] = useState("");
-  const [origem, setOrigem] = useState("");
-  const [destino, setDestino] = useState("");
-  const [partida, setPartida] = useState("");
-  const [chegada, setChegada] = useState("");
-  const [localizador, setLocalizador] = useState("");
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
-  const [duracao, setDuracao] = useState("");
-  const [bagagem, setBagagem] = useState("");
+  const [dataVoo, setDataVoo] = useState(itemEditar?.data ?? day?.dataISO ?? "");
+  const [numeroVoo, setNumeroVoo] = useState(strE("numeroVoo"));
+  const [companhia, setCompanhia] = useState(strE("companhia"));
+  const [origem, setOrigem] = useState(strE("origem"));
+  const [destino, setDestino] = useState(strE("destino"));
+  const [partida, setPartida] = useState(strE("partida") || (itemEditar?.horaInicio ?? ""));
+  const [chegada, setChegada] = useState(strE("chegada") || (itemEditar?.horaFim ?? ""));
+  const [localizador, setLocalizador] = useState(strE("localizador"));
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [passageiros, setPassageiros] = useState<Passageiro[]>(passageirosDe(itemEditar));
+  const [duracao, setDuracao] = useState(strE("duracao"));
+  const [bagagem, setBagagem] = useState(strE("bagagem"));
   const [pdfBase64, setPdfBase64] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -1408,7 +1483,7 @@ function VooFormModal({
     const titulo =
       [numeroVoo.trim().toUpperCase(), rota].filter(Boolean).join(" · ") || t("Voo");
     try {
-      const voucherPath = await subirVoucher();
+      const voucherPath = (await subirVoucher()) || voucherPathExistente;
       await onCriar({
         tipo: "voo",
         titulo,
@@ -1484,8 +1559,8 @@ function VooFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo voo")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar voo") : t("Novo voo")}
+      subtitle={subtitulo}
       maxWidth={480}
     >
       {etapa === 1 ? (
@@ -1500,22 +1575,24 @@ function VooFormModal({
       ) : (
       <div className="flex flex-col gap-4">
         <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
-        <div className="grid grid-cols-2 gap-3">
-          <ModoCard
-            ativo={modo === "manual"}
-            onClick={() => setModo("manual")}
-            icon={Pencil}
-            titulo={t("Preencher manual")}
-            desc={t("Digitar os dados do voo na mão.")}
-          />
-          <ModoCard
-            ativo={modo === "pdf"}
-            onClick={() => setModo("pdf")}
-            icon={FileUp}
-            titulo={t("Ler de um PDF")}
-            desc={t("Sobe o voucher e preenche sozinho.")}
-          />
-        </div>
+        {!editando && (
+          <div className="grid grid-cols-2 gap-3">
+            <ModoCard
+              ativo={modo === "manual"}
+              onClick={() => setModo("manual")}
+              icon={Pencil}
+              titulo={t("Preencher manual")}
+              desc={t("Digitar os dados do voo na mão.")}
+            />
+            <ModoCard
+              ativo={modo === "pdf"}
+              onClick={() => setModo("pdf")}
+              icon={FileUp}
+              titulo={t("Ler de um PDF")}
+              desc={t("Sobe o voucher e preenche sozinho.")}
+            />
+          </div>
+        )}
 
         {modo === "pdf" && (
           <>
@@ -1685,7 +1762,7 @@ function VooFormModal({
                   className="btn btn-primary disabled:opacity-50"
                   style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
                 >
-                  {salvando ? t("Salvando…") : t("Criar voo")}
+                  {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar voo")}
                 </button>
               )}
         </div>
@@ -1702,28 +1779,38 @@ function TransporteFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [dataT, setDataT] = useState(day.dataISO);
-  const [etapa, setEtapa] = useState<1 | 2>(1);
-  const [tipo, setTipo] = useState("Executivo");
-  const [empresa, setEmpresa] = useState("");
-  const [motorista, setMotorista] = useState("");
-  const [contato, setContato] = useState("");
-  const [origem, setOrigem] = useState("");
-  const [destino, setDestino] = useState("");
-  const [horario, setHorario] = useState("");
-  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
-  const [observacoes, setObservacoes] = useState("");
+  const editando = !!itemEditar;
+  const dadosE = (itemEditar?.dados ?? {}) as Record<string, unknown>;
+  const strE = (k: string) => (typeof dadosE[k] === "string" ? (dadosE[k] as string) : "");
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [dataT, setDataT] = useState(itemEditar?.data ?? day?.dataISO ?? "");
+  const [etapa, setEtapa] = useState<1 | 2>(itemEditar ? 2 : 1);
+  const [tipo, setTipo] = useState(strE("tipoTransporte") || "Executivo");
+  const [empresa, setEmpresa] = useState(strE("empresa"));
+  const [motorista, setMotorista] = useState(strE("motorista"));
+  const [contato, setContato] = useState(strE("contato"));
+  const [origem, setOrigem] = useState(strE("origem"));
+  const [destino, setDestino] = useState(strE("destino"));
+  const [horario, setHorario] = useState(itemEditar?.horaInicio ?? "");
+  const [passageiros, setPassageiros] = useState<Passageiro[]>(passageirosDe(itemEditar));
+  const [observacoes, setObservacoes] = useState(itemEditar?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -1766,8 +1853,8 @@ function TransporteFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo transporte terrestre")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar transporte") : t("Novo transporte terrestre")}
+      subtitle={subtitulo}
       maxWidth={480}
     >
       {etapa === 1 ? (
@@ -1874,7 +1961,7 @@ function TransporteFormModal({
             className="btn btn-primary disabled:opacity-50"
             style={{ backgroundColor: "var(--module-financeiro)", color: "#fff" }}
           >
-            {salvando ? t("Salvando…") : t("Criar transporte")}
+            {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar transporte")}
           </button>
         </div>
       </div>
@@ -2065,11 +2152,13 @@ function ItemDetalheModal({
   item,
   artistasDoItem,
   onClose,
+  onEditar,
   onExcluir,
 }: {
   item: AgendaItem;
   artistasDoItem: DJ[];
   onClose: () => void;
+  onEditar: () => void;
   onExcluir: () => Promise<void>;
 }) {
   const t = useT();
@@ -2124,7 +2213,14 @@ function ItemDetalheModal({
             ⚠ {t("Confira no site da companhia (pelo localizador) se o horário não mudou.")}
           </div>
         )}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-between pt-2">
+          <button
+            onClick={onEditar}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+          >
+            <Pencil size={14} />
+            {t("Editar")}
+          </button>
           <button
             onClick={excluir}
             disabled={excluindo}
