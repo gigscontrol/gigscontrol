@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CidadeRow, CidadeEscrita } from "@/lib/mappers/contatos";
 
-const COLS = "id, workspace_id, nome, estado, latitude, longitude, ibge_id";
+const COLS =
+  "id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id";
 
 export async function listarCidades(supabase: SupabaseClient): Promise<CidadeRow[]> {
   const { data, error } = await supabase
@@ -107,6 +108,23 @@ export async function buscarCidadePorIbge(
     .select(COLS)
     .eq("workspace_id", workspaceId)
     .eq("ibge_id", ibgeId)
+    .is("deletado_em", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as CidadeRow) ?? null;
+}
+
+/** Busca uma cidade do workspace pelo ID do GeoNames (catálogo mundial). */
+export async function buscarCidadePorGeoname(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  geonameId: string
+): Promise<CidadeRow | null> {
+  const { data, error } = await supabase
+    .from("cidades")
+    .select(COLS)
+    .eq("workspace_id", workspaceId)
+    .eq("geoname_id", geonameId)
     .is("deletado_em", null)
     .maybeSingle();
   if (error) throw error;

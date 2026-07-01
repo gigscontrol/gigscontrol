@@ -2685,6 +2685,7 @@ const SWEEP14: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Select at least 1 artist so it shows on their agenda.",
   "Artista(s)": "Artist(s)",
   "bagagem extra": "extra baggage",
+  "Autocomplete mundial indisponível (config. GeoNames).": "Worldwide autocomplete unavailable (GeoNames config).",
   "Digite qualquer cidade do Brasil…": "Type any city in Brazil…",
   "Localizando a cidade…": "Locating the city…",
   "Não achei essa cidade no mapa. Tente outra.": "Couldn't find that city on the map. Try another.",

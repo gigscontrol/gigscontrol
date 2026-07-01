@@ -1710,6 +1710,7 @@ export const FR: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Sélectionnez au moins 1 artiste pour l'afficher dans son agenda.",
   "Artista(s)": "Artiste(s)",
   "bagagem extra": "bagage suppl.",
+  "Autocomplete mundial indisponível (config. GeoNames).": "Autocomplétion mondiale indisponible (config. GeoNames).",
   "Digite qualquer cidade do Brasil…": "Tapez n'importe quelle ville du Brésil…",
   "Localizando a cidade…": "Localisation de la ville…",
   "Não achei essa cidade no mapa. Tente outra.": "Ville introuvable sur la carte. Essayez-en une autre.",

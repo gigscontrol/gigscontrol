@@ -13,6 +13,8 @@ export type CidadeRow = {
   latitude: number | string | null;
   longitude: number | string | null;
   ibge_id: string | null;
+  pais: string | null;
+  geoname_id: string | null;
 };
 
 function paraNumero(v: number | string | null | undefined): number | undefined {
@@ -33,6 +35,8 @@ export function rowParaCidade(row: CidadeRow): Cidade {
   if (lat !== undefined) c.latitude = lat;
   if (lng !== undefined) c.longitude = lng;
   if (row.ibge_id) c.ibgeId = row.ibge_id;
+  c.pais = row.pais ?? "BR";
+  if (row.geoname_id) c.geonameId = row.geoname_id;
   return c;
 }
 
@@ -43,6 +47,8 @@ export type CidadeEscrita = {
   latitude?: number | null;
   longitude?: number | null;
   ibge_id?: string | null;
+  pais?: string | null;
+  geoname_id?: string | null;
 };
 
 // ============================================================

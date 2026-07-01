@@ -195,6 +195,10 @@ export type Cidade = {
   /** ID do município no catálogo do IBGE. Cidades novas (a partir da
    *  migração 22) sempre têm. Cidades legadas/manuais podem não ter. */
   ibgeId?: string;
+  /** País (ISO 3166-1 alpha-2). Default 'BR' (migração 43). */
+  pais?: string;
+  /** ID no catálogo GeoNames — cidades de fora do Brasil (migração 43). */
+  geonameId?: string;
 };
 
 // ----------- Orçamentos -----------
