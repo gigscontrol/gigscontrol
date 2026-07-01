@@ -1710,6 +1710,8 @@ export const ES: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Selecciona al menos 1 artista para que aparezca en su agenda.",
   "Artista(s)": "Artista(s)",
   "bagagem extra": "equipaje extra",
+  "Para qual artista?": "¿Para qué artista?",
+  "Todos os artistas": "Todos los artistas",
   "Bagagem": "Equipaje",
   "Baixar voucher": "Descargar voucher",
   "Baixando…": "Descargando…",

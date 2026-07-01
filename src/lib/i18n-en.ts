@@ -2685,6 +2685,8 @@ const SWEEP14: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Select at least 1 artist so it shows on their agenda.",
   "Artista(s)": "Artist(s)",
   "bagagem extra": "extra baggage",
+  "Para qual artista?": "For which artist?",
+  "Todos os artistas": "All artists",
   "Bagagem": "Baggage",
   "Baixar voucher": "Download voucher",
   "Baixando…": "Downloading…",

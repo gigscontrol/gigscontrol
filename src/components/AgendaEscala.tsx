@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download, ArrowLeft } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -881,6 +881,72 @@ function SeletorArtistas({
   );
 }
 
+/** Passo 1 dos forms de item: "pra qual artista?" antes do formulário. */
+function PassoArtista({
+  artistas,
+  value,
+  onChange,
+  onCancelar,
+  onContinuar,
+  cor,
+}: {
+  artistas: DJ[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  onCancelar: () => void;
+  onContinuar: () => void;
+  cor: string;
+}) {
+  const t = useT();
+  return (
+    <div className="flex flex-col gap-4">
+      <SeletorArtistas
+        artistas={artistas}
+        value={value}
+        onChange={onChange}
+        label={t("Para qual artista?")}
+        hintVazio={t("Nenhum selecionado = vale para todos os artistas")}
+      />
+      <div className="flex justify-end gap-2 pt-1">
+        <button onClick={onCancelar} className="btn btn-secondary">
+          {t("Cancelar")}
+        </button>
+        <button
+          onClick={onContinuar}
+          className="btn btn-primary"
+          style={{ backgroundColor: cor, color: "#fff" }}
+        >
+          {t("Continuar")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Cabeçalho da etapa 2: mostra pra quem é o item + volta pra trocar o artista. */
+function VoltarArtista({
+  artistas,
+  ids,
+  onVoltar,
+}: {
+  artistas: DJ[];
+  ids: string[];
+  onVoltar: () => void;
+}) {
+  const t = useT();
+  const resumo = labelArtistas(ids, artistas) ?? t("Todos os artistas");
+  return (
+    <button
+      type="button"
+      onClick={onVoltar}
+      className="self-start inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors"
+    >
+      <ArrowLeft size={14} />
+      <span className="truncate max-w-[16rem]">{resumo}</span>
+    </button>
+  );
+}
+
 type Passageiro = {
   nome: string;
   nascimento?: string;
@@ -997,6 +1063,7 @@ function EventoFormModal({
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState<1 | 2>(1);
 
   async function submit() {
     if (salvando) return;
@@ -1031,7 +1098,18 @@ function EventoFormModal({
       subtitle={`${t(day.name)} · ${day.date}`}
       maxWidth={440}
     >
+      {etapa === 1 ? (
+        <PassoArtista
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-contratos)"
+        />
+      ) : (
       <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
         <CampoForm label={t("Título")}>
           <input
             autoFocus
@@ -1041,14 +1119,6 @@ function EventoFormModal({
             className="campo-input"
           />
         </CampoForm>
-
-        <SeletorArtistas
-          artistas={artistas}
-          value={artistIds}
-          onChange={setArtistIds}
-          label={t("Artistas")}
-          hintVazio={t("Nenhum selecionado = vale para todos os artistas")}
-        />
 
         <CampoForm label={t("Quando")}>
           <div className="flex rounded-md border border-border overflow-hidden text-sm">
@@ -1126,6 +1196,7 @@ function EventoFormModal({
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }
@@ -1216,6 +1287,7 @@ function VooFormModal({
   const [pdfMulti, setPdfMulti] = useState<VooExtraido[] | null>(null);
   const [pdfOk, setPdfOk] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState<1 | 2>(1);
 
   function aplicarVoo(v: VooExtraido) {
     if (v.data) setDataVoo(v.data);
@@ -1416,7 +1488,18 @@ function VooFormModal({
       subtitle={`${t(day.name)} · ${day.date}`}
       maxWidth={480}
     >
+      {etapa === 1 ? (
+        <PassoArtista
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-agenda)"
+        />
+      ) : (
       <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
         <div className="grid grid-cols-2 gap-3">
           <ModoCard
             ativo={modo === "manual"}
@@ -1433,14 +1516,6 @@ function VooFormModal({
             desc={t("Sobe o voucher e preenche sozinho.")}
           />
         </div>
-
-        <SeletorArtistas
-          artistas={artistas}
-          value={artistIds}
-          onChange={setArtistIds}
-          label={t("Artista(s) — de quem é o voo")}
-          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
-        />
 
         {modo === "pdf" && (
           <>
@@ -1615,6 +1690,7 @@ function VooFormModal({
               )}
         </div>
       </div>
+      )}
     </Modal>
   );
 }
@@ -1638,6 +1714,7 @@ function TransporteFormModal({
   const t = useT();
   const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
   const [dataT, setDataT] = useState(day.dataISO);
+  const [etapa, setEtapa] = useState<1 | 2>(1);
   const [tipo, setTipo] = useState("Executivo");
   const [empresa, setEmpresa] = useState("");
   const [motorista, setMotorista] = useState("");
@@ -1693,14 +1770,18 @@ function TransporteFormModal({
       subtitle={`${t(day.name)} · ${day.date}`}
       maxWidth={480}
     >
-      <div className="flex flex-col gap-4">
-        <SeletorArtistas
+      {etapa === 1 ? (
+        <PassoArtista
           artistas={artistas}
           value={artistIds}
           onChange={setArtistIds}
-          label={t("Artista(s) — de quem é o transporte")}
-          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-financeiro)"
         />
+      ) : (
+      <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
 
         <div className="grid grid-cols-2 gap-3">
           <CampoForm label={t("Data")}>
@@ -1797,6 +1878,7 @@ function TransporteFormModal({
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }
