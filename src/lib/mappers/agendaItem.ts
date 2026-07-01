@@ -33,7 +33,11 @@ export function rowParaAgendaItem(row: AgendaItemRow): AgendaItem {
     diaInteiro: !!row.dia_inteiro,
     horaInicio: row.hora_inicio ?? undefined,
     horaFim: row.hora_fim ?? undefined,
-    artistId: row.artist_id ?? undefined,
+    artistIds: Array.isArray(row.dados?.artistIds)
+      ? (row.dados.artistIds as string[])
+      : row.artist_id
+        ? [row.artist_id]
+        : [],
     observacoes: row.observacoes ?? undefined,
     dados: row.dados ?? undefined,
   };

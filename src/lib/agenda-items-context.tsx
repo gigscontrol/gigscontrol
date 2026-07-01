@@ -25,7 +25,7 @@ export type NovoAgendaItem = {
   diaInteiro?: boolean;
   horaInicio?: string;
   horaFim?: string;
-  artistId?: string | null;
+  artistIds?: string[];
   observacoes?: string;
   dados?: Record<string, unknown>;
 };
@@ -49,9 +49,9 @@ function paraApi(i: NovoAgendaItem): Record<string, unknown> {
     dia_inteiro: i.diaInteiro ?? false,
     hora_inicio: i.horaInicio ?? null,
     hora_fim: i.horaFim ?? null,
-    artist_id: i.artistId ?? null,
+    artist_id: i.artistIds?.[0] ?? null,
     observacoes: i.observacoes ?? null,
-    dados: i.dados ?? {},
+    dados: { ...(i.dados ?? {}), artistIds: i.artistIds ?? [] },
   };
 }
 

@@ -119,8 +119,8 @@ export type AgendaItem = {
   diaInteiro: boolean;
   horaInicio?: string;
   horaFim?: string;
-  /** Artista a quem o item pertence (opcional; filtra por DJ). */
-  artistId?: string;
+  /** Artistas a quem o item pertence (vazio = geral; filtra por DJ). */
+  artistIds: string[];
   observacoes?: string;
   /** Payload específico por tipo (voo/transporte na Fase 3). */
   dados?: Record<string, unknown>;
