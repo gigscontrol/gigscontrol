@@ -37,6 +37,22 @@ export async function criarAgendaItem(
   return data as unknown as AgendaItemRow;
 }
 
+export async function atualizarAgendaItem(
+  supabase: SupabaseClient,
+  id: string,
+  payload: AgendaItemEscrita
+): Promise<AgendaItemRow> {
+  const { data, error } = await supabase
+    .from("agenda_items")
+    .update(payload)
+    .eq("id", id)
+    .is("deletado_em", null)
+    .select(SELECT)
+    .single();
+  if (error) throw error;
+  return data as unknown as AgendaItemRow;
+}
+
 export async function removerAgendaItem(
   supabase: SupabaseClient,
   id: string

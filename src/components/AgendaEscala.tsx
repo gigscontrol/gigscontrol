@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download, ArrowLeft } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -293,7 +293,8 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
-  const { itens: agendaItens, criar: criarItem, remover: removerItem } = useAgendaItems();
+  const { itens: agendaItens, criar: criarItem, editar: editarItem, remover: removerItem } =
+    useAgendaItems();
   // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo DJ.
   const filteredItens = agendaItens.filter(
     (i) => i.artistIds.length === 0 || i.artistIds.some((id) => selectedDJs.includes(id))
@@ -303,6 +304,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
   const [transporteFormDia, setTransporteFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
+  const [editandoItem, setEditandoItem] = useState<AgendaItem | null>(null);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -485,12 +487,58 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         />
       )}
 
+      {/* Edição de item (reusa os forms em modo edição) */}
+      {editandoItem && (
+        <>
+          {editandoItem.tipo === "evento" && (
+            <EventoFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+          {editandoItem.tipo === "voo" && (
+            <VooFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+          {editandoItem.tipo === "transporte" && (
+            <TransporteFormModal
+              itemEditar={editandoItem}
+              artistas={artistas}
+              defaultArtistIds={editandoItem.artistIds}
+              onClose={() => setEditandoItem(null)}
+              onCriar={async (input) => {
+                await editarItem(editandoItem.id, input);
+                setEditandoItem(null);
+              }}
+            />
+          )}
+        </>
+      )}
+
       {/* Detalhe + excluir item */}
       {itemDetalhe && (
         <ItemDetalheModal
           item={itemDetalhe}
-          artistaLabel={labelArtistas(itemDetalhe.artistIds, artistas)}
+          artistasDoItem={artistas.filter((a) => itemDetalhe.artistIds.includes(a.id))}
           onClose={() => setItemDetalhe(null)}
+          onEditar={() => {
+            setEditandoItem(itemDetalhe);
+            setItemDetalhe(null);
+          }}
           onExcluir={async () => {
             await removerItem(itemDetalhe.id);
             setItemDetalhe(null);
@@ -881,11 +929,84 @@ function SeletorArtistas({
   );
 }
 
+/** Passo 1 dos forms de item: "pra qual artista?" antes do formulário. */
+function PassoArtista({
+  artistas,
+  value,
+  onChange,
+  onCancelar,
+  onContinuar,
+  cor,
+}: {
+  artistas: DJ[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  onCancelar: () => void;
+  onContinuar: () => void;
+  cor: string;
+}) {
+  const t = useT();
+  return (
+    <div className="flex flex-col gap-4">
+      <SeletorArtistas
+        artistas={artistas}
+        value={value}
+        onChange={onChange}
+        label={t("Para qual artista?")}
+        hintVazio={t("Nenhum selecionado = vale para todos os artistas")}
+      />
+      <div className="flex justify-end gap-2 pt-1">
+        <button onClick={onCancelar} className="btn btn-secondary">
+          {t("Cancelar")}
+        </button>
+        <button
+          onClick={onContinuar}
+          className="btn btn-primary"
+          style={{ backgroundColor: cor, color: "#fff" }}
+        >
+          {t("Continuar")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Cabeçalho da etapa 2: mostra pra quem é o item + volta pra trocar o artista. */
+function VoltarArtista({
+  artistas,
+  ids,
+  onVoltar,
+}: {
+  artistas: DJ[];
+  ids: string[];
+  onVoltar: () => void;
+}) {
+  const t = useT();
+  const resumo = labelArtistas(ids, artistas) ?? t("Todos os artistas");
+  return (
+    <button
+      type="button"
+      onClick={onVoltar}
+      className="self-start inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition-colors"
+    >
+      <ArrowLeft size={14} />
+      <span className="truncate max-w-[16rem]">{resumo}</span>
+    </button>
+  );
+}
+
 type Passageiro = {
   nome: string;
   nascimento?: string;
   bagagemExtra?: boolean;
 };
+
+/** Passageiros guardados (array de objeto OU string) → array do form. */
+function passageirosDe(item?: AgendaItem): Passageiro[] {
+  const arr = item?.dados?.passageiros;
+  if (!Array.isArray(arr)) return [];
+  return arr.map((p) => (typeof p === "string" ? { nome: p } : (p as Passageiro)));
+}
 
 /** Lista repetível de passageiros (nome obrigatório; nascimento/bagagem opcionais). */
 function PassageirosField({
@@ -979,24 +1100,34 @@ function EventoFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
-  const [titulo, setTitulo] = useState("");
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [diaInteiro, setDiaInteiro] = useState(true);
-  const [horaInicio, setHoraInicio] = useState("");
-  const [horaFim, setHoraFim] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+  const editando = !!itemEditar;
+  const dataISO = itemEditar?.data ?? day?.dataISO ?? "";
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const [titulo, setTitulo] = useState(itemEditar?.titulo ?? "");
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [diaInteiro, setDiaInteiro] = useState(itemEditar ? itemEditar.diaInteiro : true);
+  const [horaInicio, setHoraInicio] = useState(itemEditar?.horaInicio ?? "");
+  const [horaFim, setHoraFim] = useState(itemEditar?.horaFim ?? "");
+  const [observacoes, setObservacoes] = useState(itemEditar?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState<1 | 2>(itemEditar ? 2 : 1);
 
   async function submit() {
     if (salvando) return;
@@ -1010,7 +1141,7 @@ function EventoFormModal({
       await onCriar({
         tipo: "evento",
         titulo: titulo.trim(),
-        data: day.dataISO,
+        data: dataISO,
         diaInteiro,
         horaInicio: diaInteiro ? undefined : horaInicio || undefined,
         horaFim: diaInteiro ? undefined : horaFim || undefined,
@@ -1027,11 +1158,22 @@ function EventoFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo evento")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar evento") : t("Novo evento")}
+      subtitle={subtitulo}
       maxWidth={440}
     >
+      {etapa === 1 ? (
+        <PassoArtista
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-contratos)"
+        />
+      ) : (
       <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
         <CampoForm label={t("Título")}>
           <input
             autoFocus
@@ -1041,14 +1183,6 @@ function EventoFormModal({
             className="campo-input"
           />
         </CampoForm>
-
-        <SeletorArtistas
-          artistas={artistas}
-          value={artistIds}
-          onChange={setArtistIds}
-          label={t("Artistas")}
-          hintVazio={t("Nenhum selecionado = vale para todos os artistas")}
-        />
 
         <CampoForm label={t("Quando")}>
           <div className="flex rounded-md border border-border overflow-hidden text-sm">
@@ -1122,10 +1256,11 @@ function EventoFormModal({
             className="btn btn-primary disabled:opacity-50"
             style={{ backgroundColor: "var(--module-contratos)", color: "#fff" }}
           >
-            {salvando ? t("Salvando…") : t("Criar evento")}
+            {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar evento")}
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }
@@ -1178,31 +1313,42 @@ function VooFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
+  const editando = !!itemEditar;
+  const dadosE = (itemEditar?.dados ?? {}) as Record<string, unknown>;
+  const strE = (k: string) => (typeof dadosE[k] === "string" ? (dadosE[k] as string) : "");
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const voucherPathExistente = strE("voucherPath");
   const [modo, setModo] = useState<"manual" | "pdf">("manual");
 
   // Form (usado pelo manual E pelo PDF de 1 voo)
-  const [dataVoo, setDataVoo] = useState(day.dataISO);
-  const [numeroVoo, setNumeroVoo] = useState("");
-  const [companhia, setCompanhia] = useState("");
-  const [origem, setOrigem] = useState("");
-  const [destino, setDestino] = useState("");
-  const [partida, setPartida] = useState("");
-  const [chegada, setChegada] = useState("");
-  const [localizador, setLocalizador] = useState("");
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
-  const [duracao, setDuracao] = useState("");
-  const [bagagem, setBagagem] = useState("");
+  const [dataVoo, setDataVoo] = useState(itemEditar?.data ?? day?.dataISO ?? "");
+  const [numeroVoo, setNumeroVoo] = useState(strE("numeroVoo"));
+  const [companhia, setCompanhia] = useState(strE("companhia"));
+  const [origem, setOrigem] = useState(strE("origem"));
+  const [destino, setDestino] = useState(strE("destino"));
+  const [partida, setPartida] = useState(strE("partida") || (itemEditar?.horaInicio ?? ""));
+  const [chegada, setChegada] = useState(strE("chegada") || (itemEditar?.horaFim ?? ""));
+  const [localizador, setLocalizador] = useState(strE("localizador"));
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [passageiros, setPassageiros] = useState<Passageiro[]>(passageirosDe(itemEditar));
+  const [duracao, setDuracao] = useState(strE("duracao"));
+  const [bagagem, setBagagem] = useState(strE("bagagem"));
   const [pdfBase64, setPdfBase64] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -1216,6 +1362,7 @@ function VooFormModal({
   const [pdfMulti, setPdfMulti] = useState<VooExtraido[] | null>(null);
   const [pdfOk, setPdfOk] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState<1 | 2>(1);
 
   function aplicarVoo(v: VooExtraido) {
     if (v.data) setDataVoo(v.data);
@@ -1336,7 +1483,7 @@ function VooFormModal({
     const titulo =
       [numeroVoo.trim().toUpperCase(), rota].filter(Boolean).join(" · ") || t("Voo");
     try {
-      const voucherPath = await subirVoucher();
+      const voucherPath = (await subirVoucher()) || voucherPathExistente;
       await onCriar({
         tipo: "voo",
         titulo,
@@ -1412,35 +1559,40 @@ function VooFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo voo")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar voo") : t("Novo voo")}
+      subtitle={subtitulo}
       maxWidth={480}
     >
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <ModoCard
-            ativo={modo === "manual"}
-            onClick={() => setModo("manual")}
-            icon={Pencil}
-            titulo={t("Preencher manual")}
-            desc={t("Digitar os dados do voo na mão.")}
-          />
-          <ModoCard
-            ativo={modo === "pdf"}
-            onClick={() => setModo("pdf")}
-            icon={FileUp}
-            titulo={t("Ler de um PDF")}
-            desc={t("Sobe o voucher e preenche sozinho.")}
-          />
-        </div>
-
-        <SeletorArtistas
+      {etapa === 1 ? (
+        <PassoArtista
           artistas={artistas}
           value={artistIds}
           onChange={setArtistIds}
-          label={t("Artista(s) — de quem é o voo")}
-          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-agenda)"
         />
+      ) : (
+      <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
+        {!editando && (
+          <div className="grid grid-cols-2 gap-3">
+            <ModoCard
+              ativo={modo === "manual"}
+              onClick={() => setModo("manual")}
+              icon={Pencil}
+              titulo={t("Preencher manual")}
+              desc={t("Digitar os dados do voo na mão.")}
+            />
+            <ModoCard
+              ativo={modo === "pdf"}
+              onClick={() => setModo("pdf")}
+              icon={FileUp}
+              titulo={t("Ler de um PDF")}
+              desc={t("Sobe o voucher e preenche sozinho.")}
+            />
+          </div>
+        )}
 
         {modo === "pdf" && (
           <>
@@ -1610,11 +1762,12 @@ function VooFormModal({
                   className="btn btn-primary disabled:opacity-50"
                   style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
                 >
-                  {salvando ? t("Salvando…") : t("Criar voo")}
+                  {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar voo")}
                 </button>
               )}
         </div>
       </div>
+      )}
     </Modal>
   );
 }
@@ -1626,27 +1779,38 @@ function TransporteFormModal({
   day,
   artistas,
   defaultArtistIds,
+  itemEditar,
   onClose,
   onCriar,
 }: {
-  day: DayCell;
+  day?: DayCell;
   artistas: DJ[];
   defaultArtistIds: string[];
+  itemEditar?: AgendaItem;
   onClose: () => void;
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
-  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
-  const [dataT, setDataT] = useState(day.dataISO);
-  const [tipo, setTipo] = useState("Executivo");
-  const [empresa, setEmpresa] = useState("");
-  const [motorista, setMotorista] = useState("");
-  const [contato, setContato] = useState("");
-  const [origem, setOrigem] = useState("");
-  const [destino, setDestino] = useState("");
-  const [horario, setHorario] = useState("");
-  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
-  const [observacoes, setObservacoes] = useState("");
+  const editando = !!itemEditar;
+  const dadosE = (itemEditar?.dados ?? {}) as Record<string, unknown>;
+  const strE = (k: string) => (typeof dadosE[k] === "string" ? (dadosE[k] as string) : "");
+  const subtitulo = itemEditar
+    ? formatarDataBR(itemEditar.data)
+    : day
+      ? `${t(day.name)} · ${day.date}`
+      : "";
+  const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
+  const [dataT, setDataT] = useState(itemEditar?.data ?? day?.dataISO ?? "");
+  const [etapa, setEtapa] = useState<1 | 2>(itemEditar ? 2 : 1);
+  const [tipo, setTipo] = useState(strE("tipoTransporte") || "Executivo");
+  const [empresa, setEmpresa] = useState(strE("empresa"));
+  const [motorista, setMotorista] = useState(strE("motorista"));
+  const [contato, setContato] = useState(strE("contato"));
+  const [origem, setOrigem] = useState(strE("origem"));
+  const [destino, setDestino] = useState(strE("destino"));
+  const [horario, setHorario] = useState(itemEditar?.horaInicio ?? "");
+  const [passageiros, setPassageiros] = useState<Passageiro[]>(passageirosDe(itemEditar));
+  const [observacoes, setObservacoes] = useState(itemEditar?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -1689,18 +1853,22 @@ function TransporteFormModal({
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Novo transporte terrestre")}
-      subtitle={`${t(day.name)} · ${day.date}`}
+      title={editando ? t("Editar transporte") : t("Novo transporte terrestre")}
+      subtitle={subtitulo}
       maxWidth={480}
     >
-      <div className="flex flex-col gap-4">
-        <SeletorArtistas
+      {etapa === 1 ? (
+        <PassoArtista
           artistas={artistas}
           value={artistIds}
           onChange={setArtistIds}
-          label={t("Artista(s) — de quem é o transporte")}
-          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+          onCancelar={onClose}
+          onContinuar={() => setEtapa(2)}
+          cor="var(--module-financeiro)"
         />
+      ) : (
+      <div className="flex flex-col gap-4">
+        <VoltarArtista artistas={artistas} ids={artistIds} onVoltar={() => setEtapa(1)} />
 
         <div className="grid grid-cols-2 gap-3">
           <CampoForm label={t("Data")}>
@@ -1793,10 +1961,11 @@ function TransporteFormModal({
             className="btn btn-primary disabled:opacity-50"
             style={{ backgroundColor: "var(--module-financeiro)", color: "#fff" }}
           >
-            {salvando ? t("Salvando…") : t("Criar transporte")}
+            {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar transporte")}
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }
@@ -1825,14 +1994,59 @@ function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
+/**
+ * Normaliza a franquia de bagagem pra exibição como "Bagagem extra":
+ * - "" quando o voucher não fala de bagagem (esconde a linha);
+ * - `labelNao` (ex: "Não") quando é só bagagem de mão / sem mala despachada;
+ * - o texto original quando há bagagem despachada de fato ("2x 32kg").
+ */
+function formatarBagagemExtra(raw: string, labelNao: string): string {
+  const s = raw.trim();
+  if (!s) return "";
+  const low = s.toLowerCase();
+  // Tem bagagem despachada de fato (peso/quantidade)?
+  if (/\d\s*(kg|quilo|mala|peç|pec|piece|pc\b|x\s)/.test(low)) return s;
+  // Frases que indicam ausência de bagagem despachada.
+  if (/(sem mala|sem baga|s[oó]\s|apenas|somente|de m[aã]o|carry.?on|hand luggage|no checked|nenhum|n[aã]o)/.test(low)) {
+    return labelNao;
+  }
+  return s;
+}
+
+/**
+ * Cabeçalho do detalhe: o(s) artista(s) do item em destaque, no mesmo estilo
+ * "coloridinho" dos cards de show da agenda (barrinha colorida na lateral).
+ */
+function CabecalhoArtistas({ artistas }: { artistas: DJ[] }) {
+  if (artistas.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {artistas.map((a) => (
+        <div
+          key={a.id}
+          className="inline-flex items-center gap-2 bg-surface-2 border border-border rounded-md pl-2.5 pr-3 py-1.5"
+          style={{ borderLeft: `3px solid ${a.color}` }}
+        >
+          <span
+            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: a.color }}
+          />
+          <span className="text-sm font-bold text-primary">{a.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Linhas específicas de um voo (a partir do `dados` do item). */
 function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const t = useT();
   const [baixando, setBaixando] = useState(false);
   const d = (dados ?? {}) as Record<string, unknown>;
   const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
-  const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
+  const rota = str("origem") && str("destino") ? `${str("origem")} → ${str("destino")}` : "";
   const voucherPath = str("voucherPath");
+  const bagagemExtra = formatarBagagemExtra(str("bagagem"), t("Não"));
   const passageiros: Passageiro[] = Array.isArray(d.passageiros)
     ? (d.passageiros as Passageiro[])
     : str("passageiros")
@@ -1863,15 +2077,15 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
     <>
       {str("companhia") && <LinhaDetalhe rotulo={t("Companhia")} valor={str("companhia")} />}
       {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
-      {str("bagagem") && <LinhaDetalhe rotulo={t("Bagagem")} valor={str("bagagem")} />}
+      {bagagemExtra && <LinhaDetalhe rotulo={t("Bagagem extra")} valor={bagagemExtra} />}
       {str("localizador") && (
         <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
       )}
       {passageiros.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted">{t("Passageiros")}</span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t("Passageiros")}</span>
           {passageiros.map((p, i) => (
-            <div key={i} className="text-sm text-primary leading-snug">
+            <div key={i} className="text-sm text-primary font-medium leading-snug">
               {p.nome}
               {(p.nascimento || p.bagagemExtra) && (
                 <span className="text-xs text-muted">
@@ -1920,10 +2134,10 @@ function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
       {str("empresa") && <LinhaDetalhe rotulo={t("Empresa")} valor={str("empresa")} />}
       {contato && <LinhaDetalhe rotulo={t("Motorista")} valor={contato} />}
       {passageiros.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted">{t("Passageiros")}</span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-muted">{t("Passageiros")}</span>
           {passageiros.map((p, i) => (
-            <div key={i} className="text-sm text-primary leading-snug">
+            <div key={i} className="text-sm text-primary font-medium leading-snug">
               {p.nome}
             </div>
           ))}
@@ -1936,13 +2150,15 @@ function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
 /** Detalhe de um item + excluir (Fase 2: sem edição). */
 function ItemDetalheModal({
   item,
-  artistaLabel,
+  artistasDoItem,
   onClose,
+  onEditar,
   onExcluir,
 }: {
   item: AgendaItem;
-  artistaLabel?: string;
+  artistasDoItem: DJ[];
   onClose: () => void;
+  onEditar: () => void;
   onExcluir: () => Promise<void>;
 }) {
   const t = useT();
@@ -1975,29 +2191,36 @@ function ItemDetalheModal({
       maxWidth={400}
     >
       <div className="flex flex-col gap-3">
-        <LinhaDetalhe
-          rotulo={t("Quando")}
-          valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
-        />
-        {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
-        {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
-        {artistaLabel && (
+        <CabecalhoArtistas artistas={artistasDoItem} />
+        {item.tipo === "voo" ? (
+          <>
+            <LinhaDetalhe rotulo={t("Data")} valor={formatarDataBR(item.data)} />
+            {item.horaInicio && <LinhaDetalhe rotulo={t("Partida")} valor={item.horaInicio} />}
+            {item.horaFim && <LinhaDetalhe rotulo={t("Chegada")} valor={item.horaFim} />}
+            {dur && <LinhaDetalhe rotulo={t("Tempo de voo")} valor={dur} />}
+          </>
+        ) : (
           <LinhaDetalhe
-            rotulo={
-              item.tipo === "voo" || item.tipo === "transporte"
-                ? t("Artista(s)")
-                : t("Artistas")
-            }
-            valor={artistaLabel}
+            rotulo={t("Quando")}
+            valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
           />
         )}
+        {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
+        {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
         {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
         {item.tipo === "voo" && (
           <div className="text-[0.7rem] text-muted pt-2 border-t border-border">
             ⚠ {t("Confira no site da companhia (pelo localizador) se o horário não mudou.")}
           </div>
         )}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-between pt-2">
+          <button
+            onClick={onEditar}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+          >
+            <Pencil size={14} />
+            {t("Editar")}
+          </button>
           <button
             onClick={excluir}
             disabled={excluindo}

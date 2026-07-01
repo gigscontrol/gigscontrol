@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MapPin, Building2, Users, Search } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { MapPin, Building2, Users, Search, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
+import CidadeIBGEAutocomplete, { type CidadeIBGE } from "@/components/CidadeIBGEAutocomplete";
 import type { Cidade, Casa, Contratante } from "@/types";
 
 /**
@@ -40,23 +41,72 @@ export default function MapaDobras({
     [cidades]
   );
 
-  const [cidadeBaseId, setCidadeBaseId] = useState<string>(
-    cidadesComCoord[0]?.id ?? ""
-  );
+  // Cidade de referência: digitável (autocomplete IBGE) + geocode OSM.
+  const [refCidade, setRefCidade] = useState<CidadeIBGE | null>(null);
+  const [refCoords, setRefCoords] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+  const [geocodando, setGeocodando] = useState(false);
+  const [geoErro, setGeoErro] = useState<string | null>(null);
   const [raioKm, setRaioKm] = useState<number>(500);
 
-  const cidadeBase = useMemo(
-    () => cidades.find((c) => c.id === cidadeBaseId),
-    [cidades, cidadeBaseId]
-  );
+  // Default: pré-seleciona a primeira cidade com coords (uma vez, ao carregar).
+  const jaInicializou = useRef(false);
+  useEffect(() => {
+    if (jaInicializou.current) return;
+    const p = cidadesComCoord[0];
+    if (p && p.latitude !== undefined && p.longitude !== undefined) {
+      jaInicializou.current = true;
+      setRefCidade({ ibgeId: p.ibgeId ?? "", nome: p.nome, uf: p.estado });
+      setRefCoords({ latitude: p.latitude, longitude: p.longitude });
+    }
+  }, [cidadesComCoord]);
+
+  async function escolherCidade(c: CidadeIBGE | null) {
+    setRefCidade(c);
+    setGeoErro(null);
+    if (!c) {
+      setRefCoords(null);
+      return;
+    }
+    // Se já temos essa cidade no banco com coords, usa direto (sem bater no OSM).
+    const local = cidadesComCoord.find(
+      (x) =>
+        x.nome.trim().toLowerCase() === c.nome.trim().toLowerCase() &&
+        x.estado.toUpperCase() === c.uf.toUpperCase()
+    );
+    if (local && local.latitude !== undefined && local.longitude !== undefined) {
+      setRefCoords({ latitude: local.latitude, longitude: local.longitude });
+      return;
+    }
+    setGeocodando(true);
+    try {
+      const res = await fetch(
+        `/api/geocode?nome=${encodeURIComponent(c.nome)}&uf=${encodeURIComponent(c.uf)}`,
+        { credentials: "include" }
+      );
+      const body = await res.json();
+      if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+        setRefCoords({ latitude: body.latitude, longitude: body.longitude });
+      } else {
+        setRefCoords(null);
+        setGeoErro(t("Não achei essa cidade no mapa. Tente outra."));
+      }
+    } catch {
+      setRefCoords(null);
+      setGeoErro(t("Não achei essa cidade no mapa. Tente outra."));
+    } finally {
+      setGeocodando(false);
+    }
+  }
 
   const cidadesNoRaio = useMemo(() => {
-    if (!cidadeBase) return [];
+    if (!refCoords) return [];
     return cidades
-      .map((c) => ({ cidade: c, distancia: distanciaKm(cidadeBase, c) }))
+      .map((c) => ({ cidade: c, distancia: distanciaKm(refCoords, c) }))
       .filter((x) => x.distancia !== undefined && x.distancia! <= raioKm)
       .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [cidadeBase, cidades, raioKm]);
+  }, [refCoords, cidades, raioKm]);
 
   const idsCidadesNoRaio = useMemo(
     () => new Set(cidadesNoRaio.map((x) => x.cidade.id)),
@@ -71,11 +121,11 @@ export default function MapaDobras({
         return {
           casa,
           cidade,
-          distancia: cidade && cidadeBase ? distanciaKm(cidadeBase, cidade) : undefined,
+          distancia: cidade && refCoords ? distanciaKm(refCoords, cidade) : undefined,
         };
       })
       .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [casas, cidades, cidadeBase, idsCidadesNoRaio]);
+  }, [casas, cidades, refCoords, idsCidadesNoRaio]);
 
   const contratantesNoRaio = useMemo(() => {
     return contratantes
@@ -85,11 +135,11 @@ export default function MapaDobras({
         return {
           contratante,
           cidade,
-          distancia: cidade && cidadeBase ? distanciaKm(cidadeBase, cidade) : undefined,
+          distancia: cidade && refCoords ? distanciaKm(refCoords, cidade) : undefined,
         };
       })
       .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [contratantes, cidades, cidadeBase, idsCidadesNoRaio]);
+  }, [contratantes, cidades, refCoords, idsCidadesNoRaio]);
 
   const cidadesSemCoord = cidades.length - cidadesComCoord.length;
 
@@ -104,20 +154,18 @@ export default function MapaDobras({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
-            <select
-              value={cidadeBaseId}
-              onChange={(e) => setCidadeBaseId(e.target.value)}
-              className="w-full bg-elevated border border-border rounded-md px-3 py-2 text-sm"
-            >
-              {cidadesComCoord.length === 0 && (
-                <option value="">{t("Nenhuma cidade com coordenadas")}</option>
-              )}
-              {cidadesComCoord.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}/{c.estado}
-                </option>
-              ))}
-            </select>
+            <CidadeIBGEAutocomplete
+              value={refCidade}
+              onChange={escolherCidade}
+              placeholder="Digite qualquer cidade do Brasil…"
+            />
+            {geocodando && (
+              <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                <Loader2 size={12} className="animate-spin" />
+                {t("Localizando a cidade…")}
+              </div>
+            )}
+            {geoErro && <div className="mt-1.5 text-xs text-danger">{geoErro}</div>}
           </div>
           <div>
             <label className="text-xs text-muted block mb-1">
