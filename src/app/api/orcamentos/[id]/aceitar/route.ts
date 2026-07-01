@@ -18,7 +18,7 @@ type RouteCtx = { params: { id: string } };
  * se status + show estiverem ambos OK.
  */
 export async function POST(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
   const bloqueio = verificarAcessoOrcamentos(r.sessao);
   if (bloqueio) return bloqueio;

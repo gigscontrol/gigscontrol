@@ -13,6 +13,7 @@ import type { DJ, TaxaAgenciaModo, DocumentoTipo } from "@/types";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
+import { setPreferencias as setPreferenciasGlobais } from "./preferencias";
 
 /**
  * Configurações do workspace (a agência) — módulo de Configurações do admin.
@@ -27,6 +28,13 @@ import { useAuth } from "./auth-context";
 export type Aparencia = {
   nomeAgencia: string;
   logoUrl: string | null;
+};
+
+/** Preferências da agência (defaults): idioma, país e formato de data. */
+export type WorkspacePreferencias = {
+  idiomaPadrao: string | null;
+  paisPadrao: string | null;
+  formatoData: string | null;
 };
 
 export type ArtistaWS = DJ;
@@ -200,6 +208,10 @@ type WorkspaceContextValue = {
   /** ISO timestamp da criação do workspace (null enquanto carrega/se anônimo). */
   workspaceCriadoEm: string | null;
 
+  // Preferências (padrões da agência: idioma, país e formato de data)
+  preferencias: WorkspacePreferencias;
+  atualizarPreferencias: (p: Partial<WorkspacePreferencias>) => Promise<void>;
+
   // Artistas
   artistas: ArtistaWS[];
   carregandoArtistas: boolean;
@@ -271,7 +283,14 @@ async function jsonOuErro(res: Response): Promise<Record<string, unknown>> {
   return body;
 }
 
-type WorkspaceApi = { nomeAgencia: string; logoUrl: string | null; criadoEm: string | null };
+type WorkspaceApi = {
+  nomeAgencia: string;
+  logoUrl: string | null;
+  criadoEm: string | null;
+  idiomaPadrao: string | null;
+  paisPadrao: string | null;
+  formatoData: string | null;
+};
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
@@ -279,6 +298,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [aparencia, setAparencia] = useState<Aparencia>(APARENCIA_INICIAL);
   const [carregandoAparencia, setCarregandoAparencia] = useState(false);
   const [workspaceCriadoEm, setWorkspaceCriadoEm] = useState<string | null>(null);
+  const [preferencias, setPreferenciasState] = useState<WorkspacePreferencias>({
+    idiomaPadrao: null,
+    paisPadrao: null,
+    formatoData: null,
+  });
 
   const [artistas, setArtistas] = useState<ArtistaWS[]>([]);
   const [carregandoArtistas, setCarregandoArtistas] = useState(false);
@@ -313,6 +337,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const ws = body.workspace as WorkspaceApi;
       setAparencia({ nomeAgencia: ws.nomeAgencia, logoUrl: ws.logoUrl });
       setWorkspaceCriadoEm(ws.criadoEm);
+      setPreferenciasState({
+        idiomaPadrao: ws.idiomaPadrao,
+        paisPadrao: ws.paisPadrao,
+        formatoData: ws.formatoData,
+      });
+      setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
     } catch {
       setAparencia((prev) => ({
         ...prev,
@@ -339,6 +369,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setAparencia({ nomeAgencia: ws.nomeAgencia, logoUrl: ws.logoUrl });
     setWorkspaceCriadoEm(ws.criadoEm);
   }, []);
+
+  const atualizarPreferencias = useCallback(
+    async (p: Partial<WorkspacePreferencias>) => {
+      const res = await fetch("/api/workspace", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idioma_padrao: p.idiomaPadrao,
+          pais_padrao: p.paisPadrao,
+          formato_data: p.formatoData,
+        }),
+      });
+      const body = await jsonOuErro(res);
+      const ws = body.workspace as WorkspaceApi;
+      setPreferenciasState({
+        idiomaPadrao: ws.idiomaPadrao,
+        paisPadrao: ws.paisPadrao,
+        formatoData: ws.formatoData,
+      });
+      setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
+    },
+    []
+  );
 
   const uploadLogo = useCallback(async (arquivo: File | Blob) => {
     const form = new FormData();
@@ -767,6 +821,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       uploadLogo,
       removerLogo,
       workspaceCriadoEm,
+      preferencias,
+      atualizarPreferencias,
 
       artistas,
       carregandoArtistas,
@@ -805,6 +861,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [
       aparencia, carregandoAparencia, recarregarAparencia,
       atualizarNomeAgencia, uploadLogo, removerLogo, workspaceCriadoEm,
+      preferencias, atualizarPreferencias,
       artistas, carregandoArtistas, erroArtistas, recarregarArtistas,
       adicionarArtista, atualizarArtista, reordenarArtistas, removerArtista,
       alternarSuspensaoArtista, resetarSenhaArtista,

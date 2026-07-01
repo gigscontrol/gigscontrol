@@ -5,7 +5,7 @@ import { MapPin, Building2, Users, Search, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
-import CidadeIBGEAutocomplete, { type CidadeIBGE } from "@/components/CidadeIBGEAutocomplete";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import type { Cidade, Casa, Contratante } from "@/types";
 
 /**
@@ -41,8 +41,8 @@ export default function MapaDobras({
     [cidades]
   );
 
-  // Cidade de referência: digitável (autocomplete IBGE) + geocode OSM.
-  const [refCidade, setRefCidade] = useState<CidadeIBGE | null>(null);
+  // Cidade de referência: digitável, país→cidade (BR=IBGE, mundo=GeoNames).
+  const [refCidade, setRefCidade] = useState<CidadeEscolhida | null>(null);
   const [refCoords, setRefCoords] = useState<
     { latitude: number; longitude: number } | null
   >(null);
@@ -57,16 +57,29 @@ export default function MapaDobras({
     const p = cidadesComCoord[0];
     if (p && p.latitude !== undefined && p.longitude !== undefined) {
       jaInicializou.current = true;
-      setRefCidade({ ibgeId: p.ibgeId ?? "", nome: p.nome, uf: p.estado });
+      setRefCidade({
+        ibgeId: p.ibgeId,
+        geonameId: p.geonameId,
+        nome: p.nome,
+        uf: p.estado,
+        pais: p.pais ?? "BR",
+        latitude: p.latitude,
+        longitude: p.longitude,
+      });
       setRefCoords({ latitude: p.latitude, longitude: p.longitude });
     }
   }, [cidadesComCoord]);
 
-  async function escolherCidade(c: CidadeIBGE | null) {
+  async function escolherCidade(c: CidadeEscolhida | null) {
     setRefCidade(c);
     setGeoErro(null);
     if (!c) {
       setRefCoords(null);
+      return;
+    }
+    // GeoNames (fora do BR) já traz as coordenadas — usa direto.
+    if (c.latitude !== undefined && c.longitude !== undefined) {
+      setRefCoords({ latitude: c.latitude, longitude: c.longitude });
       return;
     }
     // Se já temos essa cidade no banco com coords, usa direto (sem bater no OSM).
@@ -154,10 +167,10 @@ export default function MapaDobras({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
-            <CidadeIBGEAutocomplete
+            <CidadeGlobalAutocomplete
               value={refCidade}
               onChange={escolherCidade}
-              placeholder="Digite qualquer cidade do Brasil…"
+              orientacao="horizontal"
             />
             {geocodando && (
               <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">

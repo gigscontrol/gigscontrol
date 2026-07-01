@@ -9,6 +9,8 @@
  * (YYYY-MM-DD) no estado/banco, mas mostramos DD/MM/YYYY pro usuário.
  */
 
+import { getFormatoData } from "./preferencias";
+
 /** Remove tudo que não é dígito. */
 export function apenasDigitos(s: string | null | undefined): string {
   return (s ?? "").replace(/\D/g, "");
@@ -77,7 +79,8 @@ export function formatarDataBR(iso: string | null | undefined): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return "";
   const [, y, mo, d] = m;
-  return `${d}/${mo}/${y}`;
+  // Ordem conforme a preferência da agência (dmy = DD/MM, mdy = MM/DD).
+  return getFormatoData() === "mdy" ? `${mo}/${d}/${y}` : `${d}/${mo}/${y}`;
 }
 
 /**
@@ -106,9 +109,13 @@ export function parseDataBR(br: string | null | undefined): string | null {
   if (!br) return null;
   const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const d = Number(dd);
-  const mo = Number(mm);
+  const [, p1, p2, yyyy] = m;
+  // Qual grupo é dia e qual é mês depende da preferência (dmy vs mdy).
+  const mdy = getFormatoData() === "mdy";
+  const diaStr = mdy ? p2 : p1;
+  const mesStr = mdy ? p1 : p2;
+  const d = Number(diaStr);
+  const mo = Number(mesStr);
   const y = Number(yyyy);
   if (mo < 1 || mo > 12) return null;
   if (d < 1 || d > 31) return null;
@@ -122,5 +129,5 @@ export function parseDataBR(br: string | null | undefined): string | null {
   ) {
     return null;
   }
-  return `${yyyy}-${mm}-${dd}`;
+  return `${yyyy}-${mesStr}-${diaStr}`;
 }

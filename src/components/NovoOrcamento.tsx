@@ -29,10 +29,11 @@ import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
-import CidadeIBGEAutocomplete, { type CidadeIBGE } from "./CidadeIBGEAutocomplete";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
-import { resolverCidadeIbge } from "@/lib/cidade-helpers";
+import { resolverCidade } from "@/lib/cidade-helpers";
+import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -125,7 +126,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // por reusá-lo (corrigindo o nome) — guarda o id, sem criar duplicado.
   const [vinculadoId, setVinculadoId] = useState<string | null>(null);
   const [buscaAberta, setBuscaAberta] = useState(false);
-  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(null);
+  const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(null);
 
   // Orçamento simples (padrão) x detalhado. No detalhado capturamos infos do
   // evento que NÃO vão pro WhatsApp — ficam salvas pra pré-preencher a venda.
@@ -283,7 +284,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // geocoda lat/lng via OSM no caminho).
     let cidadeResolvida;
     try {
-      cidadeResolvida = await resolverCidadeIbge(cidadeIbge);
+      cidadeResolvida = await resolverCidade(cidadeIbge);
     } catch (e) {
       setErrors((p) => ({ ...p, cidade: (e as Error).message }));
       return;
@@ -802,7 +803,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               <div className="section-title mb-3">
                 {t("Cidade do evento")} <span className="text-danger">*</span>
               </div>
-              <CidadeIBGEAutocomplete
+              <CidadeGlobalAutocomplete
                 value={cidadeIbge}
                 onChange={(c) => {
                   setCidadeIbge(c);
@@ -827,7 +828,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
               <div className="mb-3">
                 <Field label="Cidade do evento" required error={errors.cidade}>
-                  <CidadeIBGEAutocomplete
+                  <CidadeGlobalAutocomplete
                     value={cidadeIbge}
                     onChange={(c) => {
                       setCidadeIbge(c);
@@ -874,7 +875,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     <TextInput
                       value={evEndereco}
                       onChange={(e) => setEvEndereco(e.target.value)}
-                      placeholder="Rua, número, bairro…"
+                      placeholder={exemploEndereco(cidadeIbge?.pais ?? "BR")}
                     />
                   </Field>
                 </div>

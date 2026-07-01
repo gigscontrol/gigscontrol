@@ -194,6 +194,101 @@ export function getPlano(id: PlanoId): Plano {
   return PLANOS.find((p) => p.id === id) ?? PLANOS[0];
 }
 
+/** Índice de "tier" do plano na escada (maior = plano superior). */
+export function tierPlano(id: PlanoId): number {
+  return PLANOS.findIndex((p) => p.id === id);
+}
+
+/** true se `novo` é um plano SUPERIOR ao `atual` (upgrade). */
+export function ehUpgrade(atual: PlanoId, novo: PlanoId): boolean {
+  return tierPlano(novo) > tierPlano(atual);
+}
+
+/** true se `novo` é um plano INFERIOR ao `atual` (downgrade). */
+export function ehDowngrade(atual: PlanoId, novo: PlanoId): boolean {
+  return tierPlano(novo) < tierPlano(atual);
+}
+
+/** Uma dimensão de limite estourada ao tentar caber num plano-destino. */
+export type ExcedenteLimite = {
+  dimensao: "artistas" | "usuarios" | "modelos";
+  usoAtual: number;
+  limite: number;
+  /** Quantos precisa remover pra caber. */
+  remover: number;
+};
+
+/**
+ * Verifica se o uso atual (estoque de artistas/usuários/modelos) CABE nos
+ * limites do plano-destino. Devolve a lista de dimensões estouradas (vazia =
+ * cabe). Usado pra recusar um downgrade que deixaria o workspace acima do
+ * limite do plano menor. (maxContratosMes é fluxo mensal — reseta no novo
+ * período — então não entra aqui.)
+ */
+export function cabeNoPlano(params: {
+  destino: PlanoId;
+  artistas: number;
+  usuarios: number;
+  modelos: number;
+}): ExcedenteLimite[] {
+  const p = getPlano(params.destino);
+  const out: ExcedenteLimite[] = [];
+  if (params.artistas > p.maxArtistas) {
+    out.push({
+      dimensao: "artistas",
+      usoAtual: params.artistas,
+      limite: p.maxArtistas,
+      remover: params.artistas - p.maxArtistas,
+    });
+  }
+  if (params.usuarios > p.maxUsuariosAdicionais) {
+    out.push({
+      dimensao: "usuarios",
+      usoAtual: params.usuarios,
+      limite: p.maxUsuariosAdicionais,
+      remover: params.usuarios - p.maxUsuariosAdicionais,
+    });
+  }
+  if (params.modelos > p.maxModelos) {
+    out.push({
+      dimensao: "modelos",
+      usoAtual: params.modelos,
+      limite: p.maxModelos,
+      remover: params.modelos - p.maxModelos,
+    });
+  }
+  return out;
+}
+
+/**
+ * Estimativa do valor a pagar AGORA ao dar upgrade, por rateio linear:
+ * a diferença de preço (novo − atual) × fração do ciclo ainda não usada.
+ * O valor EXATO é calculado pela Stripe (proration) na confirmação.
+ */
+export function estimarUpgrade(params: {
+  atual: PlanoId;
+  novo: PlanoId;
+  ciclo: CicloCobranca;
+  moeda: Moeda;
+  diasRestantes: number;
+  /** Dias reais do ciclo (do período do Stripe). Sem isso, cai em 30/365. */
+  diasCiclo?: number;
+}): number {
+  const { atual, novo, ciclo, moeda, diasRestantes } = params;
+  const diasCiclo =
+    params.diasCiclo && params.diasCiclo > 0
+      ? params.diasCiclo
+      : ciclo === "anual"
+        ? 365
+        : 30;
+  const fracao = Math.max(0, Math.min(1, diasRestantes / diasCiclo));
+  const precoAtual =
+    ciclo === "anual" ? valorAnual(getPlano(atual), moeda) : valorMensal(getPlano(atual), moeda);
+  const precoNovo =
+    ciclo === "anual" ? valorAnual(getPlano(novo), moeda) : valorMensal(getPlano(novo), moeda);
+  return Math.max(0, (precoNovo - precoAtual) * fracao);
+}
+
 /** Preço mensal cru na moeda escolhida */
 export function valorMensal(plano: Plano, moeda: Moeda = "brl"): number {
   return moeda === "usd" ? plano.precoMensalUsd : plano.precoMensal;

@@ -12,7 +12,7 @@ type RouteCtx = { params: { id: string } };
  * data, observação, etc.
  */
 export async function PATCH(request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
   const bloqueio = verificarInformarPagamento(r.sessao);
   if (bloqueio) return bloqueio;

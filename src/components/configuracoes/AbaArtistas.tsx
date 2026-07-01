@@ -38,9 +38,7 @@ import {
 } from "lucide-react";
 import Toast from "../Toast";
 import PageHeader from "../PageHeader";
-import CidadeIBGEAutocomplete, {
-  type CidadeIBGE,
-} from "../CidadeIBGEAutocomplete";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import ColorPicker from "../ColorPicker";
 import CardGoogleCalendar from "./CardGoogleCalendar";
 import {
@@ -1385,7 +1383,7 @@ export function ModalNovoArtista({
   // Seção 1 — dados básicos
   const [nome, setNome] = useState("");
   const [cor, setCor] = useState(CORES[0]);
-  const [cidade, setCidade] = useState<CidadeIBGE | null>(null);
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(null);
 
   // Seção 2 — acesso
   // Auto-preenche a partir do nome enquanto o usuário não toca no campo.
@@ -1502,7 +1500,7 @@ export function ModalNovoArtista({
         usernameRaiz: usernameRaiz.trim().toLowerCase(),
       };
       if (cidade) {
-        input.cidadeIbgeId = cidade.ibgeId;
+        input.cidadeIbgeId = cidade.ibgeId ?? "";
         input.cidadeNome = cidade.nome;
         input.cidadeUf = cidade.uf;
       }
@@ -1601,7 +1599,7 @@ export function ModalNovoArtista({
             <SeletorDeCor cor={cor} onChange={setCor} />
 
             <Campo label={t("Cidade onde reside")}>
-              <CidadeIBGEAutocomplete
+              <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
@@ -1948,12 +1946,13 @@ function ModalEditarArtista({
   // Estado dos campos editáveis
   const [nome, setNome] = useState(artista.nome);
   const [cor, setCor] = useState(artista.cor);
-  const [cidade, setCidade] = useState<CidadeIBGE | null>(
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
     artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
       ? {
           ibgeId: artista.cidadeIbgeId,
           nome: artista.cidadeNome,
           uf: artista.cidadeUf,
+          pais: "BR",
         }
       : null
   );
@@ -2111,7 +2110,7 @@ function ModalEditarArtista({
       const patch: Partial<NovoArtistaInput> = {
         nome: nome.trim(),
         cor,
-        cidadeIbgeId: cidade!.ibgeId,
+        cidadeIbgeId: cidade!.ibgeId ?? "",
         cidadeNome: cidade!.nome,
         cidadeUf: cidade!.uf,
         taxaModo,
@@ -2199,7 +2198,7 @@ function ModalEditarArtista({
             <SeletorDeCor cor={cor} onChange={setCor} />
 
             <Campo label={t("Cidade onde reside")}>
-              <CidadeIBGEAutocomplete
+              <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
@@ -2866,7 +2865,7 @@ function ModalEditarArtista({
                 />
               </Campo>
               <Campo label={t("Cidade onde reside")}>
-                <CidadeIBGEAutocomplete
+                <CidadeGlobalAutocomplete
                   value={cidade}
                   onChange={setCidade}
                   placeholder={t("Cidade onde reside")}

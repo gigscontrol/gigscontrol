@@ -1,5 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPlano, precoPorMes, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import {
+  getPlano,
+  precoPorMes,
+  type PlanoId,
+  type CicloCobranca,
+  type Moeda,
+} from "@/lib/planos";
+// Fonte única da regra de acesso (mesma do onboarding e do gate de mutação).
+import { estadoAcessoDe as estadoAcesso } from "@/lib/acesso";
+// Moeda de cobrança derivada do país do workspace (mesma regra do checkout).
+import { regiaoDe } from "@/lib/regiao";
 import type {
   Assinatura,
   StatusAssinatura,
@@ -23,6 +33,7 @@ type WorkspaceRow = {
   ciclo: CicloCobranca;
   status: string;
   criado_em: string;
+  pais_padrao: string | null;
 };
 
 type ProfileRow = {
@@ -62,24 +73,6 @@ function calcularProximaCobranca(criadoEm: string, ciclo: CicloCobranca): string
   return proxima.toISOString().slice(0, 10);
 }
 
-/** Estado de acesso efetivo (mesma regra da rota /api/workspace/onboarding). */
-function estadoAcesso(
-  status: string,
-  trialTerminaEm: string | null
-): "ok" | "graca" | "bloqueado" {
-  const agora = Date.now();
-  const prazo = trialTerminaEm ? new Date(trialTerminaEm).getTime() : null;
-  if (status === "ativa") return "ok";
-  if (status === "suspended" || status === "cancelled") return "bloqueado";
-  if (status === "trial") {
-    if (!prazo || agora <= prazo) return "ok";
-    if (agora <= prazo + 86_400_000) return "graca";
-    return "bloqueado";
-  }
-  if (status === "graca") return prazo && agora <= prazo ? "graca" : "bloqueado";
-  return "ok";
-}
-
 /** Status interno da subscription → rótulo exibido no painel. */
 function statusAdmin(
   subStatus: string,
@@ -115,7 +108,7 @@ export async function listarAssinaturas(
   // Workspaces
   const { data: workspaces, error: errWs } = await admin
     .from("workspaces")
-    .select("id, nome, plano, ciclo, status, criado_em")
+    .select("id, nome, plano, ciclo, status, criado_em, pais_padrao")
     .order("criado_em", { ascending: false });
   if (errWs) throw errWs;
 
@@ -194,6 +187,7 @@ export async function listarAssinaturas(
       email: dono?.email ?? "",
       plano: w.plano,
       ciclo: (sub?.ciclo as CicloCobranca) ?? w.ciclo,
+      moeda: regiaoDe(w.pais_padrao).moeda,
       // Status/dias vêm da subscription real; sem sub, cai no campo do workspace.
       status: subStatus ? statusAdmin(subStatus, trialEm) : statusAssinaturaValido(w.status),
       diasRestantes: subStatus ? diasRestantes(subStatus, trialEm, proxima) : null,
@@ -344,8 +338,11 @@ export async function alterarStatusUsuario(
 // ============================================================
 
 export type KpisPlataforma = {
-  mrr: number;
-  arr: number;
+  /** MRR separado por moeda — não dá pra somar BRL + USD sem câmbio. */
+  mrrBrl: number;
+  mrrUsd: number;
+  arrBrl: number;
+  arrUsd: number;
   totalUsuarios: number;
   agencias: number;
   totalArtistas: number;
@@ -359,8 +356,14 @@ export async function kpisPlataforma(
   const assinaturas = await listarAssinaturas(admin);
   const ativas = assinaturas.filter((a) => a.status === "ativa");
 
-  let mrr = 0;
-  for (const a of ativas) mrr += precoPorMes(getPlano(a.plano), a.ciclo);
+  // Soma o MRR na moeda REAL de cada assinatura (não mistura BRL com USD).
+  let mrrBrl = 0;
+  let mrrUsd = 0;
+  for (const a of ativas) {
+    const preco = precoPorMes(getPlano(a.plano), a.ciclo, a.moeda);
+    if (a.moeda === "usd") mrrUsd += preco;
+    else mrrBrl += preco;
+  }
 
   const agencias = assinaturas.filter((a) =>
     ["equipe", "time", "agencia", "agencia-plus", "agencia-max"].includes(a.plano)
@@ -389,5 +392,14 @@ export async function kpisPlataforma(
     // ignore
   }
 
-  return { mrr, arr: mrr * 12, totalUsuarios, agencias, totalArtistas, ativos30d };
+  return {
+    mrrBrl,
+    mrrUsd,
+    arrBrl: mrrBrl * 12,
+    arrUsd: mrrUsd * 12,
+    totalUsuarios,
+    agencias,
+    totalArtistas,
+    ativos30d,
+  };
 }

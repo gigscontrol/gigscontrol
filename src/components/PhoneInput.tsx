@@ -75,7 +75,7 @@ export default function PhoneInput({
           className="flex items-center gap-2 px-3 border-r border-border hover:bg-surface-2 transition-colors rounded-l-md text-sm flex-shrink-0"
           aria-label={t("País: {name}", { name: country.name })}
         >
-          <span className="text-lg leading-none">{country.flag}</span>
+          <Flag code={country.code} size={22} />
           <span className="font-medium tabular-nums">+{country.ddi}</span>
           <ChevronDown
             size={12}
@@ -134,7 +134,7 @@ export default function PhoneInput({
                       ${isActive ? "bg-elevated" : "hover:bg-elevated"}
                     `}
                   >
-                    <span className="text-xl leading-none flex-shrink-0">{p.flag}</span>
+                    <Flag code={p.code} size={22} className="flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div
                         className={`text-sm font-medium truncate ${

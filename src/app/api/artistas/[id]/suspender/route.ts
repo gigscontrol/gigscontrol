@@ -9,7 +9,7 @@ type RouteCtx = { params: { id: string } };
  * POST /api/artistas/:id/suspender — toggle do flag acesso_suspenso.
  */
 export async function POST(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
   try {
     const artista = await alternarSuspensaoArtista(r.sessao.supabase, params.id);

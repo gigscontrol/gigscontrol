@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 }
 
 export async function PATCH(request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   let raw: unknown;
@@ -60,7 +60,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
   try {
     await removerContratantePorId(r.sessao.supabase, params.id);

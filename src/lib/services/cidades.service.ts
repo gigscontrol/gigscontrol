@@ -8,6 +8,7 @@ import {
   atualizarCidade as repoAtualizar,
   removerCidade as repoRemover,
   buscarCidadePorIbge,
+  buscarCidadePorGeoname,
   buscarCidadePorNomeUf,
 } from "@/lib/repositories/cidades.repo";
 import type {
@@ -112,6 +113,64 @@ export async function lookupOuCriarCidadePorIbge(
     escrita.latitude = coords.latitude;
     escrita.longitude = coords.longitude;
   }
+  const criada = await repoCriar(supabase, workspaceId, escrita);
+  return rowParaCidade(criada);
+}
+
+/**
+ * Lookup-or-create UNIFICADO: Brasil (IBGE, geocode OSM) OU mundo
+ * (GeoNames, coords já vêm no payload). Idempotente:
+ *  - IBGE → delega pro fluxo existente (`lookupOuCriarCidadePorIbge`).
+ *  - GeoNames → match por `geoname_id`; senão adota legada por nome+UF;
+ *    senão cria com pais/geoname_id/lat/lng.
+ */
+export async function lookupOuCriarCidade(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  c: {
+    ibgeId?: string;
+    geonameId?: string;
+    nome: string;
+    uf: string;
+    pais: string;
+    latitude?: number;
+    longitude?: number;
+  }
+): Promise<Cidade> {
+  // Brasil via IBGE — mantém o fluxo existente (adota legada + geocode OSM).
+  if (c.ibgeId) {
+    return lookupOuCriarCidadePorIbge(supabase, workspaceId, {
+      ibgeId: c.ibgeId,
+      nome: c.nome,
+      uf: c.uf,
+    });
+  }
+
+  // Outros países via GeoNames — coords já vêm no payload.
+  if (c.geonameId) {
+    const existente = await buscarCidadePorGeoname(supabase, workspaceId, c.geonameId);
+    if (existente) return rowParaCidade(existente);
+  }
+
+  // Adota cidade legada (mesmo nome+UF) — evita duplicar.
+  const legacy = await buscarCidadePorNomeUf(supabase, workspaceId, c.nome, c.uf);
+  if (legacy) {
+    const patch: CidadeEscrita = { pais: c.pais };
+    if (c.geonameId) patch.geoname_id = c.geonameId;
+    if (c.latitude !== undefined) patch.latitude = c.latitude;
+    if (c.longitude !== undefined) patch.longitude = c.longitude;
+    const atualizada = await repoAtualizar(supabase, legacy.id, patch);
+    return rowParaCidade(atualizada);
+  }
+
+  const escrita: CidadeEscrita = {
+    nome: c.nome,
+    estado: c.uf,
+    pais: c.pais,
+  };
+  if (c.geonameId) escrita.geoname_id = c.geonameId;
+  if (c.latitude !== undefined) escrita.latitude = c.latitude;
+  if (c.longitude !== undefined) escrita.longitude = c.longitude;
   const criada = await repoCriar(supabase, workspaceId, escrita);
   return rowParaCidade(criada);
 }

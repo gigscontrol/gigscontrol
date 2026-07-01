@@ -24,6 +24,7 @@ function entradaParaEscrita(
   const out: ContratanteEscrita = {};
   if (input.nome !== undefined) out.nome = input.nome;
   if (input.documento !== undefined) out.documento = input.documento;
+  if (input.pais !== undefined) out.pais = input.pais;
   // Zod normaliza string vazia em e-mail como ""; tratamos como null no banco
   if (input.email !== undefined) out.email = input.email === "" ? null : input.email;
   if (input.telefone !== undefined) out.telefone = input.telefone;

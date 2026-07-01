@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 }
 
 export async function PATCH(request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   if (r.sessao.papel !== "admin") {
@@ -76,7 +76,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   if (r.sessao.papel !== "admin") {

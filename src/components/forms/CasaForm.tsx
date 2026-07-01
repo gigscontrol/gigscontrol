@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea, Select } from "../Field";
 import InputCapacidade from "../inputs/InputCapacidade";
-import CidadeIBGEAutocomplete, { type CidadeIBGE } from "../CidadeIBGEAutocomplete";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
-import { resolverCidadeIbge, cidadeParaIbge } from "@/lib/cidade-helpers";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { exemploEndereco } from "@/lib/data/exemplos";
 import type { Casa, TipoCasa } from "@/types";
 
 const TIPOS: { value: TipoCasa; label: string }[] = [
@@ -34,8 +35,8 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const cidadeInicial = initial?.cidadeId
     ? cidades.find((c) => c.id === initial.cidadeId)
     : undefined;
-  const [cidadeIbge, setCidadeIbge] = useState<CidadeIBGE | null>(
-    cidadeParaIbge(cidadeInicial)
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
+    cidadeParaEscolhida(cidadeInicial)
   );
 
   const [nome, setNome] = useState(initial?.nome ?? "");
@@ -50,19 +51,19 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = t("Nome obrigatório");
-    if (!cidadeIbge) errs.cidade = t("Selecione uma cidade");
+    if (!cidadeSel) errs.cidade = t("Selecione uma cidade");
     if (capacidade && isNaN(Number(capacidade))) errs.capacidade = t("Capacidade deve ser número");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    if (!cidadeIbge) return; // type guard pro TS
+    if (!cidadeSel) return; // type guard pro TS
 
-    // Resolve IBGE → UUID local antes de salvar
+    // Resolve cidade (IBGE ou GeoNames) → UUID local antes de salvar
     let cidadeIdResolvido: string;
     try {
-      const cid = await resolverCidadeIbge(cidadeIbge);
+      const cid = await resolverCidade(cidadeSel);
       cidadeIdResolvido = cid.id;
     } catch (e) {
       setErrors({ cidade: (e as Error).message });
@@ -103,10 +104,10 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
           </Select>
         </Field>
         <Field label="Cidade" required error={errors.cidade}>
-          <CidadeIBGEAutocomplete
-            value={cidadeIbge}
+          <CidadeGlobalAutocomplete
+            value={cidadeSel}
             onChange={(c) => {
-              setCidadeIbge(c);
+              setCidadeSel(c);
               if (c) setErrors((p) => ({ ...p, cidade: "" }));
             }}
             placeholder={t("Ex: São Paulo, Belo Horizonte...")}
@@ -128,7 +129,7 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
       </div>
 
       <Field label="Endereço">
-        <TextInput value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número — Bairro" />
+        <TextInput value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder={exemploEndereco(cidadeSel?.pais ?? "BR")} />
       </Field>
 
       <Field label="Observações">

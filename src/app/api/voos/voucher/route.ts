@@ -11,7 +11,7 @@ const MAX_BYTES = 2 * 1024 * 1024; // 2MB
  * O path (ex: "<workspaceId>/<uuid>.pdf") vai pra dados.voucherPath do item.
  */
 export async function POST(request: Request) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   let body: { pdf?: string };

@@ -11,7 +11,7 @@ import { auditAndNotify } from "@/lib/services/historico.service";
 type RouteCtx = { params: { id: string } };
 
 export async function PATCH(request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
   let raw: unknown;
@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteCtx) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
   // Snapshot do nome ANTES de remover, pra auditoria legível
   const { data: snap } = await r.sessao.supabase

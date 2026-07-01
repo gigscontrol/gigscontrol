@@ -66,6 +66,7 @@ function contratanteParaApi(
   const out: Record<string, unknown> = {};
   if (c.nome !== undefined) out.nome = c.nome;
   if (c.documento !== undefined) out.documento = c.documento || null;
+  if (c.pais !== undefined) out.pais = c.pais || null;
   if (c.email !== undefined) out.email = c.email || null;
   if (c.telefone !== undefined) out.telefone = c.telefone || null;
   if (c.endereco !== undefined) out.endereco = c.endereco || null;

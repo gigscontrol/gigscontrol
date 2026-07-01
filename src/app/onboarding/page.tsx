@@ -23,9 +23,7 @@ import {
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
-import CidadeIBGEAutocomplete, {
-  type CidadeIBGE,
-} from "@/components/CidadeIBGEAutocomplete";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import ColorPicker from "@/components/ColorPicker";
 import PhoneInput, {
   DEFAULT_COUNTRY,
@@ -649,9 +647,9 @@ function Etapa3Agencia({
   >("idle");
   const [slugMsg, setSlugMsg] = useState<string | null>(null);
   // Cidade (autocomplete IBGE)
-  const [cidade, setCidade] = useState<CidadeIBGE | null>(
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
     id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
-      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf }
+      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf, pais: "BR" }
       : null
   );
   // WhatsApp
@@ -763,7 +761,7 @@ function Etapa3Agencia({
         body: JSON.stringify({
           whatsapp: montarTelefoneE164(country, telDigits),
           cor_acento: cor,
-          cidade_ibge_id: cidade.ibgeId,
+          cidade_ibge_id: cidade.ibgeId ?? "",
           cidade_nome: cidade.nome,
           cidade_uf: cidade.uf,
         }),
@@ -870,7 +868,7 @@ function Etapa3Agencia({
           <span className="text-xs font-medium text-secondary">
             {t("Cidade")} <span className="text-danger">*</span>
           </span>
-          <CidadeIBGEAutocomplete
+          <CidadeGlobalAutocomplete
             value={cidade}
             onChange={setCidade}
             placeholder="Ex: São Paulo, Belo Horizonte..."

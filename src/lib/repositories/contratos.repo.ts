@@ -21,10 +21,11 @@ export async function listarContratos(
 }
 
 /**
- * Conta os contratos (não-deletados) criados a partir de `desdeIso` (ISO) no
- * workspace — usado pra validar o limite mensal do plano (`maxContratosMes`).
- * `desdeIso` é o primeiro instante do mês corrente. Conta por `criado_em`,
- * incluindo cancelados (a geração já consumiu a cota do mês).
+ * Conta os contratos criados a partir de `desdeIso` (ISO) no workspace — usado
+ * pra validar o limite mensal do plano (`maxContratosMes`). `desdeIso` é o
+ * primeiro instante do mês corrente. Conta por `criado_em` e inclui TAMBÉM os
+ * cancelados E os que foram pra lixeira (soft-delete): a geração já consumiu a
+ * cota do mês, então apagar + recriar NÃO reseta o limite.
  */
 export async function contarContratosDesde(
   supabase: SupabaseClient,
@@ -35,7 +36,6 @@ export async function contarContratosDesde(
     .from("contratos")
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", workspaceId)
-    .is("deletado_em", null)
     .gte("criado_em", desdeIso);
   if (error) throw error;
   return count ?? 0;
