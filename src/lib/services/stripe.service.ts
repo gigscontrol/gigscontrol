@@ -148,6 +148,50 @@ export async function criarCheckoutAssinatura(params: {
   });
 }
 
+/** Moeda + dias restantes do ciclo atual da assinatura (pro preview do upgrade). */
+export async function infoSubscription(subscriptionId: string): Promise<{
+  moeda: Moeda;
+  diasRestantes: number;
+}> {
+  const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
+    expand: ["items.data.price"],
+  });
+  const item = sub.items.data[0];
+  const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
+  const periodEnd = item?.current_period_end ?? null;
+  const diasRestantes = periodEnd
+    ? Math.max(0, Math.ceil((periodEnd * 1000 - Date.now()) / 86_400_000))
+    : 0;
+  return { moeda, diasRestantes };
+}
+
+/**
+ * Aplica upgrade da assinatura: troca o item de preço com RATEIO e cobra a
+ * diferença NA HORA (`proration_behavior: 'always_invoice'` cria e cobra a
+ * fatura de rateio imediatamente). Falha se o cartão recusar
+ * (`error_if_incomplete`). Devolve a subscription atualizada + a moeda.
+ */
+export async function aplicarUpgrade(params: {
+  subscriptionId: string;
+  plano: PlanoId;
+  ciclo: CicloCobranca;
+}): Promise<{ subscription: Stripe.Subscription; moeda: Moeda }> {
+  const stripe = getStripe();
+  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
+    expand: ["items.data.price"],
+  });
+  const item = sub.items.data[0];
+  if (!item) throw new Error("Assinatura sem item de preço.");
+  const moeda: Moeda = item.price?.currency === "usd" ? "usd" : "brl";
+  const novoPriceId = await resolverPriceId(params.plano, params.ciclo, moeda);
+  const subscription = await stripe.subscriptions.update(params.subscriptionId, {
+    items: [{ id: item.id, price: novoPriceId }],
+    proration_behavior: "always_invoice",
+    payment_behavior: "error_if_incomplete",
+  });
+  return { subscription, moeda };
+}
+
 /**
  * Constrói e VERIFICA o evento do webhook a partir do corpo bruto e da
  * assinatura `stripe-signature`. Lança se a assinatura não confere.

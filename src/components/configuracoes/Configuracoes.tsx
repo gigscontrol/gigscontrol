@@ -9,9 +9,11 @@ import {
   History,
   Bell,
   SlidersHorizontal,
+  CreditCard,
 } from "lucide-react";
 import AbaGeral from "./AbaGeral";
 import AbaPreferencias from "./AbaPreferencias";
+import AbaPlano from "./AbaPlano";
 import AbaLixeira from "./AbaLixeira";
 import AbaHistorico from "./AbaHistorico";
 import AbaNotificacoes from "./AbaNotificacoes";
@@ -27,13 +29,14 @@ import { useAuth } from "@/lib/auth-context";
  *   "Notificações".
  */
 
-type AbaConfig = "geral" | "preferencias" | "lixeira" | "historico" | "notificacoes";
+type AbaConfig = "geral" | "preferencias" | "plano" | "lixeira" | "historico" | "notificacoes";
 
 type AbaDef = { id: AbaConfig; label: string; icon: typeof Settings };
 
 const ABAS_ADMIN: AbaDef[] = [
   { id: "geral", label: "Geral", icon: Settings },
   { id: "preferencias", label: "Preferências", icon: SlidersHorizontal },
+  { id: "plano", label: "Plano & Assinatura", icon: CreditCard },
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
   { id: "historico", label: "Histórico", icon: History },
   { id: "notificacoes", label: "Notificações", icon: Bell },
@@ -106,6 +109,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
       {/* Conteúdo */}
       {aba === "geral" && <AbaGeral />}
       {aba === "preferencias" && isAdmin && <AbaPreferencias />}
+      {aba === "plano" && isAdmin && <AbaPlano />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}
       {aba === "historico" && isAdmin && <AbaHistorico />}
       {aba === "notificacoes" && <AbaNotificacoes />}

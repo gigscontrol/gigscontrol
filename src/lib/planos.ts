@@ -194,6 +194,38 @@ export function getPlano(id: PlanoId): Plano {
   return PLANOS.find((p) => p.id === id) ?? PLANOS[0];
 }
 
+/** Índice de "tier" do plano na escada (maior = plano superior). */
+export function tierPlano(id: PlanoId): number {
+  return PLANOS.findIndex((p) => p.id === id);
+}
+
+/** true se `novo` é um plano SUPERIOR ao `atual` (upgrade). */
+export function ehUpgrade(atual: PlanoId, novo: PlanoId): boolean {
+  return tierPlano(novo) > tierPlano(atual);
+}
+
+/**
+ * Estimativa do valor a pagar AGORA ao dar upgrade, por rateio linear:
+ * a diferença de preço (novo − atual) × fração do ciclo ainda não usada.
+ * O valor EXATO é calculado pela Stripe (proration) na confirmação.
+ */
+export function estimarUpgrade(params: {
+  atual: PlanoId;
+  novo: PlanoId;
+  ciclo: CicloCobranca;
+  moeda: Moeda;
+  diasRestantes: number;
+}): number {
+  const { atual, novo, ciclo, moeda, diasRestantes } = params;
+  const diasCiclo = ciclo === "anual" ? 365 : 30;
+  const fracao = Math.max(0, Math.min(1, diasRestantes / diasCiclo));
+  const precoAtual =
+    ciclo === "anual" ? valorAnual(getPlano(atual), moeda) : valorMensal(getPlano(atual), moeda);
+  const precoNovo =
+    ciclo === "anual" ? valorAnual(getPlano(novo), moeda) : valorMensal(getPlano(novo), moeda);
+  return Math.max(0, (precoNovo - precoAtual) * fracao);
+}
+
 /** Preço mensal cru na moeda escolhida */
 export function valorMensal(plano: Plano, moeda: Moeda = "brl"): number {
   return moeda === "usd" ? plano.precoMensalUsd : plano.precoMensal;
