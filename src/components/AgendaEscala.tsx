@@ -1926,30 +1926,26 @@ function formatarBagagemExtra(raw: string, labelNao: string): string {
   return s;
 }
 
-/** Cabeçalho do detalhe: o(s) artista(s) do item em destaque, com a cor de cada um. */
+/**
+ * Cabeçalho do detalhe: o(s) artista(s) do item em destaque, no mesmo estilo
+ * "coloridinho" dos cards de show da agenda (barrinha colorida na lateral).
+ */
 function CabecalhoArtistas({ artistas }: { artistas: DJ[] }) {
   if (artistas.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap gap-2">
       {artistas.map((a) => (
-        <span
+        <div
           key={a.id}
-          className="inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3.5 border"
-          style={{
-            borderColor: `color-mix(in srgb, ${a.color} 40%, transparent)`,
-            backgroundColor: `color-mix(in srgb, ${a.color} 15%, transparent)`,
-          }}
+          className="inline-flex items-center gap-2 bg-surface-2 border border-border rounded-md pl-2.5 pr-3 py-1.5"
+          style={{ borderLeft: `3px solid ${a.color}` }}
         >
           <span
-            className="grid place-items-center h-7 w-7 rounded-full text-xs font-bold text-white flex-shrink-0"
+            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: a.color }}
-          >
-            {a.name.trim().charAt(0).toUpperCase()}
-          </span>
-          <span className="text-sm font-semibold leading-none" style={{ color: a.color }}>
-            {a.name}
-          </span>
-        </span>
+          />
+          <span className="text-sm font-bold text-primary">{a.name}</span>
+        </div>
       ))}
     </div>
   );
