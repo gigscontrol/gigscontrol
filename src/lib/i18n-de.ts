@@ -1681,5 +1681,17 @@ export const DE: Record<string, string> = {
   "Busca automática indisponível (sem chave). Preencha manualmente.": "Automatische Suche nicht verfügbar (kein Schlüssel). Manuell ausfüllen.",
   "Voo não encontrado hoje. Preencha manualmente.": "Flug heute nicht gefunden. Manuell ausfüllen.",
   "Não foi possível buscar agora.": "Suche derzeit nicht möglich.",
-  "Rota": "Route"
+  "Rota": "Route",
+  "Importar voucher (PDF)": "Voucher importieren (PDF)",
+  "Sobe todos os voos de um PDF": "Lädt alle Flüge aus einer PDF",
+  "Escolher PDF do voucher": "Voucher-PDF auswählen",
+  "Lendo o voucher…": "Voucher wird gelesen…",
+  "Nenhum voo encontrado nesse PDF.": "Keine Flüge in dieser PDF gefunden.",
+  "Importação por IA indisponível — configure a chave Anthropic no servidor.": "KI-Import nicht verfügbar — Anthropic-Schlüssel auf dem Server einrichten.",
+  "Não consegui ler esse voucher.": "Dieser Voucher konnte nicht gelesen werden.",
+  "Voos encontrados": "Gefundene Flüge",
+  "sem data": "ohne Datum",
+  "Adicionando…": "Wird hinzugefügt…",
+  "Adicionar à agenda": "Zum Kalender hinzufügen",
+  "Falha ao adicionar os voos.": "Fehler beim Hinzufügen der Flüge."
 };

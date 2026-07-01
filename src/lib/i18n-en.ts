@@ -2657,6 +2657,18 @@ const SWEEP14: Record<string, string> = {
   "Voo não encontrado hoje. Preencha manualmente.": "Flight not found today. Fill in manually.",
   "Não foi possível buscar agora.": "Couldn't search right now.",
   "Rota": "Route",
+  "Importar voucher (PDF)": "Import voucher (PDF)",
+  "Sobe todos os voos de um PDF": "Adds all flights from a PDF",
+  "Escolher PDF do voucher": "Choose voucher PDF",
+  "Lendo o voucher…": "Reading the voucher…",
+  "Nenhum voo encontrado nesse PDF.": "No flights found in this PDF.",
+  "Importação por IA indisponível — configure a chave Anthropic no servidor.": "AI import unavailable — set the Anthropic key on the server.",
+  "Não consegui ler esse voucher.": "Couldn't read this voucher.",
+  "Voos encontrados": "Flights found",
+  "sem data": "no date",
+  "Adicionando…": "Adding…",
+  "Adicionar à agenda": "Add to agenda",
+  "Falha ao adicionar os voos.": "Failed to add the flights.",
 };
 
 export const EN: Record<string, string> = {

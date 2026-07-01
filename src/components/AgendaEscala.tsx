@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -301,6 +301,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
   const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
+  const [importarVoucher, setImportarVoucher] = useState(false);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -433,6 +434,10 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             setNovoItemDia(null);
             setVooFormDia(d);
           }}
+          onImportarVoucher={() => {
+            setNovoItemDia(null);
+            setImportarVoucher(true);
+          }}
         />
       )}
 
@@ -460,6 +465,16 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           onCriar={async (input) => {
             await criarItem(input);
             setVooFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Importar voucher (PDF) → vários voos de uma vez */}
+      {importarVoucher && (
+        <VoucherImportModal
+          onClose={() => setImportarVoucher(false)}
+          onCriar={async (input) => {
+            await criarItem(input);
           }}
         />
       )}
@@ -611,6 +626,13 @@ const ACOES_NOVO_ITEM: {
     icon: Calendar,
     cor: "var(--module-contratos)",
   },
+  {
+    key: "import",
+    label: "Importar voucher (PDF)",
+    desc: "Sobe todos os voos de um PDF",
+    icon: FileUp,
+    cor: "var(--module-agenda)",
+  },
 ];
 
 /** Action-sheet do "+": escolhe o tipo de item a adicionar no dia.
@@ -622,12 +644,14 @@ function NovoItemModal({
   onNovoShow,
   onNovoEvento,
   onNovoVoo,
+  onImportarVoucher,
 }: {
   day: DayCell;
   onClose: () => void;
   onNovoShow: () => void;
   onNovoEvento: () => void;
   onNovoVoo: () => void;
+  onImportarVoucher: () => void;
 }) {
   const t = useT();
   return (
@@ -653,7 +677,9 @@ function NovoItemModal({
                     ? onNovoEvento
                     : a.key === "voo"
                       ? onNovoVoo
-                      : undefined
+                      : a.key === "import"
+                        ? onImportarVoucher
+                        : undefined
               }
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
             >
@@ -1163,6 +1189,180 @@ function VooFormModal({
   );
 }
 
+type VooExtraido = {
+  numeroVoo?: string;
+  companhia?: string;
+  data?: string;
+  origem?: string;
+  destino?: string;
+  partida?: string;
+  chegada?: string;
+  localizador?: string;
+  passageiros?: string[];
+};
+
+/** Importa um voucher em PDF: manda pro Claude ler, mostra preview, sobe os voos. */
+function VoucherImportModal({
+  onClose,
+  onCriar,
+}: {
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [nomeArquivo, setNomeArquivo] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [voos, setVoos] = useState<VooExtraido[] | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  async function escolher(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNomeArquivo(file.name);
+    setVoos(null);
+    setMsg(null);
+    setCarregando(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve(String(reader.result).replace(/^data:[^;]*;base64,/, ""));
+        reader.onerror = () => reject(new Error("read"));
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/voos/importar", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: base64 }),
+      });
+      const body = await res.json();
+      if (Array.isArray(body.voos)) {
+        if (body.voos.length === 0) setMsg(t("Nenhum voo encontrado nesse PDF."));
+        else setVoos(body.voos);
+      } else if (body.indisponivel) {
+        setMsg(
+          t("Importação por IA indisponível — configure a chave Anthropic no servidor.")
+        );
+      } else {
+        setMsg(body.erro ?? t("Não consegui ler esse voucher."));
+      }
+    } catch {
+      setMsg(t("Não consegui ler esse voucher."));
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  const validos = (voos ?? []).filter((v) => v.data);
+
+  async function adicionar() {
+    if (!validos.length || salvando) return;
+    setSalvando(true);
+    try {
+      for (const v of validos) {
+        const rota = v.origem && v.destino ? `${v.origem}→${v.destino}` : "";
+        const titulo = [v.numeroVoo, rota].filter(Boolean).join(" · ") || t("Voo");
+        await onCriar({
+          tipo: "voo",
+          titulo,
+          data: v.data as string,
+          diaInteiro: false,
+          horaInicio: v.partida || undefined,
+          horaFim: v.chegada || undefined,
+          artistIds: [],
+          dados: {
+            numeroVoo: v.numeroVoo ?? "",
+            companhia: v.companhia ?? "",
+            origem: v.origem ?? "",
+            destino: v.destino ?? "",
+            partida: v.partida ?? "",
+            chegada: v.chegada ?? "",
+            localizador: v.localizador ?? "",
+            passageiros: (v.passageiros ?? []).join(", "),
+          },
+        });
+      }
+      onClose();
+    } catch {
+      setSalvando(false);
+      setMsg(t("Falha ao adicionar os voos."));
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Importar voucher (PDF)")}
+      subtitle={t("Sobe todos os voos de um PDF")}
+      maxWidth={480}
+    >
+      <div className="flex flex-col gap-4">
+        <label className="flex flex-col items-center justify-center gap-1.5 h-24 border border-dashed border-border rounded-md cursor-pointer text-sm text-muted hover:border-border-strong hover:text-secondary transition-colors">
+          <FileUp size={20} />
+          <span className="truncate max-w-full px-3">
+            {nomeArquivo || t("Escolher PDF do voucher")}
+          </span>
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={escolher}
+          />
+        </label>
+
+        {carregando && <div className="text-sm text-muted">{t("Lendo o voucher…")}</div>}
+        {msg && <div className="text-xs text-secondary">{msg}</div>}
+
+        {voos && voos.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="stat-label">{t("Voos encontrados")}</div>
+            {voos.map((v, i) => (
+              <div key={i} className="rounded-md border border-border p-2.5">
+                <div className="text-sm font-medium text-primary">
+                  {[v.numeroVoo, v.origem && v.destino ? `${v.origem}→${v.destino}` : ""]
+                    .filter(Boolean)
+                    .join(" · ") || t("Voo")}
+                </div>
+                <div className="text-xs text-muted mt-0.5">
+                  {[
+                    v.companhia,
+                    v.data ? formatarDataBR(v.data) : "⚠ " + t("sem data"),
+                    [v.partida, v.chegada].filter(Boolean).join("–"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+                {(v.passageiros?.length ?? 0) > 0 && (
+                  <div className="text-xs text-muted mt-0.5">{v.passageiros!.join(", ")}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          {validos.length > 0 && (
+            <button
+              onClick={adicionar}
+              disabled={salvando}
+              className="btn btn-primary disabled:opacity-50"
+              style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+            >
+              {salvando ? t("Adicionando…") : t("Adicionar à agenda")}
+            </button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /** Linha rótulo/valor pro detalhe. */
 function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
@@ -1183,6 +1383,7 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
       {d.companhia && <LinhaDetalhe rotulo={t("Companhia")} valor={d.companhia} />}
       {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
       {d.localizador && <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={d.localizador} />}
+      {d.passageiros && <LinhaDetalhe rotulo={t("Passageiros")} valor={d.passageiros} />}
     </>
   );
 }
