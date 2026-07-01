@@ -2669,6 +2669,11 @@ const SWEEP14: Record<string, string> = {
   "Adicionando…": "Adding…",
   "Adicionar à agenda": "Add to agenda",
   "Falha ao adicionar os voos.": "Failed to add the flights.",
+  "Preencher manual": "Fill in manually",
+  "Digitar os dados do voo na mão.": "Type the flight details by hand.",
+  "Ler de um PDF": "Read from a PDF",
+  "Sobe o voucher e preenche sozinho.": "Upload the voucher and it fills itself.",
+  "Do voucher": "From voucher",
 };
 
 export const EN: Record<string, string> = {

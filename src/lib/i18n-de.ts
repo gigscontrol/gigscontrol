@@ -1693,5 +1693,10 @@ export const DE: Record<string, string> = {
   "sem data": "ohne Datum",
   "Adicionando…": "Wird hinzugefügt…",
   "Adicionar à agenda": "Zum Kalender hinzufügen",
-  "Falha ao adicionar os voos.": "Fehler beim Hinzufügen der Flüge."
+  "Falha ao adicionar os voos.": "Fehler beim Hinzufügen der Flüge.",
+  "Preencher manual": "Manuell ausfüllen",
+  "Digitar os dados do voo na mão.": "Flugdaten von Hand eingeben.",
+  "Ler de um PDF": "Aus einer PDF lesen",
+  "Sobe o voucher e preenche sozinho.": "Voucher hochladen — füllt sich selbst aus.",
+  "Do voucher": "Aus Voucher"
 };

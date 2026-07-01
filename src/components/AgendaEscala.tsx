@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -301,7 +301,6 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
   const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
-  const [importarVoucher, setImportarVoucher] = useState(false);
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -434,10 +433,6 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             setNovoItemDia(null);
             setVooFormDia(d);
           }}
-          onImportarVoucher={() => {
-            setNovoItemDia(null);
-            setImportarVoucher(true);
-          }}
         />
       )}
 
@@ -465,16 +460,6 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           onCriar={async (input) => {
             await criarItem(input);
             setVooFormDia(null);
-          }}
-        />
-      )}
-
-      {/* Importar voucher (PDF) → vários voos de uma vez */}
-      {importarVoucher && (
-        <VoucherImportModal
-          onClose={() => setImportarVoucher(false)}
-          onCriar={async (input) => {
-            await criarItem(input);
           }}
         />
       )}
@@ -626,13 +611,6 @@ const ACOES_NOVO_ITEM: {
     icon: Calendar,
     cor: "var(--module-contratos)",
   },
-  {
-    key: "import",
-    label: "Importar voucher (PDF)",
-    desc: "Sobe todos os voos de um PDF",
-    icon: FileUp,
-    cor: "var(--module-agenda)",
-  },
 ];
 
 /** Action-sheet do "+": escolhe o tipo de item a adicionar no dia.
@@ -644,14 +622,12 @@ function NovoItemModal({
   onNovoShow,
   onNovoEvento,
   onNovoVoo,
-  onImportarVoucher,
 }: {
   day: DayCell;
   onClose: () => void;
   onNovoShow: () => void;
   onNovoEvento: () => void;
   onNovoVoo: () => void;
-  onImportarVoucher: () => void;
 }) {
   const t = useT();
   return (
@@ -677,9 +653,7 @@ function NovoItemModal({
                     ? onNovoEvento
                     : a.key === "voo"
                       ? onNovoVoo
-                      : a.key === "import"
-                        ? onImportarVoucher
-                        : undefined
+                      : undefined
               }
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
             >
@@ -980,6 +954,49 @@ function EventoFormModal({
 }
 
 /** Form de criação de voo (Fase 3) — manual + autofill opcional (AviationStack). */
+/** Card de escolha de modo (visual do "Tipo de orçamento"). */
+function ModoCard({
+  ativo,
+  onClick,
+  icon: Icone,
+  titulo,
+  desc,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  icon: typeof Music;
+  titulo: string;
+  desc: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-lg border p-3 transition-colors"
+      style={{
+        borderColor: ativo ? "var(--module-agenda)" : "var(--border-color)",
+        backgroundColor: ativo
+          ? "color-mix(in srgb, var(--module-agenda) 10%, transparent)"
+          : "transparent",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
+            color: "var(--module-agenda)",
+          }}
+        >
+          <Icone size={15} />
+        </span>
+        <span className="text-sm font-semibold text-primary">{titulo}</span>
+      </div>
+      <span className="block text-xs text-muted leading-snug">{desc}</span>
+    </button>
+  );
+}
+
 function VooFormModal({
   day,
   artistas,
@@ -994,6 +1011,10 @@ function VooFormModal({
   onCriar: (input: NovoAgendaItem) => Promise<void>;
 }) {
   const t = useT();
+  const [modo, setModo] = useState<"manual" | "pdf">("manual");
+
+  // Form (usado pelo manual E pelo PDF de 1 voo)
+  const [dataVoo, setDataVoo] = useState(day.dataISO);
   const [numeroVoo, setNumeroVoo] = useState("");
   const [companhia, setCompanhia] = useState("");
   const [origem, setOrigem] = useState("");
@@ -1002,11 +1023,75 @@ function VooFormModal({
   const [chegada, setChegada] = useState("");
   const [localizador, setLocalizador] = useState("");
   const [passageiros, setPassageiros] = useState<string[]>(defaultArtistIds);
+  const [pdfPassageiros, setPdfPassageiros] = useState<string[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // PDF
+  const [nomeArquivo, setNomeArquivo] = useState("");
+  const [lendoPdf, setLendoPdf] = useState(false);
+  const [pdfMulti, setPdfMulti] = useState<VooExtraido[] | null>(null);
+  const [pdfOk, setPdfOk] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState<string | null>(null);
+
+  function aplicarVoo(v: VooExtraido) {
+    if (v.data) setDataVoo(v.data);
+    setNumeroVoo(v.numeroVoo ?? "");
+    setCompanhia(v.companhia ?? "");
+    setOrigem(v.origem ?? "");
+    setDestino(v.destino ?? "");
+    setPartida(v.partida ?? "");
+    setChegada(v.chegada ?? "");
+    setLocalizador(v.localizador ?? "");
+    setPdfPassageiros(v.passageiros ?? []);
+  }
+
+  async function escolherPdf(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNomeArquivo(file.name);
+    setPdfMulti(null);
+    setPdfOk(false);
+    setPdfMsg(null);
+    setLendoPdf(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () =>
+          resolve(String(reader.result).replace(/^data:[^;]*;base64,/, ""));
+        reader.onerror = () => reject(new Error("read"));
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/voos/importar", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: base64 }),
+      });
+      const body = await res.json();
+      if (Array.isArray(body.voos)) {
+        const achados = body.voos as VooExtraido[];
+        if (achados.length === 0) setPdfMsg(t("Nenhum voo encontrado nesse PDF."));
+        else if (achados.length === 1) {
+          aplicarVoo(achados[0]);
+          setPdfOk(true);
+        } else setPdfMulti(achados);
+      } else if (body.indisponivel) {
+        setPdfMsg(
+          t("Importação por IA indisponível — configure a chave Anthropic no servidor.")
+        );
+      } else {
+        setPdfMsg(body.erro ?? t("Não consegui ler esse voucher."));
+      }
+    } catch {
+      setPdfMsg(t("Não consegui ler esse voucher."));
+    } finally {
+      setLendoPdf(false);
+    }
+  }
 
   async function buscar() {
     const f = numeroVoo.trim();
@@ -1040,7 +1125,7 @@ function VooFormModal({
     }
   }
 
-  async function submit() {
+  async function submitUm() {
     if (salvando) return;
     if (!numeroVoo.trim() && !origem.trim() && !destino.trim()) {
       setErro(t("Informe ao menos o número do voo ou a rota."));
@@ -1055,7 +1140,7 @@ function VooFormModal({
       await onCriar({
         tipo: "voo",
         titulo,
-        data: day.dataISO,
+        data: dataVoo,
         diaInteiro: false,
         horaInicio: partida || undefined,
         horaFim: chegada || undefined,
@@ -1069,6 +1154,7 @@ function VooFormModal({
           partida,
           chegada,
           localizador: localizador.trim(),
+          passageiros: pdfPassageiros.join(", "),
         },
       });
     } catch (e) {
@@ -1077,191 +1163,12 @@ function VooFormModal({
     }
   }
 
-  return (
-    <Modal
-      isOpen
-      onClose={onClose}
-      title={t("Novo voo")}
-      subtitle={`${t(day.name)} · ${day.date}`}
-      maxWidth={460}
-    >
-      <div className="flex flex-col gap-4">
-        <CampoForm label={t("Número do voo")}>
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              value={numeroVoo}
-              onChange={(e) => setNumeroVoo(e.target.value)}
-              placeholder="LA3477"
-              className="campo-input flex-1 uppercase placeholder:normal-case"
-            />
-            <button
-              type="button"
-              onClick={buscar}
-              disabled={buscando || !numeroVoo.trim()}
-              className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <Search size={14} />
-              {buscando ? t("Buscando…") : t("Buscar")}
-            </button>
-          </div>
-          {aviso && <div className="text-[0.7rem] text-muted mt-1.5">{aviso}</div>}
-        </CampoForm>
-
-        <CampoForm label={t("Companhia")}>
-          <input
-            value={companhia}
-            onChange={(e) => setCompanhia(e.target.value)}
-            className="campo-input"
-          />
-        </CampoForm>
-
-        <div className="grid grid-cols-2 gap-3">
-          <CampoForm label={t("Origem")}>
-            <input
-              value={origem}
-              onChange={(e) => setOrigem(e.target.value)}
-              placeholder="GRU"
-              className="campo-input uppercase placeholder:normal-case"
-            />
-          </CampoForm>
-          <CampoForm label={t("Destino")}>
-            <input
-              value={destino}
-              onChange={(e) => setDestino(e.target.value)}
-              placeholder="SCL"
-              className="campo-input uppercase placeholder:normal-case"
-            />
-          </CampoForm>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <CampoForm label={t("Partida")}>
-            <InputHora value={partida} onChange={setPartida} accent="var(--module-agenda)" />
-          </CampoForm>
-          <CampoForm label={t("Chegada")}>
-            <InputHora value={chegada} onChange={setChegada} accent="var(--module-agenda)" />
-          </CampoForm>
-        </div>
-
-        <CampoForm label={t("Localizador (PNR)")}>
-          <input
-            value={localizador}
-            onChange={(e) => setLocalizador(e.target.value)}
-            placeholder="ABC123"
-            className="campo-input uppercase placeholder:normal-case"
-          />
-        </CampoForm>
-
-        <SeletorArtistas
-          artistas={artistas}
-          value={passageiros}
-          onChange={setPassageiros}
-          label={t("Passageiros")}
-        />
-
-        <CampoForm label={t("Observações")}>
-          <textarea
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-            rows={2}
-            className="campo-input resize-none"
-          />
-        </CampoForm>
-
-        {erro && <div className="text-xs text-danger">{erro}</div>}
-
-        <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="btn btn-secondary">
-            {t("Cancelar")}
-          </button>
-          <button
-            onClick={submit}
-            disabled={salvando}
-            className="btn btn-primary disabled:opacity-50"
-            style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
-          >
-            {salvando ? t("Salvando…") : t("Criar voo")}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-type VooExtraido = {
-  numeroVoo?: string;
-  companhia?: string;
-  data?: string;
-  origem?: string;
-  destino?: string;
-  partida?: string;
-  chegada?: string;
-  localizador?: string;
-  passageiros?: string[];
-};
-
-/** Importa um voucher em PDF: manda pro Claude ler, mostra preview, sobe os voos. */
-function VoucherImportModal({
-  onClose,
-  onCriar,
-}: {
-  onClose: () => void;
-  onCriar: (input: NovoAgendaItem) => Promise<void>;
-}) {
-  const t = useT();
-  const [nomeArquivo, setNomeArquivo] = useState("");
-  const [carregando, setCarregando] = useState(false);
-  const [voos, setVoos] = useState<VooExtraido[] | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-
-  async function escolher(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setNomeArquivo(file.name);
-    setVoos(null);
-    setMsg(null);
-    setCarregando(true);
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () =>
-          resolve(String(reader.result).replace(/^data:[^;]*;base64,/, ""));
-        reader.onerror = () => reject(new Error("read"));
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch("/api/voos/importar", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pdf: base64 }),
-      });
-      const body = await res.json();
-      if (Array.isArray(body.voos)) {
-        if (body.voos.length === 0) setMsg(t("Nenhum voo encontrado nesse PDF."));
-        else setVoos(body.voos);
-      } else if (body.indisponivel) {
-        setMsg(
-          t("Importação por IA indisponível — configure a chave Anthropic no servidor.")
-        );
-      } else {
-        setMsg(body.erro ?? t("Não consegui ler esse voucher."));
-      }
-    } catch {
-      setMsg(t("Não consegui ler esse voucher."));
-    } finally {
-      setCarregando(false);
-    }
-  }
-
-  const validos = (voos ?? []).filter((v) => v.data);
-
-  async function adicionar() {
-    if (!validos.length || salvando) return;
+  async function submitTodos() {
+    if (!pdfMulti || salvando) return;
     setSalvando(true);
+    setErro(null);
     try {
-      for (const v of validos) {
+      for (const v of pdfMulti.filter((x) => x.data)) {
         const rota = v.origem && v.destino ? `${v.origem}→${v.destino}` : "";
         const titulo = [v.numeroVoo, rota].filter(Boolean).join(" · ") || t("Voo");
         await onCriar({
@@ -1285,41 +1192,64 @@ function VoucherImportModal({
         });
       }
       onClose();
-    } catch {
+    } catch (e) {
+      setErro((e as Error).message);
       setSalvando(false);
-      setMsg(t("Falha ao adicionar os voos."));
     }
   }
+
+  const multiValidos = (pdfMulti ?? []).filter((v) => v.data);
+  const mostrarForm = modo === "manual" || (modo === "pdf" && pdfOk);
 
   return (
     <Modal
       isOpen
       onClose={onClose}
-      title={t("Importar voucher (PDF)")}
-      subtitle={t("Sobe todos os voos de um PDF")}
+      title={t("Novo voo")}
+      subtitle={`${t(day.name)} · ${day.date}`}
       maxWidth={480}
     >
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col items-center justify-center gap-1.5 h-24 border border-dashed border-border rounded-md cursor-pointer text-sm text-muted hover:border-border-strong hover:text-secondary transition-colors">
-          <FileUp size={20} />
-          <span className="truncate max-w-full px-3">
-            {nomeArquivo || t("Escolher PDF do voucher")}
-          </span>
-          <input
-            type="file"
-            accept="application/pdf,.pdf"
-            className="hidden"
-            onChange={escolher}
+        <div className="grid grid-cols-2 gap-3">
+          <ModoCard
+            ativo={modo === "manual"}
+            onClick={() => setModo("manual")}
+            icon={Pencil}
+            titulo={t("Preencher manual")}
+            desc={t("Digitar os dados do voo na mão.")}
           />
-        </label>
+          <ModoCard
+            ativo={modo === "pdf"}
+            onClick={() => setModo("pdf")}
+            icon={FileUp}
+            titulo={t("Ler de um PDF")}
+            desc={t("Sobe o voucher e preenche sozinho.")}
+          />
+        </div>
 
-        {carregando && <div className="text-sm text-muted">{t("Lendo o voucher…")}</div>}
-        {msg && <div className="text-xs text-secondary">{msg}</div>}
+        {modo === "pdf" && (
+          <>
+            <label className="flex flex-col items-center justify-center gap-1.5 h-20 border border-dashed border-border rounded-md cursor-pointer text-sm text-muted hover:border-border-strong hover:text-secondary transition-colors">
+              <FileUp size={18} />
+              <span className="truncate max-w-full px-3">
+                {nomeArquivo || t("Escolher PDF do voucher")}
+              </span>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={escolherPdf}
+              />
+            </label>
+            {lendoPdf && <div className="text-sm text-muted">{t("Lendo o voucher…")}</div>}
+            {pdfMsg && <div className="text-xs text-secondary">{pdfMsg}</div>}
+          </>
+        )}
 
-        {voos && voos.length > 0 && (
+        {modo === "pdf" && pdfMulti && (
           <div className="flex flex-col gap-2">
             <div className="stat-label">{t("Voos encontrados")}</div>
-            {voos.map((v, i) => (
+            {pdfMulti.map((v, i) => (
               <div key={i} className="rounded-md border border-border p-2.5">
                 <div className="text-sm font-medium text-primary">
                   {[v.numeroVoo, v.origem && v.destino ? `${v.origem}→${v.destino}` : ""]
@@ -1343,25 +1273,159 @@ function VoucherImportModal({
           </div>
         )}
 
+        {mostrarForm && (
+          <>
+            <CampoForm label={t("Número do voo")}>
+              {modo === "manual" ? (
+                <div className="flex gap-2">
+                  <input
+                    value={numeroVoo}
+                    onChange={(e) => setNumeroVoo(e.target.value)}
+                    placeholder="LA3477"
+                    className="campo-input flex-1 uppercase placeholder:normal-case"
+                  />
+                  <button
+                    type="button"
+                    onClick={buscar}
+                    disabled={buscando || !numeroVoo.trim()}
+                    className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Search size={14} />
+                    {buscando ? t("Buscando…") : t("Buscar")}
+                  </button>
+                </div>
+              ) : (
+                <input
+                  value={numeroVoo}
+                  onChange={(e) => setNumeroVoo(e.target.value)}
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              )}
+              {aviso && <div className="text-[0.7rem] text-muted mt-1.5">{aviso}</div>}
+            </CampoForm>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Data")}>
+                <input
+                  type="date"
+                  value={dataVoo}
+                  onChange={(e) => setDataVoo(e.target.value)}
+                  className="campo-input"
+                />
+              </CampoForm>
+              <CampoForm label={t("Companhia")}>
+                <input
+                  value={companhia}
+                  onChange={(e) => setCompanhia(e.target.value)}
+                  className="campo-input"
+                />
+              </CampoForm>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Origem")}>
+                <input
+                  value={origem}
+                  onChange={(e) => setOrigem(e.target.value)}
+                  placeholder="GRU"
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              </CampoForm>
+              <CampoForm label={t("Destino")}>
+                <input
+                  value={destino}
+                  onChange={(e) => setDestino(e.target.value)}
+                  placeholder="SCL"
+                  className="campo-input uppercase placeholder:normal-case"
+                />
+              </CampoForm>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CampoForm label={t("Partida")}>
+                <InputHora value={partida} onChange={setPartida} accent="var(--module-agenda)" />
+              </CampoForm>
+              <CampoForm label={t("Chegada")}>
+                <InputHora value={chegada} onChange={setChegada} accent="var(--module-agenda)" />
+              </CampoForm>
+            </div>
+
+            <CampoForm label={t("Localizador (PNR)")}>
+              <input
+                value={localizador}
+                onChange={(e) => setLocalizador(e.target.value)}
+                placeholder="ABC123"
+                className="campo-input uppercase placeholder:normal-case"
+              />
+            </CampoForm>
+
+            <SeletorArtistas
+              artistas={artistas}
+              value={passageiros}
+              onChange={setPassageiros}
+              label={t("Passageiros")}
+            />
+            {pdfPassageiros.length > 0 && (
+              <div className="text-[0.7rem] text-muted -mt-2">
+                {t("Do voucher")}: {pdfPassageiros.join(", ")}
+              </div>
+            )}
+
+            <CampoForm label={t("Observações")}>
+              <textarea
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={2}
+                className="campo-input resize-none"
+              />
+            </CampoForm>
+          </>
+        )}
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
         <div className="flex justify-end gap-2 pt-1">
           <button onClick={onClose} className="btn btn-secondary">
             {t("Cancelar")}
           </button>
-          {validos.length > 0 && (
-            <button
-              onClick={adicionar}
-              disabled={salvando}
-              className="btn btn-primary disabled:opacity-50"
-              style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
-            >
-              {salvando ? t("Adicionando…") : t("Adicionar à agenda")}
-            </button>
-          )}
+          {modo === "pdf" && pdfMulti
+            ? multiValidos.length > 0 && (
+                <button
+                  onClick={submitTodos}
+                  disabled={salvando}
+                  className="btn btn-primary disabled:opacity-50"
+                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                >
+                  {salvando ? t("Adicionando…") : t("Adicionar à agenda")}
+                </button>
+              )
+            : mostrarForm && (
+                <button
+                  onClick={submitUm}
+                  disabled={salvando}
+                  className="btn btn-primary disabled:opacity-50"
+                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                >
+                  {salvando ? t("Salvando…") : t("Criar voo")}
+                </button>
+              )}
         </div>
       </div>
     </Modal>
   );
 }
+
+type VooExtraido = {
+  numeroVoo?: string;
+  companhia?: string;
+  data?: string;
+  origem?: string;
+  destino?: string;
+  partida?: string;
+  chegada?: string;
+  localizador?: string;
+  passageiros?: string[];
+};
 
 /** Linha rótulo/valor pro detalhe. */
 function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
