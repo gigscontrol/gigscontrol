@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -1205,6 +1205,8 @@ function VooFormModal({
   const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
   const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
   const [duracao, setDuracao] = useState("");
+  const [bagagem, setBagagem] = useState("");
+  const [pdfBase64, setPdfBase64] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -1229,6 +1231,7 @@ function VooFormModal({
     setLocalizador(v.localizador ?? "");
     setPassageiros((v.passageiros ?? []).map((n) => ({ nome: n })));
     if (v.duracao) setDuracao(v.duracao);
+    if (v.bagagem) setBagagem(v.bagagem);
   }
 
   async function escolherPdf(e: ChangeEvent<HTMLInputElement>) {
@@ -1247,6 +1250,7 @@ function VooFormModal({
         reader.onerror = () => reject(new Error("read"));
         reader.readAsDataURL(file);
       });
+      setPdfBase64(base64);
       const res = await fetch("/api/voos/importar", {
         method: "POST",
         credentials: "include",
@@ -1307,6 +1311,22 @@ function VooFormModal({
     }
   }
 
+  async function subirVoucher(): Promise<string> {
+    if (!pdfBase64) return "";
+    try {
+      const res = await fetch("/api/voos/voucher", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdf: pdfBase64 }),
+      });
+      const b = await res.json();
+      return typeof b.path === "string" ? b.path : "";
+    } catch {
+      return "";
+    }
+  }
+
   async function submitUm() {
     if (salvando) return;
     if (!numeroVoo.trim() && !origem.trim() && !destino.trim()) {
@@ -1319,6 +1339,7 @@ function VooFormModal({
     const titulo =
       [numeroVoo.trim().toUpperCase(), rota].filter(Boolean).join(" · ") || t("Voo");
     try {
+      const voucherPath = await subirVoucher();
       await onCriar({
         tipo: "voo",
         titulo,
@@ -1336,6 +1357,8 @@ function VooFormModal({
           partida,
           chegada,
           duracao: duracao || calcularDuracao(partida, chegada),
+          bagagem: bagagem.trim(),
+          voucherPath,
           localizador: localizador.trim(),
           passageiros: passageiros.filter((p) => p.nome.trim()),
         },
@@ -1351,6 +1374,7 @@ function VooFormModal({
     setSalvando(true);
     setErro(null);
     try {
+      const voucherPath = await subirVoucher();
       for (const v of pdfMulti.filter((x) => x.data)) {
         const rota = v.origem && v.destino ? `${v.origem}→${v.destino}` : "";
         const titulo = [v.numeroVoo, rota].filter(Boolean).join(" · ") || t("Voo");
@@ -1370,6 +1394,8 @@ function VooFormModal({
             partida: v.partida ?? "",
             chegada: v.chegada ?? "",
             duracao: v.duracao || calcularDuracao(v.partida ?? "", v.chegada ?? ""),
+            bagagem: v.bagagem ?? "",
+            voucherPath,
             localizador: v.localizador ?? "",
             passageiros: (v.passageiros ?? []).map((n) => ({ nome: n })),
           },
@@ -1789,6 +1815,7 @@ type VooExtraido = {
   partida?: string;
   chegada?: string;
   duracao?: string;
+  bagagem?: string;
   localizador?: string;
   passageiros?: string[];
 };
@@ -1806,9 +1833,11 @@ function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
 /** Linhas específicas de um voo (a partir do `dados` do item). */
 function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const t = useT();
+  const [baixando, setBaixando] = useState(false);
   const d = (dados ?? {}) as Record<string, unknown>;
   const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
   const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
+  const voucherPath = str("voucherPath");
   const passageiros: Passageiro[] = Array.isArray(d.passageiros)
     ? (d.passageiros as Passageiro[])
     : str("passageiros")
@@ -1817,10 +1846,29 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
           .filter(Boolean)
           .map((nome) => ({ nome }))
       : [];
+
+  async function baixarVoucher() {
+    if (!voucherPath || baixando) return;
+    setBaixando(true);
+    try {
+      const res = await fetch(
+        `/api/voos/voucher?path=${encodeURIComponent(voucherPath)}`,
+        { credentials: "include" }
+      );
+      const b = await res.json();
+      if (b?.url) window.open(b.url, "_blank", "noopener");
+    } catch {
+      // silencioso — download é secundário
+    } finally {
+      setBaixando(false);
+    }
+  }
+
   return (
     <>
       {str("companhia") && <LinhaDetalhe rotulo={t("Companhia")} valor={str("companhia")} />}
       {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
+      {str("bagagem") && <LinhaDetalhe rotulo={t("Bagagem")} valor={str("bagagem")} />}
       {str("localizador") && (
         <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
       )}
@@ -1846,6 +1894,17 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
             </div>
           ))}
         </div>
+      )}
+      {voucherPath && (
+        <button
+          type="button"
+          onClick={baixarVoucher}
+          disabled={baixando}
+          className="btn btn-secondary self-start inline-flex items-center gap-1.5 text-sm disabled:opacity-50"
+        >
+          <Download size={14} />
+          {baixando ? t("Baixando…") : t("Baixar voucher")}
+        </button>
       )}
     </>
   );
