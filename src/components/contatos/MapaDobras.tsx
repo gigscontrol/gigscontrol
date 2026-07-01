@@ -170,6 +170,7 @@ export default function MapaDobras({
             <CidadeGlobalAutocomplete
               value={refCidade}
               onChange={escolherCidade}
+              orientacao="horizontal"
             />
             {geocodando && (
               <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">

@@ -39,6 +39,8 @@ type Props = {
   value: CidadeEscolhida | null;
   onChange: (c: CidadeEscolhida | null) => void;
   placeholder?: string;
+  /** "vertical" (padrão) empilha país sobre cidade; "horizontal" põe lado a lado. */
+  orientacao?: "vertical" | "horizontal";
 };
 
 function paisInicial(value: CidadeEscolhida | null): Country {
@@ -49,8 +51,14 @@ function paisInicial(value: CidadeEscolhida | null): Country {
   return BRASIL;
 }
 
-export default function CidadeGlobalAutocomplete({ value, onChange, placeholder }: Props) {
+export default function CidadeGlobalAutocomplete({
+  value,
+  onChange,
+  placeholder,
+  orientacao = "vertical",
+}: Props) {
   const t = useT();
+  const horizontal = orientacao === "horizontal";
   const [pais, setPais] = useState<Country>(() => paisInicial(value));
   const [input, setInput] = useState(value ? value.nome : "");
   const [open, setOpen] = useState(false);
@@ -188,9 +196,9 @@ export default function CidadeGlobalAutocomplete({ value, onChange, placeholder 
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={horizontal ? "flex gap-2 items-start" : "flex flex-col gap-2"}>
       {/* Seletor de país */}
-      <div ref={paisRef} className="relative">
+      <div ref={paisRef} className={`relative ${horizontal ? "basis-[45%] shrink-0 min-w-0" : ""}`}>
         <button
           type="button"
           onClick={() => setOpenPais((v) => !v)}
@@ -210,7 +218,9 @@ export default function CidadeGlobalAutocomplete({ value, onChange, placeholder 
 
         {openPais && (
           <div
-            className="absolute top-full left-0 right-0 mt-1 z-50 bg-surface border border-border rounded-md flex flex-col"
+            className={`absolute top-full mt-1 z-50 bg-surface border border-border rounded-md flex flex-col ${
+              horizontal ? "left-0 w-64 max-w-[80vw]" : "left-0 right-0"
+            }`}
             style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.6)", maxHeight: 320 }}
           >
             <div className="p-2 border-b border-border flex-shrink-0">
@@ -254,7 +264,7 @@ export default function CidadeGlobalAutocomplete({ value, onChange, placeholder 
       </div>
 
       {/* Cidade */}
-      <div ref={wrapRef} className="relative">
+      <div ref={wrapRef} className={`relative ${horizontal ? "flex-1 min-w-0" : ""}`}>
         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
           <MapPin size={14} className="text-muted flex-shrink-0" />
           <input
