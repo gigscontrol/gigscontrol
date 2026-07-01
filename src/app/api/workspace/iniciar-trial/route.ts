@@ -49,45 +49,41 @@ export async function POST(request: Request) {
 
   const admin = criarClienteAdmin();
   const workspaceId = r.sessao.workspaceId;
+
+  // Trial é de UMA vez só. Se já existe QUALQUER subscription (trial anterior,
+  // checkout iniciado ou assinatura), NÃO concede outro trial grátis — fecha o
+  // "trial infinito" (re-chamar toda semana pra resetar os 7 dias). A criação
+  // legítima acontece só aqui, no onboarding, quando ainda não há subscription.
+  const { data: subExistente } = await admin
+    .from("subscriptions")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle<{ id: string }>();
+  if (subExistente) {
+    return NextResponse.json(
+      { erro: "Este workspace já iniciou o teste grátis. Assine para continuar." },
+      { status: 409 }
+    );
+  }
+
   const fimTrial = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    // 1. Atualiza workspaces.plano
     const { error: errWs } = await admin
       .from("workspaces")
       .update({ plano: parsed.data.plano, status: "trial" })
       .eq("id", workspaceId);
     if (errWs) throw errWs;
 
-    // 2. Cria/atualiza subscription
-    const { data: sub } = await admin
-      .from("subscriptions")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-
-    if (sub) {
-      const { error } = await admin
-        .from("subscriptions")
-        .update({
-          plano: parsed.data.plano,
-          status: "trial",
-          trial_termina_em: fimTrial,
-          inicio_em: new Date().toISOString().slice(0, 10),
-        })
-        .eq("id", sub.id);
-      if (error) throw error;
-    } else {
-      const { error } = await admin.from("subscriptions").insert({
-        workspace_id: workspaceId,
-        plano: parsed.data.plano,
-        ciclo: "mensal",
-        status: "trial",
-        trial_termina_em: fimTrial,
-        inicio_em: new Date().toISOString().slice(0, 10),
-      });
-      if (error) throw error;
-    }
+    const { error } = await admin.from("subscriptions").insert({
+      workspace_id: workspaceId,
+      plano: parsed.data.plano,
+      ciclo: "mensal",
+      status: "trial",
+      trial_termina_em: fimTrial,
+      inicio_em: new Date().toISOString().slice(0, 10),
+    });
+    if (error) throw error;
 
     return NextResponse.json({ ok: true, trialTerminaEm: fimTrial });
   } catch (e) {

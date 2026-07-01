@@ -30,12 +30,20 @@ export async function planoEfetivoParaLimites(
   try {
     const { data, error } = await db
       .from("subscriptions")
-      .select("downgrade_para")
+      .select("status, downgrade_para")
       .eq("workspace_id", workspaceId)
-      .maybeSingle<{ downgrade_para: string | null }>();
-    if (error || !data?.downgrade_para) return planoAtual;
-    const alvo = data.downgrade_para as PlanoId;
-    if (PLANOS.some((p) => p.id === alvo) && tierPlano(alvo) < tierPlano(planoAtual)) {
+      .maybeSingle<{ status: string | null; downgrade_para: string | null }>();
+    if (error || !data) return planoAtual;
+
+    // Durante o TRIAL grátis (que por design é SÓ Individual — planos maiores
+    // exigem pagamento imediato), os limites são SEMPRE os do Individual, mesmo
+    // que workspaces.plano tenha sido escrito mais alto por escolher-plano ou
+    // por um checkout abandonado antes de pagar. Assim ninguém ganha limites de
+    // plano superior sem cobrança confirmada — status 'ativa' só vem do webhook.
+    if (data.status === "trial") return "individual";
+
+    const alvo = data.downgrade_para as PlanoId | null;
+    if (alvo && PLANOS.some((p) => p.id === alvo) && tierPlano(alvo) < tierPlano(planoAtual)) {
       return alvo;
     }
     return planoAtual;

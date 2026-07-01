@@ -51,17 +51,19 @@ export async function POST(request: Request) {
 
   const admin = criarClienteAdmin();
 
-  // Com assinatura ATIVA, a troca de plano PRECISA passar pelo Stripe
-  // (upgrade com rateio ou downgrade agendado). Gravar workspaces.plano direto
-  // aqui dessincronizaria do que o Stripe cobra — bloqueia e manda pra aba Plano.
+  // escolher-plano é APENAS a pré-seleção do onboarding (antes de existir
+  // qualquer subscription). Se já existe subscription (trial, checkout ou
+  // assinatura), a troca de plano PRECISA passar pelo fluxo Stripe
+  // (upgrade/downgrade) — gravar workspaces.plano direto aqui dessincronizaria
+  // do que o Stripe cobra e, em trial, tentaria burlar limites sem pagar.
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("status")
+    .select("id")
     .eq("workspace_id", r.sessao.workspaceId)
-    .maybeSingle<{ status: string | null }>();
-  if (sub?.status === "ativa") {
+    .maybeSingle<{ id: string }>();
+  if (sub) {
     return NextResponse.json(
-      { erro: "Assinatura ativa: mude o plano em Configurações › Plano & Assinatura." },
+      { erro: "Mude o plano em Configurações › Plano & Assinatura." },
       { status: 409 }
     );
   }
