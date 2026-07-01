@@ -31,6 +31,7 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
 import { buscarPais } from "@/lib/data/countries";
+import { exemploEndereco } from "@/lib/data/exemplos";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
@@ -583,7 +584,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
               <TextInput
                 value={contratanteEndereco}
                 onChange={(e) => setContratanteEndereco(e.target.value)}
-                placeholder="Rua, número, bairro, cidade — CEP"
+                placeholder={exemploEndereco(paisOrigem.code)}
               />
             </Field>
           </div>
@@ -671,7 +672,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                   setEnderecoLocal(e.target.value);
                   marcarEditado("enderecoLocal");
                 }}
-                placeholder="Rua, número, bairro"
+                placeholder={exemploEndereco(cidadeIbge?.pais ?? "BR")}
               />
             </FieldWithAuto>
           </div>

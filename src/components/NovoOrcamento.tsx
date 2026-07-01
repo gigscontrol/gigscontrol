@@ -33,6 +33,7 @@ import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAu
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { resolverCidade } from "@/lib/cidade-helpers";
+import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -874,7 +875,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     <TextInput
                       value={evEndereco}
                       onChange={(e) => setEvEndereco(e.target.value)}
-                      placeholder="Rua, número, bairro…"
+                      placeholder={exemploEndereco(cidadeIbge?.pais ?? "BR")}
                     />
                   </Field>
                 </div>

@@ -7,6 +7,7 @@ import InputCapacidade from "../inputs/InputCapacidade";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { exemploEndereco } from "@/lib/data/exemplos";
 import type { Casa, TipoCasa } from "@/types";
 
 const TIPOS: { value: TipoCasa; label: string }[] = [
@@ -128,7 +129,7 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
       </div>
 
       <Field label="Endereço">
-        <TextInput value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número — Bairro" />
+        <TextInput value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder={exemploEndereco(cidadeSel?.pais ?? "BR")} />
       </Field>
 
       <Field label="Observações">

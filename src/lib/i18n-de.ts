@@ -1710,6 +1710,7 @@ export const DE: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Wähle mindestens 1 Künstler, damit es in seinem Kalender erscheint.",
   "Artista(s)": "Künstler",
   "bagagem extra": "Zusatzgepäck",
+  "Ex: {c}…": "z. B. {c}…",
   "País de origem": "Herkunftsland",
   "Define o documento fiscal pedido": "Legt das abgefragte Steuerdokument fest",
   "Documento / Tax ID": "Dokument / Tax ID",

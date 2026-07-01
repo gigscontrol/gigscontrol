@@ -5,6 +5,7 @@ import { MapPin, X, Loader2, ChevronDown, Search, Check } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { buscarPais, BRASIL, type Country } from "@/lib/data/countries";
 import Flag from "./Flag";
+import { exemploCidades } from "@/lib/data/exemplos";
 
 /**
  * Autocomplete de cidade GLOBAL: escolhe o país e depois a cidade.
@@ -74,6 +75,10 @@ export default function CidadeGlobalAutocomplete({
   const paisRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isBR = pais.code === "BR";
+  const exemplos = exemploCidades(pais.code);
+  const phCidade = exemplos.length
+    ? t("Ex: {c}…", { c: exemplos.join(", ") })
+    : t(placeholder ?? "Digite a cidade...");
 
   useEffect(() => {
     setInput(value ? value.nome : "");
@@ -279,7 +284,7 @@ export default function CidadeGlobalAutocomplete({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={t(placeholder ?? "Digite a cidade...")}
+            placeholder={phCidade}
             autoComplete="off"
             className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted outline-none min-w-0"
           />
