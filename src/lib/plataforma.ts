@@ -1,4 +1,4 @@
-import type { PlanoId, CicloCobranca } from "./planos";
+import type { PlanoId, CicloCobranca, Moeda } from "./planos";
 
 /**
  * Dados da PLATAFORMA GIGS CONTROL — visíveis apenas para o super-admin.
@@ -17,6 +17,8 @@ export type Assinatura = {
   email: string;
   plano: PlanoId;
   ciclo: CicloCobranca;
+  /** Moeda de cobrança da assinatura (derivada do país do workspace). */
+  moeda: Moeda;
   status: StatusAssinatura;
   /** Quantidade de artistas em uso */
   artistasEmUso: number;
@@ -55,6 +57,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "two",
     plano: "agencia-plus",
     ciclo: "anual",
+    moeda: "brl",
     status: "ativa",
     artistasEmUso: 4,
     usuariosEmUso: 6,
@@ -68,6 +71,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "carla@lunarbooking.com",
     plano: "agencia",
     ciclo: "anual",
+    moeda: "brl",
     status: "ativa",
     artistasEmUso: 8,
     usuariosEmUso: 11,
@@ -81,6 +85,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "rodrigo@beatcollective.com",
     plano: "equipe",
     ciclo: "mensal",
+    moeda: "brl",
     status: "ativa",
     artistasEmUso: 3,
     usuariosEmUso: 4,
@@ -94,6 +99,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "marcos@djvieira.com",
     plano: "individual",
     ciclo: "mensal",
+    moeda: "brl",
     status: "ativa",
     artistasEmUso: 1,
     usuariosEmUso: 1,
@@ -107,6 +113,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "juliana@primetalent.com",
     plano: "agencia-max",
     ciclo: "anual",
+    moeda: "brl",
     status: "ativa",
     artistasEmUso: 32,
     usuariosEmUso: 54,
@@ -120,6 +127,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "pedro@nightfall.com",
     plano: "equipe",
     ciclo: "mensal",
+    moeda: "brl",
     status: "trial",
     artistasEmUso: 2,
     usuariosEmUso: 2,
@@ -133,6 +141,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "tatiana@groovemgmt.com",
     plano: "agencia",
     ciclo: "anual",
+    moeda: "brl",
     status: "suspensa",
     artistasEmUso: 6,
     usuariosEmUso: 9,
@@ -146,6 +155,7 @@ export const MOCK_ASSINATURAS: Assinatura[] = [
     email: "andre@mcstudio.com",
     plano: "individual",
     ciclo: "anual",
+    moeda: "brl",
     status: "cancelada",
     artistasEmUso: 0,
     usuariosEmUso: 0,

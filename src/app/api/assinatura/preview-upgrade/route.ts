@@ -65,8 +65,14 @@ export async function POST(request: Request) {
 
   try {
     // Ciclo + moeda vêm do Stripe (estado real), não do banco.
-    const { moeda, ciclo, diasRestantes } = await infoSubscription(sub.mp_preference_id);
-    const valorAgora = estimarUpgrade({ atual, novo, ciclo, moeda, diasRestantes });
+    const { moeda, ciclo, diasRestantes, periodEnd, periodStart } =
+      await infoSubscription(sub.mp_preference_id);
+    // Dias reais do ciclo (28-31 / 365-366) em vez de 30/365 fixos.
+    const diasCiclo =
+      periodStart && periodEnd
+        ? Math.max(1, Math.round((periodEnd - periodStart) / 86_400))
+        : undefined;
+    const valorAgora = estimarUpgrade({ atual, novo, ciclo, moeda, diasRestantes, diasCiclo });
     return NextResponse.json({ valorAgora, moeda, diasRestantes, ciclo, atual, novo });
   } catch (e) {
     return NextResponse.json(

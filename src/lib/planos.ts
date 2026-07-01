@@ -271,9 +271,16 @@ export function estimarUpgrade(params: {
   ciclo: CicloCobranca;
   moeda: Moeda;
   diasRestantes: number;
+  /** Dias reais do ciclo (do período do Stripe). Sem isso, cai em 30/365. */
+  diasCiclo?: number;
 }): number {
   const { atual, novo, ciclo, moeda, diasRestantes } = params;
-  const diasCiclo = ciclo === "anual" ? 365 : 30;
+  const diasCiclo =
+    params.diasCiclo && params.diasCiclo > 0
+      ? params.diasCiclo
+      : ciclo === "anual"
+        ? 365
+        : 30;
   const fracao = Math.max(0, Math.min(1, diasRestantes / diasCiclo));
   const precoAtual =
     ciclo === "anual" ? valorAnual(getPlano(atual), moeda) : valorMensal(getPlano(atual), moeda);

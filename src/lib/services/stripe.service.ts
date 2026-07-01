@@ -195,6 +195,8 @@ export async function infoSubscription(subscriptionId: string): Promise<{
   diasRestantes: number;
   /** unix seconds do fim do período atual (quando o downgrade viraria). */
   periodEnd: number | null;
+  /** unix seconds do início do período atual (pra medir o ciclo real). */
+  periodStart: number | null;
 }> {
   const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
     expand: ["items.data.price"],
@@ -203,10 +205,11 @@ export async function infoSubscription(subscriptionId: string): Promise<{
   const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
   const ciclo = cicloDoInterval(item?.price?.recurring?.interval);
   const periodEnd = item?.current_period_end ?? null;
+  const periodStart = item?.current_period_start ?? null;
   const diasRestantes = periodEnd
     ? Math.max(0, Math.ceil((periodEnd * 1000 - Date.now()) / 86_400_000))
     : 0;
-  return { moeda, ciclo, diasRestantes, periodEnd };
+  return { moeda, ciclo, diasRestantes, periodEnd, periodStart };
 }
 
 /**

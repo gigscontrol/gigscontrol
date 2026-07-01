@@ -31,8 +31,14 @@ export default function AdminDashboard() {
 
   const kpis = useMemo(() => {
     const ativas = assinaturas.filter((a) => a.status === "ativa");
-    let mrr = 0;
-    for (const a of ativas) mrr += precoPorMes(getPlano(a.plano), a.ciclo);
+    // MRR por moeda — não dá pra somar BRL + USD sem câmbio.
+    let mrrBrl = 0;
+    let mrrUsd = 0;
+    for (const a of ativas) {
+      const preco = precoPorMes(getPlano(a.plano), a.ciclo, a.moeda);
+      if (a.moeda === "usd") mrrUsd += preco;
+      else mrrBrl += preco;
+    }
 
     const agencias = assinaturas.filter((a) =>
       ["equipe", "time", "agencia", "agencia-plus", "agencia-max"].includes(a.plano)
@@ -47,14 +53,22 @@ export default function AdminDashboard() {
       anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : 0;
 
     return {
-      mrr,
-      arr: mrr * 12,
+      mrrBrl,
+      mrrUsd,
+      arrBrl: mrrBrl * 12,
+      arrUsd: mrrUsd * 12,
       totalUsuarios: usuarios.length,
       agencias,
       totalArtistas,
       crescimentoPct,
     };
   }, [assinaturas, usuarios]);
+
+  // "R$X" e, se houver receita em USD, "· $Y" ao lado.
+  const fmtMoedas = (brl: number, usd: number) =>
+    usd > 0
+      ? `${formatarPrecoCurto(brl, "brl")} · ${formatarPrecoCurto(usd, "usd")}`
+      : formatarPrecoCurto(brl, "brl");
 
   const maxReceita = Math.max(...MOCK_CRESCIMENTO.map((p) => p.receita));
 
@@ -70,14 +84,14 @@ export default function AdminDashboard() {
         <Kpi
           icon={<DollarSign size={16} />}
           label="MRR"
-          value={formatarPrecoCurto(kpis.mrr)}
+          value={fmtMoedas(kpis.mrrBrl, kpis.mrrUsd)}
           color="var(--module-financeiro)"
           trend={kpis.crescimentoPct}
         />
         <Kpi
           icon={<TrendingUp size={16} />}
           label="ARR"
-          value={formatarPrecoCurto(kpis.arr)}
+          value={fmtMoedas(kpis.arrBrl, kpis.arrUsd)}
           color="var(--module-financeiro)"
         />
         <Kpi

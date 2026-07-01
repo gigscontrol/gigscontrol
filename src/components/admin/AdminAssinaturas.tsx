@@ -121,7 +121,7 @@ export default function AdminAssinaturas() {
                     </Td>
                     <Td className="tabular-nums font-semibold">
                       {a.status === "ativa"
-                        ? formatarPreco(precoPorMes(plano, a.ciclo))
+                        ? formatarPreco(precoPorMes(plano, a.ciclo, a.moeda), a.moeda)
                         : "—"}
                     </Td>
                     <Td>
