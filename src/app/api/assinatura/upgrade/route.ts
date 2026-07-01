@@ -3,7 +3,7 @@ import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { aplicarUpgrade, valorCobranca } from "@/lib/services/stripe.service";
-import { ehUpgrade, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import { PLANOS, ehUpgrade, type PlanoId } from "@/lib/planos";
 
 /**
  * POST /api/assinatura/upgrade  { plano }
@@ -40,13 +40,12 @@ export async function POST(request: Request) {
   const admin = criarClienteAdmin();
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, mp_preference_id, plano, ciclo, status")
+    .select("id, mp_preference_id, plano, status")
     .eq("workspace_id", r.sessao.workspaceId)
     .maybeSingle<{
       id: string;
       mp_preference_id: string | null;
       plano: string | null;
-      ciclo: string | null;
       status: string | null;
     }>();
 
@@ -60,24 +59,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const atual = (sub.plano ?? "individual") as PlanoId;
+  // Valida o plano atual contra os planos conhecidos (não confia em texto livre do banco).
+  const atual: PlanoId = PLANOS.some((p) => p.id === sub.plano)
+    ? (sub.plano as PlanoId)
+    : "individual";
   const novo = parsed.data.plano;
-  const ciclo = (sub.ciclo === "anual" ? "anual" : "mensal") as CicloCobranca;
   if (!ehUpgrade(atual, novo)) {
     return NextResponse.json({ erro: "Só dá pra SUBIR de plano por aqui." }, { status: 400 });
   }
 
   try {
-    const { moeda } = await aplicarUpgrade({
+    // Ciclo + moeda saem do estado REAL da assinatura no Stripe (dentro de aplicarUpgrade).
+    const { moeda, ciclo } = await aplicarUpgrade({
       subscriptionId: sub.mp_preference_id,
       plano: novo,
-      ciclo,
     });
-    // A Stripe já trocou o preço + cobrou o rateio. Sincroniza o plano no DB.
+    // A Stripe já trocou o preço + cobrou o rateio (irreversível). Sincroniza o DB;
+    // se algum write falhar, o webhook (customer.subscription.updated) reconcilia pelo preço.
     const valor = valorCobranca(novo, ciclo, moeda);
-    await admin.from("workspaces").update({ plano: novo, ciclo }).eq("id", r.sessao.workspaceId);
-    await admin.from("subscriptions").update({ plano: novo, ciclo, valor }).eq("id", sub.id);
-    return NextResponse.json({ ok: true, plano: novo });
+    const [w1, w2] = await Promise.all([
+      admin.from("workspaces").update({ plano: novo, ciclo }).eq("id", r.sessao.workspaceId),
+      admin.from("subscriptions").update({ plano: novo, ciclo, valor }).eq("id", sub.id),
+    ]);
+    if (w1.error || w2.error) {
+      console.error(
+        "[upgrade] Stripe cobrou mas o sync no DB falhou (o webhook vai reconciliar):",
+        w1.error?.message,
+        w2.error?.message
+      );
+    }
+    return NextResponse.json({ ok: true, plano: novo, ciclo });
   } catch (e) {
     // error_if_incomplete → cartão recusado / pagamento pendente.
     return NextResponse.json(

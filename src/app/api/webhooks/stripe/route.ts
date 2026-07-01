@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { construirEvento, getStripe } from "@/lib/services/stripe.service";
+import {
+  construirEvento,
+  getStripe,
+  parseLookupKey,
+  valorCobranca,
+} from "@/lib/services/stripe.service";
+import type { PlanoId, CicloCobranca, Moeda } from "@/lib/planos";
 
 /**
  * POST /api/webhooks/stripe
@@ -39,6 +45,10 @@ type SubResumo = {
   status: string;
   /** unix seconds do fim do período atual (renovação) ou null. */
   periodEnd: number | null;
+  /** Plano/ciclo/moeda derivados do preço REAL da assinatura (lookup_key). */
+  plano?: PlanoId | null;
+  ciclo?: CicloCobranca | null;
+  moeda?: Moeda | null;
 };
 
 /** Extrai o id (string) de um campo que pode vir expandido (objeto) ou só id. */
@@ -55,6 +65,17 @@ function periodEndDaSub(sub: Stripe.Subscription): number | null {
   return item?.current_period_end ?? null;
 }
 
+/**
+ * Deriva {plano, ciclo, moeda} do `lookup_key` do preço que a assinatura
+ * está REALMENTE cobrando (fonte da verdade da Stripe). null se não bater.
+ */
+function planoInfoDaSub(
+  sub: Stripe.Subscription
+): { plano: PlanoId; ciclo: CicloCobranca; moeda: Moeda } | null {
+  const price = sub.items?.data?.[0]?.price;
+  return parseLookupKey(price?.lookup_key ?? null);
+}
+
 /** Converte unix seconds → 'YYYY-MM-DD' (coluna date). */
 function dataDe(unixSeconds: number | null): string | null {
   if (!unixSeconds) return null;
@@ -65,13 +86,19 @@ function dataDe(unixSeconds: number | null): string | null {
 async function resumoDaSubscription(
   subscriptionId: string
 ): Promise<SubResumo> {
-  const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+  const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
+    expand: ["items.data.price"],
+  });
+  const info = planoInfoDaSub(sub);
   return {
     subscriptionId: sub.id,
     customerId: idDe(sub.customer),
     workspaceId: (sub.metadata?.workspaceId as string) ?? null,
     status: sub.status,
     periodEnd: periodEndDaSub(sub),
+    plano: info?.plano ?? null,
+    ciclo: info?.ciclo ?? null,
+    moeda: info?.moeda ?? null,
   };
 }
 
@@ -90,7 +117,7 @@ async function aplicarStatus(
   admin: Admin,
   r: SubResumo,
   statusInterno: "ativa" | "suspended" | "cancelled",
-  opts: { espelharNoWorkspace?: boolean } = {}
+  opts: { espelharNoWorkspace?: boolean; preservarGraca?: boolean } = {}
 ) {
   if (!r.workspaceId) return;
   const proxima = dataDe(r.periodEnd);
@@ -108,16 +135,42 @@ async function aplicarStatus(
     patch.metodo = "credit_card";
   }
 
-  await admin
+  // RECONCILIAÇÃO DE PLANO: alinha plano/ciclo/valor ao preço que a Stripe está
+  // REALMENTE cobrando. Só quando ATIVA (checkout/renovação paga) — nunca em
+  // graça/suspenso, pra não rebaixar antes da cobrança. É o que fecha o furo do
+  // downgrade: ao renovar no preço menor, o plano cai no MESMO instante da
+  // cobrança menor (nem antes — mantém benefícios até o fim do período pago —
+  // nem depois — não dá pra pagar menos e manter o plano top).
+  const reconciliaPlano = statusInterno === "ativa" && !!r.plano && !!r.ciclo;
+  if (reconciliaPlano && r.plano && r.ciclo) {
+    patch.plano = r.plano;
+    patch.ciclo = r.ciclo;
+    patch.valor = valorCobranca(r.plano, r.ciclo, r.moeda ?? "brl");
+  }
+
+  let q = admin
     .from("subscriptions")
     .update(patch)
     .eq("workspace_id", r.workspaceId);
+  // Dunning (past_due/unpaid/paused via subscription.updated) NÃO atropela a
+  // graça de 1 dia: quem está em 'graca' fica até o prazo expirar (o bloqueio
+  // vem da derivação de estado). Chargeback/fraude NÃO passam preservarGraca,
+  // então cortam na hora.
+  if (statusInterno === "suspended" && opts.preservarGraca) {
+    q = q.neq("status", "graca");
+  }
+  await q;
 
-  if (opts.espelharNoWorkspace) {
-    await admin
-      .from("workspaces")
-      .update({ status: statusInterno })
-      .eq("id", r.workspaceId);
+  // workspaces.plano é a fonte da verdade dos limites → tem que refletir o
+  // plano reconciliado (independente de espelhar o status).
+  if (opts.espelharNoWorkspace || reconciliaPlano) {
+    const wsPatch: Record<string, unknown> = {};
+    if (opts.espelharNoWorkspace) wsPatch.status = statusInterno;
+    if (reconciliaPlano && r.plano && r.ciclo) {
+      wsPatch.plano = r.plano;
+      wsPatch.ciclo = r.ciclo;
+    }
+    await admin.from("workspaces").update(wsPatch).eq("id", r.workspaceId);
   }
 }
 
@@ -236,12 +289,16 @@ export async function POST(request: Request) {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+        const info = planoInfoDaSub(sub);
         const resumo: SubResumo = {
           subscriptionId: sub.id,
           customerId: idDe(sub.customer),
           workspaceId: (sub.metadata?.workspaceId as string) ?? null,
           status: sub.status,
           periodEnd: periodEndDaSub(sub),
+          plano: info?.plano ?? null,
+          ciclo: info?.ciclo ?? null,
+          moeda: info?.moeda ?? null,
         };
         await aplicarStatus(admin, resumo, "cancelled", {
           espelharNoWorkspace: true,
@@ -256,17 +313,23 @@ export async function POST(request: Request) {
           // invoice.payment_failed. Não atropela o prazo aqui.
           break;
         }
+        const info = planoInfoDaSub(sub);
         const resumo: SubResumo = {
           subscriptionId: sub.id,
           customerId: idDe(sub.customer),
           workspaceId: (sub.metadata?.workspaceId as string) ?? null,
           status: sub.status,
           periodEnd: periodEndDaSub(sub),
+          plano: info?.plano ?? null,
+          ciclo: info?.ciclo ?? null,
+          moeda: info?.moeda ?? null,
         };
         const interno = mapStatus(sub.status);
-        // Espelha cancelamento no workspace; ativa/suspende ficam só na sub.
+        // Espelha cancelamento no workspace; ativa/suspende ficam só na sub
+        // (mas a reconciliação de plano dentro de aplicarStatus ainda roda p/ ativa).
         await aplicarStatus(admin, resumo, interno, {
           espelharNoWorkspace: interno === "cancelled",
+          preservarGraca: true,
         });
         break;
       }

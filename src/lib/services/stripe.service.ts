@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import {
+  PLANOS,
   getPlano,
   valorMensal,
   valorAnual,
@@ -148,9 +149,49 @@ export async function criarCheckoutAssinatura(params: {
   });
 }
 
-/** Moeda + dias restantes do ciclo atual da assinatura (pro preview do upgrade). */
+/** 'month' | 'year' (Stripe) → nosso ciclo. */
+export function cicloDoInterval(interval: string | undefined | null): CicloCobranca {
+  return interval === "year" ? "anual" : "mensal";
+}
+
+/**
+ * Extrai {plano, ciclo, moeda} do `lookup_key` de um preço da Stripe
+ * (`${plano}_${ciclo}[_usd]`). É o inverso do `lookupKey()`. null se não bater
+ * com nenhum plano conhecido. Usado pelo webhook pra reconciliar o plano a
+ * partir do que a Stripe realmente está cobrando.
+ */
+export function parseLookupKey(
+  lookupKey: string | null | undefined
+): { plano: PlanoId; ciclo: CicloCobranca; moeda: Moeda } | null {
+  if (!lookupKey) return null;
+  let s = lookupKey;
+  let moeda: Moeda = "brl";
+  if (s.endsWith("_usd")) {
+    moeda = "usd";
+    s = s.slice(0, -4);
+  }
+  let ciclo: CicloCobranca;
+  if (s.endsWith("_mensal")) {
+    ciclo = "mensal";
+    s = s.slice(0, -"_mensal".length);
+  } else if (s.endsWith("_anual")) {
+    ciclo = "anual";
+    s = s.slice(0, -"_anual".length);
+  } else {
+    return null;
+  }
+  const plano = PLANOS.find((p) => p.id === s)?.id;
+  if (!plano) return null;
+  return { plano, ciclo, moeda };
+}
+
+/**
+ * Moeda + ciclo (do Stripe, não do banco) + dias restantes do ciclo atual.
+ * Ciclo derivado de `price.recurring.interval` pra bater com a cobrança real.
+ */
 export async function infoSubscription(subscriptionId: string): Promise<{
   moeda: Moeda;
+  ciclo: CicloCobranca;
   diasRestantes: number;
 }> {
   const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
@@ -158,11 +199,12 @@ export async function infoSubscription(subscriptionId: string): Promise<{
   });
   const item = sub.items.data[0];
   const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
+  const ciclo = cicloDoInterval(item?.price?.recurring?.interval);
   const periodEnd = item?.current_period_end ?? null;
   const diasRestantes = periodEnd
     ? Math.max(0, Math.ceil((periodEnd * 1000 - Date.now()) / 86_400_000))
     : 0;
-  return { moeda, diasRestantes };
+  return { moeda, ciclo, diasRestantes };
 }
 
 /**
@@ -174,22 +216,31 @@ export async function infoSubscription(subscriptionId: string): Promise<{
 export async function aplicarUpgrade(params: {
   subscriptionId: string;
   plano: PlanoId;
-  ciclo: CicloCobranca;
-}): Promise<{ subscription: Stripe.Subscription; moeda: Moeda }> {
+}): Promise<{ subscription: Stripe.Subscription; moeda: Moeda; ciclo: CicloCobranca }> {
   const stripe = getStripe();
   const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
     expand: ["items.data.price"],
   });
   const item = sub.items.data[0];
   if (!item) throw new Error("Assinatura sem item de preço.");
+  // Moeda E ciclo saem do estado REAL da assinatura no Stripe (não do banco),
+  // pra o novo preço bater com a cobrança atual (evita trocar mensal↔anual).
   const moeda: Moeda = item.price?.currency === "usd" ? "usd" : "brl";
-  const novoPriceId = await resolverPriceId(params.plano, params.ciclo, moeda);
-  const subscription = await stripe.subscriptions.update(params.subscriptionId, {
-    items: [{ id: item.id, price: novoPriceId }],
-    proration_behavior: "always_invoice",
-    payment_behavior: "error_if_incomplete",
-  });
-  return { subscription, moeda };
+  const ciclo = cicloDoInterval(item.price?.recurring?.interval);
+  const novoPriceId = await resolverPriceId(params.plano, ciclo, moeda);
+  const subscription = await stripe.subscriptions.update(
+    params.subscriptionId,
+    {
+      items: [{ id: item.id, price: novoPriceId }],
+      proration_behavior: "always_invoice",
+      payment_behavior: "error_if_incomplete",
+      // Mantém o metadata coerente com o preço novo (o webhook pode confiar nele).
+      metadata: { ...(sub.metadata ?? {}), plano: params.plano, ciclo, moeda },
+    },
+    // Idempotência: duplo clique / retry não cobra o rateio 2×.
+    { idempotencyKey: `upgrade_${params.subscriptionId}_${novoPriceId}` }
+  );
+  return { subscription, moeda, ciclo };
 }
 
 /**

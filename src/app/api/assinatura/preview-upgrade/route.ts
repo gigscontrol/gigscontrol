@@ -3,12 +3,7 @@ import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { infoSubscription } from "@/lib/services/stripe.service";
-import {
-  ehUpgrade,
-  estimarUpgrade,
-  type PlanoId,
-  type CicloCobranca,
-} from "@/lib/planos";
+import { PLANOS, ehUpgrade, estimarUpgrade, type PlanoId } from "@/lib/planos";
 
 /**
  * POST /api/assinatura/preview-upgrade  { plano }
@@ -42,12 +37,11 @@ export async function POST(request: Request) {
   const admin = criarClienteAdmin();
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("mp_preference_id, plano, ciclo, status")
+    .select("mp_preference_id, plano, status")
     .eq("workspace_id", r.sessao.workspaceId)
     .maybeSingle<{
       mp_preference_id: string | null;
       plano: string | null;
-      ciclo: string | null;
       status: string | null;
     }>();
 
@@ -61,15 +55,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const atual = (sub.plano ?? "individual") as PlanoId;
+  const atual: PlanoId = PLANOS.some((p) => p.id === sub.plano)
+    ? (sub.plano as PlanoId)
+    : "individual";
   const novo = parsed.data.plano;
-  const ciclo = (sub.ciclo === "anual" ? "anual" : "mensal") as CicloCobranca;
   if (!ehUpgrade(atual, novo)) {
     return NextResponse.json({ erro: "Só dá pra SUBIR de plano por aqui." }, { status: 400 });
   }
 
   try {
-    const { moeda, diasRestantes } = await infoSubscription(sub.mp_preference_id);
+    // Ciclo + moeda vêm do Stripe (estado real), não do banco.
+    const { moeda, ciclo, diasRestantes } = await infoSubscription(sub.mp_preference_id);
     const valorAgora = estimarUpgrade({ atual, novo, ciclo, moeda, diasRestantes });
     return NextResponse.json({ valorAgora, moeda, diasRestantes, ciclo, atual, novo });
   } catch (e) {
