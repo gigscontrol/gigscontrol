@@ -882,13 +882,11 @@ function SeletorArtistas({
 
 type Passageiro = {
   nome: string;
-  cpf?: string;
-  rg?: string;
   nascimento?: string;
   bagagemExtra?: boolean;
 };
 
-/** Lista repetível de passageiros (nome obrigatório; CPF/RG/nascimento/bagagem opcionais). */
+/** Lista repetível de passageiros (nome obrigatório; nascimento/bagagem opcionais). */
 function PassageirosField({
   value,
   onChange,
@@ -920,36 +918,35 @@ function PassageirosField({
                 <Trash2 size={14} />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <input
-                value={p.cpf ?? ""}
-                onChange={(e) => setP(i, { cpf: e.target.value })}
-                placeholder={t("CPF")}
-                className="campo-input text-sm"
-              />
-              <input
-                value={p.rg ?? ""}
-                onChange={(e) => setP(i, { rg: e.target.value })}
-                placeholder={t("RG")}
-                className="campo-input text-sm"
-              />
+            <div className="flex items-stretch gap-2">
               <input
                 type="date"
                 value={p.nascimento ?? ""}
                 onChange={(e) => setP(i, { nascimento: e.target.value })}
-                className="campo-input text-sm"
+                className="campo-input text-sm flex-1"
                 title={t("Nascimento")}
+                aria-label={t("Nascimento")}
               />
+              <button
+                type="button"
+                onClick={() => setP(i, { bagagemExtra: !p.bagagemExtra })}
+                aria-pressed={!!p.bagagemExtra}
+                className="shrink-0 inline-flex items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors"
+                style={
+                  p.bagagemExtra
+                    ? {
+                        color: "var(--module-agenda)",
+                        borderColor: "color-mix(in srgb, var(--module-agenda) 45%, transparent)",
+                        backgroundColor:
+                          "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
+                      }
+                    : { color: "var(--text-muted)", borderColor: "var(--border-color)" }
+                }
+              >
+                <Check size={13} style={{ opacity: p.bagagemExtra ? 1 : 0.35 }} />
+                {t("Bagagem extra")}
+              </button>
             </div>
-            <label className="flex items-center gap-2 text-xs text-secondary cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={!!p.bagagemExtra}
-                onChange={(e) => setP(i, { bagagemExtra: e.target.checked })}
-                style={{ accentColor: "var(--module-agenda)" }}
-              />
-              {t("Bagagem extra")}
-            </label>
           </div>
         ))}
         <button
@@ -1878,12 +1875,10 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
           {passageiros.map((p, i) => (
             <div key={i} className="text-sm text-primary leading-snug">
               {p.nome}
-              {(p.cpf || p.rg || p.nascimento || p.bagagemExtra) && (
+              {(p.nascimento || p.bagagemExtra) && (
                 <span className="text-xs text-muted">
                   {" · "}
                   {[
-                    p.cpf && `CPF ${p.cpf}`,
-                    p.rg && `RG ${p.rg}`,
                     p.nascimento && formatarDataBR(p.nascimento),
                     p.bagagemExtra && t("bagagem extra"),
                   ]
