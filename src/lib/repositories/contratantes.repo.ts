@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContratanteRow, ContratanteEscrita } from "@/lib/mappers/contatos";
 
 const COLS =
-  "id, workspace_id, nome, documento, email, telefone, endereco, cidade_id, observacoes, criado_por, criado_em";
+  "id, workspace_id, nome, documento, pais, email, telefone, endereco, cidade_id, observacoes, criado_por, criado_em";
 
 export async function listarContratantes(
   supabase: SupabaseClient,

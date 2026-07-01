@@ -162,6 +162,8 @@ export type Contratante = {
   id: string;
   nome: string;
   documento?: string; // ✱ agora opcional
+  /** País de origem (ISO2). Define o tipo de documento. Default 'BR'. */
+  pais?: string;
   email?: string; // ✱ agora opcional
   telefone: string;
   endereco?: string;

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin, X, Loader2, ChevronDown, Search, Check } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { buscarPais, BRASIL, type Country } from "@/lib/data/countries";
+import Flag from "./Flag";
 
 /**
  * Autocomplete de cidade GLOBAL: escolhe o país e depois a cidade.
@@ -206,7 +207,7 @@ export default function CidadeGlobalAutocomplete({
             openPais ? "border-border-strong" : "border-border hover:border-border-strong"
           }`}
         >
-          <span className="text-lg leading-none flex-shrink-0">{pais.flag}</span>
+          <Flag code={pais.code} size={20} className="flex-shrink-0" />
           <span className="text-sm text-primary font-medium flex-1 text-left truncate">
             {pais.name}
           </span>
@@ -245,7 +246,7 @@ export default function CidadeGlobalAutocomplete({
                     p.code === pais.code ? "bg-elevated" : "hover:bg-elevated"
                   }`}
                 >
-                  <span className="text-lg leading-none flex-shrink-0">{p.flag}</span>
+                  <Flag code={p.code} size={20} className="flex-shrink-0" />
                   <span
                     className={`flex-1 text-sm truncate ${
                       p.code === pais.code ? "text-primary font-medium" : "text-secondary"

@@ -114,6 +114,7 @@ export type ContratanteRow = {
   workspace_id: string;
   nome: string;
   documento: string | null;
+  pais: string | null;
   email: string | null;
   telefone: string | null;
   endereco: string | null;
@@ -128,6 +129,7 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     id: row.id,
     nome: row.nome,
     documento: row.documento ?? undefined,
+    pais: row.pais ?? "BR",
     email: row.email ?? undefined,
     telefone: row.telefone ?? "",
     endereco: row.endereco ?? undefined,
@@ -141,6 +143,7 @@ export type ContratanteEscrita = {
   workspace_id?: string;
   nome?: string;
   documento?: string | null;
+  pais?: string | null;
   email?: string | null;
   telefone?: string | null;
   endereco?: string | null;

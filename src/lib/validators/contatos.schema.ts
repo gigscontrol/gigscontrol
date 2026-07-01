@@ -53,6 +53,7 @@ export type CasaUpdateInput = z.infer<typeof casaUpdateSchema>;
 export const contratanteCreateSchema = z.object({
   nome: z.string().min(1, "nome obrigatório"),
   documento: z.string().nullable().optional(),
+  pais: z.string().length(2).nullable().optional(),
   email: z.string().email("e-mail inválido").nullable().optional().or(z.literal("")),
   telefone: z.string().nullable().optional(),
   endereco: z.string().nullable().optional(),
