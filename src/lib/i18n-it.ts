@@ -1710,5 +1710,20 @@ export const IT: Record<string, string> = {
   "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Seleziona almeno 1 artista per mostrarlo nella sua agenda.",
   "Artista(s)": "Artista/i",
   "bagagem extra": "bagaglio extra",
-  "Confira no site da companhia (pelo localizador) se o horário não mudou.": "Verifica sul sito della compagnia (col codice) se l'orario non è cambiato."
+  "Confira no site da companhia (pelo localizador) se o horário não mudou.": "Verifica sul sito della compagnia (col codice) se l'orario non è cambiato.",
+  "Novo transporte terrestre": "Nuovo trasporto terrestre",
+  "Transfer/van com motorista": "Transfer/van con autista",
+  "Artista(s) — de quem é o transporte": "Artista/i — di chi è il trasporto",
+  "Executivo": "Executive",
+  "Van": "Van",
+  "Carro": "Auto",
+  "Ônibus": "Autobus",
+  "Transfer": "Transfer",
+  "Aeroporto, hotel…": "Aeroporto, hotel…",
+  "Local do evento…": "Sede dell'evento…",
+  "Motorista": "Autista",
+  "Contato do motorista": "Contatto autista",
+  "Telefone/WhatsApp": "Telefono/WhatsApp",
+  "Criar transporte": "Crea trasporto",
+  "Informe ao menos a rota ou a empresa.": "Inserisci almeno la rotta o l'azienda."
 };

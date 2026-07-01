@@ -300,6 +300,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const [novoItemDia, setNovoItemDia] = useState<DayCell | null>(null);
   const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
   const [vooFormDia, setVooFormDia] = useState<DayCell | null>(null);
+  const [transporteFormDia, setTransporteFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
 
   // Dias planos para listagem mobile
@@ -433,6 +434,11 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
             setNovoItemDia(null);
             setVooFormDia(d);
           }}
+          onNovoTransporte={() => {
+            const d = novoItemDia;
+            setNovoItemDia(null);
+            setTransporteFormDia(d);
+          }}
         />
       )}
 
@@ -460,6 +466,20 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
           onCriar={async (input) => {
             await criarItem(input);
             setVooFormDia(null);
+          }}
+        />
+      )}
+
+      {/* Form de novo transporte terrestre */}
+      {transporteFormDia && (
+        <TransporteFormModal
+          day={transporteFormDia}
+          artistas={artistas}
+          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          onClose={() => setTransporteFormDia(null)}
+          onCriar={async (input) => {
+            await criarItem(input);
+            setTransporteFormDia(null);
           }}
         />
       )}
@@ -599,10 +619,9 @@ const ACOES_NOVO_ITEM: {
   {
     key: "transporte",
     label: "Novo Transporte Terrestre",
-    desc: "Em breve",
+    desc: "Transfer/van com motorista",
     icon: Car,
     cor: "var(--module-financeiro)",
-    emBreve: true,
   },
   {
     key: "evento",
@@ -622,12 +641,14 @@ function NovoItemModal({
   onNovoShow,
   onNovoEvento,
   onNovoVoo,
+  onNovoTransporte,
 }: {
   day: DayCell;
   onClose: () => void;
   onNovoShow: () => void;
   onNovoEvento: () => void;
   onNovoVoo: () => void;
+  onNovoTransporte: () => void;
 }) {
   const t = useT();
   return (
@@ -653,7 +674,9 @@ function NovoItemModal({
                     ? onNovoEvento
                     : a.key === "voo"
                       ? onNovoVoo
-                      : undefined
+                      : a.key === "transporte"
+                        ? onNovoTransporte
+                        : undefined
               }
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors enabled:hover:bg-elevated disabled:opacity-45 disabled:cursor-not-allowed"
             >
@@ -1574,6 +1597,189 @@ function VooFormModal({
   );
 }
 
+const TIPOS_TRANSPORTE = ["Executivo", "Van", "Carro", "Ônibus", "Transfer", "Outro"];
+
+/** Form de criação de transporte terrestre (Fase 3, manual). */
+function TransporteFormModal({
+  day,
+  artistas,
+  defaultArtistIds,
+  onClose,
+  onCriar,
+}: {
+  day: DayCell;
+  artistas: DJ[];
+  defaultArtistIds: string[];
+  onClose: () => void;
+  onCriar: (input: NovoAgendaItem) => Promise<void>;
+}) {
+  const t = useT();
+  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
+  const [dataT, setDataT] = useState(day.dataISO);
+  const [tipo, setTipo] = useState("Executivo");
+  const [empresa, setEmpresa] = useState("");
+  const [motorista, setMotorista] = useState("");
+  const [contato, setContato] = useState("");
+  const [origem, setOrigem] = useState("");
+  const [destino, setDestino] = useState("");
+  const [horario, setHorario] = useState("");
+  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
+  const [observacoes, setObservacoes] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function submit() {
+    if (salvando) return;
+    if (!origem.trim() && !destino.trim() && !empresa.trim()) {
+      setErro(t("Informe ao menos a rota ou a empresa."));
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    const rota = origem && destino ? `${origem.trim()}→${destino.trim()}` : "";
+    const titulo = [t(tipo), rota].filter(Boolean).join(" · ") || t("Transporte");
+    try {
+      await onCriar({
+        tipo: "transporte",
+        titulo,
+        data: dataT,
+        diaInteiro: false,
+        horaInicio: horario || undefined,
+        artistIds,
+        observacoes: observacoes.trim() || undefined,
+        dados: {
+          tipoTransporte: tipo,
+          empresa: empresa.trim(),
+          motorista: motorista.trim(),
+          contato: contato.trim(),
+          origem: origem.trim(),
+          destino: destino.trim(),
+          passageiros: passageiros.filter((p) => p.nome.trim()),
+        },
+      });
+    } catch (e) {
+      setErro((e as Error).message);
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={t("Novo transporte terrestre")}
+      subtitle={`${t(day.name)} · ${day.date}`}
+      maxWidth={480}
+    >
+      <div className="flex flex-col gap-4">
+        <SeletorArtistas
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          label={t("Artista(s) — de quem é o transporte")}
+          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Data")}>
+            <input
+              type="date"
+              value={dataT}
+              onChange={(e) => setDataT(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Horário")}>
+            <InputHora value={horario} onChange={setHorario} accent="var(--module-financeiro)" />
+          </CampoForm>
+        </div>
+
+        <CampoForm label={t("Tipo")}>
+          <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="campo-input">
+            {TIPOS_TRANSPORTE.map((tp) => (
+              <option key={tp} value={tp}>
+                {t(tp)}
+              </option>
+            ))}
+          </select>
+        </CampoForm>
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Origem")}>
+            <input
+              value={origem}
+              onChange={(e) => setOrigem(e.target.value)}
+              placeholder={t("Aeroporto, hotel…")}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Destino")}>
+            <input
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              placeholder={t("Local do evento…")}
+              className="campo-input"
+            />
+          </CampoForm>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <CampoForm label={t("Empresa")}>
+            <input
+              value={empresa}
+              onChange={(e) => setEmpresa(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+          <CampoForm label={t("Motorista")}>
+            <input
+              value={motorista}
+              onChange={(e) => setMotorista(e.target.value)}
+              className="campo-input"
+            />
+          </CampoForm>
+        </div>
+
+        <CampoForm label={t("Contato do motorista")}>
+          <input
+            value={contato}
+            onChange={(e) => setContato(e.target.value)}
+            placeholder={t("Telefone/WhatsApp")}
+            className="campo-input"
+          />
+        </CampoForm>
+
+        <PassageirosField value={passageiros} onChange={setPassageiros} />
+
+        <CampoForm label={t("Observações")}>
+          <textarea
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            rows={2}
+            className="campo-input resize-none"
+          />
+        </CampoForm>
+
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className="btn btn-secondary">
+            {t("Cancelar")}
+          </button>
+          <button
+            onClick={submit}
+            disabled={salvando}
+            className="btn btn-primary disabled:opacity-50"
+            style={{ backgroundColor: "var(--module-financeiro)", color: "#fff" }}
+          >
+            {salvando ? t("Salvando…") : t("Criar transporte")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 type VooExtraido = {
   numeroVoo?: string;
   companhia?: string;
@@ -1645,6 +1851,36 @@ function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   );
 }
 
+/** Linhas específicas de um transporte terrestre. */
+function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
+  const t = useT();
+  const d = (dados ?? {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
+  const rota = str("origem") && str("destino") ? `${str("origem")} → ${str("destino")}` : "";
+  const contato = [str("motorista"), str("contato")].filter(Boolean).join(" · ");
+  const passageiros: Passageiro[] = Array.isArray(d.passageiros)
+    ? (d.passageiros as Passageiro[])
+    : [];
+  return (
+    <>
+      {str("tipoTransporte") && <LinhaDetalhe rotulo={t("Tipo")} valor={t(str("tipoTransporte"))} />}
+      {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
+      {str("empresa") && <LinhaDetalhe rotulo={t("Empresa")} valor={str("empresa")} />}
+      {contato && <LinhaDetalhe rotulo={t("Motorista")} valor={contato} />}
+      {passageiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">{t("Passageiros")}</span>
+          {passageiros.map((p, i) => (
+            <div key={i} className="text-sm text-primary leading-snug">
+              {p.nome}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Detalhe de um item + excluir (Fase 2: sem edição). */
 function ItemDetalheModal({
   item,
@@ -1692,9 +1928,14 @@ function ItemDetalheModal({
           valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
         />
         {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
+        {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
         {artistaLabel && (
           <LinhaDetalhe
-            rotulo={item.tipo === "voo" ? t("Artista(s)") : t("Artistas")}
+            rotulo={
+              item.tipo === "voo" || item.tipo === "transporte"
+                ? t("Artista(s)")
+                : t("Artistas")
+            }
             valor={artistaLabel}
           />
         )}

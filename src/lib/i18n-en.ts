@@ -2686,6 +2686,21 @@ const SWEEP14: Record<string, string> = {
   "Artista(s)": "Artist(s)",
   "bagagem extra": "extra baggage",
   "Confira no site da companhia (pelo localizador) se o horário não mudou.": "Check on the airline's site (with the locator) if the time hasn't changed.",
+  "Novo transporte terrestre": "New ground transport",
+  "Transfer/van com motorista": "Transfer/van with driver",
+  "Artista(s) — de quem é o transporte": "Artist(s) — whose transport",
+  "Executivo": "Executive",
+  "Van": "Van",
+  "Carro": "Car",
+  "Ônibus": "Bus",
+  "Transfer": "Transfer",
+  "Aeroporto, hotel…": "Airport, hotel…",
+  "Local do evento…": "Event venue…",
+  "Motorista": "Driver",
+  "Contato do motorista": "Driver contact",
+  "Telefone/WhatsApp": "Phone/WhatsApp",
+  "Criar transporte": "Create transport",
+  "Informe ao menos a rota ou a empresa.": "Enter at least the route or the company.",
 };
 
 export const EN: Record<string, string> = {
