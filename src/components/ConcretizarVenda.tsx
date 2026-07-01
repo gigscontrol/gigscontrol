@@ -32,6 +32,7 @@ import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./Phon
 import SeletorPais from "./SeletorPais";
 import { buscarPais } from "@/lib/data/countries";
 import { exemploEndereco } from "@/lib/data/exemplos";
+import { getPaisPadrao, getPaisPadraoCode } from "@/lib/preferencias";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
@@ -106,11 +107,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // Contratante
   const [contratanteNome, setContratanteNome] = useState(contratanteOrc?.nome ?? "");
   const [contratanteEmail, setContratanteEmail] = useState(contratanteOrc?.email ?? "");
-  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [country, setCountry] = useState<Country>(() => getPaisPadrao());
   // País de origem do contratante — define o documento fiscal pedido.
   const [paisOrigem, setPaisOrigem] = useState<Country>(() => {
-    const code = (contratanteOrc?.pais ?? "BR").toUpperCase();
-    return buscarPais(code).find((p) => p.code === code) ?? DEFAULT_COUNTRY;
+    const code = (contratanteOrc?.pais ?? getPaisPadraoCode()).toUpperCase();
+    return buscarPais(code).find((p) => p.code === code) ?? getPaisPadrao();
   });
   const [telDigits, setTelDigits] = useState(() => {
     const tel = contratanteOrc?.telefone ?? "";

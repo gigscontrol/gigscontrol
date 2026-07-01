@@ -21,6 +21,7 @@ import ShowDetalheModal from "@/components/ShowDetalheModal";
 import SomenteLeitura from "@/components/SomenteLeitura";
 import BannerPagamento from "@/components/BannerPagamento";
 import BloqueioModal from "@/components/BloqueioModal";
+import PreferenciasApply from "@/components/PreferenciasApply";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
@@ -66,6 +67,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     <ContratosProvider>
                       <AuthGuard>
                         <NavProvider>
+                          <PreferenciasApply />
                           <AppRoot />
                           {children}
                         </NavProvider>

@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n";
 import { buscarPais, BRASIL, type Country } from "@/lib/data/countries";
 import Flag from "./Flag";
 import { exemploCidades } from "@/lib/data/exemplos";
+import { getPaisPadrao } from "@/lib/preferencias";
 
 /**
  * Autocomplete de cidade GLOBAL: escolhe o país e depois a cidade.
@@ -50,7 +51,7 @@ function paisInicial(value: CidadeEscolhida | null): Country {
     const achado = buscarPais(value.pais).find((p) => p.code === value.pais);
     if (achado) return achado;
   }
-  return BRASIL;
+  return getPaisPadrao();
 }
 
 export default function CidadeGlobalAutocomplete({

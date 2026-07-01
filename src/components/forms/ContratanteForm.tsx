@@ -11,6 +11,7 @@ import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { getPaisPadrao } from "@/lib/preferencias";
 import type { Contratante } from "@/types";
 
 type Props = {
@@ -24,7 +25,7 @@ function paisDe(code: string | undefined): Country {
     const p = buscarPais(code).find((x) => x.code === code.toUpperCase());
     if (p) return p;
   }
-  return BRASIL;
+  return getPaisPadrao();
 }
 
 export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) {
