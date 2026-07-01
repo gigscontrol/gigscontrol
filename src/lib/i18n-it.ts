@@ -1698,5 +1698,17 @@ export const IT: Record<string, string> = {
   "Digitar os dados do voo na mão.": "Digita i dati del volo a mano.",
   "Ler de um PDF": "Leggi da un PDF",
   "Sobe o voucher e preenche sozinho.": "Carica il voucher e si compila da solo.",
-  "Do voucher": "Dal voucher"
+  "Do voucher": "Dal voucher",
+  "Buscar artista…": "Cerca artista…",
+  "Nenhum artista": "Nessun artista",
+  "CPF": "CPF",
+  "RG": "RG",
+  "Nascimento": "Nascita",
+  "Bagagem extra": "Bagaglio extra",
+  "Adicionar passageiro": "Aggiungi passeggero",
+  "Artista(s) — de quem é o voo": "Artista/i — di chi è il volo",
+  "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Seleziona almeno 1 artista per mostrarlo nella sua agenda.",
+  "Artista(s)": "Artista/i",
+  "bagagem extra": "bagaglio extra",
+  "Confira no site da companhia (pelo localizador) se o horário não mudou.": "Verifica sul sito della compagnia (col codice) se l'orario non è cambiato."
 };

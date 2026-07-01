@@ -2674,6 +2674,18 @@ const SWEEP14: Record<string, string> = {
   "Ler de um PDF": "Read from a PDF",
   "Sobe o voucher e preenche sozinho.": "Upload the voucher and it fills itself.",
   "Do voucher": "From voucher",
+  "Buscar artista…": "Search artist…",
+  "Nenhum artista": "No artist",
+  "CPF": "CPF",
+  "RG": "ID",
+  "Nascimento": "Birth date",
+  "Bagagem extra": "Extra baggage",
+  "Adicionar passageiro": "Add passenger",
+  "Artista(s) — de quem é o voo": "Artist(s) — whose flight",
+  "Selecione ao menos 1 artista pra aparecer na agenda dele.": "Select at least 1 artist so it shows on their agenda.",
+  "Artista(s)": "Artist(s)",
+  "bagagem extra": "extra baggage",
+  "Confira no site da companhia (pelo localizador) se o horário não mudou.": "Check on the airline's site (with the locator) if the time hasn't changed.",
 };
 
 export const EN: Record<string, string> = {

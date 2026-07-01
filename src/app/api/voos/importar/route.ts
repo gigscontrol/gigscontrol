@@ -13,13 +13,14 @@ const MAX_PDF_BYTES = 8 * 1024 * 1024; // ~8MB de PDF (base64 infla ~33%)
 
 const PROMPT = `Você recebe um voucher/confirmação de reserva de voos. Extraia TODOS os trechos de voo do documento.
 Responda SOMENTE com um array JSON (nada de texto antes ou depois), no formato:
-[{"numeroVoo":"LA3477","companhia":"LATAM","data":"2026-07-10","origem":"GRU","destino":"SCL","partida":"14:30","chegada":"18:00","localizador":"ABC123","passageiros":["Nome Sobrenome"]}]
+[{"numeroVoo":"LA3477","companhia":"LATAM","data":"2026-07-10","origem":"GRU","destino":"SCL","partida":"14:30","chegada":"18:00","duracao":"3h55","localizador":"ABC123","passageiros":["Arthur Alves Dreher"]}]
 Regras:
 - data em YYYY-MM-DD (a data de PARTIDA do trecho).
 - origem/destino em código IATA de 3 letras (ex: GRU, SCL). Se só tiver a cidade, deduza o IATA do aeroporto principal.
 - partida/chegada em HH:mm 24h (horário local).
+- duracao = duração do trecho no formato "3h55" (calcule por partida→chegada se não vier explícito; "" se não der).
 - localizador = código da reserva (PNR), o mesmo para todos os trechos se houver um só.
-- passageiros = nomes que aparecem no voucher (array; [] se não houver).
+- passageiros = nomes na ORDEM NATURAL (nome próprio primeiro, sobrenomes depois): "Arthur Alves Dreher". NUNCA inverta nem use barra — NÃO escreva "Alves Dreher/Arthur". Array de strings; [] se não houver.
 - se um campo não aparecer, use "" (string vazia).
 - um trecho por voo (ida e volta = 2 itens; conexões = 1 item por perna).
 Se não houver nenhum voo, responda [].`;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil } from "lucide-react";
+import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -762,39 +762,196 @@ function SeletorArtistas({
   label: string;
   hintVazio?: string;
 }) {
+  const t = useT();
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!aberto) return;
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [aberto]);
   const toggle = (id: string) =>
     onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  const selecionados = artistas.filter((a) => value.includes(a.id));
+  const q = busca.trim().toLowerCase();
+  const filtrados = q ? artistas.filter((a) => a.name.toLowerCase().includes(q)) : artistas;
   return (
     <CampoForm label={label}>
-      <div className="flex flex-wrap gap-1.5">
-        {artistas.map((a) => {
-          const ativo = value.includes(a.id);
-          return (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => toggle(a.id)}
-              className="px-2.5 py-1 rounded-md text-xs font-medium border transition-colors"
-              style={
-                ativo
-                  ? {
-                      borderColor: a.color,
-                      backgroundColor: `color-mix(in srgb, ${a.color} 18%, transparent)`,
-                      color: a.color,
-                    }
-                  : { borderColor: "var(--border-color)", color: "var(--text-secondary)" }
-              }
-            >
-              {a.name}
-            </button>
-          );
-        })}
+      <div className="relative" ref={ref}>
+        {selecionados.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {selecionados.map((a) => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+                style={{
+                  borderColor: a.color,
+                  backgroundColor: `color-mix(in srgb, ${a.color} 16%, transparent)`,
+                  color: a.color,
+                }}
+              >
+                {a.name}
+                <button type="button" onClick={() => toggle(a.id)} aria-label={t("Remover")}>
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          value={busca}
+          onChange={(e) => {
+            setBusca(e.target.value);
+            setAberto(true);
+          }}
+          onFocus={() => setAberto(true)}
+          placeholder={t("Buscar artista…")}
+          className="campo-input w-full"
+        />
+        {aberto && (
+          <div
+            className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-md"
+            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+          >
+            {filtrados.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted">{t("Nenhum artista")}</div>
+            ) : (
+              filtrados.map((a) => {
+                const ativo = value.includes(a.id);
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => toggle(a.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-elevated transition-colors"
+                  >
+                    <span
+                      className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: ativo ? a.color : "var(--border-strong)",
+                        backgroundColor: ativo ? a.color : "transparent",
+                      }}
+                    >
+                      {ativo && <Check size={11} color="#fff" />}
+                    </span>
+                    <span
+                      className="h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: a.color }}
+                    />
+                    <span className="text-primary truncate">{a.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
       {value.length === 0 && hintVazio && (
         <div className="text-[0.7rem] text-muted mt-1.5">{hintVazio}</div>
       )}
     </CampoForm>
   );
+}
+
+type Passageiro = {
+  nome: string;
+  cpf?: string;
+  rg?: string;
+  nascimento?: string;
+  bagagemExtra?: boolean;
+};
+
+/** Lista repetível de passageiros (nome obrigatório; CPF/RG/nascimento/bagagem opcionais). */
+function PassageirosField({
+  value,
+  onChange,
+}: {
+  value: Passageiro[];
+  onChange: (p: Passageiro[]) => void;
+}) {
+  const t = useT();
+  const setP = (i: number, patch: Partial<Passageiro>) =>
+    onChange(value.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  return (
+    <CampoForm label={t("Passageiros")}>
+      <div className="flex flex-col gap-2">
+        {value.map((p, i) => (
+          <div key={i} className="rounded-md border border-border p-2.5 flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <input
+                value={p.nome}
+                onChange={(e) => setP(i, { nome: e.target.value })}
+                placeholder={t("Nome completo")}
+                className="campo-input flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((_, idx) => idx !== i))}
+                className="text-muted hover:text-danger p-1"
+                aria-label={t("Remover")}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                value={p.cpf ?? ""}
+                onChange={(e) => setP(i, { cpf: e.target.value })}
+                placeholder={t("CPF")}
+                className="campo-input text-sm"
+              />
+              <input
+                value={p.rg ?? ""}
+                onChange={(e) => setP(i, { rg: e.target.value })}
+                placeholder={t("RG")}
+                className="campo-input text-sm"
+              />
+              <input
+                type="date"
+                value={p.nascimento ?? ""}
+                onChange={(e) => setP(i, { nascimento: e.target.value })}
+                className="campo-input text-sm"
+                title={t("Nascimento")}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-secondary cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!p.bagagemExtra}
+                onChange={(e) => setP(i, { bagagemExtra: e.target.checked })}
+                style={{ accentColor: "var(--module-agenda)" }}
+              />
+              {t("Bagagem extra")}
+            </label>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...value, { nome: "" }])}
+          className="flex items-center justify-center gap-1.5 h-9 border border-dashed border-border rounded-md text-sm text-muted hover:text-secondary hover:border-border-strong transition-colors"
+        >
+          <Plus size={14} /> {t("Adicionar passageiro")}
+        </button>
+      </div>
+    </CampoForm>
+  );
+}
+
+/** "HH:mm" partida/chegada → duração "3h15" (naive; +24h se chegada no dia seguinte). */
+function calcularDuracao(partida: string, chegada: string): string {
+  const p = /^(\d{2}):(\d{2})$/.exec(partida);
+  const c = /^(\d{2}):(\d{2})$/.exec(chegada);
+  if (!p || !c) return "";
+  let min =
+    parseInt(c[1], 10) * 60 + parseInt(c[2], 10) - (parseInt(p[1], 10) * 60 + parseInt(p[2], 10));
+  if (min < 0) min += 24 * 60;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`;
 }
 
 /** Form de criação de evento personalizado (Fase 2). */
@@ -1022,8 +1179,9 @@ function VooFormModal({
   const [partida, setPartida] = useState("");
   const [chegada, setChegada] = useState("");
   const [localizador, setLocalizador] = useState("");
-  const [passageiros, setPassageiros] = useState<string[]>(defaultArtistIds);
-  const [pdfPassageiros, setPdfPassageiros] = useState<string[]>([]);
+  const [artistIds, setArtistIds] = useState<string[]>(defaultArtistIds);
+  const [passageiros, setPassageiros] = useState<Passageiro[]>([]);
+  const [duracao, setDuracao] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -1046,7 +1204,8 @@ function VooFormModal({
     setPartida(v.partida ?? "");
     setChegada(v.chegada ?? "");
     setLocalizador(v.localizador ?? "");
-    setPdfPassageiros(v.passageiros ?? []);
+    setPassageiros((v.passageiros ?? []).map((n) => ({ nome: n })));
+    if (v.duracao) setDuracao(v.duracao);
   }
 
   async function escolherPdf(e: ChangeEvent<HTMLInputElement>) {
@@ -1144,7 +1303,7 @@ function VooFormModal({
         diaInteiro: false,
         horaInicio: partida || undefined,
         horaFim: chegada || undefined,
-        artistIds: passageiros,
+        artistIds: artistIds,
         observacoes: observacoes.trim() || undefined,
         dados: {
           numeroVoo: numeroVoo.trim().toUpperCase(),
@@ -1153,8 +1312,9 @@ function VooFormModal({
           destino: destino.trim().toUpperCase(),
           partida,
           chegada,
+          duracao: duracao || calcularDuracao(partida, chegada),
           localizador: localizador.trim(),
-          passageiros: pdfPassageiros.join(", "),
+          passageiros: passageiros.filter((p) => p.nome.trim()),
         },
       });
     } catch (e) {
@@ -1178,7 +1338,7 @@ function VooFormModal({
           diaInteiro: false,
           horaInicio: v.partida || undefined,
           horaFim: v.chegada || undefined,
-          artistIds: [],
+          artistIds: artistIds,
           dados: {
             numeroVoo: v.numeroVoo ?? "",
             companhia: v.companhia ?? "",
@@ -1186,8 +1346,9 @@ function VooFormModal({
             destino: v.destino ?? "",
             partida: v.partida ?? "",
             chegada: v.chegada ?? "",
+            duracao: v.duracao || calcularDuracao(v.partida ?? "", v.chegada ?? ""),
             localizador: v.localizador ?? "",
-            passageiros: (v.passageiros ?? []).join(", "),
+            passageiros: (v.passageiros ?? []).map((n) => ({ nome: n })),
           },
         });
       }
@@ -1226,6 +1387,14 @@ function VooFormModal({
             desc={t("Sobe o voucher e preenche sozinho.")}
           />
         </div>
+
+        <SeletorArtistas
+          artistas={artistas}
+          value={artistIds}
+          onChange={setArtistIds}
+          label={t("Artista(s) — de quem é o voo")}
+          hintVazio={t("Selecione ao menos 1 artista pra aparecer na agenda dele.")}
+        />
 
         {modo === "pdf" && (
           <>
@@ -1359,17 +1528,7 @@ function VooFormModal({
               />
             </CampoForm>
 
-            <SeletorArtistas
-              artistas={artistas}
-              value={passageiros}
-              onChange={setPassageiros}
-              label={t("Passageiros")}
-            />
-            {pdfPassageiros.length > 0 && (
-              <div className="text-[0.7rem] text-muted -mt-2">
-                {t("Do voucher")}: {pdfPassageiros.join(", ")}
-              </div>
-            )}
+            <PassageirosField value={passageiros} onChange={setPassageiros} />
 
             <CampoForm label={t("Observações")}>
               <textarea
@@ -1423,6 +1582,7 @@ type VooExtraido = {
   destino?: string;
   partida?: string;
   chegada?: string;
+  duracao?: string;
   localizador?: string;
   passageiros?: string[];
 };
@@ -1440,14 +1600,47 @@ function LinhaDetalhe({ rotulo, valor }: { rotulo: string; valor: string }) {
 /** Linhas específicas de um voo (a partir do `dados` do item). */
 function DetalheVoo({ dados }: { dados?: Record<string, unknown> }) {
   const t = useT();
-  const d = (dados ?? {}) as Record<string, string>;
-  const rota = d.origem && d.destino ? `${d.origem}→${d.destino}` : "";
+  const d = (dados ?? {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
+  const rota = str("origem") && str("destino") ? `${str("origem")}→${str("destino")}` : "";
+  const passageiros: Passageiro[] = Array.isArray(d.passageiros)
+    ? (d.passageiros as Passageiro[])
+    : str("passageiros")
+      ? str("passageiros")
+          .split(", ")
+          .filter(Boolean)
+          .map((nome) => ({ nome }))
+      : [];
   return (
     <>
-      {d.companhia && <LinhaDetalhe rotulo={t("Companhia")} valor={d.companhia} />}
+      {str("companhia") && <LinhaDetalhe rotulo={t("Companhia")} valor={str("companhia")} />}
       {rota && <LinhaDetalhe rotulo={t("Rota")} valor={rota} />}
-      {d.localizador && <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={d.localizador} />}
-      {d.passageiros && <LinhaDetalhe rotulo={t("Passageiros")} valor={d.passageiros} />}
+      {str("localizador") && (
+        <LinhaDetalhe rotulo={t("Localizador (PNR)")} valor={str("localizador")} />
+      )}
+      {passageiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted">{t("Passageiros")}</span>
+          {passageiros.map((p, i) => (
+            <div key={i} className="text-sm text-primary leading-snug">
+              {p.nome}
+              {(p.cpf || p.rg || p.nascimento || p.bagagemExtra) && (
+                <span className="text-xs text-muted">
+                  {" · "}
+                  {[
+                    p.cpf && `CPF ${p.cpf}`,
+                    p.rg && `RG ${p.rg}`,
+                    p.nascimento && formatarDataBR(p.nascimento),
+                    p.bagagemExtra && t("bagagem extra"),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -1470,6 +1663,10 @@ function ItemDetalheModal({
   const horario = item.diaInteiro
     ? t("Dia inteiro")
     : [item.horaInicio, item.horaFim].filter(Boolean).join(" – ") || "—";
+  const dur =
+    item.tipo === "voo" && typeof item.dados?.duracao === "string"
+      ? (item.dados.duracao as string)
+      : "";
 
   async function excluir() {
     if (excluindo) return;
@@ -1490,15 +1687,23 @@ function ItemDetalheModal({
       maxWidth={400}
     >
       <div className="flex flex-col gap-3">
-        <LinhaDetalhe rotulo={t("Quando")} valor={`${formatarDataBR(item.data)} · ${horario}`} />
+        <LinhaDetalhe
+          rotulo={t("Quando")}
+          valor={`${formatarDataBR(item.data)} · ${horario}${dur ? ` · ${dur}` : ""}`}
+        />
         {item.tipo === "voo" && <DetalheVoo dados={item.dados} />}
         {artistaLabel && (
           <LinhaDetalhe
-            rotulo={item.tipo === "voo" ? t("Passageiros") : t("Artistas")}
+            rotulo={item.tipo === "voo" ? t("Artista(s)") : t("Artistas")}
             valor={artistaLabel}
           />
         )}
         {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
+        {item.tipo === "voo" && (
+          <div className="text-[0.7rem] text-muted pt-2 border-t border-border">
+            ⚠ {t("Confira no site da companhia (pelo localizador) se o horário não mudou.")}
+          </div>
+        )}
         <div className="flex justify-end pt-2">
           <button
             onClick={excluir}
