@@ -7,6 +7,7 @@ import {
   parseDataBR,
 } from "@/lib/formatters";
 import { getFormatoData } from "@/lib/preferencias";
+import { useT } from "@/lib/i18n";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
@@ -39,6 +40,7 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
 ) {
   // Display string interno — segue sendo digitado letra a letra,
   // independente de quando o ISO fica válido.
+  const t = useT();
   const [displayed, setDisplayed] = useState(() => formatarDataBR(value));
 
   // Quando o ISO externo muda (ex: pré-preenchimento via orçamento),
@@ -59,7 +61,7 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
       type="text"
       inputMode="numeric"
       autoComplete="off"
-      placeholder={placeholder ?? (getFormatoData() === "mdy" ? "mm/dd/aaaa" : "dd/mm/aaaa")}
+      placeholder={placeholder ?? t(getFormatoData() === "mdy" ? "mm/dd/aaaa" : "dd/mm/aaaa")}
       maxLength={10}
       value={displayed}
       onChange={(e) => {

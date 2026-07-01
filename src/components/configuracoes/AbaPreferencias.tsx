@@ -140,7 +140,7 @@ export default function AbaPreferencias() {
                     : { color: "var(--text-muted)" }
                 }
               >
-                {op.label}
+                {t(op.label)}
               </button>
             );
           })}
