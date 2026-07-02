@@ -194,19 +194,24 @@ export default function Sidebar({
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* Logo GC centralizado no topo (tokens.md §3/§4). Recolhido: só o monograma. */}
-      <div className="relative flex items-center justify-center h-16 border-b border-border flex-shrink-0 px-3">
+      {/* Logo GC + flechinha ao lado (direita) — um só controle: « recolhe,
+          » expande. Recolhido no desktop: só o monograma + ». */}
+      <div
+        className={`relative flex items-center justify-center h-16 border-b border-border flex-shrink-0 ${
+          collapsed ? "gap-2 px-3 lg:gap-1 lg:px-2" : "gap-2 px-3"
+        }`}
+      >
         {aparencia.logoUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={aparencia.logoUrl}
               alt={aparencia.nomeAgencia}
-              style={{ height: 42, maxWidth: 176, width: "auto" }}
+              style={{ height: 42, maxWidth: 168, width: "auto" }}
               className={`object-contain ${collapsed ? "lg:hidden" : ""}`}
             />
             <LogoGC
-              size={30}
+              size={26}
               variant="gradient"
               className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
             />
@@ -222,12 +227,21 @@ export default function Sidebar({
             />
             {/* Só o monograma — desktop recolhido */}
             <LogoGC
-              size={30}
+              size={26}
               variant="gradient"
               className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
             />
           </>
         )}
+        {/* Flechinha de recolher/expandir — sempre à direita do logo (só desktop) */}
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? t("Expandir menu") : t("Recolher menu")}
+          aria-label={collapsed ? t("Expandir menu") : t("Recolher menu")}
+          className="hidden lg:flex flex-shrink-0 items-center justify-center h-5 w-5 rounded text-muted hover:text-primary hover:bg-elevated transition-colors"
+        >
+          {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+        </button>
         {/* Fechar (mobile) */}
         <button
           onClick={onCloseMobile}
@@ -235,21 +249,6 @@ export default function Sidebar({
           aria-label={t("Fechar menu")}
         >
           <X size={18} />
-        </button>
-      </div>
-
-      {/* Toggle recolher (»«) — flechinha discreta logo abaixo do logo, só
-          desktop. Um lugar só pros dois estados: « recolhe, » expande. */}
-      <div className="hidden lg:block px-3 pt-2.5">
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          aria-label={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          className={`flex w-full items-center rounded-md py-1.5 text-muted hover:text-primary hover:bg-elevated transition-colors ${
-            collapsed ? "justify-center" : "justify-end px-2"
-          }`}
-        >
-          {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
         </button>
       </div>
 
