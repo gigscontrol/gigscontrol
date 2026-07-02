@@ -65,10 +65,11 @@ WITH pares AS (
 ),
 perfilmap AS (
   SELECT
-    user_id, workspace_id, artist_id,
+    user_id, workspace_id,
+    artist_id::uuid AS artist_id,   -- funcoes guarda o id como texto no JSON
     CASE funcao WHEN 'produtor' THEN 'equipe' ELSE funcao END AS perfil
   FROM pares
-  WHERE artist_id IS NOT NULL
+  WHERE artist_id IS NOT NULL AND artist_id <> ''
 ),
 perfil_perms(perfil, perm) AS (
   VALUES
@@ -94,6 +95,7 @@ vinc AS (
     array_agg(DISTINCT pp.perm)    AS perms
   FROM perfilmap pm
   JOIN perfil_perms pp ON pp.perfil = pm.perfil
+  JOIN artists a ON a.id = pm.artist_id   -- só artista que existe (satisfaz o FK)
   GROUP BY pm.user_id, pm.workspace_id, pm.artist_id
 )
 INSERT INTO membros_artista (workspace_id, user_id, artist_id, perfis, permissoes)
