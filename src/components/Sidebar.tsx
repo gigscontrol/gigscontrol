@@ -196,47 +196,44 @@ export default function Sidebar({
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* Logo — identidade GC (monograma + "gigs control"). Recolhido: só o monograma. */}
-      <div
-        className={`flex items-center gap-2 h-16 border-b border-border flex-shrink-0 px-4 justify-between ${
-          collapsed ? "lg:px-3 lg:justify-center" : ""
-        }`}
-      >
+      {/* Logo GC centralizado no topo (tokens.md §3/§4: monograma + "gigs
+          control"). Recolhido no desktop: só o monograma. */}
+      <div className="relative flex items-center justify-center h-16 border-b border-border flex-shrink-0 px-3">
         {aparencia.logoUrl ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={aparencia.logoUrl}
               alt={aparencia.nomeAgencia}
-              style={{ height: 44, maxWidth: 180, width: "auto" }}
+              style={{ height: 42, maxWidth: 176, width: "auto" }}
               className={`object-contain ${collapsed ? "lg:hidden" : ""}`}
             />
             <LogoGC
               size={30}
               variant="gradient"
-              className={`flex-shrink-0 hidden ${collapsed ? "lg:block" : ""}`}
+              className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
             />
           </>
         ) : (
-          <div
-            className={`flex items-center gap-2.5 min-w-0 ${
-              collapsed ? "lg:justify-center lg:w-full" : ""
-            }`}
-          >
-            <LogoGC size={28} variant="gradient" className="flex-shrink-0" />
-            <span
-              className={`font-display font-bold lowercase tracking-tight text-lg leading-none ${
-                collapsed ? "lg:hidden" : ""
-              }`}
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              gigs control
-            </span>
-          </div>
+          <>
+            {/* Lockup completo (mark + "gigs control") — some no desktop recolhido */}
+            <LogoGC
+              size={27}
+              variant="gradient"
+              withWordmark
+              className={`flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}
+            />
+            {/* Só o monograma — aparece no desktop recolhido */}
+            <LogoGC
+              size={30}
+              variant="gradient"
+              className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
+            />
+          </>
         )}
         <button
           onClick={onCloseMobile}
-          className="lg:hidden btn-ghost p-1.5 rounded flex-shrink-0"
+          className="lg:hidden btn-ghost p-1.5 rounded absolute right-3 top-1/2 -translate-y-1/2"
           aria-label={t("Fechar menu")}
         >
           <X size={18} />
@@ -405,8 +402,8 @@ export default function Sidebar({
         <button
           onClick={toggleCollapsed}
           title={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          className={`hidden lg:flex items-center gap-2 w-full px-4 py-2.5 text-xs font-medium text-secondary hover:bg-elevated hover:text-primary transition-colors ${
-            collapsed ? "justify-center" : ""
+          className={`hidden lg:flex items-center gap-2 my-2.5 rounded-md border border-border text-xs font-medium text-secondary hover:bg-elevated hover:text-primary hover:border-border-strong transition-colors ${
+            collapsed ? "mx-2 justify-center py-2" : "mx-3 px-3 py-2"
           }`}
         >
           {collapsed ? (
