@@ -184,7 +184,7 @@ export default function ModelosPage() {
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                    backgroundColor: noLimite ? "var(--danger)" : ACCENT,
+                    background: noLimite ? "var(--danger)" : "var(--grad-signal)",
                   }}
                 />
               </div>

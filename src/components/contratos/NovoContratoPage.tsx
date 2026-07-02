@@ -237,7 +237,7 @@ export default function NovoContratoPage() {
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${limiteMes > 0 ? Math.min(100, (usadosMes / limiteMes) * 100) : 0}%`,
-                    backgroundColor: noLimite ? "var(--danger)" : ACCENT,
+                    background: noLimite ? "var(--danger)" : "var(--grad-signal)",
                   }}
                 />
               </div>

@@ -158,7 +158,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${(r.faturamento / maxFat) * 100}%`,
-                        backgroundColor: accent,
+                        background: "var(--grad-signal)",
                       }}
                     />
                   </div>

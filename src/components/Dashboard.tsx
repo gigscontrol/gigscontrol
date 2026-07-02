@@ -14,6 +14,7 @@ import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { gradienteSutil } from "@/lib/gradiente";
 import { formatBRL } from "@/lib/whatsapp";
 import {
   LABELS_STATUS_PARCELA,
@@ -181,7 +182,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
         <div className="h-3 rounded-full bg-elevated overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${pctRecebido}%`, backgroundColor: "var(--success)" }}
+            style={{ width: `${pctRecebido}%`, background: "var(--grad-signal)" }}
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-muted">
@@ -272,7 +273,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${(valor / maxDJ) * 100}%`,
-                        backgroundColor: dj.color,
+                        background: gradienteSutil(dj.color),
                       }}
                     />
                   </div>

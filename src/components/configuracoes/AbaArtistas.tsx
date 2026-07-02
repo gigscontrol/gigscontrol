@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { gradienteSutil } from "@/lib/gradiente";
 import {
   Music,
   Plus,
@@ -356,7 +357,7 @@ export default function AbaArtistas() {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                  backgroundColor: noLimite ? "var(--danger)" : "var(--brand)",
+                  background: noLimite ? "var(--danger)" : "var(--grad-signal)",
                 }}
               />
             </div>
@@ -3753,7 +3754,7 @@ function SeletorDeCor({
               aria-label={`Cor ${c}`}
               className="relative h-8 w-8 rounded-full transition-all hover:scale-110"
               style={{
-                backgroundColor: c,
+                background: gradienteSutil(c),
                 boxShadow: sel
                   ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${c}`
                   : "0 1px 2px rgba(0,0,0,0.3)",
@@ -3784,7 +3785,7 @@ function SeletorDeCor({
             // Quando personalizada está ativa: mostra a cor escolhida
             // Quando inativa: mostra um gradient arco-íris como "hint" de paleta
             background: ePersonalizada
-              ? cor
+              ? gradienteSutil(cor)
               : "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #14b8a6, #3b82f6, #a855f7, #ec4899, #ef4444)",
             boxShadow: ePersonalizada
               ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${cor}`
