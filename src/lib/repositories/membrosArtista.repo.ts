@@ -68,3 +68,67 @@ export function mapaDeVinculos(rows: VinculoRow[]): Record<string, string[]> {
   for (const v of rows) mapa[v.artist_id] = v.permissoes;
   return mapa;
 }
+
+/**
+ * Cria ou atualiza o vínculo ativo (usuário × artista). Um vínculo ativo por
+ * par (índice único parcial), então busca o ativo e atualiza, senão insere.
+ * Usa o cliente ADMIN (a rota valida workspace/admin antes).
+ */
+export async function upsertVinculo(
+  admin: SupabaseClient,
+  params: {
+    workspaceId: string;
+    userId: string;
+    artistId: string;
+    perfis: string[];
+    permissoes: string[];
+  }
+): Promise<VinculoRow> {
+  const { data: existente } = await admin
+    .from("membros_artista")
+    .select("id")
+    .eq("user_id", params.userId)
+    .eq("artist_id", params.artistId)
+    .is("deletado_em", null)
+    .maybeSingle();
+
+  if (existente) {
+    const { data, error } = await admin
+      .from("membros_artista")
+      .update({ perfis: params.perfis, permissoes: params.permissoes })
+      .eq("id", (existente as { id: string }).id)
+      .select(COLS)
+      .single();
+    if (error) throw error;
+    return normalizar(data as Record<string, unknown>);
+  }
+
+  const { data, error } = await admin
+    .from("membros_artista")
+    .insert({
+      workspace_id: params.workspaceId,
+      user_id: params.userId,
+      artist_id: params.artistId,
+      perfis: params.perfis,
+      permissoes: params.permissoes,
+    })
+    .select(COLS)
+    .single();
+  if (error) throw error;
+  return normalizar(data as Record<string, unknown>);
+}
+
+/** Soft delete do vínculo ativo (usuário × artista). */
+export async function removerVinculo(
+  admin: SupabaseClient,
+  userId: string,
+  artistId: string
+): Promise<void> {
+  const { error } = await admin
+    .from("membros_artista")
+    .update({ deletado_em: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("artist_id", artistId)
+    .is("deletado_em", null);
+  if (error) throw error;
+}

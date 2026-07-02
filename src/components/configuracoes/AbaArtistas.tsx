@@ -42,6 +42,8 @@ import PageHeader from "../PageHeader";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import ColorPicker from "../ColorPicker";
 import CardGoogleCalendar from "./CardGoogleCalendar";
+import EquipeDoArtista from "./EquipeDoArtista";
+import Modal from "../Modal";
 import {
   useWorkspace,
   LABELS_PAPEL_EQUIPE,
@@ -178,6 +180,7 @@ export default function AbaArtistas() {
 
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<ArtistaParaEdicao | null>(null);
+  const [equipeDe, setEquipeDe] = useState<{ id: string; nome: string } | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [credenciaisGeradas, setCredenciaisGeradas] = useState<{
     nomeArtista: string;
@@ -759,6 +762,14 @@ export default function AbaArtistas() {
                     <Pencil size={13} /> {t("Editar")}
                   </button>
                   <button
+                    onClick={() =>
+                      setEquipeDe({ id: djSelecionado.id, nome: djSelecionado.name })
+                    }
+                    className="btn btn-secondary text-xs inline-flex items-center gap-1"
+                  >
+                    <Users size={13} /> {t("Equipe")}
+                  </button>
+                  <button
                     onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
                     className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
                     style={{
@@ -1293,6 +1304,13 @@ export default function AbaArtistas() {
           onFechar={() => setCredenciaisGeradas(null)}
         />
       )}
+
+      {/* Equipe do artista — permissões por-vínculo (novo modelo) */}
+      <Modal isOpen={!!equipeDe} onClose={() => setEquipeDe(null)} title="" maxWidth={720}>
+        {equipeDe && (
+          <EquipeDoArtista artistaId={equipeDe.id} artistaNome={equipeDe.nome} />
+        )}
+      </Modal>
     </div>
   );
 }
