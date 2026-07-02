@@ -71,9 +71,12 @@ export async function buscarShowPorId(
 export async function criarShowNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
-  input: ShowCreateInput
+  input: ShowCreateInput,
+  criadoPor?: string
 ): Promise<Show> {
-  const row = await repoCriar(supabase, workspaceId, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  if (criadoPor) escrita.criado_por = criadoPor;
+  const row = await repoCriar(supabase, workspaceId, escrita);
   return rowParaShow(row);
 }
 

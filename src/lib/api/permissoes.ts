@@ -116,6 +116,29 @@ function filtrarEscopoArtista<Q extends QueryBuilder>(
   return query.eq("artist_id", ZERO_RESULTS) as Q; // sem acesso → zero
 }
 
+/**
+ * Filtra por artistas visíveis pela UNIÃO de várias chaves de visualização
+ * (ex.: agenda.ver + agenda.ver_detalhado). Sem escopo "próprios" — é só por
+ * artista. Retorna zero quando o usuário não alcança nenhum.
+ */
+function filtrarPorArtistasVisiveis<Q extends QueryBuilder>(
+  query: Q,
+  sessao: SessaoAutenticada,
+  chaves: string[]
+): Q {
+  const set = new Set<string>();
+  for (const c of chaves) {
+    const v = artistasVisiveisNaSessao(sessao, c);
+    if (v === "todos") return query; // admin/super → tudo
+    for (const a of v) set.add(a);
+  }
+  if (set.size === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
+  // itens gerais (sem artista) continuam visíveis pra quem tem acesso à agenda.
+  return query.or(
+    `artist_id.is.null,artist_id.in.(${Array.from(set).join(",")})`
+  ) as Q;
+}
+
 /** Regra legada de mutar venda/orçamento (vendedor restrito só o que criou). */
 function vendaLegadoPodeMutar(
   sessao: SessaoAutenticada,
@@ -137,6 +160,13 @@ export function aplicarFiltroShows<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
+  if (!usarLegado(sessao)) {
+    return filtrarPorArtistasVisiveis(query, sessao, [
+      "agenda.ver",
+      "agenda.ver_detalhado",
+    ]);
+  }
+  // ---- legado (agenda aberta; só produtor filtra) ----
   if (sessao.papel === "admin") return query;
   if (sessao.papel === "artista" && sessao.artistaId) {
     return query.eq("artist_id", sessao.artistaId) as Q;
@@ -147,6 +177,74 @@ export function aplicarFiltroShows<Q extends QueryBuilder>(
     return query.in("artist_id", djs) as Q;
   }
   return query;
+}
+
+// ============================================================
+// AGENDA (shows + agenda_items) — no LEGADO a agenda é aberta pra toda a
+// equipe, então o gate só existe no modelo novo (com vínculo). Sem vínculo
+// → libera (comportamento de hoje). artist_id NULL (item geral) = admin-only.
+// ============================================================
+
+/** Pode VER a agenda deste artista (básico OU detalhado)? */
+export function podeVerAgenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return (
+    podeNaSessao(sessao, artistId, "agenda.ver") ||
+    podeNaSessao(sessao, artistId, "agenda.ver_detalhado")
+  );
+}
+
+/** Pode ver os detalhes COMPLETOS (não só dia/local/horário)? */
+export function podeVerAgendaDetalhado(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return podeNaSessao(sessao, artistId, "agenda.ver_detalhado");
+}
+
+/** Pode CRIAR na agenda deste artista? */
+export function podeCriarAgenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return podeNaSessao(sessao, artistId, "agenda.criar");
+}
+
+/** Pode EDITAR este item da agenda (respeitando próprios × todos)? */
+export function podeEditarAgenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return podeMutar(
+    sessao,
+    artistId,
+    criadoPor,
+    "agenda.editar",
+    "agenda.editar_todos"
+  );
+}
+
+/** Pode EXCLUIR este item da agenda (respeitando próprios × todos)? */
+export function podeExcluirAgenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return podeMutar(
+    sessao,
+    artistId,
+    criadoPor,
+    "agenda.excluir",
+    "agenda.excluir_todos"
+  );
 }
 
 // ============================================================

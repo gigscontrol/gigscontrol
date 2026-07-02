@@ -208,7 +208,7 @@ export async function criarVendaCompleta(
         await atualizarShowPorId(supabase, orc.showId, showPayload);
         showIdFinal = orc.showId;
       } else {
-        const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload);
+        const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload, criadoPor);
         showIdFinal = show.id;
       }
       // Atualiza o orçamento (aceito + show_id + data/horario sincronizados)
@@ -220,7 +220,7 @@ export async function criarVendaCompleta(
         casa_id: normalizarUuid(input.casa_id ?? null),
       });
     } else {
-      const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload);
+      const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload, criadoPor);
       showIdFinal = show.id;
     }
 

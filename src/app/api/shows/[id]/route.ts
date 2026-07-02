@@ -6,6 +6,12 @@ import {
   removerShowPorId,
 } from "@/lib/services/shows.service";
 import { showUpdateSchema } from "@/lib/validators/shows.schema";
+import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
+import {
+  podeVerAgenda,
+  podeEditarAgenda,
+  podeExcluirAgenda,
+} from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
 
@@ -22,6 +28,12 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         { status: 404 }
       );
     }
+    if (show.djId && !podeVerAgenda(r.sessao, show.djId)) {
+      return NextResponse.json(
+        { erro: "Você não tem acesso a este show." },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ show });
   } catch (e) {
     return NextResponse.json(
@@ -35,6 +47,16 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await repoBuscarShow(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
+  if (!podeEditarAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para editar este show." },
+      { status: 403 }
+    );
+  }
 
   let raw: unknown;
   try {
@@ -70,6 +92,16 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await repoBuscarShow(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
+  if (!podeExcluirAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para remover este show." },
+      { status: 403 }
+    );
+  }
 
   try {
     await removerShowPorId(r.sessao.supabase, params.id);

@@ -12,7 +12,7 @@ import type { ShowRow, ShowEscrita } from "@/lib/mappers/show";
 // shows cujo artista foi soft-deletado (mandado pra lixeira).
 const SELECT_COM_JOINS = `
   id, workspace_id, artist_id, contratante_id, casa_id, cidade_id,
-  data, horario, status, valor, orcamento_id, venda_id, criado_em,
+  data, horario, status, valor, orcamento_id, venda_id, criado_em, criado_por,
   artist:artists ( id, nome, deletado_em ),
   casa:casas ( id, nome ),
   cidade:cidades ( id, nome, estado )

@@ -5,6 +5,8 @@ import {
   removerAgendaItemPorId,
 } from "@/lib/services/agendaItems.service";
 import { agendaItemCreateSchema } from "@/lib/validators/agendaItems.schema";
+import { buscarAgendaItem } from "@/lib/repositories/agendaItems.repo";
+import { podeEditarAgenda, podeExcluirAgenda } from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
 
@@ -12,6 +14,16 @@ type RouteCtx = { params: { id: string } };
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await buscarAgendaItem(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Item não encontrado." }, { status: 404 });
+  if (!podeEditarAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para editar este item." },
+      { status: 403 }
+    );
+  }
 
   let raw: unknown;
   try {
@@ -47,6 +59,16 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await buscarAgendaItem(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Item não encontrado." }, { status: 404 });
+  if (!podeExcluirAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para remover este item." },
+      { status: 403 }
+    );
+  }
 
   try {
     await removerAgendaItemPorId(r.sessao.supabase, params.id);

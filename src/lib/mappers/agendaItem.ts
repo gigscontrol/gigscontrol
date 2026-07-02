@@ -15,6 +15,7 @@ export type AgendaItemRow = {
   dados: Record<string, unknown> | null;
   observacoes: string | null;
   criado_em: string | null;
+  criado_por: string | null;
 };
 
 function tipoValido(t: string | null): AgendaItemTipo {
@@ -56,4 +57,5 @@ export type AgendaItemEscrita = {
   hora_fim?: string | null;
   dados?: Record<string, unknown>;
   observacoes?: string | null;
+  criado_por?: string | null;
 };

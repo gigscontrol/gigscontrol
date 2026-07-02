@@ -8,6 +8,8 @@ import {
   removerAgendaItem as repoRemover,
 } from "@/lib/repositories/agendaItems.repo";
 import type { AgendaItemCreateInput } from "@/lib/validators/agendaItems.schema";
+import type { SessaoAutenticada } from "@/lib/api/session";
+import { aplicarFiltroShows } from "@/lib/api/permissoes";
 
 /** Camada de negócio dos itens da agenda. */
 
@@ -27,18 +29,25 @@ function entradaParaEscrita(input: AgendaItemCreateInput): AgendaItemEscrita {
 }
 
 export async function listarAgendaItensDoWorkspace(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  sessao?: SessaoAutenticada
 ): Promise<AgendaItem[]> {
-  const rows = await repoListar(supabase);
+  const filtro = sessao
+    ? <Q,>(q: Q) => aplicarFiltroShows(q as never, sessao) as Q
+    : undefined;
+  const rows = await repoListar(supabase, filtro);
   return rows.map(rowParaAgendaItem);
 }
 
 export async function criarAgendaItemNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
-  input: AgendaItemCreateInput
+  input: AgendaItemCreateInput,
+  criadoPor?: string
 ): Promise<AgendaItem> {
-  const row = await repoCriar(supabase, workspaceId, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  if (criadoPor) escrita.criado_por = criadoPor;
+  const row = await repoCriar(supabase, workspaceId, escrita);
   return rowParaAgendaItem(row);
 }
 
