@@ -1552,7 +1552,7 @@ export function ModalNovoArtista({
             <Music size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">{t("Novo artista")}</div>
           </div>
-          <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
+          <button onClick={onCancelar} className="btn-ghost p-1.5 rounded" aria-label={t("Fechar")}>
             <X size={18} />
           </button>
         </div>
@@ -2162,7 +2162,7 @@ function ModalEditarArtista({
             <Pencil size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">{t("Editar {nome}", { nome: artista.nome })}</div>
           </div>
-          <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
+          <button onClick={onCancelar} className="btn-ghost p-1.5 rounded" aria-label={t("Fechar")}>
             <X size={18} />
           </button>
         </div>

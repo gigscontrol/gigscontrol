@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import {
   restaurarArtistaDaLixeira,
   restaurarUsuarioDaLixeira,
@@ -60,6 +61,23 @@ export async function POST(_request: Request, { params }: RouteCtx) {
   const tipo = params.tipo as TipoLixeira;
 
   const admin = criarClienteAdmin();
+
+  // Isolamento multi-tenant (anti-IDOR): o admin client ignora RLS e vários
+  // restauradores mexem só por id (sem workspace). Valida que o item da lixeira
+  // pertence ao workspace do requester ANTES de restaurar.
+  if (
+    !(await pertenceAoWorkspace(
+      admin,
+      META_POR_TIPO[tipo].tabela,
+      params.id,
+      r.sessao.workspaceId
+    ))
+  ) {
+    return NextResponse.json(
+      { erro: "Item não encontrado na lixeira." },
+      { status: 404 }
+    );
+  }
 
   // Plano (necessário só pra artista/usuário, mas resolvemos antes)
   const { data: ws, error: errWs } = await admin

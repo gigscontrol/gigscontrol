@@ -188,7 +188,7 @@ function ModalGerenciar({
               {assinatura.responsavel} · {assinatura.email}
             </div>
           </div>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded">
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>

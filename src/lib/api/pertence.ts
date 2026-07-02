@@ -13,7 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  */
 export async function pertenceAoWorkspace(
   admin: SupabaseClient,
-  tabela: "artists" | "profiles",
+  // Tabela que TENHA a coluna workspace_id (artists, profiles, orcamentos,
+  // vendas, contratantes, casas, cidades, shows, ...).
+  tabela: string,
   id: string,
   workspaceId: string
 ): Promise<boolean> {

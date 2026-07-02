@@ -149,7 +149,7 @@ function ModalEditarPlano({
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
           <div className="section-title">Editar plano — {plano.nome}</div>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded">
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
