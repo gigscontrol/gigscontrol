@@ -18,6 +18,7 @@ import {
 } from "./permissoes";
 import { DEFAULT_SELECTED_DJ_IDS } from "./djs";
 import { criarClienteBrowser } from "./db/supabase-browser";
+import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
 
 /**
  * Camada de autenticação do GIGS CONTROL — ligada ao Supabase Auth.
@@ -38,6 +39,12 @@ export type Sessao = {
   usuario: Usuario;
   /** Workspace ativo. Para super-admin, só existe quando ele "entra" num workspace. */
   workspace: Workspace | null;
+  /**
+   * Permissões por artista (novo modelo — tabela membros_artista):
+   * artist_id → chaves de permissão concedidas. Vazio para admin/artista/
+   * super-admin (resolvidos pelo papel no motor).
+   */
+  vinculos?: Record<string, string[]>;
   /**
    * Quando true, o super-admin está visualizando a dashboard de um cliente
    * em modo somente-leitura — nenhuma ação de escrita é permitida.
@@ -62,6 +69,12 @@ type AuthContextValue = {
   entrarComoVisitante: (ws: Workspace) => void;
   /** Super-admin sai do modo visitante e volta ao painel da plataforma */
   sairDoModoVisitante: () => void;
+  /**
+   * Motor de permissões no cliente: o usuário pode `chave` no `artistaId`?
+   * (Novo modelo por-artista. Ainda NÃO consumido pelos componentes legados —
+   * disponível pra UI nova; hoje os componentes usam `permissoes`.)
+   */
+  pode: (artistaId: string | null, chave: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -157,7 +170,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return { tipo, usuario, workspace };
+      // Vínculos por artista (novo modelo de permissões). Só operacionais
+      // precisam carregar — admin/artista/super são resolvidos pelo papel.
+      const vinculos: Record<string, string[]> = {};
+      if (
+        !profile.is_super_admin &&
+        profile.workspace_id &&
+        profile.papel !== "admin" &&
+        profile.papel !== "artista"
+      ) {
+        const { data: vinc } = await supabase
+          .from("membros_artista")
+          .select("artist_id, permissoes")
+          .eq("user_id", profile.id)
+          .is("deletado_em", null);
+        for (const v of vinc ?? []) {
+          const perms = (v as { permissoes?: unknown }).permissoes;
+          vinculos[(v as { artist_id: string }).artist_id] = Array.isArray(perms)
+            ? (perms.filter((x) => typeof x === "string") as string[])
+            : [];
+        }
+      }
+
+      return { tipo, usuario, workspace, vinculos };
     },
     [supabase]
   );
@@ -290,6 +325,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           // ignore
         }
+      },
+
+      pode: (artistaId, chave) => {
+        if (!sessao) return false;
+        const ctx: CtxPermissao = {
+          isSuperAdmin: sessao.tipo === "super-admin",
+          papel: sessao.usuario.papel,
+          artistaId:
+            (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+          vinculos: sessao.vinculos,
+        };
+        return motorPode(ctx, artistaId, chave);
       },
     }),
     [sessao, carregando, permissoes, supabase, montarSessao]
