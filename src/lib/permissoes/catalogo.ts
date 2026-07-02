@@ -43,7 +43,8 @@ export const MODULOS: { id: ModuloPermissao; label: string }[] = [
 
 export const CATALOGO: Permissao[] = [
   // ---------------- AGENDA (por artista) ----------------
-  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Visualizar agenda", existe: true },
+  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local, horário)", existe: true },
+  { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — detalhado (todas as informações)", existe: true },
   { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar evento", existe: true },
   { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar eventos criados por ele", existe: true },
   { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer evento", existe: true },

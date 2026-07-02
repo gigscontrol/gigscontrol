@@ -35,7 +35,7 @@ export const PERFIS: Perfil[] = [
     descricao: "Gerencia o artista de ponta a ponta (agenda, vendas, financeiro, contratos, contatos).",
     cor: "#6366f1",
     permissoes: [
-      "agenda.ver", "agenda.criar", "agenda.editar", "agenda.editar_todos",
+      "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar", "agenda.editar_todos",
       "vendas.ver", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
       "vendas.criar_venda", "vendas.editar_venda", "vendas.editar_todos",
       "financeiro.ver", "financeiro.ver_caches", "financeiro.ver_pagamentos",
@@ -85,7 +85,7 @@ export const PERFIS: Perfil[] = [
     descricao: "Operação e logística — cuida da agenda e do dia a dia.",
     cor: "#f59e0b",
     permissoes: [
-      "agenda.ver", "agenda.criar", "agenda.editar",
+      "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar",
       "vendas.ver",
       "contatos.ver",
     ],
@@ -96,7 +96,7 @@ export const PERFIS: Perfil[] = [
     descricao: "O próprio artista — vê os dados dele.",
     cor: "#a855f7",
     permissoes: [
-      "agenda.ver", "vendas.ver", "financeiro.ver", "contratos.ver", "contatos.ver",
+      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "financeiro.ver", "contratos.ver", "contatos.ver",
     ],
   },
 ];

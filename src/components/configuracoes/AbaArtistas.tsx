@@ -1306,7 +1306,13 @@ export default function AbaArtistas() {
       )}
 
       {/* Equipe do artista — permissões por-vínculo (novo modelo) */}
-      <Modal isOpen={!!equipeDe} onClose={() => setEquipeDe(null)} title="" maxWidth={720}>
+      <Modal
+        isOpen={!!equipeDe}
+        onClose={() => setEquipeDe(null)}
+        title={t("Equipe do artista")}
+        subtitle={equipeDe?.nome}
+        maxWidth={720}
+      >
         {equipeDe && (
           <EquipeDoArtista artistaId={equipeDe.id} artistaNome={equipeDe.nome} />
         )}

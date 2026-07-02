@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import Modal from "@/components/Modal";
 import { MODULOS, permsDoModulo } from "@/lib/permissoes/catalogo";
 import { PERFIS, permissoesDosPerfis, type PerfilId } from "@/lib/permissoes/perfis";
@@ -144,13 +144,8 @@ export default function EquipeDoArtista({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="section-title flex items-center gap-2">
-            <Users size={16} style={{ color: "var(--brand)" }} /> Equipe do artista
-          </div>
-          <div className="section-subtitle">
-            Quem trabalha com {artistaNome} e o que cada um pode fazer — vale só para este artista.
-          </div>
+        <div className="section-subtitle min-w-0">
+          O que cada membro pode fazer com {artistaNome} — vale só para este artista.
         </div>
         <button onClick={abrirNovo} className="btn btn-primary text-sm flex-shrink-0">
           <Plus size={14} /> Adicionar membro
@@ -244,7 +239,7 @@ export default function EquipeDoArtista({
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium text-secondary">Perfil (marca as permissões-base — depois personalize)</span>
               <div className="flex flex-wrap gap-2">
-                {PERFIS.map((p) => {
+                {PERFIS.filter((p) => p.id !== "artista").map((p) => {
                   const on = editor.perfis.includes(p.id);
                   return (
                     <button
@@ -268,11 +263,15 @@ export default function EquipeDoArtista({
 
             {/* Checkboxes por módulo */}
             <div className="flex flex-col gap-3">
-              {MODULOS.map((mod) => (
+              {MODULOS.filter((mod) =>
+                permsDoModulo(mod.id).some((p) => p.nivel === "artista")
+              ).map((mod) => (
                 <div key={mod.id} className="bg-surface-2 border border-border rounded-md p-3">
                   <div className="stat-label mb-2">{mod.label}</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {permsDoModulo(mod.id).map((perm) => {
+                    {permsDoModulo(mod.id)
+                      .filter((p) => p.nivel === "artista")
+                      .map((perm) => {
                       const marcada = editor.perms.has(perm.chave);
                       return (
                         <button
@@ -282,7 +281,7 @@ export default function EquipeDoArtista({
                           className="flex items-center gap-2 text-left text-xs py-1 px-1 rounded hover:bg-elevated transition-colors"
                         >
                           <span
-                            className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 border"
+                            className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
                             style={{
                               backgroundColor: marcada ? "var(--brand)" : "transparent",
                               borderColor: marcada ? "var(--brand)" : "var(--border-strong)",
