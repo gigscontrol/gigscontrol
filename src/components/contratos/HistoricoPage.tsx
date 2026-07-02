@@ -14,10 +14,14 @@ import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
 import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
+import { useVendas } from "@/lib/vendas-context";
+import { useArtistas } from "@/lib/workspace-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
+import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
+import { MODULE_THEMES } from "@/types";
 
-const ACCENT = "#14b8a6";
+const ACCENT = MODULE_THEMES.contratos.color;
 
 /** Status na ordem em que aparecem no pill-group de troca de status. */
 const STATUS_ORDEM: ContratoStatus[] = [
@@ -50,13 +54,26 @@ function formatarData(iso: string | null): string {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-export default function HistoricoPage() {
+export default function HistoricoPage({
+  abrirId = null,
+  statusInicial = null,
+}: {
+  /** Abre este contrato já no detalhe ao montar (vindo da dashboard). */
+  abrirId?: string | null;
+  /** Filtro de status inicial (vindo de um card da dashboard). */
+  statusInicial?: ContratoStatus | null;
+} = {}) {
   const t = useT();
   const { contratos, carregando, erro, atualizarContrato, removerContrato } =
     useContratos();
   const { modelos } = useModelos();
+  const { vendas } = useVendas();
+  const artistas = useArtistas();
 
-  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(abrirId);
+  const [filtro, setFiltro] = useState<ContratoStatus | "todos">(
+    statusInicial ?? "todos"
+  );
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [salvandoStatus, setSalvandoStatus] = useState(false);
 
@@ -80,6 +97,26 @@ export default function HistoricoPage() {
     () =>
       [...contratos].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)),
     [contratos]
+  );
+
+  // Contagem por status (pros chips do filtro) e a lista já filtrada.
+  const contagem = useMemo(() => {
+    const c: Record<ContratoStatus, number> = {
+      rascunho: 0,
+      enviado: 0,
+      assinado: 0,
+      cancelado: 0,
+    };
+    for (const ct of ordenados) c[ct.status] += 1;
+    return c;
+  }, [ordenados]);
+
+  const filtrados = useMemo(
+    () =>
+      filtro === "todos"
+        ? ordenados
+        : ordenados.filter((c) => c.status === filtro),
+    [ordenados, filtro]
   );
 
   const selecionado = useMemo(
@@ -176,13 +213,76 @@ export default function HistoricoPage() {
           </div>
         </div>
       ) : (
-        <ListaContratos
-          contratos={ordenados}
-          nomeModelo={nomeModelo}
-          onAbrir={(c) => setSelecionadoId(c.id)}
-          onExcluir={excluir}
-        />
+        <div className="flex flex-col gap-4">
+          <FiltroStatus
+            valor={filtro}
+            onChange={setFiltro}
+            contagem={contagem}
+            total={ordenados.length}
+          />
+          {filtrados.length === 0 ? (
+            <div className="card py-10 text-center text-sm text-muted">
+              {t("Nenhum contrato com esse status.")}
+            </div>
+          ) : (
+            <ListaContratos
+              contratos={filtrados}
+              nomeModelo={nomeModelo}
+              desc={(c) => descreverContrato(c, vendas, artistas)}
+              onAbrir={(c) => setSelecionadoId(c.id)}
+              onExcluir={excluir}
+            />
+          )}
+        </div>
       )}
+    </div>
+  );
+}
+
+// ---------------- Filtro por status ----------------
+
+/** Chips de filtro: Todos + um por status, cada um com a contagem. */
+function FiltroStatus({
+  valor,
+  onChange,
+  contagem,
+  total,
+}: {
+  valor: ContratoStatus | "todos";
+  onChange: (v: ContratoStatus | "todos") => void;
+  contagem: Record<ContratoStatus, number>;
+  total: number;
+}) {
+  const t = useT();
+  const chips: { key: ContratoStatus | "todos"; label: string; n: number }[] = [
+    { key: "todos", label: t("Todos"), n: total },
+    ...STATUS_ORDEM.map((s) => ({ key: s, label: t(STATUS_LABEL[s]), n: contagem[s] })),
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {chips.map((c) => {
+        const ativo = valor === c.key;
+        return (
+          <button
+            key={c.key}
+            type="button"
+            onClick={() => onChange(c.key)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border transition-colors"
+            style={
+              ativo
+                ? {
+                    backgroundColor: `color-mix(in srgb, ${ACCENT} 15%, transparent)`,
+                    borderColor: ACCENT,
+                    color: ACCENT,
+                  }
+                : { borderColor: "var(--border-color)", color: "var(--text-secondary)" }
+            }
+          >
+            {c.label}
+            <span className="text-xs opacity-70 tabular-nums">{c.n}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -192,11 +292,13 @@ export default function HistoricoPage() {
 function ListaContratos({
   contratos,
   nomeModelo,
+  desc,
   onAbrir,
   onExcluir,
 }: {
   contratos: Contrato[];
   nomeModelo: (c: Contrato) => string;
+  desc: (c: Contrato) => ReturnType<typeof descreverContrato>;
   onAbrir: (c: Contrato) => void;
   onExcluir: (c: Contrato) => void;
 }) {
@@ -207,7 +309,7 @@ function ListaContratos({
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="text-left text-muted">
-              <th className="font-medium px-4 py-3">{t("Número")}</th>
+              <th className="font-medium px-4 py-3">{t("Contrato")}</th>
               <th className="font-medium px-4 py-3">{t("Status")}</th>
               <th className="font-medium px-4 py-3">{t("Emissão")}</th>
               <th className="font-medium px-4 py-3">{t("Modelo")}</th>
@@ -216,22 +318,31 @@ function ListaContratos({
             </tr>
           </thead>
           <tbody>
-            {contratos.map((c) => (
+            {contratos.map((c) => {
+              const d = desc(c);
+              return (
               <tr
                 key={c.id}
                 onClick={() => onAbrir(c)}
                 className="cursor-pointer border-t transition-colors hover:bg-elevated"
                 style={{ borderColor: "var(--border-color)" }}
               >
-                <td className="px-4 py-3 font-medium whitespace-nowrap">
-                  <span className="inline-flex items-center gap-2">
+                <td className="px-4 py-3 font-medium">
+                  <div className="flex items-center gap-2 min-w-0">
                     <FileText
                       size={15}
                       className="flex-shrink-0"
                       style={{ color: ACCENT }}
                     />
-                    {c.numero}
-                  </span>
+                    <div className="min-w-0">
+                      <div className="text-primary truncate max-w-[260px]" title={d.titulo}>
+                        {d.titulo}
+                      </div>
+                      <div className="text-xs text-muted font-normal truncate">
+                        {[d.artista, d.temEvento ? d.numero : null].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${STATUS_BADGE[c.status]}`}>
@@ -262,7 +373,8 @@ function ListaContratos({
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

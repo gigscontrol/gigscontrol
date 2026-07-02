@@ -69,7 +69,7 @@ type Props = Omit<
   value: string;
   /** Recebe "HH:mm" 24h válido quando completo, ou "" enquanto incompleto. */
   onChange: (hhmm: string) => void;
-  /** Cor de destaque do AM/PM ativo (hex). Default = vendas. */
+  /** Cor de destaque do AM/PM ativo (hex/CSS). Default = brand (Signal Blue). */
   accent?: string;
 };
 
@@ -86,7 +86,7 @@ const InputHora = forwardRef<HTMLInputElement, Props>(function InputHora(
     onChange,
     className = "",
     placeholder,
-    accent = "#a855f7",
+    accent = "var(--brand)",
     ...rest
   },
   ref

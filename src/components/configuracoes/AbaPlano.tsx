@@ -321,7 +321,7 @@ export default function AbaPlano() {
                         disabled={!ativa || loadUp}
                         onClick={() => escolherUp(p.id)}
                         className="btn btn-secondary text-sm inline-flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50"
-                        style={sel ? { borderColor: "var(--module-vendas)", color: "var(--module-vendas)" } : undefined}
+                        style={sel ? { borderColor: "var(--brand)", color: "var(--brand)" } : undefined}
                       >
                         <ArrowUp size={14} /> {t("Fazer upgrade")}
                       </button>
@@ -359,7 +359,7 @@ export default function AbaPlano() {
                                 disabled={confUp}
                                 onClick={confirmarUp}
                                 className="btn btn-primary text-sm disabled:opacity-50"
-                                style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+                                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
                               >
                                 {confUp ? t("Cobrando…") : t("Confirmar e pagar")}
                               </button>

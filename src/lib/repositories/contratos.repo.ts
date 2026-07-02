@@ -5,7 +5,7 @@ const COLS = `
   id, workspace_id, venda_id, modelo_id,
   numero, status, corpo_preenchido, arquivo_url,
   local_assinatura, data_emissao, data_assinatura, observacoes,
-  criado_em, atualizado_em
+  pasta_id, criado_em, atualizado_em
 `;
 
 export async function listarContratos(

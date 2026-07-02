@@ -11,6 +11,26 @@ const SELECT = `
   dia_inteiro, hora_inicio, hora_fim, dados, observacoes, criado_em
 `;
 
+/**
+ * Conta vouchers de aérea (agenda_items com `dados.voucherPath`) criados desde
+ * `desdeIso` — janela do limite de uploads do ciclo. Inclui os que foram pra
+ * lixeira (o upload já consumiu a cota), pra não driblar com apagar + recriar.
+ */
+export async function contarVouchersDesde(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  desdeIso: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("agenda_items")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .not("dados->>voucherPath", "is", null)
+    .gte("criado_em", desdeIso);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function listarAgendaItems(
   supabase: SupabaseClient
 ): Promise<AgendaItemRow[]> {

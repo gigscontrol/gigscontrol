@@ -93,7 +93,7 @@ export default function ContratanteBuscaModal({
                 >
                   <span
                     className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ background: "var(--module-vendas)" }}
+                    style={{ background: "var(--brand)" }}
                   >
                     {c.nome.slice(0, 2).toUpperCase()}
                   </span>
@@ -109,7 +109,7 @@ export default function ContratanteBuscaModal({
                     <Check
                       size={15}
                       className="flex-shrink-0"
-                      style={{ color: "var(--module-vendas)" }}
+                      style={{ color: "var(--brand)" }}
                     />
                   )}
                 </button>

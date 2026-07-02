@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import LogoGC from "@/components/LogoGC";
 import {
   CalendarRange,
   FileText,
@@ -25,15 +26,14 @@ import {
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT } from "@/lib/i18n";
 
-const VENDAS = "#a855f7";
-const AGENDA = "#3b82f6";
-const FINANCEIRO = "#22c55e";
-const CONTRATOS = "#14b8a6";
-const CONTATOS = "#f97316";
+// Identidade Signal Blue — cor de ação única da marca. Mantida como hex
+// porque vários realces concatenam opacidade (ex.: `${BRAND}22`), o que não
+// funciona com var(--brand). Alinhada a --brand em globals.css.
+const BRAND = "#3D7BFF";
 
 /** Anel de foco visível para teclado (acessibilidade), na cor da marca. */
 const FOCO =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--module-vendas)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)] rounded-md";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-main)] rounded-md";
 
 export default function LandingPage() {
   const t = useT();
@@ -57,7 +57,7 @@ export default function LandingPage() {
             <Link
               href="/planos"
               className={`btn text-sm text-white ${FOCO}`}
-              style={{ backgroundColor: VENDAS }}
+              style={{ backgroundColor: BRAND }}
             >
               {t("Começar")}
             </Link>
@@ -72,18 +72,18 @@ export default function LandingPage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(620px circle at 72% 8%, rgba(168,85,247,0.18), transparent 60%), radial-gradient(560px circle at 18% 30%, rgba(20,184,166,0.14), transparent 60%), radial-gradient(700px circle at 50% 80%, rgba(59,130,246,0.10), transparent 65%)",
+              "radial-gradient(620px circle at 72% 8%, rgba(61,123,255,0.18), transparent 60%), radial-gradient(560px circle at 18% 30%, rgba(74,196,255,0.14), transparent 60%), radial-gradient(700px circle at 50% 80%, rgba(40,71,215,0.10), transparent 65%)",
           }}
         />
         <div className="relative max-w-[1200px] mx-auto px-6 pt-20 pb-12 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/70 text-xs text-secondary mb-7">
-            <Sparkles size={13} style={{ color: VENDAS }} />
+            <Sparkles size={13} style={{ color: BRAND }} />
             {t("Gestão completa para agências e artistas da música")}
           </div>
 
           <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto">
             {t("A operação da sua")}{" "}
-            <span className="bg-gradient-to-r from-[var(--module-vendas)] to-[var(--module-contratos)] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[var(--brand)] to-[var(--brand-2)] bg-clip-text text-transparent">
               {t("agência musical")}
             </span>{" "}
             {t("em um só lugar")}
@@ -96,8 +96,8 @@ export default function LandingPage() {
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/planos"
-              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(168,85,247,0.5)] ${FOCO}`}
-              style={{ backgroundColor: VENDAS }}
+              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] ${FOCO}`}
+              style={{ backgroundColor: BRAND }}
             >
               {t("Ver planos")}
               <ArrowRight size={16} />
@@ -116,10 +116,10 @@ export default function LandingPage() {
 
           {/* Indicadores (fiéis às features, sem números inventados) */}
           <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs text-secondary">
-            <Indicador icon={<Layers size={14} />} cor={VENDAS} label={t("5 módulos integrados")} />
-            <Indicador icon={<MessageCircle size={14} />} cor={FINANCEIRO} label={t("Proposta no WhatsApp")} />
-            <Indicador icon={<FileSignature size={14} />} cor={CONTRATOS} label={t("Contrato com assinatura")} />
-            <Indicador icon={<ShieldCheck size={14} />} cor={AGENDA} label={t("Privacidade por papel")} />
+            <Indicador icon={<Layers size={14} />} cor={BRAND} label={t("5 módulos integrados")} />
+            <Indicador icon={<MessageCircle size={14} />} cor={BRAND} label={t("Proposta no WhatsApp")} />
+            <Indicador icon={<FileSignature size={14} />} cor={BRAND} label={t("Contrato com assinatura")} />
+            <Indicador icon={<ShieldCheck size={14} />} cor={BRAND} label={t("Privacidade por papel")} />
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function LandingPage() {
             className="absolute -inset-x-10 -top-6 bottom-10 pointer-events-none blur-2xl opacity-60"
             style={{
               background:
-                "radial-gradient(closest-side, rgba(168,85,247,0.18), transparent)",
+                "radial-gradient(closest-side, rgba(61,123,255,0.18), transparent)",
             }}
           />
           <div className="relative">
@@ -174,39 +174,39 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <FeatureCard
             icon={<CalendarRange size={20} />}
-            color={AGENDA}
+            color={BRAND}
             title={t("Agenda")}
             desc={t("Escala de shows, calendário e a logística completa de cada evento.")}
           />
           <FeatureCard
             icon={<FileText size={20} />}
-            color={VENDAS}
+            color={BRAND}
             title={t("Vendas")}
             desc={t("Orçamentos profissionais, envio por WhatsApp e conversão em vendas.")}
           />
           <FeatureCard
             icon={<Wallet size={20} />}
-            color={FINANCEIRO}
+            color={BRAND}
             title={t("Financeiro")}
             desc={t("Parcelas, vencimentos e controle de quem pagou e quem está atrasado.")}
           />
           <FeatureCard
             icon={<FileSignature size={20} />}
-            color={CONTRATOS}
+            color={BRAND}
             title={t("Contratos")}
             desc={t("Gere o contrato do show e colete a assinatura com selfie e facial.")}
             novo
           />
           <FeatureCard
             icon={<Users size={20} />}
-            color={CONTATOS}
+            color={BRAND}
             title={t("Contatos")}
             desc={t("Contratantes, casas e cidades — um CRM feito para o meio musical.")}
           />
           <div className="card flex flex-col justify-center gap-2" style={{ borderColor: "var(--border-hover)" }}>
             <div
               className="h-10 w-10 rounded-md flex items-center justify-center mb-1"
-              style={{ backgroundColor: "var(--bg-elevated)", color: VENDAS }}
+              style={{ backgroundColor: "var(--bg-elevated)", color: BRAND }}
             >
               <Layers size={20} />
             </div>
@@ -233,21 +233,21 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Passo
               n={1}
-              cor={VENDAS}
+              cor={BRAND}
               icon={<MessageCircle size={18} />}
               title={t("Orçou, enviou")}
               desc={t("Monte o orçamento com um ou vários artistas e mande a proposta formatada direto no WhatsApp.")}
             />
             <Passo
               n={2}
-              cor={AGENDA}
+              cor={BRAND}
               icon={<Zap size={18} />}
               title={t("Fechou, agendou")}
               desc={t("Orçamento aceito vira venda, entra como show na agenda e gera as parcelas no financeiro.")}
             />
             <Passo
               n={3}
-              cor={CONTRATOS}
+              cor={BRAND}
               icon={<FileSignature size={18} />}
               title={t("Assinou, garantiu")}
               desc={t("Gere o contrato do show e colete a assinatura com CPF, selfie e reconhecimento facial.")}
@@ -258,7 +258,7 @@ export default function LandingPage() {
 
       {/* ===== FUNCIONALIDADES (texto + mockup) ===== */}
       <SecaoFuncionalidade
-        cor={AGENDA}
+        cor={BRAND}
         etiqueta={t("Agenda de Shows")}
         titulo={t("Toda a escala da agência num calendário só")}
         descricao={t("Visualize os shows de todos os artistas de uma vez ou filtre por DJ. Cada evento traz contratante, local, line-up, camarim, hotel e logística completa — tudo num clique.")}
@@ -273,7 +273,7 @@ export default function LandingPage() {
       />
 
       <SecaoFuncionalidade
-        cor={VENDAS}
+        cor={BRAND}
         etiqueta={t("Orçamentos & Vendas")}
         titulo={t("Do orçamento no WhatsApp ao show fechado")}
         descricao={t("Monte orçamentos profissionais com múltiplos DJs, logística e valores. Envie a proposta formatada pelo WhatsApp e, quando aceita, transforme em venda e em show na agenda.")}
@@ -288,7 +288,7 @@ export default function LandingPage() {
       />
 
       <SecaoFuncionalidade
-        cor={FINANCEIRO}
+        cor={BRAND}
         etiqueta={t("Controle Financeiro")}
         titulo={t("Saiba quem pagou, quem deve e quando vence")}
         descricao={t("Cada venda gera as parcelas automaticamente. Acompanhe vencimentos, registre pagamentos e veja num relance o que está pago, pendente ou atrasado.")}
@@ -303,7 +303,7 @@ export default function LandingPage() {
       />
 
       <SecaoFuncionalidade
-        cor={CONTRATOS}
+        cor={BRAND}
         etiqueta={t("Contratos & Assinatura")}
         titulo={t("Contrato pronto e assinado, sem ferramenta extra")}
         descricao={t("Gere o contrato direto da venda, com seus modelos e os dados já preenchidos. Envie o link de assinatura por WhatsApp e a pessoa assina pelo celular — com CPF, selfie e reconhecimento facial. No fim, um relatório de assinaturas com a prova de cada assinante.")}
@@ -323,25 +323,25 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-6 py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <Destaque
             icon={<MessageCircle size={18} />}
-            cor={FINANCEIRO}
+            cor={BRAND}
             title={t("Orçamento direto no WhatsApp")}
             desc={t("Monte e envie a proposta formatada em segundos, sem copiar e colar.")}
           />
           <Destaque
             icon={<ShieldCheck size={18} />}
-            cor={AGENDA}
+            cor={BRAND}
             title={t("Cada um vê o que deve ver")}
             desc={t("Defina o que vendedores, produtores e artistas acessam. Privacidade por papel.")}
           />
           <Destaque
             icon={<FileSignature size={18} />}
-            cor={CONTRATOS}
+            cor={BRAND}
             title={t("Contrato com assinatura")}
             desc={t("Assinatura pelo celular com CPF, selfie e reconhecimento facial.")}
           />
           <Destaque
             icon={<Zap size={18} />}
-            cor={VENDAS}
+            cor={BRAND}
             title={t("Do orçamento ao palco")}
             desc={t("Um orçamento aceito vira venda, show, contrato e parcelas num clique.")}
           />
@@ -354,7 +354,7 @@ export default function LandingPage() {
           className="relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center"
           style={{
             background:
-              "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.16), transparent 70%), var(--bg-surface)",
+              "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.16), transparent 70%), var(--bg-surface)",
           }}
         >
           <h2 className="font-display text-2xl sm:text-4xl font-bold">
@@ -366,8 +366,8 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/planos"
-              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(168,85,247,0.5)] ${FOCO}`}
-              style={{ backgroundColor: VENDAS }}
+              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] ${FOCO}`}
+              style={{ backgroundColor: BRAND }}
             >
               {t("Conhecer os planos")}
               <ArrowRight size={16} />
@@ -520,28 +520,7 @@ function BrowserFrame({
 }
 
 function Logo({ small }: { small?: boolean }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className="rounded-md flex items-center justify-center font-bold text-white"
-        style={{
-          backgroundColor: VENDAS,
-          width: small ? 24 : 30,
-          height: small ? 24 : 30,
-          fontSize: small ? 13 : 16,
-        }}
-      >
-        G
-      </div>
-      <span
-        className={`font-display font-bold tracking-tight ${
-          small ? "text-sm" : "text-base"
-        }`}
-      >
-        GIGS<span className="text-muted"> CONTROL</span>
-      </span>
-    </div>
-  );
+  return <LogoGC size={small ? 24 : 30} variant="gradient" withWordmark />;
 }
 
 function Indicador({

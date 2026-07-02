@@ -51,7 +51,7 @@ export default function AbaNotificacoes() {
         setCarregando(false);
       }
     },
-    [apenasNaoLidas, offset]
+    [apenasNaoLidas, offset, t]
   );
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function AbaNotificacoes() {
     <div className="flex flex-col gap-5 max-w-3xl">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <Bell size={16} style={{ color: "var(--module-vendas)" }} />
+          <Bell size={16} style={{ color: "var(--brand)" }} />
           <div className="section-title">{t("Notificações")}</div>
           {naoLidas > 0 && (
             <span
@@ -190,7 +190,7 @@ function LinhaCompleta({
       case "sucesso": return "var(--success)";
       case "aviso":   return "var(--warning)";
       case "alerta":  return "var(--danger)";
-      default:        return "var(--module-vendas)";
+      default:        return "var(--brand)";
     }
   })();
 

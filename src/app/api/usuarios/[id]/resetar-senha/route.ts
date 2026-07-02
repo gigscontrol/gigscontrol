@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import { resetarSenhaDoUsuario } from "@/lib/services/usuarios.service";
 import { audit } from "@/lib/services/historico.service";
 import { notificarUsuario } from "@/lib/services/notificacoes.service";
@@ -15,8 +16,19 @@ type RouteCtx = { params: { id: string } };
 export async function POST(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  // Ação sensível de equipe é só de admin (igual ao reset de artista).
+  if (r.sessao.papel !== "admin") {
+    return NextResponse.json(
+      { erro: "Apenas admin pode resetar senha." },
+      { status: 403 }
+    );
+  }
   try {
     const admin = criarClienteAdmin();
+    // Isolamento multi-tenant: o admin client ignora RLS, então valida à mão.
+    if (!(await pertenceAoWorkspace(admin, "profiles", params.id, r.sessao.workspaceId))) {
+      return NextResponse.json({ erro: "Usuário não encontrado." }, { status: 404 });
+    }
     const resultado = await resetarSenhaDoUsuario(admin, params.id);
     // Snapshot do nome
     const { data: snap } = await admin

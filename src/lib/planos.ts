@@ -37,8 +37,10 @@ export type Plano = {
   maxUsuariosAdicionais: number;
   /** Limite de modelos de contrato salvos */
   maxModelos: number;
-  /** Limite de contratos gerados por mês (janela de calendário) */
+  /** Limite de contratos gerados por ciclo (reseta na virada do plano). */
   maxContratosMes: number;
+  /** Limite de uploads de voucher de aérea (PDF) por ciclo. */
+  maxVouchersMes: number;
   /** Preço por mês no plano mensal (R$) */
   precoMensal: number;
   /** Preço TOTAL do ano no plano anual (R$) — cobrado 1× ao ano */
@@ -65,7 +67,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 1,
     maxUsuariosAdicionais: 3,
     maxModelos: 2,
-    maxContratosMes: 8,
+    maxContratosMes: 10,
+    maxVouchersMes: 10,
     precoMensal: 149,
     precoAnual: 1490,
     precoMensalUsd: 59,
@@ -74,7 +77,7 @@ export const PLANOS: Plano[] = [
       "1 artista",
       "3 usuários da equipe",
       "2 modelos de contrato",
-      "8 contratos por mês",
+      "10 contratos por mês",
       "Agenda, vendas e financeiro",
       "Orçamento por WhatsApp",
     ],
@@ -86,7 +89,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 3,
     maxUsuariosAdicionais: 9,
     maxModelos: 6,
-    maxContratosMes: 24,
+    maxContratosMes: 30,
+    maxVouchersMes: 30,
     precoMensal: 367,
     precoAnual: 3670,
     precoMensalUsd: 137,
@@ -96,7 +100,7 @@ export const PLANOS: Plano[] = [
       "3 artistas",
       "9 usuários da equipe",
       "6 modelos de contrato",
-      "24 contratos por mês",
+      "30 contratos por mês",
       "Tudo do plano Individual",
       "Papéis e permissões por usuário",
     ],
@@ -108,7 +112,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 5,
     maxUsuariosAdicionais: 15,
     maxModelos: 10,
-    maxContratosMes: 40,
+    maxContratosMes: 50,
+    maxVouchersMes: 50,
     precoMensal: 585,
     precoAnual: 5850,
     precoMensalUsd: 215,
@@ -117,7 +122,7 @@ export const PLANOS: Plano[] = [
       "5 artistas",
       "15 usuários da equipe",
       "10 modelos de contrato",
-      "40 contratos por mês",
+      "50 contratos por mês",
       "Tudo do plano Equipe",
       "Métricas por artista",
     ],
@@ -129,7 +134,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 10,
     maxUsuariosAdicionais: 30,
     maxModelos: 20,
-    maxContratosMes: 80,
+    maxContratosMes: 100,
+    maxVouchersMes: 100,
     precoMensal: 1130,
     precoAnual: 11300,
     precoMensalUsd: 410,
@@ -138,7 +144,7 @@ export const PLANOS: Plano[] = [
       "10 artistas",
       "30 usuários da equipe",
       "20 modelos de contrato",
-      "80 contratos por mês",
+      "100 contratos por mês",
       "Tudo do plano Time",
       "Relatórios consolidados da agência",
       "Suporte prioritário",
@@ -151,7 +157,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 20,
     maxUsuariosAdicionais: 60,
     maxModelos: 40,
-    maxContratosMes: 160,
+    maxContratosMes: 200,
+    maxVouchersMes: 200,
     precoMensal: 2765,
     precoAnual: 27650,
     precoMensalUsd: 995,
@@ -160,7 +167,7 @@ export const PLANOS: Plano[] = [
       "20 artistas",
       "60 usuários da equipe",
       "40 modelos de contrato",
-      "160 contratos por mês",
+      "200 contratos por mês",
       "Tudo do plano Agência",
       "Exportação de dados",
       "Gerente de conta dedicado",
@@ -173,7 +180,8 @@ export const PLANOS: Plano[] = [
     maxArtistas: 40,
     maxUsuariosAdicionais: 120,
     maxModelos: 80,
-    maxContratosMes: 320,
+    maxContratosMes: 400,
+    maxVouchersMes: 400,
     precoMensal: 5490,
     precoAnual: 54900,
     precoMensalUsd: 1970,
@@ -182,13 +190,25 @@ export const PLANOS: Plano[] = [
       "40 artistas",
       "120 usuários da equipe",
       "80 modelos de contrato",
-      "320 contratos por mês",
+      "400 contratos por mês",
       "Tudo do plano Agência Plus",
       "Onboarding assistido",
       "Suporte dedicado com SLA",
     ],
   },
 ];
+
+/**
+ * Preço do contrato EXCEDENTE (gerado além do limite do ciclo), em CENTAVOS,
+ * por moeda: R$ 9,99 (conta BR) / US$ 5,00 (exterior). Cobrança imediata por
+ * unidade no cartão salvo, ao confirmar no modal.
+ */
+export const PRECO_EXCEDENTE: Record<Moeda, number> = { brl: 999, usd: 500 };
+
+/** Preço do excedente formatado (ex.: "R$ 9,99" / "$5.00"). */
+export function precoExcedenteFmt(moeda: Moeda = "brl"): string {
+  return formatarPreco(PRECO_EXCEDENTE[moeda] / 100, moeda);
+}
 
 export function getPlano(id: PlanoId): Plano {
   return PLANOS.find((p) => p.id === id) ?? PLANOS[0];

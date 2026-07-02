@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import LogoGC from "@/components/LogoGC";
 import { Check, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   PLANOS,
@@ -49,15 +50,7 @@ export default function PlanosPage() {
       <nav className="sticky top-0 z-40 border-b border-border bg-main/90 backdrop-blur-md">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 h-16">
           <Link href="/" className="flex items-center gap-2">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
-            >
-              G
-            </div>
-            <span className="font-bold tracking-tight text-base">
-              GIGS<span className="text-muted"> CONTROL</span>
-            </span>
+            <LogoGC size={28} variant="gradient" withWordmark />
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
@@ -75,7 +68,7 @@ export default function PlanosPage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(600px circle at 50% -10%, rgba(168,85,247,0.16), transparent 60%)",
+              "radial-gradient(600px circle at 50% -10%, rgba(61,123,255,0.16), transparent 60%)",
           }}
         />
         <div className="relative">
@@ -117,7 +110,7 @@ export default function PlanosPage() {
               {t("Anual")}
               <span
                 className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full text-white"
-                style={{ backgroundColor: "var(--module-financeiro)" }}
+                style={{ backgroundColor: "var(--brand)" }}
               >
                 {t("ECONOMIZE")}
               </span>
@@ -183,7 +176,7 @@ export default function PlanosPage() {
               style={{
                 width: idx === inicio ? 24 : 8,
                 backgroundColor:
-                  idx === inicio ? "var(--module-vendas)" : "var(--border-strong)",
+                  idx === inicio ? "var(--brand)" : "var(--border-strong)",
               }}
             />
           ))}
@@ -295,8 +288,8 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
       style={
         plano.destaque
           ? {
-              borderColor: "var(--module-vendas)",
-              boxShadow: "0 0 0 1px var(--module-vendas)",
+              borderColor: "var(--brand)",
+              boxShadow: "0 0 0 1px var(--brand)",
             }
           : undefined
       }
@@ -304,7 +297,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
       {plano.destaque && (
         <span
           className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[0.6rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full text-white whitespace-nowrap"
-          style={{ backgroundColor: "var(--module-vendas)" }}
+          style={{ backgroundColor: "var(--brand)" }}
         >
           {t("Mais popular")}
         </span>
@@ -331,7 +324,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
             </span>
             <span
               className="text-[0.7rem] font-semibold"
-              style={{ color: "var(--module-financeiro)" }}
+              style={{ color: "var(--brand)" }}
             >
               {t("Economize")} {formatarPrecoCurto(economia, moeda)} {t("por ano")} ({desconto}%)
             </span>
@@ -378,7 +371,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
             <Check
               size={13}
               className="flex-shrink-0 mt-0.5"
-              style={{ color: "var(--module-financeiro)" }}
+              style={{ color: "var(--brand)" }}
             />
             {r}
           </li>
@@ -390,7 +383,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
         className="btn text-sm w-full justify-center"
         style={
           plano.destaque
-            ? { backgroundColor: "var(--module-vendas)", color: "#fff" }
+            ? { backgroundColor: "var(--brand)", color: "#fff" }
             : {
                 backgroundColor: "var(--bg-elevated)",
                 color: "var(--text-primary)",

@@ -8,7 +8,7 @@ import type {
 const COLS = `
   id, contrato_id, workspace_id, nome, email, papel, ordem, token,
   exige, arquivos, status, assinatura, documento, ip, geolocalizacao,
-  dispositivo, assinado_em, criado_em
+  dispositivo, assinado_em, aberturas, criado_em
 `;
 
 /** Signatários de um contrato (uso da agência — RLS por workspace). */
@@ -24,6 +24,42 @@ export async function listarPorContrato(
     .order("criado_em", { ascending: true });
   if (error) throw error;
   return (data ?? []) as unknown as SignatarioRow[];
+}
+
+/** Resumo de TODOS os signatários do workspace (pra pintar status na lista). */
+export async function resumoDoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<
+  Array<{ contrato_id: string; nome: string; status: string; aberturas: number | null; ordem: number | null }>
+> {
+  const { data, error } = await supabase
+    .from("contrato_signatarios")
+    .select("contrato_id, nome, status, aberturas, ordem")
+    .eq("workspace_id", workspaceId)
+    .order("ordem", { ascending: true })
+    .order("criado_em", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as Array<{
+    contrato_id: string;
+    nome: string;
+    status: string;
+    aberturas: number | null;
+    ordem: number | null;
+  }>;
+}
+
+/** Incrementa o contador de aberturas de um signatário (link aberto sem assinar). */
+export async function incrementarAberturas(
+  admin: SupabaseClient,
+  id: string,
+  novoValor: number
+): Promise<void> {
+  await admin
+    .from("contrato_signatarios")
+    .update({ aberturas: novoValor })
+    .eq("id", id)
+    .neq("status", "assinado");
 }
 
 /** Remove os signatários ainda NÃO assinados de um contrato (pra redefinir). */

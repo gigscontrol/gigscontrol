@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import { emailEhInternoFake } from "@/lib/services/artistas.service";
 
 /**
@@ -35,6 +36,14 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   }
 
   const admin = criarClienteAdmin();
+
+  // Isolamento multi-tenant: o admin client ignora RLS, então valida à mão.
+  if (!(await pertenceAoWorkspace(admin, "artists", params.id, r.sessao.workspaceId))) {
+    return NextResponse.json(
+      { erro: "Artista sem usuário vinculado." },
+      { status: 404 }
+    );
+  }
 
   // Acha o profile vinculado a este artista
   const { data: profile, error: errProf } = await admin

@@ -496,7 +496,7 @@ export default function ShowDetalheModal({
                   </span>
                   <span
                     className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--module-vendas)" }}
+                    style={{ color: "var(--brand)" }}
                   >
                     {venda.numero}
                   </span>
@@ -525,7 +525,7 @@ export default function ShowDetalheModal({
                   </span>
                   <span
                     className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--module-vendas)" }}
+                    style={{ color: "var(--brand)" }}
                   >
                     {orcamento.numero}
                   </span>
@@ -572,7 +572,7 @@ function Bloco({
   return (
     <div>
       <div className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
-        <span style={{ color: "var(--module-vendas)" }}>{icon}</span>
+        <span style={{ color: "var(--brand)" }}>{icon}</span>
         {title}
       </div>
       <div className="flex flex-col gap-1">{children}</div>

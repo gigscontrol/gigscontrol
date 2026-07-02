@@ -149,6 +149,7 @@ export type ActivePage =
   | "contratos-novo"
   | "contratos-modelos"
   | "contratos-historico"
+  | "contratos-pastas"
   | "contatos-lista"
   | "agencia-artistas"
   | "agencia-equipe";
@@ -447,11 +448,15 @@ export type ModuleTheme = {
   color: string;
 };
 
+// Cor de ação ÚNICA (Signal Blue) — as cores por módulo foram removidas.
+// `color` continua existindo pra não quebrar quem consome MODULE_THEMES,
+// mas todas apontam pro Signal Blue. A cor pessoal do artista é `dj.color`.
+const SIGNAL = "#3D7BFF";
 export const MODULE_THEMES: Record<ActiveTab, ModuleTheme> = {
-  agenda: { key: "agenda", label: "Agenda", color: "#3b82f6" },
-  vendas: { key: "vendas", label: "Vendas", color: "#a855f7" },
-  financeiro: { key: "financeiro", label: "Financeiro", color: "#22c55e" },
-  contratos: { key: "contratos", label: "Contratos", color: "#14b8a6" },
-  contatos: { key: "contatos", label: "Contatos", color: "#f97316" },
-  agencia: { key: "agencia", label: "Agência", color: "#6366f1" },
+  agenda: { key: "agenda", label: "Agenda", color: SIGNAL },
+  vendas: { key: "vendas", label: "Vendas", color: SIGNAL },
+  financeiro: { key: "financeiro", label: "Financeiro", color: SIGNAL },
+  contratos: { key: "contratos", label: "Contratos", color: SIGNAL },
+  contatos: { key: "contatos", label: "Contatos", color: SIGNAL },
+  agencia: { key: "agencia", label: "Agência", color: SIGNAL },
 };

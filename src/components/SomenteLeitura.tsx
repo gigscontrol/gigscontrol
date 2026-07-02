@@ -96,7 +96,7 @@ export default function SomenteLeitura({
       node.removeEventListener("click", bloquear, true);
       node.removeEventListener("submit", bloquearSubmit, true);
     };
-  }, [modoVisitante]);
+  }, [modoVisitante, t]);
 
   return (
     <div ref={ref} className="contents">
@@ -120,7 +120,7 @@ function avisar(msg: string) {
       "left:50%",
       "transform:translateX(-50%)",
       "z-index:9999",
-      "background:var(--module-vendas,#a855f7)",
+      "background:var(--brand,#3D7BFF)",
       "color:#fff",
       "padding:10px 18px",
       "border-radius:8px",

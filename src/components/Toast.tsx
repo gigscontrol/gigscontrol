@@ -23,10 +23,10 @@ const CONFIG: Record<
   ToastTipo,
   { icon: typeof CheckCircle2; cor: string; bg: string }
 > = {
-  sucesso: { icon: CheckCircle2, cor: "var(--success)", bg: "rgba(34,197,94,0.12)" },
-  info:    { icon: Info,         cor: "var(--info, #3b82f6)", bg: "rgba(59,130,246,0.12)" },
-  alerta:  { icon: AlertTriangle, cor: "var(--warning)", bg: "rgba(245,158,11,0.12)" },
-  erro:    { icon: XCircle,      cor: "var(--danger)",  bg: "rgba(239,68,68,0.12)" },
+  sucesso: { icon: CheckCircle2, cor: "var(--success)", bg: "var(--success-weak)" },
+  info:    { icon: Info,         cor: "var(--info)", bg: "var(--info-weak)" },
+  alerta:  { icon: AlertTriangle, cor: "var(--warning)", bg: "var(--warning-weak)" },
+  erro:    { icon: XCircle,      cor: "var(--danger)",  bg: "var(--danger-weak)" },
 };
 
 /**

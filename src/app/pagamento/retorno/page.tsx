@@ -86,7 +86,7 @@ function RetornoInner() {
             <Loader2
               size={40}
               className="animate-spin mx-auto mb-4"
-              style={{ color: "var(--module-vendas)" }}
+              style={{ color: "var(--brand)" }}
             />
             <h1 className="text-lg font-bold text-primary">
               {t("Confirmando seu pagamento...")}
@@ -139,7 +139,7 @@ function RetornoInner() {
             <button
               onClick={() => router.replace("/onboarding")}
               className="btn btn-primary text-sm mt-5"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
               {t("Continuar")}
             </button>
@@ -184,7 +184,7 @@ function RetornoInner() {
             <button
               onClick={() => router.replace("/pagamento")}
               className="btn btn-primary text-sm mt-5"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
               {t("Tentar de novo")}
             </button>

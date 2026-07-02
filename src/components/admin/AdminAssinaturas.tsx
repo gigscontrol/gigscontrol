@@ -188,7 +188,7 @@ function ModalGerenciar({
               {assinatura.responsavel} · {assinatura.email}
             </div>
           </div>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded">
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -253,7 +253,7 @@ function ModalGerenciar({
                     className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border transition-colors text-left"
                     style={{
                       borderColor: atual
-                        ? "var(--module-vendas)"
+                        ? "var(--brand)"
                         : "var(--border-color)",
                       backgroundColor: atual
                         ? "var(--bg-elevated)"
@@ -269,7 +269,7 @@ function ModalGerenciar({
                       </div>
                     </div>
                     {atual && (
-                      <Check size={15} style={{ color: "var(--module-vendas)" }} />
+                      <Check size={15} style={{ color: "var(--brand)" }} />
                     )}
                   </button>
                 );

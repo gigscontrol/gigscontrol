@@ -217,7 +217,7 @@ function LinhaNotificacao({
       case "sucesso": return "var(--success)";
       case "aviso":   return "var(--warning)";
       case "alerta":  return "var(--danger)";
-      default:        return "var(--module-vendas)";
+      default:        return "var(--brand)";
     }
   })();
 

@@ -47,8 +47,8 @@ export default function AdminPlanos() {
                       {p.destaque && (
                         <Star
                           size={12}
-                          fill="var(--module-vendas)"
-                          style={{ color: "var(--module-vendas)" }}
+                          fill="var(--brand)"
+                          style={{ color: "var(--brand)" }}
                         />
                       )}
                     </div>
@@ -149,7 +149,7 @@ function ModalEditarPlano({
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
           <div className="section-title">Editar plano — {plano.nome}</div>
-          <button onClick={onClose} className="btn-ghost p-1.5 rounded">
+          <button onClick={onClose} className="btn-ghost p-1.5 rounded" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -221,9 +221,9 @@ function ModalEditarPlano({
               className="h-5 w-5 rounded border flex items-center justify-center transition-colors"
               style={{
                 borderColor: destaque
-                  ? "var(--module-vendas)"
+                  ? "var(--brand)"
                   : "var(--border-strong)",
-                backgroundColor: destaque ? "var(--module-vendas)" : "transparent",
+                backgroundColor: destaque ? "var(--brand)" : "transparent",
               }}
             >
               {destaque && <Check size={13} className="text-white" />}

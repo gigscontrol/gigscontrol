@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
         }}
       />
 
@@ -65,7 +65,7 @@ export default function ForgotPasswordPage() {
           <Link href="/" className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
                   type="submit"
                   disabled={enviando}
                   className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-                  style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+                  style={{ backgroundColor: "var(--brand)", color: "#fff" }}
                 >
                   {enviando ? t("Enviando...") : t("Enviar link de recuperação")}
                   {!enviando && <ArrowRight size={14} />}

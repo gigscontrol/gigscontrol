@@ -15,12 +15,16 @@ import { useT } from "@/lib/i18n";
  * valores em R$ e datas ficam como estão).
  */
 
+// Identidade Signal Blue — os realces de navegação de todos os módulos usam a
+// marca. (As cores de STATUS nas tabelas — pago/aceito/pendente/atrasado —
+// continuam semânticas, definidas inline com as vars --success/--warning/etc.)
+const BRAND = "#3D7BFF";
 const COR = {
-  agenda: "#3b82f6",
-  vendas: "#a855f7",
-  financeiro: "#22c55e",
-  contratos: "#14b8a6",
-  contatos: "#f97316",
+  agenda: BRAND,
+  vendas: BRAND,
+  financeiro: BRAND,
+  contratos: BRAND,
+  contatos: BRAND,
 };
 
 /* Barra lateral simplificada, comum a todos os mockups */
@@ -243,12 +247,13 @@ export function MockAgenda() {
    ============================================================ */
 export function MockVendas() {
   const t = useT();
+  // Cores de STATUS (semânticas): aceito=success, enviado=info, pendente=warning.
   const linhas = [
-    { ev: "Festival Verão", dj: "CZ", v: "R$ 12.000", st: "Aceito", c: COR.financeiro },
-    { ev: "Casamento Premium", dj: "Dudu", v: "R$ 8.500", st: "Enviado", c: COR.vendas },
-    { ev: "Aniversário 30", dj: "Maninho", v: "R$ 6.000", st: "Aceito", c: COR.financeiro },
-    { ev: "Formatura Med", dj: "Blackdrumm", v: "R$ 15.000", st: "Pendente", c: "var(--text-muted)" },
-    { ev: "Réveillon Club", dj: "CZ", v: "R$ 20.000", st: "Aceito", c: COR.financeiro },
+    { ev: "Festival Verão", dj: "CZ", v: "R$ 12.000", st: "Aceito", c: "var(--success)" },
+    { ev: "Casamento Premium", dj: "Dudu", v: "R$ 8.500", st: "Enviado", c: "var(--brand-2)" },
+    { ev: "Aniversário 30", dj: "Maninho", v: "R$ 6.000", st: "Aceito", c: "var(--success)" },
+    { ev: "Formatura Med", dj: "Blackdrumm", v: "R$ 15.000", st: "Pendente", c: "var(--warning)" },
+    { ev: "Réveillon Club", dj: "CZ", v: "R$ 20.000", st: "Aceito", c: "var(--success)" },
   ];
   return (
     <div className="flex h-[300px] sm:h-[360px] text-left">
@@ -284,7 +289,10 @@ export function MockVendas() {
               </div>
               <span
                 className="text-[0.55rem] font-semibold px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: `${l.c}22`, color: l.c }}
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${l.c} 14%, transparent)`,
+                  color: l.c,
+                }}
               >
                 {t(l.st)}
               </span>
@@ -301,12 +309,13 @@ export function MockVendas() {
    ============================================================ */
 export function MockFinanceiro() {
   const t = useT();
+  // Cores de STATUS (semânticas): pago=success, pendente=warning, atrasado=danger.
   const parcelas = [
-    { ev: "Festival Verão — 1/2", venc: "10/05", st: "Pago", c: COR.financeiro },
-    { ev: "Casamento Premium", venc: "15/05", st: "Pago", c: COR.financeiro },
-    { ev: "Réveillon Club — 1/3", venc: "20/05", st: "Pendente", c: COR.agenda },
-    { ev: "Aniversário 30", venc: "02/05", st: "Atrasado", c: "#ef4444" },
-    { ev: "Formatura Med — 2/2", venc: "28/05", st: "Pendente", c: COR.agenda },
+    { ev: "Festival Verão — 1/2", venc: "10/05", st: "Pago", c: "var(--success)" },
+    { ev: "Casamento Premium", venc: "15/05", st: "Pago", c: "var(--success)" },
+    { ev: "Réveillon Club — 1/3", venc: "20/05", st: "Pendente", c: "var(--warning)" },
+    { ev: "Aniversário 30", venc: "02/05", st: "Atrasado", c: "var(--danger)" },
+    { ev: "Formatura Med — 2/2", venc: "28/05", st: "Pendente", c: "var(--warning)" },
   ];
   return (
     <div className="flex h-[300px] sm:h-[360px] text-left">
@@ -316,9 +325,9 @@ export function MockFinanceiro() {
         <div className="text-[0.6rem] text-muted mb-3">{t("Maio de 2026")}</div>
 
         <div className="flex gap-2 mb-3">
-          <MiniStat label={t("Recebido")} valor="R$ 20,5k" cor={COR.financeiro} />
+          <MiniStat label={t("Recebido")} valor="R$ 20,5k" cor="var(--success)" />
           <MiniStat label={t("A receber")} valor="R$ 35k" cor={COR.agenda} />
-          <MiniStat label={t("Atrasado")} valor="R$ 6k" cor="#ef4444" />
+          <MiniStat label={t("Atrasado")} valor="R$ 6k" cor="var(--danger)" />
         </div>
 
         <div className="rounded-md border border-border bg-surface overflow-hidden">
@@ -339,7 +348,10 @@ export function MockFinanceiro() {
               <div className="text-[0.55rem] text-muted">{t("venc.")} {p.venc}</div>
               <span
                 className="text-[0.55rem] font-semibold px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: `${p.c}22`, color: p.c }}
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${p.c} 14%, transparent)`,
+                  color: p.c,
+                }}
               >
                 {t(p.st)}
               </span>
@@ -358,7 +370,10 @@ function MiniCheck({ cor }: { cor: string }) {
   return (
     <span
       className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ backgroundColor: `${cor}22`, color: cor }}
+      style={{
+        backgroundColor: `color-mix(in srgb, ${cor} 14%, transparent)`,
+        color: cor,
+      }}
     >
       <svg
         width="9"
@@ -394,7 +409,7 @@ export function MockContratos() {
           </div>
           <span
             className="h-6 px-2 rounded text-[0.6rem] flex items-center text-white font-semibold"
-            style={{ backgroundColor: COR.contratos }}
+            style={{ backgroundColor: "var(--success)" }}
           >
             {t("Assinado")}
           </span>
@@ -442,14 +457,14 @@ export function MockContratos() {
                   key={i}
                   className="rounded-md border border-border bg-surface p-1.5 flex items-center gap-1.5"
                 >
-                  <MiniCheck cor={COR.financeiro} />
+                  <MiniCheck cor="var(--success)" />
                   <div className="min-w-0">
                     <div className="text-[0.6rem] font-medium text-primary truncate">
                       {s.nome}
                     </div>
                     <div
                       className="text-[0.5rem]"
-                      style={{ color: COR.financeiro }}
+                      style={{ color: "var(--success)" }}
                     >
                       {t(s.papel)} · {t("assinado")}
                     </div>

@@ -105,7 +105,7 @@ export default function CapturaFoto({
         onChange(null);
       }
     },
-    [onChange],
+    [onChange, t],
   );
 
   const remover = useCallback(() => {
@@ -176,7 +176,7 @@ export default function CapturaFoto({
         >
           <span
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-elevated"
-            style={{ color: "var(--module-contratos)" }}
+            style={{ color: "var(--brand)" }}
           >
             <Icone size={20} />
           </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   CalendarDays,
   ShoppingBag,
@@ -18,6 +19,9 @@ import {
   Building2,
   Music,
   LayoutTemplate,
+  FolderOpen,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MODULE_THEMES } from "@/types";
@@ -25,6 +29,7 @@ import type { ActiveTab, ActivePage } from "@/types";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import LogoGC from "./LogoGC";
 
 type Props = {
   activeTab: ActiveTab;
@@ -105,6 +110,7 @@ const MODULES: ModuleDef[] = [
       { page: "contratos-novo", label: "Novo Contrato", icon: FilePlus },
       { page: "contratos-modelos", label: "Modelos", icon: LayoutTemplate },
       { page: "contratos-historico", label: "Histórico de Contratos", icon: History },
+      { page: "contratos-pastas", label: "Organizador", icon: FolderOpen },
     ],
   },
   {
@@ -144,6 +150,20 @@ export default function Sidebar({
   const DJS = useArtistas();
   const t = useT();
 
+  // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
+  // um drawer full-width — o "recolhido" só vale no lg+ (classes lg:*).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem("gc-sidebar-collapsed") === "1") setCollapsed(true);
+  }, []);
+  const setColapsado = (next: boolean) => {
+    setCollapsed(next);
+    try {
+      localStorage.setItem("gc-sidebar-collapsed", next ? "1" : "0");
+    } catch {}
+  };
+  const toggleCollapsed = () => setColapsado(!collapsed);
+
   // Plano Individual: só tem 1 artista, então o toggle de
   // mostrar/esconder não faz sentido — o usuário SEMPRE quer ver as
   // métricas dele. Bloqueia toggle e renderiza sempre como ativo.
@@ -168,38 +188,68 @@ export default function Sidebar({
       className={`
         fixed lg:static inset-y-0 left-0 z-40
         flex flex-col flex-shrink-0
-        w-[260px]
+        w-[260px] ${collapsed ? "lg:w-[72px]" : "lg:w-[260px]"}
         bg-surface border-r border-border
-        transition-transform duration-300 ease-smooth
+        transition-[width,transform] duration-300 ease-smooth
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* Logo / nome da agência */}
-      <div className="flex items-center justify-between gap-2 px-4 h-16 border-b border-border flex-shrink-0">
+      {/* Logo GC + flechinha ao lado (direita) — um só controle: « recolhe,
+          » expande. Recolhido no desktop: só o monograma + ». */}
+      <div
+        className={`relative flex items-center justify-center h-16 border-b border-border flex-shrink-0 ${
+          collapsed ? "gap-2 px-3 lg:gap-1 lg:px-2" : "gap-2 px-3"
+        }`}
+      >
         {aparencia.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={aparencia.logoUrl}
-            alt={aparencia.nomeAgencia}
-            style={{ height: 46, maxWidth: 200, width: "auto" }}
-            className="object-contain"
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={aparencia.logoUrl}
+              alt={aparencia.nomeAgencia}
+              style={{ height: 42, maxWidth: 168, width: "auto" }}
+              className={`object-contain ${collapsed ? "lg:hidden" : ""}`}
+            />
+            <LogoGC
+              size={26}
+              variant="gradient"
+              className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
+            />
+          </>
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-8 w-8 text-base flex-shrink-0"
-              style={{ backgroundColor: "var(--module-vendas)" }}
-            >
-              {aparencia.nomeAgencia.charAt(0).toUpperCase()}
-            </div>
-            <span className="font-bold tracking-tight text-lg truncate">
-              {aparencia.nomeAgencia}
-            </span>
-          </div>
+          <>
+            {/* Lockup completo (mark + "gigs control") — some no desktop recolhido */}
+            <LogoGC
+              size={27}
+              variant="gradient"
+              withWordmark
+              className={`flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}
+            />
+            {/* Só o monograma — desktop recolhido */}
+            <LogoGC
+              size={26}
+              variant="gradient"
+              className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
+            />
+          </>
         )}
+        {/* Flechinha de recolher/expandir. Expandida: encostada na direita da
+            sidebar (logo fica centralizado). Recolhida: ao lado do monograma
+            (rail estreito). Só desktop. */}
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? t("Expandir menu") : t("Recolher menu")}
+          aria-label={collapsed ? t("Expandir menu") : t("Recolher menu")}
+          className={`hidden lg:flex flex-shrink-0 items-center justify-center h-5 w-5 rounded text-muted hover:text-primary hover:bg-elevated transition-colors ${
+            collapsed ? "" : "lg:absolute lg:right-2.5 lg:top-1/2 lg:-translate-y-1/2"
+          }`}
+        >
+          {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+        </button>
+        {/* Fechar (mobile) */}
         <button
           onClick={onCloseMobile}
-          className="lg:hidden btn-ghost p-1.5 rounded"
+          className="lg:hidden btn-ghost p-1.5 rounded absolute right-3 top-1/2 -translate-y-1/2"
           aria-label={t("Fechar menu")}
         >
           <X size={18} />
@@ -209,7 +259,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-6">
         {/* Módulos com submenu inline (accordion) */}
         <div>
-          <div className="px-2 mb-2 stat-label">{t("Módulos")}</div>
+          <div className={`px-2 mb-2 stat-label ${collapsed ? "lg:invisible" : ""}`}>{t("Módulos")}</div>
           <div className="flex flex-col gap-1">
             {MODULES.map((mod) => {
               // Com as Configurações abertas, nenhum módulo fica ativo
@@ -221,10 +271,17 @@ export default function Sidebar({
                 <div key={mod.tab} className="flex flex-col">
                   {/* Botão do módulo */}
                   <button
-                    onClick={() => setActiveTab(mod.tab)}
+                    onClick={() => {
+                      // Recolhida: clicar num módulo expande de volta pra
+                      // mostrar o submenu (pra escolher a subpágina).
+                      if (collapsed) setColapsado(false);
+                      setActiveTab(mod.tab);
+                    }}
+                    title={t(mod.label)}
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
                       transition-all duration-150 ease-smooth
+                      ${collapsed ? "lg:justify-center" : ""}
                       ${isActive
                         ? "text-primary"
                         : "text-secondary hover:bg-elevated hover:text-primary"
@@ -239,11 +296,11 @@ export default function Sidebar({
                         : undefined
                     }
                   >
-                    <Icon size={16} style={{ color: isActive ? color : undefined }} />
-                    <span>{t(mod.label)}</span>
+                    <Icon size={16} className="flex-shrink-0" style={{ color: isActive ? color : undefined }} />
+                    <span className={collapsed ? "lg:hidden" : ""}>{t(mod.label)}</span>
                     {isActive && (
                       <span
-                        className="ml-auto h-1.5 w-1.5 rounded-full"
+                        className={`ml-auto h-1.5 w-1.5 rounded-full ${collapsed ? "lg:hidden" : ""}`}
                         style={{ backgroundColor: color }}
                       />
                     )}
@@ -252,7 +309,7 @@ export default function Sidebar({
                   {/* Submenu inline: aparece só quando o módulo está ativo */}
                   {isActive && mod.subPages.length > 0 && (
                     <div
-                      className="ml-3 mt-1 mb-2 pl-3 flex flex-col gap-0.5 border-l"
+                      className={`ml-3 mt-1 mb-2 pl-3 flex flex-col gap-0.5 border-l ${collapsed ? "lg:hidden" : ""}`}
                       style={{ borderColor: `${color}40` }}
                     >
                       {mod.subPages.map((sp) => {
@@ -297,7 +354,7 @@ export default function Sidebar({
             com ele; contatos manuais sem histórico aparecem sempre). */}
         {(
           <div>
-            <div className="flex items-center justify-between px-2 mb-2">
+            <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
               <span className="stat-label">DJs</span>
               {/* "Todos/Limpar" só faz sentido com 2+ artistas (planos
                   Equipe/Agência/etc). Individual = 1 artista = sem toggle. */}
@@ -326,6 +383,7 @@ export default function Sidebar({
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium
                       transition-all duration-150 ease-smooth
+                      ${collapsed ? "lg:justify-center" : ""}
                       ${isActiveDj
                         ? "text-primary"
                         : "text-muted hover:text-secondary hover:bg-elevated"
@@ -348,9 +406,9 @@ export default function Sidebar({
                     >
                       {dj.name.slice(0, 2).toUpperCase()}
                     </span>
-                    <span className="flex-1 text-left truncate">{dj.name}</span>
+                    <span className={`flex-1 text-left truncate ${collapsed ? "lg:hidden" : ""}`}>{dj.name}</span>
                     {isActiveDj && !planoIndividual && (
-                      <Check size={14} className="text-secondary" />
+                      <Check size={14} className={`text-secondary ${collapsed ? "lg:hidden" : ""}`} />
                     )}
                   </button>
                 );
@@ -360,7 +418,7 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="border-t border-border p-4 flex-shrink-0">
+      <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
         <div className="text-[0.7rem] text-muted">
           {planoIndividual
             ? t(DJS.length === 1 ? "{n} artista" : "{n} artistas", { n: DJS.length })

@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
+import { contarVouchersDesde } from "@/lib/repositories/agendaItems.repo";
+import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
+import { getPlano, type PlanoId } from "@/lib/planos";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB
 
@@ -24,6 +27,31 @@ export async function POST(request: Request) {
   if (!pdf) return NextResponse.json({ erro: "Envie o PDF." }, { status: 400 });
   if (Buffer.byteLength(pdf, "base64") > MAX_BYTES) {
     return NextResponse.json({ erro: "Voucher acima de 2MB." }, { status: 413 });
+  }
+
+  // Limite de uploads de aérea do ciclo (bloqueia; sem excedente pago).
+  try {
+    const { data: ws } = await r.sessao.supabase
+      .from("workspaces")
+      .select("plano")
+      .eq("id", r.sessao.workspaceId)
+      .single();
+    const plano = getPlano((ws?.plano ?? "individual") as PlanoId);
+    const usados = await contarVouchersDesde(
+      r.sessao.supabase,
+      r.sessao.workspaceId,
+      await janelaDoCicloISO(r.sessao.workspaceId)
+    );
+    if (usados >= plano.maxVouchersMes) {
+      return NextResponse.json(
+        {
+          erro: `Limite de ${plano.maxVouchersMes} uploads de aérea no ciclo atingido no plano ${plano.nome}. Faça upgrade ou aguarde a virada do plano.`,
+        },
+        { status: 409 }
+      );
+    }
+  } catch {
+    /* se a contagem falhar, não bloqueia o upload */
   }
 
   try {

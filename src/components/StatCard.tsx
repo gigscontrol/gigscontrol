@@ -32,12 +32,10 @@ export default function StatCard({
       <div className="flex items-start justify-between">
         <span className="stat-label">{title}</span>
         <div
-          className="h-8 w-8 rounded-md flex items-center justify-center transition-colors"
+          className="h-[30px] w-[30px] rounded-chip flex items-center justify-center flex-shrink-0"
           style={{
-            backgroundColor: accentColor
-              ? `color-mix(in srgb, ${accentColor} 13%, transparent)`
-              : "var(--bg-elevated)",
-            color: accentColor ?? "var(--text-primary)",
+            backgroundColor: accentColor ?? "rgba(255,255,255,0.07)",
+            color: accentColor ? "rgba(255,255,255,0.92)" : "var(--text-secondary)",
           }}
         >
           {icon}

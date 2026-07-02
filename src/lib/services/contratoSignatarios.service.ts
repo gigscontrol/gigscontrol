@@ -20,6 +20,8 @@ import {
   buscarPorToken,
   registrarAssinaturaPorToken,
   listarPorContratoAdmin,
+  resumoDoWorkspace,
+  incrementarAberturas,
 } from "@/lib/repositories/contratoSignatarios.repo";
 import {
   buscarContrato,
@@ -200,4 +202,39 @@ export async function preencherUrls(
       return { ...s, arquivosUrls: urls };
     })
   );
+}
+
+/** Resumo dos assinantes por contrato do workspace (status + aberturas). */
+export type AssinanteResumo = {
+  nome: string;
+  status: "pendente" | "assinado";
+  aberturas: number;
+};
+
+export async function resumoAssinantesDoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string
+): Promise<Record<string, AssinanteResumo[]>> {
+  const rows = await resumoDoWorkspace(supabase, workspaceId);
+  const mapa: Record<string, AssinanteResumo[]> = {};
+  for (const row of rows) {
+    (mapa[row.contrato_id] ??= []).push({
+      nome: row.nome,
+      status: row.status === "assinado" ? "assinado" : "pendente",
+      aberturas: row.aberturas ?? 0,
+    });
+  }
+  return mapa;
+}
+
+/**
+ * Registra uma ABERTURA do link (visualização sem assinar): +1 no contador.
+ * No-op se já assinou. Chamado na rota pública GET /api/assinar/[token].
+ */
+export async function registrarAbertura(
+  admin: SupabaseClient,
+  signatario: { id: string; status: string; aberturas: number }
+): Promise<void> {
+  if (signatario.status === "assinado") return;
+  await incrementarAberturas(admin, signatario.id, (signatario.aberturas ?? 0) + 1);
 }

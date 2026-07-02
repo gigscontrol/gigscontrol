@@ -3,6 +3,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   buscarParaAssinar,
   registrarAssinatura,
+  registrarAbertura,
 } from "@/lib/services/contratoSignatarios.service";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
 
@@ -32,6 +33,9 @@ export async function GET(
       );
     }
     const { signatario, contrato } = r;
+    // Conta a abertura do link (visualização) — só se ainda não assinou.
+    // Fire-and-forget pra não atrasar a resposta.
+    void registrarAbertura(admin, signatario).catch(() => {});
     return NextResponse.json({
       signatario: {
         nome: signatario.nome,

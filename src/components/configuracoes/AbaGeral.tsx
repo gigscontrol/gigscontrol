@@ -380,7 +380,7 @@ function SlugSection({
       ctrl.abort();
       clearTimeout(timer);
     };
-  }, [novoSlug, info]);
+  }, [novoSlug, info, t]);
 
   const podeAbrirConfirmacao = useMemo(() => {
     if (!info) return false;

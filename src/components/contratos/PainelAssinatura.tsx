@@ -45,7 +45,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useT } from "@/lib/i18n";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#3D7BFF";
 
 /** Linha editável do form de definição (papel é texto livre). */
 type LinhaForm = {

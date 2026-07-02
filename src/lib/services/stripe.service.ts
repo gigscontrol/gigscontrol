@@ -4,6 +4,7 @@ import {
   getPlano,
   valorMensal,
   valorAnual,
+  PRECO_EXCEDENTE,
   type PlanoId,
   type CicloCobranca,
   type Moeda,
@@ -335,6 +336,56 @@ export async function cancelarDowngrade(params: {
   if (!scheduleId) return false;
   await stripe.subscriptionSchedules.release(scheduleId);
   return true;
+}
+
+/**
+ * Cobra UMA unidade excedente (ex.: contrato além do limite do ciclo) no cartão
+ * salvo da assinatura, NA HORA (off-session). Valor = PRECO_EXCEDENTE na moeda
+ * REAL da assinatura (R$ 9,99 / US$ 5). Idempotente pelo `idempotencyKey` (o
+ * mesmo clique/retry não cobra 2×). Lança se não houver cartão ou o pagamento
+ * não for aprovado.
+ */
+export async function cobrarExcedente(params: {
+  subscriptionId: string;
+  descricao: string;
+  idempotencyKey: string;
+}): Promise<{ moeda: Moeda; valor: number; paymentIntentId: string }> {
+  const stripe = getStripe();
+  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
+    expand: ["items.data.price", "default_payment_method"],
+  });
+  const item = sub.items.data[0];
+  const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
+  const customerId = idDeStripe(sub.customer);
+  if (!customerId) throw new Error("Assinatura sem cliente na Stripe.");
+
+  // Cartão: o default da assinatura, ou o default do cliente.
+  let pmId = idDeStripe(sub.default_payment_method as string | { id: string } | null);
+  if (!pmId) {
+    const cust = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
+    pmId = idDeStripe(
+      (cust.invoice_settings?.default_payment_method as string | { id: string } | null) ?? null
+    );
+  }
+  if (!pmId) throw new Error("Nenhum cartão salvo para cobrar o excedente.");
+
+  const valor = PRECO_EXCEDENTE[moeda];
+  const pi = await stripe.paymentIntents.create(
+    {
+      amount: valor,
+      currency: moeda,
+      customer: customerId,
+      payment_method: pmId,
+      off_session: true,
+      confirm: true,
+      description: params.descricao,
+    },
+    { idempotencyKey: params.idempotencyKey }
+  );
+  if (pi.status !== "succeeded") {
+    throw new Error("Pagamento do excedente não foi aprovado.");
+  }
+  return { moeda, valor, paymentIntentId: pi.id };
 }
 
 /**

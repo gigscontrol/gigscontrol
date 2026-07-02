@@ -146,7 +146,7 @@ export default function Topbar({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">{t("Plano")}</span>
                     <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
-                      <BadgeCheck size={12} style={{ color: "var(--module-financeiro)" }} />
+                      <BadgeCheck size={12} style={{ color: "var(--brand)" }} />
                       {plano.nome}
                     </span>
                   </div>

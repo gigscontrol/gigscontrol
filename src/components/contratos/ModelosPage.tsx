@@ -28,7 +28,7 @@ import {
   SECOES_MODELO_EXEMPLO,
 } from "@/lib/contratos/modeloExemplo";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#3D7BFF";
 
 type Vista = "lista" | "editor";
 
@@ -184,7 +184,7 @@ export default function ModelosPage() {
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                    backgroundColor: noLimite ? "var(--danger)" : ACCENT,
+                    background: noLimite ? "var(--danger)" : "var(--grad-signal)",
                   }}
                 />
               </div>

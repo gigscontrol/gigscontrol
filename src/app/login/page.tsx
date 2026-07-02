@@ -110,7 +110,7 @@ function LoginInner() {
               type="submit"
               disabled={enviando}
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
               {enviando ? t("Entrando…") : t("Entrar")}
               {!enviando && <ArrowRight size={14} />}
@@ -129,7 +129,7 @@ function LoginInner() {
               <Link
                 href="/signup"
                 className="text-sm font-medium hover:text-primary transition-colors"
-                style={{ color: "var(--module-vendas)" }}
+                style={{ color: "var(--brand)" }}
               >
                 {t("Criar conta agora →")}
               </Link>

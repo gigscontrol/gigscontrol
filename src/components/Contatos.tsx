@@ -205,7 +205,6 @@ export default function Contatos({
               else setModal({ type: "novo-cidade" });
             }}
             className="btn btn-primary"
-            style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Plus size={16} />
             {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}

@@ -557,7 +557,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${pct}%`,
-                          backgroundColor: cheio ? "var(--success)" : accent,
+                          background: cheio ? "var(--success)" : "var(--grad-signal)",
                         }}
                       />
                     </div>
@@ -834,7 +834,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                     <div className="h-1.5 rounded-full bg-elevated overflow-hidden">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: cheio ? "var(--success)" : accent }}
+                        style={{ width: `${pct}%`, background: cheio ? "var(--success)" : "var(--grad-signal)" }}
                       />
                     </div>
                   </div>

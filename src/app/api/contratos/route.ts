@@ -6,7 +6,9 @@ import {
   LimiteContratosError,
 } from "@/lib/services/contratos.service";
 import { contratoCreateSchema } from "@/lib/validators/contratos.schema";
-import type { PlanoId } from "@/lib/planos";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { cobrarExcedente, infoSubscription } from "@/lib/services/stripe.service";
+import { PRECO_EXCEDENTE, type PlanoId } from "@/lib/planos";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -61,6 +63,9 @@ export async function POST(request: Request) {
     );
   }
 
+  // Flags do excedente pago (fora do schema do contrato).
+  const extra = (raw ?? {}) as { pagarExcedente?: boolean; idem?: string };
+
   try {
     const contrato = await criarContratoNoWorkspace(
       r.sessao.supabase,
@@ -70,12 +75,69 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ contrato }, { status: 201 });
   } catch (e) {
-    if (e instanceof LimiteContratosError) {
+    if (!(e instanceof LimiteContratosError)) {
+      return NextResponse.json(
+        { erro: (e as Error).message ?? "Falha ao criar contrato." },
+        { status: 500 }
+      );
+    }
+
+    // Limite do ciclo atingido. Se há assinatura ativa (cartão), oferece pagar
+    // o contrato EXCEDENTE por unidade; senão, só bloqueia.
+    const admin = criarClienteAdmin();
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("mp_preference_id, status")
+      .eq("workspace_id", r.sessao.workspaceId)
+      .maybeSingle<{ mp_preference_id: string | null; status: string | null }>();
+    const subId = sub?.mp_preference_id ?? null;
+    if (!subId || sub?.status !== "ativa") {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar contrato." },
-      { status: 500 }
+
+    if (!extra.pagarExcedente) {
+      // Oferece: devolve o preço na moeda REAL da assinatura.
+      let moeda: "brl" | "usd" = "brl";
+      try {
+        moeda = (await infoSubscription(subId)).moeda;
+      } catch {
+        /* mantém brl */
+      }
+      return NextResponse.json(
+        {
+          excedente: true,
+          limite: e.limite,
+          plano: e.plano,
+          valor: PRECO_EXCEDENTE[moeda],
+          moeda,
+        },
+        { status: 402 }
+      );
+    }
+
+    // Confirmou o pagamento → cobra o excedente e cria pulando o limite.
+    if (!extra.idem) {
+      return NextResponse.json({ erro: "Token de pagamento ausente." }, { status: 400 });
+    }
+    try {
+      await cobrarExcedente({
+        subscriptionId: subId,
+        descricao: `Contrato excedente — plano ${e.plano}`,
+        idempotencyKey: `exc_${extra.idem}`,
+      });
+    } catch (ce) {
+      return NextResponse.json(
+        { erro: (ce as Error).message ?? "Falha ao cobrar o excedente. Verifique o cartão." },
+        { status: 402 }
+      );
+    }
+    const contrato = await criarContratoNoWorkspace(
+      r.sessao.supabase,
+      r.sessao.workspaceId,
+      ws.plano as PlanoId,
+      parsed.data,
+      true
     );
+    return NextResponse.json({ contrato, excedentePago: true }, { status: 201 });
   }
 }

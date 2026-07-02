@@ -133,7 +133,7 @@ export default function PagamentoPage() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(600px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+            "radial-gradient(600px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
         }}
       />
 
@@ -142,7 +142,7 @@ export default function PagamentoPage() {
           <div className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -174,7 +174,7 @@ export default function PagamentoPage() {
 
             <div className="card">
               <div className="section-title mb-1 flex items-center gap-2">
-                <ShieldCheck size={16} style={{ color: "var(--module-vendas)" }} />
+                <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
                 {t("Pagamento por cartão")}
               </div>
               <p className="text-sm text-secondary mb-4">
@@ -214,7 +214,7 @@ export default function PagamentoPage() {
                 onClick={irParaCheckout}
                 disabled={indo || !plano}
                 className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-                style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
               >
                 {indo ? (
                   <>
@@ -243,12 +243,12 @@ export default function PagamentoPage() {
               className="card sticky top-4"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(168,85,247,0.02))",
-                borderColor: "rgba(168,85,247,0.2)",
+                  "linear-gradient(135deg, rgba(61,123,255,0.08), rgba(61,123,255,0.02))",
+                borderColor: "rgba(61,123,255,0.2)",
               }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={14} style={{ color: "var(--module-vendas)" }} />
+                <Sparkles size={14} style={{ color: "var(--brand)" }} />
                 <span className="text-xs uppercase tracking-wider text-muted font-semibold">
                   {t("Resumo do pedido")}
                 </span>
@@ -305,7 +305,7 @@ function MetodoCard({
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-md border border-border bg-elevated py-3">
-      <span style={{ color: "var(--module-vendas)" }}>{icon}</span>
+      <span style={{ color: "var(--brand)" }}>{icon}</span>
       <span className="text-xs font-semibold text-primary">{label}</span>
       <span className="text-[0.6rem] text-muted">{hint}</span>
     </div>

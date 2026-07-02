@@ -2,46 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @layer base {
   :root {
-    /* Backgrounds */
-    --bg-main: #0a0a0b;
-    --bg-surface: #111113;
-    --bg-surface-2: #18181b;
-    --bg-elevated: #1f1f23;
+    /* Superfícies (dark, frias) — Signal design system */
+    --bg-main: #0B0D12;
+    --bg-surface: #12151D;
+    --bg-surface-2: #161A24;
+    --bg-elevated: #1E2430;
+    /* Aliases canônicos (tokens.md) */
+    --bg: #0B0D12;
+    --surface: #12151D;
+    --surface-2: #161A24;
+    --surface-3: #1E2430;
 
     /* Borders */
-    --border-color: #1f1f23;
-    --border-hover: #2a2a2f;
-    --border-strong: #3a3a40;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.14);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --border: rgba(255, 255, 255, 0.08);
 
     /* Text */
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
-    --text-disabled: #52525b;
+    --text-primary: #F1F3F7;
+    --text-secondary: #9AA2B4;
+    --text-muted: #6E7794;
+    --text-disabled: #5E6470;
+    /* Aliases canônicos */
+    --text: #F1F3F7;
+    --text-2: #9AA2B4;
+    --text-3: #6E7794;
+    --text-4: #5E6470;
 
-    /* Brand / Módulos */
-    --module-agenda: #3b82f6;
-    --module-vendas: #a855f7;
-    --module-financeiro: #22c55e;
-    --module-contratos: #14b8a6;
-    --module-contatos: #f97316;
-    --module-agencia: #6366f1;
+    /* Marca — Signal Blue (cor de ação ÚNICA) */
+    --brand: #3D7BFF;
+    --brand-2: #5B93FF;
+    --brand-weak: rgba(61, 123, 255, 0.14);
+    --brand-soft: rgba(61, 123, 255, 0.18);
+    --grad-signal: linear-gradient(120deg, #4AC4FF, #3D7BFF 50%, #2847D7);
 
-    /* Loader / spinner */
-    --brand: var(--module-vendas);
-    --brand-soft: rgba(168, 85, 247, 0.18);
+    /* Módulos — TODOS apontam pro Signal Blue (cores por módulo removidas).
+       Mantidos como alias pra não quebrar 200+ usos; limpeza módulo a módulo. */
+    --module-agenda: #3D7BFF;
+    --module-vendas: #3D7BFF;
+    --module-financeiro: #3D7BFF;
+    --module-contratos: #3D7BFF;
+    --module-contatos: #3D7BFF;
+    --module-agencia: #3D7BFF;
 
-    /* Semantic */
-    --accent-color: #fafafa;
-    --success: #22c55e;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --info: #3b82f6;
+    /* Semânticas (SÓ status) */
+    --accent-color: #F1F3F7;
+    --success: #1F9E5A;
+    --success-ink: #3CE08C;
+    --success-weak: rgba(31, 158, 90, 0.14);
+    --warning: #F5A623;
+    --warning-weak: rgba(245, 166, 35, 0.14);
+    --danger: #F5455C;
+    --danger-ink: #F5808C;
+    --danger-weak: rgba(245, 69, 92, 0.14);
+    --info: #3D7BFF;
+    --info-weak: rgba(61, 123, 255, 0.14);
 
     /* Layout */
     --sidebar-width: 240px;
@@ -52,6 +72,13 @@
     --radius-sm: 6px;
     --radius: 10px;
     --radius-lg: 14px;
+    --r-card: 14px;
+    --r-control: 9px;
+    --r-chip: 8px;
+    --r-pill: 30px;
+
+    /* Elevação */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
 
     /* Easing */
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -68,7 +95,7 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
     background-color: var(--bg-main);
     color: var(--text-primary);
     line-height: 1.5;
@@ -76,11 +103,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Fonte de display nos títulos em todo o app (headings sem classe própria
-     também herdam). Utilitários font-* do Tailwind ainda têm prioridade. */
+  /* Fonte de display (Bricolage) nos títulos em todo o app (headings sem
+     classe própria também herdam). Utilitários font-* do Tailwind ainda têm
+     prioridade. */
   h1, h2, h3 {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.01em;
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 
   /* Força a renderização de emoji colorido nas bandeiras (Windows não tem por padrão) */
@@ -102,10 +130,10 @@
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
-  ::selection { background: rgba(59, 130, 246, 0.3); }
+  ::selection { background: rgba(61, 123, 255, 0.30); }
 
   /* Foco visível consistente em todo o app (acessibilidade). */
   :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
@@ -119,9 +147,9 @@
   .card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius);
+    border-radius: var(--r-card);
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-card);
     transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
   }
   .card:hover { border-color: var(--border-hover); }
@@ -129,10 +157,10 @@
   .card-interactive {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius);
+    border-radius: var(--r-card);
     padding: 20px;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-card);
     transition: border-color 200ms var(--ease), transform 200ms var(--ease),
       box-shadow 200ms var(--ease);
   }
@@ -142,23 +170,25 @@
     box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.55);
   }
 
-  /* Badges */
+  /* Badges — mono CAIXA ALTA, cor semântica sobre o *-weak */
   .badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px;
+    padding: 5px 8px;
     border-radius: var(--radius-sm);
-    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5625rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
+    line-height: 1;
   }
-  .badge-success { color: var(--success); background-color: rgba(34, 197, 94, 0.1); }
-  .badge-danger { color: var(--danger); background-color: rgba(239, 68, 68, 0.1); }
-  .badge-warning { color: var(--warning); background-color: rgba(245, 158, 11, 0.1); }
-  .badge-info { color: var(--info); background-color: rgba(59, 130, 246, 0.1); }
-  .badge-neutral { color: var(--text-secondary); background-color: var(--bg-elevated); }
+  .badge-success { color: var(--success-ink); background-color: var(--success-weak); }
+  .badge-danger { color: var(--danger-ink); background-color: var(--danger-weak); }
+  .badge-warning { color: var(--warning); background-color: var(--warning-weak); }
+  .badge-info { color: var(--brand-2); background-color: var(--info-weak); }
+  .badge-neutral { color: var(--text-secondary); background-color: rgba(255, 255, 255, 0.06); }
 
   /* Buttons */
   .btn {
@@ -166,8 +196,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    border-radius: var(--r-control);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
@@ -175,16 +205,16 @@
     transition: all 200ms var(--ease);
   }
   .btn-primary {
-    background-color: var(--text-primary);
-    color: var(--bg-main);
+    background-color: var(--brand);
+    color: #fff;
   }
-  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:hover { filter: brightness(0.93); }
   .btn-secondary {
-    background-color: var(--bg-elevated);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-strong);
   }
-  .btn-secondary:hover { border-color: var(--border-strong); }
+  .btn-secondary:hover { color: var(--text-primary); border-color: var(--border-hover); }
   .btn-ghost {
     background: transparent;
     color: var(--text-secondary);
@@ -197,24 +227,25 @@
 
   /* Typography helpers */
   .stat-value {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 1.875rem;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
   }
   .stat-label {
-    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.12em;
     color: var(--text-secondary);
   }
   .section-title {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--text-primary);
   }
@@ -223,7 +254,7 @@
     color: var(--text-muted);
   }
   .page-title {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -232,6 +263,16 @@
   .page-subtitle {
     font-size: 0.875rem;
     color: var(--text-secondary);
+  }
+
+  /* Microlabel em mono CAIXA ALTA (IDs, datas, valores auxiliares) */
+  .mono-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
   }
 
   /* Inputs */
@@ -247,17 +288,17 @@
 
   .campo-input {
     width: 100%;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-control);
     padding: 0.5rem 0.65rem;
     outline: none;
     font-size: 0.875rem;
     color: var(--text-primary);
     transition: border-color 0.15s ease;
   }
-  .campo-input:focus { border-color: var(--border-strong); }
-  .campo-input::placeholder { color: var(--text-muted); }
+  .campo-input:focus { border-color: var(--brand); }
+  .campo-input::placeholder { color: var(--text-disabled); }
 
   /* Tab pills (period selector etc.) */
   .pill-group {
@@ -282,15 +323,15 @@
   }
   .pill:hover { color: var(--text-primary); }
   .pill.active {
-    background-color: var(--bg-elevated);
-    color: var(--text-primary);
+    background-color: var(--brand);
+    color: #fff;
   }
 }
 
 @layer utilities {
   /* Fonte de display dos títulos da landing pública — não altera o resto do app. */
   .font-display {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
     letter-spacing: -0.02em;
   }
 
@@ -362,7 +403,7 @@
     50% { opacity: 1; }
   }
 
-  /* Glow radial roxo de fundo do loader inicial */
+  /* Glow radial de fundo do loader inicial (Signal Blue) */
   .loader-glow {
     background: radial-gradient(60% 50% at 50% 42%, var(--brand-soft) 0%, transparent 70%);
   }

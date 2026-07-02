@@ -92,7 +92,7 @@ export default function AbaSeguranca() {
     <div className="flex flex-col gap-6">
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck size={16} style={{ color: "var(--module-financeiro)" }} />
+          <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
           <div className="section-title">{t("Alterar senha")}</div>
         </div>
         <div className="section-subtitle mb-4">

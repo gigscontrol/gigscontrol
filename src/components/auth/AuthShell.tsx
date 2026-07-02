@@ -12,8 +12,9 @@ import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import LogoGC from "@/components/LogoGC";
 
-const VENDAS = "#a855f7";
+const BRAND = "#3D7BFF";
 
 const PONTOS = [
   "Agenda de shows de todos os artistas",
@@ -41,25 +42,17 @@ export default function AuthShell({
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(600px circle at 25% 15%, rgba(168,85,247,0.20), transparent 60%), radial-gradient(520px circle at 80% 70%, rgba(20,184,166,0.14), transparent 60%)",
+              "radial-gradient(600px circle at 25% 15%, rgba(61,123,255,0.20), transparent 60%), radial-gradient(520px circle at 80% 70%, rgba(74,196,255,0.12), transparent 60%)",
           }}
         />
-        <Link href="/" className="relative inline-flex items-center gap-2 w-fit">
-          <span
-            className="rounded-md flex items-center justify-center font-bold text-white h-8 w-8 text-base"
-            style={{ backgroundColor: VENDAS }}
-          >
-            G
-          </span>
-          <span className="font-display font-bold tracking-tight text-base">
-            GIGS<span className="text-muted"> CONTROL</span>
-          </span>
+        <Link href="/" className="relative w-fit">
+          <LogoGC size={30} variant="gradient" withWordmark />
         </Link>
 
         <div className="relative max-w-md">
           <h2 className="font-display text-3xl xl:text-4xl font-extrabold leading-[1.1]">
             {t("A operação da sua")}{" "}
-            <span className="bg-gradient-to-r from-[var(--module-vendas)] to-[var(--module-contratos)] bg-clip-text text-transparent">
+            <span className="bg-grad-signal bg-clip-text text-transparent">
               {t("agência musical")}
             </span>{" "}
             {t("em um só lugar")}
@@ -69,7 +62,7 @@ export default function AuthShell({
               <li key={p} className="flex items-center gap-3">
                 <span
                   className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${VENDAS}22`, color: VENDAS }}
+                  style={{ backgroundColor: `${BRAND}22`, color: BRAND }}
                 >
                   <Check size={12} strokeWidth={3} />
                 </span>
@@ -91,22 +84,14 @@ export default function AuthShell({
           className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
           style={{
             background:
-              "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+              "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
           }}
         />
 
         {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
         <div className="relative flex items-center justify-between px-6 h-16">
-          <Link href="/" className="flex items-center gap-2 lg:hidden">
-            <span
-              className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: VENDAS }}
-            >
-              G
-            </span>
-            <span className="font-display font-bold tracking-tight text-base">
-              GIGS<span className="text-muted"> CONTROL</span>
-            </span>
+          <Link href="/" className="lg:hidden">
+            <LogoGC size={26} variant="gradient" withWordmark />
           </Link>
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
