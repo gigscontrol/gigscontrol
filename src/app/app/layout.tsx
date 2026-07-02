@@ -40,9 +40,11 @@ import EmConstrucao from "@/components/EmConstrucao";
 import ModelosPage from "@/components/contratos/ModelosPage";
 import NovoContratoPage from "@/components/contratos/NovoContratoPage";
 import HistoricoPage from "@/components/contratos/HistoricoPage";
+import MeusContratosPage from "@/components/contratos/MeusContratosPage";
 import DashboardContratos from "@/components/contratos/DashboardContratos";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
+import type { ContratoStatus } from "@/lib/mappers/contrato";
 
 /**
  * Layout do app logado.
@@ -281,6 +283,7 @@ function resolverRota(seg: string[]): Rota {
     if (b === "novo") return rotaBase("contratos", "contratos-novo");
     if (b === "modelos") return rotaBase("contratos", "contratos-modelos");
     if (b === "historico") return rotaBase("contratos", "contratos-historico");
+    if (b === "pastas") return rotaBase("contratos", "contratos-pastas");
     return rotaBase("contratos", "dashboard");
   }
   if (a === "contatos") {
@@ -322,6 +325,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/contratos/modelos`;
     case "contratos-historico":
       return `${BASE}/contratos/historico`;
+    case "contratos-pastas":
+      return `${BASE}/contratos/pastas`;
     case "contatos-lista":
       return `${BASE}/contatos/lista`;
     case "agencia-artistas":
@@ -398,6 +403,9 @@ function AppRoot() {
   const [dataShowInicial, setDataShowInicial] = useState<string | null>(null);
   // Categoria inicial ao abrir a lista de Contatos
   const [contatoCategoria, setContatoCategoria] = useState<ContatoCategoria>("contratantes");
+  // Passados à dashboard de Contratos → Histórico (filtro por status / abrir um contrato).
+  const [contratoStatusFiltro, setContratoStatusFiltro] = useState<ContratoStatus | null>(null);
+  const [contratoAbrirId, setContratoAbrirId] = useState<string | null>(null);
   // Show aberto no modal (a partir de qualquer tela)
   const [showModalId, setShowModalId] = useState<string | null>(null);
 
@@ -414,6 +422,8 @@ function AppRoot() {
     setSidebarOpen(false);
     setOrcamentoSendoTransformado(null);
     setDataShowInicial(null);
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
     irPara(urlDaTela(tab, "dashboard"));
   };
 
@@ -421,6 +431,8 @@ function AppRoot() {
     setSidebarOpen(false);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
     setDataShowInicial(null);
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
     irPara(urlDaTela(activeTab, page));
   };
 
@@ -429,7 +441,23 @@ function AppRoot() {
     setSidebarOpen(false);
     if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
     setDataShowInicial(null);
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
     irPara(urlDaTela(tab, page));
+  };
+
+  /** Card de status da dashboard de Contratos → Histórico filtrado. */
+  const verContratosStatus = (status: ContratoStatus | null) => {
+    setContratoAbrirId(null);
+    setContratoStatusFiltro(status);
+    irPara(urlDaTela("contratos", "contratos-historico"));
+  };
+
+  /** Linha de contrato recente → abre o contrato no Histórico. */
+  const abrirContrato = (id: string) => {
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(id);
+    irPara(urlDaTela("contratos", "contratos-historico"));
   };
 
   const abrirOrcamento = (id: string) => {
@@ -619,7 +647,11 @@ function AppRoot() {
 
           {/* Contratos */}
           {activeTab === "contratos" && activePage === "dashboard" && (
-            <DashboardContratos />
+            <DashboardContratos
+              onNavigate={navegar}
+              onVerStatus={verContratosStatus}
+              onAbrirContrato={abrirContrato}
+            />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
             <NovoContratoPage />
@@ -628,7 +660,13 @@ function AppRoot() {
             <ModelosPage />
           )}
           {activeTab === "contratos" && activePage === "contratos-historico" && (
-            <HistoricoPage />
+            <HistoricoPage
+              abrirId={contratoAbrirId}
+              statusInicial={contratoStatusFiltro}
+            />
+          )}
+          {activeTab === "contratos" && activePage === "contratos-pastas" && (
+            <MeusContratosPage onAbrirContrato={abrirContrato} onNavigate={navegar} />
           )}
 
           {/* Agência */}

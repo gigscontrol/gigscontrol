@@ -149,6 +149,7 @@ export type ActivePage =
   | "contratos-novo"
   | "contratos-modelos"
   | "contratos-historico"
+  | "contratos-pastas"
   | "contatos-lista"
   | "agencia-artistas"
   | "agencia-equipe";

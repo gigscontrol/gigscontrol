@@ -16,6 +16,7 @@ export const contratoCreateSchema = z.object({
   data_emissao: z.string().nullable().optional(),
   data_assinatura: z.string().nullable().optional(),
   observacoes: z.string().nullable().optional(),
+  pasta_id: z.string().nullable().optional(),
 });
 
 export type ContratoCreateInput = z.infer<typeof contratoCreateSchema>;

@@ -15,6 +15,7 @@ import type {
   ContratoUpdateInput,
 } from "@/lib/validators/contratos.schema";
 import { getPlano, type PlanoId } from "@/lib/planos";
+import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
 
 /**
  * Limite mensal de contratos do plano atingido (espelha LimitePlanoEquipeError).
@@ -28,12 +29,6 @@ export class LimiteContratosError extends Error {
     );
     this.name = "LimiteContratosError";
   }
-}
-
-/** Primeiro instante (ISO) do mês corrente — janela do limite mensal. */
-function inicioDoMesIso(): string {
-  const agora = new Date();
-  return new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString();
 }
 
 function entradaParaEscrita(
@@ -53,6 +48,7 @@ function entradaParaEscrita(
     out.data_assinatura = input.data_assinatura ?? null;
   if (input.observacoes !== undefined)
     out.observacoes = input.observacoes ?? null;
+  if (input.pasta_id !== undefined) out.pasta_id = input.pasta_id ?? null;
   return out;
 }
 
@@ -75,16 +71,20 @@ export async function criarContratoNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
   planoId: PlanoId,
-  input: ContratoCreateInput
+  input: ContratoCreateInput,
+  /** true = pula a checagem de limite (usado após pagar o contrato excedente). */
+  pularLimite = false
 ): Promise<Contrato> {
   const plano = getPlano(planoId);
-  const usadosNoMes = await contarContratosDesde(
-    supabase,
-    workspaceId,
-    inicioDoMesIso()
-  );
-  if (usadosNoMes >= plano.maxContratosMes) {
-    throw new LimiteContratosError(plano.maxContratosMes, plano.nome);
+  if (!pularLimite) {
+    const usadosNoCiclo = await contarContratosDesde(
+      supabase,
+      workspaceId,
+      await janelaDoCicloISO(workspaceId)
+    );
+    if (usadosNoCiclo >= plano.maxContratosMes) {
+      throw new LimiteContratosError(plano.maxContratosMes, plano.nome);
+    }
   }
 
   const escrita = entradaParaEscrita(input);

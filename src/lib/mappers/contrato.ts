@@ -13,6 +13,36 @@ import { secoesValidas, estiloValido, ESTILO_PADRAO } from "./contratoModelo";
 /** Status do contrato gerado. */
 export type ContratoStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
 
+/** Pasta de organização de contratos (aba "Meus contratos"). Máx. 5/workspace. */
+export type ContratoPasta = { id: string; nome: string; ordem: number };
+
+/** Máximo de pastas PERSONALIZADAS (a "Arquivados" é fixa, à parte). */
+export const MAX_PASTAS = 4;
+
+/** Valida/normaliza a lista de pastas (do jsonb do banco ou do client). Cap em 5. */
+export function pastasValidas(raw: unknown): ContratoPasta[] {
+  let arr: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const out: ContratoPasta[] = [];
+  for (const p of arr) {
+    if (!p || typeof p !== "object") continue;
+    const o = p as Record<string, unknown>;
+    const id = typeof o.id === "string" && o.id ? o.id : null;
+    const nome = typeof o.nome === "string" ? o.nome.trim().slice(0, 40) : "";
+    if (!id || !nome) continue;
+    out.push({ id, nome, ordem: typeof o.ordem === "number" ? o.ordem : out.length });
+    if (out.length >= MAX_PASTAS) break;
+  }
+  return out.sort((a, b) => a.ordem - b.ordem);
+}
+
 /** Conteúdo desserializado do snapshot (`corpo_preenchido`). */
 export type ContratoConteudo = { secoes: SecaoModelo[]; estilo: EstiloModelo };
 
@@ -29,6 +59,8 @@ export type ContratoRow = {
   data_emissao: string | null;
   data_assinatura: string | null;
   observacoes: string | null;
+  /** Pasta (organização em "Meus contratos"). null = sem pasta. */
+  pasta_id: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
 };
@@ -45,6 +77,8 @@ export type Contrato = {
   dataEmissao: string | null;
   dataAssinatura: string | null;
   observacoes: string | null;
+  /** Pasta de organização (null = sem pasta). */
+  pastaId: string | null;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -99,6 +133,7 @@ export function rowParaContrato(row: ContratoRow): Contrato {
     dataEmissao: row.data_emissao ?? null,
     dataAssinatura: row.data_assinatura ?? null,
     observacoes: row.observacoes ?? null,
+    pastaId: row.pasta_id ?? null,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -116,5 +151,6 @@ export type ContratoEscrita = {
   data_emissao?: string | null;
   data_assinatura?: string | null;
   observacoes?: string | null;
+  pasta_id?: string | null;
   atualizado_em?: string;
 };

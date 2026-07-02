@@ -18,6 +18,7 @@ import {
   Building2,
   Music,
   LayoutTemplate,
+  FolderOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MODULE_THEMES } from "@/types";
@@ -105,6 +106,7 @@ const MODULES: ModuleDef[] = [
       { page: "contratos-novo", label: "Novo Contrato", icon: FilePlus },
       { page: "contratos-modelos", label: "Modelos", icon: LayoutTemplate },
       { page: "contratos-historico", label: "Histórico de Contratos", icon: History },
+      { page: "contratos-pastas", label: "Organizador", icon: FolderOpen },
     ],
   },
   {

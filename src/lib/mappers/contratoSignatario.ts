@@ -80,6 +80,8 @@ export type SignatarioRow = {
   geolocalizacao: string | null;
   dispositivo: string | null;
   assinado_em: string | null;
+  /** Nº de vezes que o link foi ABERTO sem assinar (tracking de visualização). */
+  aberturas: number | null;
   criado_em: string | null;
 };
 
@@ -102,6 +104,8 @@ export type Signatario = {
   geolocalizacao: string | null;
   dispositivo: string | null;
   assinadoEm: string | null;
+  /** Nº de aberturas do link sem assinar. */
+  aberturas: number;
   criadoEm: string;
 };
 
@@ -144,6 +148,7 @@ export function rowParaSignatario(row: SignatarioRow): Signatario {
     geolocalizacao: row.geolocalizacao ?? null,
     dispositivo: row.dispositivo ?? null,
     assinadoEm: row.assinado_em ?? null,
+    aberturas: row.aberturas ?? 0,
     criadoEm: row.criado_em ?? "",
   };
 }

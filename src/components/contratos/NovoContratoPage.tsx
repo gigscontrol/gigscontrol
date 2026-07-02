@@ -11,12 +11,13 @@ import {
   Plus,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
+import Modal from "../Modal";
 import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import { useContratos } from "@/lib/contratos-context";
+import { useContratos, ExcedenteError } from "@/lib/contratos-context";
 import {
   valoresDeVenda,
   preencherSecoes,
@@ -25,7 +26,7 @@ import {
 } from "@/lib/contratos/preencherSecoes";
 import { VARIAVEIS_CONTRATO } from "@/lib/contratos/variaveis";
 import type { Contrato } from "@/lib/mappers/contrato";
-import { getPlano } from "@/lib/planos";
+import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 
 const ACCENT = "#14b8a6";
@@ -83,6 +84,10 @@ export default function NovoContratoPage() {
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [gerado, setGerado] = useState<Contrato | null>(null);
+  // Modal de contrato EXCEDENTE (limite atingido + opção de pagar por unidade).
+  const [excedente, setExcedente] = useState<
+    { limite: number; plano: string; valor: number; moeda: "brl" | "usd" } | null
+  >(null);
 
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -136,28 +141,22 @@ export default function NovoContratoPage() {
     setValores((prev) => ({ ...prev, [token]: valor }));
   }
 
-  async function gerar() {
+  async function gerar(opts?: { pagarExcedente?: boolean; idem?: string }) {
     if (!modelo) return;
-    if (noLimite) {
-      setErro(
-        t(
-          "Limite de contratos do mês atingido no plano {nome}. Faça upgrade ou aguarde o próximo mês.",
-          { nome: plano?.nome ?? "" }
-        )
-      );
-      return;
-    }
     setGerando(true);
     setErro(null);
     try {
       const secoes = preencherSecoes(modelo.secoes, valores);
-      const contrato = await criarContrato({
-        modeloId: modelo.id,
-        vendaId: vendaId || null,
-        secoes,
-        estilo: modelo.estilo,
-        status: "rascunho",
-      });
+      const contrato = await criarContrato(
+        {
+          modeloId: modelo.id,
+          vendaId: vendaId || null,
+          secoes,
+          estilo: modelo.estilo,
+          status: "rascunho",
+        },
+        opts?.pagarExcedente ? { pagarExcedente: true, idem: opts.idem } : undefined
+      );
       // Injeta o número real (CTR-XXXX) no snapshot e na tela.
       const valoresFinais = { ...valores, numero_contrato: contrato.numero };
       const secoesFinais = preencherSecoes(modelo.secoes, valoresFinais);
@@ -167,11 +166,27 @@ export default function NovoContratoPage() {
       });
       setValores(valoresFinais);
       setGerado(atualizado);
+      setExcedente(null);
     } catch (e) {
-      setErro((e as Error).message || t("Não foi possível gerar o contrato."));
+      if (e instanceof ExcedenteError) {
+        // Limite atingido → abre o modal pra pagar o contrato extra.
+        setExcedente(e.info);
+      } else {
+        setErro((e as Error).message || t("Não foi possível gerar o contrato."));
+      }
     } finally {
       setGerando(false);
     }
+  }
+
+  async function confirmarExcedente() {
+    let idem: string;
+    try {
+      idem = crypto.randomUUID();
+    } catch {
+      idem = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+    }
+    await gerar({ pagarExcedente: true, idem });
   }
 
   async function baixarPdf() {
@@ -239,7 +254,7 @@ export default function NovoContratoPage() {
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
             {t(
-              "Limite de contratos do mês do plano {nome} atingido. Faça upgrade ou aguarde o próximo mês para gerar outro.",
+              "Você atingiu o limite de contratos do plano {nome} neste ciclo. Ao gerar, pode pagar por um contrato extra, ou fazer upgrade.",
               { nome: plano?.nome ?? "" }
             )}
           </span>
@@ -255,6 +270,57 @@ export default function NovoContratoPage() {
           <p className="text-sm text-danger">{erro}</p>
         </div>
       )}
+
+      {/* Modal do contrato EXCEDENTE (pagar por unidade além do limite) */}
+      <Modal
+        isOpen={excedente !== null}
+        onClose={() => !gerando && setExcedente(null)}
+        title={t("Limite de contratos atingido")}
+        subtitle={
+          excedente
+            ? t("Plano {plano} — {limite} contratos no ciclo", {
+                plano: excedente.plano,
+                limite: excedente.limite,
+              })
+            : undefined
+        }
+        maxWidth={440}
+      >
+        {excedente && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-secondary">
+              {t("Você atingiu o limite do seu plano neste ciclo. Dá pra gerar um contrato EXTRA agora pagando")}{" "}
+              <span className="font-bold text-primary">
+                {formatarPreco(excedente.valor / 100, excedente.moeda)}
+              </span>{" "}
+              {t("no cartão salvo. O limite reseta na virada do plano.")}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary text-sm"
+                onClick={() => setExcedente(null)}
+                disabled={gerando}
+              >
+                {t("Cancelar")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary text-sm disabled:opacity-50"
+                style={{ backgroundColor: ACCENT, color: "#fff" }}
+                onClick={confirmarExcedente}
+                disabled={gerando}
+              >
+                {gerando
+                  ? t("Cobrando…")
+                  : t("Pagar {valor} e gerar", {
+                      valor: formatarPreco(excedente.valor / 100, excedente.moeda),
+                    })}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {editaveis.length === 0 ? (
         <div className="card flex flex-col items-center text-center gap-3 py-16">
@@ -412,18 +478,13 @@ export default function NovoContratoPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={gerar}
-                      disabled={gerando || noLimite}
-                      title={
-                        noLimite
-                          ? t("Limite de contratos do mês do plano atingido")
-                          : undefined
-                      }
+                      onClick={() => gerar()}
+                      disabled={gerando}
                       className="btn disabled:cursor-not-allowed"
                       style={{
                         backgroundColor: ACCENT,
                         color: "#fff",
-                        opacity: gerando || noLimite ? 0.6 : 1,
+                        opacity: gerando ? 0.6 : 1,
                       }}
                     >
                       {gerando ? (
