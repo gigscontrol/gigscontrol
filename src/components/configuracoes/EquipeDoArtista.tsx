@@ -296,32 +296,34 @@ export default function EquipeDoArtista({
                           </button>
 
                           {ativa && cap.variantes && (
-                            <div className="ml-6 mt-1 flex flex-wrap gap-1.5">
+                            <div
+                              role="radiogroup"
+                              aria-label={cap.label}
+                              className="ml-6 mt-1.5 inline-flex gap-0.5 p-0.5 rounded-lg border"
+                              style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}
+                            >
                               {cap.variantes.map((v) => {
                                 const sel = varSel === v.chave;
                                 return (
                                   <button
                                     key={v.chave}
                                     type="button"
+                                    role="radio"
+                                    aria-checked={sel}
                                     onClick={() =>
                                       setEditor((e) =>
                                         e ? { ...e, perms: selecionarVariante(e.perms, cap, v.chave) } : e
                                       )
                                     }
-                                    className="text-[0.7rem] px-2 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5"
-                                    style={{
-                                      borderColor: sel ? "var(--brand)" : "var(--border-strong)",
-                                      backgroundColor: sel ? "var(--brand-weak)" : "transparent",
-                                      color: sel ? "var(--brand-2)" : "var(--text-muted)",
-                                    }}
+                                    className={`text-[0.7rem] font-medium px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+                                      sel ? "" : "text-muted hover:text-secondary"
+                                    }`}
+                                    style={
+                                      sel
+                                        ? { backgroundColor: "var(--brand)", color: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.35)" }
+                                        : undefined
+                                    }
                                   >
-                                    <span
-                                      className="h-2.5 w-2.5 rounded-full border flex-shrink-0"
-                                      style={{
-                                        borderColor: sel ? "var(--brand)" : "var(--border-strong)",
-                                        backgroundColor: sel ? "var(--brand)" : "transparent",
-                                      }}
-                                    />
                                     {v.label}
                                   </button>
                                 );
