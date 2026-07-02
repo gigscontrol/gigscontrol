@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import {
   atualizarUsuarioDaEquipe,
   removerUsuarioDaEquipe,
@@ -31,6 +32,10 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 
   try {
     const admin = criarClienteAdmin();
+    // Isolamento multi-tenant: o admin client ignora RLS, então valida à mão.
+    if (!(await pertenceAoWorkspace(admin, "profiles", params.id, r.sessao.workspaceId))) {
+      return NextResponse.json({ erro: "Usuário não encontrado." }, { status: 404 });
+    }
     const usuario = await atualizarUsuarioDaEquipe(admin, params.id, parsed.data);
     await auditAndNotify(r.sessao, {
       modulo: "equipe",
@@ -53,6 +58,10 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   if ("response" in r) return r.response;
   // Snapshot do nome ANTES de remover, pra auditoria legível
   const adminPre = criarClienteAdmin();
+  // Isolamento multi-tenant: o admin client ignora RLS, então valida à mão.
+  if (!(await pertenceAoWorkspace(adminPre, "profiles", params.id, r.sessao.workspaceId))) {
+    return NextResponse.json({ erro: "Usuário não encontrado." }, { status: 404 });
+  }
   const { data: snap } = await adminPre
     .from("profiles")
     .select("id, nome")

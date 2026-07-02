@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import {
   atualizarArtistaPorId,
   removerArtistaPorId,
@@ -32,6 +33,10 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   // Update usa admin pra também conseguir ler o profile.username via join
   // sem precisar de policy extra.
   const admin = criarClienteAdmin();
+  // Isolamento multi-tenant: o admin client ignora RLS, então valida à mão.
+  if (!(await pertenceAoWorkspace(admin, "artists", params.id, r.sessao.workspaceId))) {
+    return NextResponse.json({ erro: "Artista não encontrado." }, { status: 404 });
+  }
   try {
     const artista = await atualizarArtistaPorId(admin, params.id, parsed.data);
     await auditAndNotify(r.sessao, {
