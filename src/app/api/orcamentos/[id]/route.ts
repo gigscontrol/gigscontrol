@@ -9,6 +9,7 @@ import { orcamentoUpdateSchema } from "@/lib/validators/orcamentos.schema";
 import {
   verificarAcessoOrcamentos,
   podeEditarOrcamento,
+  podeExcluirOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -43,7 +44,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const row = await repoBuscarOrcamento(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
-  if (!podeEditarOrcamento(r.sessao, row.criado_por)) {
+  if (!podeEditarOrcamento(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para editar este orçamento." },
       { status: 403 }
@@ -96,7 +97,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const row = await repoBuscarOrcamento(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
-  if (!podeEditarOrcamento(r.sessao, row.criado_por)) {
+  if (!podeExcluirOrcamento(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para remover este orçamento." },
       { status: 403 }

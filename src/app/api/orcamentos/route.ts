@@ -5,7 +5,10 @@ import {
   criarOrcamentoNoWorkspace,
 } from "@/lib/services/orcamentos.service";
 import { orcamentoCreateSchema } from "@/lib/validators/orcamentos.schema";
-import { verificarAcessoOrcamentos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoOrcamentos,
+  verificarCriarOrcamento,
+} from "@/lib/api/permissoes";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
@@ -30,8 +33,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoOrcamentos(r.sessao);
-  if (bloqueio) return bloqueio;
 
   let raw: unknown;
   try {
@@ -47,6 +48,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const bloqueio = verificarCriarOrcamento(r.sessao, parsed.data.artist_id ?? null);
+  if (bloqueio) return bloqueio;
 
   try {
     const orcamento = await criarOrcamentoNoWorkspace(

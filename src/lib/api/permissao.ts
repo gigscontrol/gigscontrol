@@ -28,3 +28,27 @@ export function artistasVisiveisNaSessao(
 ): "todos" | string[] {
   return artistasVisiveis(ctxDaSessao(sessao), chave);
 }
+
+/**
+ * Pode MUTAR (editar/excluir) uma linha respeitando o escopo "próprios × todos".
+ *
+ *   - tem `chaveTodos` no artista           → pode em qualquer linha;
+ *   - é o dono (criadoPor === userId) e tem  → pode só na própria;
+ *     `chaveProprio`
+ *   - senão                                  → não pode.
+ *
+ * Linha com `criadoPor` nulo (legado, sem dono) exige `chaveTodos`.
+ */
+export function podeMutar(
+  sessao: SessaoAutenticada,
+  artistaId: string | null,
+  criadoPor: string | null | undefined,
+  chaveProprio: string,
+  chaveTodos: string
+): boolean {
+  if (podeNaSessao(sessao, artistaId, chaveTodos)) return true;
+  if (criadoPor && criadoPor === sessao.userId) {
+    return podeNaSessao(sessao, artistaId, chaveProprio);
+  }
+  return false;
+}

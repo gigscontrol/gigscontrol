@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import type { SessaoAutenticada } from "./session";
+import {
+  podeNaSessao,
+  artistasVisiveisNaSessao,
+  podeMutar,
+} from "./permissao";
 
 /**
  * Camada de permissões server-side.
@@ -29,6 +34,7 @@ import type { SessaoAutenticada } from "./session";
 type QueryBuilder = {
   eq: (column: string, value: string) => QueryBuilder;
   in: (column: string, values: readonly string[]) => QueryBuilder;
+  or: (filtro: string) => QueryBuilder;
 };
 
 /**
@@ -53,6 +59,72 @@ function temFuncao(
   // de já ter DJ configurado. Listas vazias contam como acesso ao
   // módulo mas com zero resultados (a UI mostra estado vazio).
   return funcao in sessao.funcoes;
+}
+
+// ============================================================
+// MODELO NOVO (vínculos por artista) — helpers compartilhados.
+// Quando o usuário tem vínculos carregados (ou é admin/artista/super),
+// resolvemos pelo MOTOR. Operacional SEM nenhum vínculo cai no LEGADO
+// EXATO (funcoes/escopo), pra não mudar nada durante a transição.
+// ============================================================
+
+/** Operacional sem nenhum vínculo → usa o caminho legado exato. */
+function usarLegado(sessao: SessaoAutenticada): boolean {
+  return (
+    sessao.vinculos === undefined &&
+    !sessao.isSuperAdmin &&
+    sessao.papel !== "admin" &&
+    sessao.papel !== "artista"
+  );
+}
+
+/** Alcança algum artista com QUALQUER uma das chaves (acesso ao módulo)? */
+function alcancaAlgum(sessao: SessaoAutenticada, chaves: string[]): boolean {
+  for (const c of chaves) {
+    const v = artistasVisiveisNaSessao(sessao, c);
+    if (v === "todos" || v.length > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Filtra uma query por escopo de artista (modelo novo): mostra TUDO dos
+ * artistas com `chaveVer`, e só os PRÓPRIOS (criado_por) dos artistas com
+ * `chaveVerProprios`. Requer colunas `artist_id` e `criado_por` na tabela.
+ */
+function filtrarEscopoArtista<Q extends QueryBuilder>(
+  query: Q,
+  sessao: SessaoAutenticada,
+  chaveVer: string,
+  chaveVerProprios: string
+): Q {
+  const todos = artistasVisiveisNaSessao(sessao, chaveVer);
+  if (todos === "todos") return query; // admin/super → tudo
+  const propRaw = artistasVisiveisNaSessao(sessao, chaveVerProprios);
+  const proprios = propRaw === "todos" ? [] : propRaw;
+  if (todos.length > 0 && proprios.length > 0) {
+    return query.or(
+      `artist_id.in.(${todos.join(",")}),and(artist_id.in.(${proprios.join(
+        ","
+      )}),criado_por.eq.${sessao.userId})`
+    ) as Q;
+  }
+  if (todos.length > 0) return query.in("artist_id", todos) as Q;
+  if (proprios.length > 0) {
+    return query.in("artist_id", proprios).eq("criado_por", sessao.userId) as Q;
+  }
+  return query.eq("artist_id", ZERO_RESULTS) as Q; // sem acesso → zero
+}
+
+/** Regra legada de mutar venda/orçamento (vendedor restrito só o que criou). */
+function vendaLegadoPodeMutar(
+  sessao: SessaoAutenticada,
+  criadoPor: string | null
+): boolean {
+  if (sessao.papel === "admin") return true;
+  if (!temFuncao(sessao, "vendedor")) return false;
+  if (sessao.escopo.verTodasVendas) return true;
+  return criadoPor === sessao.userId;
 }
 
 // ============================================================
@@ -86,6 +158,17 @@ export function aplicarFiltroShows<Q extends QueryBuilder>(
 export function verificarAcessoOrcamentos(
   sessao: SessaoAutenticada
 ): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    if (sessao.papel === "artista") return null;
+    if (!alcancaAlgum(sessao, ["vendas.ver", "vendas.ver_proprios"])) {
+      return NextResponse.json(
+        { erro: "Você não tem acesso a orçamentos." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  // ---- legado ----
   if (sessao.papel === "admin") return null;
   if (sessao.papel === "artista") return null; // artista lê os próprios
   if (!temFuncao(sessao, "vendedor")) {
@@ -97,10 +180,31 @@ export function verificarAcessoOrcamentos(
   return null;
 }
 
+/** Pode CRIAR orçamento no artista? (precisa do artist_id do body). */
+export function verificarCriarOrcamento(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    if (!podeNaSessao(sessao, artistId, "vendas.criar_orcamento")) {
+      return NextResponse.json(
+        { erro: "Você não tem permissão para criar orçamento neste artista." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  return verificarAcessoOrcamentos(sessao); // legado: acesso ao módulo = pode criar
+}
+
 export function aplicarFiltroOrcamentos<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
+  if (!usarLegado(sessao)) {
+    return filtrarEscopoArtista(query, sessao, "vendas.ver", "vendas.ver_proprios");
+  }
+  // ---- legado ----
   if (sessao.papel === "admin") return query;
   if (sessao.papel === "artista" && sessao.artistaId) {
     return query.eq("artist_id", sessao.artistaId) as Q;
@@ -118,15 +222,37 @@ export function aplicarFiltroOrcamentos<Q extends QueryBuilder>(
   return query;
 }
 
-/** Vendedor com escopo restrito só edita o que criou. */
 export function podeEditarOrcamento(
   sessao: SessaoAutenticada,
+  artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  if (sessao.papel === "admin") return true;
-  if (!temFuncao(sessao, "vendedor")) return false;
-  if (sessao.escopo.verTodasVendas) return true;
-  return criadoPor === sessao.userId;
+  if (!usarLegado(sessao)) {
+    return podeNaSessao(sessao, artistId, "vendas.editar_orcamento");
+  }
+  return vendaLegadoPodeMutar(sessao, criadoPor);
+}
+
+export function podeExcluirOrcamento(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (!usarLegado(sessao)) {
+    return podeNaSessao(sessao, artistId, "vendas.excluir_orcamento");
+  }
+  return vendaLegadoPodeMutar(sessao, criadoPor);
+}
+
+export function podeConverterOrcamento(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (!usarLegado(sessao)) {
+    return podeNaSessao(sessao, artistId, "vendas.converter");
+  }
+  return vendaLegadoPodeMutar(sessao, criadoPor);
 }
 
 // ============================================================
@@ -138,6 +264,17 @@ export function podeEditarOrcamento(
 export function verificarAcessoVendas(
   sessao: SessaoAutenticada
 ): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    if (sessao.papel === "artista") return null;
+    if (!alcancaAlgum(sessao, ["vendas.ver", "vendas.ver_proprios"])) {
+      return NextResponse.json(
+        { erro: "Você não tem acesso a vendas." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  // ---- legado ----
   if (sessao.papel === "admin") return null;
   if (sessao.papel === "artista") return null;
   if (temFuncao(sessao, "vendedor") || temFuncao(sessao, "financeiro")) {
@@ -150,8 +287,19 @@ export function verificarAcessoVendas(
 }
 
 export function verificarCriarVenda(
-  sessao: SessaoAutenticada
+  sessao: SessaoAutenticada,
+  artistId: string | null
 ): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    if (!podeNaSessao(sessao, artistId, "vendas.criar_venda")) {
+      return NextResponse.json(
+        { erro: "Você não tem permissão para criar venda neste artista." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  // ---- legado ----
   if (sessao.papel === "admin") return null;
   if (!temFuncao(sessao, "vendedor")) {
     return NextResponse.json(
@@ -166,6 +314,10 @@ export function aplicarFiltroVendas<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
+  if (!usarLegado(sessao)) {
+    return filtrarEscopoArtista(query, sessao, "vendas.ver", "vendas.ver_proprios");
+  }
+  // ---- legado ----
   if (sessao.papel === "admin") return query;
   if (sessao.papel === "artista" && sessao.artistaId) {
     return query.eq("artist_id", sessao.artistaId) as Q;
@@ -193,12 +345,30 @@ export function aplicarFiltroVendas<Q extends QueryBuilder>(
 
 export function podeEditarVenda(
   sessao: SessaoAutenticada,
+  artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  if (sessao.papel === "admin") return true;
-  if (!temFuncao(sessao, "vendedor")) return false;
-  if (sessao.escopo.verTodasVendas) return true;
-  return criadoPor === sessao.userId;
+  if (!usarLegado(sessao)) {
+    return podeMutar(
+      sessao,
+      artistId,
+      criadoPor,
+      "vendas.editar_venda",
+      "vendas.editar_todos"
+    );
+  }
+  return vendaLegadoPodeMutar(sessao, criadoPor);
+}
+
+export function podeExcluirVenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (!usarLegado(sessao)) {
+    return podeNaSessao(sessao, artistId, "vendas.excluir_venda");
+  }
+  return vendaLegadoPodeMutar(sessao, criadoPor);
 }
 
 // ============================================================

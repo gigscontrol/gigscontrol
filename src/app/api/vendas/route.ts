@@ -35,8 +35,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarCriarVenda(r.sessao);
-  if (bloqueio) return bloqueio;
 
   let raw: unknown;
   try {
@@ -52,6 +50,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const bloqueio = verificarCriarVenda(r.sessao, parsed.data.artist_id ?? null);
+  if (bloqueio) return bloqueio;
 
   try {
     const venda = await criarVendaCompleta(
