@@ -20,8 +20,7 @@ import {
   Music,
   LayoutTemplate,
   FolderOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronsLeft,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { MODULE_THEMES } from "@/types";
@@ -156,15 +155,13 @@ export default function Sidebar({
   useEffect(() => {
     if (localStorage.getItem("gc-sidebar-collapsed") === "1") setCollapsed(true);
   }, []);
-  const toggleCollapsed = () => {
-    setCollapsed((v) => {
-      const n = !v;
-      try {
-        localStorage.setItem("gc-sidebar-collapsed", n ? "1" : "0");
-      } catch {}
-      return n;
-    });
+  const setColapsado = (next: boolean) => {
+    setCollapsed(next);
+    try {
+      localStorage.setItem("gc-sidebar-collapsed", next ? "1" : "0");
+    } catch {}
   };
+  const toggleCollapsed = () => setColapsado(!collapsed);
 
   // Plano Individual: só tem 1 artista, então o toggle de
   // mostrar/esconder não faz sentido — o usuário SEMPRE quer ver as
@@ -196,8 +193,8 @@ export default function Sidebar({
         ${isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
     >
-      {/* Logo GC centralizado no topo (tokens.md §3/§4: monograma + "gigs
-          control"). Recolhido no desktop: só o monograma. */}
+      {/* Logo GC centralizado no topo (tokens.md §3/§4). Recolhido: só o
+          monograma (clicável pra expandir). Recolher = flechinha discreta. */}
       <div className="relative flex items-center justify-center h-16 border-b border-border flex-shrink-0 px-3">
         {aparencia.logoUrl ? (
           <>
@@ -208,11 +205,13 @@ export default function Sidebar({
               style={{ height: 42, maxWidth: 176, width: "auto" }}
               className={`object-contain ${collapsed ? "lg:hidden" : ""}`}
             />
-            <LogoGC
-              size={30}
-              variant="gradient"
+            <button
+              onClick={() => setColapsado(false)}
+              title={t("Expandir menu")}
               className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
-            />
+            >
+              <LogoGC size={30} variant="gradient" />
+            </button>
           </>
         ) : (
           <>
@@ -223,14 +222,28 @@ export default function Sidebar({
               withWordmark
               className={`flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}
             />
-            {/* Só o monograma — aparece no desktop recolhido */}
-            <LogoGC
-              size={30}
-              variant="gradient"
+            {/* Só o monograma (clicável pra expandir) — desktop recolhido */}
+            <button
+              onClick={() => setColapsado(false)}
+              title={t("Expandir menu")}
               className={`flex-shrink-0 ${collapsed ? "hidden lg:inline-flex" : "hidden"}`}
-            />
+            >
+              <LogoGC size={30} variant="gradient" />
+            </button>
           </>
         )}
+        {/* Recolher — flechinha discreta no topo-direita, só desktop expandido */}
+        <button
+          onClick={toggleCollapsed}
+          title={t("Recolher menu")}
+          aria-label={t("Recolher menu")}
+          className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7 items-center justify-center rounded-md text-muted hover:text-primary hover:bg-elevated transition-colors hidden ${
+            collapsed ? "" : "lg:flex"
+          }`}
+        >
+          <ChevronsLeft size={16} />
+        </button>
+        {/* Fechar (mobile) */}
         <button
           onClick={onCloseMobile}
           className="lg:hidden btn-ghost p-1.5 rounded absolute right-3 top-1/2 -translate-y-1/2"
@@ -243,7 +256,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-6">
         {/* Módulos com submenu inline (accordion) */}
         <div>
-          <div className={`px-2 mb-2 stat-label ${collapsed ? "lg:hidden" : ""}`}>{t("Módulos")}</div>
+          <div className={`px-2 mb-2 stat-label ${collapsed ? "lg:invisible" : ""}`}>{t("Módulos")}</div>
           <div className="flex flex-col gap-1">
             {MODULES.map((mod) => {
               // Com as Configurações abertas, nenhum módulo fica ativo
@@ -255,7 +268,12 @@ export default function Sidebar({
                 <div key={mod.tab} className="flex flex-col">
                   {/* Botão do módulo */}
                   <button
-                    onClick={() => setActiveTab(mod.tab)}
+                    onClick={() => {
+                      // Recolhida: clicar num módulo expande de volta pra
+                      // mostrar o submenu (pra escolher a subpágina).
+                      if (collapsed) setColapsado(false);
+                      setActiveTab(mod.tab);
+                    }}
                     title={t(mod.label)}
                     className={`
                       flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
@@ -333,7 +351,7 @@ export default function Sidebar({
             com ele; contatos manuais sem histórico aparecem sempre). */}
         {(
           <div>
-            <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:hidden" : ""}`}>
+            <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
               <span className="stat-label">DJs</span>
               {/* "Todos/Limpar" só faz sentido com 2+ artistas (planos
                   Equipe/Agência/etc). Individual = 1 artista = sem toggle. */}
@@ -397,25 +415,8 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="border-t border-border flex-shrink-0">
-        {/* Recolher / expandir — só no desktop (mobile é drawer) */}
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          className={`hidden lg:flex items-center gap-2 my-2.5 rounded-md border border-border text-xs font-medium text-secondary hover:bg-elevated hover:text-primary hover:border-border-strong transition-colors ${
-            collapsed ? "mx-2 justify-center py-2" : "mx-3 px-3 py-2"
-          }`}
-        >
-          {collapsed ? (
-            <PanelLeftOpen size={16} />
-          ) : (
-            <>
-              <PanelLeftClose size={16} />
-              <span>{t("Recolher menu")}</span>
-            </>
-          )}
-        </button>
-        <div className={`px-4 pb-4 pt-3 text-[0.7rem] text-muted ${collapsed ? "lg:hidden" : ""}`}>
+      <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
+        <div className="text-[0.7rem] text-muted">
           {planoIndividual
             ? t(DJS.length === 1 ? "{n} artista" : "{n} artistas", { n: DJS.length })
             : t("{n} de {m} DJs visíveis", { n: selectedDJs.length, m: DJS.length })}
