@@ -153,21 +153,22 @@ export async function proximaPosicaoArtista(
 
 /**
  * Atualiza a posição de vários artistas em lote.
- * Não usa transação (Supabase JS não expõe), mas faz updates
- * sequenciais. Se algum falhar, a UI vai recarregar e mostrar o estado
- * atual do banco — o usuário arrasta de novo.
+ * Não usa transação (Supabase JS não expõe). Os updates são independentes
+ * (cada artista tem a sua posição), então rodam em PARALELO em vez de um por
+ * vez. Se algum falhar, a UI recarrega e mostra o estado atual do banco — o
+ * usuário arrasta de novo.
  */
 export async function atualizarPosicoes(
   supabase: SupabaseClient,
   updates: Array<{ id: string; posicao: number }>
 ): Promise<void> {
-  for (const u of updates) {
-    const { error } = await supabase
-      .from("artists")
-      .update({ posicao: u.posicao })
-      .eq("id", u.id);
-    if (error) throw error;
-  }
+  const resultados = await Promise.all(
+    updates.map((u) =>
+      supabase.from("artists").update({ posicao: u.posicao }).eq("id", u.id)
+    )
+  );
+  const primeiroErro = resultados.find((r) => r.error)?.error;
+  if (primeiroErro) throw primeiroErro;
 }
 
 /**
