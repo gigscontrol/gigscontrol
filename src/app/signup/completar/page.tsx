@@ -107,7 +107,7 @@ export default function CompletarCadastroPage() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
         }}
       />
 
@@ -116,7 +116,7 @@ export default function CompletarCadastroPage() {
           <Link href="/" className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -193,14 +193,14 @@ export default function CompletarCadastroPage() {
                       onClick={() => setPlanoId(p.id)}
                       className="card text-left transition-all hover:border-border-strong relative p-3"
                       style={{
-                        borderColor: sel ? "var(--module-vendas)" : undefined,
-                        boxShadow: sel ? "0 0 0 1px var(--module-vendas)" : undefined,
+                        borderColor: sel ? "var(--brand)" : undefined,
+                        boxShadow: sel ? "0 0 0 1px var(--brand)" : undefined,
                       }}
                     >
                       {p.destaque && (
                         <span
                           className="absolute -top-2 left-3 text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
-                          style={{ backgroundColor: "var(--module-vendas)" }}
+                          style={{ backgroundColor: "var(--brand)" }}
                         >
                           {t("Popular")}
                         </span>
@@ -217,7 +217,7 @@ export default function CompletarCadastroPage() {
                       {sel && (
                         <div
                           className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: "var(--module-vendas)" }}
+                          style={{ backgroundColor: "var(--brand)" }}
                         >
                           <Check size={12} className="text-white" />
                         </div>
@@ -239,7 +239,7 @@ export default function CompletarCadastroPage() {
               type="submit"
               disabled={enviando}
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
               {enviando ? t("Criando...") : t("Finalizar cadastro e entrar")}
               {!enviando && <ArrowRight size={14} />}

@@ -149,7 +149,7 @@ export default function SearchableSelect({
                     <Check
                       size={14}
                       className="flex-shrink-0"
-                      style={{ color: "var(--module-vendas)" }}
+                      style={{ color: "var(--brand)" }}
                     />
                   )}
                 </button>

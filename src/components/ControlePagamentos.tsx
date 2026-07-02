@@ -18,7 +18,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
-  MODULE_THEMES,
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type StatusParcela,
@@ -42,7 +41,7 @@ type LinhaParcela = {
 
 export default function ControlePagamentos() {
   const t = useT();
-  const accent = MODULE_THEMES.financeiro.color;
+  const accent = "var(--brand)";
   const { vendas, atualizarParcela } = useVendas();
   const { modoVisitante } = useAuth();
   const artistas = useArtistas();

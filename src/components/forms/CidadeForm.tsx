@@ -42,11 +42,11 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
         <div
           className="flex items-start gap-3 rounded-md px-4 py-3"
           style={{
-            backgroundColor: "rgba(168,85,247,0.08)",
-            border: "1px solid rgba(168,85,247,0.2)",
+            backgroundColor: "color-mix(in srgb, var(--brand) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--brand) 20%, transparent)",
           }}
         >
-          <Info size={18} style={{ color: "var(--module-vendas)" }} className="flex-shrink-0 mt-0.5" />
+          <Info size={18} style={{ color: "var(--brand)" }} className="flex-shrink-0 mt-0.5" />
           <div className="text-sm text-secondary leading-relaxed">
             {t("Cidades agora são adicionadas")} <strong className="text-primary">{t("automaticamente")}</strong> {t("a partir do catálogo nacional do IBGE quando aparecem em um orçamento, venda, casa ou contratante.")}
             <br />

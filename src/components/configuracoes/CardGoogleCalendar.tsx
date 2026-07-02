@@ -103,7 +103,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
   return (
     <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-        <CalendarClock size={12} style={{ color: "var(--module-agencia)" }} />
+        <CalendarClock size={12} style={{ color: "var(--brand)" }} />
         Google Calendar
       </div>
 
@@ -154,7 +154,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
               onClick={conectar}
               disabled={ocupado}
               className="inline-flex items-center gap-2 self-start px-3 py-2 rounded-md text-sm font-medium border transition-colors disabled:opacity-50"
-              style={{ borderColor: "var(--module-agencia)", color: "var(--module-agencia)" }}
+              style={{ borderColor: "var(--brand)", color: "var(--brand)" }}
             >
               {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />}
               {t("Conectar conta Google")}

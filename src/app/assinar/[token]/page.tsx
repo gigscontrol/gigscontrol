@@ -240,7 +240,7 @@ export default function AssinarPage({
       {/* Topo */}
       <div className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur px-4 py-3">
         <div className="max-w-[900px] mx-auto flex items-center gap-3 flex-wrap">
-          <PenLine size={18} style={{ color: "var(--module-contratos)" }} />
+          <PenLine size={18} style={{ color: "var(--brand)" }} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-primary truncate">
               Assinatura de contrato · {contrato.numero}
@@ -298,7 +298,7 @@ export default function AssinarPage({
         {!assinado && (
           <div className="card flex flex-col gap-4">
             <div className="section-title inline-flex items-center gap-2">
-              <PenLine size={16} style={{ color: "var(--module-contratos)" }} />
+              <PenLine size={16} style={{ color: "var(--brand)" }} />
               Sua assinatura
             </div>
 
@@ -351,7 +351,7 @@ export default function AssinarPage({
                 <ScanFace
                   size={20}
                   className="flex-shrink-0"
-                  style={{ color: "var(--module-contratos)" }}
+                  style={{ color: "var(--brand)" }}
                 />
                 <span className="leading-relaxed">
                   Ao tocar em <strong>Assinar contrato</strong>, abriremos a
@@ -377,7 +377,7 @@ export default function AssinarPage({
               disabled={enviando}
               className="btn"
               style={{
-                backgroundColor: "var(--module-contratos)",
+                backgroundColor: "var(--brand)",
                 color: "#fff",
                 opacity: enviando ? 0.6 : 1,
               }}

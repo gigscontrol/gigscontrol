@@ -298,7 +298,7 @@ function FormCadastro({
           type="submit"
           disabled={!podeEnviar}
           className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
         >
           {enviando ? t("Criando conta…") : t("Criar conta e enviar verificação")}
           {!enviando && <ArrowRight size={14} />}

@@ -85,20 +85,20 @@ export default function AdminDashboard() {
           icon={<DollarSign size={16} />}
           label="MRR"
           value={fmtMoedas(kpis.mrrBrl, kpis.mrrUsd)}
-          color="var(--module-financeiro)"
+          color="var(--brand)"
           trend={kpis.crescimentoPct}
         />
         <Kpi
           icon={<TrendingUp size={16} />}
           label="ARR"
           value={fmtMoedas(kpis.arrBrl, kpis.arrUsd)}
-          color="var(--module-financeiro)"
+          color="var(--brand)"
         />
         <Kpi
           icon={<DollarSign size={16} />}
           label="Receita total"
           value={formatarPrecoCurto(METRICAS_SAAS.receitaTotal)}
-          color="var(--module-vendas)"
+          color="var(--brand)"
         />
         <Kpi
           icon={<TrendingDown size={16} />}
@@ -114,25 +114,25 @@ export default function AdminDashboard() {
           icon={<Users size={16} />}
           label="Total de usuários"
           value={kpis.totalUsuarios}
-          color="var(--module-contatos)"
+          color="var(--brand)"
         />
         <Kpi
           icon={<Building2 size={16} />}
           label="Agências"
           value={kpis.agencias}
-          color="var(--module-vendas)"
+          color="var(--brand)"
         />
         <Kpi
           icon={<Music size={16} />}
           label="Artistas"
           value={kpis.totalArtistas}
-          color="var(--module-agenda)"
+          color="var(--brand)"
         />
         <Kpi
           icon={<Activity size={16} />}
           label="Usuários ativos (30d)"
           value={METRICAS_SAAS.usuariosAtivos30d}
-          color="var(--module-financeiro)"
+          color="var(--brand)"
         />
       </div>
 
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
         {/* Gráfico de crescimento */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} style={{ color: "var(--module-financeiro)" }} />
+            <TrendingUp size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">Crescimento do MRR</div>
           </div>
           <div className="flex items-end justify-between gap-2 h-44 px-1">
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
                   className="w-full rounded-t transition-all"
                   style={{
                     height: `${(p.receita / maxReceita) * 130}px`,
-                    backgroundColor: "var(--module-financeiro)",
+                    backgroundColor: "var(--brand)",
                     minHeight: 4,
                   }}
                 />
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
         {/* Logs / atividade recente */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <Activity size={16} style={{ color: "var(--module-vendas)" }} />
+            <Activity size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">Atividade recente</div>
           </div>
           <div className="flex flex-col gap-1">
@@ -227,11 +227,11 @@ export default function AdminDashboard() {
 
 function corLog(tipo: TipoLog): string {
   const m: Record<TipoLog, string> = {
-    login: "var(--module-agenda)",
-    assinatura: "var(--module-vendas)",
-    pagamento: "var(--module-financeiro)",
-    usuario: "var(--module-contatos)",
-    plano: "var(--module-vendas)",
+    login: "var(--brand)",
+    assinatura: "var(--brand)",
+    pagamento: "var(--brand)",
+    usuario: "var(--brand)",
+    plano: "var(--brand)",
     sistema: "var(--text-muted)",
   };
   return m[tipo];

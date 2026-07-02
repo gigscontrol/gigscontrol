@@ -93,7 +93,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
                   color: ativa ? "var(--text-primary)" : "var(--text-muted)",
                   fontWeight: ativa ? 600 : 400,
                   borderBottom: ativa
-                    ? "2px solid var(--module-vendas)"
+                    ? "2px solid var(--brand)"
                     : "2px solid transparent",
                   marginBottom: -1,
                 }}

@@ -29,7 +29,7 @@ import type { Contrato } from "@/lib/mappers/contrato";
 import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#3D7BFF";
 
 // Tokens que costumam ser longos → textarea.
 const LONGOS = new Set([

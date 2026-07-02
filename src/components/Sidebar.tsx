@@ -26,6 +26,7 @@ import type { ActiveTab, ActivePage } from "@/types";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import LogoGC from "./LogoGC";
 
 type Props = {
   activeTab: ActiveTab;
@@ -187,14 +188,9 @@ export default function Sidebar({
             className="object-contain"
           />
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-8 w-8 text-base flex-shrink-0"
-              style={{ backgroundColor: "var(--module-vendas)" }}
-            >
-              {aparencia.nomeAgencia.charAt(0).toUpperCase()}
-            </div>
-            <span className="font-bold tracking-tight text-lg truncate">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <LogoGC size={30} variant="gradient" className="flex-shrink-0" />
+            <span className="font-display font-bold tracking-tight text-lg truncate">
               {aparencia.nomeAgencia}
             </span>
           </div>

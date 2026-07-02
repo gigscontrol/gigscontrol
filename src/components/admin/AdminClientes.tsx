@@ -115,7 +115,7 @@ export default function AdminClientes() {
                       <div className="flex items-center gap-2.5">
                         <span
                           className="h-9 w-9 rounded-md flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                          style={{ backgroundColor: "var(--module-vendas)" }}
+                          style={{ backgroundColor: "var(--brand)" }}
                         >
                           {assinatura.nomeWorkspace.slice(0, 2).toUpperCase()}
                         </span>
@@ -235,7 +235,7 @@ function DetalheCliente({
           <div className="flex items-center gap-3">
             <span
               className="h-14 w-14 rounded-lg flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               {assinatura.nomeWorkspace.slice(0, 2).toUpperCase()}
             </span>
@@ -257,7 +257,6 @@ function DetalheCliente({
           <button
             onClick={visualizarDashboard}
             className="btn btn-primary text-sm"
-            style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
           >
             <Eye size={15} />
             Visualizar dashboard
@@ -277,7 +276,7 @@ function DetalheCliente({
           sub={`${assinatura.ciclo} · ${formatarPreco(
             precoPorMes(plano, assinatura.ciclo)
           )}/mês`}
-          color="var(--module-vendas)"
+          color="var(--brand)"
         />
         <InfoCard
           icon={<CalendarCheck2 size={16} />}
@@ -294,7 +293,7 @@ function DetalheCliente({
               ? formatarPreco(uso.valorUltimoPagamento)
               : "Sem cobrança"
           }
-          color="var(--module-financeiro)"
+          color="var(--brand)"
         />
         <InfoCard
           icon={<CalendarClock size={16} />}
@@ -307,7 +306,7 @@ function DetalheCliente({
               : "—"
           }
           sub={fmtDias(assinatura.diasRestantes)}
-          color="var(--module-agenda)"
+          color="var(--brand)"
         />
         <InfoCard
           icon={<Clock size={16} />}
@@ -316,14 +315,14 @@ function DetalheCliente({
             "pt-BR"
           )}
           sub={`Workspace ${assinatura.workspaceId}`}
-          color="var(--module-contatos)"
+          color="var(--brand)"
         />
       </div>
 
       {/* Uso da dashboard */}
       <div className="card mb-4">
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={16} style={{ color: "var(--module-vendas)" }} />
+          <TrendingUp size={16} style={{ color: "var(--brand)" }} />
           <div className="section-title">Atividade na dashboard</div>
         </div>
         {uso ? (
@@ -371,7 +370,7 @@ function DetalheCliente({
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Users size={16} style={{ color: "var(--module-contatos)" }} />
+            <Users size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">
               Equipe do cliente ({equipe.length})
             </div>
@@ -490,7 +489,7 @@ function GerenciarAssinatura({ assinatura }: { assinatura: Assinatura }) {
   return (
     <div className="card mb-4">
       <div className="flex items-center gap-2 mb-3">
-        <CalendarClock size={16} style={{ color: "var(--module-vendas)" }} />
+        <CalendarClock size={16} style={{ color: "var(--brand)" }} />
         <div className="section-title">Gerenciar assinatura</div>
       </div>
 
@@ -604,7 +603,7 @@ function UsoStat({
       className="rounded-md border border-border p-3"
       style={{
         backgroundColor: destaque
-          ? "rgba(34,197,94,0.06)"
+          ? "color-mix(in srgb, var(--brand) 8%, transparent)"
           : "var(--bg-elevated)",
       }}
     >
@@ -614,7 +613,7 @@ function UsoStat({
       </div>
       <div
         className="text-lg font-bold tabular-nums"
-        style={{ color: destaque ? "var(--success)" : "var(--text-primary)" }}
+        style={{ color: destaque ? "var(--brand)" : "var(--text-primary)" }}
       >
         {value}
       </div>

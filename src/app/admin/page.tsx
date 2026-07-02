@@ -97,7 +97,7 @@ function AdminShell() {
           <div className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -136,13 +136,13 @@ function AdminShell() {
                   color: ativo ? "var(--text-primary)" : "var(--text-secondary)",
                   fontWeight: ativo ? 600 : 400,
                   borderLeft: ativo
-                    ? "2px solid var(--module-vendas)"
+                    ? "2px solid var(--brand)"
                     : "2px solid transparent",
                 }}
               >
                 <Icon
                   size={16}
-                  style={{ color: ativo ? "var(--module-vendas)" : undefined }}
+                  style={{ color: ativo ? "var(--brand)" : undefined }}
                 />
                 {s.label}
               </button>

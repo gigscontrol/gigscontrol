@@ -344,7 +344,7 @@ export default function AbaArtistas() {
             ? t("Plano {nome} — {usados} de {limite} em uso", { nome: plano.nome, usados, limite })
             : t("Artistas da sua agência")
         }
-        accentColor="var(--module-agencia)"
+        accentColor="var(--brand)"
         actions={
           <div className="min-w-[160px]">
             <div className="text-right">
@@ -356,7 +356,7 @@ export default function AbaArtistas() {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                  backgroundColor: noLimite ? "var(--danger)" : "var(--module-agencia)",
+                  backgroundColor: noLimite ? "var(--danger)" : "var(--brand)",
                 }}
               />
             </div>
@@ -429,7 +429,7 @@ export default function AbaArtistas() {
                   style={{
                     opacity: sendoArrastado ? 0.4 : suspenso && !ativo ? 0.7 : 1,
                     borderLeft: ehAlvo
-                      ? "2px solid var(--module-agencia)"
+                      ? "2px solid var(--brand)"
                       : "2px solid transparent",
                     cursor: modoReordenar ? "grab" : "pointer",
                   }}
@@ -474,7 +474,7 @@ export default function AbaArtistas() {
               disabled={noLimite}
               title={noLimite ? t("Limite do plano atingido") : t("Adicionar artista")}
               className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "var(--module-agencia)" }}
+              style={{ color: "var(--brand)" }}
             >
               <Plus size={16} />
             </button>
@@ -546,7 +546,7 @@ export default function AbaArtistas() {
         <div className="card flex flex-col items-center justify-center text-center gap-3 py-16">
           <div
             className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center"
-            style={{ color: "var(--module-agencia)" }}
+            style={{ color: "var(--brand)" }}
           >
             <Music size={22} />
           </div>
@@ -781,7 +781,7 @@ export default function AbaArtistas() {
                       resetarSenhaDoPerfil(djSelecionado.id, djSelecionado.name)
                     }
                     className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                    style={{ color: "var(--module-agencia)" }}
+                    style={{ color: "var(--brand)" }}
                   >
                     <KeyRound size={14} /> {t("Resetar senha")}
                   </button>
@@ -803,7 +803,7 @@ export default function AbaArtistas() {
             {/* Acesso */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
+                <KeyRound size={12} style={{ color: "var(--brand)" }} />
                 {t("Acesso ao sistema")}
               </div>
               {djSelecionado.username && (
@@ -957,7 +957,7 @@ export default function AbaArtistas() {
             {/* Privacidade (read-only; edita no formulário) */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
+                <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
                 {t("Privacidade")}
               </div>
               {(() => {
@@ -1007,7 +1007,7 @@ export default function AbaArtistas() {
             {/* Membros da equipe que atendem o DJ */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <Users size={12} style={{ color: "var(--module-agencia)" }} />
+                <Users size={12} style={{ color: "var(--brand)" }} />
                 {t("Membros da equipe")}
               </div>
               {(() => {
@@ -1136,9 +1136,9 @@ export default function AbaArtistas() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 {(djSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
-                  <Percent size={12} style={{ color: "var(--module-agencia)" }} />
+                  <Percent size={12} style={{ color: "var(--brand)" }} />
                 ) : (
-                  <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
+                  <DollarSign size={12} style={{ color: "var(--brand)" }} />
                 )}
                 {t("Taxa de agência")}
               </div>
@@ -1177,7 +1177,7 @@ export default function AbaArtistas() {
         <div className="card p-0 overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
-              <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
+              <Trash2 size={14} style={{ color: "var(--brand)" }} />
               <div className="section-title">
                 {t("Na lixeira ({n})", { n: lixeiraArtistas.length })}
               </div>
@@ -1548,7 +1548,7 @@ export function ModalNovoArtista({
       {!modoInline && (
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <Music size={16} style={{ color: "var(--module-vendas)" }} />
+            <Music size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">{t("Novo artista")}</div>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
@@ -1725,7 +1725,7 @@ export function ModalNovoArtista({
             <div
               className="text-xs rounded-md px-3 py-2 leading-relaxed"
               style={{
-                backgroundColor: "rgba(168,85,247,0.08)",
+                backgroundColor: "color-mix(in srgb, var(--brand) 8%, transparent)",
                 color: "var(--text-secondary)",
               }}
             >
@@ -2158,7 +2158,7 @@ function ModalEditarArtista({
       >
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
-            <Pencil size={16} style={{ color: "var(--module-agencia)" }} />
+            <Pencil size={16} style={{ color: "var(--brand)" }} />
             <div className="section-title">{t("Editar {nome}", { nome: artista.nome })}</div>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded">
@@ -2386,7 +2386,7 @@ function ModalEditarArtista({
                         type="button"
                         onClick={() => setEditandoEmail(true)}
                         className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
-                        style={{ color: "var(--module-vendas)" }}
+                        style={{ color: "var(--brand)" }}
                       >
                         <Pencil size={11} /> {t("Definir e-mail")}
                       </button>
@@ -2422,7 +2422,7 @@ function ModalEditarArtista({
                           type="button"
                           onClick={() => setEditandoEmail(true)}
                           className="inline-flex items-center gap-1 hover:underline"
-                          style={{ color: "var(--module-vendas)" }}
+                          style={{ color: "var(--brand)" }}
                         >
                           <Pencil size={11} /> {t("Editar")}
                         </button>
@@ -2518,8 +2518,8 @@ function ModalEditarArtista({
                   }}
                   className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated"
                   style={{
-                    borderColor: "var(--module-vendas)",
-                    color: "var(--module-vendas)",
+                    borderColor: "var(--brand)",
+                    color: "var(--brand)",
                   }}
                 >
                   <KeyRound size={14} />
@@ -2935,7 +2935,7 @@ function ModalEditarArtista({
         {/* Acesso ao sistema */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-            <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
+            <KeyRound size={12} style={{ color: "var(--brand)" }} />
             {t("Acesso ao sistema")}
           </div>
 
@@ -3097,7 +3097,7 @@ function ModalEditarArtista({
                       type="button"
                       onClick={() => setEditandoEmail(true)}
                       className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
-                      style={{ color: "var(--module-vendas)" }}
+                      style={{ color: "var(--brand)" }}
                     >
                       <Pencil size={11} /> {t("Definir e-mail")}
                     </button>
@@ -3133,7 +3133,7 @@ function ModalEditarArtista({
                         type="button"
                         onClick={() => setEditandoEmail(true)}
                         className="inline-flex items-center gap-1 hover:underline"
-                        style={{ color: "var(--module-vendas)" }}
+                        style={{ color: "var(--brand)" }}
                       >
                         <Pencil size={11} /> {t("Editar")}
                       </button>
@@ -3229,8 +3229,8 @@ function ModalEditarArtista({
                 }}
                 className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated"
                 style={{
-                  borderColor: "var(--module-vendas)",
-                  color: "var(--module-vendas)",
+                  borderColor: "var(--brand)",
+                  color: "var(--brand)",
                 }}
               >
                 <KeyRound size={14} />
@@ -3243,7 +3243,7 @@ function ModalEditarArtista({
         {/* Privacidade */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-            <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
+            <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
             {t("Privacidade")}
           </div>
           <p className="text-xs text-muted -mt-1">
@@ -3380,9 +3380,9 @@ function ModalEditarArtista({
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             {taxaModo.startsWith("perc") ? (
-              <Percent size={12} style={{ color: "var(--module-agencia)" }} />
+              <Percent size={12} style={{ color: "var(--brand)" }} />
             ) : (
-              <DollarSign size={12} style={{ color: "var(--module-agencia)" }} />
+              <DollarSign size={12} style={{ color: "var(--brand)" }} />
             )}
             {t("Taxa de agência")}
           </div>
@@ -3495,7 +3495,7 @@ function TogglePriv({
         onClick={() => onChange(!valor)}
         className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0 disabled:cursor-not-allowed"
         style={{
-          backgroundColor: valor ? "var(--module-agencia)" : "var(--border-strong)",
+          backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
         }}
         aria-label={label}
       >
@@ -3551,8 +3551,8 @@ function SegmentedChoice<T extends string>({
               style={
                 ativo
                   ? {
-                      borderColor: "var(--module-agencia)",
-                      backgroundColor: "rgba(99,102,241,0.14)",
+                      borderColor: "var(--brand)",
+                      backgroundColor: "color-mix(in srgb, var(--brand) 14%, transparent)",
                       color: "var(--text-primary)",
                     }
                   : {

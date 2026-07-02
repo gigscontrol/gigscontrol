@@ -30,7 +30,7 @@ export function Field({ label, required, hint, error, children }: Props) {
 }
 
 const INPUT_BASE =
-  "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
+  "bg-main border border-border-strong rounded-control px-3 py-2 text-sm text-primary placeholder:text-disabled outline-none transition-colors focus:border-brand";
 
 export function TextInput({
   className = "",

@@ -15,7 +15,7 @@ export default function PrivacidadePage() {
           <Link href="/" className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>

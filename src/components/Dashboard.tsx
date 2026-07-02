@@ -16,7 +16,6 @@ import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
-  MODULE_THEMES,
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type Parcela,
@@ -43,7 +42,7 @@ type LinhaParcela = {
 
 export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Props) {
   const t = useT();
-  const accent = MODULE_THEMES.financeiro.color;
+  const accent = "var(--brand)";
   const { vendas } = useVendas();
   const artistas = useArtistas();
 
@@ -124,7 +123,6 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           <button
             onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
             className="btn btn-primary"
-            style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Wallet size={14} />
             {t("Controle de Pagamentos")}
@@ -291,7 +289,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           className="card mt-4 flex items-center gap-3 w-full text-left hover:border-border-strong transition-colors"
           style={{
             borderColor: "var(--danger)",
-            backgroundColor: "rgba(239,68,68,0.06)",
+            backgroundColor: "var(--danger-weak)",
           }}
         >
           <AlertTriangle

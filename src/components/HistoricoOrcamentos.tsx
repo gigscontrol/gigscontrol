@@ -417,7 +417,7 @@ function RowActions({
       )}
       {status !== "recusado" && (
         <ActionBtn label={t("Transformar em venda")} onClick={onTransformar}>
-          <CalendarCheck2 size={14} style={{ color: "var(--module-vendas)" }} />
+          <CalendarCheck2 size={14} style={{ color: "var(--brand)" }} />
         </ActionBtn>
       )}
       {status !== "negociacao" && status !== "aceito" && (

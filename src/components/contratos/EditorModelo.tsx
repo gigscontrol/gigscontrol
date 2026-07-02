@@ -40,7 +40,7 @@ import {
   type VariavelContrato,
 } from "@/lib/contratos/variaveis";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#3D7BFF";
 
 type Props = {
   /** Quando presente, o editor atualiza um modelo existente; senão cria um novo. */
@@ -918,7 +918,7 @@ export default function EditorModelo({
                           type="button"
                           onClick={() => adicionarTestemunha(secao.id)}
                           className="btn-ghost text-xs inline-flex items-center gap-1.5 self-start"
-                          style={{ color: "var(--module-contratos)" }}
+                          style={{ color: "var(--brand)" }}
                         >
                           <Plus size={13} /> {t("Testemunha")}
                         </button>

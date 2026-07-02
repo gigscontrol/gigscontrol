@@ -25,7 +25,7 @@ function VerifiqueEmailInner() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(500px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
         }}
       />
 
@@ -34,7 +34,7 @@ function VerifiqueEmailInner() {
           <Link href="/" className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -50,8 +50,8 @@ function VerifiqueEmailInner() {
           <div
             className="h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4"
             style={{
-              background: "linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))",
-              color: "var(--module-vendas)",
+              background: "linear-gradient(135deg, rgba(61,123,255,0.2), rgba(61,123,255,0.05))",
+              color: "var(--brand)",
             }}
           >
             <Mail size={28} />

@@ -36,13 +36,13 @@ const MODULOS: {
   cor: string;
 }[] = [
   { id: "todos", label: "Todos", icon: History, cor: "var(--text-secondary)" },
-  { id: "venda", label: "Vendas", icon: ShoppingBag, cor: "#a855f7" },
-  { id: "orcamento", label: "Orçamentos", icon: FileText, cor: "#a855f7" },
-  { id: "parcela", label: "Parcelas", icon: Wallet, cor: "#22c55e" },
-  { id: "artista", label: "Artistas", icon: Music, cor: "#3b82f6" },
-  { id: "equipe", label: "Equipe", icon: Users, cor: "#f97316" },
+  { id: "venda", label: "Vendas", icon: ShoppingBag, cor: "var(--brand)" },
+  { id: "orcamento", label: "Orçamentos", icon: FileText, cor: "var(--brand)" },
+  { id: "parcela", label: "Parcelas", icon: Wallet, cor: "var(--brand)" },
+  { id: "artista", label: "Artistas", icon: Music, cor: "var(--brand)" },
+  { id: "equipe", label: "Equipe", icon: Users, cor: "var(--brand)" },
   { id: "lixeira", label: "Lixeira", icon: Trash2, cor: "var(--text-muted)" },
-  { id: "aparencia", label: "Aparência", icon: Palette, cor: "#a855f7" },
+  { id: "aparencia", label: "Aparência", icon: Palette, cor: "var(--brand)" },
 ];
 
 const LIMIT = 50;
@@ -93,7 +93,7 @@ export default function AbaHistorico() {
       {/* Cabeçalho */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <History size={16} style={{ color: "#a855f7" }} />
+          <History size={16} style={{ color: "var(--brand)" }} />
           <div className="section-title">{t("Histórico de ações")}</div>
         </div>
         <div className="section-subtitle">
@@ -134,7 +134,9 @@ export default function AbaHistorico() {
                   onClick={() => setModulo(m.id)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
                   style={{
-                    backgroundColor: sel ? `${m.cor}22` : "var(--bg-elevated)",
+                    backgroundColor: sel
+                      ? `color-mix(in srgb, ${m.cor} 13%, transparent)`
+                      : "var(--bg-elevated)",
                     color: sel ? m.cor : "var(--text-muted)",
                     boxShadow: sel ? `0 0 0 1px ${m.cor}` : "none",
                   }}
@@ -199,7 +201,7 @@ function LinhaAcao({ item }: { item: HistoricoAcao }) {
     <div className="flex items-start gap-3 px-4 py-3">
       <span
         className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${moduloInfo.cor}1c`, color: moduloInfo.cor }}
+        style={{ backgroundColor: `color-mix(in srgb, ${moduloInfo.cor} 11%, transparent)`, color: moduloInfo.cor }}
       >
         <Icon size={14} />
       </span>

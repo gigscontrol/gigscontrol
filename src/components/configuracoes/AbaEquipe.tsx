@@ -292,7 +292,7 @@ export default function AbaEquipe() {
             ? t("Plano {nome} — {usados} de {limite} em uso", { nome: plano.nome, usados, limite })
             : t("Crie os logins da sua equipe.")
         }
-        accentColor="var(--module-agencia)"
+        accentColor="var(--brand)"
         actions={
           <div className="min-w-[160px]">
             <div className="text-right">
@@ -304,7 +304,7 @@ export default function AbaEquipe() {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${limite > 0 ? Math.min(100, (usados / limite) * 100) : 0}%`,
-                  backgroundColor: noLimite ? "var(--danger)" : "var(--module-agencia)",
+                  backgroundColor: noLimite ? "var(--danger)" : "var(--brand)",
                 }}
               />
             </div>
@@ -353,9 +353,9 @@ export default function AbaEquipe() {
                       style={{
                         background: bloqueado
                           ? "var(--border-strong)"
-                          : `linear-gradient(135deg, ${info?.cor ?? "var(--module-contatos)"}, ${info?.cor ?? "var(--module-contatos)"}99)`,
+                          : `linear-gradient(135deg, ${info?.cor ?? "var(--border-strong)"}, ${info?.cor ?? "var(--border-strong)"}99)`,
                         boxShadow: ativoChip
-                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${info?.cor ?? "var(--module-contatos)"}`
+                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${info?.cor ?? "var(--border-strong)"}`
                           : undefined,
                       }}
                     >
@@ -387,7 +387,7 @@ export default function AbaEquipe() {
               disabled={noLimite}
               title={noLimite ? t("Limite do plano atingido") : t("Criar usuário")}
               className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: "var(--module-vendas)" }}
+              style={{ color: "var(--brand)" }}
             >
               <Plus size={16} />
             </button>
@@ -431,7 +431,7 @@ export default function AbaEquipe() {
         <div className="card flex flex-col items-center justify-center text-center gap-3 py-16">
           <div
             className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center"
-            style={{ color: "var(--module-vendas)" }}
+            style={{ color: "var(--brand)" }}
           >
             <Users size={22} />
           </div>
@@ -454,7 +454,7 @@ export default function AbaEquipe() {
             <div
               style={{
                 height: 4,
-                background: `linear-gradient(90deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--module-vendas)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--module-vendas)"}66)`,
+                background: `linear-gradient(90deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}66)`,
               }}
             />
             <div className="p-5 flex items-start gap-4 flex-wrap">
@@ -463,7 +463,7 @@ export default function AbaEquipe() {
                 style={{
                   background: !selecionado.ativo
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--module-vendas)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--module-vendas)"}99)`,
+                    : `linear-gradient(135deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
                 }}
               >
                 {selecionado.nome.charAt(0).toUpperCase()}
@@ -577,7 +577,7 @@ export default function AbaEquipe() {
                 <button
                   onClick={() => aoResetarSenha(selecionado)}
                   className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{ color: "var(--module-agencia)" }}
+                  style={{ color: "var(--brand)" }}
                 >
                   <KeyRound size={14} /> {t("Resetar senha")}
                 </button>
@@ -598,7 +598,7 @@ export default function AbaEquipe() {
             {/* Acesso ao sistema */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <KeyRound size={12} style={{ color: "var(--module-agencia)" }} />
+                <KeyRound size={12} style={{ color: "var(--brand)" }} />
                 {t("Acesso ao sistema")}
               </div>
               {/* Login (handle) — só em membros novos criados por username.
@@ -762,7 +762,7 @@ export default function AbaEquipe() {
             {/* Funções e DJs atendidos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <Users size={12} style={{ color: "var(--module-agencia)" }} />
+                <Users size={12} style={{ color: "var(--brand)" }} />
                 {t("Funções e DJs atendidos")}
               </div>
               {(() => {
@@ -820,7 +820,7 @@ export default function AbaEquipe() {
             {/* Permissões (read-only; edita no modal) */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <ShieldCheck size={12} style={{ color: "var(--module-agencia)" }} />
+                <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
                 {t("Permissões")}
               </div>
               {(() => {
@@ -857,7 +857,7 @@ export default function AbaEquipe() {
         <div className="card p-0 overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
-              <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
+              <Trash2 size={14} style={{ color: "var(--brand)" }} />
               <div className="section-title">
                 {t("Na lixeira ({n})", { n: lixeiraUsuarios.length })}
               </div>
@@ -876,7 +876,7 @@ export default function AbaEquipe() {
                 >
                   <span
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ backgroundColor: "var(--module-contatos)", opacity: 0.6 }}
+                    style={{ backgroundColor: "var(--border-strong)", opacity: 0.6 }}
                   >
                     {item.usuario.nome
                       .split(" ")
@@ -1491,7 +1491,7 @@ function ModalUsuario({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} style={{ color: "var(--module-financeiro)" }} />
+            <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
             <span className="text-xs font-medium text-secondary">
               {t("Privacidade e permissões")}
             </span>
@@ -1533,7 +1533,7 @@ function ModalUsuario({
         {modo === "editar" && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <div className="flex items-center gap-1.5">
-              <Lock size={14} style={{ color: "var(--module-financeiro)" }} />
+              <Lock size={14} style={{ color: "var(--brand)" }} />
               <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
             </div>
             {carregandoConta ? (
@@ -1630,8 +1630,8 @@ function ModalUsuario({
                 }}
                 className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-1"
                 style={{
-                  borderColor: "var(--module-vendas)",
-                  color: "var(--module-vendas)",
+                  borderColor: "var(--brand)",
+                  color: "var(--brand)",
                 }}
               >
                 <KeyRound size={14} />
@@ -1685,7 +1685,7 @@ function LinhaEscopo({
         onClick={() => onChange(!valor)}
         className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
         style={{
-          backgroundColor: valor ? "var(--module-vendas)" : "var(--border-strong)",
+          backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
         }}
         aria-label={label}
       >

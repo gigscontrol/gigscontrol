@@ -195,7 +195,7 @@ function OnboardingInner() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(700px circle at 50% 0%, rgba(168,85,247,0.15), transparent 60%)",
+            "radial-gradient(700px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
         }}
       />
 
@@ -204,7 +204,7 @@ function OnboardingInner() {
           <div className="flex items-center gap-2">
             <div
               className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
-              style={{ backgroundColor: "var(--module-vendas)" }}
+              style={{ backgroundColor: "var(--brand)" }}
             >
               G
             </div>
@@ -314,7 +314,7 @@ function Stepper({ etapaAtual }: { etapaAtual: number }) {
                   backgroundColor: concluida
                     ? "var(--success)"
                     : ativa
-                    ? "var(--module-vendas)"
+                    ? "var(--brand)"
                     : "var(--bg-elevated)",
                   color: concluida || ativa ? "#fff" : "var(--text-muted)",
                   border: concluida || ativa ? "none" : "1px solid var(--border-color)",
@@ -369,8 +369,8 @@ function Etapa1Bemvindo({
         className="h-16 w-16 mx-auto rounded-full flex items-center justify-center mb-4"
         style={{
           background:
-            "linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))",
-          color: "var(--module-vendas)",
+            "linear-gradient(135deg, rgba(61,123,255,0.2), rgba(61,123,255,0.05))",
+          color: "var(--brand)",
         }}
       >
         <PartyPopper size={28} />
@@ -386,7 +386,7 @@ function Etapa1Bemvindo({
       <button
         onClick={onAvancar}
         className="btn btn-primary text-sm mt-6 py-2.5 px-6"
-        style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+        style={{ backgroundColor: "var(--brand)", color: "#fff" }}
       >
         <Sparkles size={14} />
         {t("Vamos lá")}
@@ -488,8 +488,8 @@ function Etapa2Plano({
               onClick={() => setPlanoSelecionado(p.id)}
               className="card text-left transition-all hover:border-border-strong relative flex flex-col"
               style={{
-                borderColor: sel ? "var(--module-vendas)" : undefined,
-                boxShadow: sel ? "0 0 0 1px var(--module-vendas)" : undefined,
+                borderColor: sel ? "var(--brand)" : undefined,
+                boxShadow: sel ? "0 0 0 1px var(--brand)" : undefined,
                 paddingTop: temTrial || popular ? 24 : undefined,
               }}
             >
@@ -498,7 +498,7 @@ function Etapa2Plano({
                 {popular && (
                   <span
                     className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: "var(--module-vendas)" }}
+                    style={{ backgroundColor: "var(--brand)" }}
                   >
                     {t("Mais popular")}
                   </span>
@@ -532,7 +532,7 @@ function Etapa2Plano({
               {sel && (
                 <div
                   className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--module-vendas)" }}
+                  style={{ backgroundColor: "var(--brand)" }}
                 >
                   <Check size={12} className="text-white" />
                 </div>
@@ -557,12 +557,12 @@ function Etapa2Plano({
       )}
 
       <div className="flex flex-col gap-2 max-w-[480px] mx-auto">
-        {/* Botão verde: pagar agora (todos os planos) */}
+        {/* Botão primário: pagar agora (todos os planos) */}
         <button
           onClick={irParaPagamento}
           disabled={acao !== null}
           className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-          style={{ backgroundColor: "var(--success)", color: "#fff" }}
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
         >
           {acao === "pagar" ? (
             <>
@@ -660,7 +660,7 @@ function Etapa3Agencia({
     return digs.startsWith("55") && digs.length >= 12 ? digs.slice(2) : digs;
   });
   // Cor de preferência
-  const [cor, setCor] = useState<string>(id.corAcento ?? "#a855f7");
+  const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
@@ -910,7 +910,7 @@ function Etapa3Agencia({
           onClick={salvar}
           disabled={salvando}
           className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-          style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
         >
           {salvando ? (
             <>
@@ -1048,7 +1048,7 @@ function Etapa4Artista({
         <Music
           size={32}
           className="mx-auto mb-3"
-          style={{ color: "var(--module-vendas)" }}
+          style={{ color: "var(--brand)" }}
         />
         <h2 className="text-xl font-bold tracking-tight">
           {t("Cadastre seu primeiro artista")}
@@ -1162,7 +1162,7 @@ function Etapa5Equipe({
         <Users
           size={32}
           className="mx-auto mb-3"
-          style={{ color: "var(--module-vendas)" }}
+          style={{ color: "var(--brand)" }}
         />
         <h2 className="text-xl font-bold tracking-tight">{t("Convide a equipe")}</h2>
         <p className="mt-1 text-sm text-secondary">
@@ -1190,7 +1190,7 @@ function Etapa5Equipe({
           <button
             onClick={onAvancar}
             className="btn btn-primary text-sm w-full justify-center py-2.5 mt-4"
-            style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
           >
             {t("Terminar")}
             <ArrowRight size={14} />
@@ -1255,7 +1255,7 @@ function Etapa5Equipe({
                   onClick={() => setPapel(p)}
                   className="card text-center py-2 text-xs capitalize transition-colors"
                   style={{
-                    borderColor: papel === p ? "var(--module-vendas)" : undefined,
+                    borderColor: papel === p ? "var(--brand)" : undefined,
                     color: papel === p ? "var(--text-primary)" : "var(--text-secondary)",
                     fontWeight: papel === p ? 600 : 400,
                   }}
@@ -1285,7 +1285,7 @@ function Etapa5Equipe({
               onClick={salvar}
               disabled={salvando}
               className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--module-vendas)", color: "#fff" }}
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
               {salvando ? t("Convidando...") : t("Convidar")}
             </button>

@@ -19,8 +19,9 @@ import { useArtistas } from "@/lib/workspace-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
+import { MODULE_THEMES } from "@/types";
 
-const ACCENT = "#14b8a6";
+const ACCENT = MODULE_THEMES.contratos.color;
 
 /** Status na ordem em que aparecem no pill-group de troca de status. */
 const STATUS_ORDEM: ContratoStatus[] = [

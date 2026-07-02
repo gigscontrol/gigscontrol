@@ -795,8 +795,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             <div
               className="flex items-center gap-3 px-3 py-2.5 rounded-md border bg-elevated mt-1"
               style={{
-                borderColor: djEfetivoOrc.color,
-                boxShadow: `0 0 0 1px ${djEfetivoOrc.color}`,
+                borderColor: accent,
+                boxShadow: `0 0 0 1px ${accent}`,
               }}
             >
               <span
@@ -844,9 +844,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                     }}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
                     style={{
-                      borderColor: isActive ? d.color : "var(--border-color)",
+                      borderColor: isActive ? accent : "var(--border-color)",
                       boxShadow: isActive
-                        ? `0 0 0 1px ${d.color}`
+                        ? `0 0 0 1px ${accent}`
                         : undefined,
                     }}
                   >
@@ -996,7 +996,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
               {djSelecionado && (
                 <>
                   {" "}{t("para")}{" "}
-                  <span style={{ color: djSelecionado.color }} className="font-semibold">
+                  <span className="font-semibold text-primary">
                     {djSelecionado.name}
                   </span>
                 </>

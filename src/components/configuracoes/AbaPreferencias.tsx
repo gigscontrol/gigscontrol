@@ -82,15 +82,15 @@ export default function AbaPreferencias() {
                 style={
                   ativo
                     ? {
-                        borderColor: "var(--module-vendas)",
-                        backgroundColor: "color-mix(in srgb, var(--module-vendas) 12%, transparent)",
+                        borderColor: "var(--brand)",
+                        backgroundColor: "color-mix(in srgb, var(--brand) 12%, transparent)",
                       }
                     : { borderColor: "var(--border-color)" }
                 }
               >
                 <Flag code={i.flag} size={20} />
                 <span className="flex-1 text-left text-primary">{i.nome}</span>
-                {ativo && <Check size={14} style={{ color: "var(--module-vendas)" }} />}
+                {ativo && <Check size={14} style={{ color: "var(--brand)" }} />}
               </button>
             );
           })}
@@ -134,8 +134,8 @@ export default function AbaPreferencias() {
                 style={
                   ativo
                     ? {
-                        color: "var(--module-vendas)",
-                        backgroundColor: "color-mix(in srgb, var(--module-vendas) 14%, transparent)",
+                        color: "var(--brand)",
+                        backgroundColor: "color-mix(in srgb, var(--brand) 14%, transparent)",
                       }
                     : { color: "var(--text-muted)" }
                 }

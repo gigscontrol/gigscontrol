@@ -663,21 +663,21 @@ const ACOES_NOVO_ITEM: {
   cor: string;
   emBreve?: boolean;
 }[] = [
-  { key: "show", label: "Novo Show", desc: "Venda direta neste dia", icon: Music, cor: "var(--module-vendas)" },
-  { key: "voo", label: "Novo Voo", desc: "Voo com passageiros (busca por número)", icon: Plane, cor: "var(--module-agenda)" },
+  { key: "show", label: "Novo Show", desc: "Venda direta neste dia", icon: Music, cor: "var(--brand)" },
+  { key: "voo", label: "Novo Voo", desc: "Voo com passageiros (busca por número)", icon: Plane, cor: "var(--brand)" },
   {
     key: "transporte",
     label: "Novo Transporte Terrestre",
     desc: "Transfer/van com motorista",
     icon: Car,
-    cor: "var(--module-financeiro)",
+    cor: "var(--brand)",
   },
   {
     key: "evento",
     label: "Novo Evento Personalizado",
     desc: "Reserva o dia ou um horário",
     icon: Calendar,
-    cor: "var(--module-contratos)",
+    cor: "var(--brand)",
   },
 ];
 
@@ -751,9 +751,9 @@ function NovoItemModal({
 }
 
 const META_TIPO: Record<AgendaItem["tipo"], { label: string; icon: typeof Music; cor: string }> = {
-  evento: { label: "Evento", icon: Calendar, cor: "var(--module-contratos)" },
-  voo: { label: "Voo", icon: Plane, cor: "var(--module-agenda)" },
-  transporte: { label: "Transporte", icon: Car, cor: "var(--module-financeiro)" },
+  evento: { label: "Evento", icon: Calendar, cor: "var(--brand)" },
+  voo: { label: "Voo", icon: Plane, cor: "var(--brand)" },
+  transporte: { label: "Transporte", icon: Car, cor: "var(--brand)" },
 };
 
 /** "YYYY-MM-DD" → "DD/MM/YYYY". */
@@ -1056,10 +1056,10 @@ function PassageirosField({
                 style={
                   p.bagagemExtra
                     ? {
-                        color: "var(--module-agenda)",
-                        borderColor: "color-mix(in srgb, var(--module-agenda) 45%, transparent)",
+                        color: "var(--brand)",
+                        borderColor: "color-mix(in srgb, var(--brand) 45%, transparent)",
                         backgroundColor:
-                          "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
+                          "color-mix(in srgb, var(--brand) 16%, transparent)",
                       }
                     : { color: "var(--text-muted)", borderColor: "var(--border-color)" }
                 }
@@ -1169,7 +1169,7 @@ function EventoFormModal({
           onChange={setArtistIds}
           onCancelar={onClose}
           onContinuar={() => setEtapa(2)}
-          cor="var(--module-contratos)"
+          cor="var(--brand)"
         />
       ) : (
       <div className="flex flex-col gap-4">
@@ -1202,9 +1202,9 @@ function EventoFormModal({
                   style={
                     ativo
                       ? {
-                          color: "var(--module-contratos)",
+                          color: "var(--brand)",
                           backgroundColor:
-                            "color-mix(in srgb, var(--module-contratos) 16%, transparent)",
+                            "color-mix(in srgb, var(--brand) 16%, transparent)",
                         }
                       : { color: "var(--text-muted)" }
                   }
@@ -1222,14 +1222,14 @@ function EventoFormModal({
               <InputHora
                 value={horaInicio}
                 onChange={setHoraInicio}
-                accent="var(--module-contratos)"
+                accent="var(--brand)"
               />
             </CampoForm>
             <CampoForm label={t("Fim")}>
               <InputHora
                 value={horaFim}
                 onChange={setHoraFim}
-                accent="var(--module-contratos)"
+                accent="var(--brand)"
               />
             </CampoForm>
           </div>
@@ -1254,7 +1254,7 @@ function EventoFormModal({
             onClick={submit}
             disabled={salvando}
             className="btn btn-primary disabled:opacity-50"
-            style={{ backgroundColor: "var(--module-contratos)", color: "#fff" }}
+            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
           >
             {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar evento")}
           </button>
@@ -1286,9 +1286,9 @@ function ModoCard({
       onClick={onClick}
       className="text-left rounded-lg border p-3 transition-colors"
       style={{
-        borderColor: ativo ? "var(--module-agenda)" : "var(--border-color)",
+        borderColor: ativo ? "var(--brand)" : "var(--border-color)",
         backgroundColor: ativo
-          ? "color-mix(in srgb, var(--module-agenda) 10%, transparent)"
+          ? "color-mix(in srgb, var(--brand) 10%, transparent)"
           : "transparent",
       }}
     >
@@ -1296,8 +1296,8 @@ function ModoCard({
         <span
           className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
           style={{
-            backgroundColor: "color-mix(in srgb, var(--module-agenda) 16%, transparent)",
-            color: "var(--module-agenda)",
+            backgroundColor: "color-mix(in srgb, var(--brand) 16%, transparent)",
+            color: "var(--brand)",
           }}
         >
           <Icone size={15} />
@@ -1570,7 +1570,7 @@ function VooFormModal({
           onChange={setArtistIds}
           onCancelar={onClose}
           onContinuar={() => setEtapa(2)}
-          cor="var(--module-agenda)"
+          cor="var(--brand)"
         />
       ) : (
       <div className="flex flex-col gap-4">
@@ -1709,10 +1709,10 @@ function VooFormModal({
 
             <div className="grid grid-cols-2 gap-3">
               <CampoForm label={t("Partida")}>
-                <InputHora value={partida} onChange={setPartida} accent="var(--module-agenda)" />
+                <InputHora value={partida} onChange={setPartida} accent="var(--brand)" />
               </CampoForm>
               <CampoForm label={t("Chegada")}>
-                <InputHora value={chegada} onChange={setChegada} accent="var(--module-agenda)" />
+                <InputHora value={chegada} onChange={setChegada} accent="var(--brand)" />
               </CampoForm>
             </div>
 
@@ -1750,7 +1750,7 @@ function VooFormModal({
                   onClick={submitTodos}
                   disabled={salvando}
                   className="btn btn-primary disabled:opacity-50"
-                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                  style={{ backgroundColor: "var(--brand)", color: "#fff" }}
                 >
                   {salvando ? t("Adicionando…") : t("Adicionar à agenda")}
                 </button>
@@ -1760,7 +1760,7 @@ function VooFormModal({
                   onClick={submitUm}
                   disabled={salvando}
                   className="btn btn-primary disabled:opacity-50"
-                  style={{ backgroundColor: "var(--module-agenda)", color: "#fff" }}
+                  style={{ backgroundColor: "var(--brand)", color: "#fff" }}
                 >
                   {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar voo")}
                 </button>
@@ -1864,7 +1864,7 @@ function TransporteFormModal({
           onChange={setArtistIds}
           onCancelar={onClose}
           onContinuar={() => setEtapa(2)}
-          cor="var(--module-financeiro)"
+          cor="var(--brand)"
         />
       ) : (
       <div className="flex flex-col gap-4">
@@ -1879,7 +1879,7 @@ function TransporteFormModal({
             />
           </CampoForm>
           <CampoForm label={t("Horário")}>
-            <InputHora value={horario} onChange={setHorario} accent="var(--module-financeiro)" />
+            <InputHora value={horario} onChange={setHorario} accent="var(--brand)" />
           </CampoForm>
         </div>
 
@@ -1959,7 +1959,7 @@ function TransporteFormModal({
             onClick={submit}
             disabled={salvando}
             className="btn btn-primary disabled:opacity-50"
-            style={{ backgroundColor: "var(--module-financeiro)", color: "#fff" }}
+            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
           >
             {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar transporte")}
           </button>

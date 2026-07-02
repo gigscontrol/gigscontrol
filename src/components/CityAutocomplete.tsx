@@ -123,7 +123,7 @@ export default function CityAutocomplete({
       }
     }
     return out.slice(0, 12);
-  }, [input, cidadesUsuario, isBR, carregandoIBGE]);
+  }, [input, cidadesUsuario, isBR]);
 
   useEffect(() => setHighlight(0), [sugestoes.length]);
 

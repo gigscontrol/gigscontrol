@@ -295,7 +295,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
             }}
             maxLength={6}
             className="bg-transparent outline-none text-sm text-primary uppercase font-mono w-full tracking-wider"
-            placeholder="A855F7"
+            placeholder="3D7BFF"
           />
         </div>
       </div>
@@ -305,7 +305,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
         type="button"
         onClick={() => onApply(hexAtual)}
         className="w-full inline-flex items-center justify-center gap-1.5 rounded-md py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        style={{ backgroundColor: "var(--module-vendas)" }}
+        style={{ backgroundColor: "var(--brand)" }}
       >
         <Check size={14} />
         {t("Aplicar")}

@@ -28,7 +28,7 @@ import {
   SECOES_MODELO_EXEMPLO,
 } from "@/lib/contratos/modeloExemplo";
 
-const ACCENT = "#14b8a6";
+const ACCENT = "#3D7BFF";
 
 type Vista = "lista" | "editor";
 

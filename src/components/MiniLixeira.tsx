@@ -60,7 +60,7 @@ export default function MiniLixeira({ tipo }: Props) {
             nome: i.orcamento.numero,
             sub: i.orcamento.tipoEvento ?? null,
             iniciais: "OR",
-            corAvatar: "var(--module-vendas)",
+            corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
         };
@@ -72,7 +72,7 @@ export default function MiniLixeira({ tipo }: Props) {
             nome: i.venda.numero,
             sub: i.venda.nomeEvento ?? null,
             iniciais: "VN",
-            corAvatar: "var(--module-vendas)",
+            corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
         };
@@ -84,7 +84,7 @@ export default function MiniLixeira({ tipo }: Props) {
             nome: i.contratante.nome,
             sub: i.contratante.email ?? null,
             iniciais: i.contratante.nome.charAt(0).toUpperCase(),
-            corAvatar: "var(--module-contatos)",
+            corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
         };
@@ -96,7 +96,7 @@ export default function MiniLixeira({ tipo }: Props) {
             nome: i.casa.nome,
             sub: null,
             iniciais: i.casa.nome.charAt(0).toUpperCase(),
-            corAvatar: "var(--module-contatos)",
+            corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
         };
@@ -108,7 +108,7 @@ export default function MiniLixeira({ tipo }: Props) {
             nome: `${i.cidade.nome}, ${i.cidade.estado}`,
             sub: null,
             iniciais: i.cidade.nome.charAt(0).toUpperCase(),
-            corAvatar: "var(--module-contatos)",
+            corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
         };
@@ -141,7 +141,7 @@ export default function MiniLixeira({ tipo }: Props) {
       <div className="card p-0 overflow-hidden mt-6">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <Trash2 size={14} style={{ color: "var(--module-financeiro)" }} />
+            <Trash2 size={14} style={{ color: "var(--brand)" }} />
             <div className="section-title">
               {t("Na lixeira ({n})", { n: dados.itens.length })}
             </div>
