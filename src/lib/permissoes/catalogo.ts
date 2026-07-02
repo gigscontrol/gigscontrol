@@ -11,7 +11,7 @@
  *
  * `existe`: true = já há operação real no app que essa chave protege (dá pra
  * fazer enforcement hoje). false = "slot" pronto pra quando a feature nascer
- * (aparece no editor mas ainda não barra nada). Mantido à prova de futuro.
+ * (aparece no editor marcado "(em breve)"). Mantido à prova de futuro.
  */
 
 export type ModuloPermissao =
@@ -43,16 +43,16 @@ export const MODULOS: { id: ModuloPermissao; label: string }[] = [
 
 export const CATALOGO: Permissao[] = [
   // ---------------- AGENDA (por artista) ----------------
-  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local, horário)", existe: true },
-  { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — detalhado (todas as informações)", existe: true },
+  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local e horário)", existe: true },
+  { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — completo (todas as informações)", existe: true },
   { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar evento", existe: true },
-  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar eventos criados por ele", existe: true },
+  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os eventos que ele criou", existe: true },
   { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer evento", existe: true },
-  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir eventos criados por ele", existe: true },
+  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir os eventos que ele criou", existe: true },
   { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer evento", existe: true },
 
   // ---------------- VENDAS (por artista) ----------------
-  { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Visualizar vendas e orçamentos", existe: true },
+  { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas e orçamentos", existe: true },
   { chave: "vendas.criar_orcamento", modulo: "vendas", nivel: "artista", label: "Criar orçamento", existe: true },
   { chave: "vendas.editar_orcamento", modulo: "vendas", nivel: "artista", label: "Editar orçamento", existe: true },
   { chave: "vendas.excluir_orcamento", modulo: "vendas", nivel: "artista", label: "Excluir orçamento", existe: true },
@@ -61,23 +61,23 @@ export const CATALOGO: Permissao[] = [
   { chave: "vendas.editar_venda", modulo: "vendas", nivel: "artista", label: "Editar venda", existe: true },
   { chave: "vendas.cancelar_venda", modulo: "vendas", nivel: "artista", label: "Cancelar venda", existe: false },
   { chave: "vendas.excluir_venda", modulo: "vendas", nivel: "artista", label: "Excluir venda", existe: true },
-  { chave: "vendas.editar_todos", modulo: "vendas", nivel: "artista", label: "Editar todas as vendas do artista (não só as suas)", existe: true },
+  { chave: "vendas.editar_todos", modulo: "vendas", nivel: "artista", label: "Editar todas as vendas (não só as que ele criou)", existe: true },
 
   // ---------------- FINANCEIRO (por artista) ----------------
   // Hoje o app controla parcelas/pagamentos das vendas. Receita/despesa/
   // comissão/aprovação ainda não existem como operação → slots (existe:false).
-  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver financeiro", existe: true },
-  { chave: "financeiro.ver_caches", modulo: "financeiro", nivel: "artista", label: "Ver cachês", existe: true },
-  { chave: "financeiro.ver_pagamentos", modulo: "financeiro", nivel: "artista", label: "Ver pagamentos", existe: true },
-  { chave: "financeiro.ver_saldo", modulo: "financeiro", nivel: "artista", label: "Ver saldo", existe: false },
-  { chave: "financeiro.ver_despesas", modulo: "financeiro", nivel: "artista", label: "Ver despesas", existe: false },
-  { chave: "financeiro.ver_comissoes", modulo: "financeiro", nivel: "artista", label: "Ver comissões", existe: false },
+  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro", existe: true },
+  { chave: "financeiro.ver_caches", modulo: "financeiro", nivel: "artista", label: "Ver os cachês", existe: true },
+  { chave: "financeiro.ver_pagamentos", modulo: "financeiro", nivel: "artista", label: "Ver os pagamentos", existe: true },
+  { chave: "financeiro.ver_saldo", modulo: "financeiro", nivel: "artista", label: "Ver o saldo", existe: false },
+  { chave: "financeiro.ver_despesas", modulo: "financeiro", nivel: "artista", label: "Ver as despesas", existe: false },
+  { chave: "financeiro.ver_comissoes", modulo: "financeiro", nivel: "artista", label: "Ver as comissões", existe: false },
   { chave: "financeiro.registrar_pagamento", modulo: "financeiro", nivel: "artista", label: "Registrar pagamento", existe: true },
   { chave: "financeiro.editar_pagamento", modulo: "financeiro", nivel: "artista", label: "Editar pagamento", existe: true },
-  { chave: "financeiro.cancelar_pagamento", modulo: "financeiro", nivel: "artista", label: "Cancelar/desfazer pagamento", existe: true },
+  { chave: "financeiro.cancelar_pagamento", modulo: "financeiro", nivel: "artista", label: "Desfazer/cancelar pagamento", existe: true },
   { chave: "financeiro.registrar_recebimento", modulo: "financeiro", nivel: "artista", label: "Registrar recebimento", existe: false },
-  { chave: "financeiro.criar_receita", modulo: "financeiro", nivel: "artista", label: "Criar receita", existe: false },
-  { chave: "financeiro.criar_despesa", modulo: "financeiro", nivel: "artista", label: "Criar despesa", existe: false },
+  { chave: "financeiro.criar_receita", modulo: "financeiro", nivel: "artista", label: "Lançar receita", existe: false },
+  { chave: "financeiro.criar_despesa", modulo: "financeiro", nivel: "artista", label: "Lançar despesa", existe: false },
   { chave: "financeiro.editar_receita", modulo: "financeiro", nivel: "artista", label: "Editar receita", existe: false },
   { chave: "financeiro.editar_despesa", modulo: "financeiro", nivel: "artista", label: "Editar despesa", existe: false },
   { chave: "financeiro.excluir_lancamento", modulo: "financeiro", nivel: "artista", label: "Excluir lançamento", existe: false },
@@ -87,22 +87,24 @@ export const CATALOGO: Permissao[] = [
   // ---------------- CONTRATOS (por artista) — sem "assinar" ----------------
   // Assinar é feito pelo contratante via link gerado (fluxo /assinar/[token]),
   // não é ação de membro da equipe.
-  { chave: "contratos.ver", modulo: "contratos", nivel: "artista", label: "Visualizar contratos", existe: true },
+  { chave: "contratos.ver", modulo: "contratos", nivel: "artista", label: "Ver contratos", existe: true },
   { chave: "contratos.criar", modulo: "contratos", nivel: "artista", label: "Criar contrato", existe: true },
   { chave: "contratos.editar", modulo: "contratos", nivel: "artista", label: "Editar contrato", existe: true },
   { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato", existe: false },
   { chave: "contratos.excluir", modulo: "contratos", nivel: "artista", label: "Excluir contrato", existe: true },
-  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos do artista", existe: true },
+  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos (não só os que ele criou)", existe: true },
 
   // ---------------- CONTATOS (por artista) ----------------
-  // Escopo emergente: o usuário só alcança contatos dos artistas a que tem vínculo.
-  { chave: "contatos.ver", modulo: "contatos", nivel: "artista", label: "Visualizar contatos", existe: true },
+  // Escopo de visualização: todos OU só os que o próprio criou.
+  { chave: "contatos.ver", modulo: "contatos", nivel: "artista", label: "Ver todos os contatos", existe: true },
+  { chave: "contatos.ver_proprios", modulo: "contatos", nivel: "artista", label: "Ver só os contatos que ele criou", existe: true },
   { chave: "contatos.criar", modulo: "contatos", nivel: "artista", label: "Criar contato", existe: true },
   { chave: "contatos.editar", modulo: "contatos", nivel: "artista", label: "Editar contato", existe: true },
   { chave: "contatos.excluir", modulo: "contatos", nivel: "artista", label: "Excluir contato", existe: true },
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },
 
-  // ---------------- AGÊNCIA (workspace — administrativo, não por-artista) ----------------
+  // ---------------- AGÊNCIA (workspace — administrativo, NÃO por-artista) ----------------
+  // Não aparece no editor por-artista (é gestão global/perigosa da agência).
   { chave: "agencia.criar_artista", modulo: "agencia", nivel: "workspace", label: "Criar artista", existe: true },
   { chave: "agencia.editar_artista", modulo: "agencia", nivel: "workspace", label: "Editar artista", existe: true },
   { chave: "agencia.excluir_artista", modulo: "agencia", nivel: "workspace", label: "Excluir artista", existe: true },
