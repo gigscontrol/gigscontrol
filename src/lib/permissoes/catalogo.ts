@@ -53,6 +53,7 @@ export const CATALOGO: Permissao[] = [
 
   // ---------------- VENDAS (por artista) ----------------
   { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas e orçamentos", existe: true },
+  { chave: "vendas.ver_proprios", modulo: "vendas", nivel: "artista", label: "Ver só as vendas que ele criou", existe: true },
   { chave: "vendas.criar_orcamento", modulo: "vendas", nivel: "artista", label: "Criar orçamento", existe: true },
   { chave: "vendas.editar_orcamento", modulo: "vendas", nivel: "artista", label: "Editar orçamento", existe: true },
   { chave: "vendas.excluir_orcamento", modulo: "vendas", nivel: "artista", label: "Excluir orçamento", existe: true },

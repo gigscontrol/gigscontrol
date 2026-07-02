@@ -3,7 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import Modal from "@/components/Modal";
-import { MODULOS, permsDoModulo } from "@/lib/permissoes/catalogo";
+import { MODULOS } from "@/lib/permissoes/catalogo";
+import {
+  capacidadesDoModulo,
+  capacidadeAtiva,
+  varianteAtiva,
+  toggleCapacidade,
+  selecionarVariante,
+  normalizarPerms,
+} from "@/lib/permissoes/capacidades";
 import { PERFIS, permissoesDosPerfis, type PerfilId } from "@/lib/permissoes/perfis";
 
 type Membro = {
@@ -84,16 +92,7 @@ export default function EquipeDoArtista({
     setEditor((e) => {
       if (!e) return e;
       const perfis = e.perfis.includes(id) ? e.perfis.filter((x) => x !== id) : [...e.perfis, id];
-      return { ...e, perfis, perms: new Set(permissoesDosPerfis(perfis)) };
-    });
-  }
-  function togglePerm(chave: string) {
-    setEditor((e) => {
-      if (!e) return e;
-      const perms = new Set(e.perms);
-      if (perms.has(chave)) perms.delete(chave);
-      else perms.add(chave);
-      return { ...e, perms };
+      return { ...e, perfis, perms: normalizarPerms(new Set(permissoesDosPerfis(perfis))) };
     });
   }
 
@@ -109,7 +108,7 @@ export default function EquipeDoArtista({
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ perfis: editor.perfis, permissoes: [...editor.perms] }),
+        body: JSON.stringify({ perfis: editor.perfis, permissoes: [...normalizarPerms(editor.perms)] }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.erro ?? "Falha ao salvar.");
@@ -263,39 +262,73 @@ export default function EquipeDoArtista({
 
             {/* Checkboxes por módulo */}
             <div className="flex flex-col gap-3">
-              {MODULOS.filter((mod) =>
-                permsDoModulo(mod.id).some((p) => p.nivel === "artista")
-              ).map((mod) => (
+              {MODULOS.filter((mod) => capacidadesDoModulo(mod.id).length > 0).map((mod) => (
                 <div key={mod.id} className="bg-surface-2 border border-border rounded-md p-3">
                   <div className="stat-label mb-2">{mod.label}</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {permsDoModulo(mod.id)
-                      .filter((p) => p.nivel === "artista")
-                      .map((perm) => {
-                      const marcada = editor.perms.has(perm.chave);
+                  <div className="flex flex-col gap-1.5">
+                    {capacidadesDoModulo(mod.id).map((cap) => {
+                      const ativa = capacidadeAtiva(editor.perms, cap);
+                      const varSel = varianteAtiva(editor.perms, cap);
                       return (
-                        <button
-                          key={perm.chave}
-                          type="button"
-                          onClick={() => togglePerm(perm.chave)}
-                          className="flex items-center gap-2 text-left text-xs py-1 px-1 rounded hover:bg-elevated transition-colors"
-                        >
-                          <span
-                            className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
-                            style={{
-                              backgroundColor: marcada ? "var(--brand)" : "transparent",
-                              borderColor: marcada ? "var(--brand)" : "var(--border-strong)",
-                            }}
+                        <div key={cap.id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditor((e) => (e ? { ...e, perms: toggleCapacidade(e.perms, cap) } : e))
+                            }
+                            className="flex items-center gap-2 text-left text-xs py-1 w-full rounded hover:bg-elevated transition-colors"
                           >
-                            {marcada && (
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                            )}
-                          </span>
-                          <span className={perm.existe ? "text-secondary" : "text-muted"}>
-                            {perm.label}
-                            {!perm.existe && <span className="text-[0.6rem] text-disabled ml-1">(em breve)</span>}
-                          </span>
-                        </button>
+                            <span
+                              className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                              style={{
+                                backgroundColor: ativa ? "var(--brand)" : "transparent",
+                                borderColor: ativa ? "var(--brand)" : "var(--border-strong)",
+                              }}
+                            >
+                              {ativa && (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                              )}
+                            </span>
+                            <span className={cap.existe ? "text-secondary" : "text-muted"}>
+                              {cap.label}
+                              {!cap.existe && <span className="text-[0.6rem] text-disabled ml-1">(em breve)</span>}
+                            </span>
+                          </button>
+
+                          {ativa && cap.variantes && (
+                            <div className="ml-6 mt-1 flex flex-wrap gap-1.5">
+                              {cap.variantes.map((v) => {
+                                const sel = varSel === v.chave;
+                                return (
+                                  <button
+                                    key={v.chave}
+                                    type="button"
+                                    onClick={() =>
+                                      setEditor((e) =>
+                                        e ? { ...e, perms: selecionarVariante(e.perms, cap, v.chave) } : e
+                                      )
+                                    }
+                                    className="text-[0.7rem] px-2 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5"
+                                    style={{
+                                      borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                                      backgroundColor: sel ? "var(--brand-weak)" : "transparent",
+                                      color: sel ? "var(--brand-2)" : "var(--text-muted)",
+                                    }}
+                                  >
+                                    <span
+                                      className="h-2.5 w-2.5 rounded-full border flex-shrink-0"
+                                      style={{
+                                        borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                                        backgroundColor: sel ? "var(--brand)" : "transparent",
+                                      }}
+                                    />
+                                    {v.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
