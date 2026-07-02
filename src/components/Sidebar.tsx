@@ -233,12 +233,16 @@ export default function Sidebar({
             />
           </>
         )}
-        {/* Flechinha de recolher/expandir — sempre à direita do logo (só desktop) */}
+        {/* Flechinha de recolher/expandir. Expandida: encostada na direita da
+            sidebar (logo fica centralizado). Recolhida: ao lado do monograma
+            (rail estreito). Só desktop. */}
         <button
           onClick={toggleCollapsed}
           title={collapsed ? t("Expandir menu") : t("Recolher menu")}
           aria-label={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          className="hidden lg:flex flex-shrink-0 items-center justify-center h-5 w-5 rounded text-muted hover:text-primary hover:bg-elevated transition-colors"
+          className={`hidden lg:flex flex-shrink-0 items-center justify-center h-5 w-5 rounded text-muted hover:text-primary hover:bg-elevated transition-colors ${
+            collapsed ? "" : "lg:absolute lg:right-2.5 lg:top-1/2 lg:-translate-y-1/2"
+          }`}
         >
           {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
         </button>
