@@ -32,6 +32,7 @@ type LinhaParcela = {
   parcela: Parcela;
   indiceParcela: number;
   totalParcelas: number;
+  djId: string;
   djNome: string;
   djColor: string;
   contratante: string;
@@ -43,7 +44,7 @@ export default function ControlePagamentos() {
   const t = useT();
   const accent = "var(--brand)";
   const { vendas, atualizarParcela } = useVendas();
-  const { modoVisitante } = useAuth();
+  const { modoVisitante, podeUI } = useAuth();
   const artistas = useArtistas();
 
   const [search, setSearch] = useState("");
@@ -61,6 +62,7 @@ export default function ControlePagamentos() {
           parcela,
           indiceParcela: idx + 1,
           totalParcelas: v.parcelas.length,
+          djId: v.djId,
           djNome: dj?.name ?? "—",
           djColor: dj?.color ?? "#888",
           contratante: v.contratanteNome,
@@ -318,26 +320,53 @@ export default function ControlePagamentos() {
                           {modoVisitante ? (
                             <span className="text-xs text-muted">—</span>
                           ) : l.status === "pago" ? (
-                            <button
-                              onClick={() => desfazerPago(l)}
-                              className="btn-ghost text-xs inline-flex items-center gap-1"
-                              title={t("Desfazer pagamento")}
-                            >
-                              <Undo2 size={13} />
-                              {t("Desfazer")}
-                            </button>
+                            (() => {
+                              const podeCancelar = podeUI(
+                                l.djId || null,
+                                "financeiro.cancelar_pagamento"
+                              );
+                              return (
+                                <button
+                                  onClick={() => desfazerPago(l)}
+                                  disabled={!podeCancelar}
+                                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={
+                                    !podeCancelar
+                                      ? "Você não tem permissão para isso."
+                                      : t("Desfazer pagamento")
+                                  }
+                                >
+                                  <Undo2 size={13} />
+                                  {t("Desfazer")}
+                                </button>
+                              );
+                            })()
                           ) : (
-                            <button
-                              onClick={() => marcarPago(l)}
-                              className="btn text-xs inline-flex items-center gap-1"
-                              style={{
-                                backgroundColor: "var(--success)",
-                                color: "#fff",
-                              }}
-                            >
-                              <CheckCircle2 size={13} />
-                              {t("Informar pagamento")}
-                            </button>
+                            (() => {
+                              const podeRegistrar = podeUI(
+                                l.djId || null,
+                                "financeiro.registrar_pagamento"
+                              );
+                              return (
+                                <button
+                                  onClick={() => marcarPago(l)}
+                                  disabled={!podeRegistrar}
+                                  className="btn text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={
+                                    !podeRegistrar
+                                      ? "Você não tem permissão para isso."
+                                      : undefined
+                                  }
+                                  style={{
+                                    backgroundColor: "var(--success)",
+                                    color: "#fff",
+                                  }}
+                                >
+                                  <CheckCircle2 size={13} />
+                                  {t("Informar pagamento")}
+                                </button>
+                              );
+                            })()
                           )}
                         </div>
                       </Td>

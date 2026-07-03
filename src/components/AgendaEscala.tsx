@@ -15,6 +15,7 @@ import Modal from "./Modal";
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -134,6 +135,8 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
+  const podeCriarAlgum = artistas.some((a) => podeUI(a.id, "agenda.criar"));
   const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
   // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
@@ -373,6 +376,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
                 accent={accent}
+                podeCriarAlgum={podeCriarAlgum}
                 onShowClick={setShowSelecionado}
                 onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
@@ -398,6 +402,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
                 itens={itens}
                 artistas={artistas}
                 accent={accent}
+                podeCriarAlgum={podeCriarAlgum}
                 onShowClick={setShowSelecionado}
                 onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
@@ -421,6 +426,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
       {novoItemDia && (
         <NovoItemModal
           day={novoItemDia}
+          podeCriarItem={podeCriarAlgum}
           onClose={() => setNovoItemDia(null)}
           onNovoShow={() => {
             const d = novoItemDia.dataISO;
@@ -534,6 +540,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         <ItemDetalheModal
           item={itemDetalhe}
           artistasDoItem={artistas.filter((a) => itemDetalhe.artistIds.includes(a.id))}
+          podeUI={podeUI}
           onClose={() => setItemDetalhe(null)}
           onEditar={() => {
             setEditandoItem(itemDetalhe);
@@ -557,6 +564,7 @@ function DayCellComponent({
   itens,
   artistas,
   accent,
+  podeCriarAlgum,
   onShowClick,
   onItemClick,
   onNovoItem,
@@ -566,6 +574,7 @@ function DayCellComponent({
   itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
+  podeCriarAlgum: boolean;
   onShowClick: (id: string) => void;
   onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
@@ -624,7 +633,9 @@ function DayCellComponent({
           />
         ))}
         {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
-        {!day.isOtherMonth && <NovoItemSlot onClick={() => onNovoItem(day)} />}
+        {!day.isOtherMonth && (
+          <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeCriarAlgum} />
+        )}
       </div>
     </div>
   );
@@ -640,15 +651,16 @@ function DayCellEmptySlot() {
 }
 
 /** Retângulo pontilhado com "+" — sempre o último item da coluna do dia. */
-function NovoItemSlot({ onClick }: { onClick: () => void }) {
+function NovoItemSlot({ onClick, podeCriar = true }: { onClick: () => void; podeCriar?: boolean }) {
   const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={!podeCriar}
       aria-label={t("Adicionar ao dia")}
-      title={t("Adicionar ao dia")}
-      className="mt-2 w-full flex items-center justify-center h-9 border border-dashed border-border rounded-md text-muted hover:text-secondary hover:border-border-strong transition-colors"
+      title={!podeCriar ? t("Você não tem permissão para isso.") : t("Adicionar ao dia")}
+      className="mt-2 w-full flex items-center justify-center h-9 border border-dashed border-border rounded-md text-muted hover:text-secondary hover:border-border-strong transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Plus size={15} />
     </button>
@@ -686,6 +698,7 @@ const ACOES_NOVO_ITEM: {
  *  viewport, sem o bug de `fixed` ancorando no <main> com transform. */
 function NovoItemModal({
   day,
+  podeCriarItem,
   onClose,
   onNovoShow,
   onNovoEvento,
@@ -693,6 +706,7 @@ function NovoItemModal({
   onNovoTransporte,
 }: {
   day: DayCell;
+  podeCriarItem: boolean;
   onClose: () => void;
   onNovoShow: () => void;
   onNovoEvento: () => void;
@@ -711,11 +725,15 @@ function NovoItemModal({
       <div className="flex flex-col gap-1">
         {ACOES_NOVO_ITEM.map((a) => {
           const Icone = a.icon;
+          // Voo/Transporte/Evento criam item de agenda → gate por agenda.criar.
+          // "show" abre a Nova Venda Direta (fora do escopo deste gate).
+          const gateItem = a.key !== "show" && !podeCriarItem;
           return (
             <button
               key={a.key}
               type="button"
-              disabled={a.emBreve}
+              disabled={a.emBreve || gateItem}
+              title={gateItem ? t("Você não tem permissão para isso.") : undefined}
               onClick={
                 a.key === "show"
                   ? onNovoShow
@@ -2151,12 +2169,14 @@ function DetalheTransporte({ dados }: { dados?: Record<string, unknown> }) {
 function ItemDetalheModal({
   item,
   artistasDoItem,
+  podeUI,
   onClose,
   onEditar,
   onExcluir,
 }: {
   item: AgendaItem;
   artistasDoItem: DJ[];
+  podeUI: (artistaId: string | null, chave: string) => boolean;
   onClose: () => void;
   onEditar: () => void;
   onExcluir: () => Promise<void>;
@@ -2164,6 +2184,16 @@ function ItemDetalheModal({
   const t = useT();
   const [excluindo, setExcluindo] = useState(false);
   const meta = META_TIPO[item.tipo];
+  const podeEditar = item.artistIds.length
+    ? item.artistIds.some(
+        (id) => podeUI(id, "agenda.editar") || podeUI(id, "agenda.editar_todos")
+      )
+    : podeUI(null, "agenda.editar_todos");
+  const podeExcluir = item.artistIds.length
+    ? item.artistIds.some(
+        (id) => podeUI(id, "agenda.excluir") || podeUI(id, "agenda.excluir_todos")
+      )
+    : podeUI(null, "agenda.excluir_todos");
   const horario = item.diaInteiro
     ? t("Dia inteiro")
     : [item.horaInicio, item.horaFim].filter(Boolean).join(" – ") || "—";
@@ -2216,15 +2246,18 @@ function ItemDetalheModal({
         <div className="flex justify-between pt-2">
           <button
             onClick={onEditar}
-            className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+            disabled={!podeEditar}
+            title={!podeEditar ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Pencil size={14} />
             {t("Editar")}
           </button>
           <button
             onClick={excluir}
-            disabled={excluindo}
-            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
+            disabled={excluindo || !podeExcluir}
+            title={!podeExcluir ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "var(--danger)" }}
           >
             <Trash2 size={14} />
@@ -2242,6 +2275,7 @@ function MobileDayCard({
   itens,
   artistas,
   accent,
+  podeCriarAlgum,
   onShowClick,
   onItemClick,
   onNovoItem,
@@ -2251,6 +2285,7 @@ function MobileDayCard({
   itens: AgendaItem[];
   artistas: DJ[];
   accent: string;
+  podeCriarAlgum: boolean;
   onShowClick: (id: string) => void;
   onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
@@ -2303,7 +2338,7 @@ function MobileDayCard({
         />
       ))}
       {shows.length === 0 && itens.length === 0 && <MobileDayEmptySlot />}
-      <NovoItemSlot onClick={() => onNovoItem(day)} />
+      <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeCriarAlgum} />
     </div>
   );
 }

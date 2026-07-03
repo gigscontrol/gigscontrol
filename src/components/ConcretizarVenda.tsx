@@ -37,6 +37,7 @@ import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import {
   CATALOGO_CAMARIM,
@@ -93,6 +94,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
 
   const orc = orcamentoId ? orcamentos.find((o) => o.id === orcamentoId) : undefined;
   const contratanteOrc = orc ? contratantes.find((c) => c.id === orc.contratanteId) : undefined;
@@ -1179,8 +1181,16 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </button>
         <button
           onClick={handleSubmit}
-          disabled={salvando}
-          className="btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={
+            salvando ||
+            !podeUI(djId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
+          }
+          title={
+            !podeUI(djId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
+              ? "Você não tem permissão para isso."
+              : undefined
+          }
+          className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: accent, color: "#fff" }}
         >
           <CheckCircle2 size={14} />

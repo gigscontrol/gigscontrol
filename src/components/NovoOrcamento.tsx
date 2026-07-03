@@ -38,6 +38,7 @@ import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { montarTelefoneE164 } from "@/lib/data/countries";
 import {
@@ -112,6 +113,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const { contratantes, updateContratante, cidades } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
 
   const [step, setStep] = useState(1);
 
@@ -1022,7 +1024,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            className="btn btn-primary"
+            disabled={blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))}
+            title={
+              blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))
+                ? "Você não tem permissão para isso."
+                : undefined
+            }
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Save size={14} />

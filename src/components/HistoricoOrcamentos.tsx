@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import {
   Plus,
   Search,
@@ -39,10 +40,15 @@ const STATUS_FILTROS: { value: OrcamentoStatus | "todos"; label: string }[] = [
 
 export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVenda }: Props) {
   const t = useT();
+  const { podeUI } = useAuth();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
   const { contratantes, cidades, casas } = useContatos();
   const artistas = useArtistas();
+
+  // Botão "Novo orçamento" não tem artista fixo (escolhido no wizard) →
+  // habilita se o usuário puder criar orçamento em ALGUM artista.
+  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar_orcamento"));
 
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -123,7 +129,9 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
         actions={
           <button
             onClick={onNovo}
-            className="btn btn-primary"
+            disabled={!podeCriarOrcamento}
+            title={!podeCriarOrcamento ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Plus size={14} />
@@ -239,7 +247,9 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
             {orcamentos.length === 0 && (
               <button
                 onClick={onNovo}
-                className="btn btn-primary"
+                disabled={!podeCriarOrcamento}
+                title={!podeCriarOrcamento ? t("Você não tem permissão para isso.") : undefined}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: accent, color: "#fff" }}
               >
                 <Plus size={14} />
@@ -309,6 +319,9 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                           onDelete={() => handleRemover(o.id)}
                           onTransformar={() => onTransformarEmVenda(o.id)}
                           status={o.status}
+                          podeEditar={podeUI(o.djId || null, "vendas.editar_orcamento")}
+                          podeConverter={podeUI(o.djId || null, "vendas.converter")}
+                          podeExcluir={podeUI(o.djId || null, "vendas.excluir_orcamento")}
                         />
                       </Td>
                     </tr>
@@ -390,6 +403,9 @@ function RowActions({
   onDelete,
   onTransformar,
   status,
+  podeEditar,
+  podeConverter,
+  podeExcluir,
 }: {
   onView: () => void;
   onWA: () => void;
@@ -400,8 +416,12 @@ function RowActions({
   onDelete: () => void;
   onTransformar: () => void;
   status: OrcamentoStatus;
+  podeEditar: boolean;
+  podeConverter: boolean;
+  podeExcluir: boolean;
 }) {
   const t = useT();
+  const semPermissao = t("Você não tem permissão para isso.");
   return (
     <div className="flex items-center gap-0.5 justify-end" onClick={(e) => e.stopPropagation()}>
       <ActionBtn label={t("Ver")} onClick={onView}>
@@ -411,29 +431,29 @@ function RowActions({
         <MessageCircle size={14} />
       </ActionBtn>
       {status !== "aceito" && (
-        <ActionBtn label={t("Marcar aceito")} onClick={onAccept}>
+        <ActionBtn label={t("Marcar aceito")} onClick={onAccept} disabled={!podeEditar} disabledTitle={semPermissao}>
           <CheckCircle2 size={14} className="text-success" />
         </ActionBtn>
       )}
       {status !== "recusado" && (
-        <ActionBtn label={t("Transformar em venda")} onClick={onTransformar}>
+        <ActionBtn label={t("Transformar em venda")} onClick={onTransformar} disabled={!podeConverter} disabledTitle={semPermissao}>
           <CalendarCheck2 size={14} style={{ color: "var(--brand)" }} />
         </ActionBtn>
       )}
       {status !== "negociacao" && status !== "aceito" && (
-        <ActionBtn label={t("Em negociação")} onClick={onNegotiate}>
+        <ActionBtn label={t("Em negociação")} onClick={onNegotiate} disabled={!podeEditar} disabledTitle={semPermissao}>
           <Clock size={14} className="text-warning" />
         </ActionBtn>
       )}
       {status !== "recusado" && status !== "aceito" && (
-        <ActionBtn label={t("Marcar recusado")} onClick={onReject}>
+        <ActionBtn label={t("Marcar recusado")} onClick={onReject} disabled={!podeEditar} disabledTitle={semPermissao}>
           <XCircle size={14} className="text-danger" />
         </ActionBtn>
       )}
-      <ActionBtn label={t("Duplicar")} onClick={onDuplicate}>
+      <ActionBtn label={t("Duplicar")} onClick={onDuplicate} disabled={!podeEditar} disabledTitle={semPermissao}>
         <Copy size={14} />
       </ActionBtn>
-      <ActionBtn label={t("Remover")} onClick={onDelete}>
+      <ActionBtn label={t("Remover")} onClick={onDelete} disabled={!podeExcluir} disabledTitle={semPermissao}>
         <Trash2 size={14} />
       </ActionBtn>
     </div>
@@ -444,17 +464,22 @@ function ActionBtn({
   label,
   onClick,
   children,
+  disabled = false,
+  disabledTitle,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
+  disabledTitle?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      title={label}
+      disabled={disabled}
+      title={disabled ? (disabledTitle ?? label) : label}
       aria-label={label}
-      className="btn-ghost p-1.5 rounded"
+      className="btn-ghost p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>
