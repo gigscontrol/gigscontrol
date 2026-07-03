@@ -4115,7 +4115,7 @@ function CamposDadosContrato({
 function SecaoDadosContrato(props: Parameters<typeof CamposDadosContrato>[0]) {
   const t = useT();
   return (
-    <Secao titulo={t("Dados para contrato")}>
+    <Secao titulo={t("Dados pessoais")}>
       <CamposDadosContrato {...props} />
     </Secao>
   );
