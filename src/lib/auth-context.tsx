@@ -75,6 +75,14 @@ type AuthContextValue = {
    * disponível pra UI nova; hoje os componentes usam `permissoes`.)
    */
   pode: (artistaId: string | null, chave: string) => boolean;
+  /**
+   * Versão do `pode` pra GREY-OUT de botões (UX; o servidor é a autoridade).
+   * Só restringe no MODELO NOVO: operacional LEGADO (sem vínculos) e admin/
+   * artista veem tudo habilitado (o cliente não carrega funcoes/escopo, então
+   * cinza só pra quem já tem vínculo). Use isto — não o `pode` cru — pra
+   * desabilitar botões, senão você cinza indevidamente quem é legado.
+   */
+  podeUI: (artistaId: string | null, chave: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -332,6 +340,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const ctx: CtxPermissao = {
           isSuperAdmin: sessao.tipo === "super-admin",
           papel: sessao.usuario.papel,
+          artistaId:
+            (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+          vinculos: sessao.vinculos,
+        };
+        return motorPode(ctx, artistaId, chave);
+      },
+
+      podeUI: (artistaId, chave) => {
+        if (!sessao) return false;
+        const papel = sessao.usuario.papel;
+        const temVinculos =
+          !!sessao.vinculos && Object.keys(sessao.vinculos).length > 0;
+        // Operacional LEGADO (não-admin, não-artista, sem vínculo) → mostra tudo:
+        // ele tem acesso via legado no servidor e o cliente não carrega
+        // funcoes/escopo pra reproduzir isso. Cinza só pro modelo novo.
+        if (papel !== "admin" && papel !== "artista" && !temVinculos) return true;
+        const ctx: CtxPermissao = {
+          isSuperAdmin: sessao.tipo === "super-admin",
+          papel,
           artistaId:
             (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
           vinculos: sessao.vinculos,
