@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
-import { verificarAcessoContatos, podeVerContratante } from "@/lib/api/permissoes";
+import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { contratanteVisivelParaSessao } from "@/lib/services/contatosAcesso";
 import {
   buscarContratantePorId,
   atualizarContratantePorId,
@@ -17,8 +18,16 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   if (g) return g;
   try {
     const contratante = await buscarContratantePorId(r.sessao.supabase, params.id);
-    // 404 (não 403) fora do escopo pra não vazar existência ao vendedor restrito.
-    if (!contratante || !podeVerContratante(r.sessao, contratante.criadoPor ?? null))
+    // 404 (não 403) fora do escopo pra não vazar existência.
+    if (
+      !contratante ||
+      !(await contratanteVisivelParaSessao(
+        r.sessao.supabase,
+        r.sessao,
+        params.id,
+        contratante.criadoPor ?? null
+      ))
+    )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
     return NextResponse.json({ contratante });
   } catch (e) {
@@ -53,7 +62,15 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   try {
     // Confirma escopo (dono) antes de mutar — mesma regra da lista.
     const atual = await buscarContratantePorId(r.sessao.supabase, params.id);
-    if (!atual || !podeVerContratante(r.sessao, atual.criadoPor ?? null))
+    if (
+      !atual ||
+      !(await contratanteVisivelParaSessao(
+        r.sessao.supabase,
+        r.sessao,
+        params.id,
+        atual.criadoPor ?? null
+      ))
+    )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
     const contratante = await atualizarContratantePorId(
       r.sessao.supabase,
@@ -76,7 +93,15 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   if (g) return g;
   try {
     const atual = await buscarContratantePorId(r.sessao.supabase, params.id);
-    if (!atual || !podeVerContratante(r.sessao, atual.criadoPor ?? null))
+    if (
+      !atual ||
+      !(await contratanteVisivelParaSessao(
+        r.sessao.supabase,
+        r.sessao,
+        params.id,
+        atual.criadoPor ?? null
+      ))
+    )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
     await removerContratantePorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });

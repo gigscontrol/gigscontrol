@@ -41,7 +41,6 @@ export const PERFIS: Perfil[] = [
       "financeiro.ver", "financeiro.ver_caches", "financeiro.ver_pagamentos",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento",
       "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos",
-      "contatos.ver", "contatos.criar", "contatos.editar",
     ],
   },
   {
@@ -53,7 +52,6 @@ export const PERFIS: Perfil[] = [
       "vendas.ver",
       "financeiro.ver", "financeiro.ver_caches", "financeiro.ver_pagamentos",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento", "financeiro.cancelar_pagamento",
-      "contatos.ver",
     ],
   },
   {
@@ -64,7 +62,6 @@ export const PERFIS: Perfil[] = [
     permissoes: [
       "vendas.ver",
       "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos",
-      "contatos.ver",
     ],
   },
   {
@@ -76,7 +73,6 @@ export const PERFIS: Perfil[] = [
       "agenda.ver",
       "vendas.ver", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
       "vendas.criar_venda", "vendas.editar_venda",
-      "contatos.ver", "contatos.criar",
     ],
   },
   {
@@ -87,7 +83,6 @@ export const PERFIS: Perfil[] = [
     permissoes: [
       "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar",
       "vendas.ver",
-      "contatos.ver",
     ],
   },
   {
@@ -96,7 +91,7 @@ export const PERFIS: Perfil[] = [
     descricao: "O próprio artista — vê os dados dele.",
     cor: "#a855f7",
     permissoes: [
-      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "financeiro.ver", "contratos.ver", "contatos.ver",
+      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "financeiro.ver", "contratos.ver",
     ],
   },
 ];

@@ -16,7 +16,7 @@ import type {
   ContratanteUpdateInput,
 } from "@/lib/validators/contatos.schema";
 import type { SessaoAutenticada } from "@/lib/api/session";
-import { aplicarFiltroContratantes } from "@/lib/api/permissoes";
+import { contratanteIdsVisiveis } from "@/lib/services/contatosAcesso";
 import { resolverGeoDoContato } from "@/lib/services/geoContato";
 
 function entradaParaEscrita(
@@ -39,10 +39,21 @@ export async function listarContratantesDoWorkspace(
   supabase: SupabaseClient,
   sessao?: SessaoAutenticada
 ): Promise<Contratante[]> {
-  const filtro = sessao
-    ? <Q,>(q: Q) => aplicarFiltroContratantes(q as never, sessao) as Q
-    : undefined;
-  const rows = await repoListar(supabase, filtro);
+  // Visibilidade DERIVADA (modelo novo): só os contratantes que o usuário
+  // alcança (criou, fez orçamento/venda, ou é de um artista que ele atende).
+  // Admin/legado → "todos". Ver contatosAcesso.ts.
+  if (sessao) {
+    const visiveis = await contratanteIdsVisiveis(supabase, sessao);
+    if (visiveis !== "todos") {
+      if (visiveis.size === 0) return [];
+      const ids = Array.from(visiveis);
+      const rows = await repoListar(supabase, <Q,>(q: Q) =>
+        (q as unknown as { in(c: string, v: string[]): unknown }).in("id", ids) as Q
+      );
+      return rows.map(rowParaContratante);
+    }
+  }
+  const rows = await repoListar(supabase);
   return rows.map(rowParaContratante);
 }
 

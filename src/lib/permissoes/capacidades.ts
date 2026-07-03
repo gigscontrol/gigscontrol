@@ -104,17 +104,12 @@ export const CAPACIDADES: Capacidade[] = [
   { id: "contratos.excluir", modulo: "contratos", label: "Excluir contrato", existe: true, chave: "contratos.excluir" },
 
   // -------- CONTATOS --------
-  {
-    id: "contatos.ver", modulo: "contatos", label: "Ver contatos", existe: true,
-    variantes: [
-      { chave: "contatos.ver", label: "Todos" },
-      { chave: "contatos.ver_proprios", label: "Só os que ele criou" },
-    ],
-  },
-  { id: "contatos.criar", modulo: "contatos", label: "Criar contato", existe: true, chave: "contatos.criar" },
-  { id: "contatos.editar", modulo: "contatos", label: "Editar contato", existe: true, chave: "contatos.editar" },
-  { id: "contatos.excluir", modulo: "contatos", label: "Excluir contato", existe: true, chave: "contatos.excluir" },
-  { id: "contatos.exportar", modulo: "contatos", label: "Exportar contatos", existe: false, chave: "contatos.exportar" },
+  // Contatos NÃO entra no editor por artista de propósito: um contato é do
+  // workspace, não de um artista. A visibilidade dos CONTRATANTES é derivada
+  // (quem criou + quem fez orçamento/venda pra ele + os artistas desses
+  // orçamentos/vendas) — ver src/lib/services/contatosAcesso.ts. As chaves
+  // contatos.* continuam no catálogo só por retrocompat (vínculos antigos),
+  // mas são inertes. Por isso este módulo fica sem capacidades (some do editor).
 ];
 
 export function capacidadesDoModulo(modulo: ModuloPermissao): Capacidade[] {
