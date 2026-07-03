@@ -21,17 +21,19 @@ import type { SessaoAutenticada } from "@/lib/api/session";
 import { verTodosContratos, podeVerContrato } from "@/lib/api/permissoes";
 
 /**
- * Resolve o escopo (artista + dono) de um contrato pela venda vinculada.
- * Contrato avulso (venda_id NULL) → sem artista → { null, null } (admin-only).
- * Usado pelas rotas [id]/signatários pra gatear por artista.
+ * Resolve o ARTISTA de um contrato pela venda vinculada (contrato → venda →
+ * vendas.artist_id). Contrato avulso (venda_id NULL) → sem artista → null
+ * (admin-only). O "dono" para o escopo "só os que ele criou" NÃO sai daqui —
+ * vem de `contratos.criado_por` (o criador real do contrato, não o vendedor da
+ * venda). Usado pelas rotas [id]/signatários pra gatear por artista.
  */
 export async function resolverEscopoContrato(
   supabase: SupabaseClient,
   vendaId: string | null
-): Promise<{ artistId: string | null; criadoPor: string | null }> {
-  if (!vendaId) return { artistId: null, criadoPor: null };
+): Promise<{ artistId: string | null }> {
+  if (!vendaId) return { artistId: null };
   const venda = await buscarVenda(supabase, vendaId);
-  return { artistId: venda?.artist_id ?? null, criadoPor: venda?.criado_por ?? null };
+  return { artistId: venda?.artist_id ?? null };
 }
 
 /**
@@ -102,6 +104,8 @@ export async function criarContratoNoWorkspace(
   workspaceId: string,
   planoId: PlanoId,
   input: ContratoCreateInput,
+  /** Quem cria (r.sessao.userId) — grava `criado_por` p/ o escopo "só os que ele criou". */
+  criadoPor?: string,
   /** true = pula a checagem de limite (usado após pagar o contrato excedente). */
   pularLimite = false
 ): Promise<Contrato> {
@@ -118,6 +122,7 @@ export async function criarContratoNoWorkspace(
   }
 
   const escrita = entradaParaEscrita(input);
+  if (criadoPor) escrita.criado_por = criadoPor;
   escrita.numero = await proximoNumeroContrato(supabase, workspaceId);
   escrita.status = escrita.status ?? "rascunho";
   if (!escrita.data_emissao)

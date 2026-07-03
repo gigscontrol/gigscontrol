@@ -53,12 +53,13 @@ export async function POST(
   const contrato = await buscarContratoPorId(r.sessao.supabase, params.id);
   if (!contrato)
     return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
-  const { artistId, criadoPor } = await resolverEscopoContrato(
+  const { artistId } = await resolverEscopoContrato(
     r.sessao.supabase,
     contrato.vendaId
   );
-  // 404 fora de escopo (coerente com GET/PATCH) — não vaza existência.
-  if (!podeEditarContrato(r.sessao, artistId, criadoPor))
+  // Artista vem da venda; o "dono" é o criador do CONTRATO (contratos.criado_por),
+  // não o vendedor da venda. 404 fora de escopo (coerente com GET/PATCH).
+  if (!podeEditarContrato(r.sessao, artistId, contrato.criadoPor))
     return NextResponse.json(
       { erro: "Contrato não encontrado." },
       { status: 404 }

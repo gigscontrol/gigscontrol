@@ -74,7 +74,8 @@ export async function POST(request: Request) {
       r.sessao.supabase,
       r.sessao.workspaceId,
       ws.plano as PlanoId,
-      parsed.data
+      parsed.data,
+      r.sessao.userId
     );
     return NextResponse.json({ contrato }, { status: 201 });
   } catch (e) {
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
       r.sessao.workspaceId,
       ws.plano as PlanoId,
       parsed.data,
+      r.sessao.userId,
       true
     );
     return NextResponse.json({ contrato, excedentePago: true }, { status: 201 });

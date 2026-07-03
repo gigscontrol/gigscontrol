@@ -549,10 +549,11 @@ export function podeVerContratante(
 }
 
 // ============================================================
-// CONTRATOS — a tabela `contratos` NÃO tem artist_id nem criado_por. O artista
-// é resolvido pela VENDA vinculada (contratos.venda_id → vendas.artist_id) e o
-// escopo "próprios" herda vendas.criado_por. Contrato AVULSO (venda_id NULL) =
-// sem artista → admin-only (padrão "artist_id NULL = admin-only").
+// CONTRATOS — a tabela `contratos` não tem artist_id: o artista é resolvido pela
+// VENDA vinculada (contratos.venda_id → vendas.artist_id). Já o escopo "próprios"
+// usa `contratos.criado_por` (o criador REAL do contrato, gravado no insert —
+// migration 50), NÃO o vendedor da venda. Contrato AVULSO (venda_id NULL) = sem
+// artista → admin-only (padrão "artist_id NULL = admin-only").
 //
 // LEGADO (operacional sem vínculo): preserva o comportamento atual EXATO —
 // leitura aberta (vê tudo) e mutação admin-only. Assim ninguém é trancado na
@@ -601,7 +602,7 @@ export function verificarCriarContrato(
   );
 }
 
-/** Pode EDITAR o contrato (próprios × todos, herdando venda.criado_por)? */
+/** Pode EDITAR o contrato (próprios × todos, dono = contratos.criado_por)? */
 export function podeEditarContrato(
   sessao: SessaoAutenticada,
   artistId: string | null,

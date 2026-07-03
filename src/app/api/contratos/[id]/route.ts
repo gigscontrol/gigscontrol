@@ -64,13 +64,15 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         { erro: "Contrato não encontrado." },
         { status: 404 }
       );
-    const { artistId, criadoPor } = await resolverEscopoContrato(
+    const { artistId } = await resolverEscopoContrato(
       r.sessao.supabase,
       existente.vendaId
     );
+    // Artista vem da venda; o "dono" do escopo "só os que ele criou" é o criador
+    // do CONTRATO (contratos.criado_por), não o vendedor da venda vinculada.
     // 404 (não 403) fora de escopo — mesmo padrão do GET e de contatos/[id],
     // pra não virar oráculo de existência de contrato por id.
-    if (!podeEditarContrato(r.sessao, artistId, criadoPor))
+    if (!podeEditarContrato(r.sessao, artistId, existente.criadoPor))
       return NextResponse.json(
         { erro: "Contrato não encontrado." },
         { status: 404 }
