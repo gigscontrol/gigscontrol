@@ -163,17 +163,27 @@ export default function MapaRaio({
   useEffect(() => {
     const mapa = mapaRef.current;
     if (!mapa || refCoords || !focoPais) return;
+    const centro: L.LatLngExpression = [focoPais.latitude, focoPais.longitude];
+
     if (focoPais.bbox) {
       const [s, w, n, e] = focoPais.bbox;
-      mapa.fitBounds(
-        [
-          [s, w],
-          [n, e],
-        ],
-        { padding: [24, 24], animate: true }
-      );
+      // bbox "poluído" por territórios distantes / cruzando a linha de data
+      // (ex.: EUA vêm -180..180 por causa de Alasca + Pacífico). Nesses casos
+      // o fitBounds tentaria mostrar o mundo todo — usa o centro + zoom de país.
+      const patologico = e <= w || e - w > 140 || n - s > 70;
+      if (patologico) {
+        mapa.setView(centro, 4, { animate: true });
+      } else {
+        mapa.fitBounds(
+          [
+            [s, w],
+            [n, e],
+          ],
+          { padding: [24, 24], animate: true }
+        );
+      }
     } else {
-      mapa.setView([focoPais.latitude, focoPais.longitude], 5, { animate: true });
+      mapa.setView(centro, 4, { animate: true });
     }
   }, [focoPais, refCoords]);
 
