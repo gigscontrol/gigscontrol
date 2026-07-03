@@ -6,7 +6,11 @@ import {
 } from "@/lib/services/agendaItems.service";
 import { agendaItemCreateSchema } from "@/lib/validators/agendaItems.schema";
 import { buscarAgendaItem } from "@/lib/repositories/agendaItems.repo";
-import { podeEditarAgenda, podeExcluirAgenda } from "@/lib/api/permissoes";
+import {
+  podeCriarAgenda,
+  podeEditarAgenda,
+  podeExcluirAgenda,
+} from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
 
@@ -37,6 +41,18 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
+    );
+  }
+
+  // IDOR de destino: mover o item pra OUTRO artista exige permissão no destino.
+  if (
+    parsed.data.artist_id !== undefined &&
+    (parsed.data.artist_id ?? null) !== row.artist_id &&
+    !podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)
+  ) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para mover este item para esse artista." },
+      { status: 403 }
     );
   }
 

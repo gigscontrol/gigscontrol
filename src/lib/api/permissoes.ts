@@ -134,10 +134,11 @@ function filtrarPorArtistasVisiveis<Q extends QueryBuilder>(
     for (const a of v) set.add(a);
   }
   if (set.size === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
-  // itens gerais (sem artista) continuam visíveis pra quem tem acesso à agenda.
-  return query.or(
-    `artist_id.is.null,artist_id.in.(${Array.from(set).join(",")})`
-  ) as Q;
+  // Item geral (artist_id NULL) = admin-only. Admin/super já saíram com "todos"
+  // acima; operacional vê só os artistas que alcança. Sem o `artist_id.is.null`
+  // a lista bate com o gate do GET [id] e com a redação — fecha o vazamento do
+  // item sem artista pra quem tem vínculo.
+  return query.in("artist_id", Array.from(set)) as Q;
 }
 
 /** Regra legada de mutar venda/orçamento (vendedor restrito só o que criou). */

@@ -9,6 +9,7 @@ import { showUpdateSchema } from "@/lib/validators/shows.schema";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
 import {
   podeVerAgenda,
+  podeCriarAgenda,
   podeEditarAgenda,
   podeExcluirAgenda,
   stripShowDetalhado,
@@ -29,7 +30,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         { status: 404 }
       );
     }
-    if (show.djId && !podeVerAgenda(r.sessao, show.djId)) {
+    // Inclui show SEM artista (djId vazio → null): item geral = admin-only
+    // (podeVerAgenda(null) só passa admin/legado). Antes escapava do gate.
+    if (!podeVerAgenda(r.sessao, show.djId || null)) {
       return NextResponse.json(
         { erro: "Você não tem acesso a este show." },
         { status: 403 }
@@ -72,6 +75,20 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
+    );
+  }
+
+  // IDOR de destino: se o PATCH move o show para OUTRO artista, exige permissão
+  // no DESTINO também — senão daria pra empurrar o evento pra dentro de um
+  // artista sem vínculo. Só checa quando o artist_id muda de fato.
+  if (
+    parsed.data.artist_id !== undefined &&
+    (parsed.data.artist_id ?? null) !== row.artist_id &&
+    !podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)
+  ) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para mover este evento para esse artista." },
+      { status: 403 }
     );
   }
 
