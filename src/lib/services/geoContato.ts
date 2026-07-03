@@ -33,10 +33,11 @@ export async function resolverGeoDoContato(
   const { endereco, cidadeId, paisIso2 } = params;
 
   // Centroide + contexto (nome/UF ajudam o Nominatim a acertar o endereço).
+  // Não lemos cidades.pais aqui de propósito — o país já vem do contato
+  // (paisIso2) e assim evitamos acoplar a esta coluna.
   type CidadeGeo = {
     nome: string;
     estado: string | null;
-    pais: string | null;
     latitude: number | string | null;
     longitude: number | string | null;
   };
@@ -45,7 +46,7 @@ export async function resolverGeoDoContato(
   if (cidadeId) {
     const { data } = await supabase
       .from("cidades")
-      .select("nome, estado, pais, latitude, longitude")
+      .select("nome, estado, latitude, longitude")
       .eq("id", cidadeId)
       .maybeSingle();
     cidade = (data as CidadeGeo | null) ?? null;
@@ -57,7 +58,7 @@ export async function resolverGeoDoContato(
       endereco,
       cidade?.nome ?? null,
       cidade?.estado ?? null,
-      paisIso2 ?? cidade?.pais ?? null
+      paisIso2 ?? null
     );
     if (exato) {
       return {
