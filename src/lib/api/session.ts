@@ -140,7 +140,19 @@ export async function autenticar(): Promise<
   ) {
     try {
       const rows = await listarVinculosDoUsuario(supabase, profile.id);
-      if (rows.length > 0) vinculos = mapaDeVinculos(rows);
+      if (rows.length > 0) {
+        // Vínculo com permissões VAZIAS não conta como "modelo novo": senão um
+        // usuário recém-criado (que nasce com vínculos vazios por artista, só
+        // marcando "com quais artistas trabalha") ficaria TRANCADO em tudo em
+        // vez de cair no fallback legado. Só entra no modelo novo quem tem ao
+        // menos 1 permissão em algum artista.
+        const mapa = mapaDeVinculos(rows);
+        const comPerms: Record<string, string[]> = {};
+        for (const [artistId, chaves] of Object.entries(mapa)) {
+          if (chaves.length > 0) comPerms[artistId] = chaves;
+        }
+        if (Object.keys(comPerms).length > 0) vinculos = comPerms;
+      }
     } catch {
       vinculos = undefined;
     }
