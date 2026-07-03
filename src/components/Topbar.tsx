@@ -84,6 +84,9 @@ export default function Topbar({
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
+            aria-label={t("Menu de perfil")}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
             className="flex h-9 items-center gap-1.5 rounded-md border border-border pl-1 pr-2 text-secondary transition-colors hover:border-border-strong hover:text-primary"
           >
             <span

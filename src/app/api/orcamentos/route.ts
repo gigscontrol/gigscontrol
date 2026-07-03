@@ -9,6 +9,7 @@ import {
   verificarAcessoOrcamentos,
   verificarCriarOrcamento,
 } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
@@ -68,9 +69,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ orcamento }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar orçamento." },
-      { status: 500 }
-    );
+    // Colisão de número (23505) etc. viram status amigável em vez de 500 cru.
+    return respostaDeErro(e, "Falha ao criar orçamento.");
   }
 }

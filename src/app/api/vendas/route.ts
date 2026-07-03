@@ -10,6 +10,7 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
 } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
@@ -73,9 +74,6 @@ export async function POST(request: Request) {
     if (e instanceof VendaDuplicadaError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar venda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar venda.");
   }
 }
