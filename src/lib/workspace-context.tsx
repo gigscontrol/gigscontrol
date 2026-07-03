@@ -50,6 +50,8 @@ export type NovoArtistaInput = {
   cidadeNome?: string;
   cidadeUf?: string;
   /** Dados do CONTRATADO (para contratos). */
+  /** País de origem (ISO2) — dirige documento/DDI/endereço. */
+  pais?: string;
   nomeLegal?: string;
   documento?: string;
   documentoTipo?: DocumentoTipo;
@@ -461,6 +463,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
       if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
       if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.pais) payload.pais = input.pais;
       if (input.nomeLegal) payload.nome_legal = input.nomeLegal;
       if (input.documento) payload.documento = input.documento;
       if (input.documentoTipo) payload.documento_tipo = input.documentoTipo;
@@ -503,6 +506,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.pais !== undefined) payload.pais = patch.pais;
       if (patch.nomeLegal !== undefined) payload.nome_legal = patch.nomeLegal;
       if (patch.documento !== undefined) payload.documento = patch.documento;
       if (patch.documentoTipo !== undefined)

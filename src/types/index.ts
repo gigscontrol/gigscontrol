@@ -51,6 +51,8 @@ export type DJ = {
   cidadeNome?: string;
   cidadeUf?: string;
   // ------- Dados do CONTRATADO (para contratos / migração 37) -------
+  /** País de origem (ISO2) — dirige documento/DDI/endereço (migração 52). */
+  pais?: string;
   /** Nome civil / responsável — o `name` acima é só o nome artístico. */
   nomeLegal?: string;
   /** 'cpf' | 'cnpj' — define se mostramos razão social. */

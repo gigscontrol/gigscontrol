@@ -13,7 +13,8 @@ export type ArtistaRow = {
   cidade_ibge_id: string | null;
   cidade_nome: string | null;
   cidade_uf: string | null;
-  // Dados do contratado p/ contrato (migração 37)
+  // Dados do contratado p/ contrato (migração 37) + país (migração 52)
+  pais: string | null;
   nome_legal: string | null;
   documento_tipo: string | null;
   documento: string | null;
@@ -96,6 +97,7 @@ export function rowParaDj(row: ArtistaRow): DJ {
   if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
   if (row.cidade_nome) dj.cidadeNome = row.cidade_nome;
   if (row.cidade_uf) dj.cidadeUf = row.cidade_uf;
+  if (row.pais) dj.pais = row.pais;
   if (row.nome_legal) dj.nomeLegal = row.nome_legal;
   if (row.documento_tipo === "cpf" || row.documento_tipo === "cnpj")
     dj.documentoTipo = row.documento_tipo;
@@ -119,6 +121,7 @@ export type ArtistaEscrita = {
   cidade_ibge_id?: string | null;
   cidade_nome?: string | null;
   cidade_uf?: string | null;
+  pais?: string | null;
   nome_legal?: string | null;
   documento_tipo?: string | null;
   documento?: string | null;
