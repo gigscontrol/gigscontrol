@@ -50,6 +50,12 @@ export type ProfileRow = {
    * Ver migration 28 e doc do trade-off.
    */
   senha_padrao_valor: string | null;
+  // Dados pessoais (migração 53) — servem para contrato.
+  pais: string | null;
+  documento_tipo: string | null;
+  documento: string | null;
+  endereco: string | null;
+  telefone: string | null;
 };
 
 /** Escopo de privacidade da equipe (flags genéricas). */
@@ -76,6 +82,12 @@ export type UsuarioEquipe = {
   escopo: EscopoUsuario;
   funcoes: Funcoes;
   ativo: boolean;
+  // Dados pessoais (opcionais).
+  pais?: string;
+  documentoTipo?: string;
+  documento?: string;
+  endereco?: string;
+  telefone?: string;
 };
 
 function escopoValido(raw: Record<string, unknown> | null | undefined): EscopoUsuario {
@@ -109,7 +121,7 @@ export function funcoesValido(raw: Record<string, unknown> | null | undefined): 
 }
 
 export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
-  return {
+  const u: UsuarioEquipe = {
     id: row.id,
     nome: row.nome,
     email: row.email,
@@ -119,6 +131,12 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
     funcoes: funcoesValido(row.funcoes),
     ativo: row.status === "ativo",
   };
+  if (row.pais) u.pais = row.pais;
+  if (row.documento_tipo) u.documentoTipo = row.documento_tipo;
+  if (row.documento) u.documento = row.documento;
+  if (row.endereco) u.endereco = row.endereco;
+  if (row.telefone) u.telefone = row.telefone;
+  return u;
 }
 
 export type UsuarioEscrita = {
@@ -135,4 +153,10 @@ export type UsuarioEscrita = {
   senha_padrao?: boolean;
   /** Valor da senha aleatória (plaintext). Só viaja junto com `senha_padrao=true`. */
   senha_padrao_valor?: string | null;
+  // Dados pessoais (migração 53).
+  pais?: string | null;
+  documento_tipo?: string | null;
+  documento?: string | null;
+  endereco?: string | null;
+  telefone?: string | null;
 };

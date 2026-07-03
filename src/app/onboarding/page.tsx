@@ -1137,8 +1137,8 @@ function Etapa5Equipe({
       const r = await adicionarUsuario({
         nome: nome.trim(),
         username_raiz: usernameRaiz.trim().toLowerCase(),
-        // Onboarding cria só o acesso; permissões se definem depois na Equipe.
-        acessos: [],
+        // Onboarding cria só o acesso; artistas/permissões se definem na Equipe.
+        artistIds: [],
       });
       setResultado({
         senha: r.senhaTemporaria,

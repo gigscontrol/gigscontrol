@@ -41,10 +41,12 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
-import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
-
-/** Perfis oferecidos ao criar usuário (o "artista" é o próprio dono, não entra). */
-const PERFIS_ATRIBUIVEIS = PERFIS.filter((p) => p.id !== "artista");
+import SeletorPais from "../SeletorPais";
+import InputDocumento from "../inputs/InputDocumento";
+import PhoneInput from "../PhoneInput";
+import { configDocumento } from "@/lib/data/documentos";
+import { exemploEndereco } from "@/lib/data/exemplos";
+import { BRASIL, montarTelefoneE164, type Country } from "@/lib/data/countries";
 
 const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
 
@@ -208,7 +210,11 @@ export default function AbaEquipe() {
   async function aoCriar(dados: {
     nome: string;
     username_raiz: string;
-    acessos: { artistId: string; perfil: PerfilId }[];
+    artistIds: string[];
+    pais?: string;
+    documento?: string;
+    endereco?: string;
+    telefone?: string;
   }) {
     try {
       const { usuario, senhaTemporaria } = await adicionarUsuario(dados);
@@ -1152,7 +1158,11 @@ function ModalUsuario({
   onCriar: (dados: {
     nome: string;
     username_raiz: string;
-    acessos: { artistId: string; perfil: PerfilId }[];
+    artistIds: string[];
+    pais?: string;
+    documento?: string;
+    endereco?: string;
+    telefone?: string;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
@@ -1166,8 +1176,14 @@ function ModalUsuario({
   const [usernameRaiz, setUsernameRaiz] = useState("");
   const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
   const [copiouUsername, setCopiouUsername] = useState(false);
-  // Modelo novo: perfil por artista (só no criar). artistId → perfil.
-  const [acessos, setAcessos] = useState<Record<string, PerfilId>>({});
+  // Artistas com quem trabalha (a função é definida depois na aba Equipe).
+  const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
+  // Dados pessoais (opcionais) — country-aware, servem para contrato.
+  const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
+  const [documento, setDocumento] = useState("");
+  const [telPais, setTelPais] = useState<Country>(BRASIL);
+  const [telDigits, setTelDigits] = useState("");
+  const [endereco, setEndereco] = useState("");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1217,11 +1233,11 @@ function ModalUsuario({
     };
   }, [modo, inicial?.id]);
 
-  function definirPerfil(artistId: string, perfil: PerfilId | "") {
-    setAcessos((prev) => {
-      const next = { ...prev };
-      if (perfil) next[artistId] = perfil;
-      else delete next[artistId];
+  function toggleArtista(id: string) {
+    setArtistIdsSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -1237,12 +1253,9 @@ function ModalUsuario({
         setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
         return;
       }
-      const lista = Object.entries(acessos).map(([artistId, perfil]) => ({
-        artistId,
-        perfil,
-      }));
-      if (lista.length === 0) {
-        setErro(t("Dê acesso a pelo menos um artista."));
+      const artistIds = [...artistIdsSel];
+      if (artistIds.length === 0) {
+        setErro(t("Selecione ao menos um artista com quem ele trabalha."));
         return;
       }
       setSalvando(true);
@@ -1251,7 +1264,11 @@ function ModalUsuario({
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
-          acessos: lista,
+          artistIds,
+          pais: paisPessoal.code,
+          documento: documento || undefined,
+          telefone: telDigits ? montarTelefoneE164(telPais, telDigits) : undefined,
+          endereco: endereco || undefined,
         });
       } catch (e) {
         setErro((e as Error).message);
@@ -1362,62 +1379,101 @@ function ModalUsuario({
         )}
 
         {modo === "criar" ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
-              <span className="text-xs font-medium text-secondary">
-                {t("Acesso aos artistas")}
-              </span>
-            </div>
-            <p className="text-[0.7rem] text-muted -mt-1">
-              {t("Escolha um perfil por artista — ele semeia as permissões. Você refina permissão por permissão depois, na aba Equipe de cada artista.")}
-            </p>
-            {artistas.length === 0 ? (
-              <span className="text-xs text-muted">
-                {t("Nenhum artista cadastrado ainda. Cadastre na aba Artistas.")}
-              </span>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {artistas.map((dj) => {
-                  const perfilAtual = acessos[dj.id];
-                  const ativo = !!perfilAtual;
-                  return (
-                    <div
-                      key={dj.id}
-                      className="flex items-center gap-2.5 rounded-md border p-2 transition-colors"
-                      style={{
-                        borderColor: ativo ? "var(--brand)" : "var(--border-color)",
-                        backgroundColor: ativo ? "var(--brand-weak)" : "transparent",
-                      }}
-                    >
-                      <span
-                        className="h-6 w-6 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: dj.color }}
-                      />
-                      <span className="text-sm font-medium text-primary flex-1 truncate">
-                        {dj.name}
-                      </span>
-                      <select
-                        value={perfilAtual ?? ""}
-                        onChange={(e) =>
-                          definirPerfil(dj.id, e.target.value as PerfilId | "")
-                        }
-                        className="campo-input text-xs py-1.5 w-[160px] flex-shrink-0"
-                        aria-label={t("Perfil de {nome}", { nome: dj.name })}
-                      >
-                        <option value="">{t("Sem acesso")}</option>
-                        {PERFIS_ATRIBUIVEIS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {t(p.nome)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
+          <>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
+                <span className="text-xs font-medium text-secondary">
+                  {t("Com quais artistas trabalha")}
+                </span>
               </div>
-            )}
-          </div>
+              <p className="text-[0.7rem] text-muted -mt-1">
+                {t("Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.")}
+              </p>
+              {artistas.length === 0 ? (
+                <span className="text-xs text-muted">
+                  {t("Nenhum artista cadastrado ainda. Cadastre na aba Artistas.")}
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {artistas.map((dj) => {
+                    const sel = artistIdsSel.has(dj.id);
+                    return (
+                      <button
+                        key={dj.id}
+                        type="button"
+                        onClick={() => toggleArtista(dj.id)}
+                        className="flex items-center gap-2.5 rounded-md border p-2 text-left transition-colors"
+                        style={{
+                          borderColor: sel ? "var(--brand)" : "var(--border-color)",
+                          backgroundColor: sel ? "var(--brand-weak)" : "transparent",
+                        }}
+                      >
+                        <span
+                          className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                          style={{
+                            backgroundColor: sel ? "var(--brand)" : "transparent",
+                            borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                          }}
+                        >
+                          {sel && <Check size={11} className="text-white" />}
+                        </span>
+                        <span
+                          className="h-6 w-6 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: dj.color }}
+                        />
+                        <span className="text-sm font-medium text-primary flex-1 truncate">
+                          {dj.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Dados pessoais (opcionais) — country-aware, igual à venda direta */}
+            <div className="flex flex-col gap-2 pt-3 border-t border-border">
+              <span className="text-xs font-medium text-secondary">{t("Dados pessoais")}</span>
+              <p className="text-[0.7rem] text-muted -mt-1">
+                {t("Opcionais — servem para contrato. O país define o documento e o DDI.")}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">{t("País de origem")}</span>
+                  <SeletorPais
+                    value={paisPessoal}
+                    onChange={(p) => {
+                      setPaisPessoal(p);
+                      setTelPais(p);
+                    }}
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">{configDocumento(paisPessoal.code).label}</span>
+                  <InputDocumento pais={paisPessoal.code} value={documento} onChange={setDocumento} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">{t("Telefone")}</span>
+                  <PhoneInput
+                    country={telPais}
+                    onCountryChange={setTelPais}
+                    value={telDigits}
+                    onChange={setTelDigits}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-xs text-muted">{t("Endereço")}</span>
+                  <input
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder={exemploEndereco(paisPessoal.code)}
+                    className="campo-input"
+                  />
+                </label>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="rounded-md border border-border p-3 flex items-start gap-2">
             <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />

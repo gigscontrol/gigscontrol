@@ -33,36 +33,24 @@ const funcoesSchema = z
     }
   );
 
-/**
- * MODELO NOVO — acesso por artista: cada item semeia um vínculo
- * (membros_artista) com o perfil escolhido. O usuário pode ter perfis
- * diferentes por artista (ex.: Financeiro do Jorge, Vendedor da Ana).
- */
-const perfilVinculoEnum = z.enum([
-  "manager",
-  "financeiro",
-  "juridico",
-  "vendedor",
-  "equipe",
-]);
-const acessoSchema = z.object({
-  artistId: uuidLike,
-  perfil: perfilVinculoEnum,
-});
-
 export const usuarioCreateSchema = z.object({
   nome: z.string().min(1, "nome obrigatório").max(120),
   // Parte do username digitada pelo admin — o backend concatena o slug
   // da agência ("raiz-slug"), exatamente como na criação de artistas.
   // Sem campo de e-mail: a conta nasce com um e-mail fake interno.
   username_raiz: usernameRaizSchema,
-  // Acesso inicial por artista (semeia vínculos). Pode vir vazio no
-  // onboarding (cria só a conta; o acesso é configurado depois na Equipe).
-  // O modal de criar usuário exige ao menos 1 no cliente.
-  acessos: z.array(acessoSchema).default([]),
+  // Artistas com quem o usuário trabalha. Cria um VÍNCULO vazio por artista
+  // (aparece na aba Equipe do artista, onde o admin define a função e as
+  // permissões). Pode vir vazio no onboarding (cria só a conta).
+  artistIds: z.array(uuidLike).default([]),
+  // Dados pessoais (opcionais) — servem para contrato. País dirige documento.
+  pais: z.string().length(2).optional(),
+  documento_tipo: z.enum(["cpf", "cnpj"]).optional(),
+  documento: z.string().max(40).optional(),
+  endereco: z.string().max(300).optional(),
+  telefone: z.string().max(40).optional(),
 });
 export type UsuarioCreateInput = z.infer<typeof usuarioCreateSchema>;
-export type AcessoInput = z.infer<typeof acessoSchema>;
 
 export const usuarioUpdateSchema = z.object({
   nome: z.string().min(1).max(120).optional(),
