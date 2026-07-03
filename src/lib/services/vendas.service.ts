@@ -171,12 +171,16 @@ export async function criarVendaCompleta(
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
   // 3: parcelas (se houver)
+  const hojeYmd = new Date().toISOString().slice(0, 10);
   const parcelasPayload: ParcelaEscrita[] = (input.parcelas ?? []).map((p) => ({
     percentual: p.percentual,
     valor: p.valor,
     data_vencimento: p.data_vencimento ?? null,
     status_base: p.status_base ?? "pendente",
-    data_pagamento: p.data_pagamento ?? null,
+    // Mesma regra do PATCH: 'pago' sem data → hoje; 'pendente' → sempre null.
+    // (fecha o buraco de integração que gravava pago sem data de pagamento.)
+    data_pagamento:
+      p.status_base === "pago" ? p.data_pagamento ?? hojeYmd : null,
     observacao: p.observacao ?? null,
   }));
   const parcelasInseridas = await inserirParcelasEmLote(

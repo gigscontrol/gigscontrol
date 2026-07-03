@@ -103,11 +103,11 @@ export async function restaurarVenda(
 export async function proximoNumeroVenda(
   supabase: SupabaseClient
 ): Promise<string> {
-  const { data, error } = await supabase
-    .from("vendas")
-    .select("numero")
-    .order("criado_em", { ascending: false })
-    .limit(50);
+  // Deriva do MAIOR número real (não dos 50 mais recentes por data): com
+  // limit(50), se o maior número não estivesse entre os 50 últimos criados,
+  // gerava um número menor já usado → colisão no índice único. RLS escopa
+  // por workspace; inclui deletados de propósito (não reaproveita número).
+  const { data, error } = await supabase.from("vendas").select("numero");
   if (error) throw error;
   const max = (data ?? []).reduce((acc, v) => {
     const n = parseInt(String(v.numero).replace(/\D/g, ""), 10);

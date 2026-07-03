@@ -153,8 +153,9 @@ export default function ShowDetalheModal({
 
   const observacoes = venda?.observacoes || orcamento?.observacoes;
 
-  // Data legível
-  const dataISO = venda?.dataShow || orcamento?.dataShow;
+  // Data legível — usa a data real do show (ISO completo) antes de recorrer
+  // ao dia-do-mês, senão um show de dezembro aberto em julho mostrava "julho".
+  const dataISO = venda?.dataShow || orcamento?.dataShow || show.data;
   let dataLegivel = "";
   if (dataISO) {
     dataLegivel = new Date(dataISO + "T12:00:00").toLocaleDateString("pt-BR", {

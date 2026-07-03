@@ -79,11 +79,10 @@ export async function buscarOrcamento(
 export async function proximoNumeroOrcamento(
   supabase: SupabaseClient
 ): Promise<string> {
-  const { data, error } = await supabase
-    .from("orcamentos")
-    .select("numero")
-    .order("criado_em", { ascending: false })
-    .limit(50);
+  // Deriva do MAIOR número real (não dos 50 mais recentes por data), senão
+  // podia gerar um número já usado e colidir no índice único. RLS escopa por
+  // workspace; inclui deletados de propósito (não reaproveita número).
+  const { data, error } = await supabase.from("orcamentos").select("numero");
   if (error) throw error;
   const max = (data ?? []).reduce((acc, o) => {
     const n = parseInt(String(o.numero).replace(/\D/g, ""), 10);

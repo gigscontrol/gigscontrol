@@ -63,18 +63,27 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
     );
   }
 
+  // BR usa UF de 2 letras + região; cidade estrangeira (GeoNames) tem estado
+  // de comprimento livre (ex.: "Lisboa", "Île-de-France") e não tem região.
+  const ehBR = (initial.pais ?? "BR") === "BR";
+
   // Modo EDIÇÃO: permite ajustar cidade existente (legada ou IBGE)
   const handleSave = () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = t("Nome obrigatório");
-    if (!estado.trim() || estado.length !== 2) errs.estado = t("UF com 2 letras (ex: SP)");
+    if (ehBR && (!estado.trim() || estado.length !== 2))
+      errs.estado = t("UF com 2 letras (ex: SP)");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
 
-    const payload = { nome, estado: estado.toUpperCase(), regiao };
+    const payload = {
+      nome,
+      estado: ehBR ? estado.toUpperCase() : estado.trim(),
+      regiao,
+    };
     updateCidade(initial.id, payload)
       .then(() => onSubmit())
       .catch((e) => setErrors({ nome: (e as Error).message }));
@@ -86,22 +95,31 @@ export default function CidadeForm({ initial, onSubmit, onCancel }: Props) {
         <TextInput value={nome} onChange={(e) => setNome(e.target.value)} placeholder="São Paulo" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="UF" required hint="Ex: SP, RJ, MG" error={errors.estado}>
+      <div className={ehBR ? "grid grid-cols-2 gap-4" : ""}>
+        <Field
+          label={ehBR ? "UF" : t("Estado/Região")}
+          required={ehBR}
+          hint={ehBR ? "Ex: SP, RJ, MG" : undefined}
+          error={errors.estado}
+        >
           <TextInput
             value={estado}
-            onChange={(e) => setEstado(e.target.value.toUpperCase())}
-            maxLength={2}
-            placeholder="SP"
+            onChange={(e) =>
+              setEstado(ehBR ? e.target.value.toUpperCase() : e.target.value)
+            }
+            maxLength={ehBR ? 2 : undefined}
+            placeholder={ehBR ? "SP" : "Lisboa"}
           />
         </Field>
-        <Field label="Região" required>
-          <Select value={regiao} onChange={(e) => setRegiao(e.target.value as Cidade["regiao"])}>
-            {REGIOES.map((r) => (
-              <option key={r} value={r}>{t(r)}</option>
-            ))}
-          </Select>
-        </Field>
+        {ehBR && (
+          <Field label="Região" required>
+            <Select value={regiao} onChange={(e) => setRegiao(e.target.value as Cidade["regiao"])}>
+              {REGIOES.map((r) => (
+                <option key={r} value={r}>{t(r)}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
