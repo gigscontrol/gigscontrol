@@ -48,6 +48,18 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         : "editar";
   const bloqueio = podeInformarPagamentoParcela(r.sessao, venda.artist_id, acao);
   if (bloqueio) return bloqueio;
+  // Chaves financeiras são independentes no modelo novo: quem (des)faz o
+  // pagamento não necessariamente pode EDITAR valor/percentual/vencimento.
+  // Se a mesma request também mexe nesses campos, exige TAMBÉM editar_pagamento
+  // (fecha o escalonamento de capacidade dentro do próprio artista).
+  const editaEstrutura =
+    parsed.data.percentual !== undefined ||
+    parsed.data.valor !== undefined ||
+    parsed.data.data_vencimento !== undefined;
+  if (editaEstrutura && acao !== "editar") {
+    const bloqEdicao = podeInformarPagamentoParcela(r.sessao, venda.artist_id, "editar");
+    if (bloqEdicao) return bloqEdicao;
+  }
 
   try {
     const parcela = await atualizarParcelaPorId(r.sessao.supabase, params.id, parsed.data);

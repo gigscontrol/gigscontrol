@@ -68,10 +68,12 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       r.sessao.supabase,
       existente.vendaId
     );
+    // 404 (não 403) fora de escopo — mesmo padrão do GET e de contatos/[id],
+    // pra não virar oráculo de existência de contrato por id.
     if (!podeEditarContrato(r.sessao, artistId, criadoPor))
       return NextResponse.json(
-        { erro: "Você não tem permissão para editar este contrato." },
-        { status: 403 }
+        { erro: "Contrato não encontrado." },
+        { status: 404 }
       );
     const contrato = await atualizarContratoPorId(
       r.sessao.supabase,
@@ -101,8 +103,8 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     const { artistId } = await resolverEscopoContrato(r.sessao.supabase, existente.vendaId);
     if (!podeExcluirContrato(r.sessao, artistId))
       return NextResponse.json(
-        { erro: "Você não tem permissão para remover este contrato." },
-        { status: 403 }
+        { erro: "Contrato não encontrado." },
+        { status: 404 }
       );
     await removerContratoPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });

@@ -57,10 +57,11 @@ export async function POST(
     r.sessao.supabase,
     contrato.vendaId
   );
+  // 404 fora de escopo (coerente com GET/PATCH) — não vaza existência.
   if (!podeEditarContrato(r.sessao, artistId, criadoPor))
     return NextResponse.json(
-      { erro: "Você não tem permissão para definir signatários deste contrato." },
-      { status: 403 }
+      { erro: "Contrato não encontrado." },
+      { status: 404 }
     );
 
   let raw: unknown;

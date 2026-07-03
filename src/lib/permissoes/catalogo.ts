@@ -93,7 +93,7 @@ export const CATALOGO: Permissao[] = [
   { chave: "contratos.editar", modulo: "contratos", nivel: "artista", label: "Editar contrato", existe: true },
   { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato", existe: false },
   { chave: "contratos.excluir", modulo: "contratos", nivel: "artista", label: "Excluir contrato", existe: true },
-  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos (não só os que ele criou)", existe: true },
+  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos (não só os das vendas que criou)", existe: true },
 
   // ---------------- CONTATOS (por artista) ----------------
   // Escopo de visualização: todos OU só os que o próprio criou.
