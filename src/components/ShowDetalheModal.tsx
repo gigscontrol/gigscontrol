@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import {
   Building2,
   MapPin,
@@ -64,6 +65,7 @@ export default function ShowDetalheModal({
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
   const [processando, setProcessando] = useState(false);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
@@ -77,6 +79,9 @@ export default function ShowDetalheModal({
 
   const dj = artistas.find((d) => d.id === show.djId);
   const cancelado = show.status === "cancelado";
+  // Grey-out (UX; servidor é a autoridade). Cancelar/reativar = alterar evento
+  // → agenda.editar_todos. podeUI já libera legado/admin.
+  const podeGerenciarShow = podeUI(show.djId || null, "agenda.editar_todos");
 
   async function cancelarOuReativar() {
     if (processando || !show) return;
@@ -245,8 +250,9 @@ export default function ShowDetalheModal({
         <button
           type="button"
           onClick={cancelarOuReativar}
-          disabled={processando}
-          className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+          disabled={processando || !podeGerenciarShow}
+          title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+          className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
         >
           {processando
