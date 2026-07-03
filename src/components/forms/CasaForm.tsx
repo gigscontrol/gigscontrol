@@ -27,7 +27,7 @@ type Props = {
 
 export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const t = useT();
-  const { cidades, addCasa, updateCasa } = useContatos();
+  const { cidades, addCasa, updateCasa, registrarCidade } = useContatos();
 
   // Pré-popula a cidade IBGE a partir da cidade atual da casa (se ela
   // tem ibgeId no banco). Cidades legadas sem ibge_id ficam vazias e o
@@ -65,6 +65,7 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
     try {
       const cid = await resolverCidade(cidadeSel);
       cidadeIdResolvido = cid.id;
+      registrarCidade(cid); // reflete cidade nova no contexto sem F5
     } catch (e) {
       setErrors({ cidade: (e as Error).message });
       return;

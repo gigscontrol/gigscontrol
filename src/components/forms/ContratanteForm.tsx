@@ -30,7 +30,7 @@ function paisDe(code: string | undefined): Country {
 
 export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) {
   const t = useT();
-  const { cidades, addContratante, updateContratante } = useContatos();
+  const { cidades, addContratante, updateContratante, registrarCidade } = useContatos();
 
   const cidadeInicial = initial?.cidadeId
     ? cidades.find((c) => c.id === initial.cidadeId)
@@ -69,7 +69,11 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
 
     let cidadeIdResolvido: string;
     try {
-      cidadeIdResolvido = (await resolverCidade(cidadeSel)).id;
+      const cidade = await resolverCidade(cidadeSel);
+      cidadeIdResolvido = cidade.id;
+      // Cidade pode ter sido criada agora no servidor — reflete no contexto
+      // pra a coluna "Cidade" e o Mapa de Dobras aparecerem sem F5.
+      registrarCidade(cidade);
     } catch (e) {
       setErrors({ cidade: (e as Error).message });
       return;
