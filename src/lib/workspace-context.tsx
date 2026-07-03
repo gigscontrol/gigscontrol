@@ -50,6 +50,8 @@ export type NovoArtistaInput = {
   cidadeNome?: string;
   cidadeUf?: string;
   /** Dados do CONTRATADO (para contratos). */
+  /** País de origem (ISO2) — dirige documento/DDI/endereço. */
+  pais?: string;
   nomeLegal?: string;
   documento?: string;
   documentoTipo?: DocumentoTipo;
@@ -233,9 +235,18 @@ type WorkspaceContextValue = {
     nome: string;
     /** Parte do username digitada pelo admin — o backend concatena o slug. */
     username_raiz: string;
-    papel: PapelEquipe;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    /** Artistas com quem trabalha (cria vínculo vazio; função definida na Equipe). */
+    artistIds: string[];
+    /** Dados pessoais (opcionais) — country-aware, servem para contrato. */
+    cor?: string;
+    pais?: string;
+    nome_legal?: string;
+    documento_tipo?: string;
+    documento?: string;
+    razao_social?: string;
+    endereco?: string;
+    telefone?: string;
+    cidade_id?: string;
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
     id: string,
@@ -456,6 +467,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
       if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
       if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.pais) payload.pais = input.pais;
       if (input.nomeLegal) payload.nome_legal = input.nomeLegal;
       if (input.documento) payload.documento = input.documento;
       if (input.documentoTipo) payload.documento_tipo = input.documentoTipo;
@@ -498,6 +510,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.pais !== undefined) payload.pais = patch.pais;
       if (patch.nomeLegal !== undefined) payload.nome_legal = patch.nomeLegal;
       if (patch.documento !== undefined) payload.documento = patch.documento;
       if (patch.documentoTipo !== undefined)
@@ -628,9 +641,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (dados: {
       nome: string;
       username_raiz: string;
-      papel: PapelEquipe;
-      escopo: EscopoUsuario;
-      funcoes: Funcoes;
+      artistIds: string[];
+      cor?: string;
+      pais?: string;
+      nome_legal?: string;
+      documento_tipo?: string;
+      documento?: string;
+      razao_social?: string;
+      endereco?: string;
+      telefone?: string;
+      cidade_id?: string;
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
         method: "POST",

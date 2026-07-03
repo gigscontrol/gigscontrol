@@ -4,10 +4,39 @@ import "./globals.css";
 import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
 
+const SITE_URL = "https://gigscontrol.vercel.app";
+const TITULO = "GIGS CONTROL — Gestão para a música";
+const DESCRICAO =
+  "CRM e gestão completa para DJs, cantores, MCs e agências musicais. Agenda, orçamentos, vendas e financeiro em um só lugar.";
+
 export const metadata: Metadata = {
-  title: "GIGS CONTROL — Gestão para a música",
-  description:
-    "CRM e gestão completa para DJs, cantores, MCs e agências musicais. Agenda, orçamentos, vendas e financeiro em um só lugar.",
+  metadataBase: new URL(SITE_URL),
+  title: TITULO,
+  description: DESCRICAO,
+  applicationName: "GIGS CONTROL",
+  keywords: [
+    "CRM para DJ",
+    "gestão de agência de música",
+    "agenda de shows",
+    "orçamento de show",
+    "contrato de show",
+    "cachê",
+    "booking",
+    "DJ management",
+  ],
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "GIGS CONTROL",
+    title: TITULO,
+    description: DESCRICAO,
+    locale: "pt_BR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITULO,
+    description: DESCRICAO,
+  },
 };
 
 const LANGS: Lang[] = ["pt", "en", "es", "fr", "de", "it"];

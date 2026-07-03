@@ -51,6 +51,8 @@ export type DJ = {
   cidadeNome?: string;
   cidadeUf?: string;
   // ------- Dados do CONTRATADO (para contratos / migração 37) -------
+  /** País de origem (ISO2) — dirige documento/DDI/endereço (migração 52). */
+  pais?: string;
   /** Nome civil / responsável — o `name` acima é só o nome artístico. */
   nomeLegal?: string;
   /** 'cpf' | 'cnpj' — define se mostramos razão social. */
@@ -159,6 +161,9 @@ export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
 
 // ----------- Entidades de Contatos -----------
 
+/** Precisão da geolocalização de um contato (tokens.md §7). */
+export type GeoPrecisao = "address" | "city";
+
 export type Contratante = {
   id: string;
   nome: string;
@@ -171,6 +176,12 @@ export type Contratante = {
   cidadeId: string;
   observacoes?: string;
   criadoEm: string;
+  /** userId de quem cadastrou — usado no escopo "próprios" (verTodosContatos). */
+  criadoPor?: string;
+  /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
+  lat?: number;
+  lng?: number;
+  geoPrecisao?: GeoPrecisao;
 };
 
 export type TipoCasa = "club" | "festival" | "festa-privada" | "bar" | "arena" | "outro";
@@ -185,6 +196,10 @@ export type Casa = {
   contatoResponsavel?: string;
   telefone?: string;
   observacoes?: string;
+  /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
+  lat?: number;
+  lng?: number;
+  geoPrecisao?: GeoPrecisao;
 };
 
 export type Cidade = {

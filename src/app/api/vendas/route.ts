@@ -10,6 +10,7 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
 } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
@@ -35,8 +36,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarCriarVenda(r.sessao);
-  if (bloqueio) return bloqueio;
 
   let raw: unknown;
   try {
@@ -52,6 +51,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const bloqueio = verificarCriarVenda(r.sessao, parsed.data.artist_id ?? null);
+  if (bloqueio) return bloqueio;
 
   try {
     const venda = await criarVendaCompleta(
@@ -72,9 +74,6 @@ export async function POST(request: Request) {
     if (e instanceof VendaDuplicadaError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar venda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar venda.");
   }
 }

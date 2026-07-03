@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { verificarAcessoContatos } from "@/lib/api/permissoes";
 import {
   buscarCidadePorId,
   atualizarCidadePorId,
@@ -12,6 +13,8 @@ type RouteCtx = { params: { id: string } };
 export async function GET(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  const g = verificarAcessoContatos(r.sessao);
+  if (g) return g;
   try {
     const cidade = await buscarCidadePorId(r.sessao.supabase, params.id);
     if (!cidade)
@@ -28,6 +31,8 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAcessoContatos(r.sessao);
+  if (g) return g;
 
   let raw: unknown;
   try {
@@ -58,6 +63,8 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAcessoContatos(r.sessao);
+  if (g) return g;
   try {
     await removerCidadePorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });

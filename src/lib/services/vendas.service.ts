@@ -115,6 +115,27 @@ export async function listarVendasDoWorkspace(
   return vendas.map((v) => rowParaVenda(v, porVenda.get(v.id) ?? []));
 }
 
+/**
+ * A venda `id` é visível para a sessão? Reusa EXATAMENTE o filtro da lista
+ * (aplicarFiltroVendas), só que estreitado ao id — se a linha passa no escopo
+ * (modelo novo OU legado) e casa o id, é visível. Zero divergência com a lista;
+ * usado no GET /vendas/[id] pra fechar o vazamento de leitura por link direto.
+ */
+export async function vendaVisivelParaSessao(
+  supabase: SupabaseClient,
+  sessao: SessaoAutenticada,
+  id: string
+): Promise<boolean> {
+  const rows = await repoListar(supabase, <Q,>(q: Q) =>
+    (
+      aplicarFiltroVendas(q as never, sessao) as unknown as {
+        eq(col: string, val: string): unknown;
+      }
+    ).eq("id", id) as Q
+  );
+  return rows.length > 0;
+}
+
 export async function buscarVendaPorId(
   supabase: SupabaseClient,
   id: string
@@ -171,12 +192,16 @@ export async function criarVendaCompleta(
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
   // 3: parcelas (se houver)
+  const hojeYmd = new Date().toISOString().slice(0, 10);
   const parcelasPayload: ParcelaEscrita[] = (input.parcelas ?? []).map((p) => ({
     percentual: p.percentual,
     valor: p.valor,
     data_vencimento: p.data_vencimento ?? null,
     status_base: p.status_base ?? "pendente",
-    data_pagamento: p.data_pagamento ?? null,
+    // Mesma regra do PATCH: 'pago' sem data → hoje; 'pendente' → sempre null.
+    // (fecha o buraco de integração que gravava pago sem data de pagamento.)
+    data_pagamento:
+      p.status_base === "pago" ? p.data_pagamento ?? hojeYmd : null,
     observacao: p.observacao ?? null,
   }));
   const parcelasInseridas = await inserirParcelasEmLote(
@@ -208,7 +233,7 @@ export async function criarVendaCompleta(
         await atualizarShowPorId(supabase, orc.showId, showPayload);
         showIdFinal = orc.showId;
       } else {
-        const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload);
+        const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload, criadoPor);
         showIdFinal = show.id;
       }
       // Atualiza o orçamento (aceito + show_id + data/horario sincronizados)
@@ -220,7 +245,7 @@ export async function criarVendaCompleta(
         casa_id: normalizarUuid(input.casa_id ?? null),
       });
     } else {
-      const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload);
+      const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload, criadoPor);
       showIdFinal = show.id;
     }
 

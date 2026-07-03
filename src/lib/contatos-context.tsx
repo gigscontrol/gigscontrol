@@ -54,6 +54,9 @@ type ContatosContextValue = {
   addCidade: (c: AddCidadeInput) => Promise<Cidade>;
   updateCidade: (id: string, c: UpdateCidadeInput) => Promise<Cidade>;
   removeCidade: (id: string) => Promise<void>;
+  /** Injeta no estado uma cidade já criada no servidor (ex.: resolverCidade
+   *  no submit de contratante/casa) pra refletir na hora, sem recarregar. */
+  registrarCidade: (c: Cidade) => void;
 };
 
 const ContatosContext = createContext<ContatosContextValue | null>(null);
@@ -275,6 +278,14 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
     setCidades((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  const registrarCidade = useCallback((c: Cidade) => {
+    setCidades((prev) =>
+      prev.some((x) => x.id === c.id)
+        ? prev.map((x) => (x.id === c.id ? c : x))
+        : [...prev, c]
+    );
+  }, []);
+
   const value = useMemo<ContatosContextValue>(
     () => ({
       contratantes,
@@ -292,6 +303,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
       addCidade,
       updateCidade,
       removeCidade,
+      registrarCidade,
     }),
     [
       contratantes,
@@ -309,6 +321,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
       addCidade,
       updateCidade,
       removeCidade,
+      registrarCidade,
     ]
   );
 

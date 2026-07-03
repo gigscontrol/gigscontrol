@@ -5,6 +5,7 @@ import {
   criarShowNoWorkspace,
 } from "@/lib/services/shows.service";
 import { showCreateSchema } from "@/lib/validators/shows.schema";
+import { podeCriarAgenda } from "@/lib/api/permissoes";
 
 /**
  * GET /api/shows
@@ -48,11 +49,19 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para criar na agenda deste artista." },
+      { status: 403 }
+    );
+  }
+
   try {
     const show = await criarShowNoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,
-      parsed.data
+      parsed.data,
+      r.sessao.userId
     );
     return NextResponse.json({ show }, { status: 201 });
   } catch (e) {

@@ -52,7 +52,7 @@ export default function NovoContratoPage() {
   const { modelos } = useModelos();
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
-  const { sessao } = useAuth();
+  const { sessao, podeUI } = useAuth();
   const { contratos, criarContrato, atualizarContrato } = useContratos();
 
   const editaveis = useMemo(
@@ -100,6 +100,12 @@ export default function NovoContratoPage() {
     () => vendas.find((v) => v.id === vendaId) ?? null,
     [vendas, vendaId]
   );
+
+  // Permissão de criar contrato. Com venda escolhida, gate pelo artista dela;
+  // sem venda (artista escolhido depois), habilita se PODE em qualquer artista.
+  const podeCriar = venda
+    ? podeUI(venda.djId || null, "contratos.criar")
+    : artistas.some((a) => podeUI(a.id, "contratos.criar"));
 
   // (Re)preenche os valores quando muda o modelo ou a venda. Edições do
   // usuário são sobrescritas só nessas trocas (comportamento esperado).
@@ -479,12 +485,13 @@ export default function NovoContratoPage() {
                     <button
                       type="button"
                       onClick={() => gerar()}
-                      disabled={gerando}
-                      className="btn disabled:cursor-not-allowed"
+                      disabled={gerando || !podeCriar}
+                      title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
+                      className="btn disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         backgroundColor: ACCENT,
                         color: "#fff",
-                        opacity: gerando ? 0.6 : 1,
+                        opacity: gerando || !podeCriar ? 0.6 : 1,
                       }}
                     >
                       {gerando ? (

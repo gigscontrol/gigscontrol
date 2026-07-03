@@ -1,5 +1,9 @@
-import type { Contratante, Casa, Cidade, TipoCasa } from "@/types";
+import type { Contratante, Casa, Cidade, TipoCasa, GeoPrecisao } from "@/types";
 import { ufParaRegiao } from "@/lib/data/cidades-br";
+
+function geoPrecisaoValida(v: string | null | undefined): GeoPrecisao | undefined {
+  return v === "address" || v === "city" ? v : undefined;
+}
 
 // ============================================================
 // Cidades
@@ -79,10 +83,13 @@ export type CasaRow = {
   endereco: string | null;
   contato_responsavel: string | null;
   telefone: string | null;
+  lat: number | string | null;
+  lng: number | string | null;
+  geo_precision: string | null;
 };
 
 export function rowParaCasa(row: CasaRow): Casa {
-  return {
+  const casa: Casa = {
     id: row.id,
     nome: row.nome,
     tipo: tipoCasaValido(row.tipo),
@@ -92,6 +99,13 @@ export function rowParaCasa(row: CasaRow): Casa {
     contatoResponsavel: row.contato_responsavel ?? undefined,
     telefone: row.telefone ?? undefined,
   };
+  const lat = paraNumero(row.lat);
+  const lng = paraNumero(row.lng);
+  if (lat !== undefined) casa.lat = lat;
+  if (lng !== undefined) casa.lng = lng;
+  const prec = geoPrecisaoValida(row.geo_precision);
+  if (prec) casa.geoPrecisao = prec;
+  return casa;
 }
 
 export type CasaEscrita = {
@@ -103,6 +117,10 @@ export type CasaEscrita = {
   endereco?: string | null;
   contato_responsavel?: string | null;
   telefone?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  geo_precision?: string | null;
+  geocoded_at?: string | null;
 };
 
 // ============================================================
@@ -122,10 +140,13 @@ export type ContratanteRow = {
   observacoes: string | null;
   criado_por: string | null;
   criado_em: string | null;
+  lat: number | string | null;
+  lng: number | string | null;
+  geo_precision: string | null;
 };
 
 export function rowParaContratante(row: ContratanteRow): Contratante {
-  return {
+  const ct: Contratante = {
     id: row.id,
     nome: row.nome,
     documento: row.documento ?? undefined,
@@ -137,6 +158,14 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     observacoes: row.observacoes ?? undefined,
     criadoEm: row.criado_em ?? "",
   };
+  if (row.criado_por) ct.criadoPor = row.criado_por;
+  const lat = paraNumero(row.lat);
+  const lng = paraNumero(row.lng);
+  if (lat !== undefined) ct.lat = lat;
+  if (lng !== undefined) ct.lng = lng;
+  const prec = geoPrecisaoValida(row.geo_precision);
+  if (prec) ct.geoPrecisao = prec;
+  return ct;
 }
 
 export type ContratanteEscrita = {
@@ -150,4 +179,8 @@ export type ContratanteEscrita = {
   cidade_id?: string | null;
   observacoes?: string | null;
   criado_por?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  geo_precision?: string | null;
+  geocoded_at?: string | null;
 };

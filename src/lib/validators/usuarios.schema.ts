@@ -39,9 +39,20 @@ export const usuarioCreateSchema = z.object({
   // da agência ("raiz-slug"), exatamente como na criação de artistas.
   // Sem campo de e-mail: a conta nasce com um e-mail fake interno.
   username_raiz: usernameRaizSchema,
-  papel: papelEquipeEnum,
-  escopo: escopoSchema.optional(),
-  funcoes: funcoesSchema,
+  // Artistas com quem o usuário trabalha. Cria um VÍNCULO vazio por artista
+  // (aparece na aba Equipe do artista, onde o admin define a função e as
+  // permissões). Pode vir vazio no onboarding (cria só a conta).
+  artistIds: z.array(uuidLike).default([]),
+  // Dados pessoais (opcionais) — servem para contrato. País dirige documento.
+  cor: z.string().max(20).optional(),
+  pais: z.string().length(2).optional(),
+  nome_legal: z.string().max(120).optional(),
+  documento_tipo: z.enum(["cpf", "cnpj"]).optional(),
+  documento: z.string().max(40).optional(),
+  razao_social: z.string().max(140).optional(),
+  endereco: z.string().max(300).optional(),
+  telefone: z.string().max(40).optional(),
+  cidade_id: uuidLike.optional(),
 });
 export type UsuarioCreateInput = z.infer<typeof usuarioCreateSchema>;
 

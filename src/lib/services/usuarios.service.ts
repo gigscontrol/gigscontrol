@@ -24,6 +24,8 @@ import type {
 import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 import { getPlano, type PlanoId } from "@/lib/planos";
 import { planoEfetivoParaLimites } from "@/lib/services/limites";
+import { ESCOPO_PADRAO } from "@/lib/mappers/usuario";
+import { upsertVinculo } from "@/lib/repositories/membrosArtista.repo";
 
 export class LimitePlanoEquipeError extends Error {
   status = 409;
@@ -99,17 +101,45 @@ export async function criarUsuarioDaEquipe(
       nome: input.nome,
       email: emailFake,
       username: usernameCompleto,
-      papel: input.papel,
-      escopo: input.escopo,
-      funcoes: input.funcoes,
+      // Papel neutro: a função real de cada artista vem do vínculo (definida
+      // depois na aba Equipe). funcoes vazio (legado). escopo default.
+      papel: "produtor",
+      escopo: ESCOPO_PADRAO,
+      funcoes: {},
       status: "ativo",
       // Membro da equipe nasce com a senha aleatória gerada acima.
       senha_padrao: true,
       senha_padrao_valor: senhaTemporaria,
+      // Dados pessoais (opcionais).
+      cor: input.cor ?? null,
+      pais: input.pais ?? null,
+      nome_legal: input.nome_legal ?? null,
+      documento_tipo: input.documento_tipo ?? null,
+      documento: input.documento ?? null,
+      razao_social: input.razao_social ?? null,
+      endereco: input.endereco ?? null,
+      telefone: input.telefone ?? null,
+      cidade_id: input.cidade_id ?? null,
     });
+
+    // Modelo NOVO — cria um VÍNCULO VAZIO por artista com quem trabalha.
+    // O link aparece na aba Equipe do artista, onde o admin define a função
+    // (perfil) e as permissões. É a fonte da verdade do acesso.
+    for (const artistId of input.artistIds) {
+      await upsertVinculo(admin, {
+        workspaceId,
+        userId: created.user.id,
+        artistId,
+        perfis: [],
+        permissoes: [],
+      });
+    }
+
     return { usuario: rowParaUsuario(row), senhaTemporaria };
   } catch (e) {
-    // Se o profile não pôde ser criado, remove o auth user pra evitar órfão.
+    // Se algo falhou, remove o auth user pra evitar órfão. Os vínculos
+    // (se algum foi criado) ficam órfãos por FK, mas sem profile ninguém
+    // loga; limpeza fica pro cascade de remoção.
     await admin.auth.admin.deleteUser(created.user.id).catch(() => undefined);
     throw e;
   }

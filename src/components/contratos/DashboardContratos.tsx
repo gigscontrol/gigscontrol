@@ -18,6 +18,7 @@ import Modal from "../Modal";
 import { useContratos } from "@/lib/contratos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato, formatarDataCurta } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
@@ -67,7 +68,12 @@ export default function DashboardContratos({
   const { contratos, carregando, erro } = useContratos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
   const [resumo, setResumo] = useState<Resumo>(null);
+
+  // "Novo Contrato" não fixa artista (é escolhido no wizard) → habilita se
+  // o usuário PODE criar contrato em algum artista.
+  const podeCriar = artistas.some((a) => podeUI(a.id, "contratos.criar"));
 
   // Total + contagem por status + a lista (ordenada) por status.
   const { total, porStatus, listaPorStatus } = useMemo(() => {
@@ -109,7 +115,9 @@ export default function DashboardContratos({
         actions={
           <button
             onClick={() => onNavigate?.("contratos", "contratos-novo")}
-            className="btn btn-primary"
+            disabled={!podeCriar}
+            title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: ACCENT, color: "#fff" }}
           >
             <Plus size={14} />
@@ -138,7 +146,9 @@ export default function DashboardContratos({
           </div>
           <button
             onClick={() => onNavigate?.("contratos", "contratos-novo")}
-            className="btn btn-primary"
+            disabled={!podeCriar}
+            title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: ACCENT, color: "#fff" }}
           >
             <Plus size={14} />

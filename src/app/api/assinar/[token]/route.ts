@@ -4,6 +4,7 @@ import {
   buscarParaAssinar,
   registrarAssinatura,
   registrarAbertura,
+  ExigenciaNaoAtendidaError,
 } from "@/lib/services/contratoSignatarios.service";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
 
@@ -27,10 +28,7 @@ export async function GET(
     const admin = criarClienteAdmin();
     const r = await buscarParaAssinar(admin, params.token);
     if (!r) {
-      return NextResponse.json(
-        { erro: "Link inválido ou expirado." },
-        { status: 404 }
-      );
+      return NextResponse.json({ erro: "Link inválido." }, { status: 404 });
     }
     const { signatario, contrato } = r;
     // Conta a abertura do link (visualização) — só se ainda não assinou.
@@ -98,6 +96,9 @@ export async function POST(
     }
     return NextResponse.json({ ok: true, assinadoEm: sig.assinadoEm });
   } catch (e) {
+    if (e instanceof ExigenciaNaoAtendidaError) {
+      return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
     return NextResponse.json(
       { erro: (e as Error).message ?? "Erro ao registrar a assinatura." },
       { status: 500 }

@@ -12,6 +12,7 @@ import type {
   CasaCreateInput,
   CasaUpdateInput,
 } from "@/lib/validators/contatos.schema";
+import { resolverGeoDoContato } from "@/lib/services/geoContato";
 
 function entradaParaEscrita(input: CasaCreateInput | CasaUpdateInput): CasaEscrita {
   const out: CasaEscrita = {};
@@ -44,7 +45,14 @@ export async function criarCasaNoWorkspace(
   workspaceId: string,
   input: CasaCreateInput
 ): Promise<Casa> {
-  const row = await repoCriar(supabase, workspaceId, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  // Geocodifica NO CADASTRO (tokens.md §7): endereço → ponto exato;
+  // senão centroide da cidade. Falha nunca bloqueia o save.
+  const geo = await resolverGeoDoContato(supabase, {
+    endereco: escrita.endereco,
+    cidadeId: escrita.cidade_id,
+  });
+  const row = await repoCriar(supabase, workspaceId, { ...escrita, ...geo });
   return rowParaCasa(row);
 }
 
@@ -53,7 +61,27 @@ export async function atualizarCasaPorId(
   id: string,
   input: CasaUpdateInput
 ): Promise<Casa> {
-  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+  let escrita = entradaParaEscrita(input);
+
+  // Re-geocodifica SÓ se endereço/cidade mudaram (cache via geocoded_at).
+  if (input.endereco !== undefined || input.cidade_id !== undefined) {
+    const atual = await repoBuscar(supabase, id);
+    const enderecoNovo = input.endereco !== undefined ? (input.endereco ?? null) : (atual?.endereco ?? null);
+    const cidadeNova = input.cidade_id !== undefined ? (input.cidade_id ?? null) : (atual?.cidade_id ?? null);
+    const mudou =
+      (atual?.endereco ?? null) !== enderecoNovo ||
+      (atual?.cidade_id ?? null) !== cidadeNova ||
+      atual?.lat == null; // nunca geocodificada → aproveita o save
+    if (mudou) {
+      const geo = await resolverGeoDoContato(supabase, {
+        endereco: enderecoNovo,
+        cidadeId: cidadeNova,
+      });
+      escrita = { ...escrita, ...geo };
+    }
+  }
+
+  const row = await repoAtualizar(supabase, id, escrita);
   return rowParaCasa(row);
 }
 

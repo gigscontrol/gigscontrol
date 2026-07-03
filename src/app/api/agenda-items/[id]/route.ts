@@ -5,6 +5,12 @@ import {
   removerAgendaItemPorId,
 } from "@/lib/services/agendaItems.service";
 import { agendaItemCreateSchema } from "@/lib/validators/agendaItems.schema";
+import { buscarAgendaItem } from "@/lib/repositories/agendaItems.repo";
+import {
+  podeCriarAgenda,
+  podeEditarAgenda,
+  podeExcluirAgenda,
+} from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
 
@@ -12,6 +18,16 @@ type RouteCtx = { params: { id: string } };
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await buscarAgendaItem(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Item não encontrado." }, { status: 404 });
+  if (!podeEditarAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para editar este item." },
+      { status: 403 }
+    );
+  }
 
   let raw: unknown;
   try {
@@ -25,6 +41,18 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
+    );
+  }
+
+  // IDOR de destino: mover o item pra OUTRO artista exige permissão no destino.
+  if (
+    parsed.data.artist_id !== undefined &&
+    (parsed.data.artist_id ?? null) !== row.artist_id &&
+    !podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)
+  ) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para mover este item para esse artista." },
+      { status: 403 }
     );
   }
 
@@ -47,6 +75,16 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+
+  const row = await buscarAgendaItem(r.sessao.supabase, params.id);
+  if (!row)
+    return NextResponse.json({ erro: "Item não encontrado." }, { status: 404 });
+  if (!podeExcluirAgenda(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para remover este item." },
+      { status: 403 }
+    );
+  }
 
   try {
     await removerAgendaItemPorId(r.sessao.supabase, params.id);

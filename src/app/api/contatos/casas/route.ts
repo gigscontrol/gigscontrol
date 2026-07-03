@@ -26,6 +26,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const bloqueio = verificarAcessoContatos(r.sessao);
+  if (bloqueio) return bloqueio;
 
   let raw: unknown;
   try {

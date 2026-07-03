@@ -18,6 +18,7 @@ import DateRangeSelector from "./DateRangeSelector";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/types";
 import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange } from "@/types";
@@ -79,6 +80,8 @@ export default function VendasDashboard({
   const { vendas } = useVendas();
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
+  const { podeUI } = useAuth();
+  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar_orcamento"));
   const [resumo, setResumo] = useState<ResumoTipo>(null);
 
   // ---- Seletor de mês (igual à Agenda) ----
@@ -238,7 +241,9 @@ export default function VendasDashboard({
             />
             <button
               onClick={() => onNavigate?.("vendas", "vendas-novo-orcamento")}
-              className="btn btn-primary"
+              disabled={!podeCriarOrcamento}
+              title={!podeCriarOrcamento ? "Você não tem permissão para isso." : undefined}
+              className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: accent, color: "#fff" }}
             >
               <Plus size={14} />

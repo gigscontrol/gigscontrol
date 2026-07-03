@@ -4,11 +4,13 @@ import {
   buscarVendaPorId,
   atualizarVendaPorId,
   removerVendaPorId,
+  vendaVisivelParaSessao,
 } from "@/lib/services/vendas.service";
 import { vendaUpdateSchema } from "@/lib/validators/vendas.schema";
 import {
   verificarAcessoVendas,
   podeEditarVenda,
+  podeExcluirVenda,
 } from "@/lib/api/permissoes";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -23,6 +25,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   try {
     const venda = await buscarVendaPorId(r.sessao.supabase, params.id);
     if (!venda)
+      return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
+    // Escopo por artista: 404 (não vaza) se a venda está fora do que a sessão vê.
+    if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
     return NextResponse.json({ venda });
   } catch (e) {
@@ -42,7 +47,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const row = await repoBuscarVenda(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
-  if (!podeEditarVenda(r.sessao, row.criado_por)) {
+  if (!podeEditarVenda(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para editar esta venda." },
       { status: 403 }
@@ -91,7 +96,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const row = await repoBuscarVenda(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
-  if (!podeEditarVenda(r.sessao, row.criado_por)) {
+  if (!podeExcluirVenda(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para remover esta venda." },
       { status: 403 }

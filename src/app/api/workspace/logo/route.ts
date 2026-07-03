@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import { rowParaWorkspace, type WorkspaceRow } from "@/lib/mappers/workspace";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
@@ -17,8 +18,10 @@ const TIPOS_ACEITOS = ["image/png", "image/jpeg", "image/webp"];
  * `autenticarComWorkspace` (precisa ter sessão e workspace).
  */
 export async function POST(request: Request) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   let form: FormData;
   try {
@@ -120,8 +123,10 @@ export async function POST(request: Request) {
  * DELETE /api/workspace/logo — apaga a logo atual.
  */
 export async function DELETE() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   const admin = criarClienteAdmin();
 

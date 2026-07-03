@@ -5,7 +5,11 @@ import {
   criarOrcamentoNoWorkspace,
 } from "@/lib/services/orcamentos.service";
 import { orcamentoCreateSchema } from "@/lib/validators/orcamentos.schema";
-import { verificarAcessoOrcamentos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoOrcamentos,
+  verificarCriarOrcamento,
+} from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 export async function GET() {
@@ -30,8 +34,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoOrcamentos(r.sessao);
-  if (bloqueio) return bloqueio;
 
   let raw: unknown;
   try {
@@ -47,6 +49,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const bloqueio = verificarCriarOrcamento(r.sessao, parsed.data.artist_id ?? null);
+  if (bloqueio) return bloqueio;
 
   try {
     const orcamento = await criarOrcamentoNoWorkspace(
@@ -64,9 +69,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ orcamento }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar orçamento." },
-      { status: 500 }
-    );
+    // Colisão de número (23505) etc. viram status amigável em vez de 500 cru.
+    return respostaDeErro(e, "Falha ao criar orçamento.");
   }
 }

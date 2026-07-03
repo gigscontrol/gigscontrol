@@ -8,7 +8,7 @@ import type { AgendaItemRow, AgendaItemEscrita } from "@/lib/mappers/agendaItem"
 
 const SELECT = `
   id, workspace_id, artist_id, tipo, titulo, data, data_fim,
-  dia_inteiro, hora_inicio, hora_fim, dados, observacoes, criado_em
+  dia_inteiro, hora_inicio, hora_fim, dados, observacoes, criado_em, criado_por
 `;
 
 /**
@@ -32,15 +32,32 @@ export async function contarVouchersDesde(
 }
 
 export async function listarAgendaItems(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  aplicarFiltro?: <Q>(q: Q) => Q
 ): Promise<AgendaItemRow[]> {
-  const { data, error } = await supabase
+  let q = supabase
     .from("agenda_items")
     .select(SELECT)
     .is("deletado_em", null)
     .order("data", { ascending: true });
+  if (aplicarFiltro) q = aplicarFiltro(q);
+  const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as AgendaItemRow[];
+}
+
+export async function buscarAgendaItem(
+  supabase: SupabaseClient,
+  id: string
+): Promise<AgendaItemRow | null> {
+  const { data, error } = await supabase
+    .from("agenda_items")
+    .select(SELECT)
+    .eq("id", id)
+    .is("deletado_em", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as AgendaItemRow) ?? null;
 }
 
 export async function criarAgendaItem(

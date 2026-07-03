@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import {
   listarEquipeDoWorkspace,
   criarUsuarioDaEquipe,
@@ -35,6 +36,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   let raw: unknown;
   try {

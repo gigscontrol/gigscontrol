@@ -91,6 +91,9 @@ export async function GET(request: Request) {
       .filter(
         (c) => c.nome && Number.isFinite(c.latitude) && Number.isFinite(c.longitude)
       );
+    // Cap simples pra não crescer sem limite num host persistente (cada
+    // país+prefixo digitado vira uma entrada). Ao estourar, zera e recomeça.
+    if (cache.size > 500) cache.clear();
     cache.set(chave, { dados: cidades, em: Date.now() });
     return NextResponse.json({ cidades });
   } catch (e) {

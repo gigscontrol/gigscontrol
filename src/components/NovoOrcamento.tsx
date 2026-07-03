@@ -38,6 +38,7 @@ import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { montarTelefoneE164 } from "@/lib/data/countries";
 import {
@@ -112,6 +113,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const { contratantes, updateContratante, cidades } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
 
   const [step, setStep] = useState(1);
 
@@ -290,13 +292,43 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       return;
     }
 
+    let vinculoResolvido = vinculadoId;
+
+    // "Já existe": o telefone digitado pode bater com um contato que EXISTE mas
+    // está OCULTO pra este usuário (visibilidade derivada). Antes de criar um
+    // novo, checa no backend (workspace inteiro) e oferece reusar — evita
+    // duplicar. One-shot no submit (sem efeito/lifecycle). Rede falha → segue.
+    if (contratanteMode === "novo" && !vinculoResolvido) {
+      const e164 = montarTelefoneE164(country, telDigits);
+      const localMatch = contratantes.find((c) => c.telefone === e164);
+      if (!localMatch && contarDigitos(telDigits) >= country.minDigits) {
+        try {
+          const resp = await fetch(
+            `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(e164)}`
+          );
+          const j = await resp.json();
+          if (j?.existe && j.contratante?.id) {
+            const usar = window.confirm(
+              t(
+                'Já existe um contratante com esse telefone: {nome}. Usar o cadastro existente em vez de criar um novo?',
+                { nome: j.contratante.nome }
+              )
+            );
+            if (usar) vinculoResolvido = j.contratante.id as string;
+          }
+        } catch {
+          /* offline/erro → segue criando novo, não bloqueia o orçamento */
+        }
+      }
+    }
+
     // Telefone "novo" vinculado a um contato existente: reusa o id (sem
     // duplicar) e corrige o nome no contato salvo se foi alterado.
-    if (contratanteMode === "novo" && vinculadoId) {
-      const existente = contratantes.find((c) => c.id === vinculadoId);
+    if (contratanteMode === "novo" && vinculoResolvido) {
+      const existente = contratantes.find((c) => c.id === vinculoResolvido);
       if (existente && novoNome.trim() && novoNome.trim() !== existente.nome) {
         try {
-          await updateContratante(vinculadoId, { nome: novoNome.trim() });
+          await updateContratante(vinculoResolvido, { nome: novoNome.trim() });
         } catch {
           /* não bloqueia o orçamento se a atualização do nome falhar */
         }
@@ -306,8 +338,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     const contratanteInputInicial: ContratanteInput =
       contratanteMode === "existente"
         ? { tipo: "existente", id: contratanteId! }
-        : vinculadoId
-          ? { tipo: "existente", id: vinculadoId }
+        : vinculoResolvido
+          ? { tipo: "existente", id: vinculoResolvido }
           : {
               tipo: "novo",
               dados: {
@@ -1022,7 +1054,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            className="btn btn-primary"
+            disabled={blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))}
+            title={
+              blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))
+                ? "Você não tem permissão para isso."
+                : undefined
+            }
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Save size={14} />

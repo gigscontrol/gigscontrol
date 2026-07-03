@@ -3,6 +3,7 @@ import { criarClienteServidor } from "@/lib/db/supabase-server";
 import type { Papel } from "@/lib/permissoes";
 import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
 import { workspaceBloqueado } from "@/lib/acesso";
+import { listarVinculosDoUsuario, mapaDeVinculos } from "@/lib/repositories/membrosArtista.repo";
 
 /**
  * Helper compartilhado pelos Route Handlers para autenticar uma requisição
@@ -38,6 +39,13 @@ export type SessaoAutenticada = {
    * ou artista, ou quando o operacional ainda não foi configurado.
    */
   funcoes: Funcoes;
+  /**
+   * Modelo NOVO (Fase 4): mapa artist_id → chaves de permissão do vínculo
+   * (membros_artista). `undefined` quando o usuário não tem NENHUM vínculo →
+   * o motor cai no fallback legado (funcoes/escopo). Carregado só para papéis
+   * operacionais (admin/artista/super são resolvidos sem consultar vínculo).
+   */
+  vinculos?: Record<string, string[]>;
 };
 
 function normalizarEscopo(raw: unknown): EscopoSessao {
@@ -120,6 +128,36 @@ export async function autenticar(): Promise<
     };
   }
 
+  // Modelo novo (Fase 4): carrega os vínculos por artista para papéis
+  // operacionais. admin/artista/super são resolvidos pelo motor sem consultar
+  // vínculo, então economizamos a query. Falha ou zero vínculos → deixa
+  // `undefined` (motor usa o fallback legado), pra não trancar ninguém.
+  let vinculos: Record<string, string[]> | undefined;
+  if (
+    !profile.is_super_admin &&
+    profile.papel !== "admin" &&
+    profile.papel !== "artista"
+  ) {
+    try {
+      const rows = await listarVinculosDoUsuario(supabase, profile.id);
+      if (rows.length > 0) {
+        // Vínculo com permissões VAZIAS não conta como "modelo novo": senão um
+        // usuário recém-criado (que nasce com vínculos vazios por artista, só
+        // marcando "com quais artistas trabalha") ficaria TRANCADO em tudo em
+        // vez de cair no fallback legado. Só entra no modelo novo quem tem ao
+        // menos 1 permissão em algum artista.
+        const mapa = mapaDeVinculos(rows);
+        const comPerms: Record<string, string[]> = {};
+        for (const [artistId, chaves] of Object.entries(mapa)) {
+          if (chaves.length > 0) comPerms[artistId] = chaves;
+        }
+        if (Object.keys(comPerms).length > 0) vinculos = comPerms;
+      }
+    } catch {
+      vinculos = undefined;
+    }
+  }
+
   return {
     sessao: {
       supabase,
@@ -134,6 +172,7 @@ export async function autenticar(): Promise<
       funcoes: funcoesValido(
         (profile.funcoes ?? null) as Record<string, unknown> | null
       ),
+      vinculos,
     },
   };
 }

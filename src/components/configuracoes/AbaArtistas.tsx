@@ -42,6 +42,13 @@ import PageHeader from "../PageHeader";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import ColorPicker from "../ColorPicker";
 import CardGoogleCalendar from "./CardGoogleCalendar";
+import EquipeDoArtista from "./EquipeDoArtista";
+import InputDocumento from "../inputs/InputDocumento";
+import PhoneInput from "../PhoneInput";
+import { configDocumento } from "@/lib/data/documentos";
+import { exemploEndereco } from "@/lib/data/exemplos";
+import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
+import Modal from "../Modal";
 import {
   useWorkspace,
   LABELS_PAPEL_EQUIPE,
@@ -81,7 +88,7 @@ import {
  * Pra ter dezenas de artistas, o admin também pode escolher cor
  * customizada via color picker.
  */
-const CORES = [
+export const CORES = [
   "#ef4444", // vermelho
   "#f97316", // laranja
   "#f59e0b", // âmbar
@@ -106,6 +113,7 @@ type ArtistaParaEdicao = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  pais?: string;
   nomeLegal?: string;
   documentoTipo?: DocumentoTipo;
   documento?: string;
@@ -178,6 +186,7 @@ export default function AbaArtistas() {
 
   const [criando, setCriando] = useState(false);
   const [editando, setEditando] = useState<ArtistaParaEdicao | null>(null);
+  const [equipeDe, setEquipeDe] = useState<{ id: string; nome: string } | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [credenciaisGeradas, setCredenciaisGeradas] = useState<{
     nomeArtista: string;
@@ -740,6 +749,7 @@ export default function AbaArtistas() {
                         cidadeIbgeId: djSelecionado.cidadeIbgeId,
                         cidadeNome: djSelecionado.cidadeNome,
                         cidadeUf: djSelecionado.cidadeUf,
+                        pais: djSelecionado.pais,
                         nomeLegal: djSelecionado.nomeLegal,
                         documentoTipo: djSelecionado.documentoTipo,
                         documento: djSelecionado.documento,
@@ -757,6 +767,14 @@ export default function AbaArtistas() {
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
                   >
                     <Pencil size={13} /> {t("Editar")}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setEquipeDe({ id: djSelecionado.id, nome: djSelecionado.name })
+                    }
+                    className="btn btn-secondary text-xs inline-flex items-center gap-1"
+                  >
+                    <Users size={13} /> {t("Equipe")}
                   </button>
                   <button
                     onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
@@ -1293,6 +1311,19 @@ export default function AbaArtistas() {
           onFechar={() => setCredenciaisGeradas(null)}
         />
       )}
+
+      {/* Equipe do artista — permissões por-vínculo (novo modelo) */}
+      <Modal
+        isOpen={!!equipeDe}
+        onClose={() => setEquipeDe(null)}
+        title={t("Equipe do artista")}
+        subtitle={equipeDe?.nome}
+        maxWidth={720}
+      >
+        {equipeDe && (
+          <EquipeDoArtista artistaId={equipeDe.id} artistaNome={equipeDe.nome} />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -1401,7 +1432,8 @@ export function ModalNovoArtista({
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>([]);
   const [riderTecnico, setRiderTecnico] = useState<string[]>([]);
 
-  // Seção — Dados para contrato (CONTRATADO)
+  // Seção — Dados pessoais (CONTRATADO)
+  const [pais, setPais] = useState<Country>(BRASIL);
   const [nomeLegal, setNomeLegal] = useState("");
   const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
   const [documento, setDocumento] = useState("");
@@ -1514,6 +1546,7 @@ export function ModalNovoArtista({
       if (riderTecnico.length > 0) input.riderTecnico = riderTecnico;
 
       // Dados do CONTRATADO (obrigatórios — validados acima)
+      input.pais = pais.code;
       input.nomeLegal = nomeLegal.trim();
       input.documento = documento.trim();
       input.documentoTipo = documentoTipo;
@@ -1599,17 +1632,20 @@ export function ModalNovoArtista({
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label={t("Cidade onde reside")}>
+            <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
+                onPaisChange={setPais}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
           </Secao>
 
-          {/* Seção — Dados para contrato (CONTRATADO) */}
+          {/* Seção — Dados pessoais (CONTRATADO) */}
           <SecaoDadosContrato
+            pais={pais}
+            setPais={setPais}
             nomeLegal={nomeLegal}
             setNomeLegal={setNomeLegal}
             documentoTipo={documentoTipo}
@@ -1974,7 +2010,13 @@ function ModalEditarArtista({
   const [riderTecnico, setRiderTecnico] = useState<string[]>(artista.riderTecnico);
   const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
 
-  // Dados para contrato (CONTRATADO) — pré-preenchidos do artista.
+  // Dados pessoais (CONTRATADO) — pré-preenchidos do artista.
+  const [pais, setPais] = useState<Country>(
+    () =>
+      buscarPais(artista.pais ?? "BR").find(
+        (p) => p.code === (artista.pais ?? "BR").toUpperCase()
+      ) ?? BRASIL
+  );
   const [nomeLegal, setNomeLegal] = useState(artista.nomeLegal ?? "");
   const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
     artista.documentoTipo ?? "cpf"
@@ -2124,6 +2166,7 @@ function ModalEditarArtista({
         riderTecnico,
         privacidade,
         // Dados do CONTRATADO (sempre enviados — validados acima).
+        pais: pais.code,
         nomeLegal: nomeLegal.trim(),
         documento: documento.trim(),
         documentoTipo,
@@ -2198,10 +2241,11 @@ function ModalEditarArtista({
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label={t("Cidade onde reside")}>
+            <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
+                onPaisChange={setPais}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
@@ -2209,6 +2253,8 @@ function ModalEditarArtista({
 
           {/* Seção — Dados para contrato (CONTRATADO) */}
           <SecaoDadosContrato
+            pais={pais}
+            setPais={setPais}
             nomeLegal={nomeLegal}
             setNomeLegal={setNomeLegal}
             documentoTipo={documentoTipo}
@@ -3723,7 +3769,7 @@ export function ModalCredenciais({
  * que abre o color picker nativo. Quando o usuário escolhe uma cor que
  * não está no padrão, ela aparece como 11ª bolinha destacada.
  */
-function SeletorDeCor({
+export function SeletorDeCor({
   cor,
   onChange,
 }: {
@@ -3994,7 +4040,9 @@ function ToggleTipoDocumento({
  * em modal) e no card do perfil editável inline. O `nome` do artista é o
  * nome artístico; aqui ficam os dados legais que vão pro contrato.
  */
-function CamposDadosContrato({
+export function CamposDadosContrato({
+  pais,
+  setPais,
   nomeLegal,
   setNomeLegal,
   documentoTipo,
@@ -4008,6 +4056,8 @@ function CamposDadosContrato({
   telefone,
   setTelefone,
 }: {
+  pais: Country;
+  setPais: (v: Country) => void;
   nomeLegal: string;
   setNomeLegal: (v: string) => void;
   documentoTipo: DocumentoTipo;
@@ -4022,6 +4072,15 @@ function CamposDadosContrato({
   setTelefone: (v: string) => void;
 }) {
   const t = useT();
+  const isBR = pais.code === "BR";
+  // O telefone é guardado em E.164 ("55119..."); o PhoneInput trabalha com os
+  // dígitos nacionais, então tiramos o DDI do país pra exibir.
+  const telDigits = (() => {
+    const digs = (telefone ?? "").replace(/\D/g, "");
+    return digs.startsWith(pais.ddi) && digs.length > pais.ddi.length
+      ? digs.slice(pais.ddi.length)
+      : digs;
+  })();
   return (
     <>
       <Campo label={t("Nome completo (civil)")} className="md:col-span-2">
@@ -4033,53 +4092,67 @@ function CamposDadosContrato({
         />
       </Campo>
 
-      <Campo label={t("Tipo de documento")}>
-        <ToggleTipoDocumento
-          documentoTipo={documentoTipo}
-          setDocumentoTipo={setDocumentoTipo}
-          documento={documento}
-          setDocumento={setDocumento}
-        />
-      </Campo>
+      {isBR ? (
+        <>
+          <Campo label={t("Tipo de documento")}>
+            <ToggleTipoDocumento
+              documentoTipo={documentoTipo}
+              setDocumentoTipo={setDocumentoTipo}
+              documento={documento}
+              setDocumento={setDocumento}
+            />
+          </Campo>
 
-      <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
-        <input
-          value={documento}
-          onChange={(e) =>
-            setDocumento(mascararDocumento(e.target.value, documentoTipo))
-          }
-          inputMode="numeric"
-          placeholder={
-            documentoTipo === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"
-          }
-          className="campo-input font-mono"
-        />
-      </Campo>
+          <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
+            <input
+              value={documento}
+              onChange={(e) =>
+                setDocumento(mascararDocumento(e.target.value, documentoTipo))
+              }
+              inputMode="numeric"
+              placeholder={
+                documentoTipo === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"
+              }
+              className="campo-input font-mono"
+            />
+          </Campo>
 
-      {documentoTipo === "cnpj" && (
-        <Campo
-          label={t("Razão social / Nome da empresa")}
-          className="md:col-span-2"
-        >
-          <input
-            value={razaoSocial}
-            onChange={(e) => setRazaoSocial(e.target.value)}
-            placeholder={t("Ex: Silva Produções Artísticas LTDA")}
-            className="campo-input"
-          />
+          {documentoTipo === "cnpj" && (
+            <Campo
+              label={t("Razão social / Nome da empresa")}
+              className="md:col-span-2"
+            >
+              <input
+                value={razaoSocial}
+                onChange={(e) => setRazaoSocial(e.target.value)}
+                placeholder={t("Ex: Silva Produções Artísticas LTDA")}
+                className="campo-input"
+              />
+            </Campo>
+          )}
+        </>
+      ) : (
+        <Campo label={configDocumento(pais.code).label}>
+          <InputDocumento pais={pais.code} value={documento} onChange={setDocumento} />
         </Campo>
       )}
 
-      <Campo label={t("Endereço (opcional)")}>
-        <CamposEndereco value={endereco} onChange={setEndereco} />
+      <Campo label={t("Telefone (opcional)")}>
+        <PhoneInput
+          country={pais}
+          onCountryChange={setPais}
+          value={telDigits}
+          onChange={(digits) =>
+            setTelefone(digits ? montarTelefoneE164(pais, digits) : "")
+          }
+        />
       </Campo>
 
-      <Campo label={t("Telefone (opcional)")}>
+      <Campo label={t("Endereço (opcional)")} className="md:col-span-2">
         <input
-          value={telefone}
-          onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
-          inputMode="tel"
-          placeholder="(11) 98888-7777"
+          value={endereco}
+          onChange={(e) => setEndereco(e.target.value)}
+          placeholder={exemploEndereco(pais.code)}
           className="campo-input"
         />
       </Campo>
@@ -4091,13 +4164,13 @@ function CamposDadosContrato({
 function SecaoDadosContrato(props: Parameters<typeof CamposDadosContrato>[0]) {
   const t = useT();
   return (
-    <Secao titulo={t("Dados para contrato")}>
+    <Secao titulo={t("Dados pessoais")}>
       <CamposDadosContrato {...props} />
     </Secao>
   );
 }
 
-function Secao({
+export function Secao({
   titulo,
   children,
 }: {
@@ -4114,7 +4187,7 @@ function Secao({
   );
 }
 
-function Campo({
+export function Campo({
   label,
   children,
   className,

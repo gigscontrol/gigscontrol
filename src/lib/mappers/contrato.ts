@@ -61,6 +61,8 @@ export type ContratoRow = {
   observacoes: string | null;
   /** Pasta (organização em "Meus contratos"). null = sem pasta. */
   pasta_id: string | null;
+  /** Quem criou o contrato (migration 50). null nas linhas antigas. */
+  criado_por: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
 };
@@ -79,6 +81,8 @@ export type Contrato = {
   observacoes: string | null;
   /** Pasta de organização (null = sem pasta). */
   pastaId: string | null;
+  /** Quem criou o contrato (usado no escopo "editar só os que ele criou"). */
+  criadoPor: string | null;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -134,6 +138,7 @@ export function rowParaContrato(row: ContratoRow): Contrato {
     dataAssinatura: row.data_assinatura ?? null,
     observacoes: row.observacoes ?? null,
     pastaId: row.pasta_id ?? null,
+    criadoPor: row.criado_por ?? null,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
@@ -152,5 +157,6 @@ export type ContratoEscrita = {
   data_assinatura?: string | null;
   observacoes?: string | null;
   pasta_id?: string | null;
+  criado_por?: string | null;
   atualizado_em?: string;
 };

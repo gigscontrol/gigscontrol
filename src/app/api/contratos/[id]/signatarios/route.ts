@@ -5,6 +5,11 @@ import {
   definirSignatarios,
   preencherUrls,
 } from "@/lib/services/contratoSignatarios.service";
+import {
+  buscarContratoPorId,
+  resolverEscopoContrato,
+} from "@/lib/services/contratos.service";
+import { podeVerContrato, podeEditarContrato } from "@/lib/api/permissoes";
 import { definirSignatariosSchema } from "@/lib/validators/contratoSignatarios.schema";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
@@ -15,6 +20,14 @@ export async function GET(
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
+    // Gate por artista ANTES de montar as URLs assinadas (PII: RG/CPF/selfie,
+    // IP, geolocalização). Fora do escopo → 404, não vaza a existência.
+    const contrato = await buscarContratoPorId(r.sessao.supabase, params.id);
+    if (!contrato)
+      return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
+    const { artistId } = await resolverEscopoContrato(r.sessao.supabase, contrato.vendaId);
+    if (!podeVerContrato(r.sessao, artistId))
+      return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
     const signatarios = await listarSignatariosDoContrato(
       r.sessao.supabase,
       params.id
@@ -36,12 +49,21 @@ export async function POST(
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  if (r.sessao.papel !== "admin") {
+  // Definir signatários = editar o contrato → gate por artista.
+  const contrato = await buscarContratoPorId(r.sessao.supabase, params.id);
+  if (!contrato)
+    return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
+  const { artistId } = await resolverEscopoContrato(
+    r.sessao.supabase,
+    contrato.vendaId
+  );
+  // Artista vem da venda; o "dono" é o criador do CONTRATO (contratos.criado_por),
+  // não o vendedor da venda. 404 fora de escopo (coerente com GET/PATCH).
+  if (!podeEditarContrato(r.sessao, artistId, contrato.criadoPor))
     return NextResponse.json(
-      { erro: "Apenas administradores podem definir signatários." },
-      { status: 403 }
+      { erro: "Contrato não encontrado." },
+      { status: 404 }
     );
-  }
 
   let raw: unknown;
   try {

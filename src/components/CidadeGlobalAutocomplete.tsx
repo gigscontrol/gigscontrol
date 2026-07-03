@@ -44,6 +44,8 @@ type Props = {
   placeholder?: string;
   /** "vertical" (padrão) empilha país sobre cidade; "horizontal" põe lado a lado. */
   orientacao?: "vertical" | "horizontal";
+  /** Avisado quando o usuário troca o PAÍS (a cidade é limpa junto). */
+  onPaisChange?: (pais: Country) => void;
 };
 
 function paisInicial(value: CidadeEscolhida | null): Country {
@@ -59,6 +61,7 @@ export default function CidadeGlobalAutocomplete({
   onChange,
   placeholder,
   orientacao = "vertical",
+  onPaisChange,
 }: Props) {
   const t = useT();
   const horizontal = orientacao === "horizontal";
@@ -185,6 +188,7 @@ export default function CidadeGlobalAutocomplete({
     onChange(null);
     setInput("");
     setSugestoes([]);
+    onPaisChange?.(p);
   }
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || sugestoes.length === 0) return;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -28,6 +29,7 @@ type Props = {
 
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
   const t = useT();
+  const { podeUI } = useAuth();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
@@ -69,6 +71,12 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const cid = cidades.find((c) => c.id === orc.cidadeId);
   const dj = artistas.find((d) => d.id === orc.djId);
   const st = LABELS_STATUS_ORCAMENTO[orc.status];
+
+  // Permissões por artista (podeUI já libera admin/legado).
+  const podeConverter = podeUI(orc.djId || null, "vendas.converter");
+  const podeEditarOrc = podeUI(orc.djId || null, "vendas.editar_orcamento");
+  const podeExcluirOrc = podeUI(orc.djId || null, "vendas.excluir_orcamento");
+  const semPermissao = t("Você não tem permissão para isso.");
 
   const texto = gerarTextoWhatsApp(orc, { contratante: cont, casa: cs, cidade: cid, dj });
   const linkWA = montarLinkWhatsApp(cont?.telefone ?? "", texto);
@@ -143,7 +151,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {orc.status !== "recusado" && (
           <button
             onClick={() => onTransformarEmVenda(orc.id)}
-            className="btn btn-primary"
+            disabled={!podeConverter}
+            title={!podeConverter ? semPermissao : undefined}
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <CalendarCheck2 size={14} />
@@ -158,7 +168,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
               if (confirm(msg)) aceitarOrcamento(orc.id);
             }}
-            className="btn btn-secondary"
+            disabled={!podeEditarOrc}
+            title={!podeEditarOrc ? semPermissao : undefined}
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "var(--success)" }}
           >
             <CheckCircle2 size={14} />
@@ -168,7 +180,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {orc.status !== "negociacao" && orc.status !== "aceito" && (
           <button
             onClick={() => marcarStatus(orc.id, "negociacao")}
-            className="btn btn-secondary"
+            disabled={!podeEditarOrc}
+            title={!podeEditarOrc ? semPermissao : undefined}
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "var(--warning)" }}
           >
             <Clock size={14} />
@@ -178,7 +192,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {orc.status !== "recusado" && orc.status !== "aceito" && (
           <button
             onClick={() => marcarStatus(orc.id, "recusado")}
-            className="btn btn-secondary"
+            disabled={!podeEditarOrc}
+            title={!podeEditarOrc ? semPermissao : undefined}
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ color: "var(--danger)" }}
           >
             <XCircle size={14} />
@@ -187,7 +203,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         )}
         <button
           onClick={() => setConfirmaDuplicar(true)}
-          className="btn btn-secondary"
+          disabled={!podeEditarOrc}
+          title={!podeEditarOrc ? semPermissao : undefined}
+          className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Copy size={14} />
           {t("Duplicar")}
@@ -199,7 +217,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               onBack();
             }
           }}
-          className="btn btn-ghost ml-auto"
+          disabled={!podeExcluirOrc}
+          title={!podeExcluirOrc ? semPermissao : undefined}
+          className="btn btn-ghost ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ color: "var(--danger)" }}
         >
           <Trash2 size={14} />
@@ -295,7 +315,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                     setInfoExtraDraft(orc.infoExtra ?? "");
                     setEditandoInfoExtra(true);
                   }}
-                  className="btn-ghost text-xs inline-flex items-center gap-1"
+                  disabled={!podeEditarOrc}
+                  title={!podeEditarOrc ? semPermissao : undefined}
+                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Pencil size={12} />
                   {t("Editar")}

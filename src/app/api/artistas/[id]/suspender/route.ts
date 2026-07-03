@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import { alternarSuspensaoArtista } from "@/lib/services/artistas.service";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
@@ -11,6 +12,8 @@ type RouteCtx = { params: { id: string } };
 export async function POST(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
   try {
     const artista = await alternarSuspensaoArtista(r.sessao.supabase, params.id);
     await auditAndNotify(r.sessao, {

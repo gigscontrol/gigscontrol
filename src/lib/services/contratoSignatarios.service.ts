@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { documentoValido } from "@/lib/documento";
 import type {
   Signatario,
   SignatarioEscrita,
@@ -84,6 +85,19 @@ export async function removerSignatarioPorId(
   await repoRemover(supabase, id);
 }
 
+/**
+ * Uma exigência da assinatura (foto, selfie, documento…) não foi atendida.
+ * O cliente valida na UI, mas o servidor é a fonte da verdade: um POST cru
+ * não pode pular etapas que a agência marcou como obrigatórias.
+ */
+export class ExigenciaNaoAtendidaError extends Error {
+  status = 422;
+  constructor(mensagem: string) {
+    super(mensagem);
+    this.name = "ExigenciaNaoAtendidaError";
+  }
+}
+
 // ---------------- Público (service-role, sem login) ----------------
 
 /** Busca o contrato + o signatário daquele token (página pública). */
@@ -125,6 +139,29 @@ export async function registrarAssinatura(
   const sigRow = await buscarPorToken(admin, token);
   if (!sigRow || sigRow.status === "assinado") return null;
 
+  // Enforcement server-side das exigências ANTES de qualquer upload/facial.
+  // O cliente também valida (UX), mas o servidor é a autoridade — um POST cru
+  // não pode assinar pulando selfie/facial/documento nem mandar CPF inválido.
+  const exige = exigeValido(sigRow.exige);
+  if (exige.cpfCnpj && !documentoValido(dados.documento ?? "")) {
+    throw new ExigenciaNaoAtendidaError("CPF/CNPJ inválido ou não informado.");
+  }
+  if (exige.fotoDocumento && !dados.fotoDocumento) {
+    throw new ExigenciaNaoAtendidaError("Foto do documento é obrigatória.");
+  }
+  if (exige.fotoCpf && !dados.fotoCpf) {
+    throw new ExigenciaNaoAtendidaError("Foto do CPF é obrigatória.");
+  }
+  // 'facial' depende da selfie + foto do documento pra comparar; exigir ambas.
+  if ((exige.selfie || exige.facial) && !dados.selfie) {
+    throw new ExigenciaNaoAtendidaError("Selfie é obrigatória.");
+  }
+  if (exige.facial && !dados.fotoDocumento) {
+    throw new ExigenciaNaoAtendidaError(
+      "Verificação facial exige a foto do documento."
+    );
+  }
+
   const base = `${sigRow.contrato_id}/${sigRow.id}`;
   const arquivos: ArquivosSignatario = {};
   if (dados.fotoCpf) {
@@ -153,7 +190,6 @@ export async function registrarAssinatura(
   }
 
   // Reconhecimento facial (Fase 3): se exigido e temos selfie + documento.
-  const exige = exigeValido(sigRow.exige);
   if (exige.facial && dados.selfie && dados.fotoDocumento) {
     const r = await compararFaces(dados.selfie, dados.fotoDocumento);
     if (r) {

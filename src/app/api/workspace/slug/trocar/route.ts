@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import {
   trocarSlugDoWorkspace,
   SlugInvalidoError,
@@ -23,15 +24,11 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  if (r.sessao.papel !== "admin") {
-    return NextResponse.json(
-      { erro: "Apenas admin pode trocar o username da agência." },
-      { status: 403 }
-    );
-  }
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   let raw: unknown;
   try {

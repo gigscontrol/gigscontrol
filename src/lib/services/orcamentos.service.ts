@@ -72,6 +72,26 @@ export async function listarOrcamentosDoWorkspace(
   return rows.map(rowParaOrcamento);
 }
 
+/**
+ * O orçamento `id` é visível para a sessão? Reusa o filtro da lista
+ * (aplicarFiltroOrcamentos) estreitado ao id — zero divergência com a lista.
+ * Fecha o vazamento de leitura por link direto no GET /orcamentos/[id].
+ */
+export async function orcamentoVisivelParaSessao(
+  supabase: SupabaseClient,
+  sessao: SessaoAutenticada,
+  id: string
+): Promise<boolean> {
+  const rows = await repoListar(supabase, <Q,>(q: Q) =>
+    (
+      aplicarFiltroOrcamentos(q as never, sessao) as unknown as {
+        eq(col: string, val: string): unknown;
+      }
+    ).eq("id", id) as Q
+  );
+  return rows.length > 0;
+}
+
 export async function buscarOrcamentoPorId(
   supabase: SupabaseClient,
   id: string

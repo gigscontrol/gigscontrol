@@ -43,6 +43,7 @@ import {
 import type { Contrato } from "@/lib/mappers/contrato";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 
 const ACCENT = "#3D7BFF";
@@ -105,6 +106,14 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   const t = useT();
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
+  const { podeUI } = useAuth();
+
+  // artistId do contrato vem da venda vinculada (contrato.vendaId → venda.djId).
+  // Definir/editar signatários = editar o contrato.
+  const artistaId = vendas.find((v) => v.id === contrato.vendaId)?.djId || null;
+  const podeEditarSignatarios =
+    podeUI(artistaId, "contratos.editar") ||
+    podeUI(artistaId, "contratos.editar_todos");
 
   const [signatarios, setSignatarios] = useState<Signatario[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -436,8 +445,9 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           <button
             type="button"
             onClick={gerarLinks}
-            disabled={salvando}
-            className="btn"
+            disabled={salvando || !podeEditarSignatarios}
+            title={!podeEditarSignatarios ? t("Você não tem permissão para isso.") : undefined}
+            className="btn disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: ACCENT, color: "#fff" }}
           >
             {salvando ? (
@@ -547,8 +557,13 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           <button
             type="button"
             onClick={abrirRedefinir}
-            className="btn btn-secondary"
-            title={t("Substitui os links pendentes por novos signatários")}
+            disabled={!podeEditarSignatarios}
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              !podeEditarSignatarios
+                ? t("Você não tem permissão para isso.")
+                : t("Substitui os links pendentes por novos signatários")
+            }
           >
             <PenLine size={14} />
             {t("Redefinir signatários")}

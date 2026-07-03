@@ -16,6 +16,7 @@ import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
@@ -69,6 +70,17 @@ export default function HistoricoPage({
   const { modelos } = useModelos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
+
+  // artistId de um contrato vem da venda vinculada (contrato.vendaId → venda.djId).
+  const artistaDoContrato = (c: Contrato): string | null => {
+    const v = vendas.find((venda) => venda.id === c.vendaId);
+    return v?.djId || null;
+  };
+  const podeExcluir = (c: Contrato) => podeUI(artistaDoContrato(c), "contratos.excluir");
+  const podeEditar = (c: Contrato) =>
+    podeUI(artistaDoContrato(c), "contratos.editar") ||
+    podeUI(artistaDoContrato(c), "contratos.editar_todos");
 
   const [selecionadoId, setSelecionadoId] = useState<string | null>(abrirId);
   const [filtro, setFiltro] = useState<ContratoStatus | "todos">(
@@ -197,6 +209,8 @@ export default function HistoricoPage({
           conteudoRef={conteudoRef}
           gerandoPdf={gerandoPdf}
           salvandoStatus={salvandoStatus}
+          podeEditar={podeEditar(selecionado)}
+          podeExcluir={podeExcluir(selecionado)}
           onVoltar={() => setSelecionadoId(null)}
           onBaixarPdf={() => baixarPdf(selecionado)}
           onMudarStatus={(s) => mudarStatus(selecionado, s)}
@@ -229,6 +243,7 @@ export default function HistoricoPage({
               contratos={filtrados}
               nomeModelo={nomeModelo}
               desc={(c) => descreverContrato(c, vendas, artistas)}
+              podeExcluir={podeExcluir}
               onAbrir={(c) => setSelecionadoId(c.id)}
               onExcluir={excluir}
             />
@@ -293,12 +308,14 @@ function ListaContratos({
   contratos,
   nomeModelo,
   desc,
+  podeExcluir,
   onAbrir,
   onExcluir,
 }: {
   contratos: Contrato[];
   nomeModelo: (c: Contrato) => string;
   desc: (c: Contrato) => ReturnType<typeof descreverContrato>;
+  podeExcluir: (c: Contrato) => boolean;
   onAbrir: (c: Contrato) => void;
   onExcluir: (c: Contrato) => void;
 }) {
@@ -365,9 +382,14 @@ function ListaContratos({
                       e.stopPropagation();
                       onExcluir(c);
                     }}
-                    title={t("Excluir contrato")}
+                    disabled={!podeExcluir(c)}
+                    title={
+                      !podeExcluir(c)
+                        ? t("Você não tem permissão para isso.")
+                        : t("Excluir contrato")
+                    }
                     aria-label={t("Excluir contrato")}
-                    className="btn-ghost p-2 rounded hover:text-danger"
+                    className="btn-ghost p-2 rounded hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -390,6 +412,8 @@ function DetalheContrato({
   conteudoRef,
   gerandoPdf,
   salvandoStatus,
+  podeEditar,
+  podeExcluir,
   onVoltar,
   onBaixarPdf,
   onMudarStatus,
@@ -400,6 +424,8 @@ function DetalheContrato({
   conteudoRef: React.Ref<HTMLDivElement>;
   gerandoPdf: boolean;
   salvandoStatus: boolean;
+  podeEditar: boolean;
+  podeExcluir: boolean;
   onVoltar: () => void;
   onBaixarPdf: () => void;
   onMudarStatus: (status: ContratoStatus) => void;
@@ -443,7 +469,9 @@ function DetalheContrato({
           <button
             type="button"
             onClick={onExcluir}
-            className="btn btn-secondary hover:text-danger"
+            disabled={!podeExcluir}
+            title={!podeExcluir ? t("Você não tem permissão para isso.") : undefined}
+            className="btn btn-secondary hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={15} />
             {t("Excluir")}
@@ -479,10 +507,11 @@ function DetalheContrato({
                   key={s}
                   type="button"
                   onClick={() => onMudarStatus(s)}
-                  disabled={salvandoStatus}
+                  disabled={salvandoStatus || !podeEditar}
+                  title={!podeEditar ? t("Você não tem permissão para isso.") : undefined}
                   className={`badge ${
                     ativo ? STATUS_BADGE[s] : "text-muted"
-                  } transition-colors disabled:opacity-60`}
+                  } transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
                   style={
                     ativo
                       ? { boxShadow: "0 0 0 1px var(--border-color)" }

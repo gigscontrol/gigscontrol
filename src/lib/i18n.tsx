@@ -77,6 +77,9 @@ export function LanguageProvider({
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
+    // Mantém <html lang> em dia (SSR resolve 1x; sem isto, leitor de tela e
+    // crawler leem o idioma antigo após a troca em sessão).
+    if (typeof document !== "undefined") document.documentElement.lang = l;
     try {
       document.cookie = `gc-lang=${l};path=/;max-age=31536000;samesite=lax`;
       localStorage.setItem("gc-lang", l); // redundância p/ compat

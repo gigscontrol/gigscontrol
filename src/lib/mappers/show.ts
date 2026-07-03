@@ -18,6 +18,7 @@ export type ShowRow = {
   orcamento_id: string | null;
   venda_id: string | null;
   criado_em: string | null;
+  criado_por: string | null;
   // joins (selecionados pelo repository)
   artist?: { id: string; nome: string; deletado_em: string | null } | null;
   casa?: { id: string; nome: string } | null;
@@ -91,4 +92,5 @@ export type ShowEscrita = {
   valor?: number | null;
   orcamento_id?: string | null;
   venda_id?: string | null;
+  criado_por?: string | null;
 };

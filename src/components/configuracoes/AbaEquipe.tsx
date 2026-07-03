@@ -41,6 +41,11 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
+import { resolverCidade } from "@/lib/cidade-helpers";
+import { BRASIL, type Country } from "@/lib/data/countries";
+import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
+import type { DocumentoTipo } from "@/types";
 
 const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
 
@@ -57,15 +62,6 @@ function normalizarUsername(s: string): string {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-/** Função primária derivada do mapa de funções (1ª preenchida). */
-function inferirPapelPrimario(funcoes: Funcoes): PapelEquipe {
-  for (const f of FUNCOES_DISPONIVEIS) {
-    if ((funcoes[f] ?? []).length > 0) return f;
-  }
-  // Fallback impossível na prática (validação na UI exige pelo menos 1)
-  return "vendedor";
 }
 
 /**
@@ -213,15 +209,19 @@ export default function AbaEquipe() {
   async function aoCriar(dados: {
     nome: string;
     username_raiz: string;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    artistIds: string[];
+    cor?: string;
+    pais?: string;
+    nome_legal?: string;
+    documento_tipo?: string;
+    documento?: string;
+    razao_social?: string;
+    endereco?: string;
+    telefone?: string;
+    cidade_id?: string;
   }) {
     try {
-      const papel = inferirPapelPrimario(dados.funcoes);
-      const { usuario, senhaTemporaria } = await adicionarUsuario({
-        ...dados,
-        papel,
-      });
+      const { usuario, senhaTemporaria } = await adicionarUsuario(dados);
       setCriando(false);
       setSenhaNova({
         nome: usuario.nome,
@@ -247,8 +247,6 @@ export default function AbaEquipe() {
         funcoes: dados.funcoes,
         ativo: dados.ativo,
       };
-      // Recalcula o papel primário quando as funções mudam.
-      if (dados.funcoes) patch.papel = inferirPapelPrimario(dados.funcoes);
       await atualizarUsuario(id, patch);
       setEditando(null);
       setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
@@ -1164,8 +1162,16 @@ function ModalUsuario({
   onCriar: (dados: {
     nome: string;
     username_raiz: string;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    artistIds: string[];
+    cor?: string;
+    pais?: string;
+    nome_legal?: string;
+    documento_tipo?: string;
+    documento?: string;
+    razao_social?: string;
+    endereco?: string;
+    telefone?: string;
+    cidade_id?: string;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
@@ -1179,8 +1185,18 @@ function ModalUsuario({
   const [usernameRaiz, setUsernameRaiz] = useState("");
   const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
   const [copiouUsername, setCopiouUsername] = useState(false);
-  const [escopo, setEscopo] = useState<EscopoUsuario>(inicial?.escopo ?? ESCOPO_PADRAO);
-  const [funcoes, setFuncoes] = useState<Funcoes>(inicial?.funcoes ?? {});
+  // Artistas com quem trabalha (a função é definida depois na aba Equipe).
+  const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
+  // Dados pessoais (opcionais) — country-aware, servem para contrato.
+  const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
+  const [cor, setCor] = useState<string>(CORES[0]);
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
+  const [nomeLegal, setNomeLegal] = useState("");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
+  const [documento, setDocumento] = useState("");
+  const [razaoSocial, setRazaoSocial] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1230,31 +1246,13 @@ function ModalUsuario({
     };
   }, [modo, inicial?.id]);
 
-  function toggleFuncao(f: PapelEquipe) {
-    setFuncoes((prev) => {
-      const next = { ...prev };
-      if (f in next) delete next[f];
-      else next[f] = [];
+  function toggleArtista(id: string) {
+    setArtistIdsSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
-  }
-
-  function toggleDj(f: PapelEquipe, djId: string) {
-    setFuncoes((prev) => {
-      const atuais = prev[f] ?? [];
-      const proximos = atuais.includes(djId)
-        ? atuais.filter((x) => x !== djId)
-        : [...atuais, djId];
-      return { ...prev, [f]: proximos };
-    });
-  }
-
-  function selecionarTodosDjs(f: PapelEquipe) {
-    setFuncoes((prev) => ({ ...prev, [f]: artistas.map((a) => a.id) }));
-  }
-
-  function limparDjs(f: PapelEquipe) {
-    setFuncoes((prev) => ({ ...prev, [f]: [] }));
   }
 
   async function salvar() {
@@ -1262,43 +1260,53 @@ function ModalUsuario({
       setErro(t("Informe o nome do usuário."));
       return;
     }
-    if (modo === "criar" && !usernameValido) {
-      setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
-      return;
-    }
-    // Valida: pelo menos 1 função marcada + cada função marcada precisa
-    // ter pelo menos 1 DJ.
-    const funcoesAtivas = FUNCOES_DISPONIVEIS.filter((f) => f in funcoes);
-    if (funcoesAtivas.length === 0) {
-      setErro(t("Selecione pelo menos uma função para o usuário."));
-      return;
-    }
-    for (const f of funcoesAtivas) {
-      if ((funcoes[f] ?? []).length === 0) {
-        setErro(
-          t("Selecione pelo menos um DJ para a função \"{nome}\".", { nome: LABELS_PAPEL_EQUIPE[f].nome })
-        );
+
+    if (modo === "criar") {
+      if (!usernameValido) {
+        setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
         return;
       }
-    }
-    setSalvando(true);
-    setErro(null);
-    try {
-      if (modo === "criar") {
+      const artistIds = [...artistIdsSel];
+      setSalvando(true);
+      setErro(null);
+      try {
+        // Cidade (opcional) → resolve/cria e devolve o UUID do catálogo.
+        let cidadeId: string | undefined;
+        if (cidadeSel) {
+          try {
+            cidadeId = (await resolverCidade(cidadeSel)).id;
+          } catch {
+            /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
+          }
+        }
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
-          escopo,
-          funcoes,
+          artistIds,
+          cor,
+          pais: paisPessoal.code,
+          nome_legal: nomeLegal.trim() || undefined,
+          documento_tipo: documentoTipo,
+          documento: documento.trim() || undefined,
+          razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
+          telefone: telefone.trim() || undefined,
+          endereco: endereco.trim() || undefined,
+          cidade_id: cidadeId,
         });
-      } else if (inicial) {
-        await onEditar(inicial.id, {
-          nome: nome.trim(),
-          escopo,
-          funcoes,
-          ativo,
-        });
+      } catch (e) {
+        setErro((e as Error).message);
+      } finally {
+        setSalvando(false);
       }
+      return;
+    }
+
+    // Editar: só nome + bloqueio. O acesso é gerenciado por artista.
+    if (!inicial) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onEditar(inicial.id, { nome: nome.trim(), ativo });
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -1314,210 +1322,179 @@ function ModalUsuario({
       maxWidth={520}
     >
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
-          <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder={t("Nome completo")}
-            className="campo-input"
-            autoFocus
-          />
-        </label>
+        {modo === "criar" ? (
+          <>
+            <Secao titulo={t("Dados básicos")}>
+              <Campo label={t("Nome")}>
+                <input
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder={t("Nome completo")}
+                  className="campo-input"
+                  autoFocus
+                />
+              </Campo>
+              <SeletorDeCor cor={cor} onChange={setCor} />
+              <Campo label={t("País e cidade onde reside")}>
+                <CidadeGlobalAutocomplete
+                  value={cidadeSel}
+                  onChange={setCidadeSel}
+                  onPaisChange={setPaisPessoal}
+                  placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
+                />
+              </Campo>
+            </Secao>
 
-        {modo === "criar" && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-secondary">{t("Login (username)")}</span>
-            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              {/* Input cresce conforme digita (largura em `ch` casa com a
-                  font-mono — sem buraco entre o texto e o sufixo). */}
-              <input
-                value={usernameRaiz}
-                onChange={(e) => {
-                  setUsernameFoiEditado(true);
-                  setUsernameRaiz(
-                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                  );
-                }}
-                placeholder="joaovendas"
-                style={{
-                  width: `${Math.max(
-                    usernameRaiz.length || "joaovendas".length,
-                    4
-                  )}ch`,
-                }}
-                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+            <Secao titulo={t("Dados pessoais")}>
+              <CamposDadosContrato
+                pais={paisPessoal}
+                setPais={setPaisPessoal}
+                nomeLegal={nomeLegal}
+                setNomeLegal={setNomeLegal}
+                documentoTipo={documentoTipo}
+                setDocumentoTipo={setDocumentoTipo}
+                documento={documento}
+                setDocumento={setDocumento}
+                razaoSocial={razaoSocial}
+                setRazaoSocial={setRazaoSocial}
+                endereco={endereco}
+                setEndereco={setEndereco}
+                telefone={telefone}
+                setTelefone={setTelefone}
               />
-              <span className="text-sm text-muted font-mono whitespace-nowrap">
-                -{slugAgencia || "agencia"}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!usernameValido || !usernameCompleto) return;
-                  navigator.clipboard.writeText(usernameCompleto).then(() => {
-                    setCopiouUsername(true);
-                    setTimeout(() => setCopiouUsername(false), 2000);
-                  });
-                }}
-                disabled={!usernameValido}
-                className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label={t("Copiar login completo")}
-                title={
-                  usernameValido
-                    ? t("Copiar login completo")
-                    : t("Preencha um login válido pra copiar")
-                }
-              >
-                {copiouUsername ? (
-                  <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
-                ) : (
-                  <Copy size={14} />
-                )}
-              </button>
-            </div>
-            {usernameCompleto && !usernameValido && (
-              <p className="text-xs mt-1" style={{ color: "var(--danger)" }}>
-                {t("Use 3+ caracteres (letras, números, hífen)")}
-              </p>
-            )}
-            {usernameValido && usernameCompleto && (
-              <p className="text-xs mt-1" style={{ color: "var(--success)" }}>
-                {t("Login completo:")}{" "}
-                <strong className="font-mono text-primary">{usernameCompleto}</strong>
-              </p>
-            )}
-            <p className="text-[0.7rem] text-muted mt-1">
-              {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
-            </p>
-          </label>
-        )}
+            </Secao>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-secondary">
-            {t("Funções e DJs atendidos")}
-          </span>
-          <p className="text-[0.7rem] text-muted -mt-1">
-            {t("Marque cada função que o usuário desempenha e, dentro dela, quais DJs ele atende. As escolhas são independentes (ex.: vendedor do DJ Z e financeiro do DJ Y).")}
-          </p>
-          {FUNCOES_DISPONIVEIS.map((f) => {
-            const info = LABELS_PAPEL_EQUIPE[f];
-            const ativoFuncao = f in funcoes;
-            const djsSelecionados = funcoes[f] ?? [];
-            return (
-              <div
-                key={f}
-                className="rounded-md border transition-colors"
-                style={{
-                  borderColor: ativoFuncao ? info.cor : "var(--border-color)",
-                  backgroundColor: ativoFuncao ? `${info.cor}10` : "transparent",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleFuncao(f)}
-                  className="w-full flex items-center gap-2.5 p-2.5 text-left"
-                >
-                  <span
-                    className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor: ativoFuncao ? info.cor : "transparent",
-                      border: ativoFuncao ? "none" : "1px solid var(--border-strong)",
+            <Secao titulo={t("Acesso ao sistema")}>
+              <Campo label={t("Login (username)")}>
+                <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                  <input
+                    value={usernameRaiz}
+                    onChange={(e) => {
+                      setUsernameFoiEditado(true);
+                      setUsernameRaiz(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                      );
                     }}
+                    placeholder="joaovendas"
+                    style={{
+                      width: `${Math.max(
+                        usernameRaiz.length || "joaovendas".length,
+                        4
+                      )}ch`,
+                    }}
+                    className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+                  />
+                  <span className="text-sm text-muted font-mono whitespace-nowrap">
+                    -{slugAgencia || "agencia"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!usernameValido || !usernameCompleto) return;
+                      navigator.clipboard.writeText(usernameCompleto).then(() => {
+                        setCopiouUsername(true);
+                        setTimeout(() => setCopiouUsername(false), 2000);
+                      });
+                    }}
+                    disabled={!usernameValido}
+                    className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label={t("Copiar login completo")}
+                    title={
+                      usernameValido
+                        ? t("Copiar login completo")
+                        : t("Preencha um login válido pra copiar")
+                    }
                   >
-                    {ativoFuncao && <Check size={13} className="text-white" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="text-sm font-medium text-primary block">
-                      {t(info.nome)}
-                    </span>
-                    <span className="text-xs text-muted">{t(info.descricao)}</span>
-                  </span>
-                </button>
-                {ativoFuncao && (
-                  <div className="px-2.5 pb-2.5 border-t border-border pt-2.5 mt-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted">
-                        {t("DJs atendidos ({n} de {total})", { n: djsSelecionados.length, total: artistas.length })}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => selecionarTodosDjs(f)}
-                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
-                        >
-                          {t("Todos")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => limparDjs(f)}
-                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
-                        >
-                          {t("Limpar")}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {artistas.length === 0 && (
-                        <span className="text-xs text-muted">
-                          {t("Nenhum DJ cadastrado ainda. Cadastre na aba Artistas.")}
-                        </span>
-                      )}
-                      {artistas.map((dj) => {
-                        const sel = djsSelecionados.includes(dj.id);
-                        return (
-                          <button
-                            key={dj.id}
-                            type="button"
-                            onClick={() => toggleDj(f, dj.id)}
-                            className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
-                            style={{
-                              backgroundColor: sel ? dj.color : "var(--bg-elevated)",
-                              color: sel ? "#fff" : "var(--text-muted)",
-                              boxShadow: sel ? `0 0 0 1px ${dj.color}` : "none",
-                            }}
-                          >
-                            {dj.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    {copiouUsername ? (
+                      <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </button>
+                </div>
+                {usernameCompleto && !usernameValido && (
+                  <p className="text-xs mt-1" style={{ color: "var(--danger)" }}>
+                    {t("Use 3+ caracteres (letras, números, hífen)")}
+                  </p>
                 )}
-              </div>
-            );
-          })}
-        </div>
+                {usernameValido && usernameCompleto && (
+                  <p className="text-xs mt-1" style={{ color: "var(--success)" }}>
+                    {t("Login completo:")}{" "}
+                    <strong className="font-mono text-primary">{usernameCompleto}</strong>
+                  </p>
+                )}
+                <p className="text-[0.7rem] text-muted mt-1">
+                  {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
+                </p>
+              </Campo>
+            </Secao>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
-            <span className="text-xs font-medium text-secondary">
-              {t("Privacidade e permissões")}
-            </span>
-          </div>
-          <LinhaEscopo
-            label={t("Ver todos os contatos")}
-            descricaoLigado={t("Enxerga todos os contatos da agência")}
-            descricaoDesligado={t("Vê apenas os contatos que ele mesmo criou")}
-            valor={escopo.verTodosContatos}
-            onChange={(v) => setEscopo((s) => ({ ...s, verTodosContatos: v }))}
-          />
-          <LinhaEscopo
-            label={t("Ver todas as vendas e orçamentos")}
-            descricaoLigado={t("Enxerga todas as vendas e orçamentos da agência")}
-            descricaoDesligado={t("Vê apenas as vendas e orçamentos que ele mesmo criou")}
-            valor={escopo.verTodasVendas}
-            onChange={(v) => setEscopo((s) => ({ ...s, verTodasVendas: v }))}
-          />
-          <LinhaEscopo
-            label={t("Editar todos os eventos")}
-            descricaoLigado={t("Pode editar qualquer evento da agência")}
-            descricaoDesligado={t("Edita apenas os eventos que ele mesmo criou")}
-            valor={escopo.editarTodosEventos}
-            onChange={(v) => setEscopo((s) => ({ ...s, editarTodosEventos: v }))}
-          />
-        </div>
+            <Secao titulo={t("Com quais artistas trabalha")}>
+              <p className="text-[0.7rem] text-muted -mt-1">
+                {t("Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.")}
+              </p>
+              {artistas.length === 0 ? (
+                <span className="text-xs text-muted">
+                  {t("Nenhum artista cadastrado ainda. Cadastre na aba Artistas.")}
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {artistas.map((dj) => {
+                    const sel = artistIdsSel.has(dj.id);
+                    return (
+                      <button
+                        key={dj.id}
+                        type="button"
+                        onClick={() => toggleArtista(dj.id)}
+                        className="flex items-center gap-2.5 rounded-md border p-2 text-left transition-colors"
+                        style={{
+                          borderColor: sel ? "var(--brand)" : "var(--border-color)",
+                          backgroundColor: sel ? "var(--brand-weak)" : "transparent",
+                        }}
+                      >
+                        <span
+                          className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                          style={{
+                            backgroundColor: sel ? "var(--brand)" : "transparent",
+                            borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                          }}
+                        >
+                          {sel && <Check size={11} className="text-white" />}
+                        </span>
+                        <span
+                          className="h-6 w-6 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: dj.color }}
+                        />
+                        <span className="text-sm font-medium text-primary flex-1 truncate">
+                          {dj.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Secao>
+          </>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder={t("Nome completo")}
+                className="campo-input"
+                autoFocus
+              />
+            </label>
+            <div className="rounded-md border border-border p-3 flex items-start gap-2">
+              <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-secondary leading-relaxed">
+                {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
+              </p>
+            </div>
+          </>
+        )}
 
         {modo === "editar" && (
           <LinhaEscopo

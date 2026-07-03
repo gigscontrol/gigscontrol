@@ -15,6 +15,13 @@ import {
   Check,
   Layers,
   Sparkles,
+  Plane,
+  Globe2,
+  Mail,
+  Table2,
+  FolderClosed,
+  ChevronDown,
+  UserCog,
 } from "lucide-react";
 import {
   MockAgenda,
@@ -23,6 +30,7 @@ import {
   MockDashboard,
   MockContratos,
 } from "@/components/landing/Mockups";
+import { Reveal, FundoHero, CenaHero } from "@/components/landing/Efeitos";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT } from "@/lib/i18n";
 
@@ -30,6 +38,7 @@ import { useT } from "@/lib/i18n";
 // porque vários realces concatenam opacidade (ex.: `${BRAND}22`), o que não
 // funciona com var(--brand). Alinhada a --brand em globals.css.
 const BRAND = "#3D7BFF";
+const SUCESSO = "#3CE08C";
 
 /** Anel de foco visível para teclado (acessibilidade), na cor da marca. */
 const FOCO =
@@ -59,7 +68,7 @@ export default function LandingPage() {
               className={`btn text-sm text-white ${FOCO}`}
               style={{ backgroundColor: BRAND }}
             >
-              {t("Começar")}
+              {t("Começar grátis")}
             </Link>
           </div>
         </div>
@@ -67,64 +76,79 @@ export default function LandingPage() {
 
       {/* ===== HERO ===== */}
       <section className="relative overflow-hidden">
+        {/* Glow de fundo */}
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(620px circle at 72% 8%, rgba(61,123,255,0.18), transparent 60%), radial-gradient(560px circle at 18% 30%, rgba(74,196,255,0.14), transparent 60%), radial-gradient(700px circle at 50% 80%, rgba(40,71,215,0.10), transparent 65%)",
+              "radial-gradient(620px circle at 72% 8%, rgba(61,123,255,0.16), transparent 60%), radial-gradient(560px circle at 18% 30%, rgba(74,196,255,0.12), transparent 60%), radial-gradient(700px circle at 50% 80%, rgba(40,71,215,0.10), transparent 65%)",
           }}
         />
+        {/* Malha de pontos interativa (acende perto do mouse) */}
+        <FundoHero />
+
         <div className="relative max-w-[1200px] mx-auto px-6 pt-20 pb-12 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/70 text-xs text-secondary mb-7">
-            <Sparkles size={13} style={{ color: BRAND }} />
-            {t("Gestão completa para agências e artistas da música")}
-          </div>
+          <Reveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/70 text-xs text-secondary mb-7">
+              <Sparkles size={13} style={{ color: BRAND }} />
+              {t("O CRM feito para agências e artistas da música")}
+            </div>
+          </Reveal>
 
-          <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto">
-            {t("A operação da sua")}{" "}
-            <span className="bg-gradient-to-r from-[var(--brand)] to-[var(--brand-2)] bg-clip-text text-transparent">
-              {t("agência musical")}
-            </span>{" "}
-            {t("em um só lugar")}
-          </h1>
+          <Reveal delay={90}>
+            <h1 className="font-display text-[2.7rem] leading-[1.04] sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto">
+              {t("Sua agência inteira.")}{" "}
+              <span className="bg-gradient-to-r from-[var(--brand)] to-[var(--brand-2)] bg-clip-text text-transparent">
+                {t("Um só controle.")}
+              </span>
+            </h1>
+          </Reveal>
 
-          <p className="mt-6 text-base sm:text-lg text-secondary max-w-2xl mx-auto leading-relaxed">
-            {t("Agenda de shows, orçamentos no WhatsApp, vendas, contratos com assinatura e financeiro — do primeiro contato ao recebimento do cachê. Feito para DJs, cantores, MCs e agências.")}
-          </p>
+          <Reveal delay={180}>
+            <p className="mt-6 text-base sm:text-lg text-secondary max-w-2xl mx-auto leading-relaxed">
+              {t("Agenda, vendas, financeiro, contratos e equipe — tudo conectado, do orçamento no WhatsApp ao cachê no bolso. Feito para DJs, cantores, MCs e agências.")}
+            </p>
+          </Reveal>
 
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/planos"
-              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] ${FOCO}`}
-              style={{ backgroundColor: BRAND }}
-            >
-              {t("Ver planos")}
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/login"
-              className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}
-            >
-              {t("Já tenho conta")}
-            </Link>
-          </div>
+          <Reveal delay={260}>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/planos"
+                className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] transition-transform hover:scale-[1.03] ${FOCO}`}
+                style={{ backgroundColor: BRAND }}
+              >
+                {t("Começar grátis")}
+                <ArrowRight size={16} />
+              </Link>
+              <Link
+                href="#recursos"
+                className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}
+              >
+                {t("Conhecer os módulos")}
+              </Link>
+            </div>
+          </Reveal>
 
-          <p className="mt-4 text-xs text-muted">
-            {t("Sem cartão de crédito para testar · Cancele quando quiser")}
-          </p>
+          <Reveal delay={330}>
+            <p className="mt-4 text-xs text-muted">
+              {t("Sem cartão de crédito para testar · Configure em minutos · Cancele quando quiser")}
+            </p>
+          </Reveal>
 
           {/* Indicadores (fiéis às features, sem números inventados) */}
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs text-secondary">
-            <Indicador icon={<Layers size={14} />} cor={BRAND} label={t("5 módulos integrados")} />
-            <Indicador icon={<MessageCircle size={14} />} cor={BRAND} label={t("Proposta no WhatsApp")} />
-            <Indicador icon={<FileSignature size={14} />} cor={BRAND} label={t("Contrato com assinatura")} />
-            <Indicador icon={<ShieldCheck size={14} />} cor={BRAND} label={t("Privacidade por papel")} />
-          </div>
+          <Reveal delay={400}>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 text-xs text-secondary">
+              <Indicador icon={<Layers size={14} />} cor={BRAND} label={t("6 módulos integrados")} />
+              <Indicador icon={<MessageCircle size={14} />} cor={BRAND} label={t("Proposta no WhatsApp")} />
+              <Indicador icon={<FileSignature size={14} />} cor={BRAND} label={t("Contrato com assinatura")} />
+              <Indicador icon={<ShieldCheck size={14} />} cor={BRAND} label={t("Permissões por artista")} />
+            </div>
+          </Reveal>
         </div>
 
-        {/* Mockup grande da dashboard, com brilho */}
-        <div className="relative max-w-[1080px] mx-auto px-6 pb-20">
+        {/* Mockup grande da dashboard — tilt 3D + chips flutuantes */}
+        <div className="relative max-w-[1080px] mx-auto px-6 pb-24">
           <div
             aria-hidden
             className="absolute -inset-x-10 -top-6 bottom-10 pointer-events-none blur-2xl opacity-60"
@@ -133,125 +157,201 @@ export default function LandingPage() {
                 "radial-gradient(closest-side, rgba(61,123,255,0.18), transparent)",
             }}
           />
-          <div className="relative">
-            <BrowserFrame legenda={t("Painel principal — visão geral da operação")}>
-              <MockDashboard />
-            </BrowserFrame>
+          <Reveal delay={200} y={40}>
+            <CenaHero
+              chips={[
+                <ChipFlutuante
+                  key="contrato"
+                  icon={<FileSignature size={15} />}
+                  cor={SUCESSO}
+                  titulo={t("Contrato assinado")}
+                  sub={t("agora mesmo, pelo celular")}
+                />,
+                <ChipFlutuante
+                  key="voo"
+                  icon={<Plane size={15} />}
+                  cor={BRAND}
+                  titulo={t("Voo importado do voucher")}
+                  sub={t("PDF lido pela IA")}
+                />,
+                <ChipFlutuante
+                  key="parcela"
+                  icon={<Wallet size={15} />}
+                  cor={SUCESSO}
+                  titulo={t("Parcela recebida")}
+                  sub={t("cachê em dia")}
+                />,
+                <ChipFlutuante
+                  key="show"
+                  icon={<CalendarRange size={15} />}
+                  cor={BRAND}
+                  titulo={t("Show confirmado")}
+                  sub={t("sábado · 22h")}
+                />,
+              ]}
+            >
+              <BrowserFrame legenda={t("Painel principal — visão geral da operação")}>
+                <MockDashboard />
+              </BrowserFrame>
+            </CenaHero>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ===== A DOR ===== */}
+      <section className="border-y border-border bg-surface/40">
+        <div className="max-w-[1200px] mx-auto px-6 py-16">
+          <Reveal>
+            <div className="text-center mb-10">
+              <h2 className="font-display text-2xl sm:text-4xl font-bold">
+                {t("Você fecha o show. E aí começa o caos.")}
+              </h2>
+              <p className="mt-3 text-secondary max-w-xl mx-auto">
+                {t("O orçamento está no e-mail. A data, na planilha. O voo, no WhatsApp. O contrato… em algum lugar.")}
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { icon: <Mail size={16} />, texto: t("Orçamento perdido na caixa de entrada") },
+              { icon: <Table2 size={16} />, texto: t("Data duplicada na planilha da escala") },
+              { icon: <MessageCircle size={16} />, texto: t("Voo enterrado no grupo da equipe") },
+              { icon: <FolderClosed size={16} />, texto: t("Contrato esperando assinatura") },
+            ].map((c, i) => (
+              <Reveal key={i} delay={i * 90}>
+                <div className="card h-full flex items-start gap-2.5 opacity-90">
+                  <span className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0 bg-elevated text-muted">
+                    {c.icon}
+                  </span>
+                  <p className="text-xs text-secondary leading-relaxed pt-1">{c.texto}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
+
+          <Reveal delay={300}>
+            <p className="mt-10 text-center text-sm sm:text-base font-medium max-w-2xl mx-auto">
+              {t("O GIGS CONTROL junta tudo num só lugar —")}{" "}
+              <span style={{ color: BRAND }}>
+                {t("e cada pessoa da equipe vê exatamente o que precisa ver.")}
+              </span>
+            </p>
+          </Reveal>
         </div>
       </section>
 
       {/* ===== PRA QUEM É ===== */}
-      <section className="max-w-[1200px] mx-auto px-6 pb-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="text-xs uppercase tracking-[0.15em] text-muted">
-            {t("Feito para quem vive de música")}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {[t("DJ"), t("Cantor"), t("MC"), t("Banda"), t("Produtor"), t("Agência")].map((p) => (
-              <span
-                key={p}
-                className="px-3 py-1 rounded-full border border-border bg-surface/60 text-xs font-medium text-secondary"
-              >
-                {p}
-              </span>
-            ))}
+      <section className="max-w-[1200px] mx-auto px-6 pt-14 pb-2">
+        <Reveal>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="text-xs uppercase tracking-[0.15em] text-muted">
+              {t("Feito para quem vive de música")}
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {[t("DJ"), t("Cantor"), t("MC"), t("Banda"), t("Produtor"), t("Agência")].map((p) => (
+                <span
+                  key={p}
+                  className="px-3 py-1 rounded-full border border-border bg-surface/60 text-xs font-medium text-secondary"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ===== MÓDULOS (grade) ===== */}
       <section id="recursos" className="max-w-[1200px] mx-auto px-6 py-16 scroll-mt-20">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-2xl sm:text-4xl font-bold">
-            {t("Tudo que a operação precisa")}
-          </h2>
-          <p className="mt-3 text-secondary max-w-xl mx-auto">
-            {t("Cinco módulos que conversam entre si, pensados para o dia a dia da música.")}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <FeatureCard
-            icon={<CalendarRange size={20} />}
-            color={BRAND}
-            title={t("Agenda")}
-            desc={t("Escala de shows, calendário e a logística completa de cada evento.")}
-          />
-          <FeatureCard
-            icon={<FileText size={20} />}
-            color={BRAND}
-            title={t("Vendas")}
-            desc={t("Orçamentos profissionais, envio por WhatsApp e conversão em vendas.")}
-          />
-          <FeatureCard
-            icon={<Wallet size={20} />}
-            color={BRAND}
-            title={t("Financeiro")}
-            desc={t("Parcelas, vencimentos e controle de quem pagou e quem está atrasado.")}
-          />
-          <FeatureCard
-            icon={<FileSignature size={20} />}
-            color={BRAND}
-            title={t("Contratos")}
-            desc={t("Gere o contrato do show e colete a assinatura com selfie e facial.")}
-            novo
-          />
-          <FeatureCard
-            icon={<Users size={20} />}
-            color={BRAND}
-            title={t("Contatos")}
-            desc={t("Contratantes, casas e cidades — um CRM feito para o meio musical.")}
-          />
-          <div className="card flex flex-col justify-center gap-2" style={{ borderColor: "var(--border-hover)" }}>
-            <div
-              className="h-10 w-10 rounded-md flex items-center justify-center mb-1"
-              style={{ backgroundColor: "var(--bg-elevated)", color: BRAND }}
-            >
-              <Layers size={20} />
-            </div>
-            <h3 className="text-sm font-bold">{t("Tudo integrado")}</h3>
-            <p className="text-xs text-secondary leading-relaxed">
-              {t("Um dado entra uma vez e flui por todos os módulos — do orçamento ao cachê no bolso.")}
+        <Reveal>
+          <div className="text-center mb-12">
+            <h2 className="font-display text-2xl sm:text-4xl font-bold">
+              {t("Tudo que a operação precisa")}
+            </h2>
+            <p className="mt-3 text-secondary max-w-xl mx-auto">
+              {t("Seis módulos que conversam entre si — um dado entra uma vez e flui do orçamento ao cachê.")}
             </p>
           </div>
+        </Reveal>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            {
+              icon: <CalendarRange size={20} />,
+              title: t("Agenda"),
+              desc: t("Shows, voos e eventos de todos os artistas num calendário só — com voucher de voo lido por IA."),
+            },
+            {
+              icon: <FileText size={20} />,
+              title: t("Vendas"),
+              desc: t("Orçamentos profissionais, proposta no WhatsApp e conversão em venda com um clique."),
+            },
+            {
+              icon: <Wallet size={20} />,
+              title: t("Financeiro"),
+              desc: t("Parcelas, vencimentos e cachês — quem pagou, quem deve e quando vence."),
+            },
+            {
+              icon: <FileSignature size={20} />,
+              title: t("Contratos"),
+              desc: t("Gerados a partir da venda e assinados pelo link, com selfie e verificação facial."),
+            },
+            {
+              icon: <Users size={20} />,
+              title: t("Contatos"),
+              desc: t("Contratantes, casas e cidades do mundo todo — sua rede é o seu ativo."),
+            },
+            {
+              icon: <UserCog size={20} />,
+              title: t("Equipe"),
+              desc: t("Permissões por artista: cada pessoa da equipe vê e faz só o que deve."),
+              novo: true,
+            },
+          ].map((m, i) => (
+            <Reveal key={m.title} delay={i * 70}>
+              <FeatureCard icon={m.icon} color={BRAND} title={m.title} desc={m.desc} novo={m.novo} />
+            </Reveal>
+          ))}
         </div>
       </section>
 
       {/* ===== COMO FUNCIONA ===== */}
       <section className="border-y border-border bg-surface/40">
         <div className="max-w-[1200px] mx-auto px-6 py-16">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-2xl sm:text-4xl font-bold">
-              {t("Do WhatsApp ao palco em 3 passos")}
-            </h2>
-            <p className="mt-3 text-secondary max-w-xl mx-auto">
-              {t("O fluxo que a sua agência já faz — só que organizado e sem perder nada pelo caminho.")}
-            </p>
-          </div>
+          <Reveal>
+            <div className="text-center mb-12">
+              <h2 className="font-display text-2xl sm:text-4xl font-bold">
+                {t("Do WhatsApp ao palco em 3 passos")}
+              </h2>
+              <p className="mt-3 text-secondary max-w-xl mx-auto">
+                {t("O fluxo que a sua agência já faz — só que organizado e sem perder nada pelo caminho.")}
+              </p>
+            </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Passo
-              n={1}
-              cor={BRAND}
-              icon={<MessageCircle size={18} />}
-              title={t("Orçou, enviou")}
-              desc={t("Monte o orçamento com um ou vários artistas e mande a proposta formatada direto no WhatsApp.")}
-            />
-            <Passo
-              n={2}
-              cor={BRAND}
-              icon={<Zap size={18} />}
-              title={t("Fechou, agendou")}
-              desc={t("Orçamento aceito vira venda, entra como show na agenda e gera as parcelas no financeiro.")}
-            />
-            <Passo
-              n={3}
-              cor={BRAND}
-              icon={<FileSignature size={18} />}
-              title={t("Assinou, garantiu")}
-              desc={t("Gere o contrato do show e colete a assinatura com CPF, selfie e reconhecimento facial.")}
-            />
+            {[
+              {
+                icon: <MessageCircle size={18} />,
+                title: t("Orçou, enviou"),
+                desc: t("Monte o orçamento com um ou vários artistas e mande a proposta formatada direto no WhatsApp."),
+              },
+              {
+                icon: <Zap size={18} />,
+                title: t("Fechou, agendou"),
+                desc: t("Orçamento aceito vira venda, entra como show na agenda e gera as parcelas no financeiro — automático."),
+              },
+              {
+                icon: <FileSignature size={18} />,
+                title: t("Assinou, garantiu"),
+                desc: t("Gere o contrato do show e colete a assinatura pelo link, com CPF, selfie e reconhecimento facial."),
+              },
+            ].map((p, i) => (
+              <Reveal key={p.title} delay={i * 110}>
+                <Passo n={i + 1} cor={BRAND} icon={p.icon} title={p.title} desc={p.desc} />
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
@@ -260,12 +360,12 @@ export default function LandingPage() {
       <SecaoFuncionalidade
         cor={BRAND}
         etiqueta={t("Agenda de Shows")}
-        titulo={t("Toda a escala da agência num calendário só")}
-        descricao={t("Visualize os shows de todos os artistas de uma vez ou filtre por DJ. Cada evento traz contratante, local, line-up, camarim, hotel e logística completa — tudo num clique.")}
+        titulo={t("O mês inteiro de cada artista, num olhar")}
+        descricao={t("Shows, voos, transportes e eventos no mesmo calendário — de todos os artistas de uma vez ou filtrado por DJ. Cada evento traz contratante, local, logística e detalhes num clique.")}
         pontos={[
-          t("Calendário com todos os artistas ao mesmo tempo"),
-          t("Detalhes completos de cada show num modal"),
-          t("Filtro por artista, status e período"),
+          t("Importe o voucher do voo em PDF — a IA preenche companhia, horário e conexão"),
+          t("Sincronização com o Google Calendar do artista"),
+          t("Rotas no mapa para planejar as dobras do fim de semana"),
         ]}
         mockup={<MockAgenda />}
         legenda={t("Agenda de Shows — escala de todos os artistas")}
@@ -276,11 +376,11 @@ export default function LandingPage() {
         cor={BRAND}
         etiqueta={t("Orçamentos & Vendas")}
         titulo={t("Do orçamento no WhatsApp ao show fechado")}
-        descricao={t("Monte orçamentos profissionais com múltiplos DJs, logística e valores. Envie a proposta formatada pelo WhatsApp e, quando aceita, transforme em venda e em show na agenda.")}
+        descricao={t("Monte orçamentos profissionais com múltiplos DJs, logística e valores. Envie a proposta formatada pelo WhatsApp e, quando aceita, transforme em venda com um clique.")}
         pontos={[
           t("Orçamento com vários artistas no mesmo evento"),
           t("Proposta formatada enviada direto no WhatsApp"),
-          t("Um clique transforma orçamento aceito em venda"),
+          t("Aceitou? Vira venda, show na agenda e parcelas no financeiro"),
         ]}
         mockup={<MockVendas />}
         legenda={t("Vendas — histórico de orçamentos e conversões")}
@@ -290,12 +390,12 @@ export default function LandingPage() {
       <SecaoFuncionalidade
         cor={BRAND}
         etiqueta={t("Controle Financeiro")}
-        titulo={t("Saiba quem pagou, quem deve e quando vence")}
-        descricao={t("Cada venda gera as parcelas automaticamente. Acompanhe vencimentos, registre pagamentos e veja num relance o que está pago, pendente ou atrasado.")}
+        titulo={t("Cada cachê, cada parcela, sob controle")}
+        descricao={t("Cada venda gera as parcelas automaticamente. Acompanhe vencimentos, registre pagamentos e veja num relance o que está pago, pendente ou atrasado — por artista ou geral.")}
         pontos={[
           t("Parcelas geradas automaticamente a cada venda"),
           t("Status de pago, pendente e atrasado"),
-          t("Visão clara de recebimentos por período"),
+          t("Visão clara de recebimentos por período e por artista"),
         ]}
         mockup={<MockFinanceiro />}
         legenda={t("Financeiro — controle de parcelas e pagamentos")}
@@ -306,7 +406,7 @@ export default function LandingPage() {
         cor={BRAND}
         etiqueta={t("Contratos & Assinatura")}
         titulo={t("Contrato pronto e assinado, sem ferramenta extra")}
-        descricao={t("Gere o contrato direto da venda, com seus modelos e os dados já preenchidos. Envie o link de assinatura por WhatsApp e a pessoa assina pelo celular — com CPF, selfie e reconhecimento facial. No fim, um relatório de assinaturas com a prova de cada assinante.")}
+        descricao={t("Gere o contrato direto da venda, com seus modelos e os dados já preenchidos. Envie o link por WhatsApp e a pessoa assina pelo celular — com CPF, selfie e reconhecimento facial. Sem imprimir, sem escanear, sem implorar.")}
         pontos={[
           t("Modelos de contrato com preenchimento automático"),
           t("Assinatura pelo link, sem cadastro, no próprio celular"),
@@ -321,62 +421,145 @@ export default function LandingPage() {
       {/* ===== DESTAQUES ===== */}
       <section className="border-y border-border bg-surface/40">
         <div className="max-w-[1200px] mx-auto px-6 py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <Destaque
-            icon={<MessageCircle size={18} />}
-            cor={BRAND}
-            title={t("Orçamento direto no WhatsApp")}
-            desc={t("Monte e envie a proposta formatada em segundos, sem copiar e colar.")}
-          />
-          <Destaque
-            icon={<ShieldCheck size={18} />}
-            cor={BRAND}
-            title={t("Cada um vê o que deve ver")}
-            desc={t("Defina o que vendedores, produtores e artistas acessam. Privacidade por papel.")}
-          />
-          <Destaque
-            icon={<FileSignature size={18} />}
-            cor={BRAND}
-            title={t("Contrato com assinatura")}
-            desc={t("Assinatura pelo celular com CPF, selfie e reconhecimento facial.")}
-          />
-          <Destaque
-            icon={<Zap size={18} />}
-            cor={BRAND}
-            title={t("Do orçamento ao palco")}
-            desc={t("Um orçamento aceito vira venda, show, contrato e parcelas num clique.")}
-          />
+          {[
+            {
+              icon: <Globe2 size={18} />,
+              title: t("Feito pro mundo"),
+              desc: t("6 idiomas, cobrança em real ou dólar e cidades de qualquer país."),
+            },
+            {
+              icon: <Sparkles size={18} />,
+              title: t("IA de verdade"),
+              desc: t("Voucher de voo em PDF vira item na agenda automaticamente."),
+            },
+            {
+              icon: <FileSignature size={18} />,
+              title: t("Assinatura pelo link"),
+              desc: t("Selfie e verificação facial no celular — sem imprimir nem escanear."),
+            },
+            {
+              icon: <ShieldCheck size={18} />,
+              title: t("Permissão cirúrgica"),
+              desc: t("Acesso por artista e por função. Cada um vê só o que deve."),
+            },
+          ].map((d, i) => (
+            <Reveal key={d.title} delay={i * 90}>
+              <Destaque icon={d.icon} cor={BRAND} title={d.title} desc={d.desc} />
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ===== PLANOS (teaser) ===== */}
+      <section className="max-w-[1200px] mx-auto px-6 pt-16">
+        <Reveal>
+          <div
+            className="rounded-2xl border border-border px-8 py-10 flex flex-col lg:flex-row items-center justify-between gap-6"
+            style={{
+              background:
+                "radial-gradient(420px circle at 12% 0%, rgba(61,123,255,0.14), transparent 70%), var(--bg-surface)",
+            }}
+          >
+            <div className="text-center lg:text-left">
+              <h2 className="font-display text-xl sm:text-2xl font-bold">
+                {t("Do artista solo à agência com 40 artistas")}
+              </h2>
+              <p className="mt-2 text-sm text-secondary max-w-xl">
+                {t("Comece no plano Individual e cresça sem trocar de ferramenta — mensal ou anual, em real ou dólar.")}
+              </p>
+            </div>
+            <Link
+              href="/planos"
+              className={`btn btn-secondary text-sm px-6 py-3 flex-shrink-0 ${FOCO}`}
+            >
+              {t("Comparar planos")}
+              <ArrowRight size={15} />
+            </Link>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ===== FAQ ===== */}
+      <section className="max-w-[760px] mx-auto px-6 py-16">
+        <Reveal>
+          <h2 className="font-display text-2xl sm:text-3xl font-bold text-center mb-8">
+            {t("Perguntas frequentes")}
+          </h2>
+        </Reveal>
+        <div className="flex flex-col gap-3">
+          {[
+            {
+              q: t("Preciso instalar alguma coisa?"),
+              a: t("Não. O GIGS CONTROL roda no navegador — no computador, no tablet e no celular."),
+            },
+            {
+              q: t("Meus dados ficam seguros?"),
+              a: t("Cada agência tem um espaço isolado, e as permissões controlam o que cada pessoa da equipe enxerga."),
+            },
+            {
+              q: t("O artista tem acesso?"),
+              a: t("Sim. Ele acompanha a própria agenda e os próprios números — sem enxergar os outros artistas."),
+            },
+            {
+              q: t("Funciona fora do Brasil?"),
+              a: t("Sim. São 6 idiomas, cobrança em real ou dólar e cidades de qualquer país do mundo."),
+            },
+            {
+              q: t("E se a minha agência crescer?"),
+              a: t("É só subir de plano — seus dados e sua equipe continuam exatamente onde estavam."),
+            },
+            {
+              q: t("Consigo cancelar quando quiser?"),
+              a: t("Sim, direto na plataforma, sem multa e sem burocracia."),
+            },
+          ].map((f, i) => (
+            <Reveal key={f.q} delay={i * 60}>
+              <details className="card group">
+                <summary className={`cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold ${FOCO}`}>
+                  {f.q}
+                  <ChevronDown
+                    size={16}
+                    className="flex-shrink-0 text-muted transition-transform duration-300 group-open:rotate-180"
+                  />
+                </summary>
+                <p className="mt-3 text-sm text-secondary leading-relaxed">{f.a}</p>
+              </details>
+            </Reveal>
+          ))}
         </div>
       </section>
 
       {/* ===== CTA FINAL ===== */}
-      <section className="max-w-[1200px] mx-auto px-6 py-20">
-        <div
-          className="relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center"
-          style={{
-            background:
-              "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.16), transparent 70%), var(--bg-surface)",
-          }}
-        >
-          <h2 className="font-display text-2xl sm:text-4xl font-bold">
-            {t("Pronto para organizar sua agência?")}
-          </h2>
-          <p className="mt-3 text-secondary max-w-md mx-auto">
-            {t("Escolha o plano do tamanho da sua operação — do artista solo à agência com 50 nomes.")}
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/planos"
-              className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] ${FOCO}`}
-              style={{ backgroundColor: BRAND }}
-            >
-              {t("Conhecer os planos")}
-              <ArrowRight size={16} />
-            </Link>
-            <Link href="/login" className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}>
-              {t("Entrar")}
-            </Link>
+      <section className="max-w-[1200px] mx-auto px-6 pb-20">
+        <Reveal y={34}>
+          <div
+            className="relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center"
+            style={{
+              background:
+                "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.16), transparent 70%), var(--bg-surface)",
+            }}
+          >
+            <h2 className="font-display text-2xl sm:text-4xl font-bold">
+              {t("Sua agência vai crescer. A planilha, não.")}
+            </h2>
+            <p className="mt-3 text-secondary max-w-md mx-auto">
+              {t("Junte agenda, vendas, financeiro e contratos hoje — e passe a semana fechando shows, não caçando informação.")}
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/planos"
+                className={`btn text-sm px-6 py-3 text-white shadow-[0_8px_24px_-6px_rgba(61,123,255,0.5)] transition-transform hover:scale-[1.03] ${FOCO}`}
+                style={{ backgroundColor: BRAND }}
+              >
+                {t("Começar grátis agora")}
+                <ArrowRight size={16} />
+              </Link>
+              <Link href="/login" className={`btn btn-secondary text-sm px-6 py-3 ${FOCO}`}>
+                {t("Entrar")}
+              </Link>
+            </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ===== FOOTER ===== */}
@@ -407,6 +590,39 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/* ============================================================
+   Chip flutuante — micro-momento do produto ao redor do hero
+   ============================================================ */
+function ChipFlutuante({
+  icon,
+  cor,
+  titulo,
+  sub,
+}: {
+  icon: React.ReactNode;
+  cor: string;
+  titulo: string;
+  sub?: string;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2.5 rounded-xl border border-border bg-surface/90 backdrop-blur px-3.5 py-2.5"
+      style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.45)" }}
+    >
+      <span
+        className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${cor}1f`, color: cor }}
+      >
+        {icon}
+      </span>
+      <span className="flex flex-col text-left">
+        <span className="text-xs font-semibold whitespace-nowrap">{titulo}</span>
+        {sub && <span className="text-[0.65rem] text-muted whitespace-nowrap">{sub}</span>}
+      </span>
     </div>
   );
 }
@@ -444,44 +660,48 @@ function SecaoFuncionalidade({
         }`}
       >
         {/* Texto */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className="inline-block text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded"
-              style={{ backgroundColor: `${cor}22`, color: cor }}
-            >
-              {etiqueta}
-            </span>
-            {novo && (
+        <Reveal y={30}>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
               <span
-                className="text-xs font-semibold px-2 py-1 rounded text-white"
-                style={{ backgroundColor: cor }}
+                className="inline-block text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded"
+                style={{ backgroundColor: `${cor}22`, color: cor }}
               >
-                {t("Novo")}
+                {etiqueta}
               </span>
-            )}
-          </div>
-          <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
-            {titulo}
-          </h2>
-          <p className="mt-3 text-secondary leading-relaxed">{descricao}</p>
-          <ul className="mt-6 flex flex-col gap-3">
-            {pontos.map((p) => (
-              <li key={p} className="flex items-start gap-2.5">
+              {novo && (
                 <span
-                  className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                  style={{ backgroundColor: `${cor}22`, color: cor }}
+                  className="text-xs font-semibold px-2 py-1 rounded text-white"
+                  style={{ backgroundColor: cor }}
                 >
-                  <Check size={12} strokeWidth={3} />
+                  {t("Novo")}
                 </span>
-                <span className="text-sm text-secondary">{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+              )}
+            </div>
+            <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
+              {titulo}
+            </h2>
+            <p className="mt-3 text-secondary leading-relaxed">{descricao}</p>
+            <ul className="mt-6 flex flex-col gap-3">
+              {pontos.map((p) => (
+                <li key={p} className="flex items-start gap-2.5">
+                  <span
+                    className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ backgroundColor: `${cor}22`, color: cor }}
+                  >
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span className="text-sm text-secondary">{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
 
         {/* Mockup */}
-        <BrowserFrame legenda={legenda}>{mockup}</BrowserFrame>
+        <Reveal y={40} delay={120}>
+          <BrowserFrame legenda={legenda}>{mockup}</BrowserFrame>
+        </Reveal>
       </div>
     </section>
   );
@@ -555,7 +775,7 @@ function FeatureCard({
 }) {
   const t = useT();
   return (
-    <div className="card-interactive">
+    <div className="card-interactive h-full">
       <div className="flex items-center justify-between mb-3">
         <div
           className="h-10 w-10 rounded-md flex items-center justify-center"
@@ -592,7 +812,7 @@ function Passo({
   desc: string;
 }) {
   return (
-    <div className="card relative">
+    <div className="card relative h-full">
       <div className="flex items-center gap-3 mb-3">
         <span
           className="h-10 w-10 rounded-lg flex items-center justify-center"

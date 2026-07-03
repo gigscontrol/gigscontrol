@@ -1,24 +1,45 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { MapPin, Building2, Users, Search, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Search, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
+import type { Country } from "@/lib/data/countries";
 import type { Cidade, Casa, Contratante } from "@/types";
+import type { PontoMapa, FocoPais } from "@/components/contatos/MapaRaio";
+
+// Leaflet usa `window` — só carrega no cliente, quando a aba do mapa abre.
+const MapaRaio = dynamic(() => import("@/components/contatos/MapaRaio"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="flex items-center justify-center text-sm text-muted"
+      style={{
+        height: 440,
+        borderRadius: 14,
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--bg)",
+      }}
+    >
+      <Loader2 size={16} className="animate-spin mr-2" />
+      Carregando o mapa…
+    </div>
+  ),
+});
+
+/** Fator do "contexto": pontos até N× o raio aparecem esmaecidos (tela 10). */
+const FATOR_FORA_DO_RAIO = 2.5;
 
 /**
- * Coverage Map — busca de contatos por raio (km) a partir de uma
- * cidade de referência.
+ * Busca por raio (tela 10 do redesign) — cidade de referência + raio; o mapa
+ * mostra o círculo e os pontos, e a lista "No raio" (ao lado) agrupa
+ * contratantes/casas/cidades ordenados por distância.
  *
- * Versão funcional (sem mapa visual). Lista cidades, casas e contratantes
- * dentro do raio, ordenados por distância. Itens cuja cidade não tem
- * coordenadas no banco são marcados como "sem coordenadas".
- *
- * Aceita props opcionais pra trabalhar com listas já filtradas (ex.: pelo
- * filtro de DJ na sidebar de Contatos). Se omitidas, cai pra leitura
- * direta do `useContatos()`.
+ * Contratantes/casas usam coordenada PRÓPRIA (lat/lng geocodificados no
+ * cadastro — migração 51) e caem pro centroide da cidade quando não têm.
  */
 export default function MapaDobras({
   cidades: cidadesProp,
@@ -49,6 +70,29 @@ export default function MapaDobras({
   const [geocodando, setGeocodando] = useState(false);
   const [geoErro, setGeoErro] = useState<string | null>(null);
   const [raioKm, setRaioKm] = useState<number>(500);
+  const [focoPais, setFocoPais] = useState<FocoPais | null>(null);
+
+  // Trocou o PAÍS → enquadra o mapa nele (a cidade foi limpa junto).
+  async function aoTrocarPais(p: Country) {
+    setGeoErro(null);
+    try {
+      const res = await fetch(
+        `/api/geocode?pais=${encodeURIComponent(p.name)}&iso=${encodeURIComponent(p.code)}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) return;
+      const body = await res.json();
+      if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+        setFocoPais({
+          latitude: body.latitude,
+          longitude: body.longitude,
+          bbox: Array.isArray(body.bbox) && body.bbox.length === 4 ? body.bbox : undefined,
+        });
+      }
+    } catch {
+      // silencioso — o mapa só não se move
+    }
+  }
 
   // Default: pré-seleciona a primeira cidade com coords (uma vez, ao carregar).
   const jaInicializou = useRef(false);
@@ -113,198 +157,269 @@ export default function MapaDobras({
     }
   }
 
-  const cidadesNoRaio = useMemo(() => {
-    if (!refCoords) return [];
-    return cidades
-      .map((c) => ({ cidade: c, distancia: distanciaKm(refCoords, c) }))
-      .filter((x) => x.distancia !== undefined && x.distancia! <= raioKm)
-      .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [refCoords, cidades, raioKm]);
-
-  const idsCidadesNoRaio = useMemo(
-    () => new Set(cidadesNoRaio.map((x) => x.cidade.id)),
-    [cidadesNoRaio]
-  );
-
-  const casasNoRaio = useMemo(() => {
-    return casas
-      .filter((c) => idsCidadesNoRaio.has(c.cidadeId))
-      .map((casa) => {
-        const cidade = cidades.find((c) => c.id === casa.cidadeId);
-        return {
-          casa,
-          cidade,
-          distancia: cidade && refCoords ? distanciaKm(refCoords, cidade) : undefined,
-        };
-      })
-      .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [casas, cidades, refCoords, idsCidadesNoRaio]);
-
-  const contratantesNoRaio = useMemo(() => {
-    return contratantes
-      .filter((c) => idsCidadesNoRaio.has(c.cidadeId))
-      .map((contratante) => {
-        const cidade = cidades.find((c) => c.id === contratante.cidadeId);
-        return {
-          contratante,
-          cidade,
-          distancia: cidade && refCoords ? distanciaKm(refCoords, cidade) : undefined,
-        };
-      })
-      .sort((a, b) => (a.distancia ?? 0) - (b.distancia ?? 0));
-  }, [contratantes, cidades, refCoords, idsCidadesNoRaio]);
-
   const cidadesSemCoord = cidades.length - cidadesComCoord.length;
 
+  // Todos os pontos do mapa: dentro do raio + contexto esmaecido (até 2.5×).
+  const pontosMapa = useMemo<PontoMapa[]>(() => {
+    if (!refCoords) return [];
+    const out: PontoMapa[] = [];
+    const cidadePorId = new Map(cidades.map((c) => [c.id, c]));
+
+    const empurrar = (
+      id: string,
+      tipo: PontoMapa["tipo"],
+      nome: string,
+      sub: string | undefined,
+      lat: number,
+      lng: number,
+      aproximado?: boolean
+    ) => {
+      const km = distanciaKm(refCoords, { latitude: lat, longitude: lng });
+      if (km === undefined || km > raioKm * FATOR_FORA_DO_RAIO) return;
+      out.push({ id, tipo, nome, sub, lat, lng, km, aproximado, foraDoRaio: km > raioKm });
+    };
+
+    for (const c of cidades) {
+      if (c.latitude === undefined || c.longitude === undefined) continue;
+      empurrar(`cidade-${c.id}`, "cidade", c.nome, c.estado || undefined, c.latitude, c.longitude);
+    }
+    for (const casa of casas) {
+      const cid = cidadePorId.get(casa.cidadeId);
+      const lat = casa.lat ?? cid?.latitude;
+      const lng = casa.lng ?? cid?.longitude;
+      if (lat === undefined || lng === undefined) continue;
+      empurrar(
+        `casa-${casa.id}`,
+        "casa",
+        casa.nome,
+        cid ? `${cid.nome}/${cid.estado}` : undefined,
+        lat,
+        lng,
+        casa.geoPrecisao !== "address"
+      );
+    }
+    for (const ct of contratantes) {
+      const cid = cidadePorId.get(ct.cidadeId);
+      const lat = ct.lat ?? cid?.latitude;
+      const lng = ct.lng ?? cid?.longitude;
+      if (lat === undefined || lng === undefined) continue;
+      empurrar(
+        `contratante-${ct.id}`,
+        "contratante",
+        ct.nome,
+        cid ? `${cid.nome}/${cid.estado}` : undefined,
+        lat,
+        lng,
+        ct.geoPrecisao !== "address"
+      );
+    }
+    return out;
+  }, [refCoords, raioKm, cidades, casas, contratantes]);
+
+  // Lista lateral "No raio" — só os de dentro, agrupados e por distância.
+  const dentroDoRaio = useMemo(
+    () =>
+      pontosMapa
+        .filter((p) => !p.foraDoRaio)
+        .sort((a, b) => (a.km ?? 0) - (b.km ?? 0)),
+    [pontosMapa]
+  );
+  const grupos = useMemo(
+    () => ({
+      contratante: dentroDoRaio.filter((p) => p.tipo === "contratante"),
+      casa: dentroDoRaio.filter((p) => p.tipo === "casa"),
+      cidade: dentroDoRaio.filter((p) => p.tipo === "cidade"),
+    }),
+    [dentroDoRaio]
+  );
+
   return (
-    <div className="flex flex-col gap-5">
-      {/* Filtros */}
-      <div className="card">
-        <div className="section-title mb-4 flex items-center gap-2">
-          <Search size={14} />
-          {t("Busca por raio")}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
-            <CidadeGlobalAutocomplete
-              value={refCidade}
-              onChange={escolherCidade}
-              orientacao="horizontal"
-            />
-            {geocodando && (
-              <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
-                <Loader2 size={12} className="animate-spin" />
-                {t("Localizando a cidade…")}
-              </div>
-            )}
-            {geoErro && <div className="mt-1.5 text-xs text-danger">{geoErro}</div>}
-          </div>
-          <div>
-            <label className="text-xs text-muted block mb-1">
-              {t("Raio:")}{" "}<span className="font-semibold text-primary">{raioKm} km</span>
-            </label>
-            <input
-              type="range"
-              min={50}
-              max={3000}
-              step={50}
-              value={raioKm}
-              onChange={(e) => setRaioKm(Number(e.target.value))}
-              className="w-full"
-            />
-            <div className="flex justify-between text-[0.65rem] text-muted mt-0.5">
-              <span>50</span>
-              <span>3000</span>
+    <div className="card">
+      <div className="section-title mb-4 flex items-center gap-2">
+        <Search size={14} />
+        {t("Busca por raio")}
+      </div>
+
+      {/* Filtros numa linha (tela 10) — acima do mapa, dropdown sempre por cima */}
+      <div className="relative z-20 mb-4 flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="flex-1">
+          <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
+          <CidadeGlobalAutocomplete
+            value={refCidade}
+            onChange={escolherCidade}
+            orientacao="horizontal"
+            onPaisChange={aoTrocarPais}
+          />
+          {geocodando && (
+            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+              <Loader2 size={12} className="animate-spin" />
+              {t("Localizando a cidade…")}
             </div>
+          )}
+          {geoErro && <div className="mt-1.5 text-xs text-danger">{geoErro}</div>}
+        </div>
+        <div className="lg:w-[280px]">
+          <div className="flex items-baseline justify-between mb-1">
+            <label className="text-xs text-muted">{t("Raio")}</label>
+            <span className="font-mono text-xs font-semibold text-primary tabular-nums">
+              {raioKm} km
+            </span>
+          </div>
+          <input
+            type="range"
+            min={50}
+            max={1000}
+            step={50}
+            value={raioKm}
+            onChange={(e) => setRaioKm(Number(e.target.value))}
+            className="w-full"
+          />
+          <div className="flex justify-between font-mono text-[0.6rem] text-muted mt-0.5">
+            <span>50</span>
+            <span>1000</span>
           </div>
         </div>
-
-        {cidadesSemCoord > 0 && (
-          <div className="mt-3 text-xs text-muted">
-            {t("{n} cidade(s) sem coordenadas — fique de fora da busca.", { n: cidadesSemCoord })}
-          </div>
-        )}
       </div>
 
-      {/* Resultados */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Cidades */}
-        <section className="card">
-          <div className="section-title mb-3 flex items-center gap-2">
-            <MapPin size={14} />
-            {t("Cidades no raio ({n})", { n: cidadesNoRaio.length })}
-          </div>
-          {cidadesNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">{t("Nenhuma cidade no raio.")}</div>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {cidadesNoRaio.map(({ cidade, distancia }) => (
-                <li
-                  key={cidade.id}
-                  className="flex items-center justify-between bg-elevated border border-border rounded-md px-3 py-2"
-                >
-                  <div className="text-sm font-medium text-primary truncate">
-                    {cidade.nome}
-                    <span className="text-muted">/{cidade.estado}</span>
-                  </div>
-                  <div className="text-xs text-secondary tabular-nums flex-shrink-0">
-                    {formatarKm(distancia)}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      {/* Mapa (⅔) + lista "No raio" (⅓) — tela 10 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <MapaRaio
+          refCoords={refCoords}
+          refNome={refCidade?.nome}
+          raioKm={raioKm}
+          pontos={pontosMapa}
+          focoPais={focoPais}
+        />
 
-        {/* Casas */}
-        <section className="card">
-          <div className="section-title mb-3 flex items-center gap-2">
-            <Building2 size={14} />
-            {t("Casas ({n})", { n: casasNoRaio.length })}
+        <aside
+          className="flex flex-col overflow-hidden"
+          style={{
+            height: 440,
+            borderRadius: 14,
+            border: "1px solid var(--border)",
+            backgroundColor: "var(--bg)",
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: "1px solid var(--border)" }}
+          >
+            <span className="text-sm font-bold text-primary">{t("No raio")}</span>
+            <span
+              className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md"
+              style={{ backgroundColor: "var(--brand-weak)", color: "var(--brand-2)" }}
+            >
+              {dentroDoRaio.length}
+            </span>
           </div>
-          {casasNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">{t("Nenhuma casa no raio.")}</div>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {casasNoRaio.map(({ casa, cidade, distancia }) => (
-                <li
-                  key={casa.id}
-                  className="bg-elevated border border-border rounded-md px-3 py-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-medium text-primary truncate">
-                      {casa.nome}
-                    </div>
-                    <div className="text-xs text-secondary tabular-nums flex-shrink-0">
-                      {formatarKm(distancia)}
-                    </div>
-                  </div>
-                  {cidade && (
-                    <div className="text-xs text-muted truncate">
-                      {cidade.nome}/{cidade.estado}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
-        {/* Contratantes */}
-        <section className="card">
-          <div className="section-title mb-3 flex items-center gap-2">
-            <Users size={14} />
-            {t("Contratantes ({n})", { n: contratantesNoRaio.length })}
+          <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-4">
+            {dentroDoRaio.length === 0 ? (
+              <div className="text-sm text-muted px-1 py-2">
+                {refCoords
+                  ? t("Nenhum contato no raio.")
+                  : t("Escolha uma cidade de referência.")}
+              </div>
+            ) : (
+              <>
+                <GrupoNoRaio
+                  titulo={t("Contratantes")}
+                  pontos={grupos.contratante}
+                  swatch={<SwatchTipo tipo="contratante" />}
+                />
+                <GrupoNoRaio
+                  titulo={t("Casas")}
+                  pontos={grupos.casa}
+                  swatch={<SwatchTipo tipo="casa" />}
+                />
+                <GrupoNoRaio
+                  titulo={t("Cidades")}
+                  pontos={grupos.cidade}
+                  swatch={<SwatchTipo tipo="cidade" />}
+                />
+              </>
+            )}
           </div>
-          {contratantesNoRaio.length === 0 ? (
-            <div className="text-sm text-muted py-3">{t("Nenhum contratante no raio.")}</div>
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {contratantesNoRaio.map(({ contratante, cidade, distancia }) => (
-                <li
-                  key={contratante.id}
-                  className="bg-elevated border border-border rounded-md px-3 py-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-medium text-primary truncate">
-                      {contratante.nome}
-                    </div>
-                    <div className="text-xs text-secondary tabular-nums flex-shrink-0">
-                      {formatarKm(distancia)}
-                    </div>
-                  </div>
-                  {cidade && (
-                    <div className="text-xs text-muted truncate">
-                      {cidade.nome}/{cidade.estado}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        </aside>
       </div>
+
+      {cidadesSemCoord > 0 && (
+        <div className="mt-3 text-xs text-muted">
+          {t("{n} cidade(s) sem coordenadas — fique de fora da busca.", { n: cidadesSemCoord })}
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ============================================================
+   Grupo da lista "No raio" — label mono CAIXA ALTA + linhas
+   ============================================================ */
+function GrupoNoRaio({
+  titulo,
+  pontos,
+  swatch,
+}: {
+  titulo: string;
+  pontos: PontoMapa[];
+  swatch: React.ReactNode;
+}) {
+  if (pontos.length === 0) return null;
+  return (
+    <section>
+      <div className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-muted px-1 mb-1.5">
+        {titulo} · {pontos.length}
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {pontos.map((p) => (
+          <li
+            key={p.id}
+            className="flex items-center gap-2.5 bg-surface-2 border border-border rounded-[10px] px-3 py-2"
+          >
+            <span className="flex-shrink-0">{swatch}</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-primary truncate">{p.nome}</div>
+              {p.sub && (
+                <div className="font-mono text-[0.6rem] uppercase tracking-[0.08em] text-muted truncate">
+                  {p.sub}
+                </div>
+              )}
+            </div>
+            <span className="font-mono text-xs text-secondary tabular-nums flex-shrink-0">
+              {formatarKm(p.km)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Mini-marcador da legenda/lista — mesmo desenho dos pins do mapa. */
+function SwatchTipo({ tipo }: { tipo: PontoMapa["tipo"] }) {
+  if (tipo === "casa") {
+    return (
+      <span
+        className="block h-3 w-3 rounded-[3px]"
+        style={{ backgroundColor: "#12151D", border: "1.5px solid #3D7BFF" }}
+      />
+    );
+  }
+  if (tipo === "cidade") {
+    return (
+      <span
+        className="block h-3 w-3 rounded-full"
+        style={{ border: "2px solid #6E7794" }}
+      />
+    );
+  }
+  return (
+    <span
+      className="block h-3 w-3 rounded-full"
+      style={{
+        backgroundColor: "#3D7BFF",
+        boxShadow: "0 0 8px rgba(61,123,255,.8)",
+      }}
+    />
   );
 }

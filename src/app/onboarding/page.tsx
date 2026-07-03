@@ -1102,9 +1102,6 @@ function Etapa5Equipe({
   // Login (handle) — raiz digitada; auto-sugere a partir do nome.
   const [usernameRaiz, setUsernameRaiz] = useState("");
   const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
-  const [papel, setPapel] = useState<"vendedor" | "produtor" | "financeiro">(
-    "vendedor"
-  );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ senha: string; login: string } | null>(null);
@@ -1140,9 +1137,8 @@ function Etapa5Equipe({
       const r = await adicionarUsuario({
         nome: nome.trim(),
         username_raiz: usernameRaiz.trim().toLowerCase(),
-        papel,
-        escopo: { verTodosContatos: true, verTodasVendas: true, editarTodosEventos: true },
-        funcoes: {},
+        // Onboarding cria só o acesso; artistas/permissões se definem na Equipe.
+        artistIds: [],
       });
       setResultado({
         senha: r.senhaTemporaria,
@@ -1166,7 +1162,7 @@ function Etapa5Equipe({
         />
         <h2 className="text-xl font-bold tracking-tight">{t("Convide a equipe")}</h2>
         <p className="mt-1 text-sm text-secondary">
-          {t("Vendedor, produtor ou financeiro — adicione quem vai te ajudar a tocar a agência. Pode pular se ainda tá começando sozinho.")}
+          {t("Crie o acesso de quem vai te ajudar a tocar a agência. As permissões você define depois, por artista. Pode pular se ainda tá começando sozinho.")}
         </p>
       </div>
 
@@ -1245,26 +1241,9 @@ function Etapa5Equipe({
             )}
           </label>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{t("Papel")}</span>
-            <div className="grid grid-cols-3 gap-2">
-              {(["vendedor", "produtor", "financeiro"] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPapel(p)}
-                  className="card text-center py-2 text-xs capitalize transition-colors"
-                  style={{
-                    borderColor: papel === p ? "var(--brand)" : undefined,
-                    color: papel === p ? "var(--text-primary)" : "var(--text-secondary)",
-                    fontWeight: papel === p ? 600 : 400,
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="text-[0.7rem] text-muted">
+            {t("Isto cria só o acesso (login + senha). Você define o que essa pessoa pode ver e fazer depois, na aba Equipe de cada artista.")}
+          </p>
 
           {erro && (
             <div

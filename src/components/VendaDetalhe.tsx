@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -21,6 +22,7 @@ type Props = {
 
 export default function VendaDetalhe({ vendaId, onBack }: Props) {
   const t = useT();
+  const { podeUI } = useAuth();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, updateVenda } = useVendas();
   const { shows, updateShow } = useShows();
@@ -53,6 +55,12 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
   }
 
   const dj = artistas.find((d) => d.id === venda.djId);
+  // Permissões por artista (podeUI já libera admin/legado).
+  const podeEditarVenda =
+    podeUI(venda.djId || null, "vendas.editar_venda") ||
+    podeUI(venda.djId || null, "vendas.editar_todos");
+  const podeExcluirVenda = podeUI(venda.djId || null, "vendas.excluir_venda");
+  const semPermissao = t("Você não tem permissão para isso.");
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const cancelado = show?.status === "cancelado";
   const showIdLigado = venda.showId;
@@ -276,7 +284,9 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                     setInfoExtraDraft(venda.infoExtra ?? "");
                     setEditandoInfoExtra(true);
                   }}
-                  className="btn-ghost text-xs inline-flex items-center gap-1"
+                  disabled={!podeEditarVenda}
+                  title={!podeEditarVenda ? semPermissao : undefined}
+                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Pencil size={12} />
                   {t("Editar")}
@@ -403,7 +413,9 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
       <div className="flex justify-end mt-6">
         <button
           onClick={() => setConfirmaRemover(true)}
-          className="btn btn-ghost"
+          disabled={!podeExcluirVenda}
+          title={!podeExcluirVenda ? semPermissao : undefined}
+          className="btn btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ color: "var(--danger)" }}
         >
           <Trash2 size={14} />

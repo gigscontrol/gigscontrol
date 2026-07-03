@@ -46,6 +46,8 @@ export const artistaCreateSchema = z.object({
   // Dados do CONTRATADO (para contratos). nome_legal + documento são
   // obrigatórios; razao_social só faz sentido quando documento_tipo='cnpj'
   // (regra condicional aplicada no formulário). endereco/telefone opcionais.
+  /** País de origem (ISO2) — dirige documento/DDI/endereço. Default 'BR'. */
+  pais: z.string().length(2).optional(),
   nome_legal: z.string().min(1, "Nome completo obrigatório.").max(120),
   documento: z.string().min(1, "CPF/CNPJ obrigatório.").max(20),
   documento_tipo: z.enum(["cpf", "cnpj"]).optional(),

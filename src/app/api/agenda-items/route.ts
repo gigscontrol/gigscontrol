@@ -5,6 +5,7 @@ import {
   criarAgendaItemNoWorkspace,
 } from "@/lib/services/agendaItems.service";
 import { agendaItemCreateSchema } from "@/lib/validators/agendaItems.schema";
+import { podeCriarAgenda } from "@/lib/api/permissoes";
 
 /** GET /api/agenda-items — lista os itens (evento/voo/transporte) do workspace. */
 export async function GET() {
@@ -12,7 +13,7 @@ export async function GET() {
   if ("response" in r) return r.response;
 
   try {
-    const itens = await listarAgendaItensDoWorkspace(r.sessao.supabase);
+    const itens = await listarAgendaItensDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ itens });
   } catch (e) {
     return NextResponse.json(
@@ -42,11 +43,19 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para criar na agenda deste artista." },
+      { status: 403 }
+    );
+  }
+
   try {
     const item = await criarAgendaItemNoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,
-      parsed.data
+      parsed.data,
+      r.sessao.userId
     );
     return NextResponse.json({ item }, { status: 201 });
   } catch (e) {
