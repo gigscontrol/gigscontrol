@@ -128,7 +128,7 @@ export default function ControlePagamentos() {
   }
 
   const contadores = useMemo(() => {
-    const c = { pago: 0, pendente: 0, atrasado: 0 };
+    const c = { pago: 0, pendente: 0, atrasado: 0, cancelado: 0 };
     todasParcelas.forEach((l) => c[l.status]++);
     return c;
   }, [todasParcelas]);

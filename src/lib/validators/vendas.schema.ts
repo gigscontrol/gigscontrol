@@ -90,5 +90,17 @@ export const parcelaUpdateSchema = z.object({
   status_base: z.enum(["pendente", "pago"]).optional(),
   data_pagamento: dataYmd.nullable().optional(),
   observacao: z.string().nullable().optional(),
+  // Financeiro detalhado (migração 56). Metadados computados no servidor a
+  // partir destes campos + a sessão (quem/quando).
+  /** Nota/forma do pagamento ("dinheiro pessoalmente", "PIX", "WhatsApp"…). */
+  nota_pagamento: z.string().max(500).nullable().optional(),
+  /** Path do comprovante no bucket (normalmente setado pelo upload). */
+  comprovante_path: z.string().max(300).nullable().optional(),
+  /** true = cancelar (baixar/isentar) o cachê; false = reativar. */
+  cancelar: z.boolean().optional(),
+  /** Obrigatório quando cancelar=true. */
+  cancelamento_motivo: z.string().max(1000).optional(),
+  /** true = registra uma cobrança enviada no log (append). */
+  registrar_cobranca: z.boolean().optional(),
 });
 export type ParcelaUpdateInput = z.infer<typeof parcelaUpdateSchema>;

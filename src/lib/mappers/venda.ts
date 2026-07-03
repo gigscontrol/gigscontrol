@@ -1,6 +1,7 @@
 import type {
   Venda,
   Parcela,
+  ParcelaMeta,
   ItemQuantidade,
   LogisticaSelecao,
   TaxaAgenciaModo,
@@ -169,6 +170,7 @@ export type ParcelaRow = {
   status_base: "pendente" | "pago";
   data_pagamento: string | null;
   observacao: string | null;
+  meta: ParcelaMeta | null;
 };
 
 export function rowParaParcela(row: ParcelaRow): Parcela {
@@ -180,6 +182,7 @@ export function rowParaParcela(row: ParcelaRow): Parcela {
     statusBase: row.status_base ?? "pendente",
     dataPagamento: row.data_pagamento ?? undefined,
     observacao: row.observacao ?? undefined,
+    meta: row.meta ?? undefined,
   };
 }
 
@@ -192,4 +195,5 @@ export type ParcelaEscrita = {
   status_base?: "pendente" | "pago";
   data_pagamento?: string | null;
   observacao?: string | null;
+  meta?: ParcelaMeta;
 };

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Venda, Parcela } from "@/types";
+import type { Venda, Parcela, ParcelaMeta } from "@/types";
 import {
   rowParaVenda,
   rowParaParcela,
@@ -302,9 +302,12 @@ export async function removerVendaPorId(
 export async function atualizarParcelaPorId(
   supabase: SupabaseClient,
   id: string,
-  input: ParcelaUpdateInput
+  input: ParcelaUpdateInput,
+  /** Meta já computada pela rota (pagamento/cancelamento/cobranças + sessão). */
+  meta?: ParcelaMeta
 ): Promise<Parcela> {
   const payload: ParcelaEscrita = {};
+  if (meta !== undefined) payload.meta = meta;
   if (input.percentual !== undefined) payload.percentual = input.percentual;
   if (input.valor !== undefined) payload.valor = input.valor;
   if (input.data_vencimento !== undefined) payload.data_vencimento = input.data_vencimento;
