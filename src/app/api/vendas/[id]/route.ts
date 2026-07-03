@@ -4,6 +4,7 @@ import {
   buscarVendaPorId,
   atualizarVendaPorId,
   removerVendaPorId,
+  vendaVisivelParaSessao,
 } from "@/lib/services/vendas.service";
 import { vendaUpdateSchema } from "@/lib/validators/vendas.schema";
 import {
@@ -24,6 +25,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   try {
     const venda = await buscarVendaPorId(r.sessao.supabase, params.id);
     if (!venda)
+      return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
+    // Escopo por artista: 404 (não vaza) se a venda está fora do que a sessão vê.
+    if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
     return NextResponse.json({ venda });
   } catch (e) {

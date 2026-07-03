@@ -115,6 +115,27 @@ export async function listarVendasDoWorkspace(
   return vendas.map((v) => rowParaVenda(v, porVenda.get(v.id) ?? []));
 }
 
+/**
+ * A venda `id` é visível para a sessão? Reusa EXATAMENTE o filtro da lista
+ * (aplicarFiltroVendas), só que estreitado ao id — se a linha passa no escopo
+ * (modelo novo OU legado) e casa o id, é visível. Zero divergência com a lista;
+ * usado no GET /vendas/[id] pra fechar o vazamento de leitura por link direto.
+ */
+export async function vendaVisivelParaSessao(
+  supabase: SupabaseClient,
+  sessao: SessaoAutenticada,
+  id: string
+): Promise<boolean> {
+  const rows = await repoListar(supabase, <Q,>(q: Q) =>
+    (
+      aplicarFiltroVendas(q as never, sessao) as unknown as {
+        eq(col: string, val: string): unknown;
+      }
+    ).eq("id", id) as Q
+  );
+  return rows.length > 0;
+}
+
 export async function buscarVendaPorId(
   supabase: SupabaseClient,
   id: string

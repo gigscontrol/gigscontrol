@@ -4,6 +4,7 @@ import {
   buscarOrcamentoPorId,
   atualizarOrcamentoPorId,
   removerOrcamentoPorId,
+  orcamentoVisivelParaSessao,
 } from "@/lib/services/orcamentos.service";
 import { orcamentoUpdateSchema } from "@/lib/validators/orcamentos.schema";
 import {
@@ -24,6 +25,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
   try {
     const orcamento = await buscarOrcamentoPorId(r.sessao.supabase, params.id);
     if (!orcamento)
+      return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
+    // Escopo por artista: 404 se está fora do que a sessão vê (não vaza por id).
+    if (!(await orcamentoVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
     return NextResponse.json({ orcamento });
   } catch (e) {
