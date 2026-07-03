@@ -7,8 +7,9 @@ import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
+import type { Country } from "@/lib/data/countries";
 import type { Cidade, Casa, Contratante } from "@/types";
-import type { PontoMapa } from "@/components/contatos/MapaRaio";
+import type { PontoMapa, FocoPais } from "@/components/contatos/MapaRaio";
 
 // Leaflet usa `window` — só carrega no cliente, quando a aba do mapa abre.
 const MapaRaio = dynamic(() => import("@/components/contatos/MapaRaio"), {
@@ -69,6 +70,29 @@ export default function MapaDobras({
   const [geocodando, setGeocodando] = useState(false);
   const [geoErro, setGeoErro] = useState<string | null>(null);
   const [raioKm, setRaioKm] = useState<number>(500);
+  const [focoPais, setFocoPais] = useState<FocoPais | null>(null);
+
+  // Trocou o PAÍS → enquadra o mapa nele (a cidade foi limpa junto).
+  async function aoTrocarPais(p: Country) {
+    setGeoErro(null);
+    try {
+      const res = await fetch(
+        `/api/geocode?pais=${encodeURIComponent(p.name)}&iso=${encodeURIComponent(p.code)}`,
+        { credentials: "include" }
+      );
+      if (!res.ok) return;
+      const body = await res.json();
+      if (typeof body.latitude === "number" && typeof body.longitude === "number") {
+        setFocoPais({
+          latitude: body.latitude,
+          longitude: body.longitude,
+          bbox: Array.isArray(body.bbox) && body.bbox.length === 4 ? body.bbox : undefined,
+        });
+      }
+    } catch {
+      // silencioso — o mapa só não se move
+    }
+  }
 
   // Default: pré-seleciona a primeira cidade com coords (uma vez, ao carregar).
   const jaInicializou = useRef(false);
@@ -224,6 +248,7 @@ export default function MapaDobras({
             value={refCidade}
             onChange={escolherCidade}
             orientacao="horizontal"
+            onPaisChange={aoTrocarPais}
           />
           {geocodando && (
             <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
@@ -243,7 +268,7 @@ export default function MapaDobras({
           <input
             type="range"
             min={50}
-            max={3000}
+            max={1000}
             step={50}
             value={raioKm}
             onChange={(e) => setRaioKm(Number(e.target.value))}
@@ -251,7 +276,7 @@ export default function MapaDobras({
           />
           <div className="flex justify-between font-mono text-[0.6rem] text-muted mt-0.5">
             <span>50</span>
-            <span>3000</span>
+            <span>1000</span>
           </div>
         </div>
       </div>
@@ -263,6 +288,7 @@ export default function MapaDobras({
           refNome={refCidade?.nome}
           raioKm={raioKm}
           pontos={pontosMapa}
+          focoPais={focoPais}
         />
 
         <aside

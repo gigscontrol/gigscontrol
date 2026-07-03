@@ -86,16 +86,26 @@ function iconeReferencia(nome: string): L.DivIcon {
   });
 }
 
+/** Enquadramento do PAÍS selecionado (antes de escolher a cidade). */
+export type FocoPais = {
+  latitude: number;
+  longitude: number;
+  /** [sul, oeste, norte, leste] */
+  bbox?: [number, number, number, number];
+};
+
 export default function MapaRaio({
   refCoords,
   refNome,
   raioKm,
   pontos,
+  focoPais,
 }: {
   refCoords: { latitude: number; longitude: number } | null;
   refNome?: string;
   raioKm: number;
   pontos: PontoMapa[];
+  focoPais?: FocoPais | null;
 }) {
   const t = useT();
   const contRef = useRef<HTMLDivElement>(null);
@@ -104,18 +114,40 @@ export default function MapaRaio({
   const marcadorRefRef = useRef<L.Marker | null>(null);
   const grupoRef = useRef<L.LayerGroup | null>(null);
 
-  // Inicializa o mapa uma vez.
+  // Inicializa o mapa uma vez — VITRINE, não navegável: sem arrastar/scroll;
+  // quem controla é a UI de cima (país, cidade, raio) + botões de zoom.
   useEffect(() => {
     const el = contRef.current;
     if (!el || mapaRef.current) return;
     const mapa = L.map(el, {
       zoomControl: false,
-      attributionControl: true,
+      attributionControl: false,
       center: [-15.6, -52],
       zoom: 4,
-      worldCopyJump: true,
+      minZoom: 2,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      // Trava o mundo numa cópia só (sem repetir ao dar zoom out).
+      maxBounds: [
+        [-85, -180],
+        [85, 180],
+      ],
+      maxBoundsViscosity: 1.0,
     });
-    L.tileLayer(TILES, { attribution: ATTR, subdomains: "abcd", maxZoom: 19 }).addTo(mapa);
+    L.tileLayer(TILES, {
+      attribution: ATTR,
+      subdomains: "abcd",
+      maxZoom: 19,
+      noWrap: true,
+      bounds: [
+        [-85, -180],
+        [85, 180],
+      ],
+    }).addTo(mapa);
     grupoRef.current = L.layerGroup().addTo(mapa);
     mapaRef.current = mapa;
     return () => {
@@ -126,6 +158,24 @@ export default function MapaRaio({
       grupoRef.current = null;
     };
   }, []);
+
+  // País selecionado (sem cidade ainda) → enquadra o país.
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa || refCoords || !focoPais) return;
+    if (focoPais.bbox) {
+      const [s, w, n, e] = focoPais.bbox;
+      mapa.fitBounds(
+        [
+          [s, w],
+          [n, e],
+        ],
+        { padding: [24, 24], animate: true }
+      );
+    } else {
+      mapa.setView([focoPais.latitude, focoPais.longitude], 5, { animate: true });
+    }
+  }, [focoPais, refCoords]);
 
   // Círculo + pin de referência — atualiza AO VIVO com o slider.
   useEffect(() => {
@@ -220,7 +270,7 @@ export default function MapaRaio({
       }}
     >
       <style>{`
-        .gc-mapa .leaflet-container { background:#0B0D12; font-family:inherit; }
+        .gc-mapa .leaflet-container { background:#0B0D12; font-family:inherit; cursor:default; }
         /* Água/vias em tons de azul discretos sobre o CARTO dark (tela 10). */
         .gc-mapa .leaflet-tile-pane { filter: sepia(0.4) hue-rotate(175deg) saturate(1.7) brightness(0.82) contrast(1.05); }
         .gc-mk-wrap { background:transparent; border:none; }

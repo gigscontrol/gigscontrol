@@ -22,6 +22,9 @@ const USER_AGENT =
 
 export type Coords = { latitude: number; longitude: number };
 
+/** Coords + caixa [sul, oeste, norte, leste] pra enquadrar no mapa. */
+export type CoordsComBBox = Coords & { bbox?: [number, number, number, number] };
+
 /**
  * Geocoda uma cidade brasileira no OpenStreetMap.
  *
@@ -69,6 +72,53 @@ export async function geocodarCidadeBR(
     return { latitude: lat, longitude: lon };
   } catch (e) {
     console.warn("[geocode-osm] exceção:", (e as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Geocoda um PAÍS no Nominatim — usado pelo mapa da busca por raio pra
+ * enquadrar o país quando o usuário troca o seletor (antes de ter cidade).
+ * Devolve o centro + bounding box. Cache longo (país não muda de lugar).
+ */
+export async function geocodarPais(
+  nome: string,
+  iso2?: string | null
+): Promise<CoordsComBBox | null> {
+  if (!nome) return null;
+  const params = new URLSearchParams({
+    q: nome,
+    format: "json",
+    limit: "1",
+    addressdetails: "0",
+  });
+  if (iso2 && /^[a-zA-Z]{2}$/.test(iso2)) {
+    params.set("countrycodes", iso2.toLowerCase());
+  }
+  try {
+    const res = await fetch(`${NOMINATIM}?${params.toString()}`, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      next: { revalidate: 60 * 60 * 24 * 30 },
+    });
+    if (!res.ok) return null;
+    const raw = (await res.json()) as Array<{
+      lat?: string;
+      lon?: string;
+      boundingbox?: string[];
+    }>;
+    if (raw.length === 0) return null;
+    const lat = parseFloat(raw[0].lat ?? "");
+    const lon = parseFloat(raw[0].lon ?? "");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const out: CoordsComBBox = { latitude: lat, longitude: lon };
+    const bb = raw[0].boundingbox;
+    if (bb && bb.length === 4) {
+      const [s, n, w, e] = bb.map(parseFloat);
+      if ([s, n, w, e].every(Number.isFinite)) out.bbox = [s, w, n, e];
+    }
+    return out;
+  } catch (e) {
+    console.warn("[geocode-osm] exceção (país):", (e as Error).message);
     return null;
   }
 }
