@@ -31,6 +31,8 @@ export type PontoMapa = {
   km?: number;
   /** true quando geo_precision = 'city' (centroide, não endereço exato). */
   aproximado?: boolean;
+  /** Fora do raio: renderiza esmaecido/cinza (contexto, tela 10). */
+  foraDoRaio?: boolean;
 };
 
 const TILES =
@@ -49,11 +51,12 @@ function esc(s: string): string {
 const SVG_PREDIO =
   '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>';
 
-function iconeDoTipo(tipo: PontoMapa["tipo"]): L.DivIcon {
+function iconeDoTipo(tipo: PontoMapa["tipo"], fora?: boolean): L.DivIcon {
+  const mod = fora ? " gc-fora" : "";
   if (tipo === "casa") {
     return L.divIcon({
       className: "gc-mk-wrap",
-      html: `<span class="gc-mk-casa">${SVG_PREDIO}</span>`,
+      html: `<span class="gc-mk-casa${mod}">${SVG_PREDIO}</span>`,
       iconSize: [22, 22],
       iconAnchor: [11, 11],
     });
@@ -61,14 +64,14 @@ function iconeDoTipo(tipo: PontoMapa["tipo"]): L.DivIcon {
   if (tipo === "cidade") {
     return L.divIcon({
       className: "gc-mk-wrap",
-      html: '<span class="gc-mk-cidade"></span>',
+      html: `<span class="gc-mk-cidade${mod}"></span>`,
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     });
   }
   return L.divIcon({
     className: "gc-mk-wrap",
-    html: '<span class="gc-mk-contratante"></span>',
+    html: `<span class="gc-mk-contratante${mod}"></span>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
@@ -178,8 +181,10 @@ export default function MapaRaio({
 
     for (const p of pontos) {
       const m = L.marker([p.lat, p.lng], {
-        icon: iconeDoTipo(p.tipo),
-        zIndexOffset: p.tipo === "contratante" ? 400 : p.tipo === "casa" ? 300 : 100,
+        icon: iconeDoTipo(p.tipo, p.foraDoRaio),
+        zIndexOffset: p.foraDoRaio
+          ? 0
+          : p.tipo === "contratante" ? 400 : p.tipo === "casa" ? 300 : 100,
       });
       const linhas = [
         `<strong class="gc-pop-titulo">${esc(p.nome)}</strong>`,
@@ -187,6 +192,7 @@ export default function MapaRaio({
         p.km !== undefined
           ? `<span class="gc-pop-km">${Math.round(p.km)} km</span>`
           : "",
+        p.foraDoRaio ? `<span class="gc-pop-aprox">${esc(t("Fora do raio"))}</span>` : "",
         p.aproximado
           ? `<span class="gc-pop-aprox">≈ ${esc(t("localização aproximada (cidade)"))}</span>`
           : "",
@@ -207,14 +213,23 @@ export default function MapaRaio({
         border: "1px solid var(--border)",
         height: 440,
         backgroundColor: "var(--bg)",
+        // Contém os z-index internos do Leaflet (z-400/z-1000) pra não
+        // cobrirem dropdowns da página (ex.: autocomplete de cidade).
+        isolation: "isolate",
+        zIndex: 0,
       }}
     >
       <style>{`
         .gc-mapa .leaflet-container { background:#0B0D12; font-family:inherit; }
+        /* Água/vias em tons de azul discretos sobre o CARTO dark (tela 10). */
+        .gc-mapa .leaflet-tile-pane { filter: sepia(0.4) hue-rotate(175deg) saturate(1.7) brightness(0.82) contrast(1.05); }
         .gc-mk-wrap { background:transparent; border:none; }
         .gc-mk-contratante { display:block; width:14px; height:14px; border-radius:50%; background:${BRAND}; border:2px solid rgba(255,255,255,.85); box-shadow:0 0 10px rgba(61,123,255,.9), 0 0 22px rgba(61,123,255,.45); }
         .gc-mk-casa { display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:#12151D; border:1.5px solid ${BRAND}; color:#5B93FF; box-shadow:0 2px 10px rgba(0,0,0,.55); }
         .gc-mk-cidade { display:block; width:12px; height:12px; border-radius:50%; background:rgba(11,13,18,.4); border:2px solid #6E7794; }
+        .gc-mk-contratante.gc-fora { background:#4A5265; border-color:rgba(255,255,255,.35); box-shadow:none; opacity:.55; }
+        .gc-mk-casa.gc-fora { border-color:#4A5265; color:#6E7794; opacity:.55; box-shadow:none; }
+        .gc-mk-cidade.gc-fora { border-color:#4A5265; opacity:.5; }
         .gc-mk-ref { position:relative; display:block; width:16px; height:16px; }
         .gc-mk-ref-nucleo { position:absolute; inset:0; border-radius:50%; background:${BRAND}; border:2px solid #fff; box-shadow:0 0 16px rgba(61,123,255,.95); }
         .gc-mk-ref-pulso { position:absolute; inset:-9px; border-radius:50%; border:2px solid rgba(61,123,255,.55); animation:gc-pulso 2.2s ease-out infinite; }
@@ -237,18 +252,17 @@ export default function MapaRaio({
 
       {/* Chips flutuantes (tela 10) */}
       <div className="pointer-events-none absolute inset-0 z-[1000]">
-        {/* Raio atual */}
+        {/* Raio atual — mono CAIXA ALTA (tela 10) */}
         <div
-          className="pointer-events-auto absolute left-3 top-3 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-primary"
+          className="pointer-events-auto absolute left-3 top-3 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-primary"
           style={{
             backgroundColor: "rgba(11,13,18,0.8)",
             backdropFilter: "blur(8px)",
             borderColor: "var(--border-strong)",
           }}
         >
-          <MapPin size={12} style={{ color: BRAND }} />
-          {refNome ? `${refNome} · ` : ""}
-          <span className="font-mono tabular-nums">{raioKm} km</span>
+          <MapPin size={11} style={{ color: BRAND }} />
+          {t("Raio")} {raioKm} km
         </div>
 
         {/* Zoom */}
