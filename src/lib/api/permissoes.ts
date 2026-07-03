@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Show, AgendaItem } from "@/types";
 import type { SessaoAutenticada } from "./session";
 import {
   podeNaSessao,
@@ -245,6 +246,32 @@ export function podeExcluirAgenda(
     "agenda.excluir",
     "agenda.excluir_todos"
   );
+}
+
+/**
+ * Redige um Show para quem tem apenas `agenda.ver` (básico), sem
+ * `agenda.ver_detalhado`: remove o cachê (valor) e os vínculos que revelam
+ * valor por join no cliente (vendaId/orcamentoId). Mantém dia/local/horário.
+ * Admin/artista(dono)/legado passam por `podeVerAgendaDetalhado` → sem redação.
+ */
+export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show {
+  if (podeVerAgendaDetalhado(sessao, show.djId || null)) return show;
+  return { ...show, valor: undefined, orcamentoId: undefined, vendaId: undefined };
+}
+
+/**
+ * Redige um AgendaItem para quem só tem `agenda.ver`: zera o blob `dados`
+ * (voo: passageiros/DOB/localizador/voucher; transporte: motorista/contato) e
+ * `observacoes`, preservando tipo/título/data/horários. `artistId` é a coluna
+ * canônica (row.artist_id) usada pelos filtros.
+ */
+export function stripAgendaItemDetalhado(
+  item: AgendaItem,
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): AgendaItem {
+  if (podeVerAgendaDetalhado(sessao, artistId)) return item;
+  return { ...item, dados: undefined, observacoes: undefined };
 }
 
 // ============================================================
@@ -518,6 +545,88 @@ export function podeVerContratante(
     return criadoPor === sessao.userId;
   }
   return true;
+}
+
+// ============================================================
+// CONTRATOS — a tabela `contratos` NÃO tem artist_id nem criado_por. O artista
+// é resolvido pela VENDA vinculada (contratos.venda_id → vendas.artist_id) e o
+// escopo "próprios" herda vendas.criado_por. Contrato AVULSO (venda_id NULL) =
+// sem artista → admin-only (padrão "artist_id NULL = admin-only").
+//
+// LEGADO (operacional sem vínculo): preserva o comportamento atual EXATO —
+// leitura aberta (vê tudo) e mutação admin-only. Assim ninguém é trancado na
+// transição; o gate por artista só passa a valer quando o admin dá vínculos.
+// ============================================================
+
+/**
+ * true = usuário enxerga TODOS os contratos sem precisar resolver artista
+ * (admin/super, ou operacional legado com leitura aberta). Permite pular a
+ * resolução venda→artista no caminho comum.
+ */
+export function verTodosContratos(sessao: SessaoAutenticada): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  if (usarLegado(sessao)) return true;
+  return false;
+}
+
+/** Pode VER um contrato deste artista? (artistId vem da venda; null = avulso). */
+export function podeVerContrato(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (usarLegado(sessao)) return true;
+  return podeNaSessao(sessao, artistId, "contratos.ver");
+}
+
+/** Pode CRIAR contrato no artista? (artistId resolvido do venda_id do body). */
+export function verificarCriarContrato(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    if (!podeNaSessao(sessao, artistId, "contratos.criar")) {
+      return NextResponse.json(
+        { erro: "Você não tem permissão para criar contrato neste artista." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  // ---- legado: admin-only (comportamento atual) ----
+  if (sessao.papel === "admin") return null;
+  return NextResponse.json(
+    { erro: "Apenas administradores podem criar contratos." },
+    { status: 403 }
+  );
+}
+
+/** Pode EDITAR o contrato (próprios × todos, herdando venda.criado_por)? */
+export function podeEditarContrato(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (!usarLegado(sessao)) {
+    return podeMutar(
+      sessao,
+      artistId,
+      criadoPor,
+      "contratos.editar",
+      "contratos.editar_todos"
+    );
+  }
+  return sessao.papel === "admin";
+}
+
+/** Pode EXCLUIR o contrato? */
+export function podeExcluirContrato(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (!usarLegado(sessao)) {
+    return podeNaSessao(sessao, artistId, "contratos.excluir");
+  }
+  return sessao.papel === "admin";
 }
 
 // ============================================================

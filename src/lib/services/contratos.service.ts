@@ -10,12 +10,29 @@ import {
   proximoNumeroContrato,
   contarContratosDesde,
 } from "@/lib/repositories/contratos.repo";
+import { buscarVenda, escoposDeVendas } from "@/lib/repositories/vendas.repo";
 import type {
   ContratoCreateInput,
   ContratoUpdateInput,
 } from "@/lib/validators/contratos.schema";
 import { getPlano, type PlanoId } from "@/lib/planos";
 import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
+import type { SessaoAutenticada } from "@/lib/api/session";
+import { verTodosContratos, podeVerContrato } from "@/lib/api/permissoes";
+
+/**
+ * Resolve o escopo (artista + dono) de um contrato pela venda vinculada.
+ * Contrato avulso (venda_id NULL) → sem artista → { null, null } (admin-only).
+ * Usado pelas rotas [id]/signatários pra gatear por artista.
+ */
+export async function resolverEscopoContrato(
+  supabase: SupabaseClient,
+  vendaId: string | null
+): Promise<{ artistId: string | null; criadoPor: string | null }> {
+  if (!vendaId) return { artistId: null, criadoPor: null };
+  const venda = await buscarVenda(supabase, vendaId);
+  return { artistId: venda?.artist_id ?? null, criadoPor: venda?.criado_por ?? null };
+}
 
 /**
  * Limite mensal de contratos do plano atingido (espelha LimitePlanoEquipeError).
@@ -53,10 +70,23 @@ function entradaParaEscrita(
 }
 
 export async function listarContratosDoWorkspace(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  sessao?: SessaoAutenticada
 ): Promise<Contrato[]> {
   const rows = await repoListar(supabase);
-  return rows.map(rowParaContrato);
+  // Sem sessão OU quem vê tudo (admin/super/legado) → lista completa.
+  if (!sessao || verTodosContratos(sessao)) return rows.map(rowParaContrato);
+  // Caso contrário (artista OU operacional com vínculo): filtra por artista
+  // visível, resolvido via a venda de cada contrato (batch). Avulso → admin-only.
+  const vendaIds = Array.from(
+    new Set(rows.map((r) => r.venda_id).filter((v): v is string => !!v))
+  );
+  const escopos = await escoposDeVendas(supabase, vendaIds);
+  const visiveis = rows.filter((r) => {
+    const artistId = r.venda_id ? escopos.get(r.venda_id)?.artistId ?? null : null;
+    return podeVerContrato(sessao, artistId);
+  });
+  return visiveis.map(rowParaContrato);
 }
 
 export async function buscarContratoPorId(

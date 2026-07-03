@@ -56,6 +56,28 @@ export async function buscarVenda(
   return (data as unknown as VendaRow) ?? null;
 }
 
+/**
+ * Mapa id → { artist_id, criado_por } de várias vendas (batch). Usado pelo
+ * escopo de CONTRATOS, que resolve o artista pelo venda_id de cada contrato.
+ * Respeita RLS/deleção implícitas do cliente passado (só retorna o que ele vê).
+ */
+export async function escoposDeVendas(
+  supabase: SupabaseClient,
+  ids: string[]
+): Promise<Map<string, { artistId: string | null; criadoPor: string | null }>> {
+  const map = new Map<string, { artistId: string | null; criadoPor: string | null }>();
+  if (ids.length === 0) return map;
+  const { data, error } = await supabase
+    .from("vendas")
+    .select("id, artist_id, criado_por")
+    .in("id", ids);
+  if (error) throw error;
+  for (const row of (data ?? []) as { id: string; artist_id: string | null; criado_por: string | null }[]) {
+    map.set(row.id, { artistId: row.artist_id ?? null, criadoPor: row.criado_por ?? null });
+  }
+  return map;
+}
+
 export async function moverVendaParaLixeira(
   supabase: SupabaseClient,
   id: string

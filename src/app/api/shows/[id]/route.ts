@@ -11,6 +11,7 @@ import {
   podeVerAgenda,
   podeEditarAgenda,
   podeExcluirAgenda,
+  stripShowDetalhado,
 } from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
@@ -34,7 +35,8 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         { status: 403 }
       );
     }
-    return NextResponse.json({ show });
+    // Redige cachê/vínculos se só tem acesso básico (agenda.ver).
+    return NextResponse.json({ show: stripShowDetalhado(show, r.sessao) });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao buscar show." },

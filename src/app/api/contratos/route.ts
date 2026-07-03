@@ -3,8 +3,10 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarContratosDoWorkspace,
   criarContratoNoWorkspace,
+  resolverEscopoContrato,
   LimiteContratosError,
 } from "@/lib/services/contratos.service";
+import { verificarCriarContrato } from "@/lib/api/permissoes";
 import { contratoCreateSchema } from "@/lib/validators/contratos.schema";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { cobrarExcedente, infoSubscription } from "@/lib/services/stripe.service";
@@ -14,7 +16,7 @@ export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
-    const contratos = await listarContratosDoWorkspace(r.sessao.supabase);
+    const contratos = await listarContratosDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ contratos });
   } catch (e) {
     return NextResponse.json(
@@ -27,13 +29,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-
-  if (r.sessao.papel !== "admin") {
-    return NextResponse.json(
-      { erro: "Apenas administradores podem criar contratos." },
-      { status: 403 }
-    );
-  }
 
   let raw: unknown;
   try {
@@ -49,6 +44,14 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  // Gate por artista: o artista vem da venda vinculada (avulso → admin-only).
+  const { artistId } = await resolverEscopoContrato(
+    r.sessao.supabase,
+    parsed.data.venda_id ?? null
+  );
+  const gate = verificarCriarContrato(r.sessao, artistId);
+  if (gate) return gate;
 
   // Plano do workspace — necessário pra validar o limite mensal de contratos.
   const { data: ws, error: wsErr } = await r.sessao.supabase

@@ -16,7 +16,7 @@ import type {
   ShowUpdateInput,
 } from "@/lib/validators/shows.schema";
 import type { SessaoAutenticada } from "@/lib/api/session";
-import { aplicarFiltroShows } from "@/lib/api/permissoes";
+import { aplicarFiltroShows, stripShowDetalhado } from "@/lib/api/permissoes";
 import {
   marcarEventoCancelado,
   marcarEventoReativado,
@@ -57,7 +57,11 @@ export async function listarShowsDoWorkspace(
     ? <Q,>(q: Q) => aplicarFiltroShows(q as never, sessao) as Q
     : undefined;
   const rows = await repoListar(supabase, filtro);
-  return rows.map(rowParaShow);
+  // Redação por nível: sem agenda.ver_detalhado → esconde cachê/vínculos.
+  return rows.map((row) => {
+    const show = rowParaShow(row);
+    return sessao ? stripShowDetalhado(show, sessao) : show;
+  });
 }
 
 export async function buscarShowPorId(

@@ -9,7 +9,7 @@ import {
 } from "@/lib/repositories/agendaItems.repo";
 import type { AgendaItemCreateInput } from "@/lib/validators/agendaItems.schema";
 import type { SessaoAutenticada } from "@/lib/api/session";
-import { aplicarFiltroShows } from "@/lib/api/permissoes";
+import { aplicarFiltroShows, stripAgendaItemDetalhado } from "@/lib/api/permissoes";
 
 /** Camada de negócio dos itens da agenda. */
 
@@ -36,7 +36,12 @@ export async function listarAgendaItensDoWorkspace(
     ? <Q,>(q: Q) => aplicarFiltroShows(q as never, sessao) as Q
     : undefined;
   const rows = await repoListar(supabase, filtro);
-  return rows.map(rowParaAgendaItem);
+  // Redação por nível: sem agenda.ver_detalhado → zera dados (voo/transporte)
+  // e observações, mantendo tipo/título/data/horários.
+  return rows.map((row) => {
+    const item = rowParaAgendaItem(row);
+    return sessao ? stripAgendaItemDetalhado(item, sessao, row.artist_id) : item;
+  });
 }
 
 export async function criarAgendaItemNoWorkspace(
