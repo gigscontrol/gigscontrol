@@ -24,6 +24,45 @@ import type {
 import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 import { getPlano, type PlanoId } from "@/lib/planos";
 import { planoEfetivoParaLimites } from "@/lib/services/limites";
+import { ESCOPO_PADRAO, type Funcoes } from "@/lib/mappers/usuario";
+import {
+  permissoesDosPerfis,
+  PERFIL_PARA_FUNCOES_LEGADO,
+  type PerfilId,
+} from "@/lib/permissoes/perfis";
+import { normalizarPerms } from "@/lib/permissoes/capacidades";
+import { upsertVinculo } from "@/lib/repositories/membrosArtista.repo";
+import type { Papel } from "@/lib/permissoes";
+
+/**
+ * Deriva a PONTE legada (papel + funcoes) a partir dos acessos por perfil,
+ * pra que os módulos ainda não migrados continuem enforçando na transição.
+ */
+function pontesLegado(acessos: UsuarioCreateInput["acessos"]): {
+  papel: Papel;
+  funcoes: Funcoes;
+} {
+  const buckets: Record<"vendedor" | "financeiro" | "produtor", string[]> = {
+    vendedor: [],
+    financeiro: [],
+    produtor: [],
+  };
+  for (const a of acessos) {
+    for (const f of PERFIL_PARA_FUNCOES_LEGADO[a.perfil as PerfilId]) {
+      if (!buckets[f].includes(a.artistId)) buckets[f].push(a.artistId);
+    }
+  }
+  const funcoes: Funcoes = {};
+  if (buckets.vendedor.length) funcoes.vendedor = buckets.vendedor;
+  if (buckets.financeiro.length) funcoes.financeiro = buckets.financeiro;
+  if (buckets.produtor.length) funcoes.produtor = buckets.produtor;
+  const papel: Papel = funcoes.vendedor?.length
+    ? "vendedor"
+    : funcoes.financeiro?.length
+      ? "financeiro"
+      : "produtor";
+  return { papel, funcoes };
+}
 
 export class LimitePlanoEquipeError extends Error {
   status = 409;
@@ -92,6 +131,9 @@ export async function criarUsuarioDaEquipe(
     throw new Error(errAuth?.message ?? "Falha ao criar usuário no Auth.");
   }
 
+  // Ponte legada derivada dos perfis escolhidos (transição — sai na Fase 5).
+  const { papel, funcoes } = pontesLegado(input.acessos);
+
   try {
     const row = await criarProfile(admin, {
       id: created.user.id,
@@ -99,17 +141,33 @@ export async function criarUsuarioDaEquipe(
       nome: input.nome,
       email: emailFake,
       username: usernameCompleto,
-      papel: input.papel,
-      escopo: input.escopo,
-      funcoes: input.funcoes,
+      papel,
+      escopo: ESCOPO_PADRAO,
+      funcoes,
       status: "ativo",
       // Membro da equipe nasce com a senha aleatória gerada acima.
       senha_padrao: true,
       senha_padrao_valor: senhaTemporaria,
     });
+
+    // Modelo NOVO — grava um vínculo (membros_artista) por artista,
+    // semeado pelas permissões do perfil. É a fonte da verdade do acesso.
+    for (const a of input.acessos) {
+      const perms = normalizarPerms(new Set(permissoesDosPerfis([a.perfil as PerfilId])));
+      await upsertVinculo(admin, {
+        workspaceId,
+        userId: created.user.id,
+        artistId: a.artistId,
+        perfis: [a.perfil],
+        permissoes: [...perms],
+      });
+    }
+
     return { usuario: rowParaUsuario(row), senhaTemporaria };
   } catch (e) {
-    // Se o profile não pôde ser criado, remove o auth user pra evitar órfão.
+    // Se algo falhou, remove o auth user pra evitar órfão. Os vínculos
+    // (se algum foi criado) ficam órfãos por FK, mas sem profile ninguém
+    // loga; limpeza fica pro cascade de remoção.
     await admin.auth.admin.deleteUser(created.user.id).catch(() => undefined);
     throw e;
   }

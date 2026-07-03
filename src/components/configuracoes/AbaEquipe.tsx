@@ -41,6 +41,10 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
+import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
+
+/** Perfis oferecidos ao criar usuário (o "artista" é o próprio dono, não entra). */
+const PERFIS_ATRIBUIVEIS = PERFIS.filter((p) => p.id !== "artista");
 
 const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
 
@@ -57,15 +61,6 @@ function normalizarUsername(s: string): string {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-/** Função primária derivada do mapa de funções (1ª preenchida). */
-function inferirPapelPrimario(funcoes: Funcoes): PapelEquipe {
-  for (const f of FUNCOES_DISPONIVEIS) {
-    if ((funcoes[f] ?? []).length > 0) return f;
-  }
-  // Fallback impossível na prática (validação na UI exige pelo menos 1)
-  return "vendedor";
 }
 
 /**
@@ -213,15 +208,10 @@ export default function AbaEquipe() {
   async function aoCriar(dados: {
     nome: string;
     username_raiz: string;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    acessos: { artistId: string; perfil: PerfilId }[];
   }) {
     try {
-      const papel = inferirPapelPrimario(dados.funcoes);
-      const { usuario, senhaTemporaria } = await adicionarUsuario({
-        ...dados,
-        papel,
-      });
+      const { usuario, senhaTemporaria } = await adicionarUsuario(dados);
       setCriando(false);
       setSenhaNova({
         nome: usuario.nome,
@@ -247,8 +237,6 @@ export default function AbaEquipe() {
         funcoes: dados.funcoes,
         ativo: dados.ativo,
       };
-      // Recalcula o papel primário quando as funções mudam.
-      if (dados.funcoes) patch.papel = inferirPapelPrimario(dados.funcoes);
       await atualizarUsuario(id, patch);
       setEditando(null);
       setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
@@ -1164,8 +1152,7 @@ function ModalUsuario({
   onCriar: (dados: {
     nome: string;
     username_raiz: string;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    acessos: { artistId: string; perfil: PerfilId }[];
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
@@ -1179,8 +1166,8 @@ function ModalUsuario({
   const [usernameRaiz, setUsernameRaiz] = useState("");
   const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
   const [copiouUsername, setCopiouUsername] = useState(false);
-  const [escopo, setEscopo] = useState<EscopoUsuario>(inicial?.escopo ?? ESCOPO_PADRAO);
-  const [funcoes, setFuncoes] = useState<Funcoes>(inicial?.funcoes ?? {});
+  // Modelo novo: perfil por artista (só no criar). artistId → perfil.
+  const [acessos, setAcessos] = useState<Record<string, PerfilId>>({});
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1230,31 +1217,13 @@ function ModalUsuario({
     };
   }, [modo, inicial?.id]);
 
-  function toggleFuncao(f: PapelEquipe) {
-    setFuncoes((prev) => {
+  function definirPerfil(artistId: string, perfil: PerfilId | "") {
+    setAcessos((prev) => {
       const next = { ...prev };
-      if (f in next) delete next[f];
-      else next[f] = [];
+      if (perfil) next[artistId] = perfil;
+      else delete next[artistId];
       return next;
     });
-  }
-
-  function toggleDj(f: PapelEquipe, djId: string) {
-    setFuncoes((prev) => {
-      const atuais = prev[f] ?? [];
-      const proximos = atuais.includes(djId)
-        ? atuais.filter((x) => x !== djId)
-        : [...atuais, djId];
-      return { ...prev, [f]: proximos };
-    });
-  }
-
-  function selecionarTodosDjs(f: PapelEquipe) {
-    setFuncoes((prev) => ({ ...prev, [f]: artistas.map((a) => a.id) }));
-  }
-
-  function limparDjs(f: PapelEquipe) {
-    setFuncoes((prev) => ({ ...prev, [f]: [] }));
   }
 
   async function salvar() {
@@ -1262,43 +1231,42 @@ function ModalUsuario({
       setErro(t("Informe o nome do usuário."));
       return;
     }
-    if (modo === "criar" && !usernameValido) {
-      setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
-      return;
-    }
-    // Valida: pelo menos 1 função marcada + cada função marcada precisa
-    // ter pelo menos 1 DJ.
-    const funcoesAtivas = FUNCOES_DISPONIVEIS.filter((f) => f in funcoes);
-    if (funcoesAtivas.length === 0) {
-      setErro(t("Selecione pelo menos uma função para o usuário."));
-      return;
-    }
-    for (const f of funcoesAtivas) {
-      if ((funcoes[f] ?? []).length === 0) {
-        setErro(
-          t("Selecione pelo menos um DJ para a função \"{nome}\".", { nome: LABELS_PAPEL_EQUIPE[f].nome })
-        );
+
+    if (modo === "criar") {
+      if (!usernameValido) {
+        setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
         return;
       }
-    }
-    setSalvando(true);
-    setErro(null);
-    try {
-      if (modo === "criar") {
+      const lista = Object.entries(acessos).map(([artistId, perfil]) => ({
+        artistId,
+        perfil,
+      }));
+      if (lista.length === 0) {
+        setErro(t("Dê acesso a pelo menos um artista."));
+        return;
+      }
+      setSalvando(true);
+      setErro(null);
+      try {
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
-          escopo,
-          funcoes,
+          acessos: lista,
         });
-      } else if (inicial) {
-        await onEditar(inicial.id, {
-          nome: nome.trim(),
-          escopo,
-          funcoes,
-          ativo,
-        });
+      } catch (e) {
+        setErro((e as Error).message);
+      } finally {
+        setSalvando(false);
       }
+      return;
+    }
+
+    // Editar: só nome + bloqueio. O acesso é gerenciado por artista.
+    if (!inicial) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onEditar(inicial.id, { nome: nome.trim(), ativo });
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -1393,131 +1361,71 @@ function ModalUsuario({
           </label>
         )}
 
-        <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium text-secondary">
-            {t("Funções e DJs atendidos")}
-          </span>
-          <p className="text-[0.7rem] text-muted -mt-1">
-            {t("Marque cada função que o usuário desempenha e, dentro dela, quais DJs ele atende. As escolhas são independentes (ex.: vendedor do DJ Z e financeiro do DJ Y).")}
-          </p>
-          {FUNCOES_DISPONIVEIS.map((f) => {
-            const info = LABELS_PAPEL_EQUIPE[f];
-            const ativoFuncao = f in funcoes;
-            const djsSelecionados = funcoes[f] ?? [];
-            return (
-              <div
-                key={f}
-                className="rounded-md border transition-colors"
-                style={{
-                  borderColor: ativoFuncao ? info.cor : "var(--border-color)",
-                  backgroundColor: ativoFuncao ? `${info.cor}10` : "transparent",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleFuncao(f)}
-                  className="w-full flex items-center gap-2.5 p-2.5 text-left"
-                >
-                  <span
-                    className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor: ativoFuncao ? info.cor : "transparent",
-                      border: ativoFuncao ? "none" : "1px solid var(--border-strong)",
-                    }}
-                  >
-                    {ativoFuncao && <Check size={13} className="text-white" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="text-sm font-medium text-primary block">
-                      {t(info.nome)}
-                    </span>
-                    <span className="text-xs text-muted">{t(info.descricao)}</span>
-                  </span>
-                </button>
-                {ativoFuncao && (
-                  <div className="px-2.5 pb-2.5 border-t border-border pt-2.5 mt-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted">
-                        {t("DJs atendidos ({n} de {total})", { n: djsSelecionados.length, total: artistas.length })}
+        {modo === "criar" ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
+              <span className="text-xs font-medium text-secondary">
+                {t("Acesso aos artistas")}
+              </span>
+            </div>
+            <p className="text-[0.7rem] text-muted -mt-1">
+              {t("Escolha um perfil por artista — ele semeia as permissões. Você refina permissão por permissão depois, na aba Equipe de cada artista.")}
+            </p>
+            {artistas.length === 0 ? (
+              <span className="text-xs text-muted">
+                {t("Nenhum artista cadastrado ainda. Cadastre na aba Artistas.")}
+              </span>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {artistas.map((dj) => {
+                  const perfilAtual = acessos[dj.id];
+                  const ativo = !!perfilAtual;
+                  return (
+                    <div
+                      key={dj.id}
+                      className="flex items-center gap-2.5 rounded-md border p-2 transition-colors"
+                      style={{
+                        borderColor: ativo ? "var(--brand)" : "var(--border-color)",
+                        backgroundColor: ativo ? "var(--brand-weak)" : "transparent",
+                      }}
+                    >
+                      <span
+                        className="h-6 w-6 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dj.color }}
+                      />
+                      <span className="text-sm font-medium text-primary flex-1 truncate">
+                        {dj.name}
                       </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => selecionarTodosDjs(f)}
-                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
-                        >
-                          {t("Todos")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => limparDjs(f)}
-                          className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary"
-                        >
-                          {t("Limpar")}
-                        </button>
-                      </div>
+                      <select
+                        value={perfilAtual ?? ""}
+                        onChange={(e) =>
+                          definirPerfil(dj.id, e.target.value as PerfilId | "")
+                        }
+                        className="campo-input text-xs py-1.5 w-[160px] flex-shrink-0"
+                        aria-label={t("Perfil de {nome}", { nome: dj.name })}
+                      >
+                        <option value="">{t("Sem acesso")}</option>
+                        {PERFIS_ATRIBUIVEIS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {t(p.nome)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {artistas.length === 0 && (
-                        <span className="text-xs text-muted">
-                          {t("Nenhum DJ cadastrado ainda. Cadastre na aba Artistas.")}
-                        </span>
-                      )}
-                      {artistas.map((dj) => {
-                        const sel = djsSelecionados.includes(dj.id);
-                        return (
-                          <button
-                            key={dj.id}
-                            type="button"
-                            onClick={() => toggleDj(f, dj.id)}
-                            className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
-                            style={{
-                              backgroundColor: sel ? dj.color : "var(--bg-elevated)",
-                              color: sel ? "#fff" : "var(--text-muted)",
-                              boxShadow: sel ? `0 0 0 1px ${dj.color}` : "none",
-                            }}
-                          >
-                            {dj.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
-            <span className="text-xs font-medium text-secondary">
-              {t("Privacidade e permissões")}
-            </span>
+            )}
           </div>
-          <LinhaEscopo
-            label={t("Ver todos os contatos")}
-            descricaoLigado={t("Enxerga todos os contatos da agência")}
-            descricaoDesligado={t("Vê apenas os contatos que ele mesmo criou")}
-            valor={escopo.verTodosContatos}
-            onChange={(v) => setEscopo((s) => ({ ...s, verTodosContatos: v }))}
-          />
-          <LinhaEscopo
-            label={t("Ver todas as vendas e orçamentos")}
-            descricaoLigado={t("Enxerga todas as vendas e orçamentos da agência")}
-            descricaoDesligado={t("Vê apenas as vendas e orçamentos que ele mesmo criou")}
-            valor={escopo.verTodasVendas}
-            onChange={(v) => setEscopo((s) => ({ ...s, verTodasVendas: v }))}
-          />
-          <LinhaEscopo
-            label={t("Editar todos os eventos")}
-            descricaoLigado={t("Pode editar qualquer evento da agência")}
-            descricaoDesligado={t("Edita apenas os eventos que ele mesmo criou")}
-            valor={escopo.editarTodosEventos}
-            onChange={(v) => setEscopo((s) => ({ ...s, editarTodosEventos: v }))}
-          />
-        </div>
+        ) : (
+          <div className="rounded-md border border-border p-3 flex items-start gap-2">
+            <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-secondary leading-relaxed">
+              {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
+            </p>
+          </div>
+        )}
 
         {modo === "editar" && (
           <LinhaEscopo

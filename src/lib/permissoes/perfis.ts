@@ -124,3 +124,21 @@ export const FUNCAO_LEGADA_PARA_PERFIL: Record<"vendedor" | "financeiro" | "prod
   financeiro: "financeiro",
   produtor: "equipe",
 };
+
+/**
+ * PONTE (transição): perfil novo → funções LEGADAS que ele cobre. Usado ao
+ * criar usuário no modelo novo pra também gravar profiles.funcoes, de forma
+ * que os módulos ainda não migrados (Fase 4) continuem funcionando. Sai na
+ * Fase 5, quando o legado for aposentado.
+ */
+export const PERFIL_PARA_FUNCOES_LEGADO: Record<
+  PerfilId,
+  ("vendedor" | "financeiro" | "produtor")[]
+> = {
+  manager: ["vendedor", "financeiro", "produtor"],
+  financeiro: ["financeiro"],
+  juridico: ["produtor"],
+  vendedor: ["vendedor"],
+  equipe: ["produtor"],
+  artista: [],
+};

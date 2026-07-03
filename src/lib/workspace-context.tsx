@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { DJ, TaxaAgenciaModo, DocumentoTipo } from "@/types";
 import type { Papel, PrivacidadeDj } from "./permissoes";
+import type { PerfilId } from "./permissoes/perfis";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 import { setPreferencias as setPreferenciasGlobais } from "./preferencias";
@@ -233,9 +234,8 @@ type WorkspaceContextValue = {
     nome: string;
     /** Parte do username digitada pelo admin — o backend concatena o slug. */
     username_raiz: string;
-    papel: PapelEquipe;
-    escopo: EscopoUsuario;
-    funcoes: Funcoes;
+    /** Acesso inicial por artista (semeia os vínculos). */
+    acessos: { artistId: string; perfil: PerfilId }[];
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
     id: string,
@@ -628,9 +628,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (dados: {
       nome: string;
       username_raiz: string;
-      papel: PapelEquipe;
-      escopo: EscopoUsuario;
-      funcoes: Funcoes;
+      acessos: { artistId: string; perfil: PerfilId }[];
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
         method: "POST",
