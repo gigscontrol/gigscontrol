@@ -4,6 +4,20 @@ import type { ParcelaRow, ParcelaEscrita } from "@/lib/mappers/venda";
 const COLS =
   "id, workspace_id, venda_id, percentual, valor, data_vencimento, status_base, data_pagamento, observacao";
 
+/** Busca uma parcela por id (usada pra resolver a venda/artista no gate). */
+export async function buscarParcela(
+  supabase: SupabaseClient,
+  id: string
+): Promise<ParcelaRow | null> {
+  const { data, error } = await supabase
+    .from("parcelas")
+    .select(COLS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as ParcelaRow) ?? null;
+}
+
 export async function listarParcelasDaVenda(
   supabase: SupabaseClient,
   vendaId: string

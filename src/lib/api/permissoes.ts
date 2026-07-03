@@ -502,6 +502,44 @@ export function aplicarFiltroContratantes<Q extends QueryBuilder>(
   return query;
 }
 
+/**
+ * Espelha `aplicarFiltroContratantes` para UM contratante (rotas [id]).
+ * As listas já respeitam `verTodosContatos`, mas as rotas [id] não re-aplicavam
+ * o escopo — permitindo a um vendedor restrito ler/editar/apagar contratante de
+ * um colega pelo id (IDOR de escopo). Mantido idêntico ao filtro de lista: se
+ * um dia contatos migrar pro modelo novo (contatos.ver_proprios), os dois mudam
+ * juntos. Chame SEMPRE após `verificarAcessoContatos` (que já barra artista).
+ */
+export function podeVerContratante(
+  sessao: SessaoAutenticada,
+  criadoPor: string | null
+): boolean {
+  if (temFuncao(sessao, "vendedor") && !sessao.escopo.verTodosContatos) {
+    return criadoPor === sessao.userId;
+  }
+  return true;
+}
+
+// ============================================================
+// AGÊNCIA / ADMIN — mutações administrativas do workspace (cadastro de
+// artistas, gestão de equipe, identidade/config da agência). Escopo é
+// WORKSPACE-LEVEL, não por artista: o gate correto é "é o admin deste
+// workspace" (papel === "admin") + o isolamento multi-tenant que cada
+// rota já faz (pertenceAoWorkspace / workspace_id). Super-admin da
+// plataforma passa (opera qualquer tenant).
+// ============================================================
+
+export function verificarAdminDoWorkspace(
+  sessao: SessaoAutenticada
+): NextResponse | null {
+  if (sessao.isSuperAdmin) return null;
+  if (sessao.papel === "admin") return null;
+  return NextResponse.json(
+    { erro: "Apenas o admin da agência pode executar esta ação." },
+    { status: 403 }
+  );
+}
+
 // ============================================================
 // PARCELAS — só admin / financeiro / vendedor (dono da venda) editam.
 // O endpoint deve adicionalmente verificar se a venda da parcela
@@ -515,6 +553,47 @@ export function verificarInformarPagamento(
   if (temFuncao(sessao, "financeiro")) return null;
   return NextResponse.json(
     { erro: "Apenas admin e financeiro podem informar pagamento." },
+    { status: 403 }
+  );
+}
+
+/**
+ * Gate financeiro por artista para PATCH de parcela (informar/desfazer
+ * pagamento e ajustes). MODELO NOVO: mapeia a ação → chave do catálogo e
+ * exige a permissão naquele artista. LEGADO (sem vínculo): mantém a regra
+ * atual (admin OU função financeiro) MAS soma djAtendidoPor para fechar o
+ * furo de escopo por DJ (financeiro do artista A não mexe em venda do B).
+ *
+ * `artistId`/`criadoPor` vêm da VENDA da parcela (a parcela não tem coluna
+ * artist_id nem criado_por — a ligação é sempre parcela→venda→artista).
+ */
+export function podeInformarPagamentoParcela(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  acao: "registrar" | "cancelar" | "editar"
+): NextResponse | null {
+  if (!usarLegado(sessao)) {
+    const chave =
+      acao === "registrar"
+        ? "financeiro.registrar_pagamento"
+        : acao === "cancelar"
+          ? "financeiro.cancelar_pagamento"
+          : "financeiro.editar_pagamento";
+    if (!podeNaSessao(sessao, artistId, chave)) {
+      return NextResponse.json(
+        { erro: "Você não tem permissão para alterar pagamentos deste artista." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+  // ---- legado: admin OU financeiro, restrito aos DJs da função ----
+  if (sessao.papel === "admin") return null;
+  if (temFuncao(sessao, "financeiro") && djAtendidoPor(sessao, "financeiro", artistId)) {
+    return null;
+  }
+  return NextResponse.json(
+    { erro: "Você não tem permissão para alterar pagamentos deste artista." },
     { status: 403 }
   );
 }

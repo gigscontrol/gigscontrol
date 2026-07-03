@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import {
   atualizarArtistaPorId,
   removerArtistaPorId,
@@ -14,6 +15,8 @@ type RouteCtx = { params: { id: string } };
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   let raw: unknown;
   try {
@@ -58,6 +61,8 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
   // Snapshot do nome ANTES de remover, pra auditoria legível
   const { data: snap } = await r.sessao.supabase
     .from("artists")

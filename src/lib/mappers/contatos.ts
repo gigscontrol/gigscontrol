@@ -158,6 +158,7 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     observacoes: row.observacoes ?? undefined,
     criadoEm: row.criado_em ?? "",
   };
+  if (row.criado_por) ct.criadoPor = row.criado_por;
   const lat = paraNumero(row.lat);
   const lng = paraNumero(row.lng);
   if (lat !== undefined) ct.lat = lat;

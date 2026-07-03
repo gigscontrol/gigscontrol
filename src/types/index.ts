@@ -176,6 +176,8 @@ export type Contratante = {
   cidadeId: string;
   observacoes?: string;
   criadoEm: string;
+  /** userId de quem cadastrou — usado no escopo "próprios" (verTodosContatos). */
+  criadoPor?: string;
   /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
   lat?: number;
   lng?: number;
