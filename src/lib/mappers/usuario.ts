@@ -56,6 +56,7 @@ export type ProfileRow = {
   documento: string | null;
   endereco: string | null;
   telefone: string | null;
+  cidade_id: string | null;
 };
 
 /** Escopo de privacidade da equipe (flags genéricas). */
@@ -88,6 +89,7 @@ export type UsuarioEquipe = {
   documento?: string;
   endereco?: string;
   telefone?: string;
+  cidadeId?: string;
 };
 
 function escopoValido(raw: Record<string, unknown> | null | undefined): EscopoUsuario {
@@ -136,6 +138,7 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   if (row.documento) u.documento = row.documento;
   if (row.endereco) u.endereco = row.endereco;
   if (row.telefone) u.telefone = row.telefone;
+  if (row.cidade_id) u.cidadeId = row.cidade_id;
   return u;
 }
 
@@ -159,4 +162,5 @@ export type UsuarioEscrita = {
   documento?: string | null;
   endereco?: string | null;
   telefone?: string | null;
+  cidade_id?: string | null;
 };

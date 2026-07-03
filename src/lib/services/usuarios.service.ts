@@ -116,6 +116,7 @@ export async function criarUsuarioDaEquipe(
       documento: input.documento ?? null,
       endereco: input.endereco ?? null,
       telefone: input.telefone ?? null,
+      cidade_id: input.cidade_id ?? null,
     });
 
     // Modelo NOVO — cria um VÍNCULO VAZIO por artista com quem trabalha.

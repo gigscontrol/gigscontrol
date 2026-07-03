@@ -44,6 +44,8 @@ import { getPlano } from "@/lib/planos";
 import SeletorPais from "../SeletorPais";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
+import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
+import { resolverCidade } from "@/lib/cidade-helpers";
 import { configDocumento } from "@/lib/data/documentos";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, montarTelefoneE164, type Country } from "@/lib/data/countries";
@@ -215,6 +217,7 @@ export default function AbaEquipe() {
     documento?: string;
     endereco?: string;
     telefone?: string;
+    cidade_id?: string;
   }) {
     try {
       const { usuario, senhaTemporaria } = await adicionarUsuario(dados);
@@ -1163,6 +1166,7 @@ function ModalUsuario({
     documento?: string;
     endereco?: string;
     telefone?: string;
+    cidade_id?: string;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
@@ -1180,6 +1184,7 @@ function ModalUsuario({
   const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
   const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
   const [documento, setDocumento] = useState("");
   const [telPais, setTelPais] = useState<Country>(BRASIL);
   const [telDigits, setTelDigits] = useState("");
@@ -1254,13 +1259,18 @@ function ModalUsuario({
         return;
       }
       const artistIds = [...artistIdsSel];
-      if (artistIds.length === 0) {
-        setErro(t("Selecione ao menos um artista com quem ele trabalha."));
-        return;
-      }
       setSalvando(true);
       setErro(null);
       try {
+        // Cidade (opcional) → resolve/cria e devolve o UUID do catálogo.
+        let cidadeId: string | undefined;
+        if (cidadeSel) {
+          try {
+            cidadeId = (await resolverCidade(cidadeSel)).id;
+          } catch {
+            /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
+          }
+        }
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
@@ -1269,6 +1279,7 @@ function ModalUsuario({
           documento: documento || undefined,
           telefone: telDigits ? montarTelefoneE164(telPais, telDigits) : undefined,
           endereco: endereco || undefined,
+          cidade_id: cidadeId,
         });
       } catch (e) {
         setErro((e as Error).message);
@@ -1462,6 +1473,14 @@ function ModalUsuario({
                     onChange={setTelDigits}
                   />
                 </label>
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-xs text-muted">{t("Cidade")}</span>
+                  <CidadeGlobalAutocomplete
+                    value={cidadeSel}
+                    onChange={setCidadeSel}
+                    orientacao="horizontal"
+                  />
+                </div>
                 <label className="flex flex-col gap-1 sm:col-span-2">
                   <span className="text-xs text-muted">{t("Endereço")}</span>
                   <input

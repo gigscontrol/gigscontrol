@@ -243,6 +243,7 @@ type WorkspaceContextValue = {
     documento?: string;
     endereco?: string;
     telefone?: string;
+    cidade_id?: string;
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
     id: string,
@@ -643,6 +644,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       documento?: string;
       endereco?: string;
       telefone?: string;
+      cidade_id?: string;
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
         method: "POST",
