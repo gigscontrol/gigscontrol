@@ -386,19 +386,50 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       return;
     }
 
+    const docNorm = normalizarDocumento(paisOrigem.code, contratanteDocumento);
+
+    // "Já existe": em venda DIRETA (sem orçamento), o documento digitado pode
+    // bater com um contratante que EXISTE mas está OCULTO pra este usuário.
+    // Oferece reusar em vez de duplicar (one-shot no submit; rede falha → segue).
+    let contratanteExistenteId: string | null = null;
+    if (!contratanteOrc && docNorm) {
+      try {
+        const resp = await fetch(
+          `/api/contatos/contratantes/existe?documento=${encodeURIComponent(docNorm)}`
+        );
+        const j = await resp.json();
+        if (j?.existe && j.contratante?.id) {
+          const usar = window.confirm(
+            t(
+              'Já existe um contratante com esse documento: {nome}. Usar o cadastro existente em vez de criar um novo?',
+              { nome: j.contratante.nome }
+            )
+          );
+          if (usar) contratanteExistenteId = j.contratante.id as string;
+        }
+      } catch {
+        /* offline/erro → segue criando novo, não bloqueia a venda */
+      }
+    }
+
+    const contratanteExistente = contratanteOrc
+      ? { tipo: "existente" as const, id: contratanteOrc.id }
+      : contratanteExistenteId
+        ? { tipo: "existente" as const, id: contratanteExistenteId }
+        : null;
+
     const input: NovaVendaInput = {
       orcamentoId,
-      contratante: contratanteOrc
+      contratante: contratanteExistente
         ? {
-            tipo: "existente",
-            id: contratanteOrc.id,
+            ...contratanteExistente,
             nomeNovo: contratanteNome,
             emailNovo: contratanteEmail,
             telefoneNovo: telefoneE164,
             // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara
             // pra exibir. Mantém o banco consistente entre cadastros
             // antigos (mascarados) e novos.
-            documentoNovo: normalizarDocumento(paisOrigem.code, contratanteDocumento),
+            documentoNovo: docNorm,
             paisNovo: paisOrigem.code,
           }
         : {
@@ -406,7 +437,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             nome: contratanteNome,
             email: contratanteEmail,
             telefone: telefoneE164,
-            documento: normalizarDocumento(paisOrigem.code, contratanteDocumento),
+            documento: docNorm,
             pais: paisOrigem.code,
             cidadeId: cidadeIdResolvido,
           },

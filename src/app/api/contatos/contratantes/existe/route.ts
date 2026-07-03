@@ -20,8 +20,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const documento = url.searchParams.get("documento")?.trim() || "";
+  const telefone = url.searchParams.get("telefone")?.trim() || "";
   const nome = url.searchParams.get("nome")?.trim() || "";
-  if (!documento && !nome) {
+  if (!documento && !telefone && !nome) {
     return NextResponse.json({ existe: false, contratante: null });
   }
 
@@ -31,8 +32,13 @@ export async function GET(request: Request) {
       .select("id, nome, documento, telefone, email, cidade_id")
       .is("deletado_em", null)
       .limit(1);
-    // Documento é o match mais forte (CPF/CNPJ). Sem ele, nome exato (case-insensitive).
-    q = documento ? q.eq("documento", documento) : q.ilike("nome", nome);
+    // Match do mais forte pro mais fraco: documento (CPF/CNPJ) → telefone (E.164)
+    // → nome exato (case-insensitive).
+    q = documento
+      ? q.eq("documento", documento)
+      : telefone
+        ? q.eq("telefone", telefone)
+        : q.ilike("nome", nome);
     const { data, error } = await q;
     if (error) throw error;
     const c = (data ?? [])[0] ?? null;
