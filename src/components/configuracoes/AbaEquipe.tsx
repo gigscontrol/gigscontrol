@@ -1320,77 +1320,122 @@ function ModalUsuario({
           />
         </label>
 
-        {modo === "criar" && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-secondary">{t("Login (username)")}</span>
-            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              {/* Input cresce conforme digita (largura em `ch` casa com a
-                  font-mono — sem buraco entre o texto e o sufixo). */}
-              <input
-                value={usernameRaiz}
-                onChange={(e) => {
-                  setUsernameFoiEditado(true);
-                  setUsernameRaiz(
-                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                  );
-                }}
-                placeholder="joaovendas"
-                style={{
-                  width: `${Math.max(
-                    usernameRaiz.length || "joaovendas".length,
-                    4
-                  )}ch`,
-                }}
-                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
-              />
-              <span className="text-sm text-muted font-mono whitespace-nowrap">
-                -{slugAgencia || "agencia"}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!usernameValido || !usernameCompleto) return;
-                  navigator.clipboard.writeText(usernameCompleto).then(() => {
-                    setCopiouUsername(true);
-                    setTimeout(() => setCopiouUsername(false), 2000);
-                  });
-                }}
-                disabled={!usernameValido}
-                className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label={t("Copiar login completo")}
-                title={
-                  usernameValido
-                    ? t("Copiar login completo")
-                    : t("Preencha um login válido pra copiar")
-                }
-              >
-                {copiouUsername ? (
-                  <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
-                ) : (
-                  <Copy size={14} />
-                )}
-              </button>
-            </div>
-            {usernameCompleto && !usernameValido && (
-              <p className="text-xs mt-1" style={{ color: "var(--danger)" }}>
-                {t("Use 3+ caracteres (letras, números, hífen)")}
-              </p>
-            )}
-            {usernameValido && usernameCompleto && (
-              <p className="text-xs mt-1" style={{ color: "var(--success)" }}>
-                {t("Login completo:")}{" "}
-                <strong className="font-mono text-primary">{usernameCompleto}</strong>
-              </p>
-            )}
-            <p className="text-[0.7rem] text-muted mt-1">
-              {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
-            </p>
-          </label>
-        )}
-
         {modo === "criar" ? (
           <>
+            {/* Dados pessoais — o país da cidade dirige documento/DDI/endereço */}
             <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium text-secondary">{t("Dados pessoais")}</span>
+              <p className="text-[0.7rem] text-muted -mt-1">
+                {t("Opcionais — servem para contrato. O país da cidade define o documento e o DDI.")}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-xs text-muted">{t("País e cidade")}</span>
+                  <CidadeGlobalAutocomplete
+                    value={cidadeSel}
+                    onChange={setCidadeSel}
+                    onPaisChange={(p) => {
+                      setPaisPessoal(p);
+                      setTelPais(p);
+                    }}
+                    orientacao="horizontal"
+                  />
+                </div>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">{configDocumento(paisPessoal.code).label}</span>
+                  <InputDocumento pais={paisPessoal.code} value={documento} onChange={setDocumento} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs text-muted">{t("Telefone")}</span>
+                  <PhoneInput
+                    country={telPais}
+                    onCountryChange={setTelPais}
+                    value={telDigits}
+                    onChange={setTelDigits}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-xs text-muted">{t("Endereço")}</span>
+                  <input
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder={exemploEndereco(paisPessoal.code)}
+                    className="campo-input"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Acesso ao sistema — login (senha gerada ao final) */}
+            <div className="flex flex-col gap-2 pt-3 border-t border-border">
+              <span className="text-xs font-medium text-secondary">{t("Acesso ao sistema")}</span>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs text-muted">{t("Login (username)")}</span>
+                <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+                  <input
+                    value={usernameRaiz}
+                    onChange={(e) => {
+                      setUsernameFoiEditado(true);
+                      setUsernameRaiz(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                      );
+                    }}
+                    placeholder="joaovendas"
+                    style={{
+                      width: `${Math.max(
+                        usernameRaiz.length || "joaovendas".length,
+                        4
+                      )}ch`,
+                    }}
+                    className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+                  />
+                  <span className="text-sm text-muted font-mono whitespace-nowrap">
+                    -{slugAgencia || "agencia"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!usernameValido || !usernameCompleto) return;
+                      navigator.clipboard.writeText(usernameCompleto).then(() => {
+                        setCopiouUsername(true);
+                        setTimeout(() => setCopiouUsername(false), 2000);
+                      });
+                    }}
+                    disabled={!usernameValido}
+                    className="ml-auto btn-ghost p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label={t("Copiar login completo")}
+                    title={
+                      usernameValido
+                        ? t("Copiar login completo")
+                        : t("Preencha um login válido pra copiar")
+                    }
+                  >
+                    {copiouUsername ? (
+                      <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </button>
+                </div>
+                {usernameCompleto && !usernameValido && (
+                  <p className="text-xs mt-1" style={{ color: "var(--danger)" }}>
+                    {t("Use 3+ caracteres (letras, números, hífen)")}
+                  </p>
+                )}
+                {usernameValido && usernameCompleto && (
+                  <p className="text-xs mt-1" style={{ color: "var(--success)" }}>
+                    {t("Login completo:")}{" "}
+                    <strong className="font-mono text-primary">{usernameCompleto}</strong>
+                  </p>
+                )}
+                <p className="text-[0.7rem] text-muted mt-1">
+                  {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
+                </p>
+              </label>
+            </div>
+
+            {/* Com quais artistas trabalha — no fim */}
+            <div className="flex flex-col gap-2 pt-3 border-t border-border">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
                 <span className="text-xs font-medium text-secondary">
@@ -1440,50 +1485,6 @@ function ModalUsuario({
                   })}
                 </div>
               )}
-            </div>
-
-            {/* Dados pessoais (opcionais) — country-aware, igual à venda direta */}
-            <div className="flex flex-col gap-2 pt-3 border-t border-border">
-              <span className="text-xs font-medium text-secondary">{t("Dados pessoais")}</span>
-              <p className="text-[0.7rem] text-muted -mt-1">
-                {t("Opcionais — servem para contrato. O país da cidade define o documento e o DDI.")}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <span className="text-xs text-muted">{t("País e cidade")}</span>
-                  <CidadeGlobalAutocomplete
-                    value={cidadeSel}
-                    onChange={setCidadeSel}
-                    onPaisChange={(p) => {
-                      setPaisPessoal(p);
-                      setTelPais(p);
-                    }}
-                    orientacao="horizontal"
-                  />
-                </div>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs text-muted">{configDocumento(paisPessoal.code).label}</span>
-                  <InputDocumento pais={paisPessoal.code} value={documento} onChange={setDocumento} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs text-muted">{t("Telefone")}</span>
-                  <PhoneInput
-                    country={telPais}
-                    onCountryChange={setTelPais}
-                    value={telDigits}
-                    onChange={setTelDigits}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
-                  <span className="text-xs text-muted">{t("Endereço")}</span>
-                  <input
-                    value={endereco}
-                    onChange={(e) => setEndereco(e.target.value)}
-                    placeholder={exemploEndereco(paisPessoal.code)}
-                    className="campo-input"
-                  />
-                </label>
-              </div>
             </div>
           </>
         ) : (
