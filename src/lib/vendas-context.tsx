@@ -95,6 +95,12 @@ type VendasContextValue = {
     parcelaId: string,
     patch: Partial<Parcela>
   ) => Promise<Parcela>;
+  /** Ação financeira crua (nota/comprovante/cancelar/cobrança). */
+  acaoParcela: (
+    vendaId: string,
+    parcelaId: string,
+    body: Record<string, unknown>
+  ) => Promise<Parcela>;
 };
 
 const VendasContext = createContext<VendasContextValue | null>(null);
@@ -345,6 +351,41 @@ export function VendasProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  /**
+   * Ação financeira "crua" na parcela (nota/comprovante/cancelar/cobrança) —
+   * campos que não são do tipo Parcela e vão direto pro PATCH. Reaproveita a
+   * atualização de estado da resposta.
+   */
+  const acaoParcela = useCallback(
+    async (
+      vendaId: string,
+      parcelaId: string,
+      body: Record<string, unknown>
+    ): Promise<Parcela> => {
+      const res = await fetch(`/api/parcelas/${parcelaId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const b = await jsonOuErro(res);
+      const atual = b.parcela as Parcela;
+      setVendas((prev) =>
+        prev.map((v) =>
+          v.id !== vendaId
+            ? v
+            : {
+                ...v,
+                parcelas: v.parcelas.map((p) => (p.id === parcelaId ? atual : p)),
+                atualizadoEm: new Date().toISOString(),
+              }
+        )
+      );
+      return atual;
+    },
+    []
+  );
+
   const value = useMemo<VendasContextValue>(
     () => ({
       vendas,
@@ -355,8 +396,9 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       updateVenda,
       removeVenda,
       atualizarParcela,
+      acaoParcela,
     }),
-    [vendas, carregando, erro, recarregar, criarVenda, updateVenda, removeVenda, atualizarParcela]
+    [vendas, carregando, erro, recarregar, criarVenda, updateVenda, removeVenda, atualizarParcela, acaoParcela]
   );
 
   return <VendasContext.Provider value={value}>{children}</VendasContext.Provider>;
