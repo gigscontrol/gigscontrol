@@ -43,7 +43,6 @@ import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalA
 import ColorPicker from "../ColorPicker";
 import CardGoogleCalendar from "./CardGoogleCalendar";
 import EquipeDoArtista from "./EquipeDoArtista";
-import SeletorPais from "../SeletorPais";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
@@ -1633,10 +1632,11 @@ export function ModalNovoArtista({
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label={t("Cidade onde reside")}>
+            <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
+                onPaisChange={setPais}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
@@ -2241,10 +2241,11 @@ function ModalEditarArtista({
 
             <SeletorDeCor cor={cor} onChange={setCor} />
 
-            <Campo label={t("Cidade onde reside")}>
+            <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
                 onChange={setCidade}
+                onPaisChange={setPais}
                 placeholder={t("Ex: São Paulo, Belo Horizonte...")}
               />
             </Campo>
@@ -4089,10 +4090,6 @@ function CamposDadosContrato({
           placeholder={t("Ex: João da Silva")}
           className="campo-input"
         />
-      </Campo>
-
-      <Campo label={t("País de origem")}>
-        <SeletorPais value={pais} onChange={setPais} />
       </Campo>
 
       {isBR ? (

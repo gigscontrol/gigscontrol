@@ -41,7 +41,6 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
-import SeletorPais from "../SeletorPais";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
@@ -1447,19 +1446,21 @@ function ModalUsuario({
             <div className="flex flex-col gap-2 pt-3 border-t border-border">
               <span className="text-xs font-medium text-secondary">{t("Dados pessoais")}</span>
               <p className="text-[0.7rem] text-muted -mt-1">
-                {t("Opcionais — servem para contrato. O país define o documento e o DDI.")}
+                {t("Opcionais — servem para contrato. O país da cidade define o documento e o DDI.")}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs text-muted">{t("País de origem")}</span>
-                  <SeletorPais
-                    value={paisPessoal}
-                    onChange={(p) => {
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <span className="text-xs text-muted">{t("País e cidade")}</span>
+                  <CidadeGlobalAutocomplete
+                    value={cidadeSel}
+                    onChange={setCidadeSel}
+                    onPaisChange={(p) => {
                       setPaisPessoal(p);
                       setTelPais(p);
                     }}
+                    orientacao="horizontal"
                   />
-                </label>
+                </div>
                 <label className="flex flex-col gap-1">
                   <span className="text-xs text-muted">{configDocumento(paisPessoal.code).label}</span>
                   <InputDocumento pais={paisPessoal.code} value={documento} onChange={setDocumento} />
@@ -1473,14 +1474,6 @@ function ModalUsuario({
                     onChange={setTelDigits}
                   />
                 </label>
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <span className="text-xs text-muted">{t("Cidade")}</span>
-                  <CidadeGlobalAutocomplete
-                    value={cidadeSel}
-                    onChange={setCidadeSel}
-                    orientacao="horizontal"
-                  />
-                </div>
                 <label className="flex flex-col gap-1 sm:col-span-2">
                   <span className="text-xs text-muted">{t("Endereço")}</span>
                   <input
