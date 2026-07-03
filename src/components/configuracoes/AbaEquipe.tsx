@@ -41,13 +41,11 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
-import InputDocumento from "../inputs/InputDocumento";
-import PhoneInput from "../PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
-import { configDocumento } from "@/lib/data/documentos";
-import { exemploEndereco } from "@/lib/data/exemplos";
-import { BRASIL, montarTelefoneE164, type Country } from "@/lib/data/countries";
+import { BRASIL, type Country } from "@/lib/data/countries";
+import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
+import type { DocumentoTipo } from "@/types";
 
 const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
 
@@ -212,8 +210,12 @@ export default function AbaEquipe() {
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    cor?: string;
     pais?: string;
+    nome_legal?: string;
+    documento_tipo?: string;
     documento?: string;
+    razao_social?: string;
     endereco?: string;
     telefone?: string;
     cidade_id?: string;
@@ -1161,8 +1163,12 @@ function ModalUsuario({
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    cor?: string;
     pais?: string;
+    nome_legal?: string;
+    documento_tipo?: string;
     documento?: string;
+    razao_social?: string;
     endereco?: string;
     telefone?: string;
     cidade_id?: string;
@@ -1183,11 +1189,14 @@ function ModalUsuario({
   const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
   const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
+  const [cor, setCor] = useState<string>(CORES[0]);
   const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
+  const [nomeLegal, setNomeLegal] = useState("");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
   const [documento, setDocumento] = useState("");
-  const [telPais, setTelPais] = useState<Country>(BRASIL);
-  const [telDigits, setTelDigits] = useState("");
+  const [razaoSocial, setRazaoSocial] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1274,10 +1283,14 @@ function ModalUsuario({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
           artistIds,
+          cor,
           pais: paisPessoal.code,
-          documento: documento || undefined,
-          telefone: telDigits ? montarTelefoneE164(telPais, telDigits) : undefined,
-          endereco: endereco || undefined,
+          nome_legal: nomeLegal.trim() || undefined,
+          documento_tipo: documentoTipo,
+          documento: documento.trim() || undefined,
+          razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
+          telefone: telefone.trim() || undefined,
+          endereco: endereco.trim() || undefined,
           cidade_id: cidadeId,
         });
       } catch (e) {
@@ -1309,68 +1322,50 @@ function ModalUsuario({
       maxWidth={520}
     >
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
-          <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder={t("Nome completo")}
-            className="campo-input"
-            autoFocus
-          />
-        </label>
-
         {modo === "criar" ? (
           <>
-            {/* Dados pessoais — o país da cidade dirige documento/DDI/endereço */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-secondary">{t("Dados pessoais")}</span>
-              <p className="text-[0.7rem] text-muted -mt-1">
-                {t("Opcionais — servem para contrato. O país da cidade define o documento e o DDI.")}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <span className="text-xs text-muted">{t("País e cidade")}</span>
-                  <CidadeGlobalAutocomplete
-                    value={cidadeSel}
-                    onChange={setCidadeSel}
-                    onPaisChange={(p) => {
-                      setPaisPessoal(p);
-                      setTelPais(p);
-                    }}
-                    orientacao="horizontal"
-                  />
-                </div>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs text-muted">{configDocumento(paisPessoal.code).label}</span>
-                  <InputDocumento pais={paisPessoal.code} value={documento} onChange={setDocumento} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-xs text-muted">{t("Telefone")}</span>
-                  <PhoneInput
-                    country={telPais}
-                    onCountryChange={setTelPais}
-                    value={telDigits}
-                    onChange={setTelDigits}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 sm:col-span-2">
-                  <span className="text-xs text-muted">{t("Endereço")}</span>
-                  <input
-                    value={endereco}
-                    onChange={(e) => setEndereco(e.target.value)}
-                    placeholder={exemploEndereco(paisPessoal.code)}
-                    className="campo-input"
-                  />
-                </label>
-              </div>
-            </div>
+            <Secao titulo={t("Dados básicos")}>
+              <Campo label={t("Nome")}>
+                <input
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder={t("Nome completo")}
+                  className="campo-input"
+                  autoFocus
+                />
+              </Campo>
+              <SeletorDeCor cor={cor} onChange={setCor} />
+              <Campo label={t("País e cidade onde reside")}>
+                <CidadeGlobalAutocomplete
+                  value={cidadeSel}
+                  onChange={setCidadeSel}
+                  onPaisChange={setPaisPessoal}
+                  placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
+                />
+              </Campo>
+            </Secao>
 
-            {/* Acesso ao sistema — login (senha gerada ao final) */}
-            <div className="flex flex-col gap-2 pt-3 border-t border-border">
-              <span className="text-xs font-medium text-secondary">{t("Acesso ao sistema")}</span>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-muted">{t("Login (username)")}</span>
+            <Secao titulo={t("Dados pessoais")}>
+              <CamposDadosContrato
+                pais={paisPessoal}
+                setPais={setPaisPessoal}
+                nomeLegal={nomeLegal}
+                setNomeLegal={setNomeLegal}
+                documentoTipo={documentoTipo}
+                setDocumentoTipo={setDocumentoTipo}
+                documento={documento}
+                setDocumento={setDocumento}
+                razaoSocial={razaoSocial}
+                setRazaoSocial={setRazaoSocial}
+                endereco={endereco}
+                setEndereco={setEndereco}
+                telefone={telefone}
+                setTelefone={setTelefone}
+              />
+            </Secao>
+
+            <Secao titulo={t("Acesso ao sistema")}>
+              <Campo label={t("Login (username)")}>
                 <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
                   <input
                     value={usernameRaiz}
@@ -1431,17 +1426,10 @@ function ModalUsuario({
                 <p className="text-[0.7rem] text-muted mt-1">
                   {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
                 </p>
-              </label>
-            </div>
+              </Campo>
+            </Secao>
 
-            {/* Com quais artistas trabalha — no fim */}
-            <div className="flex flex-col gap-2 pt-3 border-t border-border">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={14} style={{ color: "var(--brand)" }} />
-                <span className="text-xs font-medium text-secondary">
-                  {t("Com quais artistas trabalha")}
-                </span>
-              </div>
+            <Secao titulo={t("Com quais artistas trabalha")}>
               <p className="text-[0.7rem] text-muted -mt-1">
                 {t("Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.")}
               </p>
@@ -1485,15 +1473,27 @@ function ModalUsuario({
                   })}
                 </div>
               )}
-            </div>
+            </Secao>
           </>
         ) : (
-          <div className="rounded-md border border-border p-3 flex items-start gap-2">
-            <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-secondary leading-relaxed">
-              {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
-            </p>
-          </div>
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder={t("Nome completo")}
+                className="campo-input"
+                autoFocus
+              />
+            </label>
+            <div className="rounded-md border border-border p-3 flex items-start gap-2">
+              <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-secondary leading-relaxed">
+                {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
+              </p>
+            </div>
+          </>
         )}
 
         {modo === "editar" && (

@@ -44,9 +44,12 @@ export const usuarioCreateSchema = z.object({
   // permissões). Pode vir vazio no onboarding (cria só a conta).
   artistIds: z.array(uuidLike).default([]),
   // Dados pessoais (opcionais) — servem para contrato. País dirige documento.
+  cor: z.string().max(20).optional(),
   pais: z.string().length(2).optional(),
+  nome_legal: z.string().max(120).optional(),
   documento_tipo: z.enum(["cpf", "cnpj"]).optional(),
   documento: z.string().max(40).optional(),
+  razao_social: z.string().max(140).optional(),
   endereco: z.string().max(300).optional(),
   telefone: z.string().max(40).optional(),
   cidade_id: uuidLike.optional(),

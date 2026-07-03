@@ -111,9 +111,12 @@ export async function criarUsuarioDaEquipe(
       senha_padrao: true,
       senha_padrao_valor: senhaTemporaria,
       // Dados pessoais (opcionais).
+      cor: input.cor ?? null,
       pais: input.pais ?? null,
+      nome_legal: input.nome_legal ?? null,
       documento_tipo: input.documento_tipo ?? null,
       documento: input.documento ?? null,
+      razao_social: input.razao_social ?? null,
       endereco: input.endereco ?? null,
       telefone: input.telefone ?? null,
       cidade_id: input.cidade_id ?? null,

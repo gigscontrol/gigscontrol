@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProfileRow, UsuarioEscrita } from "@/lib/mappers/usuario";
 
 const COLS =
-  "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, escopo, funcoes, status, deletado_em, senha_padrao, senha_padrao_valor, pais, documento_tipo, documento, endereco, telefone, cidade_id";
+  "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, escopo, funcoes, status, deletado_em, senha_padrao, senha_padrao_valor, cor, pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, cidade_id";
 
 /** Lista equipe ativa (papel != admin/artista, deletado_em is null). */
 export async function listarUsuariosEquipe(

@@ -238,9 +238,12 @@ type WorkspaceContextValue = {
     /** Artistas com quem trabalha (cria vínculo vazio; função definida na Equipe). */
     artistIds: string[];
     /** Dados pessoais (opcionais) — country-aware, servem para contrato. */
+    cor?: string;
     pais?: string;
+    nome_legal?: string;
     documento_tipo?: string;
     documento?: string;
+    razao_social?: string;
     endereco?: string;
     telefone?: string;
     cidade_id?: string;
@@ -639,9 +642,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       nome: string;
       username_raiz: string;
       artistIds: string[];
+      cor?: string;
       pais?: string;
+      nome_legal?: string;
       documento_tipo?: string;
       documento?: string;
+      razao_social?: string;
       endereco?: string;
       telefone?: string;
       cidade_id?: string;

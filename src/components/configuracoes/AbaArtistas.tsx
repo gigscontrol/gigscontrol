@@ -88,7 +88,7 @@ import {
  * Pra ter dezenas de artistas, o admin também pode escolher cor
  * customizada via color picker.
  */
-const CORES = [
+export const CORES = [
   "#ef4444", // vermelho
   "#f97316", // laranja
   "#f59e0b", // âmbar
@@ -3769,7 +3769,7 @@ export function ModalCredenciais({
  * que abre o color picker nativo. Quando o usuário escolhe uma cor que
  * não está no padrão, ela aparece como 11ª bolinha destacada.
  */
-function SeletorDeCor({
+export function SeletorDeCor({
   cor,
   onChange,
 }: {
@@ -4040,7 +4040,7 @@ function ToggleTipoDocumento({
  * em modal) e no card do perfil editável inline. O `nome` do artista é o
  * nome artístico; aqui ficam os dados legais que vão pro contrato.
  */
-function CamposDadosContrato({
+export function CamposDadosContrato({
   pais,
   setPais,
   nomeLegal,
@@ -4170,7 +4170,7 @@ function SecaoDadosContrato(props: Parameters<typeof CamposDadosContrato>[0]) {
   );
 }
 
-function Secao({
+export function Secao({
   titulo,
   children,
 }: {
@@ -4187,7 +4187,7 @@ function Secao({
   );
 }
 
-function Campo({
+export function Campo({
   label,
   children,
   className,
