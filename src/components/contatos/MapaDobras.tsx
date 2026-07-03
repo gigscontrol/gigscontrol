@@ -1,12 +1,33 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { MapPin, Building2, Users, Search, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import type { Cidade, Casa, Contratante } from "@/types";
+import type { PontoMapa } from "@/components/contatos/MapaRaio";
+
+// Leaflet usa `window` — só carrega no cliente, quando a aba do mapa abre.
+const MapaRaio = dynamic(() => import("@/components/contatos/MapaRaio"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="flex items-center justify-center text-sm text-muted"
+      style={{
+        height: 440,
+        borderRadius: 14,
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--bg)",
+      }}
+    >
+      <Loader2 size={16} className="animate-spin mr-2" />
+      Carregando o mapa…
+    </div>
+  ),
+});
 
 /**
  * Coverage Map — busca de contatos por raio (km) a partir de uma
@@ -156,6 +177,67 @@ export default function MapaDobras({
 
   const cidadesSemCoord = cidades.length - cidadesComCoord.length;
 
+  // Pontos do MAPA: contratantes/casas usam coordenada PRÓPRIA (migração 51,
+  // geocodificada no cadastro) e caem pro centroide da cidade quando não têm.
+  const pontosMapa = useMemo<PontoMapa[]>(() => {
+    if (!refCoords) return [];
+    const out: PontoMapa[] = [];
+    const cidadePorId = new Map(cidades.map((c) => [c.id, c]));
+
+    for (const { cidade, distancia } of cidadesNoRaio) {
+      if (cidade.latitude === undefined || cidade.longitude === undefined) continue;
+      out.push({
+        id: `cidade-${cidade.id}`,
+        tipo: "cidade",
+        nome: cidade.nome,
+        sub: cidade.estado ? `${cidade.nome}/${cidade.estado}` : undefined,
+        lat: cidade.latitude,
+        lng: cidade.longitude,
+        km: distancia,
+      });
+    }
+
+    for (const casa of casas) {
+      const cid = cidadePorId.get(casa.cidadeId);
+      const lat = casa.lat ?? cid?.latitude;
+      const lng = casa.lng ?? cid?.longitude;
+      if (lat === undefined || lng === undefined) continue;
+      const km = distanciaKm(refCoords, { latitude: lat, longitude: lng });
+      if (km === undefined || km > raioKm) continue;
+      out.push({
+        id: `casa-${casa.id}`,
+        tipo: "casa",
+        nome: casa.nome,
+        sub: cid ? `${cid.nome}/${cid.estado}` : undefined,
+        lat,
+        lng,
+        km,
+        aproximado: casa.geoPrecisao !== "address",
+      });
+    }
+
+    for (const ct of contratantes) {
+      const cid = cidadePorId.get(ct.cidadeId);
+      const lat = ct.lat ?? cid?.latitude;
+      const lng = ct.lng ?? cid?.longitude;
+      if (lat === undefined || lng === undefined) continue;
+      const km = distanciaKm(refCoords, { latitude: lat, longitude: lng });
+      if (km === undefined || km > raioKm) continue;
+      out.push({
+        id: `contratante-${ct.id}`,
+        tipo: "contratante",
+        nome: ct.nome,
+        sub: cid ? `${cid.nome}/${cid.estado}` : undefined,
+        lat,
+        lng,
+        km,
+        aproximado: ct.geoPrecisao !== "address",
+      });
+    }
+
+    return out;
+  }, [refCoords, raioKm, cidadesNoRaio, casas, contratantes, cidades]);
+
   return (
     <div className="flex flex-col gap-5">
       {/* Filtros */}
@@ -206,6 +288,14 @@ export default function MapaDobras({
           </div>
         )}
       </div>
+
+      {/* Mapa — cidade de referência + círculo do raio + pontos (tela 10) */}
+      <MapaRaio
+        refCoords={refCoords}
+        refNome={refCidade?.nome}
+        raioKm={raioKm}
+        pontos={pontosMapa}
+      />
 
       {/* Resultados */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
