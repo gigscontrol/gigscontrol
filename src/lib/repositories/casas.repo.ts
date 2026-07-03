@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CasaRow, CasaEscrita } from "@/lib/mappers/contatos";
 
 const COLS =
-  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone";
+  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision";
 
 export async function listarCasas(supabase: SupabaseClient): Promise<CasaRow[]> {
   const { data, error } = await supabase

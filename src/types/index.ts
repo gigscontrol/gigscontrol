@@ -159,6 +159,9 @@ export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
 
 // ----------- Entidades de Contatos -----------
 
+/** Precisão da geolocalização de um contato (tokens.md §7). */
+export type GeoPrecisao = "address" | "city";
+
 export type Contratante = {
   id: string;
   nome: string;
@@ -171,6 +174,10 @@ export type Contratante = {
   cidadeId: string;
   observacoes?: string;
   criadoEm: string;
+  /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
+  lat?: number;
+  lng?: number;
+  geoPrecisao?: GeoPrecisao;
 };
 
 export type TipoCasa = "club" | "festival" | "festa-privada" | "bar" | "arena" | "outro";
@@ -185,6 +192,10 @@ export type Casa = {
   contatoResponsavel?: string;
   telefone?: string;
   observacoes?: string;
+  /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
+  lat?: number;
+  lng?: number;
+  geoPrecisao?: GeoPrecisao;
 };
 
 export type Cidade = {

@@ -17,6 +17,7 @@ import type {
 } from "@/lib/validators/contatos.schema";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroContratantes } from "@/lib/api/permissoes";
+import { resolverGeoDoContato } from "@/lib/services/geoContato";
 
 function entradaParaEscrita(
   input: ContratanteCreateInput | ContratanteUpdateInput
@@ -59,7 +60,15 @@ export async function criarContratanteNoWorkspace(
   criadoPor: string,
   input: ContratanteCreateInput
 ): Promise<Contratante> {
-  const row = await repoCriar(supabase, workspaceId, criadoPor, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  // Geocodifica NO CADASTRO (tokens.md §7): endereço → ponto exato;
+  // senão centroide da cidade. Falha nunca bloqueia o save.
+  const geo = await resolverGeoDoContato(supabase, {
+    endereco: escrita.endereco,
+    cidadeId: escrita.cidade_id,
+    paisIso2: escrita.pais,
+  });
+  const row = await repoCriar(supabase, workspaceId, criadoPor, { ...escrita, ...geo });
   return rowParaContratante(row);
 }
 
@@ -68,7 +77,28 @@ export async function atualizarContratantePorId(
   id: string,
   input: ContratanteUpdateInput
 ): Promise<Contratante> {
-  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+  let escrita = entradaParaEscrita(input);
+
+  // Re-geocodifica SÓ se endereço/cidade mudaram (cache via geocoded_at).
+  if (input.endereco !== undefined || input.cidade_id !== undefined) {
+    const atual = await repoBuscar(supabase, id);
+    const enderecoNovo = input.endereco !== undefined ? (input.endereco ?? null) : (atual?.endereco ?? null);
+    const cidadeNova = input.cidade_id !== undefined ? (input.cidade_id ?? null) : (atual?.cidade_id ?? null);
+    const mudou =
+      (atual?.endereco ?? null) !== enderecoNovo ||
+      (atual?.cidade_id ?? null) !== cidadeNova ||
+      atual?.lat == null; // nunca geocodificado → aproveita o save
+    if (mudou) {
+      const geo = await resolverGeoDoContato(supabase, {
+        endereco: enderecoNovo,
+        cidadeId: cidadeNova,
+        paisIso2: input.pais ?? atual?.pais ?? null,
+      });
+      escrita = { ...escrita, ...geo };
+    }
+  }
+
+  const row = await repoAtualizar(supabase, id, escrita);
   return rowParaContratante(row);
 }
 

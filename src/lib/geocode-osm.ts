@@ -72,3 +72,58 @@ export async function geocodarCidadeBR(
     return null;
   }
 }
+
+/**
+ * Geocoda um ENDEREÇO de contato (contratante/casa) no Nominatim.
+ *
+ * Busca livre "endereço, cidade, estado" restrita ao país (countrycodes) —
+ * mais tolerante a endereços informais que a busca estruturada. Usado no
+ * CADASTRO/edição (nunca ao abrir o mapa); resultado cacheado no banco via
+ * geocoded_at. Falha graciosamente com null → chamador cai pro centroide
+ * da cidade (geo_precision:'city').
+ */
+export async function geocodarEndereco(
+  endereco: string,
+  cidadeNome?: string | null,
+  estado?: string | null,
+  paisIso2?: string | null
+): Promise<Coords | null> {
+  const partes = [endereco, cidadeNome, estado].filter(
+    (p): p is string => !!p && p.trim() !== ""
+  );
+  if (partes.length === 0) return null;
+
+  const params = new URLSearchParams({
+    q: partes.join(", "),
+    format: "json",
+    limit: "1",
+    addressdetails: "0",
+  });
+  if (paisIso2 && /^[a-zA-Z]{2}$/.test(paisIso2)) {
+    params.set("countrycodes", paisIso2.toLowerCase());
+  }
+  const url = `${NOMINATIM}?${params.toString()}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "application/json",
+      },
+      next: { revalidate: 60 * 60 * 24 * 7 },
+    });
+    if (!res.ok) {
+      console.warn(`[geocode-osm] HTTP ${res.status} pra endereço`, partes.join(", "));
+      return null;
+    }
+    const raw = (await res.json()) as Array<{ lat?: string; lon?: string }>;
+    if (raw.length === 0) return null;
+    const lat = parseFloat(raw[0].lat ?? "");
+    const lon = parseFloat(raw[0].lon ?? "");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { latitude: lat, longitude: lon };
+  } catch (e) {
+    console.warn("[geocode-osm] exceção (endereço):", (e as Error).message);
+    return null;
+  }
+}
