@@ -41,13 +41,15 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
+import { PERFIS } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { BRASIL, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
 import type { DocumentoTipo } from "@/types";
 
-const FUNCOES_DISPONIVEIS: PapelEquipe[] = ["vendedor", "financeiro", "produtor"];
+/** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
+type VinculoResumo = { artistId: string; perfis: string[]; permissoes: string[] };
 
 /**
  * Normaliza um texto pra virar username (mesma regra de AbaArtistas):
@@ -121,6 +123,11 @@ export default function AbaEquipe() {
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "bloqueados">("todos");
   const [conta, setConta] = useState<DadosContaUsuario | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(false);
+  // Vínculos do membro selecionado (perfis + permissões por artista) — fonte
+  // da verdade nova do card "Funções e DJs atendidos". `null` = carregando.
+  const [vinculos, setVinculos] = useState<VinculoResumo[] | null>(null);
+  // true quando o fetch de vínculos falhou — distingue erro de "sem vínculo".
+  const [vinculosErro, setVinculosErro] = useState(false);
   // Senha mascarada por padrão; reseta ao trocar de membro pra não vazar.
   const [senhaRevelada, setSenhaRevelada] = useState(false);
   const [copiouSenha, setCopiouSenha] = useState(false);
@@ -161,6 +168,38 @@ export default function AbaEquipe() {
       })
       .finally(() => {
         if (mounted) setCarregandoConta(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [selecionadoId]);
+
+  // Carrega os vínculos (perfis + permissões por artista) do membro
+  // selecionado — modelo NOVO (membros_artista). Substitui o profiles.funcoes
+  // legado, que fica sempre vazio no modelo novo.
+  useEffect(() => {
+    if (!selecionadoId) {
+      setVinculos(null);
+      setVinculosErro(false);
+      return;
+    }
+    let mounted = true;
+    setVinculos(null);
+    setVinculosErro(false);
+    fetch(`/api/usuarios/${selecionadoId}/vinculos`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as { vinculos: VinculoResumo[] };
+      })
+      .then((d) => {
+        if (mounted) setVinculos(d.vinculos ?? []);
+      })
+      .catch(() => {
+        // Erro real (rede/HTTP) — NÃO confundir com "membro sem vínculo".
+        if (mounted) {
+          setVinculos([]);
+          setVinculosErro(true);
+        }
       });
     return () => {
       mounted = false;
@@ -508,13 +547,12 @@ export default function AbaEquipe() {
                     </span>
                   )}
                 </div>
-                {/* Funções do membro */}
+                {/* Perfis e DJs do membro (fonte: vínculos do modelo novo) */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(() => {
-                    const funcoesAtivas = FUNCOES_DISPONIVEIS.filter(
-                      (f) => (selecionado.funcoes?.[f]?.length ?? 0) > 0
-                    );
-                    if (funcoesAtivas.length === 0)
+                    const vs = vinculos ?? [];
+                    // Sem vínculo (ou ainda carregando) → badge do papel, como antes.
+                    if (vs.length === 0)
                       return (
                         <span
                           className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
@@ -526,23 +564,36 @@ export default function AbaEquipe() {
                           {t(LABELS_PAPEL_EQUIPE[selecionado.papel]?.nome ?? selecionado.papel)}
                         </span>
                       );
-                    return funcoesAtivas.map((f) => {
-                      const fInfo = LABELS_PAPEL_EQUIPE[f];
-                      const qtd = selecionado.funcoes?.[f]?.length ?? 0;
-                      return (
+                    // União dos perfis entre todos os vínculos + contagem de DJs.
+                    const perfisUniao = [...new Set(vs.flatMap((v) => v.perfis))];
+                    return (
+                      <>
+                        {perfisUniao.map((pid) => {
+                          const perfil = PERFIS.find((x) => x.id === pid);
+                          return (
+                            <span
+                              key={pid}
+                              className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                              style={{
+                                backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                color: perfil?.cor ?? "#3D7BFF",
+                              }}
+                            >
+                              {perfil?.nome ?? pid}
+                            </span>
+                          );
+                        })}
                         <span
-                          key={f}
                           className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
                           style={{
-                            backgroundColor: `${fInfo.cor}22`,
-                            color: fInfo.cor,
+                            backgroundColor: "var(--elevated)",
+                            color: "var(--text-muted)",
                           }}
-                          title={t("{n} DJ(s) atendido(s)", { n: qtd })}
                         >
-                          {t(fInfo.nome)} · {qtd}
+                          {t("{n} DJ(s)", { n: vs.length })}
                         </span>
-                      );
-                    });
+                      </>
+                    );
                   })()}
                 </div>
               </div>
@@ -763,56 +814,65 @@ export default function AbaEquipe() {
                 <Users size={12} style={{ color: "var(--brand)" }} />
                 {t("Funções e DJs atendidos")}
               </div>
-              {(() => {
-                const funcoesAtivas = FUNCOES_DISPONIVEIS.filter(
-                  (f) => (selecionado.funcoes?.[f]?.length ?? 0) > 0
-                );
-                if (funcoesAtivas.length === 0)
-                  return (
-                    <div className="text-sm text-muted">
-                      {t("Nenhuma função atribuída.")}
-                    </div>
-                  );
-                return (
-                  <div className="flex flex-col gap-3">
-                    {funcoesAtivas.map((f) => {
-                      const fInfo = LABELS_PAPEL_EQUIPE[f];
-                      const ids = selecionado.funcoes?.[f] ?? [];
-                      return (
-                        <div key={f} className="flex flex-col gap-1.5">
-                          <div className="inline-flex items-center gap-1.5">
-                            <span
-                              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: fInfo.cor }}
-                            />
-                            <span className="text-sm font-medium text-primary">
-                              {t(fInfo.nome)}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {ids.map((id) => {
-                              const dj = artistas.find((a) => a.id === id);
+              {vinculos === null ? (
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("Carregando…")}
+                </div>
+              ) : vinculosErro ? (
+                <div className="text-sm" style={{ color: "var(--danger)" }}>
+                  {t("Não foi possível carregar. Tente recarregar a página.")}
+                </div>
+              ) : vinculos.length === 0 ? (
+                <div className="text-sm text-muted">
+                  {t("Nenhum artista vinculado.")}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {vinculos.map((v) => {
+                    const dj = artistas.find((a) => a.id === v.artistId);
+                    return (
+                      <div key={v.artistId} className="flex flex-col gap-1.5">
+                        <div className="inline-flex items-center gap-1.5">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: dj?.color ?? "var(--border-strong)" }}
+                          />
+                          <span className="text-sm font-medium text-primary">
+                            {dj?.name ?? v.artistId}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {v.perfis.length > 0 ? (
+                            v.perfis.map((pid) => {
+                              const perfil = PERFIS.find((x) => x.id === pid);
                               return (
                                 <span
-                                  key={id}
-                                  className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
-                                  style={
-                                    dj
-                                      ? { boxShadow: `inset 2px 0 0 ${dj.color}` }
-                                      : undefined
-                                  }
+                                  key={pid}
+                                  className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                                  style={{
+                                    backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                    color: perfil?.cor ?? "#3D7BFF",
+                                  }}
                                 >
-                                  {dj?.name ?? id}
+                                  {perfil?.nome ?? pid}
                                 </span>
                               );
-                            })}
-                          </div>
+                            })
+                          ) : (
+                            <span className="text-[0.65rem] text-muted">
+                              {t("Personalizado")}
+                            </span>
+                          )}
+                          <span className="text-[0.65rem] text-muted">
+                            {t("{n} permissões", { n: v.permissoes.length })}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Permissões (read-only; edita no modal) */}
