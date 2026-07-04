@@ -9,54 +9,10 @@
  */
 
 import type { Cidade } from "@/types";
-import type { CidadeIBGE } from "@/components/CidadeIBGEAutocomplete";
 import type { CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 
 /**
- * Faz lookup-or-create no backend e devolve a cidade do workspace.
- * Use no submit dos forms ANTES de criar o orçamento/venda/casa.
- *
- * Lança erro se a API falhar — o caller deve tratar (mostrar toast).
- */
-export async function resolverCidadeIbge(
-  ibge: CidadeIBGE
-): Promise<Cidade> {
-  const res = await fetch("/api/contatos/cidades/lookup-ibge", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ibgeId: ibge.ibgeId,
-      nome: ibge.nome,
-      uf: ibge.uf,
-    }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
-  }
-  return body.cidade as Cidade;
-}
-
-/**
- * Converte uma `Cidade` (vinda do contexto/banco) na shape de
- * `CidadeIBGE` esperada pelo autocomplete — usado pra pré-popular
- * o campo em forms de edição.
- *
- * Retorna null se a cidade não tem ibgeId (legada/manual antiga).
- */
-export function cidadeParaIbge(cidade: Cidade | null | undefined): CidadeIBGE | null {
-  if (!cidade) return null;
-  if (!cidade.ibgeId) return null;
-  return {
-    ibgeId: cidade.ibgeId,
-    nome: cidade.nome,
-    uf: cidade.estado,
-  };
-}
-
-/**
- * Versão GLOBAL do resolver: lookup-or-create unificado (Brasil via IBGE
+ * Resolver de cidade: lookup-or-create unificado (Brasil via IBGE lookup-or-create unificado (Brasil via IBGE
  * OU mundo via GeoNames). Devolve a cidade do workspace (com UUID).
  * Use no submit dos forms que usam o `CidadeGlobalAutocomplete`.
  */

@@ -545,6 +545,7 @@ function TabelaCidades({
 }) {
   const t = useT();
   const { shows } = useShows();
+  const { casas } = useContatos();
   if (items.length === 0) return <EmptyTable label={t("Nenhuma cidade encontrada")} />;
 
   return (
@@ -564,7 +565,7 @@ function TabelaCidades({
         </thead>
         <tbody>
           {items.map((c) => {
-            const stats = getCidadeStats(c.id, shows);
+            const stats = getCidadeStats(c.id, shows, casas);
             return (
               <tr
                 key={c.id}

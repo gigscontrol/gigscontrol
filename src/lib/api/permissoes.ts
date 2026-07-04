@@ -539,37 +539,6 @@ export function verificarAcessoContatos(
   return null;
 }
 
-export function aplicarFiltroContratantes<Q extends QueryBuilder>(
-  query: Q,
-  sessao: SessaoAutenticada
-): Q {
-  if (
-    temFuncao(sessao, "vendedor") &&
-    !sessao.escopo.verTodosContatos
-  ) {
-    return query.eq("criado_por", sessao.userId) as Q;
-  }
-  return query;
-}
-
-/**
- * Espelha `aplicarFiltroContratantes` para UM contratante (rotas [id]).
- * As listas já respeitam `verTodosContatos`, mas as rotas [id] não re-aplicavam
- * o escopo — permitindo a um vendedor restrito ler/editar/apagar contratante de
- * um colega pelo id (IDOR de escopo). Mantido idêntico ao filtro de lista: se
- * um dia contatos migrar pro modelo novo (contatos.ver_proprios), os dois mudam
- * juntos. Chame SEMPRE após `verificarAcessoContatos` (que já barra artista).
- */
-export function podeVerContratante(
-  sessao: SessaoAutenticada,
-  criadoPor: string | null
-): boolean {
-  if (temFuncao(sessao, "vendedor") && !sessao.escopo.verTodosContatos) {
-    return criadoPor === sessao.userId;
-  }
-  return true;
-}
-
 // ============================================================
 // CONTRATOS — a tabela `contratos` não tem artist_id: o artista é resolvido pela
 // VENDA vinculada (contratos.venda_id → vendas.artist_id). Já o escopo "próprios"
@@ -679,17 +648,6 @@ export function verificarAdminDoWorkspace(
 // está dentro do conjunto de DJs da função do usuário.
 // ============================================================
 
-export function verificarInformarPagamento(
-  sessao: SessaoAutenticada
-): NextResponse | null {
-  if (sessao.papel === "admin") return null;
-  if (temFuncao(sessao, "financeiro")) return null;
-  return NextResponse.json(
-    { erro: "Apenas admin e financeiro podem informar pagamento." },
-    { status: 403 }
-  );
-}
-
 /**
  * Gate financeiro por artista para PATCH de parcela (informar/desfazer
  * pagamento e ajustes). MODELO NOVO: mapeia a ação → chave do catálogo e
@@ -760,7 +718,7 @@ export function podeVerFinanceiro(
  * Confere se a venda dada (pelo seu artist_id) está no escopo da função
  * informada. Usado pra autorizar edição granular de parcelas, vendas, etc.
  */
-export function djAtendidoPor(
+function djAtendidoPor(
   sessao: SessaoAutenticada,
   funcao: "vendedor" | "financeiro" | "produtor",
   artistId: string | null | undefined

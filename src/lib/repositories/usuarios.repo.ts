@@ -118,11 +118,3 @@ export async function restaurarProfile(
   if (error) throw error;
 }
 
-/** Apaga definitivamente — irrecuperável. */
-export async function removerProfileDefinitivamente(
-  supabase: SupabaseClient,
-  id: string
-): Promise<void> {
-  const { error } = await supabase.from("profiles").delete().eq("id", id);
-  if (error) throw error;
-}
