@@ -98,7 +98,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
-    return NextResponse.json({ show });
+    // Redige o cachê/venda na resposta pra quem tem editar mas não ver_detalhado
+    // (senão a resposta do PATCH vaza o que o GET esconde).
+    return NextResponse.json({ show: stripShowDetalhado(show, r.sessao) });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao atualizar show." },

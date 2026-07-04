@@ -9,7 +9,11 @@ import { vendaCreateSchema } from "@/lib/validators/vendas.schema";
 import {
   verificarAcessoVendas,
   verificarCriarVenda,
+  podeConverterOrcamento,
+  podeVerFinanceiro,
 } from "@/lib/api/permissoes";
+import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
+import { buscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
@@ -20,7 +24,13 @@ export async function GET() {
   if (bloqueio) return bloqueio;
   try {
     const vendas = await listarVendasDoWorkspace(r.sessao.supabase, r.sessao);
-    return NextResponse.json({ vendas });
+    // Rastreamento financeiro (comprovante/quem pagou/cobranças) só pra quem tem
+    // autorização de ver o financeiro daquele artista; os demais recebem a venda
+    // redigida (cachê/valores permanecem — o vendedor precisa do negócio).
+    const saida = vendas.map((v) =>
+      podeVerFinanceiro(r.sessao, v.djId || null) ? v : redigirVendaFinanceiro(v)
+    );
+    return NextResponse.json({ vendas: saida });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao listar vendas." },
@@ -54,6 +64,26 @@ export async function POST(request: Request) {
 
   const bloqueio = verificarCriarVenda(r.sessao, parsed.data.artist_id ?? null);
   if (bloqueio) return bloqueio;
+
+  // Conversão de orçamento (orcamento_id presente): criarVendaCompleta marca o
+  // orçamento como aceito e mexe no show dele. Exige a chave `converter` no
+  // artista do ORÇAMENTO e que a venda seja do MESMO artista — senão dá pra
+  // referenciar orçamento de outro artista e mutá-lo (IDOR cross-artista).
+  if (parsed.data.orcamento_id) {
+    const orc = await buscarOrcamento(r.sessao.supabase, parsed.data.orcamento_id);
+    if (!orc)
+      return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
+    if ((parsed.data.artist_id ?? null) !== (orc.artist_id ?? null))
+      return NextResponse.json(
+        { erro: "O artista da venda não confere com o do orçamento." },
+        { status: 400 }
+      );
+    if (!podeConverterOrcamento(r.sessao, orc.artist_id, orc.criado_por))
+      return NextResponse.json(
+        { erro: "Você não tem permissão para converter este orçamento." },
+        { status: 403 }
+      );
+  }
 
   try {
     const venda = await criarVendaCompleta(

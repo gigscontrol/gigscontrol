@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ParcelaMeta } from "@/types";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { atualizarParcelaPorId } from "@/lib/services/vendas.service";
 import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
 import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
@@ -48,31 +49,30 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const venda = await buscarVenda(r.sessao.supabase, parcelaRow.venda_id);
   if (!venda)
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
-  // Cancelar/reativar cachê e cobrança são ações financeiras distintas do
-  // pagar/desfazer, mas mapeiam nas mesmas 3 chaves (registrar/cancelar/editar).
-  const acao: "registrar" | "cancelar" | "editar" =
-    parsed.data.cancelar !== undefined
-      ? "cancelar"
-      : parsed.data.registrar_cobranca
-        ? "registrar"
-        : parsed.data.status_base === "pago"
-          ? "registrar"
-          : parsed.data.status_base === "pendente"
-            ? "cancelar"
-            : "editar";
-  const bloqueio = podeInformarPagamentoParcela(r.sessao, venda.artist_id, acao);
-  if (bloqueio) return bloqueio;
-  // Chaves financeiras são independentes no modelo novo: quem (des)faz o
-  // pagamento não necessariamente pode EDITAR valor/percentual/vencimento.
-  // Se a mesma request também mexe nesses campos, exige TAMBÉM editar_pagamento
-  // (fecha o escalonamento de capacidade dentro do próprio artista).
+  // As 3 chaves financeiras são INDEPENDENTES. O body pode disparar VÁRIOS
+  // efeitos ao mesmo tempo, então derivamos o CONJUNTO de ações exigidas e
+  // checamos CADA uma — senão uma combinação de flags escala entre as chaves
+  // (ex.: quem só registra mandar status_base:'pendente' desfazia o pagamento).
   const editaEstrutura =
     parsed.data.percentual !== undefined ||
     parsed.data.valor !== undefined ||
     parsed.data.data_vencimento !== undefined;
-  if (editaEstrutura && acao !== "editar") {
-    const bloqEdicao = podeInformarPagamentoParcela(r.sessao, venda.artist_id, "editar");
-    if (bloqEdicao) return bloqEdicao;
+  const requeridas = new Set<"registrar" | "cancelar" | "editar">();
+  if (parsed.data.status_base === "pago") requeridas.add("registrar");
+  if (parsed.data.status_base === "pendente") requeridas.add("cancelar"); // desfazer
+  if (parsed.data.cancelar !== undefined) requeridas.add("cancelar"); // cancelar/reativar
+  if (parsed.data.registrar_cobranca === true) requeridas.add("registrar");
+  if (editaEstrutura) requeridas.add("editar");
+  if (
+    parsed.data.nota_pagamento !== undefined &&
+    parsed.data.status_base === undefined &&
+    parsed.data.cancelar === undefined
+  )
+    requeridas.add("editar"); // só nota, sem mudar status → edição
+  if (requeridas.size === 0) requeridas.add("editar");
+  for (const acao of requeridas) {
+    const bloqueio = podeInformarPagamentoParcela(r.sessao, venda.artist_id, acao);
+    if (bloqueio) return bloqueio;
   }
 
   // Computa a nova `meta` (pagamento/cancelamento/cobrança) a partir da atual +
@@ -81,6 +81,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const agora = new Date().toISOString();
   const metaAtual: ParcelaMeta = parcelaRow.meta ?? {};
   let meta: ParcelaMeta | undefined;
+  let comprovanteOrfao: string | undefined; // path a apagar do bucket após o update
   const base = () => meta ?? metaAtual;
 
   if (parsed.data.status_base === "pago") {
@@ -98,6 +99,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     };
   } else if (parsed.data.status_base === "pendente") {
     meta = { ...base(), pagamento: undefined }; // desfazer → limpa info do pagamento
+    comprovanteOrfao = metaAtual.pagamento?.comprovantePath; // apaga do bucket depois
   } else if (parsed.data.nota_pagamento !== undefined) {
     meta = {
       ...base(),
@@ -173,6 +175,14 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         entidadeNome: nome,
         descricao: `Registrou uma cobrança da parcela (${parcela.percentual}%)`,
       });
+    }
+    // Desfazer pagamento limpa a meta; apaga o comprovante órfão do bucket
+    // privado (best-effort, service-role) pra não deixar lixo/PII pra trás.
+    if (comprovanteOrfao) {
+      await criarClienteAdmin()
+        .storage.from("comprovantes")
+        .remove([comprovanteOrfao])
+        .catch(() => undefined);
     }
     return NextResponse.json({ parcela });
   } catch (e) {

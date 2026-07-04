@@ -10,6 +10,7 @@ import {
   podeCriarAgenda,
   podeEditarAgenda,
   podeExcluirAgenda,
+  stripAgendaItemDetalhado,
 } from "@/lib/api/permissoes";
 
 type RouteCtx = { params: { id: string } };
@@ -62,7 +63,13 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       params.id,
       parsed.data
     );
-    return NextResponse.json({ item });
+    // Redige voo/observações na resposta pra quem tem editar mas não
+    // ver_detalhado (senão o PATCH vaza o que a lista/GET escondem). O artist_id
+    // de destino pode ter mudado — usa o do payload quando presente.
+    const artistId = parsed.data.artist_id !== undefined
+      ? parsed.data.artist_id ?? null
+      : row.artist_id;
+    return NextResponse.json({ item: stripAgendaItemDetalhado(item, r.sessao, artistId) });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao atualizar item." },

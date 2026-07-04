@@ -8,6 +8,7 @@ import {
   UsernameEmUsoError,
   ArtistaNaLixeiraError,
 } from "@/lib/services/artistas.service";
+import { redigirDj } from "@/lib/mappers/artista";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -17,7 +18,18 @@ export async function GET() {
   if ("response" in r) return r.response;
   try {
     const artistas = await listarArtistasDoWorkspace(r.sessao.supabase, r.sessao.workspaceId);
-    return NextResponse.json({ artistas });
+    // Admin/super veem tudo. Demais (operacional/artista) recebem a lista
+    // REDIGIDA — sem PII pessoal/legal nem a taxa da agência. O artista vê o
+    // PRÓPRIO cadastro completo (precisa dos próprios dados).
+    const podeTudo = r.sessao.isSuperAdmin || r.sessao.papel === "admin";
+    const saida = podeTudo
+      ? artistas
+      : artistas.map((dj) =>
+          r.sessao.papel === "artista" && dj.id === r.sessao.artistaId
+            ? dj
+            : redigirDj(dj)
+        );
+    return NextResponse.json({ artistas: saida });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao listar artistas." },

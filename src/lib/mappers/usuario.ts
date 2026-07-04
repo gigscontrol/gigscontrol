@@ -151,6 +151,26 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   return u;
 }
 
+/**
+ * Redige a PII do roster de equipe para quem NÃO é admin. Mantém só o que
+ * displays de atribuição precisam (id/nome/papel/ativo/cor); zera e-mail,
+ * documento, telefone, endereço, funções etc. O GET /api/usuarios não é
+ * admin-gated, então sem isso vaza a PII da equipe inteira.
+ */
+export function redigirUsuario(u: UsuarioEquipe): UsuarioEquipe {
+  return {
+    id: u.id,
+    nome: u.nome,
+    email: "",
+    username: null,
+    papel: u.papel,
+    escopo: u.escopo,
+    funcoes: {},
+    ativo: u.ativo,
+    ...(u.cor ? { cor: u.cor } : {}),
+  };
+}
+
 export type UsuarioEscrita = {
   workspace_id?: string;
   nome?: string;

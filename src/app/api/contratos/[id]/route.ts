@@ -10,6 +10,7 @@ import {
   podeVerContrato,
   podeEditarContrato,
   podeExcluirContrato,
+  verificarCriarContrato,
 } from "@/lib/api/permissoes";
 import { contratoUpdateSchema } from "@/lib/validators/contratos.schema";
 
@@ -77,6 +78,20 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         { erro: "Contrato não encontrado." },
         { status: 404 }
       );
+    // IDOR de destino: re-apontar o contrato para OUTRA venda (logo, outro
+    // artista) exige permissão no DESTINO também — senão daria pra plugar o
+    // contrato numa venda de um artista sem vínculo. Espelha vendas/orcamentos/[id].
+    if (
+      parsed.data.venda_id !== undefined &&
+      (parsed.data.venda_id ?? null) !== (existente.vendaId ?? null)
+    ) {
+      const { artistId: artistDestino } = await resolverEscopoContrato(
+        r.sessao.supabase,
+        parsed.data.venda_id ?? null
+      );
+      const bloqDestino = verificarCriarContrato(r.sessao, artistDestino);
+      if (bloqDestino) return bloqDestino;
+    }
     const contrato = await atualizarContratoPorId(
       r.sessao.supabase,
       params.id,

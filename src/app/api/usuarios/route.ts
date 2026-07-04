@@ -7,8 +7,10 @@ import {
   criarUsuarioDaEquipe,
   LimitePlanoEquipeError,
   UsernameEmUsoError,
+  ArtistaForaDoWorkspaceError,
 } from "@/lib/services/usuarios.service";
 import { usuarioCreateSchema } from "@/lib/validators/usuarios.schema";
+import { redigirUsuario } from "@/lib/mappers/usuario";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
@@ -20,7 +22,11 @@ export async function GET() {
       r.sessao.supabase,
       r.sessao.workspaceId
     );
-    return NextResponse.json({ usuarios });
+    // Só o admin vê o roster completo (PII). Demais recebem o mínimo pra
+    // atribuição (id/nome/papel/cor).
+    const podeTudo = r.sessao.isSuperAdmin || r.sessao.papel === "admin";
+    const saida = podeTudo ? usuarios : usuarios.map(redigirUsuario);
+    return NextResponse.json({ usuarios: saida });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao listar usuários." },
@@ -83,6 +89,9 @@ export async function POST(request: Request) {
   } catch (e) {
     if (e instanceof LimitePlanoEquipeError || e instanceof UsernameEmUsoError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
+    if (e instanceof ArtistaForaDoWorkspaceError) {
+      return NextResponse.json({ erro: e.message }, { status: 400 });
     }
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao criar usuário." },

@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ParcelaMeta } from "@/types";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
+import { podeInformarPagamentoParcela, podeVerFinanceiro } from "@/lib/api/permissoes";
 import { buscarParcela, atualizarParcelaRow } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
 import { vendaVisivelParaSessao } from "@/lib/services/vendas.service";
@@ -101,6 +101,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
   if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, c.venda.id)))
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
+  // Comprovante = documento bancário sensível: além de enxergar a venda, exige
+  // autorização de VER o financeiro deste artista (privacidade/financeiro.ver).
+  if (!podeVerFinanceiro(r.sessao, c.venda.artist_id))
+    return NextResponse.json(
+      { erro: "Sem permissão para ver o financeiro deste artista." },
+      { status: 403 }
+    );
 
   const path = c.parcela.meta?.pagamento?.comprovantePath;
   if (!path) return NextResponse.json({ url: null });

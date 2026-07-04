@@ -12,7 +12,9 @@ import {
   podeEditarVenda,
   podeExcluirVenda,
   verificarCriarVenda,
+  podeVerFinanceiro,
 } from "@/lib/api/permissoes";
+import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
@@ -30,7 +32,10 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // Escopo por artista: 404 (não vaza) se a venda está fora do que a sessão vê.
     if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
-    return NextResponse.json({ venda });
+    const saida = podeVerFinanceiro(r.sessao, venda.djId || null)
+      ? venda
+      : redigirVendaFinanceiro(venda);
+    return NextResponse.json({ venda: saida });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao buscar venda." },
