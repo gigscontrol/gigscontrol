@@ -17,7 +17,7 @@
  * funcoes + escopo) — assim o app se comporta EXATAMENTE como hoje até a virada.
  */
 
-import type { Papel } from "@/lib/permissoes";
+import { PRIVACIDADE_DJ_PADRAO, type Papel, type PrivacidadeDj } from "@/lib/permissoes";
 import type { Funcoes } from "@/lib/mappers/usuario";
 import type { EscopoSessao } from "@/lib/api/session";
 
@@ -26,6 +26,12 @@ export type CtxPermissao = {
   papel: Papel;
   /** Artista dono, quando papel === "artista". */
   artistaId: string | null;
+  /**
+   * Privacidade do artista (papel === "artista"): o que o admin AUTORIZOU o
+   * artista a ver/fazer no próprio espaço. `undefined` → usa o padrão seguro
+   * (PRIVACIDADE_DJ_PADRAO: vê o próprio, NÃO muta nada).
+   */
+  privacidade?: PrivacidadeDj;
   /**
    * Vínculos por artista → chaves de permissão concedidas.
    * `undefined` = ainda não carregado → usa o fallback legado.
@@ -72,15 +78,47 @@ function fallbackLegado(ctx: CtxPermissao, artistaId: string, chave: string): bo
 }
 
 /**
+ * O que o ARTISTA pode fazer no PRÓPRIO espaço, governado pela privacidade que
+ * o admin configurou (artists.privacidade). LEITURA por padrão liberada; toda
+ * MUTAÇÃO exige um switch explícito ("só se autorizado"). Sem privacidade
+ * carregada → PRIVACIDADE_DJ_PADRAO (vê o próprio, não muta).
+ */
+function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
+  const [modulo, ...rest] = chave.split(".");
+  const acao = rest.join(".");
+  const ehLeitura = acao.startsWith("ver");
+  switch (modulo) {
+    case "agenda":
+      // Vê a própria agenda (e detalhes/cachê). NÃO cria/edita/exclui show —
+      // a privacidade não expõe esse controle, então fica read-only.
+      return ehLeitura;
+    case "vendas":
+      if (ehLeitura) return priv.vendasVer || priv.orcamentosVer;
+      if (acao.includes("orcamento")) return priv.orcamentosCriar;
+      return priv.vendasCriar; // criar/editar/excluir_venda + converter
+    case "financeiro":
+      if (ehLeitura) return priv.financeiroVer;
+      return priv.financeiroInformar; // registrar/cancelar/editar_pagamento
+    case "contratos":
+      if (ehLeitura) return priv.contratosVer;
+      return priv.contratosCriar; // criar/editar/excluir
+    case "contatos":
+    case "agencia":
+    default:
+      return false; // artista nunca acessa contatos/agência por aqui
+  }
+}
+
+/**
  * O usuário PODE fazer `chave` no `artistaId`?
  */
 export function pode(ctx: CtxPermissao, artistaId: string | null, chave: string): boolean {
   if (ctx.isSuperAdmin || ctx.papel === "admin") return true;
 
   if (ctx.papel === "artista") {
-    // Dono vê/opera o próprio artista. (Refino por artists.privacidade fica
-    // pra Fase 3; hoje o artista já é escopado ao próprio.)
-    return !!artistaId && artistaId === ctx.artistaId;
+    // Só o próprio artista, e só o que a privacidade (config do admin) autoriza.
+    if (!artistaId || artistaId !== ctx.artistaId) return false;
+    return podeArtista(ctx.privacidade ?? PRIVACIDADE_DJ_PADRAO, chave);
   }
 
   if (!artistaId) return false;
@@ -102,7 +140,15 @@ export function artistasVisiveis(
   chave?: string
 ): "todos" | string[] {
   if (ctx.isSuperAdmin || ctx.papel === "admin") return "todos";
-  if (ctx.papel === "artista") return ctx.artistaId ? [ctx.artistaId] : [];
+  if (ctx.papel === "artista") {
+    if (!ctx.artistaId) return [];
+    // Se uma chave de leitura foi exigida e a privacidade nega esse módulo,
+    // o artista não alcança nem o próprio (filtro de leitura devolve zero).
+    if (chave && !podeArtista(ctx.privacidade ?? PRIVACIDADE_DJ_PADRAO, chave)) {
+      return [];
+    }
+    return [ctx.artistaId];
+  }
 
   if (ctx.vinculos) {
     return Object.keys(ctx.vinculos).filter(
@@ -126,11 +172,13 @@ export function ctxDaSessao(sessao: {
   funcoes: Funcoes;
   escopo: EscopoSessao;
   vinculos?: Record<string, string[]>;
+  privacidade?: PrivacidadeDj;
 }): CtxPermissao {
   return {
     isSuperAdmin: sessao.isSuperAdmin,
     papel: sessao.papel,
     artistaId: sessao.artistaId,
+    privacidade: sessao.privacidade,
     vinculos: sessao.vinculos,
     funcoes: sessao.funcoes,
     escopo: sessao.escopo,

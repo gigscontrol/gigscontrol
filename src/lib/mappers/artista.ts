@@ -113,6 +113,25 @@ export function rowParaDj(row: ArtistaRow): DJ {
   return dj;
 }
 
+/**
+ * Redige a PII pessoal/legal e a taxa (fee da agência) de um artista para
+ * quem NÃO é admin. Mantém o operacional (nome, cor, cidade, riders, username,
+ * privacidade). Usado no GET /api/artistas — a lista é carregada por QUALQUER
+ * usuário logado (workspace-context), então não pode vazar CPF/endereço/telefone
+ * /razão social nem o fee de todos os artistas.
+ */
+export function redigirDj(dj: DJ): DJ {
+  const limpo: DJ = { ...dj, taxaModo: "sem-taxa" };
+  delete limpo.taxaValor;
+  delete limpo.nomeLegal;
+  delete limpo.documentoTipo;
+  delete limpo.documento;
+  delete limpo.razaoSocial;
+  delete limpo.endereco;
+  delete limpo.telefone;
+  return limpo;
+}
+
 export type ArtistaEscrita = {
   workspace_id?: string;
   nome?: string;

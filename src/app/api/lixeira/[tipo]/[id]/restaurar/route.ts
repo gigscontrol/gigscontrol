@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import {
@@ -51,6 +52,9 @@ const META_POR_TIPO: Record<TipoLixeira, { tabela: string; colNome: string }> = 
 export async function POST(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
+  // Admin-only: restaurar desfaz exclusões que SÃO gated nas rotas vivas.
+  const g = verificarAdminDoWorkspace(r.sessao);
+  if (g) return g;
 
   if (!TIPOS_VALIDOS.includes(params.tipo as TipoLixeira)) {
     return NextResponse.json(

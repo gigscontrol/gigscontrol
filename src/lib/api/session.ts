@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
-import type { Papel } from "@/lib/permissoes";
+import type { Papel, PrivacidadeDj } from "@/lib/permissoes";
 import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
+import { privacidadeValida } from "@/lib/mappers/artista";
 import { workspaceBloqueado } from "@/lib/acesso";
 import { listarVinculosDoUsuario, mapaDeVinculos } from "@/lib/repositories/membrosArtista.repo";
 
@@ -46,6 +47,11 @@ export type SessaoAutenticada = {
    * operacionais (admin/artista/super são resolvidos sem consultar vínculo).
    */
   vinculos?: Record<string, string[]>;
+  /**
+   * Privacidade do artista (papel === "artista"): o que o admin autorizou o
+   * artista a ver/fazer. Governa o motor no papel artista.
+   */
+  privacidade?: PrivacidadeDj;
 };
 
 function normalizarEscopo(raw: unknown): EscopoSessao {
@@ -128,10 +134,19 @@ export async function autenticar(): Promise<
     };
   }
 
-  // Modelo novo (Fase 4): carrega os vínculos por artista para papéis
-  // operacionais. admin/artista/super são resolvidos pelo motor sem consultar
-  // vínculo, então economizamos a query. Falha ou zero vínculos → deixa
-  // `undefined` (motor usa o fallback legado), pra não trancar ninguém.
+  const funcoes = funcoesValido(
+    (profile.funcoes ?? null) as Record<string, unknown> | null
+  );
+
+  // Modelo novo (Fase 4) — semântica que FECHA o fail-open (revogar tudo TRANCA):
+  //  - TEM vínculo(s) em membros_artista → SEMPRE modelo novo, inclusive com
+  //    permissões vazias (= trancado). Não recai no legado permissivo.
+  //  - SEM nenhum vínculo → distingue:
+  //      • legado GENUÍNO (usuário anterior ao rework, com profiles.funcoes) →
+  //        `undefined` mantém o comportamento antigo na transição;
+  //      • usuário do MODELO NOVO ainda sem artista (funcoes vazio) → `{}`
+  //        (definido e vazio) → o motor NEGA tudo até o admin conceder.
+  // admin/artista/super são resolvidos pelo motor sem consultar vínculo.
   let vinculos: Record<string, string[]> | undefined;
   if (
     !profile.is_super_admin &&
@@ -141,20 +156,29 @@ export async function autenticar(): Promise<
     try {
       const rows = await listarVinculosDoUsuario(supabase, profile.id);
       if (rows.length > 0) {
-        // Vínculo com permissões VAZIAS não conta como "modelo novo": senão um
-        // usuário recém-criado (que nasce com vínculos vazios por artista, só
-        // marcando "com quais artistas trabalha") ficaria TRANCADO em tudo em
-        // vez de cair no fallback legado. Só entra no modelo novo quem tem ao
-        // menos 1 permissão em algum artista.
-        const mapa = mapaDeVinculos(rows);
-        const comPerms: Record<string, string[]> = {};
-        for (const [artistId, chaves] of Object.entries(mapa)) {
-          if (chaves.length > 0) comPerms[artistId] = chaves;
-        }
-        if (Object.keys(comPerms).length > 0) vinculos = comPerms;
+        vinculos = mapaDeVinculos(rows);
+      } else {
+        vinculos = Object.keys(funcoes).length > 0 ? undefined : {};
       }
     } catch {
-      vinculos = undefined;
+      vinculos = undefined; // erro de carga → não tranca ninguém (legado seguro)
+    }
+  }
+
+  // Privacidade do artista: o que o admin autorizou. Só o papel artista precisa
+  // (governa o motor no próprio espaço). Falha → padrão seguro (vê o próprio,
+  // não muta) é aplicado pelo resolver quando `privacidade` fica undefined.
+  let privacidade: PrivacidadeDj | undefined;
+  if (profile.papel === "artista" && profile.artista_id) {
+    try {
+      const { data: art } = await supabase
+        .from("artists")
+        .select("privacidade")
+        .eq("id", profile.artista_id)
+        .maybeSingle<{ privacidade: unknown }>();
+      privacidade = privacidadeValida(art?.privacidade ?? null);
+    } catch {
+      privacidade = undefined;
     }
   }
 
@@ -169,10 +193,9 @@ export async function autenticar(): Promise<
       papel: profile.papel,
       artistaId: profile.artista_id,
       escopo: normalizarEscopo(profile.escopo),
-      funcoes: funcoesValido(
-        (profile.funcoes ?? null) as Record<string, unknown> | null
-      ),
+      funcoes,
       vinculos,
+      privacidade,
     },
   };
 }

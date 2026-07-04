@@ -354,7 +354,15 @@ export function podeEditarOrcamento(
   criadoPor: string | null
 ): boolean {
   if (!usarLegado(sessao)) {
-    return podeNaSessao(sessao, artistId, "vendas.editar_orcamento");
+    // Respeita próprios × todos (igual editar_venda): sem `editar_todos`, só
+    // edita os PRÓPRIOS orçamentos (fecha editar por id o de um colega).
+    return podeMutar(
+      sessao,
+      artistId,
+      criadoPor,
+      "vendas.editar_orcamento",
+      "vendas.editar_todos"
+    );
   }
   return vendaLegadoPodeMutar(sessao, criadoPor);
 }
@@ -365,7 +373,13 @@ export function podeExcluirOrcamento(
   criadoPor: string | null
 ): boolean {
   if (!usarLegado(sessao)) {
-    return podeNaSessao(sessao, artistId, "vendas.excluir_orcamento");
+    return podeMutar(
+      sessao,
+      artistId,
+      criadoPor,
+      "vendas.excluir_orcamento",
+      "vendas.editar_todos"
+    );
   }
   return vendaLegadoPodeMutar(sessao, criadoPor);
 }
@@ -492,7 +506,15 @@ export function podeExcluirVenda(
   criadoPor: string | null
 ): boolean {
   if (!usarLegado(sessao)) {
-    return podeNaSessao(sessao, artistId, "vendas.excluir_venda");
+    // Próprios × todos (consistente com editar_venda): sem `editar_todos`, só
+    // exclui as PRÓPRIAS vendas.
+    return podeMutar(
+      sessao,
+      artistId,
+      criadoPor,
+      "vendas.excluir_venda",
+      "vendas.editar_todos"
+    );
   }
   return vendaLegadoPodeMutar(sessao, criadoPor);
 }
@@ -707,6 +729,31 @@ export function podeInformarPagamentoParcela(
     { erro: "Você não tem permissão para alterar pagamentos deste artista." },
     { status: 403 }
   );
+}
+
+/**
+ * Pode VER dados financeiros sensíveis deste artista (comprovante bancário)?
+ * MODELO NOVO/artista: qualquer chave financeira de leitura OU de pagamento
+ * no artista (privacidade.financeiroVer/Informar no papel artista). LEGADO:
+ * admin OU função financeiro no DJ. Gate do comprovante além do "enxerga a
+ * venda" — só quem tem autorização de financeiro vê o documento.
+ */
+export function podeVerFinanceiro(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  if (!usarLegado(sessao)) {
+    return (
+      podeNaSessao(sessao, artistId, "financeiro.ver") ||
+      podeNaSessao(sessao, artistId, "financeiro.ver_pagamentos") ||
+      podeNaSessao(sessao, artistId, "financeiro.ver_caches") ||
+      podeNaSessao(sessao, artistId, "financeiro.registrar_pagamento") ||
+      podeNaSessao(sessao, artistId, "financeiro.editar_pagamento")
+    );
+  }
+  // legado: admin já retornou; aqui exige função financeiro no DJ da venda.
+  return temFuncao(sessao, "financeiro") && djAtendidoPor(sessao, "financeiro", artistId);
 }
 
 /**
