@@ -46,6 +46,13 @@ export type Sessao = {
    */
   vinculos?: Record<string, string[]>;
   /**
+   * Operacional LEGADO genuíno = sem vínculos MAS com `profiles.funcoes`
+   * preenchido (usuário anterior ao rework). Distingue, no grey-out, "legado
+   * (mostra tudo)" de "modelo novo sem permissão (cinza tudo)" — espelhando a
+   * semântica do session.ts no servidor.
+   */
+  temFuncoesLegado?: boolean;
+  /**
    * Quando true, o super-admin está visualizando a dashboard de um cliente
    * em modo somente-leitura — nenhuma ação de escrita é permitida.
    */
@@ -99,6 +106,7 @@ type ProfileRow = {
   is_super_admin: boolean;
   artista_id: string | null;
   escopo_vendedor: Usuario["escopoVendedor"] | null;
+  funcoes: Record<string, unknown> | null;
   status: string;
   deletado_em: string | null;
 };
@@ -200,7 +208,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return { tipo, usuario, workspace, vinculos };
+      // Legado genuíno = tem funcoes preenchido (usado no grey-out pra não
+      // cinza-ar quem é legado nem liberar quem é modelo-novo-trancado).
+      const temFuncoesLegado =
+        !!profile.funcoes &&
+        typeof profile.funcoes === "object" &&
+        Object.keys(profile.funcoes).length > 0;
+
+      return { tipo, usuario, workspace, vinculos, temFuncoesLegado };
     },
     [supabase]
   );
@@ -352,10 +367,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const papel = sessao.usuario.papel;
         const temVinculos =
           !!sessao.vinculos && Object.keys(sessao.vinculos).length > 0;
-        // Operacional LEGADO (não-admin, não-artista, sem vínculo) → mostra tudo:
-        // ele tem acesso via legado no servidor e o cliente não carrega
-        // funcoes/escopo pra reproduzir isso. Cinza só pro modelo novo.
-        if (papel !== "admin" && papel !== "artista" && !temVinculos) return true;
+        // Operacional sem vínculo: espelha o servidor (session.ts). LEGADO
+        // genuíno (tem funcoes) → mostra tudo (o cliente não reproduz o legado
+        // fino); MODELO NOVO trancado (sem funcoes) → cinza tudo (o servidor
+        // nega). Antes retornava sempre `true` e mentia pro usuário novo.
+        if (papel !== "admin" && papel !== "artista" && !temVinculos) {
+          return sessao.temFuncoesLegado ?? false;
+        }
         const ctx: CtxPermissao = {
           isSuperAdmin: sessao.tipo === "super-admin",
           papel,
