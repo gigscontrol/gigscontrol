@@ -11,6 +11,7 @@ import {
   verificarAcessoOrcamentos,
   podeEditarOrcamento,
   podeExcluirOrcamento,
+  verificarCriarOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -68,6 +69,16 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  // IDOR de destino: mover o orçamento para OUTRO artista exige permissão de
+  // criação no DESTINO (mesmo padrão de shows/[id], vendas/[id]).
+  if (
+    parsed.data.artist_id !== undefined &&
+    (parsed.data.artist_id ?? null) !== row.artist_id
+  ) {
+    const bloqDestino = verificarCriarOrcamento(r.sessao, parsed.data.artist_id ?? null);
+    if (bloqDestino) return bloqDestino;
   }
 
   try {

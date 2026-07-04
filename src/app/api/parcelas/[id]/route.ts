@@ -94,27 +94,16 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         ...(parsed.data.nota_pagamento !== undefined
           ? { nota: parsed.data.nota_pagamento ?? undefined }
           : {}),
-        ...(parsed.data.comprovante_path !== undefined
-          ? { comprovantePath: parsed.data.comprovante_path ?? undefined }
-          : {}),
       },
     };
   } else if (parsed.data.status_base === "pendente") {
     meta = { ...base(), pagamento: undefined }; // desfazer → limpa info do pagamento
-  } else if (
-    parsed.data.nota_pagamento !== undefined ||
-    parsed.data.comprovante_path !== undefined
-  ) {
+  } else if (parsed.data.nota_pagamento !== undefined) {
     meta = {
       ...base(),
       pagamento: {
         ...(metaAtual.pagamento ?? {}),
-        ...(parsed.data.nota_pagamento !== undefined
-          ? { nota: parsed.data.nota_pagamento ?? undefined }
-          : {}),
-        ...(parsed.data.comprovante_path !== undefined
-          ? { comprovantePath: parsed.data.comprovante_path ?? undefined }
-          : {}),
+        nota: parsed.data.nota_pagamento ?? undefined,
       },
     };
   }

@@ -104,6 +104,11 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 
   const path = c.parcela.meta?.pagamento?.comprovantePath;
   if (!path) return NextResponse.json({ url: null });
+  // Defense-in-depth: só assina paths namespaceados por ESTE workspace + parcela.
+  // O upload sempre grava `${workspaceId}/${id}/…`; recusar qualquer outro path
+  // impede que uma meta injetada/corrompida vaze comprovante de outro tenant.
+  const prefixo = `${r.sessao.workspaceId}/${params.id}/`;
+  if (!path.startsWith(prefixo)) return NextResponse.json({ url: null });
   const admin = criarClienteAdmin();
   const { data } = await admin.storage.from(BUCKET).createSignedUrl(path, 300);
   return NextResponse.json({ url: data?.signedUrl ?? null });

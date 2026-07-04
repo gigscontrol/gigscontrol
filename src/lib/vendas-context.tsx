@@ -209,13 +209,27 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
         if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
         if (Object.keys(patch).length > 0) {
-          const atual = await updateContratante(contratanteId, patch);
-          contratanteSnapshot = {
-            nome: atual.nome ?? "",
-            email: atual.email ?? "",
-            telefone: atual.telefone ?? "",
-            documento: atual.documento ?? "",
-          };
+          try {
+            const atual = await updateContratante(contratanteId, patch);
+            contratanteSnapshot = {
+              nome: atual.nome ?? "",
+              email: atual.email ?? "",
+              telefone: atual.telefone ?? "",
+              documento: atual.documento ?? "",
+            };
+          } catch {
+            // Contato existente porém OCULTO para este usuário (visibilidade
+            // derivada) → o PATCH de dados retorna 404. Reusar mesmo assim é o
+            // objetivo do fluxo "já existe, quer usar?": segue com o
+            // contratante_id (a própria venda cria a visibilidade derivada) e
+            // monta o snapshot a partir do que a pessoa digitou.
+            contratanteSnapshot = {
+              nome: patch.nome ?? "",
+              email: patch.email ?? "",
+              telefone: patch.telefone ?? "",
+              documento: patch.documento ?? "",
+            };
+          }
         }
       } else {
         const novo = await addContratante({

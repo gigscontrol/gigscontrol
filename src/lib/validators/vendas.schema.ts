@@ -94,8 +94,11 @@ export const parcelaUpdateSchema = z.object({
   // partir destes campos + a sessão (quem/quando).
   /** Nota/forma do pagamento ("dinheiro pessoalmente", "PIX", "WhatsApp"…). */
   nota_pagamento: z.string().max(500).nullable().optional(),
-  /** Path do comprovante no bucket (normalmente setado pelo upload). */
-  comprovante_path: z.string().max(300).nullable().optional(),
+  // NOTA: `comprovante_path` foi REMOVIDO de propósito. O path do comprovante é
+  // gravado EXCLUSIVAMENTE pelo POST /api/parcelas/[id]/comprovante, que compõe
+  // o path server-side (`${workspaceId}/${id}/…`). Aceitar path do cliente aqui
+  // permitia injetar um path de outra parcela/artista/tenant e vazar o
+  // comprovante alheio pela URL assinada (IDOR).
   /** true = cancelar (baixar/isentar) o cachê; false = reativar. */
   cancelar: z.boolean().optional(),
   /** Obrigatório quando cancelar=true. */

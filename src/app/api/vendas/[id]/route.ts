@@ -11,6 +11,7 @@ import {
   verificarAcessoVendas,
   podeEditarVenda,
   podeExcluirVenda,
+  verificarCriarVenda,
 } from "@/lib/api/permissoes";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -67,6 +68,17 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  // IDOR de destino: se o PATCH move a venda (e o cachê/parcelas) para OUTRO
+  // artista, exige permissão de criação no DESTINO — senão daria pra empurrar a
+  // venda pra dentro de um artista sem vínculo. Espelha shows/[id] e agenda-items/[id].
+  if (
+    parsed.data.artist_id !== undefined &&
+    (parsed.data.artist_id ?? null) !== row.artist_id
+  ) {
+    const bloqDestino = verificarCriarVenda(r.sessao, parsed.data.artist_id ?? null);
+    if (bloqDestino) return bloqDestino;
   }
 
   try {
