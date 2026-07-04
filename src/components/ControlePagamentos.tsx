@@ -8,13 +8,16 @@ import {
   AlertTriangle,
   Wallet,
   CalendarClock,
-  Undo2,
   DollarSign,
+  Ban,
+  BellRing,
+  Paperclip,
+  ChevronRight,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import ParcelaDetalheModal from "./ParcelaDetalheModal";
 import { useVendas } from "@/lib/vendas-context";
-import { useAuth } from "@/lib/auth-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
@@ -40,17 +43,22 @@ type LinhaParcela = {
   status: StatusParcela;
 };
 
+function fmtData(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
+}
+
 export default function ControlePagamentos() {
   const t = useT();
   const accent = "var(--brand)";
-  const { vendas, atualizarParcela } = useVendas();
-  const { modoVisitante, podeUI } = useAuth();
+  const { vendas } = useVendas();
   const artistas = useArtistas();
 
   const [search, setSearch] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
+  const [detalhe, setDetalhe] = useState<{ vendaId: string; parcelaId: string } | null>(null);
 
-  // Achata todas as parcelas de todas as vendas
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendas) {
@@ -71,7 +79,6 @@ export default function ControlePagamentos() {
         });
       });
     }
-    // Ordena por data de vencimento
     return linhas.sort(
       (a, b) =>
         new Date(a.parcela.dataVencimento).getTime() -
@@ -79,12 +86,13 @@ export default function ControlePagamentos() {
     );
   }, [vendas, artistas]);
 
-  // Totais
+  // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado.
   const totais = useMemo(() => {
     let recebido = 0;
     let aReceber = 0;
     let atrasado = 0;
     for (const l of todasParcelas) {
+      if (l.status === "cancelado") continue;
       if (l.status === "pago") recebido += l.parcela.valor;
       else if (l.status === "atrasado") atrasado += l.parcela.valor;
       else aReceber += l.parcela.valor;
@@ -92,18 +100,12 @@ export default function ControlePagamentos() {
     return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
   }, [todasParcelas]);
 
-  // Filtro
   const lista = useMemo(() => {
     return todasParcelas.filter((l) => {
       if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        const hay = [
-          l.vendaNumero,
-          l.contratante,
-          l.nomeEvento,
-          l.djNome,
-        ]
+        const hay = [l.vendaNumero, l.contratante, l.nomeEvento, l.djNome]
           .join(" ")
           .toLowerCase();
         if (!hay.includes(q)) return false;
@@ -112,23 +114,8 @@ export default function ControlePagamentos() {
     });
   }, [todasParcelas, filtroStatus, search]);
 
-  function marcarPago(l: LinhaParcela) {
-    const hoje = new Date().toISOString().split("T")[0];
-    atualizarParcela(l.vendaId, l.parcela.id, {
-      statusBase: "pago",
-      dataPagamento: hoje,
-    });
-  }
-
-  function desfazerPago(l: LinhaParcela) {
-    atualizarParcela(l.vendaId, l.parcela.id, {
-      statusBase: "pendente",
-      dataPagamento: undefined,
-    });
-  }
-
   const contadores = useMemo(() => {
-    const c = { pago: 0, pendente: 0, atrasado: 0 };
+    const c = { pago: 0, pendente: 0, atrasado: 0, cancelado: 0 };
     todasParcelas.forEach((l) => c[l.status]++);
     return c;
   }, [todasParcelas]);
@@ -137,41 +124,17 @@ export default function ControlePagamentos() {
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Controle de Pagamentos"
-        subtitle="Todas as parcelas de todas as vendas — datas, valores e status"
+        subtitle="Todas as parcelas de todas as vendas — clique numa parcela para ver detalhes, informar pagamento, cobrar ou cancelar"
         accentColor={accent}
       />
 
-
-      {/* Cards de totais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title={t("Total em vendas")}
-          value={formatBRL(totais.total)}
-          icon={<DollarSign size={18} />}
-          accentColor={accent}
-        />
-        <StatCard
-          title={t("Recebido")}
-          value={formatBRL(totais.recebido)}
-          icon={<CheckCircle2 size={18} />}
-          accentColor="var(--success)"
-        />
-        <StatCard
-          title={t("A receber")}
-          value={formatBRL(totais.aReceber)}
-          icon={<CalendarClock size={18} />}
-          accentColor="var(--warning)"
-        />
-        <StatCard
-          title={t("Atrasado")}
-          value={formatBRL(totais.atrasado)}
-          icon={<AlertTriangle size={18} />}
-          accentColor="var(--danger)"
-        />
-
+        <StatCard title={t("Total em vendas")} value={formatBRL(totais.total)} icon={<DollarSign size={18} />} accentColor={accent} />
+        <StatCard title={t("Recebido")} value={formatBRL(totais.recebido)} icon={<CheckCircle2 size={18} />} accentColor="var(--success)" />
+        <StatCard title={t("A receber")} value={formatBRL(totais.aReceber)} icon={<CalendarClock size={18} />} accentColor="var(--warning)" />
+        <StatCard title={t("Atrasado")} value={formatBRL(totais.atrasado)} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
@@ -185,250 +148,163 @@ export default function ControlePagamentos() {
         </div>
 
         <div className="pill-group">
-          <button
-            type="button"
-            className={`pill ${filtroStatus === "todos" ? "active" : ""}`}
-            onClick={() => setFiltroStatus("todos")}
-          >
+          <button type="button" className={`pill ${filtroStatus === "todos" ? "active" : ""}`} onClick={() => setFiltroStatus("todos")}>
             {t("Todas ({n})", { n: todasParcelas.length })}
           </button>
-          <button
-            type="button"
-            className={`pill ${filtroStatus === "pendente" ? "active" : ""}`}
-            onClick={() => setFiltroStatus("pendente")}
-          >
+          <button type="button" className={`pill ${filtroStatus === "pendente" ? "active" : ""}`} onClick={() => setFiltroStatus("pendente")}>
             <Clock size={11} />
             {t("Pendentes ({n})", { n: contadores.pendente })}
           </button>
-          <button
-            type="button"
-            className={`pill ${filtroStatus === "atrasado" ? "active" : ""}`}
-            onClick={() => setFiltroStatus("atrasado")}
-          >
+          <button type="button" className={`pill ${filtroStatus === "atrasado" ? "active" : ""}`} onClick={() => setFiltroStatus("atrasado")}>
             <AlertTriangle size={11} />
             {t("Atrasadas ({n})", { n: contadores.atrasado })}
           </button>
-          <button
-            type="button"
-            className={`pill ${filtroStatus === "pago" ? "active" : ""}`}
-            onClick={() => setFiltroStatus("pago")}
-          >
+          <button type="button" className={`pill ${filtroStatus === "pago" ? "active" : ""}`} onClick={() => setFiltroStatus("pago")}>
             <CheckCircle2 size={11} />
             {t("Pagas ({n})", { n: contadores.pago })}
           </button>
+          {contadores.cancelado > 0 && (
+            <button type="button" className={`pill ${filtroStatus === "cancelado" ? "active" : ""}`} onClick={() => setFiltroStatus("cancelado")}>
+              <Ban size={11} />
+              {t("Canceladas ({n})", { n: contadores.cancelado })}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Lista */}
-      <div className="card p-0 overflow-hidden">
-        {lista.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
-              <Wallet size={18} className="text-muted" />
-            </div>
-            <div className="section-title mb-1">
-              {todasParcelas.length === 0
-                ? t("Nenhuma parcela registrada")
-                : t("Nenhum resultado")}
-            </div>
-            <div className="section-subtitle">
-              {todasParcelas.length === 0
-                ? t("As parcelas aparecem aqui quando você concretiza uma venda")
-                : t("Ajuste os filtros ou a busca")}
-            </div>
+      {lista.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-16 text-center">
+          <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
+            <Wallet size={18} className="text-muted" />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-2/40">
-                  <Th>{t("Vencimento")}</Th>
-                  <Th>{t("Venda")}</Th>
-                  <Th>{t("Parcela")}</Th>
-                  <Th>{t("Contratante / Evento")}</Th>
-                  <Th>{t("DJ")}</Th>
-                  <Th className="text-right">{t("Valor")}</Th>
-                  <Th>{t("Status")}</Th>
-                  <Th className="w-[1%]"></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.map((l) => {
-                  const st = LABELS_STATUS_PARCELA[l.status];
-                  const venc = new Date(
-                    l.parcela.dataVencimento + "T12:00:00"
-                  );
-                  return (
-                    <tr
-                      key={`${l.vendaId}-${l.parcela.id}`}
-                      className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors"
-                    >
-                      <Td className="tabular-nums whitespace-nowrap">
-                        <div className="font-medium text-primary">
-                          {venc.toLocaleDateString("pt-BR")}
-                        </div>
-                        {l.parcela.dataPagamento && (
-                          <div className="text-[0.7rem] text-success">
-                            {t("pago em")}{" "}
-                            {new Date(
-                              l.parcela.dataPagamento + "T12:00:00"
-                            ).toLocaleDateString("pt-BR")}
-                          </div>
-                        )}
-                      </Td>
-                      <Td className="font-mono text-xs" style={{ color: accent }}>
-                        {l.vendaNumero}
-                      </Td>
-                      <Td className="text-secondary whitespace-nowrap">
-                        {l.indiceParcela}/{l.totalParcelas}
-                        <span className="text-muted text-xs ml-1">
-                          ({l.parcela.percentual.toFixed(0)}%)
-                        </span>
-                      </Td>
-                      <Td className="min-w-[180px]">
-                        <div className="font-medium text-primary truncate max-w-[220px]">
-                          {l.contratante}
-                        </div>
-                        <div className="text-xs text-muted truncate max-w-[220px]">
-                          {l.nomeEvento}
-                        </div>
-                      </Td>
-                      <Td>
-                        <span
-                          className="inline-flex items-center gap-1.5 text-secondary"
-                        >
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: l.djColor }}
-                          />
-                          {l.djNome}
-                        </span>
-                      </Td>
-                      <Td className="text-right tabular-nums font-semibold">
-                        {formatBRL(l.parcela.valor)}
-                      </Td>
-                      <Td>
-                        <span className={`badge ${st.badge}`}>
-                          {l.status === "pago" && <CheckCircle2 size={11} />}
-                          {l.status === "pendente" && <Clock size={11} />}
-                          {l.status === "atrasado" && <AlertTriangle size={11} />}
-                          {t(st.label)}
-                        </span>
-                      </Td>
-                      <Td>
-                        <div className="flex justify-end">
-                          {modoVisitante ? (
-                            <span className="text-xs text-muted">—</span>
-                          ) : l.status === "pago" ? (
-                            (() => {
-                              const podeCancelar = podeUI(
-                                l.djId || null,
-                                "financeiro.cancelar_pagamento"
-                              );
-                              return (
-                                <button
-                                  onClick={() => desfazerPago(l)}
-                                  disabled={!podeCancelar}
-                                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title={
-                                    !podeCancelar
-                                      ? "Você não tem permissão para isso."
-                                      : t("Desfazer pagamento")
-                                  }
-                                >
-                                  <Undo2 size={13} />
-                                  {t("Desfazer")}
-                                </button>
-                              );
-                            })()
-                          ) : (
-                            (() => {
-                              const podeRegistrar = podeUI(
-                                l.djId || null,
-                                "financeiro.registrar_pagamento"
-                              );
-                              return (
-                                <button
-                                  onClick={() => marcarPago(l)}
-                                  disabled={!podeRegistrar}
-                                  className="btn text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title={
-                                    !podeRegistrar
-                                      ? "Você não tem permissão para isso."
-                                      : undefined
-                                  }
-                                  style={{
-                                    backgroundColor: "var(--success)",
-                                    color: "#fff",
-                                  }}
-                                >
-                                  <CheckCircle2 size={13} />
-                                  {t("Informar pagamento")}
-                                </button>
-                              );
-                            })()
-                          )}
-                        </div>
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="section-title mb-1">
+            {todasParcelas.length === 0 ? t("Nenhuma parcela registrada") : t("Nenhum resultado")}
           </div>
-        )}
-      </div>
+          <div className="section-subtitle">
+            {todasParcelas.length === 0
+              ? t("As parcelas aparecem aqui quando você concretiza uma venda")
+              : t("Ajuste os filtros ou a busca")}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {lista.map((l) => (
+            <ParcelaRow
+              key={`${l.vendaId}-${l.parcela.id}`}
+              linha={l}
+              accent={accent}
+              onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+            />
+          ))}
+        </div>
+      )}
 
       {totais.atrasado > 0 && (
-        <div
-          className="mt-4 card flex items-start gap-3"
-          style={{
-            borderColor: "var(--danger)",
-            backgroundColor: "rgba(239,68,68,0.06)",
-          }}
-        >
-          <AlertTriangle
-            size={16}
-            className="flex-shrink-0 mt-0.5"
-            style={{ color: "var(--danger)" }}
-          />
+        <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "rgba(239,68,68,0.06)" }}>
+          <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
           <div className="text-sm text-secondary">
-            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong> {t("em parcelas atrasadas ({n} {parcela}). Filtre por \"Atrasadas\" para ver e cobrar.", { n: contadores.atrasado, parcela: contadores.atrasado === 1 ? t("parcela") : t("parcelas") })}
+            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong>{" "}
+            {t("em parcelas atrasadas ({n} {parcela}). Filtre por \"Atrasadas\" para ver e cobrar.", {
+              n: contadores.atrasado,
+              parcela: contadores.atrasado === 1 ? t("parcela") : t("parcelas"),
+            })}
           </div>
         </div>
       )}
+
+      <ParcelaDetalheModal
+        vendaId={detalhe?.vendaId ?? null}
+        parcelaId={detalhe?.parcelaId ?? null}
+        onClose={() => setDetalhe(null)}
+      />
     </div>
   );
 }
 
-function Th({
-  children,
-  className = "",
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th
-      className={`text-left px-4 py-3 stat-label font-semibold whitespace-nowrap ${className}`}
-    >
-      {children}
-    </th>
-  );
-}
+/* ============================================================ */
 
-function Td({
-  children,
-  className = "",
-  style,
+function ParcelaRow({
+  linha: l,
+  accent,
+  onClick,
 }: {
-  children?: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
+  linha: LinhaParcela;
+  accent: string;
+  onClick: () => void;
 }) {
+  const t = useT();
+  const st = LABELS_STATUS_PARCELA[l.status];
+  const venc = new Date(l.parcela.dataVencimento + "T12:00:00");
+  const meta = l.parcela.meta;
+  const nCobrancas = meta?.cobrancas?.length ?? 0;
+  const temComprovante = !!meta?.pagamento?.comprovantePath;
+
   return (
-    <td className={`px-4 py-3 align-middle ${className}`} style={style}>
-      {children}
-    </td>
+    <button
+      type="button"
+      onClick={onClick}
+      className="card card-interactive w-full text-left flex items-center gap-4 py-3 px-4"
+    >
+      {/* Vencimento */}
+      <div className="tabular-nums whitespace-nowrap min-w-[104px]">
+        <div className="font-semibold text-primary text-sm">{venc.toLocaleDateString("pt-BR")}</div>
+        {l.status === "pago" && l.parcela.dataPagamento ? (
+          <div className="text-[0.7rem] text-success">
+            {t("pago em")} {fmtData(l.parcela.dataPagamento + "T12:00:00")}
+          </div>
+        ) : (
+          <div className="text-[0.7rem] text-muted">
+            {t("parcela {i}/{n}", { i: l.indiceParcela, n: l.totalParcelas })}
+          </div>
+        )}
+      </div>
+
+      {/* Contratante / evento */}
+      <div className="min-w-0 flex-1">
+        <div className="font-medium text-primary truncate">{l.contratante || "—"}</div>
+        <div className="text-xs text-muted truncate">
+          <span className="font-mono" style={{ color: accent }}>{l.vendaNumero}</span>
+          {l.nomeEvento ? ` · ${l.nomeEvento}` : ""}
+        </div>
+      </div>
+
+      {/* DJ */}
+      <div className="hidden md:flex items-center gap-1.5 text-secondary text-sm min-w-0 max-w-[160px]">
+        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.djColor }} />
+        <span className="truncate">{l.djNome}</span>
+      </div>
+
+      {/* Indicadores (cobrança / comprovante) */}
+      <div className="hidden sm:flex items-center gap-2">
+        {nCobrancas > 0 && l.status !== "pago" && l.status !== "cancelado" && (
+          <span
+            className="text-[0.7rem] inline-flex items-center gap-1"
+            style={{ color: "var(--warning)" }}
+            title={t("cobrado {n}x", { n: nCobrancas })}
+          >
+            <BellRing size={11} /> {nCobrancas}
+          </span>
+        )}
+        {temComprovante && <Paperclip size={13} className="text-muted" />}
+      </div>
+
+      {/* Valor */}
+      <div className="text-right tabular-nums font-bold text-primary whitespace-nowrap">
+        {formatBRL(l.parcela.valor)}
+      </div>
+
+      {/* Status */}
+      <div className="min-w-[92px] flex justify-end">
+        <span className={`badge ${st.badge}`}>
+          {l.status === "pago" && <CheckCircle2 size={11} />}
+          {l.status === "pendente" && <Clock size={11} />}
+          {l.status === "atrasado" && <AlertTriangle size={11} />}
+          {l.status === "cancelado" && <Ban size={11} />}
+          {t(st.label)}
+        </span>
+      </div>
+
+      <ChevronRight size={16} className="text-muted flex-shrink-0" />
+    </button>
   );
 }

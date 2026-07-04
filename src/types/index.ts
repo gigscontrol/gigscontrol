@@ -359,7 +359,32 @@ export const LABELS_STATUS_ORCAMENTO: Record<OrcamentoStatus, { label: string; b
 
 // ----------- Pagamentos / Parcelas -----------
 
-export type StatusParcela = "pendente" | "pago" | "atrasado";
+export type StatusParcela = "pendente" | "pago" | "atrasado" | "cancelado";
+
+/**
+ * Metadados ricos da parcela (migração 56, coluna parcelas.meta jsonb).
+ * Preenchidos ao informar pagamento, cancelar, ou registrar cobrança.
+ */
+export type ParcelaMeta = {
+  /** Ao INFORMAR o pagamento. */
+  pagamento?: {
+    pagoPor?: string; // userId de quem informou
+    pagoPorNome?: string; // nome (denormalizado pra exibir)
+    pagoEm?: string; // ISO — quando informou
+    nota?: string; // forma/observação ("dinheiro pessoalmente", "PIX"…)
+    comprovantePath?: string; // path no bucket 'comprovantes'
+  };
+  /** Ao CANCELAR (baixar/isentar) o cachê — sai do "a receber". */
+  cancelamento?: {
+    cancelado: boolean;
+    motivo?: string;
+    canceladoPor?: string;
+    canceladoPorNome?: string;
+    canceladoEm?: string;
+  };
+  /** Log de cobranças enviadas (quantas vezes cobrou e não foi pago). */
+  cobrancas?: { em: string; por?: string; porNome?: string }[];
+};
 
 /**
  * Uma parcela do pagamento de uma venda.
@@ -375,18 +400,24 @@ export type Parcela = {
   statusBase: "pendente" | "pago";
   dataPagamento?: string; // YYYY-MM-DD, preenchido quando marcado pago
   observacao?: string;
+  /** Metadados ricos (pagamento/cancelamento/cobranças) — migração 56. */
+  meta?: ParcelaMeta;
 };
 
 export const LABELS_STATUS_PARCELA: Record<StatusParcela, { label: string; badge: string }> = {
   pendente: { label: "Pendente", badge: "badge-warning" },
   pago: { label: "Pago", badge: "badge-success" },
   atrasado: { label: "Atrasado", badge: "badge-danger" },
+  cancelado: { label: "Cancelado", badge: "badge-neutral" },
 };
 
 /**
- * Calcula o status efetivo de uma parcela (deriva "atrasado").
+ * Calcula o status efetivo de uma parcela. "cancelado" (baixado/isentado) tem
+ * prioridade — sai do fluxo normal e não conta como a receber/atrasado.
+ * "atrasado" é derivado do vencimento.
  */
 export function statusEfetivoParcela(p: Parcela, hoje = new Date()): StatusParcela {
+  if (p.meta?.cancelamento?.cancelado) return "cancelado";
   if (p.statusBase === "pago") return "pago";
   const venc = new Date(p.dataVencimento + "T23:59:59");
   if (venc < hoje) return "atrasado";

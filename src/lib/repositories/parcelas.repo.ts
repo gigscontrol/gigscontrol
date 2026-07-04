@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ParcelaRow, ParcelaEscrita } from "@/lib/mappers/venda";
 
 const COLS =
-  "id, workspace_id, venda_id, percentual, valor, data_vencimento, status_base, data_pagamento, observacao";
+  "id, workspace_id, venda_id, percentual, valor, data_vencimento, status_base, data_pagamento, observacao, meta";
 
 /** Busca uma parcela por id (usada pra resolver a venda/artista no gate). */
 export async function buscarParcela(

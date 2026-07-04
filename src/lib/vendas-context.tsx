@@ -95,6 +95,12 @@ type VendasContextValue = {
     parcelaId: string,
     patch: Partial<Parcela>
   ) => Promise<Parcela>;
+  /** Ação financeira crua (nota/comprovante/cancelar/cobrança). */
+  acaoParcela: (
+    vendaId: string,
+    parcelaId: string,
+    body: Record<string, unknown>
+  ) => Promise<Parcela>;
 };
 
 const VendasContext = createContext<VendasContextValue | null>(null);
@@ -203,13 +209,27 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
         if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
         if (Object.keys(patch).length > 0) {
-          const atual = await updateContratante(contratanteId, patch);
-          contratanteSnapshot = {
-            nome: atual.nome ?? "",
-            email: atual.email ?? "",
-            telefone: atual.telefone ?? "",
-            documento: atual.documento ?? "",
-          };
+          try {
+            const atual = await updateContratante(contratanteId, patch);
+            contratanteSnapshot = {
+              nome: atual.nome ?? "",
+              email: atual.email ?? "",
+              telefone: atual.telefone ?? "",
+              documento: atual.documento ?? "",
+            };
+          } catch {
+            // Contato existente porém OCULTO para este usuário (visibilidade
+            // derivada) → o PATCH de dados retorna 404. Reusar mesmo assim é o
+            // objetivo do fluxo "já existe, quer usar?": segue com o
+            // contratante_id (a própria venda cria a visibilidade derivada) e
+            // monta o snapshot a partir do que a pessoa digitou.
+            contratanteSnapshot = {
+              nome: patch.nome ?? "",
+              email: patch.email ?? "",
+              telefone: patch.telefone ?? "",
+              documento: patch.documento ?? "",
+            };
+          }
         }
       } else {
         const novo = await addContratante({
@@ -345,6 +365,41 @@ export function VendasProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  /**
+   * Ação financeira "crua" na parcela (nota/comprovante/cancelar/cobrança) —
+   * campos que não são do tipo Parcela e vão direto pro PATCH. Reaproveita a
+   * atualização de estado da resposta.
+   */
+  const acaoParcela = useCallback(
+    async (
+      vendaId: string,
+      parcelaId: string,
+      body: Record<string, unknown>
+    ): Promise<Parcela> => {
+      const res = await fetch(`/api/parcelas/${parcelaId}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const b = await jsonOuErro(res);
+      const atual = b.parcela as Parcela;
+      setVendas((prev) =>
+        prev.map((v) =>
+          v.id !== vendaId
+            ? v
+            : {
+                ...v,
+                parcelas: v.parcelas.map((p) => (p.id === parcelaId ? atual : p)),
+                atualizadoEm: new Date().toISOString(),
+              }
+        )
+      );
+      return atual;
+    },
+    []
+  );
+
   const value = useMemo<VendasContextValue>(
     () => ({
       vendas,
@@ -355,8 +410,9 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       updateVenda,
       removeVenda,
       atualizarParcela,
+      acaoParcela,
     }),
-    [vendas, carregando, erro, recarregar, criarVenda, updateVenda, removeVenda, atualizarParcela]
+    [vendas, carregando, erro, recarregar, criarVenda, updateVenda, removeVenda, atualizarParcela, acaoParcela]
   );
 
   return <VendasContext.Provider value={value}>{children}</VendasContext.Provider>;

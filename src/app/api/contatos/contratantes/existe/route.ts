@@ -33,12 +33,15 @@ export async function GET(request: Request) {
       .is("deletado_em", null)
       .limit(1);
     // Match do mais forte pro mais fraco: documento (CPF/CNPJ) → telefone (E.164)
-    // → nome exato (case-insensitive).
+    // → nome exato (case-insensitive). Escapa %/_/\ no nome pra o `ilike` virar
+    // igualdade case-insensitive de verdade — senão `?nome=%` casaria QUALQUER
+    // contratante do tenant e vazaria PII de contatos fora da visibilidade.
+    const nomeExato = nome.replace(/[\\%_]/g, (m) => `\\${m}`);
     q = documento
       ? q.eq("documento", documento)
       : telefone
         ? q.eq("telefone", telefone)
-        : q.ilike("nome", nome);
+        : q.ilike("nome", nomeExato);
     const { data, error } = await q;
     if (error) throw error;
     const c = (data ?? [])[0] ?? null;

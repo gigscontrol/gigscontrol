@@ -90,5 +90,20 @@ export const parcelaUpdateSchema = z.object({
   status_base: z.enum(["pendente", "pago"]).optional(),
   data_pagamento: dataYmd.nullable().optional(),
   observacao: z.string().nullable().optional(),
+  // Financeiro detalhado (migração 56). Metadados computados no servidor a
+  // partir destes campos + a sessão (quem/quando).
+  /** Nota/forma do pagamento ("dinheiro pessoalmente", "PIX", "WhatsApp"…). */
+  nota_pagamento: z.string().max(500).nullable().optional(),
+  // NOTA: `comprovante_path` foi REMOVIDO de propósito. O path do comprovante é
+  // gravado EXCLUSIVAMENTE pelo POST /api/parcelas/[id]/comprovante, que compõe
+  // o path server-side (`${workspaceId}/${id}/…`). Aceitar path do cliente aqui
+  // permitia injetar um path de outra parcela/artista/tenant e vazar o
+  // comprovante alheio pela URL assinada (IDOR).
+  /** true = cancelar (baixar/isentar) o cachê; false = reativar. */
+  cancelar: z.boolean().optional(),
+  /** Obrigatório quando cancelar=true. */
+  cancelamento_motivo: z.string().max(1000).optional(),
+  /** true = registra uma cobrança enviada no log (append). */
+  registrar_cobranca: z.boolean().optional(),
 });
 export type ParcelaUpdateInput = z.infer<typeof parcelaUpdateSchema>;

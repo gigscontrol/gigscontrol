@@ -24,6 +24,8 @@ export type TipoHistorico =
   | "aceitar"
   | "pagar"
   | "desfazer-pagamento"
+  | "cancelar"
+  | "cobranca"
   | "suspender"
   | "resetar-senha"
   | "upload-logo"
