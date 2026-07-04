@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { podeVerAgendaDetalhado } from "@/lib/api/permissoes";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
 import { contarVouchersDesde } from "@/lib/repositories/agendaItems.repo";
 import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
@@ -75,6 +76,18 @@ export async function GET(request: Request) {
   const path = new URL(request.url).searchParams.get("path") ?? "";
   // Segurança: o path começa com o id do workspace — só baixa o que é seu.
   if (!path || !path.startsWith(`${r.sessao.workspaceId}/`)) {
+    return NextResponse.json({ erro: "Voucher não encontrado." }, { status: 404 });
+  }
+  // Gate por artista: o voucher tem PII de voo (passageiros/localizador). Resolve
+  // o agenda_item dono (client da sessão → já escopado por RLS/artista) e exige
+  // `agenda.ver_detalhado` no artista dele — espelha o comprovante financeiro.
+  const { data: item } = await r.sessao.supabase
+    .from("agenda_items")
+    .select("artist_id")
+    .eq("dados->>voucherPath", path)
+    .is("deletado_em", null)
+    .maybeSingle<{ artist_id: string | null }>();
+  if (!item || !podeVerAgendaDetalhado(r.sessao, item.artist_id)) {
     return NextResponse.json({ erro: "Voucher não encontrado." }, { status: 404 });
   }
   try {
