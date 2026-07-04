@@ -126,6 +126,8 @@ export default function AbaEquipe() {
   // Vínculos do membro selecionado (perfis + permissões por artista) — fonte
   // da verdade nova do card "Funções e DJs atendidos". `null` = carregando.
   const [vinculos, setVinculos] = useState<VinculoResumo[] | null>(null);
+  // true quando o fetch de vínculos falhou — distingue erro de "sem vínculo".
+  const [vinculosErro, setVinculosErro] = useState(false);
   // Senha mascarada por padrão; reseta ao trocar de membro pra não vazar.
   const [senhaRevelada, setSenhaRevelada] = useState(false);
   const [copiouSenha, setCopiouSenha] = useState(false);
@@ -178,10 +180,12 @@ export default function AbaEquipe() {
   useEffect(() => {
     if (!selecionadoId) {
       setVinculos(null);
+      setVinculosErro(false);
       return;
     }
     let mounted = true;
     setVinculos(null);
+    setVinculosErro(false);
     fetch(`/api/usuarios/${selecionadoId}/vinculos`, { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -191,7 +195,11 @@ export default function AbaEquipe() {
         if (mounted) setVinculos(d.vinculos ?? []);
       })
       .catch(() => {
-        if (mounted) setVinculos([]);
+        // Erro real (rede/HTTP) — NÃO confundir com "membro sem vínculo".
+        if (mounted) {
+          setVinculos([]);
+          setVinculosErro(true);
+        }
       });
     return () => {
       mounted = false;
@@ -810,6 +818,10 @@ export default function AbaEquipe() {
                 <div className="flex items-center gap-2 text-sm text-muted">
                   <Loader2 size={14} className="animate-spin" />
                   {t("Carregando…")}
+                </div>
+              ) : vinculosErro ? (
+                <div className="text-sm" style={{ color: "var(--danger)" }}>
+                  {t("Não foi possível carregar. Tente recarregar a página.")}
                 </div>
               ) : vinculos.length === 0 ? (
                 <div className="text-sm text-muted">
