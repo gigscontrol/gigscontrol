@@ -10,7 +10,9 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
   podeConverterOrcamento,
+  podeVerFinanceiro,
 } from "@/lib/api/permissoes";
+import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 import { buscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -22,7 +24,13 @@ export async function GET() {
   if (bloqueio) return bloqueio;
   try {
     const vendas = await listarVendasDoWorkspace(r.sessao.supabase, r.sessao);
-    return NextResponse.json({ vendas });
+    // Rastreamento financeiro (comprovante/quem pagou/cobranças) só pra quem tem
+    // autorização de ver o financeiro daquele artista; os demais recebem a venda
+    // redigida (cachê/valores permanecem — o vendedor precisa do negócio).
+    const saida = vendas.map((v) =>
+      podeVerFinanceiro(r.sessao, v.djId || null) ? v : redigirVendaFinanceiro(v)
+    );
+    return NextResponse.json({ vendas: saida });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao listar vendas." },

@@ -118,6 +118,22 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
   };
 }
 
+/**
+ * Redige o RASTREAMENTO FINANCEIRO de uma venda para quem tem `vendas.ver` mas
+ * NÃO tem autorização de ver o financeiro (podeVerFinanceiro). Remove o
+ * `meta` de cada parcela (comprovante, quem pagou/quando, nota, log de
+ * cobranças, motivo de cancelamento) e a taxa da agência. MANTÉM cachê,
+ * valores e vencimentos — o vendedor precisa do negócio pra operar; o que fica
+ * protegido é o rastro de PAGAMENTO (documento bancário, PII de quem informou).
+ */
+export function redigirVendaFinanceiro(v: Venda): Venda {
+  return {
+    ...v,
+    taxaAgenciaValor: undefined,
+    parcelas: v.parcelas.map((p) => ({ ...p, meta: undefined })),
+  };
+}
+
 export type VendaEscrita = {
   workspace_id?: string;
   numero?: string;
