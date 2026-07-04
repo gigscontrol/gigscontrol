@@ -1,24 +1,26 @@
 /**
- * Base de cidades brasileiras com fetch sob demanda da API do IBGE.
+ * Base de cidades brasileiras (client-side), a partir do catálogo estático
+ * `src/data/municipios-br.json` (gerado por `scripts/gerar-municipios-br.mjs`).
  *
  * Estratégia:
- *  - Primeira busca: fetch da API do IBGE (5570 municípios oficiais)
- *  - Após o fetch: tudo em memória, busca instantânea
- *  - Sem internet ou erro: cai pro fallback offline (apenas capitais + cidades grandes)
+ *  - O catálogo (~5570 municípios) é carregado sob demanda via dynamic import
+ *    (code-split num chunk próprio, só baixa quando entra em modo BR). Sem
+ *    baixar os ~3.2 MB do IBGE no browser nem depender da API estar no ar.
+ *  - Depois de carregado: tudo em memória, busca instantânea.
+ *  - Se o chunk falhar (raríssimo): cai pro fallback offline (capitais +
+ *    cidades grandes).
  */
+
+import { normalizar } from "@/lib/normalizar";
+
+// Reexporta pra manter a API deste módulo (CityAutocomplete importa daqui).
+export { normalizar };
 
 export type CidadeBR = {
   nome: string;
   uf: string;
   regiao: "Norte" | "Nordeste" | "Centro-Oeste" | "Sudeste" | "Sul";
 };
-
-export function normalizar(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
 
 // ---------- Mapas auxiliares: UF → Região ----------
 export function ufParaRegiao(uf: string | null | undefined): CidadeBR["regiao"] {
@@ -40,7 +42,7 @@ const UF_REGIAO: Record<string, CidadeBR["regiao"]> = {
   PR: "Sul", RS: "Sul", SC: "Sul",
 };
 
-// ---------- Fallback offline (caso a API falhe) ----------
+// ---------- Fallback offline (caso o catálogo não carregue) ----------
 // Inclui capitais e cidades grandes — não é exaustivo, mas evita app travado.
 const FALLBACK: CidadeBR[] = [
   { nome: "São Paulo", uf: "SP", regiao: "Sudeste" },
@@ -98,35 +100,31 @@ function construirIndice(arr: CidadeBR[]) {
 }
 
 /**
- * Carrega cidades do IBGE (uma única vez por sessão).
- * Retorna a Promise; chamadas simultâneas compartilham a mesma requisição.
+ * Carrega o catálogo de cidades (uma única vez por sessão).
+ * Retorna a Promise; chamadas simultâneas compartilham a mesma carga.
  */
 export function carregarCidadesBR(): Promise<CidadeBR[]> {
   if (cache) return Promise.resolve(cache);
   if (promessaCarga) return promessaCarga;
 
-  promessaCarga = fetch(
-    "https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome"
-  )
-    .then((r) => {
-      if (!r.ok) throw new Error(`IBGE retornou ${r.status}`);
-      return r.json();
-    })
-    .then((dados: Array<{ nome: string; microrregiao: { mesorregiao: { UF: { sigla: string } } } }>) => {
-      const cidades: CidadeBR[] = dados.map((m) => {
-        const uf = m.microrregiao.mesorregiao.UF.sigla;
-        return {
-          nome: m.nome,
-          uf,
-          regiao: UF_REGIAO[uf] ?? "Sudeste",
-        };
-      });
-      cache = cidades;
-      indice = construirIndice(cidades);
-      return cidades;
+  promessaCarga = import("@/data/municipios-br.json")
+    .then((mod) => {
+      const dados: CidadeBR[] = (
+        mod.default as Array<{ nome: string; uf: string }>
+      ).map((m) => ({
+        nome: m.nome,
+        uf: m.uf,
+        regiao: UF_REGIAO[m.uf] ?? "Sudeste",
+      }));
+      cache = dados;
+      indice = construirIndice(dados);
+      return dados;
     })
     .catch((err) => {
-      console.warn("[cidades-br] falha ao buscar IBGE, usando fallback offline:", err);
+      console.warn(
+        "[cidades-br] falha ao carregar catálogo, usando fallback offline:",
+        err
+      );
       cache = FALLBACK;
       indice = construirIndice(FALLBACK);
       return FALLBACK;
@@ -138,7 +136,7 @@ export function carregarCidadesBR(): Promise<CidadeBR[]> {
 /**
  * Busca cidades pela string digitada.
  * Se a base ainda não carregou, devolve apenas resultados do fallback enquanto
- * o IBGE carrega — e o componente vai refazer a busca quando a Promise resolver.
+ * o catálogo carrega — e o componente refaz a busca quando a Promise resolver.
  */
 export function buscarCidades(query: string, limit = 12): CidadeBR[] {
   const q = normalizar(query.trim());
@@ -163,7 +161,7 @@ export function buscarCidades(query: string, limit = 12): CidadeBR[] {
     .map(({ busca: _, ...rest }) => rest);
 }
 
-/** Saber se ainda estamos no fallback (sem IBGE carregado). */
+/** Saber se ainda estamos no fallback (catálogo não carregado). */
 export function estaCarregando(): boolean {
   return cache === null;
 }
