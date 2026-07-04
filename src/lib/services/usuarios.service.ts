@@ -26,6 +26,15 @@ import { getPlano, type PlanoId } from "@/lib/planos";
 import { planoEfetivoParaLimites } from "@/lib/services/limites";
 import { ESCOPO_PADRAO } from "@/lib/mappers/usuario";
 import { upsertVinculo } from "@/lib/repositories/membrosArtista.repo";
+import { pertenceAoWorkspace } from "@/lib/api/pertence";
+
+export class ArtistaForaDoWorkspaceError extends Error {
+  status = 400;
+  constructor() {
+    super("Um dos artistas selecionados não pertence a este workspace.");
+    this.name = "ArtistaForaDoWorkspaceError";
+  }
+}
 
 export class LimitePlanoEquipeError extends Error {
   status = 409;
@@ -71,6 +80,15 @@ export async function criarUsuarioDaEquipe(
   const total = await contarUsuariosEquipe(admin, workspaceId);
   if (total >= plano.maxUsuariosAdicionais) {
     throw new LimitePlanoEquipeError(plano.maxUsuariosAdicionais, plano.nome);
+  }
+
+  // Valida que TODO artist_id do vínculo pertence a ESTE workspace. O client é
+  // admin/service-role (ignora RLS), então sem esta checagem dava pra semear um
+  // vínculo cruzando tenant (usuário do workspace A ligado a artista do B).
+  for (const artistId of input.artistIds) {
+    if (!(await pertenceAoWorkspace(admin, "artists", artistId, workspaceId))) {
+      throw new ArtistaForaDoWorkspaceError();
+    }
   }
 
   // Handle = "raiz-slug" (idêntico ao fluxo de artistas). Unicidade

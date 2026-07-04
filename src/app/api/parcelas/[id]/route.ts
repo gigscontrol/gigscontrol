@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ParcelaMeta } from "@/types";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { atualizarParcelaPorId } from "@/lib/services/vendas.service";
 import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
 import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
@@ -81,6 +82,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const agora = new Date().toISOString();
   const metaAtual: ParcelaMeta = parcelaRow.meta ?? {};
   let meta: ParcelaMeta | undefined;
+  let comprovanteOrfao: string | undefined; // path a apagar do bucket após o update
   const base = () => meta ?? metaAtual;
 
   if (parsed.data.status_base === "pago") {
@@ -98,6 +100,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     };
   } else if (parsed.data.status_base === "pendente") {
     meta = { ...base(), pagamento: undefined }; // desfazer → limpa info do pagamento
+    comprovanteOrfao = metaAtual.pagamento?.comprovantePath; // apaga do bucket depois
   } else if (parsed.data.nota_pagamento !== undefined) {
     meta = {
       ...base(),
@@ -173,6 +176,14 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         entidadeNome: nome,
         descricao: `Registrou uma cobrança da parcela (${parcela.percentual}%)`,
       });
+    }
+    // Desfazer pagamento limpa a meta; apaga o comprovante órfão do bucket
+    // privado (best-effort, service-role) pra não deixar lixo/PII pra trás.
+    if (comprovanteOrfao) {
+      await criarClienteAdmin()
+        .storage.from("comprovantes")
+        .remove([comprovanteOrfao])
+        .catch(() => undefined);
     }
     return NextResponse.json({ parcela });
   } catch (e) {

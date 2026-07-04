@@ -7,6 +7,7 @@ import {
   criarUsuarioDaEquipe,
   LimitePlanoEquipeError,
   UsernameEmUsoError,
+  ArtistaForaDoWorkspaceError,
 } from "@/lib/services/usuarios.service";
 import { usuarioCreateSchema } from "@/lib/validators/usuarios.schema";
 import type { PlanoId } from "@/lib/planos";
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
   } catch (e) {
     if (e instanceof LimitePlanoEquipeError || e instanceof UsernameEmUsoError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
+    }
+    if (e instanceof ArtistaForaDoWorkspaceError) {
+      return NextResponse.json({ erro: e.message }, { status: 400 });
     }
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao criar usuário." },
