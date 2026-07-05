@@ -15,6 +15,7 @@ import {
   type UsuarioPlataforma,
   type StatusUsuario,
 } from "./plataforma";
+import type { KpisPlataforma } from "./services/plataforma.service";
 import { PLANOS, type Plano, type PlanoId } from "./planos";
 
 /**
@@ -48,6 +49,9 @@ type PlataformaContextValue = {
     status: StatusUsuario
   ) => Promise<void>;
 
+  // KPIs reais da plataforma (dashboard) — /api/admin/kpis
+  kpis: KpisPlataforma | null;
+
   // Planos — leitura de constante; mutação só localmente
   planos: Plano[];
   atualizarPlano: (id: PlanoId, patch: Partial<Plano>) => void;
@@ -69,6 +73,8 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
 
   const [usuarios, setUsuarios] = useState<UsuarioPlataforma[]>([]);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
+
+  const [kpis, setKpis] = useState<KpisPlataforma | null>(null);
 
   // Planos — catálogo TS (não migra pra banco nesta fatia)
   const [planos, setPlanos] = useState<Plano[]>(PLANOS);
@@ -99,10 +105,21 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const recarregarKpis = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/kpis", { credentials: "include" });
+      const body = await jsonOuErro(res);
+      setKpis((body.kpis as KpisPlataforma) ?? null);
+    } catch {
+      setKpis(null);
+    }
+  }, []);
+
   useEffect(() => {
     void recarregarAssinaturas();
     void recarregarUsuarios();
-  }, [recarregarAssinaturas, recarregarUsuarios]);
+    void recarregarKpis();
+  }, [recarregarAssinaturas, recarregarUsuarios, recarregarKpis]);
 
   const alterarStatusAssinatura = useCallback(
     async (workspaceId: string, status: StatusAssinatura) => {
@@ -179,6 +196,8 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       recarregarUsuarios,
       alterarStatusUsuario,
 
+      kpis,
+
       planos,
       atualizarPlano: (id, patch) =>
         setPlanos((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p))),
@@ -194,6 +213,7 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       carregandoUsuarios,
       recarregarUsuarios,
       alterarStatusUsuario,
+      kpis,
       planos,
     ]
   );
