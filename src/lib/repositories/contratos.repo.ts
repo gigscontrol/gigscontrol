@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContratoRow, ContratoEscrita } from "@/lib/mappers/contrato";
+import { softDelete } from "./_softDelete";
 
 const COLS = `
   id, workspace_id, venda_id, modelo_id,
@@ -89,11 +90,7 @@ export async function removerContrato(
   id: string
 ): Promise<void> {
   // Soft delete — marca deletado_em (mesmo padrão dos modelos/orçamentos).
-  const { error } = await supabase
-    .from("contratos")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "contratos", id);
 }
 
 export async function proximoNumeroContrato(

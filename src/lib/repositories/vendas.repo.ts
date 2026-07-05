@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { VendaRow, VendaEscrita } from "@/lib/mappers/venda";
+import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS = `
   id, workspace_id, numero, orcamento_id, show_id,
@@ -82,22 +83,14 @@ export async function moverVendaParaLixeira(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("vendas")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "vendas", id);
 }
 
 export async function restaurarVenda(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("vendas")
-    .update({ deletado_em: null })
-    .eq("id", id);
-  if (error) throw error;
+  await restaurarSoftDelete(supabase, "vendas", id);
 }
 
 export async function proximoNumeroVenda(

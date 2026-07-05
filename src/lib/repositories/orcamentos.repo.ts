@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrcamentoRow, OrcamentoEscrita } from "@/lib/mappers/orcamento";
+import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS = `
   id, workspace_id, numero, status, tipo_evento,
@@ -45,22 +46,14 @@ export async function moverOrcamentoParaLixeira(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("orcamentos")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "orcamentos", id);
 }
 
 export async function restaurarOrcamento(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("orcamentos")
-    .update({ deletado_em: null })
-    .eq("id", id);
-  if (error) throw error;
+  await restaurarSoftDelete(supabase, "orcamentos", id);
 }
 
 export async function buscarOrcamento(

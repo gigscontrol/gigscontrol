@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ShowRow, ShowEscrita } from "@/lib/mappers/show";
+import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 /**
  * Camada de acesso a dados de `shows`.
@@ -56,22 +57,14 @@ export async function moverShowParaLixeira(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("shows")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "shows", id);
 }
 
 export async function restaurarShow(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("shows")
-    .update({ deletado_em: null })
-    .eq("id", id);
-  if (error) throw error;
+  await restaurarSoftDelete(supabase, "shows", id);
 }
 
 export async function buscarShow(
