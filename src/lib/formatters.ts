@@ -17,6 +17,30 @@ export function apenasDigitos(s: string | null | undefined): string {
 }
 
 // ============================================================
+// Moeda
+// ============================================================
+
+/**
+ * Formatador de moeda ÚNICO do app (BRL/USD). Antes existiam 2 `formatBRL`
+ * divergentes (0 vs 2 casas) + formatadores inline; agora todos delegam aqui.
+ * `casas` controla as decimais (2 = detalhado "R$ 1.234,56"; 0 = resumo
+ * "R$ 1.234").
+ */
+export function formatarMoeda(
+  valor: number,
+  moeda: "BRL" | "USD" = "BRL",
+  casas = 2
+): string {
+  const locale = moeda === "USD" ? "en-US" : "pt-BR";
+  return valor.toLocaleString(locale, {
+    style: "currency",
+    currency: moeda,
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas,
+  });
+}
+
+// ============================================================
 // CPF / CNPJ
 // ============================================================
 

@@ -1,5 +1,6 @@
 import type { Orcamento, Contratante, Casa, Cidade, DJ } from "@/types";
 import { TEXTO_TRANSLADO } from "@/types";
+import { formatarMoeda } from "./formatters";
 
 export function formatarDuracao(horas: number, minutos: number): string {
   const h = Math.max(0, horas);
@@ -109,5 +110,5 @@ export function montarLinkWhatsApp(telefone: string, texto: string): string {
   return `https://wa.me/${tel}?text=${txt}`;
 }
 
-export const formatBRL = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Moeda detalhada (2 casas). Delega no formatador único. */
+export const formatBRL = (v: number) => formatarMoeda(v, "BRL", 2);

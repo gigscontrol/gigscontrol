@@ -1,4 +1,5 @@
 import type { Show, Contratante, Casa, Cidade, Orcamento } from "@/types";
+import { formatarMoeda } from "./formatters";
 
 // ---------- Contratantes ----------
 
@@ -97,5 +98,5 @@ export function getContratanteNome(
   return contratantes.find((x) => x.id === contratanteId)?.nome ?? "—";
 }
 
-export const formatBRL = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+/** Moeda resumida (0 casas). Delega no formatador único. */
+export const formatBRL = (v: number) => formatarMoeda(v, "BRL", 0);
