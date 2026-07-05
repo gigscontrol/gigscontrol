@@ -176,7 +176,7 @@ export async function criarVendaCompleta(
 
   // 1 + 2: cria a venda
   const escrita = vendaInputParaEscrita(input);
-  escrita.numero = await proximoNumeroVenda(supabase);
+  escrita.numero = await proximoNumeroVenda(supabase, workspaceId);
   // Herda info_extra do orçamento se o input não trouxe um próprio.
   // Cliente concretizar pode editar antes; se não editou, assume o do
   // orçamento como ponto de partida.

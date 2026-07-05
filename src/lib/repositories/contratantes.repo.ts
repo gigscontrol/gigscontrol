@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContratanteRow, ContratanteEscrita } from "@/lib/mappers/contatos";
+import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
   "id, workspace_id, nome, documento, pais, email, telefone, endereco, cidade_id, observacoes, criado_por, criado_em, lat, lng, geo_precision";
@@ -37,22 +38,14 @@ export async function moverContratanteParaLixeira(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("contratantes")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "contratantes", id);
 }
 
 export async function restaurarContratante(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("contratantes")
-    .update({ deletado_em: null })
-    .eq("id", id);
-  if (error) throw error;
+  await restaurarSoftDelete(supabase, "contratantes", id);
 }
 
 export async function buscarContratante(

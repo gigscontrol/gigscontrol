@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContratoRow, ContratoEscrita } from "@/lib/mappers/contrato";
+import { softDelete } from "./_softDelete";
 
 const COLS = `
   id, workspace_id, venda_id, modelo_id,
@@ -89,29 +90,19 @@ export async function removerContrato(
   id: string
 ): Promise<void> {
   // Soft delete — marca deletado_em (mesmo padrão dos modelos/orçamentos).
-  const { error } = await supabase
-    .from("contratos")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "contratos", id);
 }
 
 export async function proximoNumeroContrato(
   supabase: SupabaseClient,
   workspaceId: string
 ): Promise<string> {
-  // Mesmo padrão de vendas/orçamentos (reduce do maior sufixo numérico),
-  // mas com prefixo "CTR-" e escopado por workspace + não-deletados, pra
-  // bater com o índice único contratos_numero_uniq (workspace_id, numero).
-  const { data, error } = await supabase
-    .from("contratos")
-    .select("numero")
-    .eq("workspace_id", workspaceId)
-    .is("deletado_em", null);
+  // Numeração ATÔMICA via RPC (migration 60) — sem race nem full-scan.
+  const { data, error } = await supabase.rpc("proximo_numero", {
+    p_workspace: workspaceId,
+    p_tipo: "contrato",
+    p_prefixo: "CTR-",
+  });
   if (error) throw error;
-  const max = (data ?? []).reduce((acc, c) => {
-    const n = parseInt(String(c.numero).replace(/\D/g, ""), 10);
-    return isNaN(n) ? acc : Math.max(acc, n);
-  }, 0);
-  return `CTR-${String(max + 1).padStart(4, "0")}`;
+  return data as string;
 }

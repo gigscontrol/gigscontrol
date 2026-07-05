@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ArtistaRow, ArtistaEscrita } from "@/lib/mappers/artista";
+import { softDelete } from "./_softDelete";
 
 const COLS =
   "id, workspace_id, nome, cor, acesso_suspenso, deletado_em, criado_em, " +
@@ -102,11 +103,7 @@ export async function moverArtistaParaLixeira(
   supabase: SupabaseClient,
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("artists")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "artists", id);
 }
 
 /** Restaura — zera deletado_em. */

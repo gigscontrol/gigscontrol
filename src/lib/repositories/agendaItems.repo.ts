@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgendaItemRow, AgendaItemEscrita } from "@/lib/mappers/agendaItem";
+import { softDelete } from "./_softDelete";
 
 /**
  * Acesso a dados de `agenda_items`. Cliente já autenticado — o filtro por
@@ -95,9 +96,5 @@ export async function removerAgendaItem(
   id: string
 ): Promise<void> {
   // Soft delete — mantém o histórico (igual shows).
-  const { error } = await supabase
-    .from("agenda_items")
-    .update({ deletado_em: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+  await softDelete(supabase, "agenda_items", id);
 }
