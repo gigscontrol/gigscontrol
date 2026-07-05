@@ -56,20 +56,21 @@ export async function contratanteIdsVisiveis(
   if (veTodos(sessao)) return "todos";
   const artistas = Object.keys(sessao.vinculos ?? {});
   const set = new Set<string>();
-  // (a) contratantes que ele mesmo criou
-  const { data: criados, error } = await supabase
-    .from("contratantes")
-    .select("id")
-    .eq("criado_por", sessao.userId)
-    .is("deletado_em", null);
-  if (error) throw error;
-  for (const r of (criados ?? []) as { id: string }[]) set.add(r.id);
-  // (b) via orçamentos + vendas (que ele criou OU dos artistas que atende)
-  for (const t of ["orcamentos", "vendas"] as const) {
-    for (const id of await idsPorOrcVenda(supabase, t, sessao.userId, artistas)) {
-      set.add(id);
-    }
-  }
+  // (a) contratantes que ele mesmo criou + (b) via orçamentos/vendas (dele ou
+  // dos artistas que atende) — as 3 queries são independentes, roda em paralelo.
+  const [criadosRes, idsOrc, idsVenda] = await Promise.all([
+    supabase
+      .from("contratantes")
+      .select("id")
+      .eq("criado_por", sessao.userId)
+      .is("deletado_em", null),
+    idsPorOrcVenda(supabase, "orcamentos", sessao.userId, artistas),
+    idsPorOrcVenda(supabase, "vendas", sessao.userId, artistas),
+  ]);
+  if (criadosRes.error) throw criadosRes.error;
+  for (const r of (criadosRes.data ?? []) as { id: string }[]) set.add(r.id);
+  for (const id of idsOrc) set.add(id);
+  for (const id of idsVenda) set.add(id);
   return set;
 }
 
