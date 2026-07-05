@@ -107,7 +107,7 @@ export async function criarOrcamentoNoWorkspace(
   input: OrcamentoCreateInput
 ): Promise<Orcamento> {
   const escrita = entradaParaEscrita(input);
-  escrita.numero = await proximoNumeroOrcamento(supabase);
+  escrita.numero = await proximoNumeroOrcamento(supabase, workspaceId);
   escrita.status = escrita.status ?? "pendente";
   const row = await repoCriar(supabase, workspaceId, criadoPor, escrita);
   return rowParaOrcamento(row);

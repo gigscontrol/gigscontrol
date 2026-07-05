@@ -77,18 +77,17 @@ export async function buscarOrcamento(
 }
 
 export async function proximoNumeroOrcamento(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<string> {
-  // Deriva do MAIOR número real (não dos 50 mais recentes por data), senão
-  // podia gerar um número já usado e colidir no índice único. RLS escopa por
-  // workspace; inclui deletados de propósito (não reaproveita número).
-  const { data, error } = await supabase.from("orcamentos").select("numero");
+  // Numeração ATÔMICA via RPC (migration 60) — sem race nem full-scan.
+  const { data, error } = await supabase.rpc("proximo_numero", {
+    p_workspace: workspaceId,
+    p_tipo: "orcamento",
+    p_prefixo: "ORC-",
+  });
   if (error) throw error;
-  const max = (data ?? []).reduce((acc, o) => {
-    const n = parseInt(String(o.numero).replace(/\D/g, ""), 10);
-    return isNaN(n) ? acc : Math.max(acc, n);
-  }, 0);
-  return `ORC-${String(max + 1).padStart(4, "0")}`;
+  return data as string;
 }
 
 export async function criarOrcamento(

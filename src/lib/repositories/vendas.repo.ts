@@ -101,19 +101,19 @@ export async function restaurarVenda(
 }
 
 export async function proximoNumeroVenda(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  workspaceId: string
 ): Promise<string> {
-  // Deriva do MAIOR número real (não dos 50 mais recentes por data): com
-  // limit(50), se o maior número não estivesse entre os 50 últimos criados,
-  // gerava um número menor já usado → colisão no índice único. RLS escopa
-  // por workspace; inclui deletados de propósito (não reaproveita número).
-  const { data, error } = await supabase.from("vendas").select("numero");
+  // Numeração ATÔMICA via RPC (migration 60): incrementa o contador do
+  // workspace numa única operação com lock de linha — sem race (dois creates
+  // simultâneos não pegam mais o mesmo número) nem full-scan da tabela.
+  const { data, error } = await supabase.rpc("proximo_numero", {
+    p_workspace: workspaceId,
+    p_tipo: "venda",
+    p_prefixo: "VND-",
+  });
   if (error) throw error;
-  const max = (data ?? []).reduce((acc, v) => {
-    const n = parseInt(String(v.numero).replace(/\D/g, ""), 10);
-    return isNaN(n) ? acc : Math.max(acc, n);
-  }, 0);
-  return `VND-${String(max + 1).padStart(4, "0")}`;
+  return data as string;
 }
 
 export async function criarVendaRow(
