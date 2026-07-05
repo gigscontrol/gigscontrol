@@ -348,7 +348,20 @@ export type KpisPlataforma = {
   totalArtistas: number;
   /** Usuários com last_sign_in_at nos últimos 30 dias. */
   ativos30d: number;
+  /** Contagens reais cross-workspace (todos os tenants, não-deletados). */
+  totalShows: number;
+  totalContratos: number;
+  totalOrcamentos: number;
 };
+
+/** Conta linhas não-deletadas de uma tabela em TODOS os workspaces. */
+async function contarTabela(admin: SupabaseClient, tabela: string): Promise<number> {
+  const { count } = await admin
+    .from(tabela)
+    .select("*", { count: "exact", head: true })
+    .is("deletado_em", null);
+  return count ?? 0;
+}
 
 export async function kpisPlataforma(
   admin: SupabaseClient
@@ -392,6 +405,12 @@ export async function kpisPlataforma(
     // ignore
   }
 
+  const [totalShows, totalContratos, totalOrcamentos] = await Promise.all([
+    contarTabela(admin, "shows"),
+    contarTabela(admin, "contratos"),
+    contarTabela(admin, "orcamentos"),
+  ]);
+
   return {
     mrrBrl,
     mrrUsd,
@@ -401,5 +420,8 @@ export async function kpisPlataforma(
     agencias,
     totalArtistas,
     ativos30d,
+    totalShows,
+    totalContratos,
+    totalOrcamentos,
   };
 }

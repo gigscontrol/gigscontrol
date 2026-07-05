@@ -18,7 +18,6 @@ next-env.d.ts
 # Scripts locais de manutenção (uso pontual via service_role; nunca devem
 # ir pra produção, contêm operações destrutivas)
 scripts/
-
 gerar_contrato_dj.py
 
 # Ferramentas/temporários locais — não vão pra produção

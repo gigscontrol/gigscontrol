@@ -11,27 +11,29 @@ import {
   CalendarCheck2,
   FileText,
   Activity,
-  LogIn,
-  CreditCard,
-  UserCog,
+  Wallet,
   Layers,
-  Settings2,
 } from "lucide-react";
 import { usePlataforma } from "@/lib/plataforma-context";
-import {
-  MOCK_LOGS,
-  MOCK_CRESCIMENTO,
-  METRICAS_SAAS,
-  type TipoLog,
-} from "@/lib/plataforma";
-import { getPlano, precoPorMes, formatarPrecoCurto } from "@/lib/planos";
+import { getPlano, precoPorMes, formatarPrecoCurto, type PlanoId } from "@/lib/planos";
+import type { StatusAssinatura } from "@/lib/plataforma";
+
+const PLANOS_AGENCIA: PlanoId[] = [
+  "equipe",
+  "time",
+  "agencia",
+  "agencia-plus",
+  "agencia-max",
+];
 
 export default function AdminDashboard() {
-  const { assinaturas, usuarios } = usePlataforma();
+  const { assinaturas, kpis } = usePlataforma();
 
-  const kpis = useMemo(() => {
+  // Métricas de assinatura calculadas do estado REAL (carrega mesmo se o
+  // /api/admin/kpis demorar). Os KPIs server-only (ativos30d, contagens
+  // cross-workspace) vêm do `kpis` e mostram "—" enquanto carregam.
+  const m = useMemo(() => {
     const ativas = assinaturas.filter((a) => a.status === "ativa");
-    // MRR por moeda — não dá pra somar BRL + USD sem câmbio.
     let mrrBrl = 0;
     let mrrUsd = 0;
     for (const a of ativas) {
@@ -39,38 +41,45 @@ export default function AdminDashboard() {
       if (a.moeda === "usd") mrrUsd += preco;
       else mrrBrl += preco;
     }
-
-    const agencias = assinaturas.filter((a) =>
-      ["equipe", "time", "agencia", "agencia-plus", "agencia-max"].includes(a.plano)
-    ).length;
+    const total = assinaturas.length;
+    const canceladas = assinaturas.filter((a) => a.status === "cancelada").length;
+    const trial = assinaturas.filter((a) => a.status === "trial").length;
+    const agencias = assinaturas.filter((a) => PLANOS_AGENCIA.includes(a.plano)).length;
     const totalArtistas = assinaturas.reduce((s, a) => s + a.artistasEmUso, 0);
+    const churnPct = total > 0 ? Math.round((canceladas / total) * 1000) / 10 : 0;
 
-    // Crescimento do MRR — último mês vs penúltimo
-    const c = MOCK_CRESCIMENTO;
-    const atual = c[c.length - 1]?.receita ?? 0;
-    const anterior = c[c.length - 2]?.receita ?? 0;
-    const crescimentoPct =
-      anterior > 0 ? Math.round(((atual - anterior) / anterior) * 100) : 0;
+    // Distribuição de assinaturas ativas por plano (pro gráfico).
+    const porPlano = new Map<PlanoId, number>();
+    for (const a of ativas) porPlano.set(a.plano, (porPlano.get(a.plano) ?? 0) + 1);
+    const dist = [...porPlano.entries()]
+      .map(([plano, n]) => ({ plano, nome: getPlano(plano).nome, n }))
+      .sort((x, y) => y.n - x.n);
+
+    // Assinaturas mais recentes (atividade real).
+    const recentes = [...assinaturas]
+      .sort((a, b) => new Date(b.inicioEm).getTime() - new Date(a.inicioEm).getTime())
+      .slice(0, 9);
 
     return {
       mrrBrl,
       mrrUsd,
-      arrBrl: mrrBrl * 12,
-      arrUsd: mrrUsd * 12,
-      totalUsuarios: usuarios.length,
+      ativas: ativas.length,
+      trial,
       agencias,
       totalArtistas,
-      crescimentoPct,
+      churnPct,
+      dist,
+      recentes,
     };
-  }, [assinaturas, usuarios]);
+  }, [assinaturas]);
 
-  // "R$X" e, se houver receita em USD, "· $Y" ao lado.
   const fmtMoedas = (brl: number, usd: number) =>
     usd > 0
       ? `${formatarPrecoCurto(brl, "brl")} · ${formatarPrecoCurto(usd, "usd")}`
       : formatarPrecoCurto(brl, "brl");
-
-  const maxReceita = Math.max(...MOCK_CRESCIMENTO.map((p) => p.receita));
+  const num = (v: number | undefined) => (v == null ? "—" : v.toLocaleString("pt-BR"));
+  const maxDist = Math.max(1, ...m.dist.map((d) => d.n));
+  const ticketMedio = m.agencias > 0 ? Math.round(m.mrrBrl / m.agencias) : 0;
 
   return (
     <div>
@@ -81,188 +90,117 @@ export default function AdminDashboard() {
 
       {/* KPIs principais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <Kpi
-          icon={<DollarSign size={16} />}
-          label="MRR"
-          value={fmtMoedas(kpis.mrrBrl, kpis.mrrUsd)}
-          color="var(--brand)"
-          trend={kpis.crescimentoPct}
-        />
-        <Kpi
-          icon={<TrendingUp size={16} />}
-          label="ARR"
-          value={fmtMoedas(kpis.arrBrl, kpis.arrUsd)}
-          color="var(--brand)"
-        />
-        <Kpi
-          icon={<DollarSign size={16} />}
-          label="Receita total"
-          value={formatarPrecoCurto(METRICAS_SAAS.receitaTotal)}
-          color="var(--brand)"
-        />
+        <Kpi icon={<DollarSign size={16} />} label="MRR" value={fmtMoedas(m.mrrBrl, m.mrrUsd)} color="var(--brand)" />
+        <Kpi icon={<TrendingUp size={16} />} label="ARR" value={fmtMoedas(m.mrrBrl * 12, m.mrrUsd * 12)} color="var(--brand)" />
+        <Kpi icon={<Wallet size={16} />} label="Assinaturas ativas" value={m.ativas} color="var(--success)" />
         <Kpi
           icon={<TrendingDown size={16} />}
-          label="Churn mensal"
-          value={`${METRICAS_SAAS.churnMensal}%`}
-          color="var(--danger)"
+          label="Churn"
+          value={`${m.churnPct}%`}
+          color={m.churnPct > 0 ? "var(--danger)" : "var(--success)"}
         />
       </div>
 
       {/* KPIs secundários */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Kpi
-          icon={<Users size={16} />}
-          label="Total de usuários"
-          value={kpis.totalUsuarios}
-          color="var(--brand)"
-        />
-        <Kpi
-          icon={<Building2 size={16} />}
-          label="Agências"
-          value={kpis.agencias}
-          color="var(--brand)"
-        />
-        <Kpi
-          icon={<Music size={16} />}
-          label="Artistas"
-          value={kpis.totalArtistas}
-          color="var(--brand)"
-        />
-        <Kpi
-          icon={<Activity size={16} />}
-          label="Usuários ativos (30d)"
-          value={METRICAS_SAAS.usuariosAtivos30d}
-          color="var(--brand)"
-        />
+        <Kpi icon={<Users size={16} />} label="Total de usuários" value={num(kpis?.totalUsuarios)} color="var(--brand)" />
+        <Kpi icon={<Building2 size={16} />} label="Agências" value={m.agencias} color="var(--brand)" />
+        <Kpi icon={<Music size={16} />} label="Artistas" value={m.totalArtistas} color="var(--brand)" />
+        <Kpi icon={<Activity size={16} />} label="Ativos (30d)" value={num(kpis?.ativos30d)} color="var(--brand)" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4">
-        {/* Gráfico de crescimento */}
+        {/* Distribuição por plano (dado REAL) */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">Crescimento do MRR</div>
+            <Layers size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">Assinaturas ativas por plano</div>
           </div>
-          <div className="flex items-end justify-between gap-2 h-44 px-1">
-            {MOCK_CRESCIMENTO.map((p) => (
-              <div key={p.mes} className="flex-1 flex flex-col items-center gap-2">
-                <div className="text-[0.65rem] text-muted tabular-nums">
-                  {formatarPrecoCurto(p.receita)}
+          {m.dist.length === 0 ? (
+            <div className="text-sm text-muted py-8 text-center">Nenhuma assinatura ativa ainda.</div>
+          ) : (
+            <div className="flex items-end justify-between gap-2 h-44 px-1">
+              {m.dist.map((d) => (
+                <div key={d.plano} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                  <div className="text-[0.65rem] text-muted tabular-nums">{d.n}</div>
+                  <div
+                    className="w-full rounded-t transition-all"
+                    style={{ height: `${(d.n / maxDist) * 130}px`, backgroundColor: "var(--brand)", minHeight: 4 }}
+                  />
+                  <div className="text-[0.65rem] text-secondary text-center truncate w-full" title={d.nome}>
+                    {d.nome}
+                  </div>
                 </div>
-                <div
-                  className="w-full rounded-t transition-all"
-                  style={{
-                    height: `${(p.receita / maxReceita) * 130}px`,
-                    backgroundColor: "var(--brand)",
-                    minHeight: 4,
-                  }}
-                />
-                <div className="text-xs text-secondary">{p.mes}</div>
-              </div>
-            ))}
-          </div>
-          {/* Métricas SaaS extras */}
+              ))}
+            </div>
+          )}
+          {/* Métricas reais da plataforma */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-border">
-            <MiniStat
-              icon={<CalendarCheck2 size={14} />}
-              label="Shows cadastrados"
-              value={METRICAS_SAAS.showsCadastrados.toLocaleString("pt-BR")}
-            />
-            <MiniStat
-              icon={<FileText size={14} />}
-              label="Contratos gerados"
-              value={METRICAS_SAAS.contratosGerados.toLocaleString("pt-BR")}
-            />
-            <MiniStat
-              icon={<TrendingUp size={14} />}
-              label="LTV médio"
-              value={formatarPrecoCurto(METRICAS_SAAS.ltv)}
-            />
-            <MiniStat
-              icon={<TrendingDown size={14} />}
-              label="CAC médio"
-              value={formatarPrecoCurto(METRICAS_SAAS.cac)}
-            />
+            <MiniStat icon={<CalendarCheck2 size={14} />} label="Shows cadastrados" value={num(kpis?.totalShows)} />
+            <MiniStat icon={<FileText size={14} />} label="Contratos gerados" value={num(kpis?.totalContratos)} />
+            <MiniStat icon={<FileText size={14} />} label="Orçamentos" value={num(kpis?.totalOrcamentos)} />
+            <MiniStat icon={<DollarSign size={14} />} label="Ticket médio/mês" value={formatarPrecoCurto(ticketMedio, "brl")} />
           </div>
         </div>
 
-        {/* Logs / atividade recente */}
+        {/* Assinaturas recentes (atividade REAL) */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">Atividade recente</div>
+            <div className="section-title">Assinaturas recentes</div>
           </div>
-          <div className="flex flex-col gap-1">
-            {MOCK_LOGS.slice(0, 9).map((log) => (
-              <div
-                key={log.id}
-                className="flex items-start gap-2.5 py-2 border-b border-border/50 last:border-0"
-              >
-                <div
-                  className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{
-                    backgroundColor: `${corLog(log.tipo)}1a`,
-                    color: corLog(log.tipo),
-                  }}
-                >
-                  {iconeLog(log.tipo)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs text-primary leading-snug">
-                    {log.descricao}
+          {m.recentes.length === 0 ? (
+            <div className="text-sm text-muted py-8 text-center">Sem assinaturas ainda.</div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {m.recentes.map((a) => {
+                const st = statusInfo(a.status);
+                return (
+                  <div key={a.workspaceId} className="flex items-start gap-2.5 py-2 border-b border-border/50 last:border-0">
+                    <div
+                      className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${st.cor}1a`, color: st.cor }}
+                    >
+                      <Building2 size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-primary leading-snug truncate">
+                        {a.nomeWorkspace} · {getPlano(a.plano).nome}
+                      </div>
+                      <div className="text-[0.65rem] text-muted">
+                        <span style={{ color: st.cor }}>{st.label}</span> · {formatarData(a.inicioEm)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[0.65rem] text-muted">
-                    {log.workspace ? `${log.workspace} · ` : ""}
-                    {formatarData(log.data)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function corLog(tipo: TipoLog): string {
-  const m: Record<TipoLog, string> = {
-    login: "var(--brand)",
-    assinatura: "var(--brand)",
-    pagamento: "var(--brand)",
-    usuario: "var(--brand)",
-    plano: "var(--brand)",
-    sistema: "var(--text-muted)",
-  };
-  return m[tipo];
-}
-
-function iconeLog(tipo: TipoLog) {
-  const s = 13;
-  switch (tipo) {
-    case "login":
-      return <LogIn size={s} />;
-    case "pagamento":
-      return <CreditCard size={s} />;
-    case "usuario":
-      return <UserCog size={s} />;
-    case "plano":
-      return <Layers size={s} />;
-    case "sistema":
-      return <Settings2 size={s} />;
+function statusInfo(s: StatusAssinatura): { label: string; cor: string } {
+  switch (s) {
+    case "ativa":
+      return { label: "Ativa", cor: "var(--success)" };
+    case "trial":
+      return { label: "Trial", cor: "var(--brand)" };
+    case "suspensa":
+      return { label: "Suspensa", cor: "var(--warning)" };
+    case "cancelada":
+      return { label: "Cancelada", cor: "var(--danger)" };
     default:
-      return <Building2 size={s} />;
+      return { label: String(s), cor: "var(--text-muted)" };
   }
 }
 
 function formatarData(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function Kpi({
@@ -270,13 +208,11 @@ function Kpi({
   label,
   value,
   color,
-  trend,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   color: string;
-  trend?: number;
 }) {
   return (
     <div className="card">
@@ -287,18 +223,6 @@ function Kpi({
         >
           {icon}
         </div>
-        {trend !== undefined && (
-          <span
-            className="text-xs font-semibold tabular-nums inline-flex items-center gap-0.5"
-            style={{
-              color: trend >= 0 ? "var(--success)" : "var(--danger)",
-            }}
-          >
-            {trend >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-            {trend >= 0 ? "+" : ""}
-            {trend}%
-          </span>
-        )}
       </div>
       <div className="text-xl font-bold tabular-nums text-primary">{value}</div>
       <div className="text-xs text-muted mt-0.5">{label}</div>

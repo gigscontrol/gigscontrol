@@ -1,7 +1,3 @@
-import { MOCK_SHOWS } from "./mock-shows";
-import { MOCK_CASAS } from "./mock-casas";
-import { MOCK_CIDADES } from "./mock-cidades";
-import { MOCK_CONTRATANTES } from "./mock-contratantes";
 import type { Show, Contratante, Casa, Cidade, Orcamento } from "@/types";
 
 // ---------- Contratantes ----------
@@ -16,7 +12,7 @@ export type ContratanteStats = {
 
 export function getContratanteStats(
   contratanteId: string,
-  shows: Show[] = MOCK_SHOWS,
+  shows: Show[],
   orcamentos: Orcamento[] = []
 ): ContratanteStats {
   const meus = shows.filter((s) => s.contratanteId === contratanteId);
@@ -33,13 +29,6 @@ export function getContratanteStats(
   };
 }
 
-export function getContratantesComStats(shows: Show[] = MOCK_SHOWS, contratantes: Contratante[] = MOCK_CONTRATANTES) {
-  return contratantes.map((c) => ({
-    ...c,
-    stats: getContratanteStats(c.id, shows),
-  }));
-}
-
 // ---------- Casas ----------
 
 export type CasaStats = {
@@ -48,7 +37,7 @@ export type CasaStats = {
   djsQueTocaram: string[]; // nomes únicos
 };
 
-export function getCasaStats(casaId: string, shows: Show[] = MOCK_SHOWS): CasaStats {
+export function getCasaStats(casaId: string, shows: Show[]): CasaStats {
   const aqui = shows.filter((s) => s.casaId === casaId);
   const djsUnicos = Array.from(new Set(aqui.map((s) => s.dj)));
   return {
@@ -56,13 +45,6 @@ export function getCasaStats(casaId: string, shows: Show[] = MOCK_SHOWS): CasaSt
     faturamento: aqui.reduce((acc, s) => acc + (s.valor ?? 0), 0),
     djsQueTocaram: djsUnicos,
   };
-}
-
-export function getCasasComStats(shows: Show[] = MOCK_SHOWS, casas: Casa[] = MOCK_CASAS) {
-  return casas.map((c) => ({
-    ...c,
-    stats: getCasaStats(c.id, shows),
-  }));
 }
 
 // ---------- Cidades ----------
@@ -76,8 +58,8 @@ export type CidadeStats = {
 
 export function getCidadeStats(
   cidadeId: string,
-  shows: Show[] = MOCK_SHOWS,
-  casas: Casa[] = MOCK_CASAS
+  shows: Show[],
+  casas: Casa[]
 ): CidadeStats {
   const aqui = shows.filter((s) => s.cidadeId === cidadeId);
   const totalCasas = casas.filter((c) => c.cidadeId === cidadeId).length;
@@ -100,29 +82,17 @@ export function getCidadeStats(
   };
 }
 
-export function getCidadesComStats(
-  shows: Show[] = MOCK_SHOWS,
-  cidades: Cidade[] = MOCK_CIDADES,
-  casas: Casa[] = MOCK_CASAS
-) {
-  return cidades.map((c) => ({
-    ...c,
-    stats: getCidadeStats(c.id, shows, casas),
-  }));
-}
-
 // ---------- Helpers gerais ----------
 
-export function getCidadeNome(cidadeId: string, cidades: Cidade[] = MOCK_CIDADES) {
+export function getCidadeNome(cidadeId: string, cidades: Cidade[]) {
   const c = cidades.find((x) => x.id === cidadeId);
   return c ? `${c.nome}, ${c.estado}` : "—";
 }
 
-export function getCasaNome(casaId: string, casas: Casa[] = MOCK_CASAS) {
-  return casas.find((x) => x.id === casaId)?.nome ?? "—";
-}
-
-export function getContratanteNome(contratanteId: string | undefined, contratantes: Contratante[] = MOCK_CONTRATANTES) {
+export function getContratanteNome(
+  contratanteId: string | undefined,
+  contratantes: Contratante[]
+) {
   if (!contratanteId) return "—";
   return contratantes.find((x) => x.id === contratanteId)?.nome ?? "—";
 }

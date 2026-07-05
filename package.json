@@ -1,5 +1,5 @@
 {
-  "name": "flowbook",
+  "name": "gigscontrol",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,8 +7,7 @@
     "dev:fresh": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "municipios:gerar": "node scripts/gerar-municipios-br.mjs"
+    "lint": "next lint"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1072.0",
@@ -17,19 +16,16 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
-    "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.460.0",
     "next": "^14.2.18",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.13.3",
     "stripe": "^22.3.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.21",
-    "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^22.9.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

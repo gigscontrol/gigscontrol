@@ -288,8 +288,8 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
   }
 
   function CidadeDetail({ item, accent, onEdit }: { item: Cidade; accent: string; onEdit: () => void }) {
-    const stats = getCidadeStats(item.id, shows);
     const { casas } = useContatos();
+    const stats = getCidadeStats(item.id, shows, casas);
     const casasAqui = casas.filter((c) => c.cidadeId === item.id);
     const showsCidade = shows.filter((s) => s.cidadeId === item.id);
 

@@ -15,11 +15,5 @@ export const DJS_FALLBACK: DJ[] = [
   { id: "a0000004-0000-0000-0000-000000000001", name: "Blackdrumm", color: "#3b82f6" },
 ];
 
-/**
- * @deprecated use o hook `useArtistas()` (de `workspace-context`).
- * Mantido só para arquivos legacy/seeds que ainda não migraram.
- */
-export const DJS: DJ[] = DJS_FALLBACK;
-
 /** IDs (uuid) dos artistas que vêm pré-selecionados na sidebar. */
 export const DEFAULT_SELECTED_DJ_IDS: string[] = DJS_FALLBACK.map((d) => d.id);
