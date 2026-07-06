@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticar } from "@/lib/api/session";
+import { respostaDeErro } from "@/lib/api/erros";
 import {
   listarMinhasNotificacoes,
   contarMinhasNaoLidas,
@@ -33,10 +34,7 @@ export async function GET(request: Request) {
     ]);
     return NextResponse.json({ notificacoes, naoLidas });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar notificações." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar notificações.");
   }
 }
 

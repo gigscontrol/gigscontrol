@@ -7,6 +7,7 @@ import {
   alterarPlanoAssinatura,
   estenderDiasAssinatura,
 } from "@/lib/services/plataforma.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 const patchSchema = z.object({
   status: z.enum(["ativa", "trial", "suspensa", "cancelada"]).optional(),
@@ -50,9 +51,6 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar assinatura." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar assinatura.");
   }
 }

@@ -24,10 +24,7 @@ export async function GET() {
     );
     return NextResponse.json({ orcamentos });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar orçamentos." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar orçamentos.");
   }
 }
 

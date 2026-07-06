@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { emailEhInternoFake } from "@/lib/services/artistas.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * GET /api/usuarios/[id]/conta
@@ -80,9 +81,6 @@ export async function GET(_request: Request, { params }: RouteCtx) {
           .senha_padrao_valor ?? null,
     });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar conta." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar conta.");
   }
 }

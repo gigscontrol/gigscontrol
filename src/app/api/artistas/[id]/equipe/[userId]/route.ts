@@ -8,6 +8,7 @@ import {
 } from "@/lib/services/equipeArtista.service";
 import { vinculoSchema } from "@/lib/validators/vinculo.schema";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string; userId: string } };
 
@@ -78,10 +79,7 @@ export async function PUT(request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ vinculo });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao salvar o vínculo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao salvar o vínculo.");
   }
 }
 
@@ -115,9 +113,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover o vínculo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover o vínculo.");
   }
 }

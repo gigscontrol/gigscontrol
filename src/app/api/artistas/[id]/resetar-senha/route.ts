@@ -4,6 +4,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import { resetarSenhaArtista } from "@/lib/services/artistas.service";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * POST /api/artistas/[id]/resetar-senha
@@ -50,9 +51,6 @@ export async function POST(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ senhaTemporaria });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao resetar senha." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao resetar senha.");
   }
 }

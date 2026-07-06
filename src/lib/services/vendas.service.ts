@@ -191,7 +191,13 @@ export async function criarVendaCompleta(
   }
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
-  // 3: parcelas (se houver)
+  // A venda JÁ existe. Os passos seguintes (parcelas, show, aceite do orçamento)
+  // são escritas separadas (supabase-js não tem transação). Se qualquer um
+  // falhar, desfazemos a venda no catch — senão sobra venda sem parcelas E o
+  // guard anti-duplicação acima trava TODA re-tentativa (venda soft-deletada é
+  // ignorada pelo guard, então a re-tentativa passa).
+  try {
+    // 3: parcelas (se houver)
   const hojeYmd = new Date().toISOString().slice(0, 10);
   const parcelasPayload: ParcelaEscrita[] = (input.parcelas ?? []).map((p) => ({
     percentual: p.percentual,
@@ -267,16 +273,24 @@ export async function criarVendaCompleta(
     }
   }
 
-  // Retorno consistente: re-busca a venda já com show_id e parcelas resolvidas
-  const final = await carregarVendaCompleta(supabase, vendaRow.id);
-  if (!final) {
-    // fallback improvável
-    return rowParaVenda(
-      { ...vendaRow, show_id: showIdFinal },
-      parcelasInseridas.map(rowParaParcela)
+    // Retorno consistente: re-busca a venda já com show_id e parcelas resolvidas
+    const final = await carregarVendaCompleta(supabase, vendaRow.id);
+    if (!final) {
+      // fallback improvável
+      return rowParaVenda(
+        { ...vendaRow, show_id: showIdFinal },
+        parcelasInseridas.map(rowParaParcela)
+      );
+    }
+    return final;
+  } catch (e) {
+    // Cleanup compensatório: a venda ficou meio-feita → soft-delete pra não
+    // deixar órfão nem travar a re-tentativa. (best-effort + log)
+    await removerVendaRow(supabase, vendaRow.id).catch((err) =>
+      console.error("[criarVendaCompleta] falha ao limpar venda parcial:", err)
     );
+    throw e;
   }
-  return final;
 }
 
 export async function atualizarVendaPorId(

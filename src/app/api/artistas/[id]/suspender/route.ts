@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import { alternarSuspensaoArtista } from "@/lib/services/artistas.service";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -27,9 +28,6 @@ export async function POST(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ artista });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao alternar suspensão." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao alternar suspensão.");
   }
 }

@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/cidades.service";
 import { cidadeCreateSchema } from "@/lib/validators/contatos.schema";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -16,10 +17,7 @@ export async function GET() {
     const cidades = await listarCidadesDoWorkspace(r.sessao.supabase);
     return NextResponse.json({ cidades });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar cidades." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar cidades.");
   }
 }
 
@@ -52,9 +50,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ cidade }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar cidade." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar cidade.");
   }
 }

@@ -12,6 +12,7 @@ import {
   podeExcluirAgenda,
   stripAgendaItemDetalhado,
 } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -71,10 +72,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       : row.artist_id;
     return NextResponse.json({ item: stripAgendaItemDetalhado(item, r.sessao, artistId) });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar item." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar item.");
   }
 }
 
@@ -97,9 +95,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerAgendaItemPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover item." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover item.");
   }
 }

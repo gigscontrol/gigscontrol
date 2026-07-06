@@ -6,6 +6,7 @@ import {
   podeConverterOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
@@ -48,9 +49,6 @@ export async function POST(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json(resultado);
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao aceitar orçamento." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao aceitar orçamento.");
   }
 }

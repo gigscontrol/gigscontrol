@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { respostaDeErro } from "@/lib/api/erros";
 import { listarHistoricoDoWorkspace } from "@/lib/services/historico.service";
 import type { ModuloHistorico } from "@/lib/mappers/historico";
 
@@ -60,10 +61,7 @@ export async function GET(request: Request) {
     );
     return NextResponse.json({ historico, limit, offset });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar histórico." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar histórico.");
   }
 }
 

@@ -285,8 +285,11 @@ export async function criarArtistaCompleto(
     escrita.posicao = await proximaPosicaoArtista(admin, workspaceId);
     artistaRow = await repoCriar(admin, workspaceId, escrita);
   } catch (e) {
-    // Rollback auth user
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => undefined);
+    // Rollback do auth user — best-effort, mas LOGA se falhar (senão sobra auth
+    // user órfão com o email fake e o handle fica impossível de recriar).
+    await admin.auth.admin
+      .deleteUser(created.user.id)
+      .catch((err) => console.error("[criarArtista] rollback do auth user falhou:", created.user.id, err));
     throw e;
   }
 
@@ -311,9 +314,14 @@ export async function criarArtistaCompleto(
     });
     if (errProfile) throw errProfile;
   } catch (e) {
-    // Rollback: remove artista + auth user
-    await removerArtistaDefinitivamente(admin, artistaRow.id).catch(() => undefined);
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => undefined);
+    // Rollback: remove artista + auth user (best-effort + log — órfão de auth
+    // user bloqueia recriar o mesmo handle depois).
+    await removerArtistaDefinitivamente(admin, artistaRow.id).catch((err) =>
+      console.error("[criarArtista] rollback do artista falhou:", artistaRow.id, err)
+    );
+    await admin.auth.admin
+      .deleteUser(created.user.id)
+      .catch((err) => console.error("[criarArtista] rollback do auth user falhou:", created.user.id, err));
     throw e;
   }
 

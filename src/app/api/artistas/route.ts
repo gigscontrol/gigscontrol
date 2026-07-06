@@ -12,6 +12,7 @@ import { redigirDj } from "@/lib/mappers/artista";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -31,10 +32,7 @@ export async function GET() {
         );
     return NextResponse.json({ artistas: saida });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar artistas." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar artistas.");
   }
 }
 
@@ -111,9 +109,6 @@ export async function POST(request: Request) {
     if (e instanceof ArtistaNaLixeiraError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar artista." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar artista.");
   }
 }

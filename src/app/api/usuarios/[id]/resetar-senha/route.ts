@@ -5,6 +5,7 @@ import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import { resetarSenhaDoUsuario } from "@/lib/services/usuarios.service";
 import { audit } from "@/lib/services/historico.service";
 import { notificarUsuario } from "@/lib/services/notificacoes.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -52,9 +53,6 @@ export async function POST(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json(resultado);
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao resetar senha." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao resetar senha.");
   }
 }

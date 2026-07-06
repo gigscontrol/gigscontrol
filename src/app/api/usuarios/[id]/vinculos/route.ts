@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { listarVinculosDoUsuario } from "@/lib/repositories/membrosArtista.repo";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * GET /api/usuarios/[id]/vinculos
@@ -56,9 +57,6 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     }));
     return NextResponse.json({ vinculos });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar os vínculos." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar os vínculos.");
   }
 }

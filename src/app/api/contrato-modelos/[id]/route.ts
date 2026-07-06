@@ -6,6 +6,7 @@ import {
   removerModeloPorId,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloUpdateSchema } from "@/lib/validators/contratoModelos.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -18,10 +19,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Modelo não encontrado." }, { status: 404 });
     return NextResponse.json({ modelo });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar modelo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar modelo.");
   }
 }
 
@@ -62,10 +60,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
     return NextResponse.json({ modelo });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar modelo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar modelo.");
   }
 }
 
@@ -87,9 +82,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerModeloPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover modelo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover modelo.");
   }
 }

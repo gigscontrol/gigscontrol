@@ -13,6 +13,7 @@ import {
   verificarCriarContrato,
 } from "@/lib/api/permissoes";
 import { contratoUpdateSchema } from "@/lib/validators/contratos.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -32,10 +33,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
     return NextResponse.json({ contrato });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar contrato." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar contrato.");
   }
 }
 
@@ -99,10 +97,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
     return NextResponse.json({ contrato });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar contrato." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar contrato.");
   }
 }
 
@@ -126,9 +121,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerContratoPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover contrato." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover contrato.");
   }
 }

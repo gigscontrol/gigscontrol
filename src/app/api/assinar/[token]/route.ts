@@ -7,6 +7,7 @@ import {
   ExigenciaNaoAtendidaError,
 } from "@/lib/services/contratoSignatarios.service";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * Rota PÚBLICA (sem login) da página de assinatura. O `token` é a
@@ -49,10 +50,7 @@ export async function GET(
       jaAssinou: signatario.status === "assinado",
     });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Erro ao abrir o documento." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Erro ao abrir o documento.");
   }
 }
 
@@ -99,9 +97,6 @@ export async function POST(
     if (e instanceof ExigenciaNaoAtendidaError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Erro ao registrar a assinatura." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Erro ao registrar a assinatura.");
   }
 }

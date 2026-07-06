@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { autenticarSuperAdmin } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { kpisPlataforma } from "@/lib/services/plataforma.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarSuperAdmin();
@@ -11,9 +12,6 @@ export async function GET() {
     const kpis = await kpisPlataforma(admin);
     return NextResponse.json({ kpis });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao calcular KPIs." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao calcular KPIs.");
   }
 }

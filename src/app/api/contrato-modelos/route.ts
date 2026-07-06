@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloCreateSchema } from "@/lib/validators/contratoModelos.schema";
 import type { PlanoId } from "@/lib/planos";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -15,10 +16,7 @@ export async function GET() {
     const modelos = await listarModelosDoWorkspace(r.sessao.supabase);
     return NextResponse.json({ modelos });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar modelos." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar modelos.");
   }
 }
 
@@ -73,9 +71,6 @@ export async function POST(request: Request) {
     if (e instanceof LimiteModelosError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar modelo." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar modelo.");
   }
 }

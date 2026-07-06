@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { respostaDeErro } from "@/lib/api/erros";
 import { verificarAdminDoWorkspace } from "@/lib/api/permissoes";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { listarLixeira } from "@/lib/services/lixeira.service";
@@ -21,9 +22,6 @@ export async function GET() {
     const lista = await listarLixeira(admin, r.sessao.workspaceId);
     return NextResponse.json(lista);
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar lixeira." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar lixeira.");
   }
 }

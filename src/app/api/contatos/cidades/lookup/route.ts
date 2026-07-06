@@ -3,6 +3,7 @@ import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
 import { lookupOuCriarCidade } from "@/lib/services/cidades.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * POST /api/contatos/cidades/lookup
@@ -51,9 +52,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ cidade });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao registrar cidade." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao registrar cidade.");
   }
 }

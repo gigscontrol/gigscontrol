@@ -14,6 +14,7 @@ import {
   podeExcluirAgenda,
   stripShowDetalhado,
 } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -41,10 +42,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // Redige cachê/vínculos se só tem acesso básico (agenda.ver).
     return NextResponse.json({ show: stripShowDetalhado(show, r.sessao) });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar show." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar show.");
   }
 }
 
@@ -102,10 +100,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     // (senão a resposta do PATCH vaza o que o GET esconde).
     return NextResponse.json({ show: stripShowDetalhado(show, r.sessao) });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar show." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar show.");
   }
 }
 
@@ -128,9 +123,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerShowPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover show." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover show.");
   }
 }
