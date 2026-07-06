@@ -3,6 +3,7 @@ import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { reordenarArtistasNoWorkspace } from "@/lib/services/artistas.service";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * POST /api/artistas/reordenar
@@ -58,9 +59,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao reordenar artistas." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao reordenar artistas.");
   }
 }

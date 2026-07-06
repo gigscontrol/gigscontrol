@@ -7,6 +7,7 @@ import {
   removerCidadePorId,
 } from "@/lib/services/cidades.service";
 import { cidadeUpdateSchema } from "@/lib/validators/contatos.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -21,10 +22,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Cidade não encontrada." }, { status: 404 });
     return NextResponse.json({ cidade });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar cidade." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar cidade.");
   }
 }
 
@@ -53,10 +51,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     const cidade = await atualizarCidadePorId(r.sessao.supabase, params.id, parsed.data);
     return NextResponse.json({ cidade });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar cidade." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar cidade.");
   }
 }
 
@@ -69,9 +64,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerCidadePorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover cidade." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover cidade.");
   }
 }

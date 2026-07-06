@@ -11,6 +11,7 @@ import { contratoCreateSchema } from "@/lib/validators/contratos.schema";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { cobrarExcedente, infoSubscription } from "@/lib/services/stripe.service";
 import { PRECO_EXCEDENTE, type PlanoId } from "@/lib/planos";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -19,10 +20,7 @@ export async function GET() {
     const contratos = await listarContratosDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ contratos });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar contratos." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar contratos.");
   }
 }
 
@@ -80,10 +78,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ contrato }, { status: 201 });
   } catch (e) {
     if (!(e instanceof LimiteContratosError)) {
-      return NextResponse.json(
-        { erro: (e as Error).message ?? "Falha ao criar contrato." },
-        { status: 500 }
-      );
+      return respostaDeErro(e, "Falha ao criar contrato.");
     }
 
     // Limite do ciclo atingido. Se há assinatura ativa (cartão), oferece pagar

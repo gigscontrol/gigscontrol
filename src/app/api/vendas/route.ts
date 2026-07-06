@@ -32,10 +32,7 @@ export async function GET() {
     );
     return NextResponse.json({ vendas: saida });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar vendas." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar vendas.");
   }
 }
 

@@ -14,6 +14,7 @@ import {
   verificarCriarOrcamento,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
@@ -32,10 +33,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
     return NextResponse.json({ orcamento });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar orçamento." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar orçamento.");
   }
 }
 
@@ -96,10 +94,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ orcamento });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar orçamento." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar orçamento.");
   }
 }
 
@@ -130,9 +125,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover orçamento." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover orçamento.");
   }
 }

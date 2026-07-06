@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/permissoes";
 import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
+import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
 
 type RouteCtx = { params: { id: string } };
@@ -37,10 +38,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       : redigirVendaFinanceiro(venda);
     return NextResponse.json({ venda: saida });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar venda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar venda.");
   }
 }
 
@@ -97,10 +95,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ venda });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar venda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar venda.");
   }
 }
 
@@ -131,9 +126,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover venda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover venda.");
   }
 }

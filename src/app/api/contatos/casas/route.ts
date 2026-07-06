@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/casas.service";
 import { casaCreateSchema } from "@/lib/validators/contatos.schema";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -16,10 +17,7 @@ export async function GET() {
     const casas = await listarCasasDoWorkspace(r.sessao.supabase);
     return NextResponse.json({ casas });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar casas." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar casas.");
   }
 }
 
@@ -52,9 +50,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ casa }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar casa." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar casa.");
   }
 }

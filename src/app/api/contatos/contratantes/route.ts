@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/contratantes.service";
 import { contratanteCreateSchema } from "@/lib/validators/contatos.schema";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -19,10 +20,7 @@ export async function GET() {
     );
     return NextResponse.json({ contratantes });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar contratantes." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar contratantes.");
   }
 }
 
@@ -56,9 +54,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ contratante }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar contratante." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar contratante.");
   }
 }

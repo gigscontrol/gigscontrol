@@ -8,6 +8,7 @@ import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
 import { buscarParcela } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -186,9 +187,6 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     }
     return NextResponse.json({ parcela });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar parcela." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar parcela.");
   }
 }

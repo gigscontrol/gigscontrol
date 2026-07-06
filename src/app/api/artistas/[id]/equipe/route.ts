@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
 import { listarEquipeDoArtista } from "@/lib/services/equipeArtista.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -31,9 +32,6 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     const membros = await listarEquipeDoArtista(r.sessao.supabase, params.id);
     return NextResponse.json({ membros });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar a equipe." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar a equipe.");
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * GET /api/contatos/contratantes/existe?documento=X | ?nome=Y
@@ -47,9 +48,6 @@ export async function GET(request: Request) {
     const c = (data ?? [])[0] ?? null;
     return NextResponse.json({ existe: !!c, contratante: c });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar contratante." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar contratante.");
   }
 }

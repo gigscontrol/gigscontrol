@@ -9,6 +9,7 @@ import {
 } from "@/lib/services/usuarios.service";
 import { usuarioUpdateSchema } from "@/lib/validators/usuarios.schema";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -49,10 +50,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ usuario });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar usuário." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar usuário.");
   }
 }
 
@@ -84,9 +82,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover usuário." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover usuário.");
   }
 }

@@ -12,6 +12,7 @@ import {
 import { podeVerContrato, podeEditarContrato } from "@/lib/api/permissoes";
 import { definirSignatariosSchema } from "@/lib/validators/contratoSignatarios.schema";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET(
   _request: Request,
@@ -35,10 +36,7 @@ export async function GET(
     const comUrls = await preencherUrls(criarClienteAdmin(), signatarios);
     return NextResponse.json({ signatarios: comUrls });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar signatários." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar signatários.");
   }
 }
 
@@ -94,9 +92,6 @@ export async function POST(
     );
     return NextResponse.json({ signatarios }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao definir signatários." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao definir signatários.");
   }
 }

@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/agendaItems.service";
 import { agendaItemCreateSchema } from "@/lib/validators/agendaItems.schema";
 import { podeCriarAgenda } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /** GET /api/agenda-items — lista os itens (evento/voo/transporte) do workspace. */
 export async function GET() {
@@ -16,10 +17,7 @@ export async function GET() {
     const itens = await listarAgendaItensDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ itens });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar itens da agenda." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar itens da agenda.");
   }
 }
 
@@ -59,9 +57,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ item }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar item." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar item.");
   }
 }

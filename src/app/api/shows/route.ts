@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/shows.service";
 import { showCreateSchema } from "@/lib/validators/shows.schema";
 import { podeCriarAgenda } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * GET /api/shows
@@ -19,10 +20,7 @@ export async function GET() {
     const shows = await listarShowsDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ shows });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar shows." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar shows.");
   }
 }
 
@@ -65,9 +63,6 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ show }, { status: 201 });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar show." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar show.");
   }
 }

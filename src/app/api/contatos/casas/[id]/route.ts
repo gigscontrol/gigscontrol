@@ -7,6 +7,7 @@ import {
   removerCasaPorId,
 } from "@/lib/services/casas.service";
 import { casaUpdateSchema } from "@/lib/validators/contatos.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -20,10 +21,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     if (!casa) return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
     return NextResponse.json({ casa });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar casa." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar casa.");
   }
 }
 
@@ -52,10 +50,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     const casa = await atualizarCasaPorId(r.sessao.supabase, params.id, parsed.data);
     return NextResponse.json({ casa });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar casa." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar casa.");
   }
 }
 
@@ -68,9 +63,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerCasaPorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover casa." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover casa.");
   }
 }

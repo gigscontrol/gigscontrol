@@ -3,6 +3,7 @@ import { z } from "zod";
 import { autenticarSuperAdmin } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { alterarStatusUsuario } from "@/lib/services/plataforma.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 const patchSchema = z.object({
   status: z.enum(["ativo", "bloqueado", "desativado"]).optional(),
@@ -36,9 +37,6 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar usuário." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar usuário.");
   }
 }

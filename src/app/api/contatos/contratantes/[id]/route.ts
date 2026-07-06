@@ -8,6 +8,7 @@ import {
   removerContratantePorId,
 } from "@/lib/services/contratantes.service";
 import { contratanteUpdateSchema } from "@/lib/validators/contatos.schema";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
 
@@ -31,10 +32,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
     return NextResponse.json({ contratante });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao buscar contratante." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao buscar contratante.");
   }
 }
 
@@ -79,10 +77,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
     return NextResponse.json({ contratante });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao atualizar contratante." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao atualizar contratante.");
   }
 }
 
@@ -106,9 +101,6 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerContratantePorId(r.sessao.supabase, params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao remover contratante." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao remover contratante.");
   }
 }

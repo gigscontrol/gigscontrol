@@ -13,6 +13,7 @@ import { usuarioCreateSchema } from "@/lib/validators/usuarios.schema";
 import { redigirUsuario } from "@/lib/mappers/usuario";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
+import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -28,10 +29,7 @@ export async function GET() {
     const saida = podeTudo ? usuarios : usuarios.map(redigirUsuario);
     return NextResponse.json({ usuarios: saida });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar usuários." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar usuários.");
   }
 }
 
@@ -93,9 +91,6 @@ export async function POST(request: Request) {
     if (e instanceof ArtistaForaDoWorkspaceError) {
       return NextResponse.json({ erro: e.message }, { status: 400 });
     }
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao criar usuário." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao criar usuário.");
   }
 }

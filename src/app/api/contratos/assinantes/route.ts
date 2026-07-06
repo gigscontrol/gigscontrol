@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { resumoAssinantesDoWorkspace } from "@/lib/services/contratoSignatarios.service";
 import { listarContratosDoWorkspace } from "@/lib/services/contratos.service";
 import { verTodosContratos } from "@/lib/api/permissoes";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * GET /api/contratos/assinantes
@@ -34,9 +35,6 @@ export async function GET() {
     );
     return NextResponse.json({ assinantes: filtrado });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao listar assinantes." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao listar assinantes.");
   }
 }

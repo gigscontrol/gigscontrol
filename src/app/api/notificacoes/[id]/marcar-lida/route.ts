@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticar } from "@/lib/api/session";
+import { respostaDeErro } from "@/lib/api/erros";
 import { marcarLidaPorId } from "@/lib/services/notificacoes.service";
 
 type RouteCtx = { params: { id: string } };
@@ -16,9 +17,6 @@ export async function POST(_request: Request, { params }: RouteCtx) {
     await marcarLidaPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao marcar como lida." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao marcar como lida.");
   }
 }
