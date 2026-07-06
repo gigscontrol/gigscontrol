@@ -8,7 +8,7 @@ const COLS = `
   valor_cache, duracao_horas, duracao_minutos,
   camarim, efeitos, hotel, logistica,
   observacoes, info_extra, detalhes_evento,
-  data_show, horario, validade, show_id,
+  data_show, horario, fuso_horario, validade, show_id,
   taxa_agencia_valor, taxa_modo_aplicado,
   criado_por, criado_em, atualizado_em
 `;

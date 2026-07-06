@@ -32,6 +32,7 @@ export type OrcamentoRow = {
   observacoes: string | null;
   data_show: string | null;
   horario: string | null;
+  fuso_horario: string | null;
   validade: string | null;
   show_id: string | null;
   criado_por: string | null;
@@ -86,6 +87,7 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     djId: row.artist_id ?? "",
     dataShow: row.data_show ?? undefined,
     horario: row.horario ?? undefined,
+    fusoHorario: row.fuso_horario ?? undefined,
     duracaoHoras: row.duracao_horas ?? 0,
     duracaoMinutos: row.duracao_minutos ?? undefined,
     valorCache: paraNumero(row.valor_cache),
@@ -134,6 +136,7 @@ export type OrcamentoEscrita = {
   observacoes?: string | null;
   data_show?: string | null;
   horario?: string | null;
+  fuso_horario?: string | null;
   validade?: string | null;
   show_id?: string | null;
   criado_por?: string | null;

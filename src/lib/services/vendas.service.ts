@@ -29,6 +29,7 @@ import type {
 import { criarShowNoWorkspace, atualizarShowPorId } from "@/lib/services/shows.service";
 import { atualizarOrcamentoPorId, buscarOrcamentoPorId } from "@/lib/services/orcamentos.service";
 import { resolverTaxaAgencia } from "@/lib/services/taxaAgencia.service";
+import { buscarFusoPadrao } from "@/lib/services/workspacePrefs.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroVendas } from "@/lib/api/permissoes";
 
@@ -70,6 +71,7 @@ function vendaInputParaEscrita(
   if (input.data_show !== undefined) out.data_show = input.data_show;
   if (input.horario !== undefined) out.horario = input.horario;
   if (input.horario_fim !== undefined) out.horario_fim = input.horario_fim;
+  if (input.fuso_horario !== undefined) out.fuso_horario = input.fuso_horario;
   if (input.cidade_id !== undefined) out.cidade_id = normalizarUuid(input.cidade_id ?? null);
   if (input.casa_id !== undefined) out.casa_id = normalizarUuid(input.casa_id ?? null);
   if (input.artist_id !== undefined) out.artist_id = normalizarUuid(input.artist_id ?? null);
@@ -178,17 +180,14 @@ export async function criarVendaCompleta(
   // 1 + 2: cria a venda
   const escrita = vendaInputParaEscrita(input);
   escrita.numero = await proximoNumeroVenda(supabase, workspaceId);
-  // Herda info_extra do orçamento se o input não trouxe um próprio.
-  // Cliente concretizar pode editar antes; se não editou, assume o do
-  // orçamento como ponto de partida.
-  if (
-    (escrita.info_extra === undefined || escrita.info_extra === null) &&
-    input.orcamento_id
-  ) {
+  // Herda do orçamento o que o input não trouxe (info_extra + fuso do horário).
+  // Cliente concretizar pode editar antes; se não editou, assume o do orçamento.
+  const faltaInfoExtra = escrita.info_extra === undefined || escrita.info_extra === null;
+  const faltaFuso = escrita.fuso_horario === undefined || escrita.fuso_horario === null;
+  if (input.orcamento_id && (faltaInfoExtra || faltaFuso)) {
     const orc = await buscarOrcamentoPorId(supabase, input.orcamento_id);
-    if (orc?.infoExtra) {
-      escrita.info_extra = orc.infoExtra;
-    }
+    if (faltaInfoExtra && orc?.infoExtra) escrita.info_extra = orc.infoExtra;
+    if (faltaFuso && orc?.fusoHorario) escrita.fuso_horario = orc.fusoHorario;
   }
   // Taxa da agência (comissão, informativa): recalcula do artista + cachê final.
   // Nos modos VARIÁVEIS sem valor reenviado na concretização, herda a do
@@ -211,6 +210,10 @@ export async function criarVendaCompleta(
   if (taxaVenda) {
     escrita.taxa_agencia_valor = taxaVenda.taxa_agencia_valor;
     escrita.taxa_modo_aplicado = taxaVenda.taxa_modo_aplicado;
+  }
+  // Default do fuso do horário = fuso padrão da agência (se input/orçamento não deram).
+  if (escrita.fuso_horario === undefined || escrita.fuso_horario === null) {
+    escrita.fuso_horario = await buscarFusoPadrao(supabase, workspaceId);
   }
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 

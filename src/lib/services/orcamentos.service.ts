@@ -18,6 +18,7 @@ import type {
 } from "@/lib/validators/orcamentos.schema";
 import { criarShowNoWorkspace } from "@/lib/services/shows.service";
 import { resolverTaxaAgencia } from "@/lib/services/taxaAgencia.service";
+import { buscarFusoPadrao } from "@/lib/services/workspacePrefs.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroOrcamentos } from "@/lib/api/permissoes";
 
@@ -57,6 +58,7 @@ function entradaParaEscrita(
     out.detalhes_evento = input.detalhes_evento;
   if (input.data_show !== undefined) out.data_show = input.data_show;
   if (input.horario !== undefined) out.horario = input.horario;
+  if (input.fuso_horario !== undefined) out.fuso_horario = input.fuso_horario;
   if (input.validade !== undefined) out.validade = input.validade;
   if (input.show_id !== undefined) out.show_id = input.show_id;
   return out;
@@ -119,6 +121,10 @@ export async function criarOrcamentoNoWorkspace(
   if (taxa) {
     escrita.taxa_agencia_valor = taxa.taxa_agencia_valor;
     escrita.taxa_modo_aplicado = taxa.taxa_modo_aplicado;
+  }
+  // Default do fuso do horário = fuso padrão da agência (só rótulo).
+  if (escrita.fuso_horario === undefined || escrita.fuso_horario === null) {
+    escrita.fuso_horario = await buscarFusoPadrao(supabase, workspaceId);
   }
   const row = await repoCriar(supabase, workspaceId, criadoPor, escrita);
   return rowParaOrcamento(row);

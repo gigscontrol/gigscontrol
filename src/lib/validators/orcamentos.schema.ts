@@ -55,6 +55,8 @@ export const orcamentoCreateSchema = z.object({
     .regex(/^\d{2}:\d{2}$/, "horario deve ser HH:mm")
     .nullable()
     .optional(),
+  // Fuso do horário (IANA) — só rótulo, não converte.
+  fuso_horario: z.string().max(64).nullable().optional(),
   validade: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "validade deve ser YYYY-MM-DD")

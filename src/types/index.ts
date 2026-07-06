@@ -282,6 +282,8 @@ export type Orcamento = {
   // show — agora opcionais (preenchidos ao converter em venda)
   dataShow?: string;
   horario?: string;
+  /** Fuso do horário (IANA) — só rótulo, não converte. */
+  fusoHorario?: string;
   duracaoHoras: number;
   duracaoMinutos?: number;
   valorCache: number;
@@ -458,6 +460,8 @@ export type Venda = {
   dataShow: string; // YYYY-MM-DD
   horario: string; // HH:mm — início
   horarioFim?: string; // HH:mm — fim (opcional)
+  /** Fuso do horário (IANA) — só rótulo, não converte. */
+  fusoHorario?: string;
   cidadeId: string;
   casaId?: string;
 

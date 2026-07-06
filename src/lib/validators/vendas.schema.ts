@@ -61,6 +61,8 @@ export const vendaCreateSchema = z.object({
   data_show: dataYmd.nullable().optional(),
   horario: horaHm.nullable().optional(),
   horario_fim: horaHm.nullable().optional(),
+  // Fuso do horário (IANA) — só rótulo, não converte.
+  fuso_horario: z.string().max(64).nullable().optional(),
   cidade_id: uuidLike.nullable().optional(),
   casa_id: uuidLike.nullable().optional(),
   artist_id: uuidLike.nullable().optional(),
