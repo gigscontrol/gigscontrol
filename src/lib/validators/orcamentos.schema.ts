@@ -61,6 +61,9 @@ export const orcamentoCreateSchema = z.object({
     .nullable()
     .optional(),
   show_id: uuidLike.nullable().optional(),
+  // Taxa da agência digitada no form (modos VARIÁVEIS: % ou R$ conforme o modo
+  // do artista). Nos modos fixos o servidor calcula do config e ignora isto.
+  taxa_digitada: z.number().nonnegative().nullable().optional(),
 });
 
 export type OrcamentoCreateInput = z.infer<typeof orcamentoCreateSchema>;

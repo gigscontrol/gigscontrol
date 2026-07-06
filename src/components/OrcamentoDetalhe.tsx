@@ -11,6 +11,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { liquidoArtista } from "@/lib/taxaAgencia";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
@@ -240,6 +241,20 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 bold
                 accent={accent}
               />
+              {orc.taxaAgenciaValor !== undefined && orc.taxaAgenciaValor > 0 && (
+                <>
+                  <InfoItem
+                    label={t("Taxa de agência")}
+                    value={formatBRL(orc.taxaAgenciaValor)}
+                  />
+                  <InfoItem
+                    label={t("Líquido do artista")}
+                    value={formatBRL(liquidoArtista(orc.valorCache ?? 0, orc.taxaAgenciaValor))}
+                    bold
+                    accent={accent}
+                  />
+                </>
+              )}
               <InfoItem
                 label={t("Data")}
                 value={
