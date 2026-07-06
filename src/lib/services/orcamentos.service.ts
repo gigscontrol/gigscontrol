@@ -17,6 +17,7 @@ import type {
   OrcamentoUpdateInput,
 } from "@/lib/validators/orcamentos.schema";
 import { criarShowNoWorkspace } from "@/lib/services/shows.service";
+import { resolverTaxaAgencia } from "@/lib/services/taxaAgencia.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroOrcamentos } from "@/lib/api/permissoes";
 
@@ -109,6 +110,16 @@ export async function criarOrcamentoNoWorkspace(
   const escrita = entradaParaEscrita(input);
   escrita.numero = await proximoNumeroOrcamento(supabase, workspaceId);
   escrita.status = escrita.status ?? "pendente";
+  // Taxa da agência (comissão) — calculada no servidor a partir do artista.
+  const taxa = await resolverTaxaAgencia(supabase, {
+    artistId: escrita.artist_id ?? null,
+    cache: escrita.valor_cache ?? null,
+    taxaDigitada: input.taxa_digitada,
+  });
+  if (taxa) {
+    escrita.taxa_agencia_valor = taxa.taxa_agencia_valor;
+    escrita.taxa_modo_aplicado = taxa.taxa_modo_aplicado;
+  }
   const row = await repoCriar(supabase, workspaceId, criadoPor, escrita);
   return rowParaOrcamento(row);
 }
@@ -118,7 +129,33 @@ export async function atualizarOrcamentoPorId(
   id: string,
   input: OrcamentoUpdateInput
 ): Promise<Orcamento> {
-  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  // Recalcula a taxa quando o que a define muda (artista/cachê/valor digitado);
+  // busca o orçamento atual pra preencher o que não veio no patch.
+  if (
+    input.artist_id !== undefined ||
+    input.valor_cache !== undefined ||
+    input.taxa_digitada !== undefined
+  ) {
+    const atual = await buscarOrcamentoPorId(supabase, id);
+    const artistId =
+      input.artist_id !== undefined
+        ? normalizarUuid(input.artist_id ?? null)
+        : atual?.djId ?? null;
+    const cache =
+      input.valor_cache !== undefined ? input.valor_cache : atual?.valorCache ?? null;
+    const taxa = await resolverTaxaAgencia(supabase, {
+      artistId,
+      cache,
+      taxaDigitada: input.taxa_digitada,
+      preservarVariavelSemInput: true,
+    });
+    if (taxa) {
+      escrita.taxa_agencia_valor = taxa.taxa_agencia_valor;
+      escrita.taxa_modo_aplicado = taxa.taxa_modo_aplicado;
+    }
+  }
+  const row = await repoAtualizar(supabase, id, escrita);
   return rowParaOrcamento(row);
 }
 

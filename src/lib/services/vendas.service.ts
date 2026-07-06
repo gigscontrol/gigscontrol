@@ -28,6 +28,7 @@ import type {
 } from "@/lib/validators/vendas.schema";
 import { criarShowNoWorkspace, atualizarShowPorId } from "@/lib/services/shows.service";
 import { atualizarOrcamentoPorId, buscarOrcamentoPorId } from "@/lib/services/orcamentos.service";
+import { resolverTaxaAgencia } from "@/lib/services/taxaAgencia.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroVendas } from "@/lib/api/permissoes";
 
@@ -189,6 +190,28 @@ export async function criarVendaCompleta(
       escrita.info_extra = orc.infoExtra;
     }
   }
+  // Taxa da agência (comissão, informativa): recalcula do artista + cachê final.
+  // Nos modos VARIÁVEIS sem valor reenviado na concretização, herda a do
+  // orçamento pra não zerar o que foi definido lá.
+  let taxaVenda = await resolverTaxaAgencia(supabase, {
+    artistId: escrita.artist_id ?? null,
+    cache: escrita.cache ?? null,
+    taxaDigitada: input.taxa_digitada,
+    preservarVariavelSemInput: true,
+  });
+  if (!taxaVenda && input.orcamento_id) {
+    const orc = await buscarOrcamentoPorId(supabase, input.orcamento_id);
+    if (orc && orc.taxaAgenciaValor !== undefined) {
+      taxaVenda = {
+        taxa_agencia_valor: orc.taxaAgenciaValor,
+        taxa_modo_aplicado: orc.taxaModoAplicado ?? "sem-taxa",
+      };
+    }
+  }
+  if (taxaVenda) {
+    escrita.taxa_agencia_valor = taxaVenda.taxa_agencia_valor;
+    escrita.taxa_modo_aplicado = taxaVenda.taxa_modo_aplicado;
+  }
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
   // A venda JÁ existe. Os passos seguintes (parcelas, show, aceite do orçamento)
@@ -298,7 +321,31 @@ export async function atualizarVendaPorId(
   id: string,
   input: VendaUpdateInput
 ): Promise<Venda> {
-  await atualizarVendaRow(supabase, id, vendaInputParaEscrita(input));
+  const escrita = vendaInputParaEscrita(input);
+  // Recalcula a taxa quando o que a define muda (artista/cachê/valor digitado).
+  if (
+    input.artist_id !== undefined ||
+    input.cache !== undefined ||
+    input.taxa_digitada !== undefined
+  ) {
+    const atual = await carregarVendaCompleta(supabase, id);
+    const artistId =
+      input.artist_id !== undefined
+        ? normalizarUuid(input.artist_id ?? null)
+        : atual?.djId ?? null;
+    const cache = input.cache !== undefined ? input.cache : atual?.cache ?? null;
+    const taxa = await resolverTaxaAgencia(supabase, {
+      artistId,
+      cache,
+      taxaDigitada: input.taxa_digitada,
+      preservarVariavelSemInput: true,
+    });
+    if (taxa) {
+      escrita.taxa_agencia_valor = taxa.taxa_agencia_valor;
+      escrita.taxa_modo_aplicado = taxa.taxa_modo_aplicado;
+    }
+  }
+  await atualizarVendaRow(supabase, id, escrita);
   const final = await carregarVendaCompleta(supabase, id);
   if (!final) throw new Error("Venda não encontrada após atualização.");
   return final;

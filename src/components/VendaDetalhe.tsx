@@ -13,6 +13,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { liquidoArtista } from "@/lib/taxaAgencia";
 import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 
 type Props = {
@@ -364,6 +365,22 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
                 </span>
               }
             />
+            {venda.taxaAgenciaValor !== undefined && venda.taxaAgenciaValor > 0 && (
+              <>
+                <InfoLine
+                  label={t("Taxa de agência")}
+                  value={formatBRL(venda.taxaAgenciaValor)}
+                />
+                <InfoLine
+                  label={t("Líquido do artista")}
+                  value={
+                    <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
+                      {formatBRL(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
+                    </span>
+                  }
+                />
+              </>
+            )}
             <InfoLine
               label={t("Duração")}
               value={formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
