@@ -12,6 +12,7 @@ import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { liquidoArtista } from "@/lib/taxaAgencia";
+import { nomeCidadeFuso } from "./TimezoneSelect";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
@@ -269,7 +270,15 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 }
                 missing={!orc.dataShow}
               />
-              <InfoItem label={t("Horário")} value={orc.horario || "—"} missing={!orc.horario} />
+              <InfoItem
+                label={t("Horário")}
+                value={
+                  orc.horario
+                    ? `${orc.horario}${orc.fusoHorario ? ` · ${nomeCidadeFuso(orc.fusoHorario)}` : ""}`
+                    : "—"
+                }
+                missing={!orc.horario}
+              />
               <InfoItem label={t("Duração")} value={formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)} />
               <InfoItem
                 label={t("Validade")}

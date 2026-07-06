@@ -14,6 +14,7 @@ import { useArtistas } from "@/lib/workspace-context";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { liquidoArtista } from "@/lib/taxaAgencia";
+import { nomeCidadeFuso } from "./TimezoneSelect";
 import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 
 type Props = {
@@ -211,9 +212,10 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
             <InfoLine
               label={t("Horário")}
               value={
-                venda.horarioFim
+                (venda.horarioFim
                   ? `${venda.horario} — ${venda.horarioFim}`
-                  : venda.horario
+                  : venda.horario) +
+                (venda.fusoHorario ? ` · ${nomeCidadeFuso(venda.fusoHorario)}` : "")
               }
               bold
             />

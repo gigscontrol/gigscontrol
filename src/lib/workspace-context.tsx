@@ -35,6 +35,7 @@ export type WorkspacePreferencias = {
   idiomaPadrao: string | null;
   paisPadrao: string | null;
   formatoData: string | null;
+  fusoPadrao: string | null;
 };
 
 export type ArtistaWS = DJ;
@@ -301,6 +302,7 @@ type WorkspaceApi = {
   idiomaPadrao: string | null;
   paisPadrao: string | null;
   formatoData: string | null;
+  fusoPadrao: string | null;
 };
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -313,6 +315,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     idiomaPadrao: null,
     paisPadrao: null,
     formatoData: null,
+    fusoPadrao: null,
   });
 
   const [artistas, setArtistas] = useState<ArtistaWS[]>([]);
@@ -352,6 +355,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         idiomaPadrao: ws.idiomaPadrao,
         paisPadrao: ws.paisPadrao,
         formatoData: ws.formatoData,
+        fusoPadrao: ws.fusoPadrao,
       });
       setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
     } catch {
@@ -391,6 +395,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           idioma_padrao: p.idiomaPadrao,
           pais_padrao: p.paisPadrao,
           formato_data: p.formatoData,
+          fuso_padrao: p.fusoPadrao,
         }),
       });
       const body = await jsonOuErro(res);
@@ -399,6 +404,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         idiomaPadrao: ws.idiomaPadrao,
         paisPadrao: ws.paisPadrao,
         formatoData: ws.formatoData,
+        fusoPadrao: ws.fusoPadrao,
       });
       setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
     },

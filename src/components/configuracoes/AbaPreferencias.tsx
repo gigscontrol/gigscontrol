@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { useT, useLang, type Lang } from "@/lib/i18n";
 import { useWorkspace } from "@/lib/workspace-context";
 import SeletorPais from "../SeletorPais";
 import Flag from "../Flag";
 import { buscarPais, BRASIL, type Country } from "@/lib/data/countries";
+import TimezoneSelect, {
+  fusoDoNavegador,
+  offsetDe,
+  nomeCidadeFuso,
+} from "../TimezoneSelect";
 
 /**
  * Aba Preferências (Configurações — admin). Defaults da agência:
@@ -41,6 +46,7 @@ export default function AbaPreferencias() {
   const idiomaAtual = (preferencias.idiomaPadrao ?? "pt") as Lang;
   const paisAtual = paisDe(preferencias.paisPadrao);
   const formatoAtual = preferencias.formatoData === "mdy" ? "mdy" : "dmy";
+  const fusoDetectado = useMemo(() => fusoDoNavegador(), []);
 
   async function salvar(area: string, patch: Parameters<typeof atualizarPreferencias>[0]) {
     setSalvando(area);
@@ -145,6 +151,34 @@ export default function AbaPreferencias() {
             );
           })}
         </div>
+      </section>
+
+      {/* Fuso horário padrão */}
+      <section className="card flex flex-col gap-3">
+        <div>
+          <div className="section-title">{t("Fuso horário padrão")}</div>
+          <p className="text-xs text-muted">
+            {t("Fuso que já vem selecionado ao criar shows e nos horários de apresentação. É só exibição — não muda nada no backend nem os horários já salvos.")}
+          </p>
+        </div>
+        <TimezoneSelect
+          value={preferencias.fusoPadrao}
+          onChange={(tz) => salvar("fuso", { fusoPadrao: tz })}
+          disabled={!!salvando}
+        />
+        {!preferencias.fusoPadrao && (
+          <button
+            type="button"
+            disabled={!!salvando}
+            onClick={() => salvar("fuso", { fusoPadrao: fusoDetectado })}
+            className="text-xs text-left hover:underline disabled:opacity-60"
+            style={{ color: "var(--brand)" }}
+          >
+            {t("Detectamos o seu: {fuso} — usar", {
+              fuso: `${nomeCidadeFuso(fusoDetectado)} · ${offsetDe(fusoDetectado)}`,
+            })}
+          </button>
+        )}
       </section>
     </div>
   );

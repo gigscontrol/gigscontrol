@@ -32,6 +32,7 @@ export type VendaRow = {
   data_show: string | null;
   horario: string | null;
   horario_fim: string | null;
+  fuso_horario: string | null;
   cidade_id: string | null;
   casa_id: string | null;
   artist_id: string | null;
@@ -92,6 +93,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     dataShow: row.data_show ?? "",
     horario: row.horario ?? "",
     horarioFim: row.horario_fim ?? undefined,
+    fusoHorario: row.fuso_horario ?? undefined,
     cidadeId: row.cidade_id ?? "",
     casaId: row.casa_id ?? undefined,
 
@@ -153,6 +155,7 @@ export type VendaEscrita = {
   data_show?: string | null;
   horario?: string | null;
   horario_fim?: string | null;
+  fuso_horario?: string | null;
   cidade_id?: string | null;
   casa_id?: string | null;
   artist_id?: string | null;
