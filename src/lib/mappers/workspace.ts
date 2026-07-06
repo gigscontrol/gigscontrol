@@ -17,6 +17,7 @@ export type WorkspaceRow = {
   idioma_padrao: string | null;
   pais_padrao: string | null;
   formato_data: string | null;
+  fuso_padrao: string | null;
   criado_em: string | null;
 };
 
@@ -43,6 +44,8 @@ export type WorkspaceResumo = WorkspaceAparencia & {
   idiomaPadrao: string | null;
   paisPadrao: string | null;
   formatoData: string | null;
+  /** Fuso horário padrão da agência (IANA). Display-only; pré-preenche o evento. */
+  fusoPadrao: string | null;
   /** ISO timestamp da criação do workspace (limite inferior dos filtros de data). */
   criadoEm: string | null;
 };
@@ -64,6 +67,7 @@ export function rowParaWorkspace(row: WorkspaceRow): WorkspaceResumo {
     idiomaPadrao: row.idioma_padrao,
     paisPadrao: row.pais_padrao,
     formatoData: row.formato_data,
+    fusoPadrao: row.fuso_padrao,
     criadoEm: row.criado_em,
   };
 }
