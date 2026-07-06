@@ -45,7 +45,10 @@ type LinhaParcela = {
 
 function fmtData(iso?: string): string {
   if (!iso) return "";
-  const d = new Date(iso);
+  // Uma data pura "YYYY-MM-DD" é lida como meia-noite UTC pelo JS, exibindo o
+  // DIA ANTERIOR em fuso negativo (BR, UTC-3). Ancora ao meio-dia local.
+  const s = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso;
+  const d = new Date(s);
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
 }
 

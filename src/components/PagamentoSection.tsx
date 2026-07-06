@@ -33,7 +33,9 @@ export function novaParcela(percentual: number, cacheTotal: number): Parcela {
   return {
     id: `parc-${Date.now()}-${parcelaCounter}`,
     percentual,
-    valor: Math.round((cacheTotal * percentual) / 100),
+    // Arredonda a 2 casas (centavos), não a real inteiro — as colunas são
+    // numeric(10,2). `Math.round(x)/100` == round(x/100, 2).
+    valor: Math.round(cacheTotal * percentual) / 100,
     dataVencimento: "",
     statusBase: "pendente",
   };
@@ -59,7 +61,8 @@ export default function PagamentoSection({
   );
 
   const percentualOk = Math.abs(somaPercentual - 100) < 0.01;
-  const valorOk = Math.abs(somaValor - cacheTotal) < 1;
+  // Tolerância de 1 centavo (antes era R$1, que deixava a soma divergir do cachê).
+  const valorOk = Math.abs(somaValor - cacheTotal) < 0.01;
   const tudoOk = modo === "percentual" ? percentualOk : valorOk;
 
   function adicionar() {
@@ -82,7 +85,7 @@ export default function PagamentoSection({
     const limpo = Math.max(0, Math.min(100, pct));
     atualizar(id, {
       percentual: limpo,
-      valor: Math.round((cacheTotal * limpo) / 100),
+      valor: Math.round(cacheTotal * limpo) / 100,
     });
   }
 

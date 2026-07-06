@@ -219,7 +219,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     setParcelas((prev) =>
       prev.map((p) => ({
         ...p,
-        valor: Math.round((cacheNumAtual * p.percentual) / 100),
+        // 2 casas (centavos), não real inteiro — `Math.round(x)/100` == round(x/100,2).
+        valor: Math.round(cacheNumAtual * p.percentual) / 100,
       }))
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -240,7 +241,15 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         },
       ];
     }
-    return parcelas;
+    // Modo detalhado: a ÚLTIMA parcela absorve o resto do arredondamento pra
+    // soma(parcelas) fechar EXATAMENTE o cachê (senão sobra 1 centavo/real de
+    // drift em rateios não-divisíveis). As demais já vêm arredondadas a 2 casas.
+    if (parcelas.length === 0) return parcelas;
+    const outras = parcelas.slice(0, -1);
+    const somaOutras = outras.reduce((a, p) => a + (p.valor || 0), 0);
+    const ultima = parcelas[parcelas.length - 1];
+    const restante = Math.round((cacheNumAtual - somaOutras) * 100) / 100;
+    return [...outras, { ...ultima, valor: restante }];
   }
 
   // ------- Auto-fill tracking -------
@@ -332,7 +341,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         const somaPct = parcelas.reduce((a, p) => a + (p.percentual || 0), 0);
         const somaVal = parcelas.reduce((a, p) => a + (p.valor || 0), 0);
         const pctOk = Math.abs(somaPct - 100) < 0.01;
-        const valOk = Math.abs(somaVal - cacheNum) < 1;
+        const valOk = Math.abs(somaVal - cacheNum) < 0.01;
         if (modoParcela === "percentual" && !pctOk) {
           errs.parcelas = t("A soma das parcelas deve ser 100%");
         } else if (modoParcela === "valor" && !valOk) {
