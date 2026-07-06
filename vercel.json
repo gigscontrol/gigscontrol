@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/limpar-storage",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}
