@@ -158,7 +158,9 @@ export async function criarUsuarioDaEquipe(
     // Se algo falhou, remove o auth user pra evitar órfão. Os vínculos
     // (se algum foi criado) ficam órfãos por FK, mas sem profile ninguém
     // loga; limpeza fica pro cascade de remoção.
-    await admin.auth.admin.deleteUser(created.user.id).catch(() => undefined);
+    await admin.auth.admin
+      .deleteUser(created.user.id)
+      .catch((err) => console.error("[criarUsuarioDaEquipe] rollback do auth user falhou:", created.user.id, err));
     throw e;
   }
 }

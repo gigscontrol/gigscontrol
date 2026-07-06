@@ -83,7 +83,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     ...metaAtual,
     pagamento: { ...(metaAtual.pagamento ?? {}), comprovantePath: path },
   };
-  await atualizarParcelaRow(r.sessao.supabase, params.id, { meta });
+  try {
+    await atualizarParcelaRow(r.sessao.supabase, params.id, { meta });
+  } catch (e) {
+    // Se gravar o path na parcela falhar, apaga o objeto recém-subido pra não
+    // deixar comprovante (PII bancária) órfão no bucket privado.
+    await admin.storage.from(BUCKET).remove([path]).catch(() => undefined);
+    throw e;
+  }
 
   return NextResponse.json({ ok: true, path });
 }
