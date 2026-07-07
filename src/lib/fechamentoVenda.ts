@@ -1,5 +1,27 @@
-import type { Venda } from "@/types";
+import type { ItemQuantidade } from "@/types";
 import { formatBRL } from "./whatsapp";
+
+/** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
+ *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
+export type DadosFechamento = {
+  contratanteNome?: string;
+  contratanteEmail?: string;
+  contratanteTelefone?: string;
+  contratanteDocumento?: string;
+  contratanteEndereco?: string;
+  nomeEvento?: string;
+  eventoInstagram?: string;
+  nomeLocal?: string;
+  capacidadePublico?: number;
+  enderecoLocal?: string;
+  dataShow?: string;
+  horario?: string;
+  horarioFim?: string;
+  cache?: number;
+  lineUp?: string[];
+  efeitos?: ItemQuantidade[];
+  camarim?: ItemQuantidade[];
+};
 
 /**
  * Texto "copia e cola" pro WhatsApp gerado ao concretizar a venda (Vendas —
@@ -7,7 +29,7 @@ import { formatBRL } from "./whatsapp";
  * deixa EM BRANCO só o que falta, pro contratante completar. Sem repetir o que
  * já foi acertado. Em PT (mensagem pro cliente), como o gerarTextoWhatsApp.
  */
-export function textoFechamentoVenda(v: Venda): string {
+export function textoFechamentoVenda(v: DadosFechamento): string {
   const L: string[] = [];
   const campo = (label: string, valor?: string | number | null) => {
     const val =

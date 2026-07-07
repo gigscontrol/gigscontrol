@@ -9,6 +9,7 @@ import {
   Music,
   CheckCircle2,
   Copy,
+  MessageCircle,
   Sparkles,
   Plus,
   Minus,
@@ -18,7 +19,6 @@ import {
   Lock,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
-import Modal from "./Modal";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
@@ -51,7 +51,6 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type Parcela,
-  type Venda,
 } from "@/types";
 
 type Props = {
@@ -97,8 +96,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
-  const [vendaCriada, setVendaCriada] = useState<Venda | null>(null);
   const [copiadoWA, setCopiadoWA] = useState(false);
+  const [previewWA, setPreviewWA] = useState(false);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
 
@@ -481,10 +480,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     };
 
     const venda = await criarVenda(input);
-    // Passo 3 — em vez de navegar direto, abre o modal com o texto de
-    // fechamento pra WhatsApp. "Concluir"/fechar chama onSaved.
-    setVendaCriada(venda);
-    setSalvando(false);
+    onSaved(venda.id);
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
@@ -547,6 +543,80 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </div>
         </div>
       )}
+
+      {/* Passo 3 — lista de fechamento pro WhatsApp. Fica AQUI (antes de
+          concretizar) porque serve pra COLETAR o que falta do contratante
+          (e-mail, CPF, endereço…). Reflete o formulário atual. */}
+      {(() => {
+        const dadosFechamento = {
+          contratanteNome,
+          contratanteEmail,
+          contratanteTelefone: telDigits.replace(/\D/g, "")
+            ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
+            : "",
+          contratanteDocumento,
+          contratanteEndereco,
+          nomeEvento,
+          eventoInstagram,
+          nomeLocal,
+          capacidadePublico: capacidadePublico ? Number(capacidadePublico) : undefined,
+          enderecoLocal,
+          dataShow,
+          horario: horarioInicio,
+          horarioFim,
+          cache: cache ? parseFloat(cache.replace(",", ".")) : undefined,
+          lineUp,
+          efeitos,
+          camarim,
+        };
+        const texto = textoFechamentoVenda(dadosFechamento);
+        return (
+          <div
+            className="card mb-4 flex items-start gap-3"
+            style={{ borderColor: "var(--success)", backgroundColor: "var(--success-weak)" }}
+          >
+            <MessageCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-secondary">
+                {t("Lista de fechamento pro contratante — copie e mande no WhatsApp pra ele completar só o que falta (e-mail, CPF, endereço…).")}
+              </div>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(texto);
+                      setCopiadoWA(true);
+                      setTimeout(() => setCopiadoWA(false), 2500);
+                    } catch {
+                      /* clipboard indisponível */
+                    }
+                  }}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                >
+                  {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewWA((v) => !v)}
+                  className="btn-ghost text-xs"
+                >
+                  {previewWA ? t("Ocultar prévia") : t("Ver prévia")}
+                </button>
+              </div>
+              {previewWA && (
+                <textarea
+                  readOnly
+                  value={texto}
+                  rows={14}
+                  className="w-full mt-2 bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
+                />
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ============ 🖋️ INFORMAÇÕES DO CONTRATANTE ============ */}
       <SectionCard icon={<User size={16} />} title={t("Informações do Contratante")} accent={accent}>
@@ -1247,49 +1317,6 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </button>
       </div>
 
-      {/* Passo 3 — texto de fechamento pro WhatsApp, gerado na conversão.
-          Já vem preenchido com o que existe; só falta o que o cliente completa. */}
-      {vendaCriada && (
-        <Modal
-          isOpen
-          onClose={() => onSaved(vendaCriada.id)}
-          title={t("Venda concretizada! 🎉")}
-          subtitle={t("Envie esta lista pro contratante completar só o que falta.")}
-          maxWidth={560}
-        >
-          <textarea
-            readOnly
-            value={textoFechamentoVenda(vendaCriada)}
-            rows={16}
-            className="w-full bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
-          />
-          <div className="flex items-center justify-end gap-3 mt-3">
-            <button
-              type="button"
-              onClick={() => onSaved(vendaCriada.id)}
-              className="btn btn-secondary"
-            >
-              {t("Concluir")}
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(textoFechamentoVenda(vendaCriada));
-                  setCopiadoWA(true);
-                  setTimeout(() => setCopiadoWA(false), 2500);
-                } catch {
-                  /* clipboard indisponível */
-                }
-              }}
-              className="btn btn-primary inline-flex items-center gap-1.5"
-            >
-              {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-              {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
-            </button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
