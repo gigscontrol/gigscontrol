@@ -1,35 +1,66 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Upload, Plus, Trash2, Loader2, Check, Copy, FileSignature } from "lucide-react";
+import {
+  Upload,
+  Plus,
+  Trash2,
+  Loader2,
+  Check,
+  Copy,
+  FileSignature,
+  ArrowRight,
+  ArrowLeft,
+  AlertTriangle,
+} from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContratos } from "@/lib/contratos-context";
 import { ESTILO_PADRAO } from "@/lib/mappers/contratoModelo";
-import { EXIGENCIAS_PADRAO } from "@/lib/mappers/contratoSignatario";
+import {
+  EXIGENCIAS_PADRAO,
+  type ExigenciasSignatario,
+} from "@/lib/mappers/contratoSignatario";
 import { definirSignatarios, linkAssinatura } from "@/lib/contratos/signatarios-api";
 import type { CampoAssinatura } from "@/lib/mappers/contrato";
 import PosicionadorPdf, { type SignatarioLite } from "./PosicionadorPdf";
 
 const CORES = ["#3D7BFF", "#22C55E", "#F59E0B", "#EC4899", "#8B5CF6", "#14B8A6"];
 
+/** Meio de autenticação opcional por signatário (além da assinatura + CPF, que
+ *  são sempre exigidos). Mesmas chaves do fluxo de modelo. */
+const AUTENTICACAO: { chave: keyof ExigenciasSignatario; rotulo: string }[] = [
+  { chave: "fotoDocumento", rotulo: "Foto do documento (CNH ou RG)" },
+  { chave: "facial", rotulo: "Verificação facial (selfie)" },
+];
+
 type PdfInfo = { path: string; nome: string; paginas: number; dims: { w: number; h: number }[] };
 type LinkGerado = { nome: string; url: string };
+type SigForm = { nome: string; exige: ExigenciasSignatario };
 
-/** Fluxo "Novo contrato por UPLOAD": sobe um PDF pronto, posiciona as
- *  assinaturas e gera os links — reusando toda a captura pública de sempre. */
+/**
+ * Fluxo "Novo contrato por UPLOAD" (wizard):
+ *  1. Upload do PDF pronto.
+ *  2. Definir signatários + meio de autenticação → avançar.
+ *  3. Posicionar as assinaturas (escolhe o signatário, clica no documento).
+ *  4. Gerar os links (avisa se algum signatário ficou sem assinatura posicionada).
+ * Reusa 100% a captura pública de sempre.
+ */
 export default function NovoContratoUpload() {
   const t = useT();
   const { criarContrato } = useContratos();
 
   const [pdf, setPdf] = useState<PdfInfo | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [nomes, setNomes] = useState<string[]>([""]);
+  const [etapa, setEtapa] = useState<"sig" | "pos">("sig");
+  const [sigs, setSigs] = useState<SigForm[]>([{ nome: "", exige: { ...EXIGENCIAS_PADRAO } }]);
   const [campos, setCampos] = useState<CampoAssinatura[]>([]);
   const [subindo, setSubindo] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [links, setLinks] = useState<LinkGerado[] | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
+  // Nomes dos signatários sem campo posicionado (aviso antes de gerar).
+  const [aviso, setAviso] = useState<string[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,9 +69,9 @@ export default function NovoContratoUpload() {
     };
   }, [objectUrl]);
 
-  const signatarios: SignatarioLite[] = nomes.map((nome, i) => ({
+  const signatariosLite: SignatarioLite[] = sigs.map((s, i) => ({
     ordem: i,
-    nome: nome.trim() || t("Signatário {n}", { n: i + 1 }),
+    nome: s.nome.trim() || t("Signatário {n}", { n: i + 1 }),
     cor: CORES[i % CORES.length],
   }));
 
@@ -66,12 +97,26 @@ export default function NovoContratoUpload() {
     }
   }
 
-  async function criar() {
+  function avancar() {
     setErro(null);
-    const nomesLimpos = nomes.map((n) => n.trim()).filter(Boolean);
+    if (sigs.some((s) => !s.nome.trim())) {
+      setErro(t("Dê um nome a todos os signatários."));
+      return;
+    }
+    setEtapa("pos");
+  }
+
+  async function criar(forcar = false) {
+    setErro(null);
+    setAviso(null);
     if (!pdf) return;
-    if (nomesLimpos.length === 0) {
-      setErro(t("Adicione ao menos um signatário."));
+    // Signatários sem NENHUM campo posicionado — avisa antes de gerar.
+    const semCampo = sigs
+      .map((s, i) => ({ nome: s.nome.trim(), ordem: i }))
+      .filter((s) => !campos.some((c) => c.signatarioOrdem === s.ordem))
+      .map((s) => s.nome);
+    if (semCampo.length > 0 && !forcar) {
+      setAviso(semCampo);
       return;
     }
     setSalvando(true);
@@ -82,17 +127,12 @@ export default function NovoContratoUpload() {
         pdf: { ...pdf, campos },
         status: "rascunho",
       });
-      const sigs = await definirSignatarios(
+      const criados = await definirSignatarios(
         contrato.id,
-        nomesLimpos.map((nome) => ({
-          nome,
-          email: "",
-          papel: "",
-          exige: { ...EXIGENCIAS_PADRAO },
-        }))
+        sigs.map((s) => ({ nome: s.nome.trim(), email: "", papel: "", exige: s.exige }))
       );
       setLinks(
-        sigs
+        criados
           .sort((a, b) => a.ordem - b.ordem)
           .map((s) => ({ nome: s.nome, url: linkAssinatura(s.token) }))
       );
@@ -103,7 +143,7 @@ export default function NovoContratoUpload() {
     }
   }
 
-  // ---- Sucesso: mostra os links ----
+  // ---------- Sucesso: links ----------
   if (links) {
     return (
       <div className="card flex flex-col gap-4 max-w-xl">
@@ -135,7 +175,7 @@ export default function NovoContratoUpload() {
     );
   }
 
-  // ---- Passo 1: upload ----
+  // ---------- Passo 1: upload ----------
   if (!pdf || !objectUrl) {
     return (
       <div className="card flex flex-col items-center gap-3 py-10 max-w-xl text-center">
@@ -164,61 +204,139 @@ export default function NovoContratoUpload() {
     );
   }
 
-  // ---- Passo 2: signatários + posicionamento ----
+  // ---------- Passo 2: signatários + autenticação ----------
+  if (etapa === "sig") {
+    return (
+      <div className="flex flex-col gap-4 max-w-2xl">
+        <div className="text-sm text-muted">
+          {t("PDF")}: <span className="text-primary font-medium">{pdf.nome}</span> ({pdf.paginas} {t("páginas")})
+        </div>
+        <div className="card flex flex-col gap-4">
+          <div>
+            <div className="section-title">{t("Quem vai assinar")}</div>
+            <p className="text-xs text-muted">
+              {t("Todos assinam na tela e informam CPF/CNPJ. Marque abaixo se quer exigir mais autenticação de cada um.")}
+            </p>
+          </div>
+          {sigs.map((s, i) => (
+            <div key={i} className="rounded-md border border-border p-3 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: CORES[i % CORES.length] }} />
+                <input
+                  value={s.nome}
+                  onChange={(e) => setSigs((p) => p.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
+                  placeholder={t("Nome do signatário {n}", { n: i + 1 })}
+                  className="input flex-1"
+                />
+                {sigs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSigs((p) => p.filter((_, j) => j !== i));
+                      // Reindexa os campos: remove os do i e desloca os de ordem > i.
+                      setCampos((p) =>
+                        p
+                          .filter((c) => c.signatarioOrdem !== i)
+                          .map((c) => (c.signatarioOrdem > i ? { ...c, signatarioOrdem: c.signatarioOrdem - 1 } : c))
+                      );
+                    }}
+                    className="btn-ghost p-1.5 rounded"
+                    style={{ color: "var(--danger)" }}
+                    aria-label={t("Remover signatário")}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-5">
+                {AUTENTICACAO.map((a) => (
+                  <label key={a.chave} className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!s.exige[a.chave]}
+                      onChange={(e) =>
+                        setSigs((p) =>
+                          p.map((x, j) => (j === i ? { ...x, exige: { ...x.exige, [a.chave]: e.target.checked } } : x))
+                        )
+                      }
+                    />
+                    {t(a.rotulo)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+          {sigs.length < CORES.length && (
+            <button
+              type="button"
+              onClick={() => setSigs((p) => [...p, { nome: "", exige: { ...EXIGENCIAS_PADRAO } }])}
+              className="btn btn-secondary text-sm self-start"
+            >
+              <Plus size={14} /> {t("Adicionar signatário")}
+            </button>
+          )}
+        </div>
+        {erro && <div className="text-xs text-danger">{erro}</div>}
+        <button type="button" onClick={avancar} className="btn btn-primary self-start">
+          {t("Avançar — posicionar assinaturas")} <ArrowRight size={15} />
+        </button>
+      </div>
+    );
+  }
+
+  // ---------- Passo 3: posicionar ----------
   return (
     <div className="flex flex-col gap-4">
-      <div className="card flex flex-col gap-3 max-w-xl">
-        <div className="section-title">{t("Quem vai assinar")}</div>
-        {nomes.map((nome, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: CORES[i % CORES.length] }} />
-            <input
-              value={nome}
-              onChange={(e) => setNomes((prev) => prev.map((n, j) => (j === i ? e.target.value : n)))}
-              placeholder={t("Nome do signatário {n}", { n: i + 1 })}
-              className="input flex-1"
-            />
-            {nomes.length > 1 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNomes((prev) => prev.filter((_, j) => j !== i));
-                  setCampos((prev) => prev.filter((c) => c.signatarioOrdem !== i).map((c) => (c.signatarioOrdem > i ? { ...c, signatarioOrdem: c.signatarioOrdem - 1 } : c)));
-                }}
-                className="btn-ghost p-1.5 rounded"
-                style={{ color: "var(--danger)" }}
-                aria-label={t("Remover signatário")}
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        ))}
-        {nomes.length < CORES.length && (
-          <button type="button" onClick={() => setNomes((prev) => [...prev, ""])} className="btn btn-secondary text-sm self-start">
-            <Plus size={14} /> {t("Adicionar signatário")}
-          </button>
-        )}
-      </div>
-
-      <PosicionadorPdf
-        pdfUrl={objectUrl}
-        paginas={pdf.paginas}
-        signatarios={signatarios}
-        campos={campos}
-        onChange={setCampos}
-      />
-
-      {erro && <div className="text-xs text-danger">{erro}</div>}
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={criar} disabled={salvando} className="btn btn-primary">
-          {salvando ? <Loader2 size={15} className="animate-spin" /> : <FileSignature size={15} />}
-          {salvando ? t("Criando…") : t("Criar contrato e gerar links")}
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => setEtapa("sig")} className="btn btn-secondary text-sm">
+          <ArrowLeft size={14} /> {t("Voltar aos signatários")}
         </button>
         <span className="text-xs text-muted">
           {t("{n} campo(s) posicionado(s)", { n: campos.length })}
         </span>
       </div>
+
+      <PosicionadorPdf
+        pdfUrl={objectUrl}
+        paginas={pdf.paginas}
+        signatarios={signatariosLite}
+        campos={campos}
+        onChange={setCampos}
+      />
+
+      {/* Aviso: algum signatário sem campo posicionado */}
+      {aviso && aviso.length > 0 && (
+        <div
+          className="flex items-start gap-2 rounded-md p-3 text-sm"
+          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+        >
+          <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-medium">
+              {t("Sem assinatura posicionada: {nomes}", { nomes: aviso.join(", ") })}
+            </div>
+            <div className="text-xs mt-0.5 opacity-90">
+              {t("Esses signatários vão receber o link, mas a assinatura deles não será carimbada em lugar nenhum. Quer gerar assim mesmo?")}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button type="button" onClick={() => setAviso(null)} className="btn btn-secondary text-xs">
+                {t("Voltar e posicionar")}
+              </button>
+              <button type="button" onClick={() => criar(true)} disabled={salvando} className="btn btn-primary text-xs">
+                {t("Gerar assim mesmo")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {erro && <div className="text-xs text-danger">{erro}</div>}
+      {!aviso && (
+        <button type="button" onClick={() => criar(false)} disabled={salvando} className="btn btn-primary self-start">
+          {salvando ? <Loader2 size={15} className="animate-spin" /> : <FileSignature size={15} />}
+          {salvando ? t("Criando…") : t("Criar contrato e gerar links")}
+        </button>
+      )}
     </div>
   );
 }
