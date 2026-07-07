@@ -28,6 +28,7 @@ import Stepper from "./Stepper";
 import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
+import HistoricoContratante from "./HistoricoContratante";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
@@ -812,6 +813,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               })()}
             />
             {errors.contratante && <p className="text-xs text-danger mt-2">{errors.contratante}</p>}
+            {/* Passo 2 — histórico comercial do contratante (só quando existente). */}
+            {contratanteMode === "existente" && (
+              <HistoricoContratante contratanteId={contratanteId} />
+            )}
           </div>
 
           <ContratanteBuscaModal

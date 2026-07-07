@@ -355,6 +355,9 @@ export type Orcamento = {
   /** Orçamento detalhado: infos do evento pra pré-preencher a venda. */
   detalhesEvento?: DetalhesEvento;
   showId?: string;
+  /** Vendedor responsável (quem criou): userId + nome (via JOIN com profiles). */
+  criadoPor?: string;
+  criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -535,6 +538,9 @@ export type Venda = {
   observacoes?: string;
   /** Texto livre opcional — copiado do orçamento ao concretizar. Editável depois. */
   infoExtra?: string;
+  /** Vendedor responsável (quem criou): userId + nome (via JOIN com profiles). */
+  criadoPor?: string;
+  criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
 };

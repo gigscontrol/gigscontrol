@@ -12,7 +12,8 @@ const COLS = `
   camarim, efeitos, hotel, logistica,
   observacoes, info_extra,
   taxa_agencia_valor, taxa_modo_aplicado,
-  criado_por, criado_em, atualizado_em
+  criado_por, criado_em, atualizado_em,
+  criador:profiles!vendas_criado_por_fkey ( nome )
 `;
 
 export async function listarVendas(

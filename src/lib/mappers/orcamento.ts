@@ -44,6 +44,8 @@ export type OrcamentoRow = {
   info_extra: string | null;
   /** Infos do evento (orçamento detalhado). Ver migration 40. */
   detalhes_evento: DetalhesEvento | null;
+  /** JOIN com profiles (criado_por) — nome do vendedor. */
+  criador?: { nome: string | null } | null;
 };
 
 function statusValido(s: string | null | undefined): OrcamentoStatus {
@@ -98,6 +100,8 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     validade: row.validade ?? undefined,
     observacoes: row.observacoes ?? undefined,
     showId: row.show_id ?? undefined,
+    criadoPor: row.criado_por ?? undefined,
+    criadoPorNome: row.criador?.nome ?? undefined,
     taxaAgenciaValor:
       row.taxa_agencia_valor !== null && row.taxa_agencia_valor !== undefined
         ? paraNumero(row.taxa_agencia_valor)
