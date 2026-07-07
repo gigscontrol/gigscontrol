@@ -10,19 +10,53 @@ import {
   AlertCircle,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
+import DateRangeSelector from "../DateRangeSelector";
 import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
 import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
 import { MODULE_THEMES } from "@/types";
+import type { AgendaDateRange } from "@/types";
 
 const ACCENT = MODULE_THEMES.contratos.color;
+
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const ATALHOS_CTR: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number; tudo: boolean } {
+  const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
+}
+
+function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return false;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}
 
 /** Status na ordem em que aparecem no pill-group de troca de status. */
 const STATUS_ORDEM: ContratoStatus[] = [
@@ -88,6 +122,15 @@ export default function HistoricoPage({
   );
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [salvandoStatus, setSalvandoStatus] = useState(false);
+  const { workspaceCriadoEm } = useWorkspace();
+  const [range, setRange] = useState<AgendaDateRange>("Visão geral");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const periodo = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -107,8 +150,10 @@ export default function HistoricoPage({
   // Ordena por criadoEm desc (mais recente primeiro).
   const ordenados = useMemo(
     () =>
-      [...contratos].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)),
-    [contratos]
+      contratos
+        .filter((c) => dataNoMes(c.criadoEm, periodo))
+        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)),
+    [contratos, periodo]
   );
 
   // Contagem por status (pros chips do filtro) e a lista já filtrada.
@@ -187,7 +232,23 @@ export default function HistoricoPage({
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
-      <PageHeader title="Contratos" subtitle="Histórico" accentColor={ACCENT} />
+      <PageHeader
+        title="Contratos"
+        subtitle={`${t("Histórico")} · ${tituloPeriodo}`}
+        accentColor={ACCENT}
+        actions={
+          <DateRangeSelector
+            options={ATALHOS_CTR}
+            value={range}
+            onChange={setRange}
+            selectedCustomMonth={customMonth}
+            setSelectedCustomMonth={setCustomMonth}
+            selectedCustomYear={customYear}
+            setSelectedCustomYear={setCustomYear}
+            accountCreatedAt={workspaceCriadoEm}
+          />
+        }
+      />
 
       {carregando ? (
         <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">
