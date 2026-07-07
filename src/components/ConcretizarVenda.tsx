@@ -104,6 +104,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const [textoColado, setTextoColado] = useState("");
   const [resultadoColagem, setResultadoColagem] = useState<{
     preenchidos: string[];
+    naoPreenchidos: string[];
     avisos: string[];
   } | null>(null);
   const artistas = useArtistas();
@@ -493,7 +494,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
   // Passo 3 (volta) — cola a lista que o contratante devolveu e auto-preenche.
   function aplicarColagem() {
-    const { campos, avisos } = parseFechamento(textoColado);
+    const { campos, naoPreenchidos, avisos } = parseFechamento(textoColado);
     const feitos: string[] = [];
     const set = (v: string | undefined, fn: (x: string) => void, rotulo: string) => {
       if (v) {
@@ -512,11 +513,12 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     set(campos.enderecoLocal, setEnderecoLocal, "Endereço do evento");
     set(campos.dataShow, setDataShow, "Data");
     set(campos.horario, setHorarioInicio, "Horário");
+    if (campos.horarioFim) setHorarioFim(campos.horarioFim);
     if (campos.lineUp && campos.lineUp.length) {
       setLineUp(campos.lineUp);
       feitos.push("Line-Up");
     }
-    setResultadoColagem({ preenchidos: feitos, avisos });
+    setResultadoColagem({ preenchidos: feitos, naoPreenchidos, avisos });
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
@@ -1364,10 +1366,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                           {t("Não encontrei campos reconhecíveis nessa lista.")}
                         </div>
                       )}
-                      {resultadoColagem.avisos.length > 0 && (
+                      {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].length > 0 && (
                         <div style={{ color: "var(--warning)" }}>
-                          ⚠ {t("A lista não segue o padrão em")} {resultadoColagem.avisos.join(", ")} —{" "}
-                          {t("esses setores NÃO foram alterados (confira/ajuste manual).")}
+                          ⚠ {t("Não preenchi (confira/preencha manual):")}{" "}
+                          {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].join(", ")}.
                         </div>
                       )}
                     </div>
