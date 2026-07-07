@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import Modal from "../Modal";
+import NovoContratoUpload from "./NovoContratoUpload";
 import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
@@ -77,6 +78,7 @@ export default function NovoContratoPage() {
   }, [contratos]);
   const noLimite = !!plano && usadosMes >= limiteMes;
 
+  const [modoUpload, setModoUpload] = useState(false);
   const [modeloId, setModeloId] = useState<string>("");
   const [vendaId, setVendaId] = useState<string>("");
   const [valores, setValores] = useState<Record<string, string>>({});
@@ -251,6 +253,38 @@ export default function NovoContratoPage() {
           ) : undefined
         }
       />
+
+      {/* Modo: a partir de modelo (fluxo de sempre) OU subir um PDF pronto. */}
+      <div className="flex rounded-md border border-border overflow-hidden text-sm max-w-md my-6">
+        {[
+          { v: false, label: t("A partir de modelo") },
+          { v: true, label: t("Subir PDF pronto") },
+        ].map((op, i) => {
+          const ativo = modoUpload === op.v;
+          return (
+            <button
+              key={String(op.v)}
+              type="button"
+              onClick={() => setModoUpload(op.v)}
+              className={`flex-1 py-2 font-medium transition-colors ${
+                i === 1 ? "border-l border-border" : ""
+              }`}
+              style={
+                ativo
+                  ? { color: "#fff", backgroundColor: ACCENT }
+                  : { color: "var(--text-muted)" }
+              }
+            >
+              {op.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {modoUpload ? (
+        <NovoContratoUpload />
+      ) : (
+        <>
 
       {noLimite && (
         <div
@@ -514,6 +548,8 @@ export default function NovoContratoPage() {
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

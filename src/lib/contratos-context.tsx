@@ -11,7 +11,11 @@ import {
 } from "react";
 import { useAuth } from "./auth-context";
 import type { Contrato, ContratoStatus, ContratoPasta } from "@/lib/mappers/contrato";
-import { conteudoParaCorpo, pastasValidas } from "@/lib/mappers/contrato";
+import {
+  conteudoParaCorpo,
+  pastasValidas,
+  type ContratoPdfLayout,
+} from "@/lib/mappers/contrato";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 
 /** Geração de um contrato novo (a partir do Novo Contrato). */
@@ -21,6 +25,8 @@ export type NovoContratoInput = {
   /** Seções JÁ preenchidas + estilo viram o snapshot `corpo_preenchido`. */
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
+  /** Presente = contrato por UPLOAD de PDF (posiciona assinaturas). */
+  pdf?: ContratoPdfLayout;
   status?: ContratoStatus;
   localAssinatura?: string | null;
   dataEmissao?: string | null;
@@ -161,6 +167,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
         corpo_preenchido: conteudoParaCorpo({
           secoes: input.secoes,
           estilo: input.estilo,
+          ...(input.pdf ? { pdf: input.pdf } : {}),
         }),
       };
       if (input.status !== undefined) body.status = input.status;
