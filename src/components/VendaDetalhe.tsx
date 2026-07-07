@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import BookingSection from "./agenda/BookingSection";
 import { useVendas } from "@/lib/vendas-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -62,6 +63,8 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     podeUI(venda.djId || null, "vendas.editar_venda") ||
     podeUI(venda.djId || null, "vendas.editar_todos");
   const podeExcluirVenda = podeUI(venda.djId || null, "vendas.excluir_venda");
+  // Booking edita o SHOW → usa a permissão de editar agenda (o servidor exige a mesma).
+  const podeEditarBooking = podeUI(venda.djId || null, "agenda.editar_todos");
   const semPermissao = t("Você não tem permissão para isso.");
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const cancelado = show?.status === "cancelado";
@@ -405,6 +408,20 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
               />
             )}
           </div>
+
+          {show && (podeEditarBooking || show.booking) && (
+            <div className="card">
+              <SectionTitle icon={<Hotel size={14} />} title={t("Hospedagem / Booking")} accent={accent} />
+              <BookingSection
+                showId={show.id}
+                booking={show.booking}
+                podeEditar={podeEditarBooking}
+                onSave={async (booking) => {
+                  await updateShow(show.id, { booking });
+                }}
+              />
+            </div>
+          )}
 
           <div className="card">
             <div className="section-title mb-3">{t("Adicionais")}</div>

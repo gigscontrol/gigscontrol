@@ -99,6 +99,36 @@ export type CancelamentoInfo = {
   motivo: string;
 };
 
+/**
+ * Booking / hospedagem de um show (Agenda — Fases 4-5). Vive em
+ * `shows.meta.booking`. Fluxo: "solicitado" (pedido ao contratante) →
+ * "informado" (dados preenchidos). O voucher fica no bucket `vouchers`.
+ */
+export type BookingShow = {
+  status: "solicitado" | "informado";
+  hotelNome?: string;
+  endereco?: string;
+  quarto?: string;
+  telefone?: string;
+  /** Link/coords do mapa (Google Maps etc.). */
+  localizacao?: string;
+  /** ISO "YYYY-MM-DD" (ou com hora). */
+  checkin?: string;
+  checkout?: string;
+  /** Quantidade de quartos. */
+  quartos?: number;
+  /** Ocupação (quem fica em cada quarto) — texto livre. */
+  ocupacao?: string;
+  pago?: boolean;
+  /** Path do voucher no bucket `vouchers`. */
+  voucherPath?: string;
+  observacoes?: string;
+  solicitadoEm?: string;
+  informadoEm?: string;
+  atualizadoPor?: string;
+  atualizadoEm?: string;
+};
+
 export type Show = {
   id: string;
   /** Dia do mês (1-31) — derivado de `data` para casar com a grid da agenda. */
@@ -121,6 +151,8 @@ export type Show = {
   cancelamento?: CancelamentoInfo;
   /** Cancelamentos anteriores (empilhados a cada reversão) — mantém histórico. */
   cancelamentoHistorico?: CancelamentoInfo[];
+  /** Booking / hospedagem (Fases 4-5). */
+  booking?: BookingShow;
 };
 
 export type AgendaItemTipo = "evento" | "voo" | "transporte";

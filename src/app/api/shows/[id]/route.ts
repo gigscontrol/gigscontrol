@@ -134,6 +134,35 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     };
   }
 
+  // Booking/hospedagem (Fases 4-5): mescla em meta.booking. O cliente preenche
+  // os campos; o servidor carimba quem/quando (audit) e os marcos do fluxo.
+  if (parsed.data.booking) {
+    const base = metaOverride ?? metaAtual;
+    const bAtual =
+      base.booking && typeof base.booking === "object"
+        ? (base.booking as Record<string, unknown>)
+        : {};
+    const agora = new Date().toISOString();
+    const b = parsed.data.booking;
+    metaOverride = {
+      ...base,
+      booking: {
+        ...bAtual,
+        ...b,
+        atualizadoPor: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+        atualizadoEm: agora,
+        solicitadoEm:
+          b.status === "solicitado" && !bAtual.solicitadoEm
+            ? agora
+            : (bAtual.solicitadoEm as string | undefined),
+        informadoEm:
+          b.status === "informado"
+            ? ((bAtual.informadoEm as string | undefined) ?? agora)
+            : (bAtual.informadoEm as string | undefined),
+      },
+    };
+  }
+
   try {
     const show = await atualizarShowPorId(
       r.sessao.supabase,

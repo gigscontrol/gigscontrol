@@ -1,4 +1,4 @@
-import type { Show, ShowStatus, CancelamentoInfo } from "@/types";
+import type { Show, ShowStatus, CancelamentoInfo, BookingShow } from "@/types";
 
 /**
  * Linha bruta da tabela `shows` no Supabase, já com os joins úteis
@@ -57,6 +57,34 @@ function cancelamentoValido(raw: unknown): CancelamentoInfo | undefined {
   };
 }
 
+/** Valida o objeto de booking/hospedagem vindo do jsonb `meta`. */
+function bookingValido(raw: unknown): BookingShow | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const b = raw as Record<string, unknown>;
+  if (b.status !== "solicitado" && b.status !== "informado") return undefined;
+  const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+  const num = (v: unknown) => (typeof v === "number" ? v : undefined);
+  return {
+    status: b.status,
+    hotelNome: str(b.hotelNome),
+    endereco: str(b.endereco),
+    quarto: str(b.quarto),
+    telefone: str(b.telefone),
+    localizacao: str(b.localizacao),
+    checkin: str(b.checkin),
+    checkout: str(b.checkout),
+    quartos: num(b.quartos),
+    ocupacao: str(b.ocupacao),
+    pago: typeof b.pago === "boolean" ? b.pago : undefined,
+    voucherPath: str(b.voucherPath),
+    observacoes: str(b.observacoes),
+    solicitadoEm: str(b.solicitadoEm),
+    informadoEm: str(b.informadoEm),
+    atualizadoPor: str(b.atualizadoPor),
+    atualizadoEm: str(b.atualizadoEm),
+  };
+}
+
 /**
  * Converte uma row do banco no objeto `Show` que a UI usa.
  * Os campos denormalizados (`dj`, `location`, `venue`) são preenchidos
@@ -77,6 +105,7 @@ export function rowParaShow(row: ShowRow): Show {
   const cancelamentoHistorico = histRaw
     .map(cancelamentoValido)
     .filter((c): c is CancelamentoInfo => !!c);
+  const booking = bookingValido(meta.booking);
 
   return {
     id: row.id,
@@ -96,6 +125,7 @@ export function rowParaShow(row: ShowRow): Show {
     vendaId: row.venda_id ?? undefined,
     cancelamento,
     cancelamentoHistorico: cancelamentoHistorico.length ? cancelamentoHistorico : undefined,
+    booking,
   };
 }
 

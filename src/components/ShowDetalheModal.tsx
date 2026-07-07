@@ -30,6 +30,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Modal from "./Modal";
+import BookingSection from "./agenda/BookingSection";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -491,6 +492,20 @@ export default function ShowDetalheModal({
             {logistica.transladoTerrestre && (
               <Linha icon={<Car size={13} />}>{t(TEXTO_TRANSLADO)}</Linha>
             )}
+          </Bloco>
+        )}
+
+        {/* ===== HOSPEDAGEM / BOOKING ===== */}
+        {(show.booking || podeGerenciarShow) && (
+          <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
+            <BookingSection
+              showId={show.id}
+              booking={show.booking}
+              podeEditar={podeGerenciarShow}
+              onSave={async (booking) => {
+                await updateShow(show.id, { booking });
+              }}
+            />
           </Bloco>
         )}
 
