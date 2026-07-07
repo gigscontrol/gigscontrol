@@ -78,7 +78,6 @@ export default function NovoContratoPage() {
   }, [contratos]);
   const noLimite = !!plano && usadosMes >= limiteMes;
 
-  const [modoUpload, setModoUpload] = useState(false);
   const [modeloId, setModeloId] = useState<string>("");
   const [vendaId, setVendaId] = useState<string>("");
   const [valores, setValores] = useState<Record<string, string>>({});
@@ -254,37 +253,10 @@ export default function NovoContratoPage() {
         }
       />
 
-      {/* Modo: a partir de modelo (fluxo de sempre) OU subir um PDF pronto. */}
-      <div className="flex rounded-md border border-border overflow-hidden text-sm max-w-md my-6">
-        {[
-          { v: false, label: t("A partir de modelo") },
-          { v: true, label: t("Subir PDF pronto") },
-        ].map((op, i) => {
-          const ativo = modoUpload === op.v;
-          return (
-            <button
-              key={String(op.v)}
-              type="button"
-              onClick={() => setModoUpload(op.v)}
-              className={`flex-1 py-2 font-medium transition-colors ${
-                i === 1 ? "border-l border-border" : ""
-              }`}
-              style={
-                ativo
-                  ? { color: "#fff", backgroundColor: ACCENT }
-                  : { color: "var(--text-muted)" }
-              }
-            >
-              {op.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Tudo numa página: (1) gerar por modelo + venda; (2) subir PDF + posicionar. */}
+      <div className="section-title mt-8 mb-4">{t("1. Gerar a partir de um modelo")}</div>
 
-      {modoUpload ? (
-        <NovoContratoUpload />
-      ) : (
-        <>
+      <>
 
       {noLimite && (
         <div
@@ -550,7 +522,17 @@ export default function NovoContratoPage() {
         </div>
       )}
         </>
-      )}
+
+      {/* 2. Subir um contrato pronto (PDF) e posicionar as assinaturas. */}
+      <div className="border-t border-border mt-12 pt-8">
+        <div className="section-title mb-1">
+          {t("2. Ou: subir um PDF pronto e posicionar as assinaturas")}
+        </div>
+        <p className="section-subtitle mb-4">
+          {t("Já tem o contrato feito? Envie o PDF, escolha os signatários e posicione onde cada um assina.")}
+        </p>
+        <NovoContratoUpload />
+      </div>
     </div>
   );
 }
