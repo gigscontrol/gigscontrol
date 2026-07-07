@@ -88,8 +88,13 @@ function fmtData(iso?: string): string {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
 }
 
-export default function ControlePagamentos() {
+export default function ControlePagamentos({
+  modo = "completo",
+}: {
+  modo?: "completo" | "cobrancas";
+}) {
   const t = useT();
+  const ehCobrancas = modo === "cobrancas";
   const accent = "var(--brand)";
   const { vendas, acaoParcela } = useVendas();
   const artistas = useArtistas();
@@ -185,6 +190,18 @@ export default function ControlePagamentos() {
     [todasParcelas]
   );
 
+  // Fila da página "Fixadas / Cobranças": fixadas + atrasadas (em aberto).
+  const filaCobrancas = useMemo(
+    () =>
+      todasParcelas.filter(
+        (l) =>
+          (l.parcela.meta?.fixada || l.status === "atrasado") &&
+          l.status !== "pago" &&
+          l.status !== "cancelado"
+      ),
+    [todasParcelas]
+  );
+
   async function toggleFixar(l: LinhaParcela) {
     try {
       await acaoParcela(l.vendaId, l.parcela.id, { fixar: !l.parcela.meta?.fixada });
@@ -193,23 +210,33 @@ export default function ControlePagamentos() {
     }
   }
 
+  // Na página "Cobranças", a lista é a fila (fixadas + atrasadas); senão, o
+  // recorte por período + filtros.
+  const itensLista = ehCobrancas ? filaCobrancas : lista;
+
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Controle de Pagamentos"
-        subtitle={`${t("Parcelas de todas as vendas — informe pagamento, cobre ou cancele")} · ${tituloPeriodo}`}
+        title={ehCobrancas ? "Fixadas / Cobranças" : "Controle de Pagamentos"}
+        subtitle={
+          ehCobrancas
+            ? t("Cobranças fixadas e parcelas atrasadas — a fila do que precisa cobrar")
+            : `${t("Parcelas de todas as vendas — informe pagamento, cobre ou cancele")} · ${tituloPeriodo}`
+        }
         accentColor={accent}
         actions={
-          <DateRangeSelector
-            options={ATALHOS_FIN}
-            value={range}
-            onChange={setRange}
-            selectedCustomMonth={customMonth}
-            setSelectedCustomMonth={setCustomMonth}
-            selectedCustomYear={customYear}
-            setSelectedCustomYear={setCustomYear}
-            accountCreatedAt={workspaceCriadoEm}
-          />
+          ehCobrancas ? undefined : (
+            <DateRangeSelector
+              options={ATALHOS_FIN}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+          )
         }
       />
 
@@ -220,6 +247,7 @@ export default function ControlePagamentos() {
         <StatCard title={t("Atrasado")} value={formatBRL(totais.atrasado)} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
       </div>
 
+      {!ehCobrancas && (
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
@@ -256,8 +284,9 @@ export default function ControlePagamentos() {
           )}
         </div>
       </div>
+      )}
 
-      {fixadas.length > 0 && (
+      {!ehCobrancas && fixadas.length > 0 && (
         <div className="card mb-4" style={{ borderColor: "var(--warning)" }}>
           <div className="section-title mb-3 inline-flex items-center gap-2">
             <Pin size={15} style={{ color: "var(--warning)" }} />
@@ -277,23 +306,29 @@ export default function ControlePagamentos() {
         </div>
       )}
 
-      {lista.length === 0 ? (
+      {itensLista.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <Wallet size={18} className="text-muted" />
           </div>
           <div className="section-title mb-1">
-            {todasParcelas.length === 0 ? t("Nenhuma parcela registrada") : t("Nenhum resultado")}
+            {ehCobrancas
+              ? t("Nenhuma cobrança pendente 🎉")
+              : todasParcelas.length === 0
+                ? t("Nenhuma parcela registrada")
+                : t("Nenhum resultado")}
           </div>
           <div className="section-subtitle">
-            {todasParcelas.length === 0
-              ? t("As parcelas aparecem aqui quando você concretiza uma venda")
-              : t("Ajuste os filtros ou a busca")}
+            {ehCobrancas
+              ? t("Nada fixado nem atrasado — tudo em dia!")
+              : todasParcelas.length === 0
+                ? t("As parcelas aparecem aqui quando você concretiza uma venda")
+                : t("Ajuste os filtros ou a busca")}
           </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {lista.map((l) => (
+          {itensLista.map((l) => (
             <ParcelaRow
               key={`${l.vendaId}-${l.parcela.id}`}
               linha={l}
@@ -305,7 +340,7 @@ export default function ControlePagamentos() {
         </div>
       )}
 
-      {totais.atrasado > 0 && (
+      {!ehCobrancas && totais.atrasado > 0 && (
         <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "rgba(239,68,68,0.06)" }}>
           <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
           <div className="text-sm text-secondary">

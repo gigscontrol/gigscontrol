@@ -277,6 +277,7 @@ function resolverRota(seg: string[]): Rota {
   }
   if (a === "financeiro") {
     if (b === "pagamentos") return rotaBase("financeiro", "financeiro-pagamentos");
+    if (b === "cobrancas") return rotaBase("financeiro", "financeiro-cobrancas");
     return rotaBase("financeiro", "dashboard");
   }
   if (a === "contratos") {
@@ -319,6 +320,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/vendas/vendas/${id ?? ""}`;
     case "financeiro-pagamentos":
       return `${BASE}/financeiro/pagamentos`;
+    case "financeiro-cobrancas":
+      return `${BASE}/financeiro/cobrancas`;
     case "contratos-novo":
       return `${BASE}/contratos/novo`;
     case "contratos-modelos":
@@ -550,6 +553,9 @@ function AppRoot() {
           )}
           {activeTab === "financeiro" && activePage === "financeiro-pagamentos" && (
             <ControlePagamentos />
+          )}
+          {activeTab === "financeiro" && activePage === "financeiro-cobrancas" && (
+            <ControlePagamentos modo="cobrancas" />
           )}
 
           {/* Vendas */}

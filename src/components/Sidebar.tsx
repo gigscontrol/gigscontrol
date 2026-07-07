@@ -15,6 +15,7 @@ import {
   CalendarCheck2,
   ShoppingCart,
   Wallet,
+  Pin,
   FileSignature,
   Building2,
   Music,
@@ -99,6 +100,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "financeiro-pagamentos", label: "Controle de Pagamentos", icon: Wallet },
+      { page: "financeiro-cobrancas", label: "Fixadas / Cobranças", icon: Pin },
     ],
   },
   {
