@@ -114,8 +114,17 @@ function classificar(linha: string): Rotulo {
 /** Dia/mês/ano a partir de vários formatos. `ano` ausente = veio sem ano. */
 function parseData(v: string): { dia: string; mes: string; ano?: string } | null {
   const t = norm(v);
-  // Numérico: DD sep MM [sep AAAA|AA]. sep = / - . espaço.
-  let m = t.match(/(\d{1,2})\s*[/\-.\s]\s*(\d{1,2})(?:\s*[/\-.\s]\s*(\d{2,4}))?/);
+  // ISO (AAAA-MM-DD): trata ANTES da regex numérica pra não confundir ano com dia
+  // (ex.: "2025-12-20" não pode virar 25/12/2020).
+  const iso = t.match(/(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/);
+  if (iso) {
+    const [, ano, mes, dia] = iso;
+    if (Number(mes) < 1 || Number(mes) > 12 || Number(dia) < 1 || Number(dia) > 31) return null;
+    return { dia, mes, ano };
+  }
+  // Numérico: DD sep MM [sep AAAA|AA]. sep = / - . espaço. Ancorado (?<!\d)…(?!\d)
+  // pra não casar no meio de um número maior.
+  let m = t.match(/(?<!\d)(\d{1,2})\s*[/\-.\s]\s*(\d{1,2})(?:\s*[/\-.\s]\s*(\d{2,4}))?(?!\d)/);
   if (m) {
     const dia = m[1].padStart(2, "0");
     const mes = m[2].padStart(2, "0");
@@ -144,8 +153,16 @@ function parseHorario(v: string): { inicio: string; fim?: string } | null {
     .filter((x) => x.h <= 23 && x.min <= 59)
     .map((x) => x.txt);
   if (achados.length > 0) return { inicio: achados[0], fim: achados[1] };
-  const so = v.match(/\b(\d{1,2})\s*h\b/i); // "22h"
-  if (so && Number(so[1]) <= 23) return { inicio: `${so[1].padStart(2, "0")}:00` };
+  // Fallback "NNh" — coleta TODOS pra não perder o término num intervalo "22h às 4h".
+  const soH = [...v.matchAll(/\b(\d{1,2})\s*h\b/gi)]
+    .map((x) => Number(x[1]))
+    .filter((h) => h <= 23);
+  if (soH.length > 0) {
+    return {
+      inicio: `${String(soH[0]).padStart(2, "0")}:00`,
+      fim: soH[1] !== undefined ? `${String(soH[1]).padStart(2, "0")}:00` : undefined,
+    };
+  }
   return null;
 }
 

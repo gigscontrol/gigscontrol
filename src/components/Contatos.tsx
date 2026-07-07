@@ -60,10 +60,11 @@ function resolverMes(
   return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
-/** Casa a data de cadastro (ISO) no período. Sem data → fora (só quando há recorte). */
+/** Casa a data de cadastro (ISO) no período. Sem data de cadastro → SEMPRE visível
+ *  (registro legado não some do Gerenciar por causa do filtro de período). */
 function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
   if (p.tudo) return true;
-  if (!dataISO) return false;
+  if (!dataISO) return true;
   const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
   return d.getFullYear() === p.ano && d.getMonth() === p.mes;
 }

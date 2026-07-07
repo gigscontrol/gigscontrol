@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
@@ -42,7 +41,9 @@ export async function POST(request: Request, { params }: RouteCtx) {
 
   try {
     const admin = criarClienteAdmin();
-    const caminho = `${r.sessao.workspaceId}/booking/${params.id}/${randomUUID()}.pdf`;
+    // Path determinístico por show: "Trocar voucher" sobrescreve o mesmo objeto
+    // (upsert) em vez de deixar o PDF antigo órfão no bucket.
+    const caminho = `${r.sessao.workspaceId}/booking/${params.id}/voucher.pdf`;
     await uploadVoucher(admin, caminho, pdf);
     return NextResponse.json({ path: caminho });
   } catch (e) {

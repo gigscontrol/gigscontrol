@@ -57,7 +57,11 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const editaEstrutura =
     parsed.data.percentual !== undefined ||
     parsed.data.valor !== undefined ||
-    parsed.data.data_vencimento !== undefined;
+    parsed.data.data_vencimento !== undefined ||
+    // observacao/data_pagamento explícitos também são "editar" — senão viajavam
+    // junto de uma flag de cancelar/registrar sem exigir financeiro.editar_pagamento.
+    parsed.data.observacao !== undefined ||
+    parsed.data.data_pagamento !== undefined;
   const requeridas = new Set<"registrar" | "cancelar" | "editar">();
   if (parsed.data.status_base === "pago") requeridas.add("registrar");
   if (parsed.data.status_base === "pendente") requeridas.add("cancelar"); // desfazer
