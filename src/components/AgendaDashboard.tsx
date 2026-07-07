@@ -7,6 +7,7 @@ import {
   Plane,
   CalendarDays,
   CheckCircle2,
+  XCircle,
   AlertTriangle,
   ListChecks,
   Clock,
@@ -32,6 +33,7 @@ type Props = {
 };
 
 const ATALHOS: AgendaDateRange[] = [
+  "Visão geral",
   "Mês anterior",
   "Mês atual",
   "Próximo mês",
@@ -56,25 +58,32 @@ function diasEntre(aISO: string, bISO: string): number {
   const b = new Date(`${bISO}T12:00:00`).getTime();
   return Math.round((a - b) / 86400000);
 }
-/** Resolve {ano, mes(0-based)} a partir do seletor. */
+/**
+ * Resolve {ano, mes(0-based), tudo} a partir do seletor. `tudo` = "Visão geral"
+ * (all-time, sem recorte de data). Nesse caso ano/mes apontam pro mês corrente —
+ * fallback pros widgets que precisam de um mês concreto (ocupação, datas).
+ */
 function resolverMes(
   range: AgendaDateRange,
   customMonth: string | null,
   customYear: number | null
-): { ano: number; mes: number } {
+): { ano: number; mes: number; tudo: boolean } {
   const h = new Date();
+  if (range === "Visão geral") {
+    return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  }
   if (range === "Mês anterior") {
     const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth() };
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
   }
   if (range === "Próximo mês") {
     const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth() };
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
   }
   if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)) };
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
   }
-  return { ano: h.getFullYear(), mes: h.getMonth() };
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
 export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }: Props) {
@@ -108,21 +117,23 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     shows: Show[];
     pendencias?: boolean;
   } | null>(null);
-  const { ano, mes } = useMemo(
+  const { ano, mes, tudo } = useMemo(
     () => resolverMes(range, customMonth, customYear),
     [range, customMonth, customYear]
   );
   const hoje = hojeISO();
 
-  // Shows do mês selecionado + DJs visíveis na sidebar
+  // Shows do período + DJs visíveis na sidebar. Em "Visão geral" (tudo) pega o
+  // histórico inteiro; senão, só o mês selecionado.
   const showsMes = useMemo(
     () =>
       shows.filter((s) => {
         if (!selectedDJs.includes(s.djId) || !s.data) return false;
+        if (tudo) return true;
         const d = new Date(`${s.data}T12:00:00`);
         return d.getFullYear() === ano && d.getMonth() === mes;
       }),
-    [shows, selectedDJs, ano, mes]
+    [shows, selectedDJs, ano, mes, tudo]
   );
 
   const cidadeDoShow = (s: Show) =>
@@ -142,11 +153,18 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     [showsMes]
   );
   const confirmados = confirmadosList.length;
-  // Shows ainda a realizar (data de hoje em diante, dentro do mês).
+  // Cancelados (novo indicador) e total do período.
+  const canceladosList = useMemo(
+    () => showsMes.filter((s) => s.status === "cancelado"),
+    [showsMes]
+  );
+  const cancelados = canceladosList.length;
+  const totalShows = showsMes.length;
+  // Shows ainda a realizar (data de hoje em diante) — cancelados NÃO contam.
   const aRealizarList = useMemo(
     () =>
       showsMes
-        .filter((s) => s.data && s.data >= hoje)
+        .filter((s) => s.data && s.data >= hoje && s.status !== "cancelado")
         .sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "")),
     [showsMes, hoje]
   );
@@ -155,6 +173,8 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   // Shows com pendência: data marcada, mas algo pendente — confirmação,
   // logística, horário ou pagamento atrasado.
   const pendenciasDoShow = (s: Show): string[] => {
+    // Show cancelado saiu da operação — não tem pendência a resolver.
+    if (s.status === "cancelado") return [];
     const p: string[] = [];
     if (s.status === "pendente") p.push("confirmação");
     if (s.status === "logistica") p.push("logística");
@@ -195,6 +215,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   const viagens = useMemo(() => {
     return showsMes
       .filter((s) => {
+        // Em "Visão geral", "próximas viagens" = só as futuras (senão o
+        // histórico inteiro entraria, inclusive viagens já passadas).
+        if (tudo && (!s.data || s.data < hoje)) return false;
         const cid = cidadeDoShow(s);
         const dj = djDoShow(s);
         // Sem cidade não dá pra dizer se é viagem — inclui por garantia.
@@ -286,7 +309,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     return v.parcelas.some((p) => p.statusBase !== "pago");
   };
   const realizados = useMemo(() => {
-    const passados = showsMes.filter((s) => s.data && s.data < hoje);
+    const passados = showsMes.filter(
+      (s) => s.data && s.data < hoje && s.status !== "cancelado"
+    );
     const comPendencia = passados.filter(temPendencia);
     return { total: passados.length, comPendencia, lista: passados };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,7 +323,8 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     [showsMes]
   );
 
-  const tituloMes = `${MESES_LONGO[mes]} ${ano}`;
+  const tituloMesConcreto = `${MESES_LONGO[mes]} ${ano}`;
+  const tituloMes = tudo ? t("Visão geral") : tituloMesConcreto;
 
   // Texto de datas disponíveis de UM DJ pra colar no WhatsApp do cliente.
   // Dias importantes (Sex/Sáb/Dom + feriados/vésperas) FUTUROS do mês:
@@ -425,7 +451,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Agenda"
-        subtitle={`Visão do mês — ${tituloMes}`}
+        subtitle={tudo ? t("Panorama completo da agenda") : `${t("Visão do mês")} — ${tituloMes}`}
         accentColor={accent}
         actions={
           <DateRangeSelector
@@ -441,8 +467,22 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         }
       />
 
-      {/* Cards de número — clicáveis, abrem a lista correspondente */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
+          geral" contam a agenda inteira; senão, só o mês selecionado. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <ClickableStat
+          onClick={() =>
+            setLista({ titulo: t("Todos os shows"), subtitulo: tituloMes, shows: resumo })
+          }
+        >
+          <StatCard
+            title={t("Total de shows")}
+            value={totalShows}
+            icon={<CalendarDays size={16} />}
+            accentColor={accent}
+            subtitle={tudo ? t("Na agenda inteira") : t("Em {mes}", { mes: t(MESES_LONGO[mes]) })}
+          />
+        </ClickableStat>
         <ClickableStat
           onClick={() =>
             setLista({
@@ -456,8 +496,25 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
             title={t("Shows confirmados")}
             value={confirmados}
             icon={<Music size={16} />}
-            accentColor={accent}
-            subtitle={t("Em {mes}", { mes: t(MESES_LONGO[mes]) })}
+            accentColor="var(--success)"
+            subtitle={tudo ? t("Confirmados no total") : t("Em {mes}", { mes: t(MESES_LONGO[mes]) })}
+          />
+        </ClickableStat>
+        <ClickableStat
+          onClick={() =>
+            setLista({
+              titulo: t("Shows cancelados"),
+              subtitulo: tituloMes,
+              shows: canceladosList,
+            })
+          }
+        >
+          <StatCard
+            title={t("Cancelados")}
+            value={cancelados}
+            icon={<XCircle size={16} />}
+            accentColor="var(--danger)"
+            subtitle={cancelados === 0 ? t("Nenhum cancelamento") : t("Fora da operação")}
           />
         </ClickableStat>
         <ClickableStat
@@ -730,7 +787,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         <div className="flex items-center justify-between mb-4">
           <div className="section-title flex items-center gap-2">
             <ListChecks size={16} style={{ color: accent }} />
-            {t("Resumo do mês ({n} {show})", { n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
+            {t("Resumo — {mes} ({n} {show})", { mes: tituloMes, n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
           </div>
           {resumo.length > 0 && (
             <button
@@ -764,8 +821,8 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       <Modal
         isOpen={resumoAberto}
         onClose={() => setResumoAberto(false)}
-        title={t("Resumo de {mes}", { mes: tituloMes })}
-        subtitle={t("{n} {show} no mês", { n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
+        title={t("Resumo — {mes}", { mes: tituloMes })}
+        subtitle={t("{n} {show}", { n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
         maxWidth={640}
       >
         {resumo.length === 0 ? (
@@ -804,7 +861,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
       <Modal
         isOpen={ocupacaoAberta}
         onClose={() => setOcupacaoAberta(false)}
-        title={t("Ocupação — {mes}", { mes: tituloMes })}
+        title={t("Ocupação — {mes}", { mes: tituloMesConcreto })}
         subtitle={t("Resumo da ocupação e datas disponíveis pro cliente")}
         maxWidth={560}
       >

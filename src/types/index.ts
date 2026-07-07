@@ -146,7 +146,7 @@ export type AgendaItem = {
 };
 
 export type DateRange = "Mês atual" | "Mês passado" | "Ano" | "Personalizado";
-export type AgendaDateRange = "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
+export type AgendaDateRange = "Visão geral" | "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
 
 export type ActiveTab =
   | "agenda"
