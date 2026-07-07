@@ -100,12 +100,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { criarVenda } = useVendas();
   const [copiadoWA, setCopiadoWA] = useState(false);
   const [previewWA, setPreviewWA] = useState(false);
-  const [colarAberto, setColarAberto] = useState(false);
-  const [textoColado, setTextoColado] = useState("");
   const [resultadoColagem, setResultadoColagem] = useState<{
     preenchidos: string[];
     naoPreenchidos: string[];
     avisos: string[];
+    erro?: string;
   } | null>(null);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
@@ -493,8 +492,29 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   }
 
   // Passo 3 (volta) — cola a lista que o contratante devolveu e auto-preenche.
-  function aplicarColagem() {
-    const { campos, naoPreenchidos, avisos } = parseFechamento(textoColado);
+  async function aplicarColagem() {
+    let texto = "";
+    try {
+      texto = await navigator.clipboard.readText();
+    } catch {
+      setResultadoColagem({
+        preenchidos: [],
+        naoPreenchidos: [],
+        avisos: [],
+        erro: "Não consegui ler a área de transferência do navegador. Copie a lista de novo e tente.",
+      });
+      return;
+    }
+    if (!texto.trim()) {
+      setResultadoColagem({
+        preenchidos: [],
+        naoPreenchidos: [],
+        avisos: [],
+        erro: "Não há nada copiado. Copie a lista que o contratante devolveu e clique de novo.",
+      });
+      return;
+    }
+    const { campos, naoPreenchidos, avisos } = parseFechamento(texto);
     const feitos: string[] = [];
     const set = (v: string | undefined, fn: (x: string) => void, rotulo: string) => {
       if (v) {
@@ -1320,11 +1340,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                 </button>
                 <button
                   type="button"
-                  onClick={() => setColarAberto((v) => !v)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                  onClick={aplicarColagem}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
                 >
                   <ClipboardPaste size={14} />
-                  {colarAberto ? t("Fechar") : t("Colar preenchido")}
+                  {t("Colar resposta e preencher")}
                 </button>
               </div>
               {previewWA && (
@@ -1336,34 +1356,19 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                 />
               )}
 
-              {colarAberto && (
-                <div className="mt-3 flex flex-col gap-2">
-                  <textarea
-                    value={textoColado}
-                    onChange={(e) => setTextoColado(e.target.value)}
-                    rows={8}
-                    placeholder={t("Cole aqui a lista que o contratante devolveu preenchida — eu preencho os campos automaticamente.")}
-                    className="w-full bg-surface border border-border rounded-md px-3 py-2 text-xs text-primary font-sans whitespace-pre-wrap resize-none outline-none focus:border-border-strong"
-                  />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={aplicarColagem}
-                      disabled={!textoColado.trim()}
-                      className="btn btn-primary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {t("Preencher automaticamente")}
-                    </button>
-                  </div>
-                  {resultadoColagem && (
-                    <div className="flex flex-col gap-1 text-xs">
+              {resultadoColagem && (
+                <div className="mt-2 flex flex-col gap-1 text-xs">
+                  {resultadoColagem.erro ? (
+                    <div style={{ color: "var(--danger)" }}>{resultadoColagem.erro}</div>
+                  ) : (
+                    <>
                       {resultadoColagem.preenchidos.length > 0 ? (
                         <div style={{ color: "var(--success)" }}>
                           ✓ {t("Preenchi:")} {resultadoColagem.preenchidos.join(", ")}.
                         </div>
                       ) : (
                         <div className="text-muted">
-                          {t("Não encontrei campos reconhecíveis nessa lista.")}
+                          {t("Não encontrei campos reconhecíveis no que estava copiado.")}
                         </div>
                       )}
                       {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].length > 0 && (
@@ -1372,7 +1377,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                           {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].join(", ")}.
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               )}
