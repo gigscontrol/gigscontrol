@@ -438,6 +438,8 @@ export type ParcelaMeta = {
   };
   /** Log de cobranças enviadas (quantas vezes cobrou e não foi pago). */
   cobrancas?: { em: string; por?: string; porNome?: string }[];
+  /** Fixada (📌) — cobrança priorizada, aparece na fila "Fixadas" do topo. */
+  fixada?: boolean;
 };
 
 /**

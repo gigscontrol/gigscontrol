@@ -63,6 +63,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   if (parsed.data.status_base === "pendente") requeridas.add("cancelar"); // desfazer
   if (parsed.data.cancelar !== undefined) requeridas.add("cancelar"); // cancelar/reativar
   if (parsed.data.registrar_cobranca === true) requeridas.add("registrar");
+  if (parsed.data.fixar !== undefined) requeridas.add("editar");
   if (editaEstrutura) requeridas.add("editar");
   if (
     parsed.data.nota_pagamento !== undefined &&
@@ -134,6 +135,10 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined },
       ],
     };
+  }
+
+  if (parsed.data.fixar !== undefined) {
+    meta = { ...base(), fixada: parsed.data.fixar };
   }
 
   try {

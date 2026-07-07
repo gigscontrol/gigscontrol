@@ -109,5 +109,7 @@ export const parcelaUpdateSchema = z.object({
   cancelamento_motivo: z.string().max(1000).optional(),
   /** true = registra uma cobrança enviada no log (append). */
   registrar_cobranca: z.boolean().optional(),
+  /** Fixar (📌) / desafixar a cobrança na fila de prioridade. */
+  fixar: z.boolean().optional(),
 });
 export type ParcelaUpdateInput = z.infer<typeof parcelaUpdateSchema>;

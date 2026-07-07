@@ -12,6 +12,7 @@ import {
   Ban,
   BellRing,
   Paperclip,
+  Pin,
   ChevronRight,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
@@ -90,7 +91,7 @@ function fmtData(iso?: string): string {
 export default function ControlePagamentos() {
   const t = useT();
   const accent = "var(--brand)";
-  const { vendas } = useVendas();
+  const { vendas, acaoParcela } = useVendas();
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
 
@@ -174,6 +175,24 @@ export default function ControlePagamentos() {
     return c;
   }, [parcelasPeriodo]);
 
+  // Fixadas (📌) — fila de cobranças a fazer. Independe do período (all-time),
+  // só as em aberto (não pagas/canceladas).
+  const fixadas = useMemo(
+    () =>
+      todasParcelas.filter(
+        (l) => l.parcela.meta?.fixada && l.status !== "pago" && l.status !== "cancelado"
+      ),
+    [todasParcelas]
+  );
+
+  async function toggleFixar(l: LinhaParcela) {
+    try {
+      await acaoParcela(l.vendaId, l.parcela.id, { fixar: !l.parcela.meta?.fixada });
+    } catch {
+      /* silencioso — o estado não muda se falhar */
+    }
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
@@ -238,6 +257,26 @@ export default function ControlePagamentos() {
         </div>
       </div>
 
+      {fixadas.length > 0 && (
+        <div className="card mb-4" style={{ borderColor: "var(--warning)" }}>
+          <div className="section-title mb-3 inline-flex items-center gap-2">
+            <Pin size={15} style={{ color: "var(--warning)" }} />
+            {t("Fixadas — cobranças a fazer")} · {fixadas.length}
+          </div>
+          <div className="flex flex-col gap-2">
+            {fixadas.map((l) => (
+              <ParcelaRow
+                key={`fix-${l.vendaId}-${l.parcela.id}`}
+                linha={l}
+                accent={accent}
+                onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+                onToggleFixar={() => toggleFixar(l)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {lista.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
@@ -260,6 +299,7 @@ export default function ControlePagamentos() {
               linha={l}
               accent={accent}
               onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+              onToggleFixar={() => toggleFixar(l)}
             />
           ))}
         </div>
@@ -293,10 +333,12 @@ function ParcelaRow({
   linha: l,
   accent,
   onClick,
+  onToggleFixar,
 }: {
   linha: LinhaParcela;
   accent: string;
   onClick: () => void;
+  onToggleFixar: () => void;
 }) {
   const t = useT();
   const st = LABELS_STATUS_PARCELA[l.status];
@@ -304,13 +346,32 @@ function ParcelaRow({
   const meta = l.parcela.meta;
   const nCobrancas = meta?.cobrancas?.length ?? 0;
   const temComprovante = !!meta?.pagamento?.comprovantePath;
+  const fixada = !!meta?.fixada;
+  const podeFixar = l.status !== "pago" && l.status !== "cancelado";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="card card-interactive w-full text-left flex items-center gap-4 py-3 px-4"
-    >
+    <div className="card card-interactive w-full flex items-center gap-2 py-3 px-4">
+      {/* Fixar (📌) — cobrança prioritária */}
+      <button
+        type="button"
+        onClick={onToggleFixar}
+        disabled={!podeFixar && !fixada}
+        title={fixada ? t("Desafixar") : t("Fixar cobrança")}
+        className="flex-shrink-0 p-1 rounded hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <Pin
+          size={15}
+          style={{
+            color: fixada ? "var(--warning)" : "var(--text-muted)",
+            fill: fixada ? "var(--warning)" : "none",
+          }}
+        />
+      </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 flex items-center gap-4 text-left min-w-0"
+      >
       {/* Vencimento */}
       <div className="tabular-nums whitespace-nowrap min-w-[104px]">
         <div className="font-semibold text-primary text-sm">{venc.toLocaleDateString("pt-BR")}</div>
@@ -371,6 +432,7 @@ function ParcelaRow({
       </div>
 
       <ChevronRight size={16} className="text-muted flex-shrink-0" />
-    </button>
+      </button>
+    </div>
   );
 }
