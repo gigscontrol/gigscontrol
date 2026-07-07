@@ -1,4 +1,4 @@
-import type { Show, ShowStatus } from "@/types";
+import type { Show, ShowStatus, CancelamentoInfo } from "@/types";
 
 /**
  * Linha bruta da tabela `shows` no Supabase, já com os joins úteis
@@ -19,6 +19,7 @@ export type ShowRow = {
   venda_id: string | null;
   criado_em: string | null;
   criado_por: string | null;
+  meta?: Record<string, unknown> | null;
   // joins (selecionados pelo repository)
   artist?: { id: string; nome: string; deletado_em: string | null } | null;
   casa?: { id: string; nome: string } | null;
@@ -43,6 +44,19 @@ function diaDoMes(data: string | null): number {
   return Number.isFinite(d) ? d : 0;
 }
 
+/** Valida um objeto cru de cancelamento vindo do jsonb `meta`. */
+function cancelamentoValido(raw: unknown): CancelamentoInfo | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const c = raw as Record<string, unknown>;
+  if (typeof c.motivo !== "string") return undefined;
+  return {
+    por: typeof c.por === "string" ? c.por : "",
+    porNome: typeof c.porNome === "string" ? c.porNome : "—",
+    em: typeof c.em === "string" ? c.em : "",
+    motivo: c.motivo,
+  };
+}
+
 /**
  * Converte uma row do banco no objeto `Show` que a UI usa.
  * Os campos denormalizados (`dj`, `location`, `venue`) são preenchidos
@@ -56,6 +70,13 @@ export function rowParaShow(row: ShowRow): Show {
       ? `${cidadeNome}, ${cidadeUF}`
       : cidadeNome
     : "";
+
+  const meta = (row.meta && typeof row.meta === "object" ? row.meta : {}) as Record<string, unknown>;
+  const cancelamento = cancelamentoValido(meta.cancelamento);
+  const histRaw = Array.isArray(meta.cancelamentoHistorico) ? meta.cancelamentoHistorico : [];
+  const cancelamentoHistorico = histRaw
+    .map(cancelamentoValido)
+    .filter((c): c is CancelamentoInfo => !!c);
 
   return {
     id: row.id,
@@ -73,6 +94,8 @@ export function rowParaShow(row: ShowRow): Show {
     valor: row.valor ?? undefined,
     orcamentoId: row.orcamento_id ?? undefined,
     vendaId: row.venda_id ?? undefined,
+    cancelamento,
+    cancelamentoHistorico: cancelamentoHistorico.length ? cancelamentoHistorico : undefined,
   };
 }
 
@@ -93,4 +116,6 @@ export type ShowEscrita = {
   orcamento_id?: string | null;
   venda_id?: string | null;
   criado_por?: string | null;
+  /** jsonb — cancelamento/histórico e (futuro) booking. Escrito só pelo servidor. */
+  meta?: Record<string, unknown>;
 };

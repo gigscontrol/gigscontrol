@@ -86,6 +86,19 @@ export type DJ = {
 
 export type ShowStatus = "confirmado" | "pendente" | "logistica" | "cancelado";
 
+/** Auditoria de um cancelamento de show — carimbada pelo SERVIDOR (a partir
+ *  da sessão), nunca enviada pelo cliente. Vive em shows.meta.cancelamento. */
+export type CancelamentoInfo = {
+  /** userId de quem cancelou. */
+  por: string;
+  /** Nome (snapshot) de quem cancelou — pra exibir sem re-consultar. */
+  porNome: string;
+  /** Quando (timestamp ISO). */
+  em: string;
+  /** Motivo informado (obrigatório). */
+  motivo: string;
+};
+
 export type Show = {
   id: string;
   /** Dia do mês (1-31) — derivado de `data` para casar com a grid da agenda. */
@@ -104,6 +117,10 @@ export type Show = {
   valor?: number;
   orcamentoId?: string;
   vendaId?: string;
+  /** Cancelamento atual (só quando status === "cancelado"). */
+  cancelamento?: CancelamentoInfo;
+  /** Cancelamentos anteriores (empilhados a cada reversão) — mantém histórico. */
+  cancelamentoHistorico?: CancelamentoInfo[];
 };
 
 export type AgendaItemTipo = "evento" | "voo" | "transporte";

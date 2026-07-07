@@ -31,7 +31,13 @@ export const showCreateSchema = z.object({
 
 export type ShowCreateInput = z.infer<typeof showCreateSchema>;
 
-/** Schema de atualização — todos os campos opcionais. */
-export const showUpdateSchema = showCreateSchema.partial();
+/**
+ * Schema de atualização — todos os campos opcionais, mais o `cancelamentoMotivo`
+ * (transiente: o cliente manda o motivo ao cancelar; o servidor carimba
+ * quem/quando em shows.meta e este campo NÃO persiste como coluna).
+ */
+export const showUpdateSchema = showCreateSchema.partial().extend({
+  cancelamentoMotivo: z.string().trim().min(1).max(300).optional(),
+});
 
 export type ShowUpdateInput = z.infer<typeof showUpdateSchema>;

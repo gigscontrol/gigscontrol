@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -67,6 +67,14 @@ export default function ShowDetalheModal({
   const artistas = useArtistas();
   const { podeUI } = useAuth();
   const [processando, setProcessando] = useState(false);
+  const [mostrarFormCancel, setMostrarFormCancel] = useState(false);
+  const [motivoCancel, setMotivoCancel] = useState("");
+
+  // Reseta o formulário de cancelamento ao trocar de show.
+  useEffect(() => {
+    setMostrarFormCancel(false);
+    setMotivoCancel("");
+  }, [showId]);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
   if (!show) {
@@ -83,21 +91,27 @@ export default function ShowDetalheModal({
   // → agenda.editar_todos. podeUI já libera legado/admin.
   const podeGerenciarShow = podeUI(show.djId || null, "agenda.editar_todos");
 
-  async function cancelarOuReativar() {
-    if (processando || !show) return;
-    if (
-      !cancelado &&
-      !window.confirm(
-        t("Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).")
-      )
-    ) {
-      return;
-    }
+  async function confirmarCancelamento() {
+    const m = motivoCancel.trim();
+    if (!m || processando || !show) return;
     setProcessando(true);
     try {
-      await updateShow(show.id, {
-        status: cancelado ? "confirmado" : "cancelado",
-      });
+      await updateShow(show.id, { status: "cancelado", cancelamentoMotivo: m });
+      setMostrarFormCancel(false);
+      setMotivoCancel("");
+    } catch (e) {
+      window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function reverterCancelamento() {
+    if (processando || !show) return;
+    if (!window.confirm(t("Reverter o cancelamento e reativar o show?"))) return;
+    setProcessando(true);
+    try {
+      await updateShow(show.id, { status: "confirmado" });
     } catch (e) {
       window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {
@@ -238,30 +252,102 @@ export default function ShowDetalheModal({
         </div>
       </div>
 
-      {/* Cancelar / reativar o show — reflete a cor no Google Agenda */}
-      <div className="flex items-center justify-between gap-2 mb-5">
-        {cancelado ? (
-          <span className="badge badge-danger inline-flex items-center gap-1">
-            <AlertTriangle size={11} /> {t("Show cancelado")}
-          </span>
-        ) : (
-          <span />
-        )}
-        <button
-          type="button"
-          onClick={cancelarOuReativar}
-          disabled={processando || !podeGerenciarShow}
-          title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
-          className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+      {/* Cancelamento — o evento PERMANECE na agenda; só muda a aparência
+          (vermelho/riscado) e a cor no Google. O servidor carimba quem/quando;
+          o motivo é obrigatório. Reverter empilha no histórico (nada se perde). */}
+      {cancelado ? (
+        <div
+          className="mb-5 rounded-md border p-3"
+          style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.08)" }}
         >
-          {processando
-            ? t("Salvando…")
-            : cancelado
-            ? t("Reativar show")
-            : t("Cancelar show")}
-        </button>
-      </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="badge badge-danger inline-flex items-center gap-1">
+              <AlertTriangle size={11} /> {t("Show cancelado")}
+            </span>
+            <button
+              type="button"
+              onClick={reverterCancelamento}
+              disabled={processando || !podeGerenciarShow}
+              title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+              className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ color: "var(--success)" }}
+            >
+              {processando ? t("Salvando…") : t("Reverter cancelamento")}
+            </button>
+          </div>
+          {show.cancelamento && (
+            <div className="mt-2.5 flex flex-col gap-1 text-xs">
+              <div className="text-secondary">
+                {t("Cancelado por")}{" "}
+                <span className="font-semibold text-primary">
+                  {show.cancelamento.porNome}
+                </span>
+                {show.cancelamento.em && (
+                  <span className="text-muted"> · {formatarDataHora(show.cancelamento.em)}</span>
+                )}
+              </div>
+              <div className="text-secondary">
+                <span className="text-muted">{t("Motivo:")}</span> {show.cancelamento.motivo}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : mostrarFormCancel ? (
+        <div className="mb-5 rounded-md border border-border bg-elevated p-3">
+          <label className="stat-label block mb-1.5">
+            {t("Motivo do cancelamento")} *
+          </label>
+          <textarea
+            value={motivoCancel}
+            onChange={(e) => setMotivoCancel(e.target.value)}
+            rows={2}
+            maxLength={300}
+            autoFocus
+            placeholder={t("Ex.: contratante desistiu, conflito de agenda…")}
+            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm text-primary resize-none outline-none focus:border-border-strong"
+          />
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <p className="text-[0.65rem] text-muted">
+              {t("O evento não é apagado — fica vermelho na agenda e no Google.")}
+            </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setMostrarFormCancel(false);
+                  setMotivoCancel("");
+                }}
+                disabled={processando}
+                className="btn-ghost text-xs"
+              >
+                {t("Voltar")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmarCancelamento}
+                disabled={processando || !motivoCancel.trim()}
+                className="text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--danger)" }}
+              >
+                {processando ? t("Salvando…") : t("Confirmar cancelamento")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-end mb-5">
+          <button
+            type="button"
+            onClick={() => setMostrarFormCancel(true)}
+            disabled={!podeGerenciarShow}
+            title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+            className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{ color: "var(--danger)" }}
+          >
+            {t("Cancelar show")}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-5">
         {/* ===== CONTRATANTE ===== */}
@@ -566,6 +652,19 @@ export default function ShowDetalheModal({
 }
 
 // ---------- Auxiliares ----------
+
+/** "07/07/2026 · 14:30" a partir de um timestamp ISO. Vazio se inválido. */
+function formatarDataHora(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function Bloco({
   icon,

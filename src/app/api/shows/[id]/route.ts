@@ -90,11 +90,56 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Auditoria de cancelamento: o SERVIDOR carimba quem/quando (a partir da
+  // sessão) em shows.meta — o cliente só manda o motivo, pra ninguém forjar a
+  // autoria. Reverter empilha o cancelamento atual no histórico (nada se perde).
+  const estavaCancelado = row.status === "cancelado";
+  const querCancelar = parsed.data.status === "cancelado" && !estavaCancelado;
+  const querReativar =
+    parsed.data.status !== undefined &&
+    parsed.data.status !== "cancelado" &&
+    estavaCancelado;
+  const metaAtual =
+    row.meta && typeof row.meta === "object"
+      ? (row.meta as Record<string, unknown>)
+      : {};
+  let metaOverride: Record<string, unknown> | undefined;
+  if (querCancelar) {
+    const motivo = (parsed.data.cancelamentoMotivo ?? "").trim();
+    if (!motivo) {
+      return NextResponse.json(
+        { erro: "Informe o motivo do cancelamento." },
+        { status: 400 }
+      );
+    }
+    metaOverride = {
+      ...metaAtual,
+      cancelamento: {
+        por: r.sessao.userId,
+        porNome: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+        em: new Date().toISOString(),
+        motivo,
+      },
+    };
+  } else if (querReativar) {
+    const hist = Array.isArray(metaAtual.cancelamentoHistorico)
+      ? metaAtual.cancelamentoHistorico
+      : [];
+    metaOverride = {
+      ...metaAtual,
+      cancelamento: null,
+      cancelamentoHistorico: metaAtual.cancelamento
+        ? [...hist, metaAtual.cancelamento]
+        : hist,
+    };
+  }
+
   try {
     const show = await atualizarShowPorId(
       r.sessao.supabase,
       params.id,
-      parsed.data
+      parsed.data,
+      metaOverride
     );
     // Redige o cachê/venda na resposta pra quem tem editar mas não ver_detalhado
     // (senão a resposta do PATCH vaza o que o GET esconde).

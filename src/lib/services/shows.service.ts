@@ -87,9 +87,13 @@ export async function criarShowNoWorkspace(
 export async function atualizarShowPorId(
   supabase: SupabaseClient,
   id: string,
-  input: ShowUpdateInput
+  input: ShowUpdateInput,
+  /** `meta` já computado pelo servidor (cancelamento/histórico). Nunca vem do cliente. */
+  metaOverride?: Record<string, unknown>
 ): Promise<Show> {
-  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  if (metaOverride !== undefined) escrita.meta = metaOverride;
+  const row = await repoAtualizar(supabase, id, escrita);
 
   // Google Calendar (best-effort): reflete cancelamento/reativação na COR do
   // evento. Nunca apaga; falha aqui NÃO quebra a atualização do show.
