@@ -213,7 +213,7 @@ export default function NovoContratoUpload() {
   // ---------- Passo 2: signatários + autenticação ----------
   if (etapa === "sig") {
     return (
-      <div className="flex flex-col gap-4 max-w-2xl">
+      <div className="flex flex-col gap-4">
         <div className="text-sm text-muted">
           {t("PDF")}: <span className="text-primary font-medium">{pdf.nome}</span> ({pdf.paginas} {t("páginas")})
         </div>
