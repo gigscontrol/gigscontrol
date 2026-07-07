@@ -1,6 +1,16 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 };
 
-export default nextConfig;
+// Envolve com o Sentry. Source maps só sobem no build se SENTRY_AUTH_TOKEN
+// existir. Sem NEXT_PUBLIC_SENTRY_DSN, o SDK fica DESLIGADO em runtime.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: true,
+  widenClientFileUpload: true,
+});
+
