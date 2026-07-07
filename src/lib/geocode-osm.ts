@@ -18,7 +18,7 @@
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 const USER_AGENT =
-  "GIGS-CONTROL/1.0 (gigscontrol.vercel.app; suporte@gigscontrol.com.br)";
+  "GIGS-CONTROL/1.0 (gigscontrol.com; suporte@gigscontrol.com.br)";
 
 export type Coords = { latitude: number; longitude: number };
 
