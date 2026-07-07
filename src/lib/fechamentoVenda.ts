@@ -1,4 +1,4 @@
-import type { ItemQuantidade } from "@/types";
+import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao } from "@/types";
 import { formatBRL } from "./whatsapp";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
@@ -21,19 +21,31 @@ export type DadosFechamento = {
   lineUp?: string[];
   efeitos?: ItemQuantidade[];
   camarim?: ItemQuantidade[];
+  hotel?: ItemQuantidade[];
+  logistica?: LogisticaSelecao;
 };
 
 /**
- * Texto "copia e cola" pro WhatsApp gerado ao concretizar a venda (Vendas —
- * Passo 3). Preenche automaticamente tudo que já existe no orçamento/venda e
- * deixa EM BRANCO só o que falta, pro contratante completar. Sem repetir o que
- * já foi acertado. Em PT (mensagem pro cliente), como o gerarTextoWhatsApp.
+ * Texto "copia e cola" pro WhatsApp (Vendas — Passo 3). Preenche o que já existe
+ * e deixa EM BRANCO só o que falta, pro contratante completar. Rótulos em
+ * negrito com o valor na linha de baixo; cada campo separado por linha em branco.
+ * Hotel e Logística só entram se houver opção selecionada. Em PT (mensagem pro
+ * cliente), como o gerarTextoWhatsApp.
  */
 export function textoFechamentoVenda(v: DadosFechamento): string {
+  // Rótulo em negrito; o valor (quando existe) vai na linha de baixo.
   const campo = (label: string, valor?: string | number | null) => {
     const val =
       valor === undefined || valor === null || `${valor}`.trim() === "" ? "" : `${valor}`;
-    return `${label}: ${val}`;
+    return val ? `*${label}:* \n${val}` : `*${label}:* `;
+  };
+
+  // Bloco de lista (efeitos/camarim/hotel): cabeçalho em negrito + itens colados.
+  // `sempreMostrar=false` → some quando não há itens (caso do Hotel).
+  const blocoItens = (titulo: string, itens?: ItemQuantidade[], sempreMostrar = true) => {
+    const list = (itens ?? []).filter((i) => i.qtd > 0);
+    if (list.length === 0) return sempreMostrar ? `*${titulo}:* ` : null;
+    return [`*${titulo}:*`, ...list.map((i) => `${i.qtd}x ${i.nome}`)].join("\n");
   };
 
   const contratante = [
@@ -56,27 +68,30 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     campo("Line-UP", v.lineUp && v.lineUp.length ? v.lineUp.join(", ") : ""),
   ];
 
-  // Efeitos/Camarim: cabeçalho + itens COLADOS (sem linha em branco entre itens).
-  const efeitos = (v.efeitos ?? []).filter((i) => i.qtd > 0);
-  const blocoEfeitos = efeitos.length
-    ? ["Efeitos:", ...efeitos.map((i) => `${i.qtd}x ${i.nome}`)].join("\n")
-    : "Efeitos: ";
-  const camarim = (v.camarim ?? []).filter((i) => i.qtd > 0);
-  const blocoCamarim = camarim.length
-    ? ["Consumação/Camarim:", ...camarim.map((i) => `${i.qtd}x ${i.nome}`)].join("\n")
-    : "Consumação/Camarim: ";
+  // Hotel e Logística: SÓ aparecem se tiverem opção selecionada.
+  const blocoHotel = blocoItens("Hotel", v.hotel, false);
+  const logLinhas: string[] = [];
+  if (v.logistica) {
+    if ((v.logistica.aereaQtd ?? 0) > 0) {
+      logLinhas.push(`${v.logistica.aereaQtd}x Logística Aérea (Ida e Volta)`);
+    }
+    if (v.logistica.transladoTerrestre) logLinhas.push(TEXTO_TRANSLADO);
+  }
+  const blocoLogistica = logLinhas.length ? ["*Logística:*", ...logLinhas].join("\n") : null;
 
-  // Cada bloco = um "parágrafo" separado por LINHA EM BRANCO (join "\n\n"), pra
-  // dar respiro. Exceção: o header do evento fica colado no 1º campo dele.
+  // Cada item = um "parágrafo" separado por LINHA EM BRANCO (join "\n\n").
   const paragrafos = [
     "🖋️ *Informações do Contratante*",
     ...contratante,
-    `📌 *Informações do evento*\n${evento[0]}`,
-    ...evento.slice(1),
-    blocoEfeitos,
-    blocoCamarim,
-    "Após o preenchimento dessas informações a sua data será agendada e em seguida você receberá todos os materiais e vídeo chamada do artista.\n*OBS:* Sua data só será reservada após o preenchimento total dessa lista.",
-  ];
+    "📌 *Informações do evento*",
+    ...evento,
+    blocoItens("Efeitos", v.efeitos),
+    blocoItens("Consumação/Camarim", v.camarim),
+    blocoHotel,
+    blocoLogistica,
+    "Após o preenchimento dessas informações a sua data será agendada e em seguida você receberá todos os materiais e vídeo chamada do artista.",
+    "*OBS:* Sua data só será reservada após o preenchimento total dessa lista.",
+  ].filter((p): p is string => p !== null);
 
   return paragrafos.join("\n\n");
 }
