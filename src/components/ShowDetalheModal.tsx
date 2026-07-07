@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   FileText,
+  FileSignature,
   CalendarCheck2,
   ExternalLink,
   Instagram,
@@ -33,9 +34,11 @@ import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
+import { useContratos } from "@/lib/contratos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { mascararCpfCnpj } from "@/lib/formatters";
+import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -64,6 +67,7 @@ export default function ShowDetalheModal({
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
+  const { contratos, assinantesPorContrato } = useContratos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
   const [processando, setProcessando] = useState(false);
@@ -128,6 +132,10 @@ export default function ShowDetalheModal({
     ? orcamentos.find((o) => String(o.id) === show.orcamentoId)
     : null;
   const venda = show.vendaId ? vendas.find((v) => String(v.id) === show.vendaId) : null;
+
+  // Status contratual do show (Fase 3) — derivado da venda vinculada.
+  const resumoContrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
+  const rotuloContrato = rotuloContratoShow(resumoContrato, t);
 
   // -------- Dados consolidados (venda > orçamento > casa > show) --------
   const nomeEvento = venda?.nomeEvento;
@@ -248,6 +256,12 @@ export default function ShowDetalheModal({
           )}
           {tipoEvento && (
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[tipoEvento])}</span>
+          )}
+          {show.vendaId && (
+            <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
+              <FileSignature size={11} />
+              {rotuloContrato.texto}
+            </span>
           )}
         </div>
       </div>
@@ -578,8 +592,25 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== ORIGEM (links) ===== */}
-        {(orcamento || venda) && (
+        {(orcamento || venda || resumoContrato.contrato) && (
           <Bloco icon={<Hash size={14} />} title={t("Documentos vinculados")}>
+            {resumoContrato.contrato && (
+              <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border mb-2">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
+                    <FileSignature size={11} />
+                    {t("Contrato")}
+                  </span>
+                  <span
+                    className="font-mono text-sm font-bold tabular-nums"
+                    style={{ color: "var(--brand)" }}
+                  >
+                    {resumoContrato.contrato.numero}
+                  </span>
+                  <span className="text-xs text-muted">· {rotuloContrato.texto}</span>
+                </div>
+              </div>
+            )}
             {venda && (
               <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
                 <div className="flex items-center gap-2 min-w-0">

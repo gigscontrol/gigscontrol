@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
-import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download, ArrowLeft } from "lucide-react";
+import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download, ArrowLeft, FileSignature } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
 import { useShows } from "@/lib/shows-context";
@@ -16,6 +16,8 @@ import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { useContratos } from "@/lib/contratos-context";
+import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -81,7 +83,11 @@ function StatusBadge({ status }: { status: ShowStatus }) {
 }
 
 function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () => void }) {
+  const t = useT();
+  const { contratos, assinantesPorContrato } = useContratos();
   const cancelado = show.status === "cancelado";
+  const rcontrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
+  const rotContrato = rotuloContratoShow(rcontrato, t);
   return (
     <button
       type="button"
@@ -118,6 +124,15 @@ function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () =>
           <span className="font-semibold text-primary tabular-nums">{show.time}</span>
         </div>
       </div>
+
+      {show.vendaId && (
+        <div className="mt-2">
+          <span className={`badge ${rotContrato.badgeClass} inline-flex items-center gap-1`}>
+            <FileSignature size={10} />
+            {rotContrato.texto}
+          </span>
+        </div>
+      )}
     </button>
   );
 }
