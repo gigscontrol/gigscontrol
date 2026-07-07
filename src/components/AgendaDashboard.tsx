@@ -469,7 +469,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
 
       {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
           geral" contam a agenda inteira; senão, só o mês selecionado. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <ClickableStat
           onClick={() =>
             setLista({ titulo: t("Todos os shows"), subtitulo: tituloMes, shows: resumo })
@@ -535,44 +535,87 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
             subtitle={subtitlePendencia}
           />
         </ClickableStat>
-        <ClickableStat
-          onClick={() =>
-            setLista({
-              titulo: t("Shows realizados"),
-              subtitulo: tituloMes,
-              shows: realizados.lista,
-            })
-          }
-        >
-          <StatCard
-            title={t("Shows realizados")}
-            value={realizados.total}
-            icon={<CheckCircle2 size={16} />}
-            accentColor="var(--success)"
-            subtitle={
-              realizados.comPendencia.length > 0
-                ? t("{n} com pendência", { n: realizados.comPendencia.length })
-                : t("Tudo certo")
-            }
-          />
-        </ClickableStat>
-        <ClickableStat
-          onClick={() =>
-            setLista({
-              titulo: t("Shows a realizar"),
-              subtitulo: tituloMes,
-              shows: aRealizarList,
-            })
-          }
-        >
-          <StatCard
-            title={t("A realizar")}
-            value={aRealizar}
-            icon={<Clock size={16} />}
-            accentColor="var(--warning)"
-            subtitle={t("Shows que ainda vão acontecer")}
-          />
-        </ClickableStat>
+      </div>
+
+      {/* Shows realizados + a realizar — em lista (saíram dos cards de cima). */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="section-title flex items-center gap-2">
+              <CheckCircle2 size={16} style={{ color: "var(--success)" }} />
+              {t("Shows realizados")}
+              <span className="badge badge-neutral tabular-nums">{realizados.total}</span>
+            </div>
+            {realizados.lista.length > 0 && (
+              <button
+                onClick={() =>
+                  setLista({ titulo: t("Shows realizados"), subtitulo: tituloMes, shows: realizados.lista })
+                }
+                className="btn-ghost text-xs inline-flex items-center gap-1"
+              >
+                {t("Ver todos")} <ChevronRight size={12} />
+              </button>
+            )}
+          </div>
+          {realizados.lista.length === 0 ? (
+            <div className="text-sm text-muted text-center py-6">
+              {t("Nenhum show realizado no período.")}
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {realizados.lista.slice(0, 5).map((s) => renderLinhaResumo(s))}
+              {realizados.lista.length > 5 && (
+                <button
+                  onClick={() =>
+                    setLista({ titulo: t("Shows realizados"), subtitulo: tituloMes, shows: realizados.lista })
+                  }
+                  className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
+                >
+                  {t("+ {n} shows — ver todos", { n: realizados.lista.length - 5 })}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="section-title flex items-center gap-2">
+              <Clock size={16} style={{ color: "var(--warning)" }} />
+              {t("Shows a realizar")}
+              <span className="badge badge-neutral tabular-nums">{aRealizar}</span>
+            </div>
+            {aRealizarList.length > 0 && (
+              <button
+                onClick={() =>
+                  setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
+                }
+                className="btn-ghost text-xs inline-flex items-center gap-1"
+              >
+                {t("Ver todos")} <ChevronRight size={12} />
+              </button>
+            )}
+          </div>
+          {aRealizarList.length === 0 ? (
+            <div className="text-sm text-muted text-center py-6">
+              {t("Nenhum show a realizar no período.")}
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-border">
+              {aRealizarList.slice(0, 5).map((s) => renderLinhaResumo(s))}
+              {aRealizarList.length > 5 && (
+                <button
+                  onClick={() =>
+                    setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
+                  }
+                  className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
+                >
+                  {t("+ {n} shows — ver todos", { n: aRealizarList.length - 5 })}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
