@@ -43,12 +43,14 @@ export default function PosicionadorPdf({
     let loadingTask: PDFDocumentLoadingTask | null = null;
     setErro(null);
     (async () => {
-      const pdfjsLib = await import("pdfjs-dist");
-      // Worker do pdf.js como asset local (mesma origem → não bate na CSP).
-      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url
-      ).toString();
+      // Build "legacy" do pdfjs (o v6 padrão usa `import.meta`, que o minify do
+      // Next quebra no build de produção). Com transpilePackages no next.config
+      // o import.meta do módulo principal é resolvido.
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      // Worker servido de /public (path estático, mesma origem → não bate na CSP
+      // e NÃO passa pelo webpack/Terser, que quebrava no import/export do .mjs).
+      // O arquivo é copiado de node_modules pelo script `copy-pdf-worker`.
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       if (cancelado) return;
       loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
       try {
