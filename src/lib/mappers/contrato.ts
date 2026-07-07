@@ -43,8 +43,91 @@ export function pastasValidas(raw: unknown): ContratoPasta[] {
   return out.sort((a, b) => a.ordem - b.ordem);
 }
 
-/** Conteúdo desserializado do snapshot (`corpo_preenchido`). */
-export type ContratoConteudo = { secoes: SecaoModelo[]; estilo: EstiloModelo };
+/**
+ * Campo de assinatura posicionado num contrato-por-UPLOAD. Coordenadas em
+ * FRAÇÃO 0..1 da página (resolução-independente); vínculo com o signatário por
+ * ORDEM (0,1,2…) — os ids de contrato_signatarios são recriados a cada save.
+ */
+export type CampoAssinatura = {
+  id: string;
+  signatarioOrdem: number;
+  /** v1: só "assinatura". (nome/documento/data/rubrica ficam pra depois.) */
+  tipo: "assinatura";
+  /** Página 0-based. */
+  pagina: number;
+  xRel: number;
+  yRel: number;
+  wRel: number;
+  hRel: number;
+};
+
+/** Layout de um contrato gerado a partir de um PDF ENVIADO (não de modelo). */
+export type ContratoPdfLayout = {
+  /** Path no bucket privado `assinaturas`. */
+  path: string;
+  nome: string;
+  paginas: number;
+  /** Dimensões (pt) de cada página, na ordem. */
+  dims: { w: number; h: number }[];
+  campos: CampoAssinatura[];
+};
+
+/**
+ * Conteúdo desserializado do snapshot (`corpo_preenchido`).
+ * `pdf` presente = contrato por UPLOAD (posiciona assinaturas sobre um PDF
+ * pronto). Ausente = contrato editável de modelo (fluxo de sempre).
+ */
+export type ContratoConteudo = {
+  secoes: SecaoModelo[];
+  estilo: EstiloModelo;
+  pdf?: ContratoPdfLayout;
+};
+
+const clamp01 = (n: unknown): number =>
+  typeof n === "number" && Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
+
+/** Valida/normaliza o layout de PDF vindo do jsonb. undefined se não for válido. */
+export function pdfLayoutValido(raw: unknown): ContratoPdfLayout | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.path !== "string" || !o.path) return undefined;
+  const paginas =
+    typeof o.paginas === "number" && o.paginas > 0 ? Math.floor(o.paginas) : 0;
+  const dims = Array.isArray(o.dims)
+    ? o.dims.map((d) => {
+        const x = (d ?? {}) as Record<string, unknown>;
+        return {
+          w: typeof x.w === "number" ? x.w : 0,
+          h: typeof x.h === "number" ? x.h : 0,
+        };
+      })
+    : [];
+  const campos = Array.isArray(o.campos)
+    ? o.campos.flatMap((c): CampoAssinatura[] => {
+        const x = (c ?? {}) as Record<string, unknown>;
+        if (typeof x.pagina !== "number") return [];
+        return [
+          {
+            id: typeof x.id === "string" && x.id ? x.id : `c${Math.floor(clamp01(x.xRel) * 1e6)}`,
+            signatarioOrdem:
+              typeof x.signatarioOrdem === "number" ? Math.max(0, Math.floor(x.signatarioOrdem)) : 0,
+            tipo: "assinatura",
+            pagina: Math.max(0, Math.floor(x.pagina)),
+            xRel: clamp01(x.xRel),
+            yRel: clamp01(x.yRel),
+            wRel: clamp01(x.wRel),
+            hRel: clamp01(x.hRel),
+          },
+        ];
+      })
+    : [];
+  return { path: o.path, nome: typeof o.nome === "string" ? o.nome : "documento.pdf", paginas, dims, campos };
+}
+
+/** true = contrato por upload de PDF (tem layout posicionado). */
+export function temPdfLayout(c: ContratoConteudo): boolean {
+  return !!c.pdf && !!c.pdf.path;
+}
 
 export type ContratoRow = {
   id: string;
@@ -109,10 +192,13 @@ export function conteudoValido(corpoPreenchido: unknown): ContratoConteudo {
     const o = JSON.parse(corpoPreenchido) as {
       secoes?: unknown;
       estilo?: unknown;
+      pdf?: unknown;
     };
+    const pdf = pdfLayoutValido(o.pdf);
     return {
       secoes: secoesValidas(o.secoes),
       estilo: estiloValido(JSON.stringify(o.estilo ?? {})),
+      ...(pdf ? { pdf } : {}),
     };
   } catch {
     return { secoes: [], estilo: { ...ESTILO_PADRAO } };
