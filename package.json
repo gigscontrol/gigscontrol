@@ -7,7 +7,8 @@
     "dev:fresh": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "copy-pdf-worker": "node -e \"const{copyFileSync}=require('fs');copyFileSync(require.resolve('pdfjs-dist/legacy/build/pdf.worker.min.mjs'),'public/pdf.worker.min.mjs');console.log('pdf worker copiado pra public/')\""
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1072.0",
@@ -19,6 +20,8 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.460.0",
     "next": "^14.2.18",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

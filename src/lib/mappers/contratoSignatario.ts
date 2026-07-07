@@ -29,6 +29,9 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
   facial: false,
 };
 
+/** Teto de signatários por contrato (vale pros dois fluxos: modelo e PDF). */
+export const MAX_SIGNATARIOS = 6;
+
 /**
  * Caminhos das fotos no Storage (Fase 2) + resultado do reconhecimento facial
  * (Fase 3). Quando exibidas, as fotos viram URLs assinadas. Guardado tudo no

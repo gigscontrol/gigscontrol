@@ -37,6 +37,7 @@ import {
 } from "@/lib/contratos/signatarios-api";
 import {
   EXIGENCIAS_PADRAO,
+  MAX_SIGNATARIOS,
   type Signatario,
   type ExigenciasSignatario,
 } from "@/lib/mappers/contratoSignatario";
@@ -188,10 +189,11 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   // ---- Ações do form ----
 
   function adicionarLinha() {
-    setLinhas((prev) => [
-      ...prev,
-      { nome: "", email: "", papel: "", exige: { ...EXIGENCIAS_PADRAO } },
-    ]);
+    setLinhas((prev) =>
+      prev.length >= MAX_SIGNATARIOS
+        ? prev
+        : [...prev, { nome: "", email: "", papel: "", exige: { ...EXIGENCIAS_PADRAO } }]
+    );
   }
 
   function removerLinha(idx: number) {
@@ -428,10 +430,20 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         </div>
 
         <div>
-          <button type="button" onClick={adicionarLinha} className="btn btn-secondary">
+          <button
+            type="button"
+            onClick={adicionarLinha}
+            disabled={linhas.length >= MAX_SIGNATARIOS}
+            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Plus size={15} />
             {t("Adicionar signatário")}
           </button>
+          {linhas.length >= MAX_SIGNATARIOS && (
+            <p className="text-xs text-muted mt-1.5">
+              {t("Máximo de {n} signatários por contrato.", { n: MAX_SIGNATARIOS })}
+            </p>
+          )}
         </div>
 
         {erroForm && (

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_SIGNATARIOS } from "@/lib/mappers/contratoSignatario";
 
 const exigeSchema = z
   .object({
@@ -30,7 +31,7 @@ export const definirSignatariosSchema = z.object({
       })
     )
     .min(1, "Adicione ao menos um signatário.")
-    .max(10, "Máximo de 10 signatários."),
+    .max(MAX_SIGNATARIOS, `Máximo de ${MAX_SIGNATARIOS} signatários.`),
 });
 
 /** Submissão da assinatura (página pública). */
