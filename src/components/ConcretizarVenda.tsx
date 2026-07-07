@@ -8,6 +8,7 @@ import {
   MapPin,
   Music,
   CheckCircle2,
+  Copy,
   Sparkles,
   Plus,
   Minus,
@@ -17,6 +18,7 @@ import {
   Lock,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import Modal from "./Modal";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
@@ -39,6 +41,7 @@ import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
@@ -48,6 +51,7 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type Parcela,
+  type Venda,
 } from "@/types";
 
 type Props = {
@@ -93,6 +97,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
+  const [vendaCriada, setVendaCriada] = useState<Venda | null>(null);
+  const [copiadoWA, setCopiadoWA] = useState(false);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
 
@@ -475,7 +481,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     };
 
     const venda = await criarVenda(input);
-    onSaved(venda.id);
+    // Passo 3 — em vez de navegar direto, abre o modal com o texto de
+    // fechamento pra WhatsApp. "Concluir"/fechar chama onSaved.
+    setVendaCriada(venda);
+    setSalvando(false);
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
@@ -1237,6 +1246,50 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           {salvando ? t("Concretizando...") : t("Concretizar Venda")}
         </button>
       </div>
+
+      {/* Passo 3 — texto de fechamento pro WhatsApp, gerado na conversão.
+          Já vem preenchido com o que existe; só falta o que o cliente completa. */}
+      {vendaCriada && (
+        <Modal
+          isOpen
+          onClose={() => onSaved(vendaCriada.id)}
+          title={t("Venda concretizada! 🎉")}
+          subtitle={t("Envie esta lista pro contratante completar só o que falta.")}
+          maxWidth={560}
+        >
+          <textarea
+            readOnly
+            value={textoFechamentoVenda(vendaCriada)}
+            rows={16}
+            className="w-full bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
+          />
+          <div className="flex items-center justify-end gap-3 mt-3">
+            <button
+              type="button"
+              onClick={() => onSaved(vendaCriada.id)}
+              className="btn btn-secondary"
+            >
+              {t("Concluir")}
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(textoFechamentoVenda(vendaCriada));
+                  setCopiadoWA(true);
+                  setTimeout(() => setCopiadoWA(false), 2500);
+                } catch {
+                  /* clipboard indisponível */
+                }
+              }}
+              className="btn btn-primary inline-flex items-center gap-1.5"
+            >
+              {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+              {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
