@@ -9,6 +9,7 @@ import {
   Music,
   CheckCircle2,
   Copy,
+  ClipboardPaste,
   MessageCircle,
   Sparkles,
   Plus,
@@ -42,6 +43,7 @@ import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
+import { parseFechamento } from "@/lib/parseFechamento";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
@@ -98,6 +100,12 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { criarVenda } = useVendas();
   const [copiadoWA, setCopiadoWA] = useState(false);
   const [previewWA, setPreviewWA] = useState(false);
+  const [colarAberto, setColarAberto] = useState(false);
+  const [textoColado, setTextoColado] = useState("");
+  const [resultadoColagem, setResultadoColagem] = useState<{
+    preenchidos: string[];
+    avisos: string[];
+  } | null>(null);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
 
@@ -481,6 +489,34 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
     const venda = await criarVenda(input);
     onSaved(venda.id);
+  }
+
+  // Passo 3 (volta) — cola a lista que o contratante devolveu e auto-preenche.
+  function aplicarColagem() {
+    const { campos, avisos } = parseFechamento(textoColado);
+    const feitos: string[] = [];
+    const set = (v: string | undefined, fn: (x: string) => void, rotulo: string) => {
+      if (v) {
+        fn(v);
+        feitos.push(rotulo);
+      }
+    };
+    set(campos.contratanteNome, setContratanteNome, "Nome");
+    set(campos.contratanteEmail, setContratanteEmail, "E-mail");
+    set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
+    set(campos.contratanteEndereco, setContratanteEndereco, "Endereço");
+    set(campos.nomeEvento, setNomeEvento, "Evento");
+    set(campos.eventoInstagram, setEventoInstagram, "Instagram");
+    set(campos.nomeLocal, setNomeLocal, "Local");
+    set(campos.capacidadePublico, setCapacidadePublico, "Capacidade");
+    set(campos.enderecoLocal, setEnderecoLocal, "Endereço do evento");
+    set(campos.dataShow, setDataShow, "Data");
+    set(campos.horario, setHorarioInicio, "Horário");
+    if (campos.lineUp && campos.lineUp.length) {
+      setLineUp(campos.lineUp);
+      feitos.push("Line-Up");
+    }
+    setResultadoColagem({ preenchidos: feitos, avisos });
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
@@ -1280,6 +1316,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                 >
                   {previewWA ? t("Ocultar prévia") : t("Ver prévia")}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setColarAberto((v) => !v)}
+                  className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                >
+                  <ClipboardPaste size={14} />
+                  {colarAberto ? t("Fechar") : t("Colar preenchido")}
+                </button>
               </div>
               {previewWA && (
                 <textarea
@@ -1288,6 +1332,47 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                   rows={14}
                   className="w-full mt-2 bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
                 />
+              )}
+
+              {colarAberto && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <textarea
+                    value={textoColado}
+                    onChange={(e) => setTextoColado(e.target.value)}
+                    rows={8}
+                    placeholder={t("Cole aqui a lista que o contratante devolveu preenchida — eu preencho os campos automaticamente.")}
+                    className="w-full bg-surface border border-border rounded-md px-3 py-2 text-xs text-primary font-sans whitespace-pre-wrap resize-none outline-none focus:border-border-strong"
+                  />
+                  <div>
+                    <button
+                      type="button"
+                      onClick={aplicarColagem}
+                      disabled={!textoColado.trim()}
+                      className="btn btn-primary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t("Preencher automaticamente")}
+                    </button>
+                  </div>
+                  {resultadoColagem && (
+                    <div className="flex flex-col gap-1 text-xs">
+                      {resultadoColagem.preenchidos.length > 0 ? (
+                        <div style={{ color: "var(--success)" }}>
+                          ✓ {t("Preenchi:")} {resultadoColagem.preenchidos.join(", ")}.
+                        </div>
+                      ) : (
+                        <div className="text-muted">
+                          {t("Não encontrei campos reconhecíveis nessa lista.")}
+                        </div>
+                      )}
+                      {resultadoColagem.avisos.length > 0 && (
+                        <div style={{ color: "var(--warning)" }}>
+                          ⚠ {t("A lista não segue o padrão em")} {resultadoColagem.avisos.join(", ")} —{" "}
+                          {t("esses setores NÃO foram alterados (confira/ajuste manual).")}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
