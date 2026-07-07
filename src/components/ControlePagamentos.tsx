@@ -16,17 +16,52 @@ import {
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import DateRangeSelector from "./DateRangeSelector";
 import ParcelaDetalheModal from "./ParcelaDetalheModal";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type StatusParcela,
   type Parcela,
+  type AgendaDateRange,
 } from "@/types";
 import { useT } from "@/lib/i18n";
+
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+
+/** {ano, mes(0-based), tudo}. "Visão geral" = all-time. */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number; tudo: boolean } {
+  const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
+}
+
+function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return false;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}
 
 /** Linha achatada: uma parcela + dados da venda dona */
 type LinhaParcela = {
@@ -57,10 +92,20 @@ export default function ControlePagamentos() {
   const accent = "var(--brand)";
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { workspaceCriadoEm } = useWorkspace();
 
   const [search, setSearch] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
   const [detalhe, setDetalhe] = useState<{ vendaId: string; parcelaId: string } | null>(null);
+  // Seletor de período (padrão: Visão geral). Filtra por data de vencimento.
+  const [range, setRange] = useState<AgendaDateRange>("Visão geral");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const periodo = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
@@ -89,22 +134,28 @@ export default function ControlePagamentos() {
     );
   }, [vendas, artistas]);
 
+  // Recorte do período (por data de vencimento). "Visão geral" = todas.
+  const parcelasPeriodo = useMemo(
+    () => todasParcelas.filter((l) => dataNoMes(l.parcela.dataVencimento, periodo)),
+    [todasParcelas, periodo]
+  );
+
   // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado.
   const totais = useMemo(() => {
     let recebido = 0;
     let aReceber = 0;
     let atrasado = 0;
-    for (const l of todasParcelas) {
+    for (const l of parcelasPeriodo) {
       if (l.status === "cancelado") continue;
       if (l.status === "pago") recebido += l.parcela.valor;
       else if (l.status === "atrasado") atrasado += l.parcela.valor;
       else aReceber += l.parcela.valor;
     }
     return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
-  }, [todasParcelas]);
+  }, [parcelasPeriodo]);
 
   const lista = useMemo(() => {
-    return todasParcelas.filter((l) => {
+    return parcelasPeriodo.filter((l) => {
       if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -115,20 +166,32 @@ export default function ControlePagamentos() {
       }
       return true;
     });
-  }, [todasParcelas, filtroStatus, search]);
+  }, [parcelasPeriodo, filtroStatus, search]);
 
   const contadores = useMemo(() => {
     const c = { pago: 0, pendente: 0, atrasado: 0, cancelado: 0 };
-    todasParcelas.forEach((l) => c[l.status]++);
+    parcelasPeriodo.forEach((l) => c[l.status]++);
     return c;
-  }, [todasParcelas]);
+  }, [parcelasPeriodo]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Controle de Pagamentos"
-        subtitle="Todas as parcelas de todas as vendas — clique numa parcela para ver detalhes, informar pagamento, cobrar ou cancelar"
+        subtitle={`${t("Parcelas de todas as vendas — informe pagamento, cobre ou cancele")} · ${tituloPeriodo}`}
         accentColor={accent}
+        actions={
+          <DateRangeSelector
+            options={ATALHOS_FIN}
+            value={range}
+            onChange={setRange}
+            selectedCustomMonth={customMonth}
+            setSelectedCustomMonth={setCustomMonth}
+            selectedCustomYear={customYear}
+            setSelectedCustomYear={setCustomYear}
+            accountCreatedAt={workspaceCriadoEm}
+          />
+        }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -152,7 +215,7 @@ export default function ControlePagamentos() {
 
         <div className="pill-group">
           <button type="button" className={`pill ${filtroStatus === "todos" ? "active" : ""}`} onClick={() => setFiltroStatus("todos")}>
-            {t("Todas ({n})", { n: todasParcelas.length })}
+            {t("Todas ({n})", { n: parcelasPeriodo.length })}
           </button>
           <button type="button" className={`pill ${filtroStatus === "pendente" ? "active" : ""}`} onClick={() => setFiltroStatus("pendente")}>
             <Clock size={11} />

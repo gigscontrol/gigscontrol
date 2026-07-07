@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   DollarSign,
   CheckCircle2,
@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import DateRangeSelector from "./DateRangeSelector";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { gradienteSutil } from "@/lib/gradiente";
 import { formatBRL } from "@/lib/whatsapp";
 import {
@@ -21,8 +22,42 @@ import {
   statusEfetivoParcela,
   type Parcela,
 } from "@/types";
-import type { ActiveTab, ActivePage } from "@/types";
+import type { ActiveTab, ActivePage, AgendaDateRange } from "@/types";
 import { useT } from "@/lib/i18n";
+
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+
+/** Resolve {ano, mes(0-based), tudo}. "Visão geral" = all-time. */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number; tudo: boolean } {
+  const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
+}
+
+/** A data (vencimento) cai no período? Em "Visão geral", tudo passa. */
+function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return false;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}
 
 type Props = {
   selectedDJs: string[];
@@ -36,6 +71,7 @@ type LinhaParcela = {
   parcela: Parcela;
   indice: number;
   total: number;
+  djId: string;
   djNome: string;
   djColor: string;
   contratante: string;
@@ -46,6 +82,17 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
   const accent = "var(--brand)";
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { workspaceCriadoEm } = useWorkspace();
+
+  // ---- Seletor de período (padrão: Mês atual) ----
+  const [range, setRange] = useState<AgendaDateRange>("Mês atual");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const periodo = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
   const vendasVisiveis = useMemo(
     () => vendas.filter((v) => selectedDJs.includes(v.djId)),
@@ -64,6 +111,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           parcela,
           indice: idx + 1,
           total: v.parcelas.length,
+          djId: v.djId,
           djNome: dj?.name ?? "—",
           djColor: dj?.color ?? "#888",
           contratante: v.contratanteNome,
@@ -73,42 +121,52 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
     return linhas;
   }, [vendasVisiveis, artistas]);
 
+  // Parcelas do período (por data de vencimento).
+  const parcelasPeriodo = useMemo(
+    () => parcelas.filter((l) => dataNoMes(l.parcela.dataVencimento, periodo)),
+    [parcelas, periodo]
+  );
+
   const totais = useMemo(() => {
     let recebido = 0;
     let aReceber = 0;
     let atrasado = 0;
-    for (const l of parcelas) {
+    for (const l of parcelasPeriodo) {
       const st = statusEfetivoParcela(l.parcela);
+      if (st === "cancelado") continue; // baixada/isenta sai do a-receber
       if (st === "pago") recebido += l.parcela.valor;
       else if (st === "atrasado") atrasado += l.parcela.valor;
       else aReceber += l.parcela.valor;
     }
     return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
-  }, [parcelas]);
+  }, [parcelasPeriodo]);
 
   // Próximos vencimentos (pendentes/atrasados, ordenado por data)
   const proximosVencimentos = useMemo(() => {
-    return parcelas
-      .filter((l) => statusEfetivoParcela(l.parcela) !== "pago")
+    return parcelasPeriodo
+      .filter((l) => {
+        const st = statusEfetivoParcela(l.parcela);
+        return st !== "pago" && st !== "cancelado";
+      })
       .sort(
         (a, b) =>
           new Date(a.parcela.dataVencimento).getTime() -
           new Date(b.parcela.dataVencimento).getTime()
       )
       .slice(0, 6);
-  }, [parcelas]);
+  }, [parcelasPeriodo]);
 
-  // Faturamento por DJ
+  // Faturamento por artista — soma as parcelas do período (exclui canceladas).
   const porDJ = useMemo(() => {
     return artistas.filter((d) => selectedDJs.includes(d.id))
       .map((dj) => ({
         dj,
-        valor: vendasVisiveis
-          .filter((v) => v.djId === dj.id)
-          .reduce((acc, v) => acc + v.cache, 0),
+        valor: parcelasPeriodo
+          .filter((l) => l.djId === dj.id && statusEfetivoParcela(l.parcela) !== "cancelado")
+          .reduce((acc, l) => acc + l.parcela.valor, 0),
       }))
       .sort((a, b) => b.valor - a.valor);
-  }, [vendasVisiveis, selectedDJs, artistas]);
+  }, [parcelasPeriodo, selectedDJs, artistas]);
 
   const maxDJ = Math.max(1, ...porDJ.map((p) => p.valor));
   const pctRecebido =
@@ -118,16 +176,28 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Financeiro"
-        subtitle={t("Recebimentos, pendências e faturamento")}
+        subtitle={`${t("Recebimentos, pendências e faturamento")} · ${tituloPeriodo}`}
         accentColor={accent}
         actions={
-          <button
-            onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
-            className="btn btn-primary"
-          >
-            <Wallet size={14} />
-            {t("Controle de Pagamentos")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeSelector
+              options={ATALHOS_FIN}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+            <button
+              onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
+              className="btn btn-primary"
+            >
+              <Wallet size={14} />
+              {t("Controle de Pagamentos")}
+            </button>
+          </div>
         }
       />
 
@@ -252,7 +322,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} style={{ color: accent }} />
-            <div className="section-title">{t("Faturamento por DJ")}</div>
+            <div className="section-title">{t("Faturamento")}</div>
           </div>
           {porDJ.every((p) => p.valor === 0) ? (
             <div className="text-sm text-muted text-center py-8">
