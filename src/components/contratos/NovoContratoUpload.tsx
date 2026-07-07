@@ -18,6 +18,7 @@ import { useContratos } from "@/lib/contratos-context";
 import { ESTILO_PADRAO } from "@/lib/mappers/contratoModelo";
 import {
   EXIGENCIAS_PADRAO,
+  MAX_SIGNATARIOS,
   type ExigenciasSignatario,
 } from "@/lib/mappers/contratoSignatario";
 import { definirSignatarios, linkAssinatura } from "@/lib/contratos/signatarios-api";
@@ -313,7 +314,7 @@ export default function NovoContratoUpload() {
               </div>
             </div>
           ))}
-          {sigs.length < CORES.length && (
+          {sigs.length < MAX_SIGNATARIOS ? (
             <button
               type="button"
               onClick={() => setSigs((p) => [...p, novoSig()])}
@@ -321,6 +322,10 @@ export default function NovoContratoUpload() {
             >
               <Plus size={14} /> {t("Adicionar signatário")}
             </button>
+          ) : (
+            <p className="text-xs text-muted">
+              {t("Máximo de {n} signatários por contrato.", { n: MAX_SIGNATARIOS })}
+            </p>
           )}
         </div>
         {erro && <div className="text-xs text-danger">{erro}</div>}
