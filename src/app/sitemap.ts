@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = "https://gigscontrol.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";
 
 /**
  * Sitemap das páginas PÚBLICAS (marketing/legal). As telas autenticadas e o
