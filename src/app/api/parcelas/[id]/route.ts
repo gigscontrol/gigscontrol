@@ -7,6 +7,7 @@ import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
 import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
 import { buscarParcela } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
+import { rowParaParcela } from "@/lib/mappers/venda";
 import { auditAndNotify } from "@/lib/services/historico.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -81,87 +82,92 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     if (bloqueio) return bloqueio;
   }
 
-  // Computa a nova `meta` (pagamento/cancelamento/cobrança) a partir da atual +
-  // as flags + a sessão (quem/quando). O servidor é a fonte da verdade desses
-  // metadados — o cliente não os injeta direto.
+  // Deltas de meta (só as chaves que MUDAM) — mesclados ATOMICAMENTE no banco
+  // (merge_parcela_meta) pra dois PATCH concorrentes não se sobrescreverem (o
+  // append de cobrança nunca vira "set"). O servidor carimba quem/quando.
   const agora = new Date().toISOString();
   const metaAtual: ParcelaMeta = parcelaRow.meta ?? {};
-  let meta: ParcelaMeta | undefined;
+  const metaPatch: Record<string, unknown> = {}; // chaves top-level a mesclar (||)
+  const metaRemove: string[] = []; // chaves a apagar
+  let cobrancaNova: Record<string, unknown> | null = null; // entrada a appendar
   let comprovanteOrfao: string | undefined; // path a apagar do bucket após o update
-  const base = () => meta ?? metaAtual;
 
   if (parsed.data.status_base === "pago") {
-    meta = {
-      ...base(),
-      pagamento: {
-        ...(metaAtual.pagamento ?? {}),
-        pagoPor: r.sessao.userId,
-        pagoPorNome: r.sessao.userNome ?? undefined,
-        pagoEm: agora,
-        ...(parsed.data.nota_pagamento !== undefined
-          ? { nota: parsed.data.nota_pagamento ?? undefined }
-          : {}),
-      },
+    metaPatch.pagamento = {
+      ...(metaAtual.pagamento ?? {}),
+      pagoPor: r.sessao.userId,
+      pagoPorNome: r.sessao.userNome ?? undefined,
+      pagoEm: agora,
+      ...(parsed.data.nota_pagamento !== undefined
+        ? { nota: parsed.data.nota_pagamento ?? undefined }
+        : {}),
     };
   } else if (parsed.data.status_base === "pendente") {
-    meta = { ...base(), pagamento: undefined }; // desfazer → limpa info do pagamento
+    metaRemove.push("pagamento"); // desfazer → limpa a info do pagamento
     comprovanteOrfao = metaAtual.pagamento?.comprovantePath; // apaga do bucket depois
   } else if (parsed.data.nota_pagamento !== undefined) {
-    meta = {
-      ...base(),
-      pagamento: {
-        ...(metaAtual.pagamento ?? {}),
-        nota: parsed.data.nota_pagamento ?? undefined,
-      },
+    metaPatch.pagamento = {
+      ...(metaAtual.pagamento ?? {}),
+      nota: parsed.data.nota_pagamento ?? undefined,
     };
   }
 
   if (parsed.data.cancelar === true) {
-    meta = {
-      ...base(),
-      cancelamento: {
-        cancelado: true,
-        motivo: parsed.data.cancelamento_motivo,
-        canceladoPor: r.sessao.userId,
-        canceladoPorNome: r.sessao.userNome ?? undefined,
-        canceladoEm: agora,
-      },
+    metaPatch.cancelamento = {
+      cancelado: true,
+      motivo: parsed.data.cancelamento_motivo,
+      canceladoPor: r.sessao.userId,
+      canceladoPorNome: r.sessao.userNome ?? undefined,
+      canceladoEm: agora,
     };
   } else if (parsed.data.cancelar === false) {
-    meta = { ...base(), cancelamento: { cancelado: false } };
+    metaPatch.cancelamento = { cancelado: false };
   }
 
   if (parsed.data.registrar_cobranca === true) {
-    const cobrancas = base().cobrancas ?? [];
+    const cobrancas = metaAtual.cobrancas ?? [];
     const ultima = cobrancas[cobrancas.length - 1];
-    // Idempotência: ignora reenvio/duplo-clique — mesma pessoa cobrando de novo
-    // em menos de 60s não empilha uma cobrança duplicada.
+    // Idempotência: mesma pessoa cobrando de novo em <60s não empilha duplicata.
     const duplicada =
       !!ultima &&
       ultima.por === r.sessao.userId &&
       new Date(agora).getTime() - new Date(ultima.em).getTime() < 60_000;
     if (!duplicada) {
-      meta = {
-        ...base(),
-        cobrancas: [
-          ...cobrancas,
-          { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined },
-        ],
-      };
+      cobrancaNova = { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined };
     }
   }
 
   if (parsed.data.fixar !== undefined) {
-    meta = { ...base(), fixada: parsed.data.fixar };
+    metaPatch.fixada = parsed.data.fixar;
   }
 
+  const COLUNAS_PARCELA = [
+    "percentual", "valor", "data_vencimento", "status_base", "data_pagamento", "observacao",
+  ] as const;
+  const temColuna = COLUNAS_PARCELA.some(
+    (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
+  );
+  const temMeta =
+    Object.keys(metaPatch).length > 0 || metaRemove.length > 0 || cobrancaNova !== null;
+
   try {
-    const parcela = await atualizarParcelaPorId(
-      r.sessao.supabase,
-      params.id,
-      parsed.data,
-      meta
-    );
+    // Colunas pelo caminho normal (status_base também sincroniza data_pagamento).
+    if (temColuna) {
+      await atualizarParcelaPorId(r.sessao.supabase, params.id, parsed.data);
+    }
+    // Meta pelo merge atômico (RPC security invoker → o RLS continua valendo).
+    if (temMeta) {
+      const { error } = await r.sessao.supabase.rpc("merge_parcela_meta", {
+        p_id: params.id,
+        p_patch: metaPatch,
+        p_remove: metaRemove.length > 0 ? metaRemove : null,
+        p_cobranca: cobrancaNova,
+      });
+      if (error) throw error;
+    }
+    // Re-lê a parcela já com a meta mesclada (fonte da resposta e do audit).
+    const freshRow = await buscarParcela(r.sessao.supabase, params.id);
+    const parcela = rowParaParcela(freshRow ?? parcelaRow);
     const nome = `parcela ${parcela.percentual}%`;
     if (parsed.data.status_base === "pago") {
       await auditAndNotify(r.sessao, {

@@ -113,7 +113,11 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     row.meta && typeof row.meta === "object"
       ? (row.meta as Record<string, unknown>)
       : {};
-  let metaOverride: Record<string, unknown> | undefined;
+
+  // Deltas de meta: só as chaves que MUDAM. São mescladas atomicamente no banco
+  // (merge_show_meta) pra dois PATCH concorrentes não se sobrescreverem. O
+  // servidor carimba quem/quando (autoria) — o cliente nunca injeta meta direto.
+  const metaPatch: Record<string, unknown> = {};
   if (querCancelar) {
     const motivo = (parsed.data.cancelamentoMotivo ?? "").trim();
     if (!motivo) {
@@ -122,67 +126,71 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         { status: 400 }
       );
     }
-    metaOverride = {
-      ...metaAtual,
-      cancelamento: {
-        por: r.sessao.userId,
-        porNome: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
-        em: new Date().toISOString(),
-        motivo,
-      },
+    metaPatch.cancelamento = {
+      por: r.sessao.userId,
+      porNome: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+      em: new Date().toISOString(),
+      motivo,
     };
   } else if (querReativar) {
     const hist = Array.isArray(metaAtual.cancelamentoHistorico)
       ? metaAtual.cancelamentoHistorico
       : [];
-    metaOverride = {
-      ...metaAtual,
-      cancelamento: null,
-      cancelamentoHistorico: metaAtual.cancelamento
-        ? [...hist, metaAtual.cancelamento]
-        : hist,
-    };
+    metaPatch.cancelamento = null;
+    metaPatch.cancelamentoHistorico = metaAtual.cancelamento
+      ? [...hist, metaAtual.cancelamento]
+      : hist;
   }
 
-  // Booking/hospedagem (Fases 4-5): mescla em meta.booking. O cliente preenche
-  // os campos; o servidor carimba quem/quando (audit) e os marcos do fluxo.
+  // Booking/hospedagem: só o delta do sub-objeto (mesclado com || no banco).
+  // Marcos (solicitadoEm/informadoEm) entram no delta só quando ainda não existem.
+  let bookingPatch: Record<string, unknown> | null = null;
   if (parsed.data.booking) {
-    const base = metaOverride ?? metaAtual;
     const bAtual =
-      base.booking && typeof base.booking === "object"
-        ? (base.booking as Record<string, unknown>)
+      metaAtual.booking && typeof metaAtual.booking === "object"
+        ? (metaAtual.booking as Record<string, unknown>)
         : {};
     const agora = new Date().toISOString();
     const b = parsed.data.booking;
-    metaOverride = {
-      ...base,
-      booking: {
-        ...bAtual,
-        ...b,
-        atualizadoPor: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
-        atualizadoEm: agora,
-        solicitadoEm:
-          b.status === "solicitado" && !bAtual.solicitadoEm
-            ? agora
-            : (bAtual.solicitadoEm as string | undefined),
-        informadoEm:
-          b.status === "informado"
-            ? ((bAtual.informadoEm as string | undefined) ?? agora)
-            : (bAtual.informadoEm as string | undefined),
-      },
+    bookingPatch = {
+      ...b,
+      atualizadoPor: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+      atualizadoEm: agora,
     };
+    if (b.status === "solicitado" && !bAtual.solicitadoEm) bookingPatch.solicitadoEm = agora;
+    if (b.status === "informado" && !bAtual.informadoEm) bookingPatch.informadoEm = agora;
   }
 
+  const COLUNAS_SHOW = [
+    "artist_id", "contratante_id", "casa_id", "cidade_id", "data",
+    "horario", "status", "valor", "orcamento_id", "venda_id",
+  ] as const;
+  const temColuna = COLUNAS_SHOW.some(
+    (k) => parsed.data[k as keyof typeof parsed.data] !== undefined
+  );
+  const temMeta = Object.keys(metaPatch).length > 0 || bookingPatch !== null;
+
   try {
-    const show = await atualizarShowPorId(
-      r.sessao.supabase,
-      params.id,
-      parsed.data,
-      metaOverride
-    );
-    // Redige o cachê/venda na resposta pra quem tem editar mas não ver_detalhado
-    // (senão a resposta do PATCH vaza o que o GET esconde).
-    return NextResponse.json({ show: stripShowDetalhado(show, r.sessao) });
+    // Colunas pelo caminho normal (inclui o sync do Google Calendar por status).
+    if (temColuna) {
+      await atualizarShowPorId(r.sessao.supabase, params.id, parsed.data);
+    }
+    // Meta pelo merge atômico (RPC security invoker → RLS continua valendo).
+    if (temMeta) {
+      const { error } = await r.sessao.supabase.rpc("merge_show_meta", {
+        p_id: params.id,
+        p_patch: metaPatch,
+        p_booking_patch: bookingPatch,
+      });
+      if (error) throw error;
+    }
+    // Re-lê pra devolver a meta já mesclada. Redige cachê/venda pra quem tem
+    // editar mas não ver_detalhado (senão a resposta vaza o que o GET esconde).
+    const fresh = await buscarShowPorId(r.sessao.supabase, params.id);
+    if (!fresh) {
+      return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
+    }
+    return NextResponse.json({ show: stripShowDetalhado(fresh, r.sessao) });
   } catch (e) {
     return respostaDeErro(e, "Falha ao atualizar show.");
   }
