@@ -278,7 +278,7 @@ export default function VendasDashboard({
             title={t("Faturamento")}
             value={formatBRL(stats.faturamento)}
             icon={<DollarSign size={16} />}
-            accentColor={accent}
+            accentColor="var(--warning)"
             subtitle={t("Vendas do mês")}
           />
         </ClickableStat>
@@ -287,7 +287,7 @@ export default function VendasDashboard({
             title={t("Taxa de Conversão")}
             value={`${stats.conversao}%`}
             icon={<Percent size={16} />}
-            accentColor={accent}
+            accentColor="var(--roxo)"
             subtitle={t("Orçamentos → vendas")}
           />
         </ClickableStat>
