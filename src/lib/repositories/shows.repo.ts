@@ -19,6 +19,27 @@ const SELECT_COM_JOINS = `
   cidade:cidades ( id, nome, estado )
 `;
 
+/**
+ * Conta shows do workspace com voucher de HOTEL (booking) anexado no ciclo —
+ * cota PRÓPRIA, separada da aérea. Usa meta.booking.atualizadoEm como carimbo do
+ * upload (o path é gravado no PATCH que atualiza o booking, logo após o upload).
+ */
+export async function contarBookingVouchersDesde(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  desdeIso: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("shows")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("deletado_em", null)
+    .not("meta->booking->>voucherPath", "is", null)
+    .gte("meta->booking->>atualizadoEm", desdeIso);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function listarShows(
   supabase: SupabaseClient,
   aplicarFiltro?: <Q>(q: Q) => Q

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
+import {
+  buscarShow as repoBuscarShow,
+  contarBookingVouchersDesde,
+} from "@/lib/repositories/shows.repo";
 import { podeEditarAgenda, podeVerAgendaDetalhado } from "@/lib/api/permissoes";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
+import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
+import { getPlano, type PlanoId } from "@/lib/planos";
 import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
@@ -26,6 +31,14 @@ export async function POST(request: Request, { params }: RouteCtx) {
       { status: 403 }
     );
   }
+  // Booking tem PII de hospedagem → gerenciar o voucher exige ver_detalhado
+  // (mesma régua do download), não só agenda.editar.
+  if (!podeVerAgendaDetalhado(r.sessao, row.artist_id)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para gerenciar a hospedagem deste show." },
+      { status: 403 }
+    );
+  }
 
   let body: { pdf?: string };
   try {
@@ -37,6 +50,32 @@ export async function POST(request: Request, { params }: RouteCtx) {
   if (!pdf) return NextResponse.json({ erro: "Envie o PDF." }, { status: 400 });
   if (Buffer.byteLength(pdf, "base64") > MAX_BYTES) {
     return NextResponse.json({ erro: "Voucher acima de 2MB." }, { status: 413 });
+  }
+
+  // Cota PRÓPRIA de vouchers de hospedagem no ciclo (separada da aérea; bloqueia,
+  // sem excedente pago). Falha na contagem → não bloqueia o upload.
+  try {
+    const { data: ws } = await r.sessao.supabase
+      .from("workspaces")
+      .select("plano")
+      .eq("id", r.sessao.workspaceId)
+      .single();
+    const plano = getPlano((ws?.plano ?? "individual") as PlanoId);
+    const usados = await contarBookingVouchersDesde(
+      r.sessao.supabase,
+      r.sessao.workspaceId,
+      await janelaDoCicloISO(r.sessao.workspaceId)
+    );
+    if (usados >= plano.maxVouchersMes) {
+      return NextResponse.json(
+        {
+          erro: `Limite de ${plano.maxVouchersMes} vouchers de hospedagem no ciclo atingido no plano ${plano.nome}. Faça upgrade ou aguarde a virada do plano.`,
+        },
+        { status: 409 }
+      );
+    }
+  } catch {
+    /* se a contagem falhar, não bloqueia o upload */
   }
 
   try {

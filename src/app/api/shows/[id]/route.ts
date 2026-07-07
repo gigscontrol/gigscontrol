@@ -9,6 +9,7 @@ import { showUpdateSchema } from "@/lib/validators/shows.schema";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
 import {
   podeVerAgenda,
+  podeVerAgendaDetalhado,
   podeCriarAgenda,
   podeEditarAgenda,
   podeExcluirAgenda,
@@ -86,6 +87,15 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   ) {
     return NextResponse.json(
       { erro: "Você não tem permissão para mover este evento para esse artista." },
+      { status: 403 }
+    );
+  }
+
+  // Booking tem PII de hospedagem → gerenciar exige ver_detalhado (não só editar),
+  // simétrico ao gate de leitura/download do voucher.
+  if (parsed.data.booking && !podeVerAgendaDetalhado(r.sessao, row.artist_id)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para gerenciar a hospedagem deste show." },
       { status: 403 }
     );
   }
