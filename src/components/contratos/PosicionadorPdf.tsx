@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
 import { Trash2, MousePointerClick } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { CampoAssinatura } from "@/lib/mappers/contrato";
 
-// Worker do pdf.js como asset local (mesma origem → não bate na CSP).
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
-).toString();
+// pdfjs referencia DOMMatrix (API de browser) já no import → NÃO pode carregar
+// no SSR (Node). Importado DINAMICAMENTE dentro do effect (client-only), abaixo.
 
 export type SignatarioLite = { ordem: number; nome: string; cor: string };
 
@@ -44,16 +40,27 @@ export default function PosicionadorPdf({
 
   useEffect(() => {
     let cancelado = false;
-    const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
+    let loadingTask: PDFDocumentLoadingTask | null = null;
     setErro(null);
-    loadingTask.promise
-      .then((d) => {
+    (async () => {
+      const pdfjsLib = await import("pdfjs-dist");
+      // Worker do pdf.js como asset local (mesma origem → não bate na CSP).
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url
+      ).toString();
+      if (cancelado) return;
+      loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
+      try {
+        const d = await loadingTask.promise;
         if (!cancelado) setDoc(d);
-      })
-      .catch(() => !cancelado && setErro(t("Falha ao renderizar o PDF.")));
+      } catch {
+        if (!cancelado) setErro(t("Falha ao renderizar o PDF."));
+      }
+    })();
     return () => {
       cancelado = true;
-      loadingTask.destroy();
+      loadingTask?.destroy();
     };
   }, [pdfUrl, t]);
 
