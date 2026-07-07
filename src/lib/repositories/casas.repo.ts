@@ -3,7 +3,7 @@ import type { CasaRow, CasaEscrita } from "@/lib/mappers/contatos";
 import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
-  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision";
+  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em";
 
 export async function listarCasas(supabase: SupabaseClient): Promise<CasaRow[]> {
   const { data, error } = await supabase
