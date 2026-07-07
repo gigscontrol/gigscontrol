@@ -11,6 +11,7 @@ import AgendaDashboard from "@/components/AgendaDashboard";
 import AgendaEscala from "@/components/AgendaEscala";
 import Contatos from "@/components/Contatos";
 import ContatosDashboard from "@/components/ContatosDashboard";
+import MapaPage from "@/components/contatos/MapaPage";
 import NovoOrcamento from "@/components/NovoOrcamento";
 import HistoricoOrcamentos from "@/components/HistoricoOrcamentos";
 import OrcamentoDetalhe from "@/components/OrcamentoDetalhe";
@@ -289,6 +290,7 @@ function resolverRota(seg: string[]): Rota {
   }
   if (a === "contatos") {
     if (b === "lista") return rotaBase("contatos", "contatos-lista");
+    if (b === "mapa") return rotaBase("contatos", "contatos-mapa");
     return rotaBase("contatos", "dashboard");
   }
   if (a === "agencia") {
@@ -332,6 +334,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/contratos/pastas`;
     case "contatos-lista":
       return `${BASE}/contatos/lista`;
+    case "contatos-mapa":
+      return `${BASE}/contatos/mapa`;
     case "agencia-artistas":
       return `${BASE}/agencia/artistas`;
     case "agencia-equipe":
@@ -650,6 +654,7 @@ function AppRoot() {
           {activeTab === "contatos" && activePage === "contatos-lista" && (
             <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
           )}
+          {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
 
           {/* Contratos */}
           {activeTab === "contratos" && activePage === "dashboard" && (

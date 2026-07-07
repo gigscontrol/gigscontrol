@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Compass } from "lucide-react";
+import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import ContratanteForm from "./forms/ContratanteForm";
 import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
-import MapaDobras from "./contatos/MapaDobras";
 import MiniLixeira from "./MiniLixeira";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
@@ -213,7 +212,7 @@ export default function Contatos({
       />
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <SummaryTile
           icon={<Users size={16} />}
           label={t("Contratantes")}
@@ -238,46 +237,26 @@ export default function Contatos({
           accent={accent}
           onClick={() => setCategoria("cidades")}
         />
-        <SummaryTile
-          icon={<Compass size={16} />}
-          label={t("Mapa de Dobras")}
-          value={cidadesFiltradas.filter((c) => c.latitude !== undefined).length}
-          active={categoria === "mapa"}
-          accent={accent}
-          onClick={() => setCategoria("mapa")}
-        />
       </div>
 
-      {/* Busca (não aparece no mapa) */}
-      {categoria !== "mapa" && (
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar em {categoria}...", { categoria })}
-            className="input"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
-              {t("Limpar")}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Mapa de Dobras (busca por raio) */}
-      {categoria === "mapa" && (
-        <MapaDobras
-          cidades={cidadesFiltradas}
-          casas={casasFiltradas}
-          contratantes={contratantesFiltrados}
+      {/* Busca */}
+      <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+        <Search size={15} className="text-muted flex-shrink-0" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("Buscar em {categoria}...", { categoria })}
+          className="input"
         />
-      )}
+        {search && (
+          <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
+            {t("Limpar")}
+          </button>
+        )}
+      </div>
 
       {/* Tabela conforme categoria */}
-      {categoria !== "mapa" && (
       <div className="card p-0 overflow-hidden">
         {categoria === "contratantes" && (
           <TabelaContratantes
@@ -312,7 +291,6 @@ export default function Contatos({
           />
         )}
       </div>
-      )}
 
       {/* Mini-lixeira da categoria ativa — só admin vê, e só se houver
           algum item dessa categoria na lixeira. */}

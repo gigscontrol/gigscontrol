@@ -19,6 +19,7 @@ import {
   FileSignature,
   Building2,
   Music,
+  Map,
   LayoutTemplate,
   FolderOpen,
   ChevronsLeft,
@@ -122,6 +123,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "contatos-lista", label: "Gerenciar Contatos", icon: Users },
+      { page: "contatos-mapa", label: "Mapa", icon: Map },
     ],
   },
   {

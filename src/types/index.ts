@@ -203,10 +203,11 @@ export type ActivePage =
   | "contratos-historico"
   | "contratos-pastas"
   | "contatos-lista"
+  | "contatos-mapa"
   | "agencia-artistas"
   | "agencia-equipe";
 
-export type ContatoCategoria = "contratantes" | "casas" | "cidades" | "mapa";
+export type ContatoCategoria = "contratantes" | "casas" | "cidades";
 export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
 
 // ----------- Entidades de Contatos -----------
