@@ -257,7 +257,18 @@ export function podeExcluirAgenda(
  */
 export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show {
   if (podeVerAgendaDetalhado(sessao, show.djId || null)) return show;
-  return { ...show, valor: undefined, orcamentoId: undefined, vendaId: undefined };
+  // Nível básico (agenda.ver sem ver_detalhado): esconde cachê/vínculos E os
+  // blocos detalhados novos — booking (PII de hospedagem) e a autoria/motivo do
+  // cancelamento. Mantém dia/local/horário/status. Espelha stripAgendaItemDetalhado.
+  return {
+    ...show,
+    valor: undefined,
+    orcamentoId: undefined,
+    vendaId: undefined,
+    booking: undefined,
+    cancelamento: undefined,
+    cancelamentoHistorico: undefined,
+  };
 }
 
 /**

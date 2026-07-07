@@ -204,14 +204,18 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
             {booking.telefone && <Linha icon={<Phone size={13} />}>{booking.telefone}</Linha>}
             {booking.localizacao && (
               <Linha icon={<MapPin size={13} />}>
-                <a
-                  href={booking.localizacao}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline hover:text-primary break-all"
-                >
-                  {booking.localizacao}
-                </a>
+                {/^https?:\/\//i.test(booking.localizacao) ? (
+                  <a
+                    href={booking.localizacao}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline hover:text-primary break-all"
+                  >
+                    {booking.localizacao}
+                  </a>
+                ) : (
+                  <span className="break-all">{booking.localizacao}</span>
+                )}
               </Linha>
             )}
             <div className="flex items-center gap-2 flex-wrap mt-0.5">

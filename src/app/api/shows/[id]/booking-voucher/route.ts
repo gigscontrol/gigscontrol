@@ -5,9 +5,10 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
 import { podeEditarAgenda, podeVerAgendaDetalhado } from "@/lib/api/permissoes";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
+import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
-const MAX_BYTES = 4 * 1024 * 1024; // 4MB
+const MAX_BYTES = 2 * 1024 * 1024; // 2MB (bate com o file_size_limit do bucket vouchers)
 
 /**
  * POST { pdf: base64 } — guarda o voucher do HOTEL no Storage (bucket vouchers)
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: RouteCtx) {
   const pdf = (body.pdf ?? "").replace(/^data:application\/pdf;base64,/, "");
   if (!pdf) return NextResponse.json({ erro: "Envie o PDF." }, { status: 400 });
   if (Buffer.byteLength(pdf, "base64") > MAX_BYTES) {
-    return NextResponse.json({ erro: "Voucher acima de 4MB." }, { status: 413 });
+    return NextResponse.json({ erro: "Voucher acima de 2MB." }, { status: 413 });
   }
 
   try {
@@ -45,10 +46,7 @@ export async function POST(request: Request, { params }: RouteCtx) {
     await uploadVoucher(admin, caminho, pdf);
     return NextResponse.json({ path: caminho });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao guardar o voucher." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao guardar o voucher.");
   }
 }
 
@@ -76,9 +74,6 @@ export async function GET(request: Request, { params }: RouteCtx) {
     }
     return NextResponse.json({ url });
   } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao baixar." },
-      { status: 500 }
-    );
+    return respostaDeErro(e, "Falha ao baixar o voucher.");
   }
 }

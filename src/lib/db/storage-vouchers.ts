@@ -14,6 +14,11 @@ export async function uploadVoucher(
   base64: string
 ): Promise<string> {
   const buffer = Buffer.from(base64, "base64");
+  // Confere magic bytes: só sobe se for MESMO um PDF (evita guardar HTML/SVG/lixo
+  // rotulado como application/pdf). Cobre as duas rotas de upload (voo + booking).
+  if (buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+    throw new Error("Arquivo não é um PDF válido.");
+  }
   const { error } = await admin.storage.from(BUCKET).upload(caminho, buffer, {
     contentType: "application/pdf",
     upsert: true,

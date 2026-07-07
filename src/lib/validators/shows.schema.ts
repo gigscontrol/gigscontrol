@@ -39,7 +39,11 @@ const bookingSchema = z.object({
   endereco: z.string().max(300).optional(),
   quarto: z.string().max(100).optional(),
   telefone: z.string().max(50).optional(),
-  localizacao: z.string().max(500).optional(),
+  localizacao: z
+    .string()
+    .max(500)
+    .refine((v) => !v || /^https?:\/\//i.test(v), "link deve começar com http(s)://")
+    .optional(),
   checkin: z.string().max(30).optional(),
   checkout: z.string().max(30).optional(),
   quartos: z.number().int().nonnegative().max(999).optional(),
