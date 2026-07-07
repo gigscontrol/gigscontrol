@@ -29,13 +29,14 @@ const CORES = ["#3D7BFF", "#22C55E", "#F59E0B", "#EC4899", "#8B5CF6", "#14B8A6"]
 /** Meio de autenticação opcional por signatário (além da assinatura + CPF, que
  *  são sempre exigidos). Mesmas chaves do fluxo de modelo. */
 const AUTENTICACAO: { chave: keyof ExigenciasSignatario; rotulo: string }[] = [
-  { chave: "fotoDocumento", rotulo: "Foto do documento (CNH ou RG)" },
-  { chave: "facial", rotulo: "Verificação facial (selfie)" },
+  { chave: "fotoDocumento", rotulo: "Verificação de documento avançado com foto (CNH ou RG)" },
+  { chave: "facial", rotulo: "Verificação facial avançada (selfie)" },
 ];
 
 type PdfInfo = { path: string; nome: string; paginas: number; dims: { w: number; h: number }[] };
 type LinkGerado = { nome: string; url: string };
-type SigForm = { nome: string; exige: ExigenciasSignatario };
+type SigForm = { nome: string; email: string; papel: string; exige: ExigenciasSignatario };
+const novoSig = (): SigForm => ({ nome: "", email: "", papel: "", exige: { ...EXIGENCIAS_PADRAO } });
 
 /**
  * Fluxo "Novo contrato por UPLOAD" (wizard):
@@ -52,7 +53,7 @@ export default function NovoContratoUpload() {
   const [pdf, setPdf] = useState<PdfInfo | null>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [etapa, setEtapa] = useState<"sig" | "pos">("sig");
-  const [sigs, setSigs] = useState<SigForm[]>([{ nome: "", exige: { ...EXIGENCIAS_PADRAO } }]);
+  const [sigs, setSigs] = useState<SigForm[]>([novoSig()]);
   const [campos, setCampos] = useState<CampoAssinatura[]>([]);
   const [subindo, setSubindo] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -129,7 +130,12 @@ export default function NovoContratoUpload() {
       });
       const criados = await definirSignatarios(
         contrato.id,
-        sigs.map((s) => ({ nome: s.nome.trim(), email: "", papel: "", exige: s.exige }))
+        sigs.map((s) => ({
+          nome: s.nome.trim(),
+          email: s.email.trim(),
+          papel: s.papel.trim(),
+          exige: s.exige,
+        }))
       );
       setLinks(
         criados
@@ -219,57 +225,98 @@ export default function NovoContratoUpload() {
             </p>
           </div>
           {sigs.map((s, i) => (
-            <div key={i} className="rounded-md border border-border p-3 flex flex-col gap-2.5">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: CORES[i % CORES.length] }} />
-                <input
-                  value={s.nome}
-                  onChange={(e) => setSigs((p) => p.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
-                  placeholder={t("Nome do signatário {n}", { n: i + 1 })}
-                  className="input flex-1"
-                />
-                {sigs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSigs((p) => p.filter((_, j) => j !== i));
-                      // Reindexa os campos: remove os do i e desloca os de ordem > i.
-                      setCampos((p) =>
-                        p
-                          .filter((c) => c.signatarioOrdem !== i)
-                          .map((c) => (c.signatarioOrdem > i ? { ...c, signatarioOrdem: c.signatarioOrdem - 1 } : c))
-                      );
-                    }}
-                    className="btn-ghost p-1.5 rounded"
-                    style={{ color: "var(--danger)" }}
-                    aria-label={t("Remover signatário")}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-5">
-                {AUTENTICACAO.map((a) => (
-                  <label key={a.chave} className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
+            <div
+              key={i}
+              className="rounded-md border border-border bg-elevated p-3"
+              style={{ borderLeft: `3px solid ${CORES[i % CORES.length]}` }}
+            >
+              <div className="flex items-start gap-2">
+                <div className="grid flex-1 gap-2 sm:grid-cols-3">
+                  <div>
+                    <label className="stat-label mb-1 block">{t("Nome")}</label>
                     <input
-                      type="checkbox"
-                      checked={!!s.exige[a.chave]}
-                      onChange={(e) =>
-                        setSigs((p) =>
-                          p.map((x, j) => (j === i ? { ...x, exige: { ...x.exige, [a.chave]: e.target.checked } } : x))
-                        )
-                      }
+                      type="text"
+                      className="campo-input"
+                      value={s.nome}
+                      onChange={(e) => setSigs((p) => p.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
+                      placeholder={t("Nome completo")}
                     />
-                    {t(a.rotulo)}
+                  </div>
+                  <div>
+                    <label className="stat-label mb-1 block">{t("E-mail")}</label>
+                    <input
+                      type="email"
+                      className="campo-input"
+                      value={s.email}
+                      onChange={(e) => setSigs((p) => p.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))}
+                      placeholder={t("email@exemplo.com")}
+                    />
+                  </div>
+                  <div>
+                    <label className="stat-label mb-1 block">{t("Papel")}</label>
+                    <input
+                      type="text"
+                      className="campo-input"
+                      value={s.papel}
+                      onChange={(e) => setSigs((p) => p.map((x, j) => (j === i ? { ...x, papel: e.target.value } : x)))}
+                      placeholder={t("Contratante, Testemunha...")}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSigs((p) => p.filter((_, j) => j !== i));
+                    // Reindexa os campos: remove os do i e desloca os de ordem > i.
+                    setCampos((p) =>
+                      p
+                        .filter((c) => c.signatarioOrdem !== i)
+                        .map((c) => (c.signatarioOrdem > i ? { ...c, signatarioOrdem: c.signatarioOrdem - 1 } : c))
+                    );
+                  }}
+                  disabled={sigs.length <= 1}
+                  title={t("Remover signatário")}
+                  aria-label={t("Remover signatário")}
+                  className="btn-ghost mt-6 rounded p-2 hover:text-danger disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+
+              {/* O que será exigido */}
+              <div className="mt-3">
+                <div className="stat-label mb-1.5">{t("O que será exigido")}</div>
+                <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 text-sm text-secondary">
+                    <input type="checkbox" checked disabled readOnly />
+                    {t("Assinatura na tela")}
                   </label>
-                ))}
+                  <label className="flex items-center gap-2 text-sm text-secondary">
+                    <input type="checkbox" checked disabled readOnly />
+                    {t("CPF/CNPJ")}
+                  </label>
+                  {AUTENTICACAO.map((a) => (
+                    <label key={a.chave} className="flex items-center gap-2 text-sm text-secondary cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!s.exige[a.chave]}
+                        onChange={(e) =>
+                          setSigs((p) =>
+                            p.map((x, j) => (j === i ? { ...x, exige: { ...x.exige, [a.chave]: e.target.checked } } : x))
+                          )
+                        }
+                      />
+                      {t(a.rotulo)}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
           {sigs.length < CORES.length && (
             <button
               type="button"
-              onClick={() => setSigs((p) => [...p, { nome: "", exige: { ...EXIGENCIAS_PADRAO } }])}
+              onClick={() => setSigs((p) => [...p, novoSig()])}
               className="btn btn-secondary text-sm self-start"
             >
               <Plus size={14} /> {t("Adicionar signatário")}
