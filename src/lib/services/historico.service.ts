@@ -41,19 +41,25 @@ export async function registrarAcao(params: {
   descricao: string;
   dados?: Record<string, unknown> | null;
 }): Promise<void> {
-  const admin = criarClienteAdmin();
-  await inserirHistorico(admin, {
-    workspace_id: params.workspaceId,
-    actor_id: params.autor?.id ?? null,
-    actor_nome: params.autor?.nome ?? null,
-    actor_email: params.autor?.email ?? null,
-    modulo: params.modulo,
-    tipo: params.tipo,
-    entidade_id: params.entidadeId ?? null,
-    entidade_nome: params.entidadeNome ?? null,
-    descricao: params.descricao,
-    dados: params.dados ?? null,
-  });
+  // Best-effort de verdade (ver JSDoc): loga e NÃO propaga — uma falha aqui não
+  // pode derrubar a operação principal, que já foi commitada antes desta chamada.
+  try {
+    const admin = criarClienteAdmin();
+    await inserirHistorico(admin, {
+      workspace_id: params.workspaceId,
+      actor_id: params.autor?.id ?? null,
+      actor_nome: params.autor?.nome ?? null,
+      actor_email: params.autor?.email ?? null,
+      modulo: params.modulo,
+      tipo: params.tipo,
+      entidade_id: params.entidadeId ?? null,
+      entidade_nome: params.entidadeNome ?? null,
+      descricao: params.descricao,
+      dados: params.dados ?? null,
+    });
+  } catch (e) {
+    console.error("[historico] falha ao registrar ação (ignorada):", e);
+  }
 }
 
 export type ListarHistoricoFiltros = Omit<ListarHistoricoParams, "workspaceId">;
@@ -132,7 +138,9 @@ export async function auditAndNotify(
 ): Promise<void> {
   // Import dinâmico pra evitar ciclo entre services.
   const { notificarAdmins } = await import("./notificacoes.service");
-  await Promise.all([
+  // allSettled: uma falha de notificação NÃO derruba a rota (a operação já
+  // commitou). registrarAcao já é best-effort; aqui protegemos o notificarAdmins.
+  const resultados = await Promise.allSettled([
     audit(sessao, params),
     notificarAdmins(sessao.workspaceId, sessao.userId, {
       titulo: params.notificacao?.titulo ?? params.descricao,
@@ -145,4 +153,9 @@ export async function auditAndNotify(
       entidadeId: params.entidadeId ?? null,
     }),
   ]);
+  for (const rr of resultados) {
+    if (rr.status === "rejected") {
+      console.error("[auditAndNotify] etapa falhou (ignorada):", rr.reason);
+    }
+  }
 }

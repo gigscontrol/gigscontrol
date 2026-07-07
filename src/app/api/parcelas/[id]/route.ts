@@ -132,13 +132,23 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   }
 
   if (parsed.data.registrar_cobranca === true) {
-    meta = {
-      ...base(),
-      cobrancas: [
-        ...(base().cobrancas ?? []),
-        { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined },
-      ],
-    };
+    const cobrancas = base().cobrancas ?? [];
+    const ultima = cobrancas[cobrancas.length - 1];
+    // Idempotência: ignora reenvio/duplo-clique — mesma pessoa cobrando de novo
+    // em menos de 60s não empilha uma cobrança duplicada.
+    const duplicada =
+      !!ultima &&
+      ultima.por === r.sessao.userId &&
+      new Date(agora).getTime() - new Date(ultima.em).getTime() < 60_000;
+    if (!duplicada) {
+      meta = {
+        ...base(),
+        cobrancas: [
+          ...cobrancas,
+          { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined },
+        ],
+      };
+    }
   }
 
   if (parsed.data.fixar !== undefined) {
