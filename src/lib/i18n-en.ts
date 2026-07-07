@@ -6,6 +6,52 @@
  * Strings com `{x}` são interpoladas pelo `t(pt, { x })`.
  */
 
+// ---- Booking / Fechamento (auditoria i18n 2026-07-07) ----
+const BOOKING_AUD: Record<string, string> = {
+  "Booking / Hospedagem": "Booking / Accommodation",
+  "Pra organizar a hospedagem, preciso destas informações:": "To arrange the accommodation, I need this information:",
+  "Nome e endereço do hotel": "Hotel name and address",
+  "Check-in e check-out": "Check-in and check-out",
+  "Número de quartos e ocupação": "Number of rooms and occupancy",
+  "Telefone / contato do hotel": "Hotel phone / contact",
+  "Voucher (se já tiver)": "Voucher (if you have one)",
+  "Hospedagem informada": "Accommodation provided",
+  "Booking solicitado": "Booking requested",
+  "Sem booking": "No booking",
+  "Solicitar ao contratante": "Request from the client",
+  "Registrar hospedagem": "Log accommodation",
+  "Check-in": "Check-in",
+  "Check-out": "Check-out",
+  "Quarto": "Room",
+  "Hotel pago": "Hotel paid",
+  "Hotel não pago": "Hotel unpaid",
+  "Baixar voucher": "Download voucher",
+  "Atualizado por": "Updated by",
+  "Nome do hotel": "Hotel name",
+  "Telefone / contato": "Phone / contact",
+  "Localização (link do mapa)": "Location (map link)",
+  "Nº de quartos": "No. of rooms",
+  "Nº do quarto": "Room no.",
+  "Ocupação (quem fica onde)": "Occupancy (who stays where)",
+  "Hotel já está pago": "Hotel is already paid",
+  "Voucher anexado": "Voucher attached",
+  "Enviando…": "Uploading…",
+  "Trocar voucher": "Replace voucher",
+  "Anexar voucher (PDF)": "Attach voucher (PDF)",
+  "Salvar hospedagem": "Save accommodation",
+  "Falha ao salvar.": "Failed to save.",
+  "Falha ao ler o arquivo.": "Failed to read the file.",
+  "Falha ao baixar.": "Failed to download.",
+  "Lista de fechamento pro contratante — copie e mande no WhatsApp pra ele completar só o que falta (e-mail, CPF, endereço…).": "Closing checklist for the client — copy it and send on WhatsApp so they fill in only what's missing (email, tax ID, address…).",
+  "Copiar para WhatsApp": "Copy to WhatsApp",
+  "Ocultar prévia": "Hide preview",
+  "Ver prévia": "Show preview",
+  "Colar resposta e preencher": "Paste reply and fill in",
+  "Preenchi:": "Filled in:",
+  "Não encontrei campos reconhecíveis no que estava copiado.": "I couldn't find any recognizable fields in what was copied.",
+  "Não preenchi (confira/preencha manual):": "Not filled in (check/fill manually):",
+};
+
 // ---- Chrome (Topbar / Sidebar) ----
 const CHROME: Record<string, string> = {
   "Começar grátis": "Start for free",
@@ -2903,4 +2949,5 @@ export const EN: Record<string, string> = {
   ...SWEEP12,
   ...SWEEP13,
   ...SWEEP14,
+  ...BOOKING_AUD,
 };
