@@ -14,14 +14,19 @@ export const pastaCreateSchema = z.object({
 
 export const pastaUpdateSchema = pastaCreateSchema.partial();
 
-/** Criar nota (mensagem na thread da pasta). */
-export const notaCreateSchema = z.object({
-  pasta_id: uuidLike,
-  titulo: z.string().trim().max(200).nullable().optional(),
-  conteudo: z.string().max(20000).default(""),
-  cor: z.string().max(30).nullable().optional(),
-  fixada: z.boolean().optional(),
-});
+/** Criar nota — na thread de uma PASTA ou anexada a um SHOW (exatamente um). */
+export const notaCreateSchema = z
+  .object({
+    pasta_id: uuidLike.optional(),
+    show_id: uuidLike.optional(),
+    titulo: z.string().trim().max(200).nullable().optional(),
+    conteudo: z.string().max(20000).default(""),
+    cor: z.string().max(30).nullable().optional(),
+    fixada: z.boolean().optional(),
+  })
+  .refine((v) => !!v.pasta_id !== !!v.show_id, {
+    message: "Informe pasta_id OU show_id (exatamente um).",
+  });
 
 export const notaUpdateSchema = z.object({
   titulo: z.string().trim().max(200).nullable().optional(),

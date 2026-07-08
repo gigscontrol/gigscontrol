@@ -5,7 +5,7 @@ import type { PastaRow, NotaRow, PastaEscrita, NotaEscrita } from "@/lib/mappers
 const COLS_PASTA =
   "id, workspace_id, nome, cor, icone, visibilidade, criado_por, criado_em, atualizado_em";
 const COLS_NOTA =
-  "id, workspace_id, pasta_id, titulo, conteudo, cor, fixada, criado_por, criado_em, atualizado_em, atualizado_por";
+  "id, workspace_id, pasta_id, show_id, titulo, conteudo, cor, fixada, criado_por, criado_em, atualizado_em, atualizado_por";
 
 // ============================================================
 // Pastas
@@ -157,4 +157,36 @@ export async function atualizarNota(
 
 export async function removerNota(supabase: SupabaseClient, id: string): Promise<void> {
   await softDelete(supabase, "anotacoes", id);
+}
+
+/** Notas vivas de um show (pro limite de 4 por show). */
+export async function contarNotasDoShow(
+  supabase: SupabaseClient,
+  showId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("anotacoes")
+    .select("id", { count: "exact", head: true })
+    .eq("show_id", showId)
+    .is("deletado_em", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * Pastas vivas do WORKSPACE inteiro (pro limite de 8). Usa o cliente ADMIN
+ * (service-role) porque a contagem via sessão só veria as pastas visíveis ao
+ * usuário — e o teto é global, incluindo pastas privadas de outros.
+ */
+export async function contarPastasDoWorkspace(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<number> {
+  const { count, error } = await admin
+    .from("anotacao_pastas")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("deletado_em", null);
+  if (error) throw error;
+  return count ?? 0;
 }

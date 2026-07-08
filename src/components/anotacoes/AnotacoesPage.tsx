@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Plus,
   Search,
@@ -12,36 +12,29 @@ import {
   Lock,
   Globe,
   Send,
-  X,
   Check,
+  Music,
+  ChevronRight,
   NotebookPen,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import Modal from "../Modal";
 import { useAnotacoes } from "@/lib/anotacoes-context";
 import { useAuth } from "@/lib/auth-context";
+import { useShows } from "@/lib/shows-context";
+import { useArtistas } from "@/lib/workspace-context";
 import { MODULE_THEMES } from "@/types";
+import type { Show } from "@/types";
 import type { AnotacaoPasta, Anotacao, VisibilidadePasta } from "@/lib/mappers/anotacoes";
 import { renderMarkdownSeguro } from "./markdownSeguro";
+import NotaChat, { useEquipe, fmtQuando, type UsuarioResumo } from "./NotaChat";
+import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
 
 const ACCENT = MODULE_THEMES.agenda.color;
+const MAX_PASTAS = 8;
 const CORES = ["#3D7BFF", "#37D39A", "#F5B046", "#FF5C6C", "#9A7BFF", "#22B8CF", "#FF922B", "#94A3B8"];
 const EMOJIS = ["📁", "📌", "💡", "📞", "✅", "🎧", "💰", "📝", "⭐", "🗺️", "🎫", "🔒"];
-
-type Usuario = { id: string; nome: string; cor?: string };
-
-function fmtQuando(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const hoje = new Date();
-  const mesmoDia = d.toDateString() === hoje.toDateString();
-  return mesmoDia
-    ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) +
-        " · " +
-        d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
 
 const VIS_INFO: Record<VisibilidadePasta, { icon: typeof Globe; label: string }> = {
   todos: { icon: Globe, label: "Todos" },
@@ -64,22 +57,18 @@ export default function AnotacoesPage() {
     updateNota,
     removeNota,
   } = useAnotacoes();
+  const { shows } = useShows();
+  const artistas = useArtistas();
+  const usuarios = useEquipe();
 
   const meuId = sessao?.usuario?.id ?? "";
   const souAdmin = sessao?.usuario?.papel === "admin" || sessao?.tipo === "super-admin";
-
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  useEffect(() => {
-    fetch("/api/usuarios", { credentials: "include" })
-      .then((r) => r.json())
-      .then((b) => setUsuarios((b.usuarios as Usuario[]) ?? []))
-      .catch(() => undefined);
-  }, []);
   const nomeDe = (id?: string) =>
     id === meuId ? t("Você") : usuarios.find((u) => u.id === id)?.nome ?? "—";
   const corDe = (id?: string) => usuarios.find((u) => u.id === id)?.cor ?? "#8892a6";
 
   const [pastaAbertaId, setPastaAbertaId] = useState<string | null>(null);
+  const [showAbertoId, setShowAbertoId] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [modalPasta, setModalPasta] = useState<
     { modo: "nova" } | { modo: "editar"; pasta: AnotacaoPasta } | null
@@ -87,6 +76,36 @@ export default function AnotacoesPage() {
 
   const pastaAberta = pastas.find((p) => p.id === pastaAbertaId) ?? null;
   const notasDaPasta = (pid: string) => notas.filter((n) => n.pastaId === pid);
+
+  // ---- Notas de show, agrupadas por show (ordenadas pela mais recente) ----
+  const gruposDeShow = useMemo(() => {
+    const porShow = new Map<string, Anotacao[]>();
+    for (const n of notas) {
+      if (!n.showId) continue;
+      const arr = porShow.get(n.showId) ?? [];
+      arr.push(n);
+      porShow.set(n.showId, arr);
+    }
+    return Array.from(porShow.entries())
+      .map(([showId, ns]) => ({
+        showId,
+        notas: ns.sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
+        ultimaEm: ns.reduce((max, n) => (n.criadoEm > max ? n.criadoEm : max), ""),
+      }))
+      .sort((a, b) => b.ultimaEm.localeCompare(a.ultimaEm));
+  }, [notas]);
+
+  const showDe = (id: string): Show | undefined => shows.find((s) => s.id === id);
+  const rotuloDoShow = (id: string): { titulo: string; sub: string } => {
+    const s = showDe(id);
+    if (!s) return { titulo: t("Show"), sub: "" };
+    const dj = artistas.find((d) => d.id === s.djId);
+    const data = s.data ? s.data.split("-").reverse().slice(0, 2).join("/") : "";
+    return {
+      titulo: s.venue || s.location || t("Show"),
+      sub: [dj?.name, data].filter(Boolean).join(" · "),
+    };
+  };
 
   const buscaAtiva = busca.trim().length > 0 && !pastaAberta;
   const resultados = useMemo(() => {
@@ -99,6 +118,7 @@ export default function AnotacoesPage() {
   }, [buscaAtiva, busca, notas]);
 
   const podeGerir = (p: AnotacaoPasta) => souAdmin || p.criadoPor === meuId;
+  const atingiuTeto = pastas.length >= MAX_PASTAS;
 
   return (
     <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
@@ -133,7 +153,12 @@ export default function AnotacoesPage() {
                 )}
               </div>
               {podeCriarPasta && (
-                <button onClick={() => setModalPasta({ modo: "nova" })} className="btn btn-primary">
+                <button
+                  onClick={() => setModalPasta({ modo: "nova" })}
+                  disabled={atingiuTeto}
+                  title={atingiuTeto ? t("Limite de {n} pastas atingido.", { n: MAX_PASTAS }) : undefined}
+                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <Plus size={15} />
                   {t("Nova pasta")}
                 </button>
@@ -144,7 +169,7 @@ export default function AnotacoesPage() {
       />
 
       {pastaAberta ? (
-        <ThreadView
+        <ThreadPasta
           pasta={pastaAberta}
           notas={notasDaPasta(pastaAberta.id)}
           meuId={meuId}
@@ -167,23 +192,100 @@ export default function AnotacoesPage() {
         <BuscaResultados
           resultados={resultados}
           pastas={pastas}
+          rotuloDoShow={rotuloDoShow}
           nomeDe={nomeDe}
           corDe={corDe}
           onAbrirPasta={(id) => {
             setBusca("");
             setPastaAbertaId(id);
           }}
+          onAbrirShow={(id) => {
+            setBusca("");
+            setShowAbertoId(id);
+          }}
         />
       ) : (
-        <PastasGrid
-          pastas={pastas}
-          carregando={carregando}
-          contagem={(pid) => notasDaPasta(pid).length}
-          podeCriar={podeCriarPasta}
-          onAbrir={(id) => setPastaAbertaId(id)}
-          onNova={() => setModalPasta({ modo: "nova" })}
-        />
+        <>
+          <PastasGrid
+            pastas={pastas}
+            carregando={carregando}
+            contagem={(pid) => notasDaPasta(pid).length}
+            podeCriar={podeCriarPasta && !atingiuTeto}
+            onAbrir={(id) => setPastaAbertaId(id)}
+            onNova={() => setModalPasta({ modo: "nova" })}
+          />
+
+          {/* ===== Notas de show (embaixo das pastas) ===== */}
+          {gruposDeShow.length > 0 && (
+            <div className="mt-8">
+              <div className="stat-label mb-3 inline-flex items-center gap-1.5">
+                <Music size={13} style={{ color: ACCENT }} />
+                {t("Notas de show")}
+              </div>
+              <div className="flex flex-col gap-2">
+                {gruposDeShow.map((g) => {
+                  const rot = rotuloDoShow(g.showId);
+                  const autores = Array.from(new Set(g.notas.map((n) => n.criadoPor).filter(Boolean))) as string[];
+                  return (
+                    <button
+                      key={g.showId}
+                      onClick={() => setShowAbertoId(g.showId)}
+                      className="card flex items-center gap-3 text-left transition-colors hover:border-border-strong"
+                    >
+                      <div
+                        className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                      >
+                        <Music size={17} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-primary truncate">{rot.titulo}</div>
+                        <div className="text-xs text-muted truncate">
+                          {[rot.sub, `${g.notas.length} ${g.notas.length === 1 ? t("anotação") : t("anotações")}`]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      </div>
+                      {/* Mini-avatares de quem anotou */}
+                      <div className="flex -space-x-1.5 flex-shrink-0">
+                        {autores.slice(0, 4).map((uid) => (
+                          <span
+                            key={uid}
+                            className="h-6 w-6 rounded-full flex items-center justify-center text-[0.55rem] font-bold border-2"
+                            style={{ backgroundColor: corDe(uid), color: "#fff", borderColor: "var(--surface)" }}
+                            title={nomeDe(uid)}
+                          >
+                            {nomeDe(uid).slice(0, 2).toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="text-[0.65rem] text-muted tabular-nums flex-shrink-0">
+                        {fmtQuando(g.ultimaEm)}
+                      </span>
+                      <ChevronRight size={14} className="text-muted flex-shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
+
+      {/* Modal — thread de notas de um show */}
+      <Modal
+        isOpen={!!showAbertoId}
+        onClose={() => setShowAbertoId(null)}
+        title={showAbertoId ? rotuloDoShow(showAbertoId).titulo : ""}
+        subtitle={showAbertoId ? rotuloDoShow(showAbertoId).sub || t("Notas do show") : undefined}
+        maxWidth={560}
+      >
+        {showAbertoId && (
+          <div className="max-h-[65vh] overflow-y-auto pr-1">
+            <NotasDoShow showId={showAbertoId} />
+          </div>
+        )}
+      </Modal>
 
       {modalPasta && (
         <PastaFormModal
@@ -203,7 +305,7 @@ export default function AnotacoesPage() {
 }
 
 // ============================================================
-// Grade de pastas
+// Grade de pastas — máx 8 (4 em cima, 4 embaixo)
 // ============================================================
 
 function PastasGrid({
@@ -248,7 +350,7 @@ function PastasGrid({
     );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {pastas.map((p) => {
         const cor = p.cor || ACCENT;
         const Vis = VIS_INFO[p.visibilidade].icon;
@@ -288,21 +390,25 @@ function PastasGrid({
 }
 
 // ============================================================
-// Resultados de busca
+// Resultados de busca (notas de pasta + de show)
 // ============================================================
 
 function BuscaResultados({
   resultados,
   pastas,
+  rotuloDoShow,
   nomeDe,
   corDe,
   onAbrirPasta,
+  onAbrirShow,
 }: {
   resultados: Anotacao[];
   pastas: AnotacaoPasta[];
+  rotuloDoShow: (id: string) => { titulo: string; sub: string };
   nomeDe: (id?: string) => string;
   corDe: (id?: string) => string;
   onAbrirPasta: (id: string) => void;
+  onAbrirShow: (id: string) => void;
 }) {
   const t = useT();
   if (resultados.length === 0) {
@@ -312,16 +418,19 @@ function BuscaResultados({
     <div className="flex flex-col gap-3">
       <div className="stat-label">{t("{n} resultado(s)", { n: resultados.length })}</div>
       {resultados.map((n) => {
-        const pasta = pastas.find((p) => p.id === n.pastaId);
+        const pasta = n.pastaId ? pastas.find((p) => p.id === n.pastaId) : undefined;
+        const origem = n.showId
+          ? `🎵 ${rotuloDoShow(n.showId).titulo}`
+          : `${pasta?.icone || "📁"} ${pasta?.nome ?? "—"}`;
         return (
           <button
             key={n.id}
-            onClick={() => onAbrirPasta(n.pastaId)}
+            onClick={() => (n.showId ? onAbrirShow(n.showId) : n.pastaId && onAbrirPasta(n.pastaId))}
             className="card text-left transition-colors hover:border-border-strong"
             style={{ borderLeft: `3px solid ${n.cor || pasta?.cor || ACCENT}` }}
           >
             <div className="flex items-center gap-2 text-xs text-muted mb-1">
-              <span className="badge badge-neutral">{pasta?.icone || "📁"} {pasta?.nome ?? "—"}</span>
+              <span className="badge badge-neutral">{origem}</span>
               <span className="inline-flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: corDe(n.criadoPor) }} />
                 {nomeDe(n.criadoPor)} · {fmtQuando(n.criadoEm)}
@@ -337,10 +446,10 @@ function BuscaResultados({
 }
 
 // ============================================================
-// Thread (chat) de uma pasta
+// Thread (grupo de WhatsApp) de uma pasta
 // ============================================================
 
-function ThreadView({
+function ThreadPasta({
   pasta,
   notas,
   meuId,
@@ -363,16 +472,14 @@ function ThreadView({
   podeGerir: boolean;
   onEditarPasta: () => void;
   onExcluirPasta: () => void;
-  addNota: (n: { pasta_id: string; titulo?: string | null; conteudo: string; cor?: string | null; fixada?: boolean }) => Promise<Anotacao>;
-  updateNota: (id: string, n: { titulo?: string | null; conteudo?: string; cor?: string | null; fixada?: boolean }) => Promise<Anotacao>;
+  addNota: (n: { pasta_id: string; conteudo: string; cor?: string | null }) => Promise<Anotacao>;
+  updateNota: (id: string, n: { conteudo?: string; fixada?: boolean }) => Promise<Anotacao>;
   removeNota: (id: string) => Promise<void>;
 }) {
   const t = useT();
   const [texto, setTexto] = useState("");
   const [cor, setCor] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editTexto, setEditTexto] = useState("");
 
   const ordenadas = useMemo(
     () => [...notas].sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
@@ -380,8 +487,6 @@ function ThreadView({
   );
   const fixadas = ordenadas.filter((n) => n.fixada);
   const Vis = VIS_INFO[pasta.visibilidade].icon;
-
-  const podeMexer = (n: Anotacao) => souAdmin || n.criadoPor === meuId;
 
   const enviar = async () => {
     const conteudo = texto.trim();
@@ -398,98 +503,19 @@ function ThreadView({
     }
   };
 
-  const salvarEdicao = async (id: string) => {
-    const conteudo = editTexto.trim();
-    if (!conteudo) return;
-    try {
-      await updateNota(id, { conteudo });
-      setEditId(null);
-    } catch (e) {
-      window.alert((e as Error).message || t("Falha ao salvar."));
-    }
-  };
-
-  const renderNota = (n: Anotacao, contexto: "fixada" | "thread") => (
-    <div
-      key={`${contexto}-${n.id}`}
-      className="card"
-      style={{ borderLeft: `3px solid ${n.cor || pasta.cor || ACCENT}` }}
-    >
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="h-6 w-6 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
-            style={{ backgroundColor: corDe(n.criadoPor), color: "#fff" }}
-          >
-            {nomeDe(n.criadoPor).slice(0, 2).toUpperCase()}
-          </span>
-          <span className="text-sm font-medium text-primary truncate">{nomeDe(n.criadoPor)}</span>
-          <span className="text-xs text-muted flex-shrink-0">· {fmtQuando(n.criadoEm)}</span>
-          {n.atualizadoPor && n.atualizadoEm !== n.criadoEm && (
-            <span className="text-[0.65rem] text-muted italic flex-shrink-0">({t("editado")})</span>
-          )}
-        </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button
-            onClick={() => updateNota(n.id, { fixada: !n.fixada }).catch(() => undefined)}
-            className={`p-1.5 rounded-md hover:bg-elevated transition-colors ${n.fixada ? "" : "text-muted"}`}
-            style={n.fixada ? { color: ACCENT } : undefined}
-            title={n.fixada ? t("Desafixar") : t("Fixar")}
-            aria-label={n.fixada ? t("Desafixar") : t("Fixar")}
-          >
-            <Pin size={14} fill={n.fixada ? ACCENT : "none"} />
-          </button>
-          {podeMexer(n) && (
-            <>
-              <button
-                onClick={() => {
-                  setEditId(n.id);
-                  setEditTexto(n.conteudo);
-                }}
-                className="p-1.5 rounded-md text-muted hover:bg-elevated hover:text-primary transition-colors"
-                title={t("Editar")}
-                aria-label={t("Editar")}
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => {
-                  if (window.confirm(t("Excluir esta anotação?"))) removeNota(n.id).catch(() => undefined);
-                }}
-                className="p-1.5 rounded-md text-muted hover:bg-elevated hover:text-primary transition-colors"
-                title={t("Excluir")}
-                aria-label={t("Excluir")}
-              >
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      {n.titulo && <div className="text-sm font-semibold text-primary mb-1">{n.titulo}</div>}
-      {editId === n.id ? (
-        <div className="flex flex-col gap-2">
-          <textarea
-            value={editTexto}
-            onChange={(e) => setEditTexto(e.target.value)}
-            className="input min-h-[80px] resize-y border border-border rounded-md p-2 bg-surface"
-            autoFocus
-          />
-          <div className="flex items-center gap-2 justify-end">
-            <button onClick={() => setEditId(null)} className="btn btn-secondary text-sm">
-              <X size={14} />
-              {t("Cancelar")}
-            </button>
-            <button onClick={() => salvarEdicao(n.id)} className="btn btn-primary text-sm">
-              <Check size={14} />
-              {t("Salvar")}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="text-secondary">{renderMarkdownSeguro(n.conteudo)}</div>
-      )}
-    </div>
+  const bolha = (n: Anotacao, prefixo: string) => (
+    <NotaChat
+      key={`${prefixo}-${n.id}`}
+      nota={n}
+      minha={n.criadoPor === meuId}
+      nome={nomeDe(n.criadoPor)}
+      cor={corDe(n.criadoPor)}
+      accent={ACCENT}
+      podeMexer={souAdmin || n.criadoPor === meuId}
+      onTogglePin={() => updateNota(n.id, { fixada: !n.fixada }).catch(() => undefined)}
+      onSalvar={(conteudo) => updateNota(n.id, { conteudo }).then(() => undefined)}
+      onExcluir={() => removeNota(n.id).catch(() => undefined)}
+    />
   );
 
   return (
@@ -513,10 +539,10 @@ function ThreadView({
         </div>
         {podeGerir && (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={onEditarPasta} className="btn btn-secondary text-sm" title={t("Editar pasta")}>
+            <button onClick={onEditarPasta} className="btn btn-secondary text-sm" title={t("Editar pasta")} aria-label={t("Editar pasta")}>
               <Pencil size={14} />
             </button>
-            <button onClick={onExcluirPasta} className="btn btn-secondary text-sm" title={t("Excluir pasta")}>
+            <button onClick={onExcluirPasta} className="btn btn-secondary text-sm" title={t("Excluir pasta")} aria-label={t("Excluir pasta")}>
               <Trash2 size={14} />
             </button>
           </div>
@@ -529,7 +555,7 @@ function ThreadView({
           <div className="stat-label inline-flex items-center gap-1.5">
             <Pin size={12} style={{ color: ACCENT }} /> {t("Fixadas")}
           </div>
-          {fixadas.map((n) => renderNota(n, "fixada"))}
+          {fixadas.map((n) => bolha(n, "fix"))}
         </div>
       )}
 
@@ -539,7 +565,7 @@ function ThreadView({
           {t("Nenhuma anotação ainda. Escreva a primeira abaixo. 👇")}
         </div>
       ) : (
-        <div className="flex flex-col gap-2">{ordenadas.map((n) => renderNota(n, "thread"))}</div>
+        <div className="flex flex-col gap-2.5">{ordenadas.map((n) => bolha(n, "th"))}</div>
       )}
 
       {/* Compose */}
@@ -595,7 +621,7 @@ function PastaFormModal({
   onSalvar,
 }: {
   inicial: AnotacaoPasta | null;
-  usuarios: Usuario[];
+  usuarios: UsuarioResumo[];
   meuId: string;
   onClose: () => void;
   onSalvar: (dados: {

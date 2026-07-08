@@ -108,7 +108,8 @@ export async function criarNotaNoWorkspace(
   criadoPor: string
 ): Promise<Anotacao> {
   const escrita: NotaEscrita = {
-    pasta_id: input.pasta_id,
+    pasta_id: input.pasta_id ?? null,
+    show_id: input.show_id ?? null,
     conteudo: input.conteudo ?? "",
     titulo: input.titulo ?? null,
     cor: input.cor ?? null,

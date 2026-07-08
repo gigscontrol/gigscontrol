@@ -5,8 +5,12 @@ import {
   criarPastaNoWorkspace,
 } from "@/lib/services/anotacoes.service";
 import { pastaCreateSchema } from "@/lib/validators/anotacoes.schema";
+import { contarPastasDoWorkspace } from "@/lib/repositories/anotacoes.repo";
 import { podeCriarPastaAnotacao } from "@/lib/api/permissoes";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { respostaDeErro } from "@/lib/api/erros";
+
+const MAX_PASTAS = 8;
 
 /** GET /api/anotacoes/pastas — pastas que o usuário PODE ver (RLS filtra). */
 export async function GET() {
@@ -47,6 +51,15 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Teto GLOBAL de 8 pastas por workspace — conta via admin (a sessão não vê
+    // pastas privadas de outros; a contagem precisa incluir todas).
+    const usadas = await contarPastasDoWorkspace(criarClienteAdmin(), r.sessao.workspaceId);
+    if (usadas >= MAX_PASTAS) {
+      return NextResponse.json(
+        { erro: `Limite de ${MAX_PASTAS} pastas atingido. Exclua uma pasta para criar outra.` },
+        { status: 409 }
+      );
+    }
     const pasta = await criarPastaNoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,

@@ -71,7 +71,8 @@ export type PastaEscrita = {
 export type NotaRow = {
   id: string;
   workspace_id: string;
-  pasta_id: string;
+  pasta_id: string | null;
+  show_id: string | null;
   titulo: string | null;
   conteudo: string | null;
   cor: string | null;
@@ -84,7 +85,9 @@ export type NotaRow = {
 
 export type Anotacao = {
   id: string;
-  pastaId: string;
+  /** Dono da nota: uma pasta OU um show (exatamente um dos dois). */
+  pastaId?: string;
+  showId?: string;
   titulo?: string;
   conteudo: string;
   cor?: string;
@@ -97,13 +100,14 @@ export type Anotacao = {
 
 export function rowParaAnotacao(row: NotaRow): Anotacao {
   const n: Anotacao = {
-    id: row.id,
-    pastaId: row.pasta_id,
     conteudo: row.conteudo ?? "",
+    id: row.id,
     fixada: !!row.fixada,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };
+  if (row.pasta_id) n.pastaId = row.pasta_id;
+  if (row.show_id) n.showId = row.show_id;
   if (row.titulo) n.titulo = row.titulo;
   if (row.cor) n.cor = row.cor;
   if (row.criado_por) n.criadoPor = row.criado_por;
@@ -113,7 +117,8 @@ export function rowParaAnotacao(row: NotaRow): Anotacao {
 
 export type NotaEscrita = {
   workspace_id?: string;
-  pasta_id?: string;
+  pasta_id?: string | null;
+  show_id?: string | null;
   titulo?: string | null;
   conteudo?: string;
   cor?: string | null;

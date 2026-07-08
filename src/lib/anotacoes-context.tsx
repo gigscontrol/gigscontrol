@@ -28,7 +28,9 @@ export type PastaInput = {
 export type PastaUpdateInput = Partial<PastaInput>;
 
 export type NotaInput = {
-  pasta_id: string;
+  /** Dono da nota: pasta OU show (exatamente um). */
+  pasta_id?: string;
+  show_id?: string;
   titulo?: string | null;
   conteudo: string;
   cor?: string | null;

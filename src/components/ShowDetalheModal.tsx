@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import Modal from "./Modal";
 import BookingSection from "./agenda/BookingSection";
+import NotasDoShow from "./anotacoes/NotasDoShow";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -508,6 +509,11 @@ export default function ShowDetalheModal({
             />
           </Bloco>
         )}
+
+        {/* ===== ANOTAÇÕES DO SHOW (máx 4, estilo chat) ===== */}
+        <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
+          <NotasDoShow showId={show.id} />
+        </Bloco>
 
         {/* ===== PAGAMENTO ===== */}
         {venda && venda.parcelas.length > 0 && (
