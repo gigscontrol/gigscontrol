@@ -190,6 +190,7 @@ export type ActiveTab =
 export type ActivePage =
   | "dashboard"
   | "agenda-completa"
+  | "agenda-anotacoes"
   | "vendas-novo-orcamento"
   | "vendas-historico"
   | "vendas-orcamento-detalhe"

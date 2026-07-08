@@ -20,6 +20,7 @@ import {
   Building2,
   Music,
   Map,
+  NotebookPen,
   LayoutTemplate,
   FolderOpen,
   ChevronsLeft,
@@ -70,6 +71,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "agenda-completa", label: "Agenda de Shows", icon: CalendarRange },
+      { page: "agenda-anotacoes", label: "Anotações", icon: NotebookPen },
     ],
   },
   {

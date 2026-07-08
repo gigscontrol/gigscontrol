@@ -9,6 +9,7 @@ import ControlePagamentos from "@/components/ControlePagamentos";
 import VendasDashboard from "@/components/VendasDashboard";
 import AgendaDashboard from "@/components/AgendaDashboard";
 import AgendaEscala from "@/components/AgendaEscala";
+import AnotacoesPage from "@/components/anotacoes/AnotacoesPage";
 import Contatos from "@/components/Contatos";
 import ContatosDashboard from "@/components/ContatosDashboard";
 import MapaPage from "@/components/contatos/MapaPage";
@@ -31,6 +32,7 @@ import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
+import { AnotacoesProvider } from "@/lib/anotacoes-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
@@ -68,13 +70,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <VendasProvider>
                   <ModelosProvider>
                     <ContratosProvider>
-                      <AuthGuard>
-                        <NavProvider>
-                          <PreferenciasApply />
-                          <AppRoot />
-                          {children}
-                        </NavProvider>
-                      </AuthGuard>
+                      <AnotacoesProvider>
+                        <AuthGuard>
+                          <NavProvider>
+                            <PreferenciasApply />
+                            <AppRoot />
+                            {children}
+                          </NavProvider>
+                        </AuthGuard>
+                      </AnotacoesProvider>
                     </ContratosProvider>
                   </ModelosProvider>
                 </VendasProvider>
@@ -300,6 +304,7 @@ function resolverRota(seg: string[]): Rota {
   }
   // agenda é o default (inclui "/app" puro)
   if (a === "agenda" && b === "shows") return rotaBase("agenda", "agenda-completa");
+  if (a === "agenda" && b === "anotacoes") return rotaBase("agenda", "agenda-anotacoes");
   return rotaBase("agenda", "dashboard");
 }
 
@@ -308,6 +313,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
   switch (page) {
     case "agenda-completa":
       return `${BASE}/agenda/shows`;
+    case "agenda-anotacoes":
+      return `${BASE}/agenda/anotacoes`;
     case "vendas-historico":
       return `${BASE}/vendas/orcamentos`;
     case "vendas-novo-orcamento":
@@ -645,6 +652,9 @@ function AppRoot() {
               onAbrirVenda={abrirVenda}
               onNovaVendaNoDia={novaVendaNoDia}
             />
+          )}
+          {activeTab === "agenda" && activePage === "agenda-anotacoes" && (
+            <AnotacoesPage />
           )}
 
           {/* Contatos */}
