@@ -501,65 +501,6 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
-        {/* ===== HOSPEDAGEM / BOOKING ===== */}
-        {(show.booking || podeGerenciarShow) && (
-          <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
-            <BookingSection
-              showId={show.id}
-              booking={show.booking}
-              podeEditar={podeGerenciarShow}
-              onSave={async (booking) => {
-                await updateShow(show.id, { booking });
-              }}
-            />
-          </Bloco>
-        )}
-
-        {/* ===== ANOTAÇÕES DO SHOW — linha-resumo (estética dos Documentos
-            vinculados); a escrita/thread abre num modal próprio. ===== */}
-        <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
-          <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
-            <div className="flex items-center gap-2 min-w-0">
-              {notasDoShow.length === 0 ? (
-                <span className="text-sm text-muted">{t("Sem nenhuma anotação")}</span>
-              ) : (
-                <>
-                  <span className="badge badge-neutral inline-flex items-center gap-1">
-                    <StickyNote size={11} />
-                    {notasDoShow.length === 1 ? t("Anotação") : t("Anotações")}
-                  </span>
-                  <span
-                    className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    {notasDoShow.length}/4
-                  </span>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setNotasAbertas(true)}
-              className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
-            >
-              {notasDoShow.length === 0 ? t("Fazer anotação") : t("Ver anotações")}
-              <ExternalLink size={11} />
-            </button>
-          </div>
-        </Bloco>
-
-        {/* Modal — thread de anotações do show (campo de texto vive aqui) */}
-        <Modal
-          isOpen={notasAbertas}
-          onClose={() => setNotasAbertas(false)}
-          title={t("Anotações")}
-          subtitle={show.venue || show.location || undefined}
-          maxWidth={560}
-        >
-          <div className="max-h-[65vh] overflow-y-auto pr-1">
-            <NotasDoShow showId={show.id} />
-          </div>
-        </Modal>
 
         {/* ===== PAGAMENTO ===== */}
         {venda && venda.parcelas.length > 0 && (
@@ -657,6 +598,66 @@ export default function ShowDetalheModal({
             <p className="text-sm text-secondary whitespace-pre-wrap">{observacoes}</p>
           </Bloco>
         )}
+
+        {/* ===== HOSPEDAGEM / BOOKING ===== */}
+        {(show.booking || podeGerenciarShow) && (
+          <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
+            <BookingSection
+              showId={show.id}
+              booking={show.booking}
+              podeEditar={podeGerenciarShow}
+              onSave={async (booking) => {
+                await updateShow(show.id, { booking });
+              }}
+            />
+          </Bloco>
+        )}
+
+        {/* ===== ANOTAÇÕES DO SHOW — linha-resumo (estética dos Documentos
+            vinculados); a escrita/thread abre num modal próprio. ===== */}
+        <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
+          <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              {notasDoShow.length === 0 ? (
+                <span className="text-sm text-muted">{t("Sem nenhuma anotação")}</span>
+              ) : (
+                <>
+                  <span className="badge badge-neutral inline-flex items-center gap-1">
+                    <StickyNote size={11} />
+                    {notasDoShow.length === 1 ? t("Anotação") : t("Anotações")}
+                  </span>
+                  <span
+                    className="font-mono text-sm font-bold tabular-nums"
+                    style={{ color: "var(--brand)" }}
+                  >
+                    {notasDoShow.length}/4
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotasAbertas(true)}
+              className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+            >
+              {notasDoShow.length === 0 ? t("Fazer anotação") : t("Ver anotações")}
+              <ExternalLink size={11} />
+            </button>
+          </div>
+        </Bloco>
+
+        {/* Modal — thread de anotações do show (campo de texto vive aqui) */}
+        <Modal
+          isOpen={notasAbertas}
+          onClose={() => setNotasAbertas(false)}
+          title={t("Anotações")}
+          subtitle={show.venue || show.location || undefined}
+          maxWidth={560}
+        >
+          <div className="max-h-[65vh] overflow-y-auto pr-1">
+            <NotasDoShow showId={show.id} />
+          </div>
+        </Modal>
 
         {/* ===== ORIGEM (links) ===== */}
         {(orcamento || venda || resumoContrato.contrato) && (

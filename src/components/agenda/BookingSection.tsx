@@ -136,115 +136,165 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
   // ---------- VISÃO (não editando) ----------
   if (!editando) {
     const temDados = !!booking && booking.status === "informado";
+
+    const acoes = podeEditar && (
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={solicitar}
+          disabled={salvando}
+          className="btn-ghost text-xs inline-flex items-center gap-1.5"
+        >
+          {copiado ? <Check size={13} /> : <Send size={13} />}
+          {copiado ? t("Copiado!") : t("Solicitar ao contratante")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setForm(booking ?? VAZIO);
+            setEditando(true);
+          }}
+          className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+        >
+          <Pencil size={13} />
+          {temDados ? t("Editar") : t("Registrar hospedagem")}
+        </button>
+      </div>
+    );
+
+    // Estado vazio (sem hospedagem informada) — bloco pontilhado enxuto.
+    if (!booking || booking.status !== "informado") {
+      return (
+        <div className="flex flex-col items-center text-center gap-3 py-5 px-3 rounded-lg border border-dashed border-border bg-elevated">
+          <div
+            className="h-11 w-11 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "var(--surface)" }}
+          >
+            <Hotel size={20} className="text-muted" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-primary">
+              {booking ? t("Booking solicitado ao contratante") : t("Nenhuma hospedagem registrada")}
+            </div>
+            <div className="text-xs text-muted mt-0.5">
+              {t("Solicite os dados ao contratante ou registre você mesmo.")}
+            </div>
+          </div>
+          {acoes}
+          {erro && <div className="text-xs text-danger">{erro}</div>}
+        </div>
+      );
+    }
+
+    // Estado com dados — cartão do hotel + grade de infos.
+    const b = booking;
+    const celulas = [
+      { icon: <CalendarDays size={12} />, label: t("Check-in"), value: fmtData(b.checkin) },
+      { icon: <CalendarDays size={12} />, label: t("Check-out"), value: fmtData(b.checkout) },
+      {
+        icon: <BedDouble size={12} />,
+        label: t("Quartos"),
+        value: [b.quartos ? `${b.quartos}` : "", b.quarto ? `nº ${b.quarto}` : ""]
+          .filter(Boolean)
+          .join(" · "),
+      },
+      { icon: <Users size={12} />, label: t("Ocupação"), value: b.ocupacao ?? "" },
+      { icon: <Phone size={12} />, label: t("Telefone"), value: b.telefone ?? "" },
+    ].filter((c) => c.value);
+    const temMapa = !!b.localizacao && /^https?:\/\//i.test(b.localizacao);
+
     return (
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          {booking ? (
-            <span
-              className={`badge ${
-                booking.status === "informado" ? "badge-success" : "badge-warning"
-              }`}
-            >
-              {booking.status === "informado" ? t("Hospedagem informada") : t("Booking solicitado")}
+      <div className="flex flex-col gap-3">
+        {/* Cartão do hotel */}
+        <div className="rounded-lg border border-border bg-elevated overflow-hidden">
+          <div
+            className="p-3 flex items-start justify-between gap-3"
+            style={{ borderLeft: "3px solid var(--brand)" }}
+          >
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div
+                className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: "var(--surface)", color: "var(--brand)" }}
+              >
+                <Hotel size={17} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-primary truncate">
+                  {b.hotelNome || t("Hotel")}
+                </div>
+                {b.endereco && (
+                  <div className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                    <MapPin size={11} className="flex-shrink-0" />
+                    <span className="truncate">{b.endereco}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <span className={`badge flex-shrink-0 ${b.pago ? "badge-success" : "badge-warning"}`}>
+              {b.pago ? t("Hotel pago") : t("Hotel não pago")}
             </span>
-          ) : (
-            <span className="badge badge-neutral">{t("Sem booking")}</span>
-          )}
-          {podeEditar && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={solicitar}
-                disabled={salvando}
-                className="btn-ghost text-xs inline-flex items-center gap-1.5"
-              >
-                {copiado ? <Check size={13} /> : <Send size={13} />}
-                {copiado ? t("Copiado!") : t("Solicitar ao contratante")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setForm(booking ?? VAZIO);
-                  setEditando(true);
-                }}
-                className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
-              >
-                <Pencil size={13} />
-                {temDados ? t("Editar") : t("Registrar hospedagem")}
-              </button>
+          </div>
+
+          {celulas.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-border border-t border-border">
+              {celulas.map((c) => (
+                <div key={c.label} className="bg-elevated p-2.5 min-w-0">
+                  <div className="text-[0.6rem] uppercase tracking-wide text-muted inline-flex items-center gap-1">
+                    {c.icon}
+                    {c.label}
+                  </div>
+                  <div className="text-sm text-primary mt-0.5 truncate">{c.value}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {temDados && booking && (
-          <div className="flex flex-col gap-1.5 text-sm">
-            {booking.hotelNome && (
-              <Linha icon={<Hotel size={13} />} bold>
-                {booking.hotelNome}
-              </Linha>
+        {/* Ações rápidas: mapa + voucher */}
+        {(temMapa || b.voucherPath) && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {temMapa && (
+              <a
+                href={b.localizacao}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+              >
+                <MapPin size={13} /> {t("Ver no mapa")}
+              </a>
             )}
-            {booking.endereco && <Linha icon={<MapPin size={13} />}>{booking.endereco}</Linha>}
-            {(booking.checkin || booking.checkout) && (
-              <Linha icon={<CalendarDays size={13} />}>
-                {t("Check-in")}: {fmtData(booking.checkin) || "—"} · {t("Check-out")}:{" "}
-                {fmtData(booking.checkout) || "—"}
-              </Linha>
-            )}
-            {(booking.quartos || booking.quarto || booking.ocupacao) && (
-              <Linha icon={<BedDouble size={13} />}>
-                {[
-                  booking.quartos ? t("{n} quarto(s)", { n: booking.quartos }) : "",
-                  booking.quarto ? `${t("Quarto")} ${booking.quarto}` : "",
-                  booking.ocupacao,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </Linha>
-            )}
-            {booking.telefone && <Linha icon={<Phone size={13} />}>{booking.telefone}</Linha>}
-            {booking.localizacao && (
-              <Linha icon={<MapPin size={13} />}>
-                {/^https?:\/\//i.test(booking.localizacao) ? (
-                  <a
-                    href={booking.localizacao}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline hover:text-primary break-all"
-                  >
-                    {booking.localizacao}
-                  </a>
-                ) : (
-                  <span className="break-all">{booking.localizacao}</span>
-                )}
-              </Linha>
-            )}
-            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              <span className={`badge ${booking.pago ? "badge-success" : "badge-warning"}`}>
-                {booking.pago ? t("Hotel pago") : t("Hotel não pago")}
-              </span>
-              {booking.voucherPath && (
-                <button
-                  type="button"
-                  onClick={() => baixarVoucher(booking.voucherPath as string)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1.5"
-                >
-                  <Download size={13} /> {t("Baixar voucher")}
-                </button>
-              )}
-            </div>
-            {booking.observacoes && (
-              <Linha icon={<StickyNote size={13} />} subtle>
-                {booking.observacoes}
-              </Linha>
-            )}
-            {booking.atualizadoPor && (
-              <div className="text-[0.65rem] text-muted mt-1">
-                {t("Atualizado por")} {booking.atualizadoPor}
-                {booking.atualizadoEm ? ` · ${fmtDataHora(booking.atualizadoEm)}` : ""}
-              </div>
+            {b.voucherPath && (
+              <button
+                type="button"
+                onClick={() => baixarVoucher(b.voucherPath as string)}
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+              >
+                <Download size={13} /> {t("Baixar voucher")}
+              </button>
             )}
           </div>
         )}
+
+        {b.observacoes && (
+          <div className="text-xs text-secondary bg-elevated border border-border rounded-md p-2.5 flex items-start gap-2">
+            <StickyNote size={13} className="text-muted flex-shrink-0 mt-0.5" />
+            <span className="whitespace-pre-wrap min-w-0">{b.observacoes}</span>
+          </div>
+        )}
+
+        {/* Rodapé: status + autoria + ações */}
+        <div className="flex items-center justify-between gap-2 flex-wrap border-t border-border pt-2.5">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="badge badge-success">{t("Hospedagem informada")}</span>
+            {b.atualizadoPor && (
+              <span className="text-[0.65rem] text-muted truncate">
+                {t("Atualizado por")} {b.atualizadoPor}
+                {b.atualizadoEm ? ` · ${fmtDataHora(b.atualizadoEm)}` : ""}
+              </span>
+            )}
+          </div>
+          {acoes}
+        </div>
         {erro && <div className="text-xs text-danger">{erro}</div>}
       </div>
     );
@@ -384,29 +434,6 @@ function CampoInput({
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
       />
-    </div>
-  );
-}
-
-function Linha({
-  icon,
-  bold,
-  subtle,
-  children,
-}: {
-  icon: React.ReactNode;
-  bold?: boolean;
-  subtle?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`flex items-start gap-2 ${
-        bold ? "text-primary font-semibold" : subtle ? "text-muted" : "text-secondary"
-      }`}
-    >
-      <span className="mt-0.5 text-muted flex-shrink-0">{icon}</span>
-      <span className="min-w-0">{children}</span>
     </div>
   );
 }
