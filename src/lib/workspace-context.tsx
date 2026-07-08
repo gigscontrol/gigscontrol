@@ -125,6 +125,8 @@ export type UsuarioEquipe = {
   escopo: EscopoUsuario;
   funcoes: Funcoes;
   ativo: boolean;
+  /** Permissão dedicada: criar pastas de anotações na Agenda. */
+  podeCriarAnotacoes?: boolean;
 };
 
 // ----------------------------------------------------------------
@@ -257,6 +259,7 @@ type WorkspaceContextValue = {
       escopo: EscopoUsuario;
       funcoes: Funcoes;
       ativo: boolean;
+      pode_criar_anotacoes: boolean;
     }>
   ) => Promise<UsuarioEquipe>;
   removerUsuario: (id: string) => Promise<void>;
@@ -685,6 +688,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         escopo: EscopoUsuario;
         funcoes: Funcoes;
         ativo: boolean;
+        pode_criar_anotacoes: boolean;
       }>
     ): Promise<UsuarioEquipe> => {
       const res = await fetch(`/api/usuarios/${id}`, {

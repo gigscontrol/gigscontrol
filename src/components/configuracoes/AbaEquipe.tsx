@@ -23,6 +23,7 @@ import {
   PauseCircle,
   PlayCircle,
   Users,
+  NotebookPen,
   Ban,
   AtSign,
 } from "lucide-react";
@@ -605,6 +606,21 @@ export default function AbaEquipe() {
                   className="btn btn-secondary text-xs inline-flex items-center gap-1"
                 >
                   <Pencil size={13} /> {t("Editar")}
+                </button>
+                <button
+                  onClick={() =>
+                    atualizarUsuario(selecionado.id, {
+                      pode_criar_anotacoes: !selecionado.podeCriarAnotacoes,
+                    }).catch(() => undefined)
+                  }
+                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
+                  style={{
+                    color: selecionado.podeCriarAnotacoes ? "var(--success)" : "var(--text-muted)",
+                  }}
+                  title={t("Pode criar pastas de anotações na Agenda")}
+                >
+                  <NotebookPen size={14} />
+                  {selecionado.podeCriarAnotacoes ? t("Cria anotações") : t("Liberar anotações")}
                 </button>
                 <button
                   onClick={() => alternarBloqueio(selecionado)}

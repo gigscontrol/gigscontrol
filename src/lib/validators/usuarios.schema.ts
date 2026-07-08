@@ -62,5 +62,7 @@ export const usuarioUpdateSchema = z.object({
   escopo: escopoSchema.optional(),
   funcoes: funcoesSchema.optional(),
   ativo: z.boolean().optional(),
+  /** Permissão dedicada (workspace-level): criar pastas de anotações. */
+  pode_criar_anotacoes: z.boolean().optional(),
 });
 export type UsuarioUpdateInput = z.infer<typeof usuarioUpdateSchema>;

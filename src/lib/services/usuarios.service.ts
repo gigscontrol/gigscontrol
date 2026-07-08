@@ -176,6 +176,8 @@ export async function atualizarUsuarioDaEquipe(
   if (input.escopo !== undefined) patch.escopo = input.escopo;
   if (input.funcoes !== undefined) patch.funcoes = input.funcoes;
   if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
+  if (input.pode_criar_anotacoes !== undefined)
+    patch.pode_criar_anotacoes = input.pode_criar_anotacoes;
   const row = await atualizarProfile(admin, id, patch);
   return rowParaUsuario(row);
 }
