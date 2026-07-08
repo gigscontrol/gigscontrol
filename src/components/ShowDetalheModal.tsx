@@ -32,6 +32,7 @@ import {
 import Modal from "./Modal";
 import BookingSection from "./agenda/BookingSection";
 import NotasDoShow from "./anotacoes/NotasDoShow";
+import { useAnotacoes } from "@/lib/anotacoes-context";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -72,14 +73,17 @@ export default function ShowDetalheModal({
   const { contratos, assinantesPorContrato } = useContratos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
+  const { notas } = useAnotacoes();
   const [processando, setProcessando] = useState(false);
   const [mostrarFormCancel, setMostrarFormCancel] = useState(false);
   const [motivoCancel, setMotivoCancel] = useState("");
+  const [notasAbertas, setNotasAbertas] = useState(false);
 
-  // Reseta o formulário de cancelamento ao trocar de show.
+  // Reseta o formulário de cancelamento (e fecha as anotações) ao trocar de show.
   useEffect(() => {
     setMostrarFormCancel(false);
     setMotivoCancel("");
+    setNotasAbertas(false);
   }, [showId]);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
@@ -92,6 +96,7 @@ export default function ShowDetalheModal({
   }
 
   const dj = artistas.find((d) => d.id === show.djId);
+  const notasDoShow = notas.filter((n) => n.showId === show.id);
   const cancelado = show.status === "cancelado";
   // Grey-out (UX; servidor é a autoridade). Cancelar/reativar = alterar evento
   // → agenda.editar_todos. podeUI já libera legado/admin.
@@ -510,10 +515,51 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
-        {/* ===== ANOTAÇÕES DO SHOW (máx 4, estilo chat) ===== */}
+        {/* ===== ANOTAÇÕES DO SHOW — linha-resumo (estética dos Documentos
+            vinculados); a escrita/thread abre num modal próprio. ===== */}
         <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
-          <NotasDoShow showId={show.id} />
+          <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              {notasDoShow.length === 0 ? (
+                <span className="text-sm text-muted">{t("Sem nenhuma anotação")}</span>
+              ) : (
+                <>
+                  <span className="badge badge-neutral inline-flex items-center gap-1">
+                    <StickyNote size={11} />
+                    {notasDoShow.length === 1 ? t("Anotação") : t("Anotações")}
+                  </span>
+                  <span
+                    className="font-mono text-sm font-bold tabular-nums"
+                    style={{ color: "var(--brand)" }}
+                  >
+                    {notasDoShow.length}/4
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotasAbertas(true)}
+              className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+            >
+              {notasDoShow.length === 0 ? t("Fazer anotação") : t("Ver anotações")}
+              <ExternalLink size={11} />
+            </button>
+          </div>
         </Bloco>
+
+        {/* Modal — thread de anotações do show (campo de texto vive aqui) */}
+        <Modal
+          isOpen={notasAbertas}
+          onClose={() => setNotasAbertas(false)}
+          title={t("Anotações")}
+          subtitle={show.venue || show.location || undefined}
+          maxWidth={560}
+        >
+          <div className="max-h-[65vh] overflow-y-auto pr-1">
+            <NotasDoShow showId={show.id} />
+          </div>
+        </Modal>
 
         {/* ===== PAGAMENTO ===== */}
         {venda && venda.parcelas.length > 0 && (
