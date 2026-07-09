@@ -826,7 +826,14 @@ details.gcfaq[open] .gcplus .gcvert {
   opacity: 0;
 }
 
-/* ===== responsivo: mockups com posições absolutas encolhem ===== */
+/* ===== responsivo: mockups com posições absolutas encolhem/crescem ===== */
+@media (min-width: 1280px) {
+  /* desktop largo: calendário e radar ~10% maiores */
+  .gcvis-scale {
+    transform: scale(1.1);
+    transform-origin: center center;
+  }
+}
 @media (max-width: 900px) {
   .gcvis-scale {
     transform: scale(0.72);

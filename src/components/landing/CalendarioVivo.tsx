@@ -222,14 +222,15 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
           "radial-gradient(70% 90% at 78% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",
       }}
     >
-      {/* copy */}
-      <div className="flex flex-col justify-center gap-[22px]">
+      {/* copy — desliza da esquerda ao entrar no viewport */}
+      <div className="gcrv-l flex flex-col justify-center gap-[22px]">
         <BadgeSecao>{t("02 · Se organiza pra vender")}</BadgeSecao>
-        <h2 className="font-display text-3xl font-extrabold leading-[1.04] tracking-[-0.03em] md:text-4xl">
-          {t("Uma agenda")} <Grad>{t("inteligente")}</Grad>{" "}
+        <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
+          {t("Uma agenda")} <Grad>{t("inteligente")}</Grad>
+          <br />
           {t("para quem vive de eventos.")}
         </h2>
-        <p className="max-w-[440px] text-[15px] leading-[1.6] text-secondary">
+        <p className="max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base">
           {t(
             "Crie, acompanhe e organize shows, negociações, envios de propostas, contratos e compromissos em um calendário completo. Tudo organizado para que nenhuma oportunidade passe despercebida."
           )}
@@ -244,8 +245,11 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
         />
       </div>
 
-      {/* calendário + popups */}
-      <div className="relative min-h-[480px] overflow-hidden">
+      {/* calendário + popups — desliza da direita ao entrar no viewport */}
+      <div
+        className="gcrv-r relative min-h-[480px] overflow-hidden"
+        style={{ transitionDelay: "120ms" }}
+      >
         <div className="gcvis-scale absolute inset-0">
           {/* cartão do calendário, centrado */}
           <div

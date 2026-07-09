@@ -110,8 +110,11 @@ export default function RadarMapa({ pais }: { pais: string }) {
           "radial-gradient(60% 80% at 22% 40%, rgba(61,123,255,.08), rgba(11,13,18,0) 60%)",
       }}
     >
-      {/* radar */}
-      <div className="relative order-2 min-h-[420px] lg:order-1">
+      {/* radar — desliza da esquerda ao entrar no viewport */}
+      <div
+        className="gcrv-l relative order-2 min-h-[420px] lg:order-1"
+        style={{ transitionDelay: "120ms" }}
+      >
         <div className="gcvis-scale absolute inset-0">
           <div
             className="absolute left-1/2 top-1/2 h-[320px] w-[320px]"
@@ -273,14 +276,15 @@ export default function RadarMapa({ pais }: { pais: string }) {
         </div>
       </div>
 
-      {/* copy */}
-      <div className="order-1 flex flex-col justify-center gap-5 lg:order-2">
+      {/* copy — desliza da direita ao entrar no viewport */}
+      <div className="gcrv-r order-1 flex flex-col justify-center gap-[22px] lg:order-2">
         <BadgeSecao>{t("03 · Colhe o resultado")}</BadgeSecao>
-        <h2 className="font-display text-3xl font-extrabold leading-[1.04] tracking-[-0.03em] md:text-4xl">
-          {t("Visualize oportunidades")}{" "}
+        <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
+          {t("Visualize oportunidades")}
+          <br />
           <Grad>{t("antes da concorrência")}</Grad>.
         </h2>
-        <p className="max-w-[430px] text-[15px] leading-[1.6] text-secondary">
+        <p className="max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base">
           {t(
             "Mapeie clientes, contratantes, casas de shows, cidades e negociações em uma visão dinâmica e intuitiva. Encontre informações em segundos e mantenha toda a sua operação conectada."
           )}

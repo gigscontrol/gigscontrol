@@ -35,7 +35,7 @@ export default function FaqLanding() {
   const t = useT();
   return (
     <section className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12">
-      <h2 className="mb-[30px] text-center font-display text-[26px] font-extrabold tracking-[-0.02em] text-primary">
+      <h2 className="gcrv mb-[30px] text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Perguntas frequentes")}
       </h2>
 

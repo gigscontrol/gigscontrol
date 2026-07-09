@@ -2854,6 +2854,8 @@ const SWEEP14: Record<string, string> = {
 
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "Grandes carreiras merecem": "Great careers deserve",
+  "uma gestão profissional": "professional management",
   "Início ": "Home",
   "Soluções": "Solutions",
   "Demo": "Demo",

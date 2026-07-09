@@ -294,34 +294,50 @@ export default function HeroSidebarViva() {
           "radial-gradient(70% 90% at 22% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",
       }}
     >
-      {/* sidebar viva (esquerda no desktop, embaixo no mobile) */}
+      {/* sidebar viva (esquerda no desktop, embaixo no mobile) — +10% e
+          entrando da esquerda no load */}
       <div
         id="demo"
-        className="relative order-2 flex min-h-[490px] items-center justify-center lg:order-1"
+        className="gcrv-l relative order-2 flex min-h-[490px] items-center justify-center lg:order-1"
       >
-        <SidebarViva />
+        <div className="xl:scale-110">
+          <SidebarViva />
+        </div>
       </div>
 
-      {/* copy */}
+      {/* copy — entrada em cascata (badge → título → texto → CTAs → checks) */}
       <div className="order-1 flex flex-col justify-center gap-[22px] lg:order-2">
-        <BadgeSecao>{t("01 · Tudo num só painel")}</BadgeSecao>
-        <h1 className="font-display text-4xl font-extrabold leading-[1.02] tracking-[-0.03em] md:text-[46px]">
-          {t("Grandes carreiras merecem uma")}{" "}
-          <Grad>{t("gestão profissional")}</Grad>.
+        <div className="gcrv self-start">
+          <BadgeSecao>{t("01 · Tudo num só painel")}</BadgeSecao>
+        </div>
+        <h1
+          className="gcrv font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]"
+          style={{ transitionDelay: "80ms" }}
+        >
+          {t("Grandes carreiras merecem")}
+          <br />
+          <Grad>{t("uma gestão profissional")}</Grad>.
         </h1>
-        <p className="max-w-[440px] text-[15px] leading-[1.6] text-secondary">
+        <p
+          className="gcrv max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base"
+          style={{ transitionDelay: "160ms" }}
+        >
           {t(
             "Centralize agenda, orçamentos, vendas, contratos, clientes, artistas e equipe em uma única plataforma. Tenha controle total da operação e tome decisões com muito mais segurança."
           )}
         </p>
-        <CtasSecao />
-        <ChecksSecao
-          itens={[
-            "Controle total da operação",
-            "6 módulos totalmente integrados",
-            "Contratos com assinatura digital",
-          ]}
-        />
+        <div className="gcrv" style={{ transitionDelay: "240ms" }}>
+          <CtasSecao />
+        </div>
+        <div className="gcrv" style={{ transitionDelay: "320ms" }}>
+          <ChecksSecao
+            itens={[
+              "Controle total da operação",
+              "6 módulos totalmente integrados",
+              "Contratos com assinatura digital",
+            ]}
+          />
+        </div>
       </div>
     </section>
   );

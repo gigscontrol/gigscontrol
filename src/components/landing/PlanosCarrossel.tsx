@@ -195,10 +195,13 @@ export default function PlanosCarrossel() {
       id="planos"
       className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12"
     >
-      <h2 className="mb-2 text-center font-display text-[26px] font-extrabold tracking-[-0.02em] text-primary">
+      <h2 className="gcrv mb-2 text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Um plano para cada operação")}
       </h2>
-      <p className="mx-auto mb-6 max-w-[640px] text-center text-sm leading-normal text-secondary">
+      <p
+        className="gcrv mx-auto mb-6 max-w-[640px] text-center text-[15px] leading-normal text-secondary"
+        style={{ transitionDelay: "90ms" }}
+      >
         {t(
           "Do artista que gere a própria carreira à agência com 50 nomes. Todos os planos incluem agenda, vendas, financeiro e contatos."
         )}

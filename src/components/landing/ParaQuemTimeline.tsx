@@ -75,10 +75,13 @@ export default function ParaQuemTimeline() {
   const t = useT();
   return (
     <section className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12">
-      <h2 className="mb-2 text-center font-display text-[26px] font-extrabold tracking-[-0.02em] text-primary">
+      <h2 className="gcrv mb-2 text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Para quem é a Gigs Control?")}
       </h2>
-      <p className="mb-11 text-center text-sm text-secondary">
+      <p
+        className="gcrv mb-11 text-center text-[15px] text-secondary"
+        style={{ transitionDelay: "90ms" }}
+      >
         {t("Da carreira independente às maiores agências do mercado.")}
       </p>
 

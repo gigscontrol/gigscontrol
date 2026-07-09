@@ -4,6 +4,8 @@
  */
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "Grandes carreiras merecem": "Große Karrieren verdienen",
+  "uma gestão profissional": "ein professionelles Management",
   "Início ": "Home",
   "Soluções": "Lösungen",
   "Demo": "Demo",
