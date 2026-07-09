@@ -5,11 +5,15 @@
  * texto puro (ativo em branco), e à direita o seletor de idioma (globo+PT),
  * "Entrar" (cinza com borda) e "Começar" (azul) do MESMO tamanho.
  *
- * O link ativo acompanha a seção visível (IntersectionObserver).
+ * Reutilizável fora da landing (ex.: /planos): quando NÃO está na home, os
+ * links viram âncoras absolutas (`/#seção`) e o logo leva pra `/` — como se
+ * a pessoa acabasse de entrar no site. O link ativo acompanha a seção
+ * visível (IntersectionObserver) só na própria landing.
  */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import LogoGC from "@/components/LogoGC";
 import { useT } from "@/lib/i18n";
 import { SeletorIdioma } from "./SeletorIdioma";
@@ -26,10 +30,16 @@ const LINKS = [
 
 export default function LandingNav() {
   const t = useT();
-  const [ativo, setAtivo] = useState("inicio");
+  const pathname = usePathname();
+  const naLanding = pathname === "/";
+  const [ativo, setAtivo] = useState(naLanding ? "inicio" : "");
 
-  // marca o link da seção visível (Demo é âncora dentro do hero)
+  // Prefixo das âncoras: na landing rola direto; fora dela navega pra home.
+  const base = naLanding ? "" : "/";
+
+  // marca o link da seção visível — só na landing (as seções só existem lá)
   useEffect(() => {
+    if (!naLanding) return;
     const secoes = ["inicio", "recursos", "solucoes", "planos"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
@@ -44,28 +54,34 @@ export default function LandingNav() {
     );
     secoes.forEach((s) => io.observe(s));
     return () => io.disconnect();
-  }, []);
+  }, [naLanding]);
 
   return (
     <nav className="sticky top-0 z-30 h-[72px] border-b border-[rgba(255,255,255,.05)] bg-[rgba(11,13,18,.85)] backdrop-blur-xl">
       <div className="grid h-full items-center gap-4 px-6 sm:px-6 lg:grid-cols-[1fr_auto_1fr]">
-        {/* logo — clicar volta pro topo, como se tivesse acabado de entrar */}
-        <a
-          href="#inicio"
-          className="w-fit"
-          onClick={() => setAtivo("inicio")}
-          aria-label="Gigs Control — início"
-        >
-          <LogoGC size={30} variant="gradient" withWordmark />
-        </a>
+        {/* logo — na landing volta pro topo; fora dela vai pra home */}
+        {naLanding ? (
+          <a
+            href="#inicio"
+            className="w-fit"
+            onClick={() => setAtivo("inicio")}
+            aria-label="Gigs Control — início"
+          >
+            <LogoGC size={30} variant="gradient" withWordmark />
+          </a>
+        ) : (
+          <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
+            <LogoGC size={30} variant="gradient" withWordmark />
+          </Link>
+        )}
 
         {/* links centrados (desktop) */}
         <div className="hidden items-center gap-[26px] lg:flex">
           {LINKS.map((l) => (
             <a
               key={l.alvo}
-              href={`#${l.alvo}`}
-              onClick={() => setAtivo(l.alvo)}
+              href={`${base}#${l.alvo}`}
+              onClick={() => naLanding && setAtivo(l.alvo)}
               className="gcflink whitespace-nowrap text-[13px] transition-colors"
               style={
                 ativo === l.alvo

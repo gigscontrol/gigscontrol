@@ -205,35 +205,43 @@ export default function PainelVivoLogin() {
   const t = useT();
   return (
     <div
-      className="flex h-full flex-col justify-between p-12 xl:p-[52px]"
+      className="relative flex h-full flex-col px-12 xl:px-[52px]"
       style={{
         background:
           "radial-gradient(130% 90% at 10% 0%, rgba(61,123,255,.12), rgba(11,13,18,0) 55%)",
       }}
     >
-      {/* logo igual ao da landing (nav): tamanho 30, leva pra página inicial */}
-      <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
-        <LogoGC size={30} variant="gradient" withWordmark />
-      </Link>
+      {/* barra do logo — espelha a topbar (h-16) do lado do form pra alinhar
+          o eixo vertical das duas colunas. logo 30, leva pra página inicial */}
+      <div className="flex h-16 items-center">
+        <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
+          <LogoGC size={30} variant="gradient" withWordmark />
+        </Link>
+      </div>
 
-      {/* bloco central — centralizado e proporcional ao lado do form */}
-      <div className="mx-auto w-full max-w-[560px]">
-        <h2 className="font-display text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] xl:text-[38px]">
-          {t("A operação da sua")}{" "}
-          <span className="bg-grad-signal bg-clip-text text-transparent">
-            {t("agência musical")}
-          </span>
-          <br />
-          {t("em um só lugar")}
-        </h2>
-        <p className="mt-3 max-w-[460px] text-[15px] leading-[1.55] text-secondary">
-          {t(
-            "Entre e acompanhe shows, orçamentos, contratos e cachês em tempo real."
-          )}
-        </p>
+      {/* região central — mesma estrutura (flex-1 + py-10) da coluna do form.
+          O bloco tem min-height igual à do card de login: título em cima,
+          dashboard ancorado embaixo (justify-between) → mesma altura/eixo. */}
+      <div className="flex flex-1 items-center justify-center py-10">
+        <div className="flex min-h-[608px] w-full max-w-[560px] flex-col justify-between">
+          <div>
+            <h2 className="font-display text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] xl:text-[38px]">
+              {t("A operação da sua")}{" "}
+              <span className="bg-grad-signal bg-clip-text text-transparent">
+                {t("agência musical")}
+              </span>
+              <br />
+              {t("em um só lugar")}
+            </h2>
+            <p className="mt-3 max-w-[460px] text-[15px] leading-[1.55] text-secondary">
+              {t(
+                "Entre e acompanhe shows, orçamentos, contratos e cachês em tempo real."
+              )}
+            </p>
+          </div>
 
-        {/* mini-dashboard + notificações flutuando */}
-        <div className="relative mt-9 w-full">
+          {/* mini-dashboard + notificações flutuando */}
+          <div className="relative mt-10 w-full">
           <MiniDashboard />
 
           <Notificacao
@@ -283,10 +291,12 @@ export default function PainelVivoLogin() {
             titulo={t("Show confirmado")}
             detalhe={t("sábado · 22h")}
           />
+          </div>
         </div>
       </div>
 
-      <div className="mx-auto mt-[26px] w-full max-w-[560px] font-mono text-[10px] text-[#4E545E]">
+      {/* rodapé fixo no canto inferior (fora do fluxo central) */}
+      <div className="absolute bottom-8 left-12 font-mono text-[10px] text-[#4E545E] xl:left-[52px]">
         © {new Date().getFullYear()} GIGS CONTROL — {t("GESTÃO PARA A MÚSICA")}
       </div>
     </div>
