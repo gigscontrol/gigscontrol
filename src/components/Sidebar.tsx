@@ -103,7 +103,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "financeiro-pagamentos", label: "Controle de Pagamentos", icon: Wallet },
-      { page: "financeiro-cobrancas", label: "Fixadas / Cobranças", icon: Pin },
+      { page: "financeiro-cobrancas", label: "Fixados", icon: Pin },
     ],
   },
   {

@@ -217,7 +217,7 @@ export default function ControlePagamentos({
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title={ehCobrancas ? "Fixadas / Cobranças" : "Controle de Pagamentos"}
+        title={ehCobrancas ? "Fixados" : "Controle de Pagamentos"}
         subtitle={
           ehCobrancas
             ? t("Cobranças fixadas e parcelas atrasadas — a fila do que precisa cobrar")
