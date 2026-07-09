@@ -228,10 +228,11 @@ export default function PainelVivoLogin({
       )}
 
       {/* região central — mesma estrutura (flex-1 + py-10) da coluna do form.
-          O bloco tem min-height igual à do card de login: título em cima,
-          dashboard ancorado embaixo (justify-between) → mesma altura/eixo. */}
+          O bloco tem min-height igual à do card de login: copy no topo
+          (verde) e o dashboard PREENCHENDO o resto, centralizado, com folga
+          igual em cima/embaixo (vermelho). */}
       <div className="flex flex-1 items-center justify-center py-10">
-        <div className="flex min-h-[608px] w-full max-w-[560px] flex-col justify-between">
+        <div className="flex min-h-[608px] w-full max-w-[560px] flex-col">
           <div>
             <h2 className="font-display text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] xl:text-[38px]">
               {t("A operação da sua")}{" "}
@@ -248,12 +249,18 @@ export default function PainelVivoLogin({
             </p>
           </div>
 
-          {/* mini-dashboard + notificações flutuando */}
-          <div className="relative mt-10 w-full">
+          {/* dashboard + notificações — preenche o espaço abaixo da copy,
+              centralizado e ampliado (scale) pra equilibrar a coluna. Sem
+              margem: o flex-1 centraliza com folga igual em cima e embaixo. */}
+          <div className="flex flex-1 items-center justify-center">
+          <div
+            className="relative w-full"
+            style={{ transform: "scale(1.12)", transformOrigin: "center" }}
+          >
           <MiniDashboard />
 
           <Notificacao
-            estilo={{ top: -16, left: -20 }}
+            estilo={{ top: -14, left: -8 }}
             anim="gcFloat 6s ease-in-out infinite"
             corIcone="#1F9E5A"
             icone={
@@ -266,7 +273,7 @@ export default function PainelVivoLogin({
             detalhe={t("agora mesmo, pelo celular")}
           />
           <Notificacao
-            estilo={{ top: "26%", right: -24 }}
+            estilo={{ top: "26%", right: -10 }}
             anim="gcFloat 7s ease-in-out -2.5s infinite"
             corIcone="#3D7BFF"
             icone={
@@ -279,7 +286,7 @@ export default function PainelVivoLogin({
             detalhe={t("PDF lido pela IA")}
           />
           <Notificacao
-            estilo={{ bottom: "16%", left: -26 }}
+            estilo={{ bottom: "16%", left: -10 }}
             anim="gcFloat 7.5s ease-in-out -1.2s infinite"
             corIcone="#1F9E5A"
             icone={<path d="M5 12l5 5L20 6" />}
@@ -287,7 +294,7 @@ export default function PainelVivoLogin({
             detalhe={t("cachê em dia")}
           />
           <Notificacao
-            estilo={{ bottom: -16, right: -14 }}
+            estilo={{ bottom: -14, right: -6 }}
             anim="gcFloat 8s ease-in-out -4s infinite"
             corIcone="#3D7BFF"
             icone={
@@ -299,6 +306,7 @@ export default function PainelVivoLogin({
             titulo={t("Show confirmado")}
             detalhe={t("sábado · 22h")}
           />
+          </div>
           </div>
         </div>
       </div>
