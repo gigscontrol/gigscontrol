@@ -233,7 +233,10 @@ export default function PainelVivoLogin({
           igual em cima/embaixo (vermelho). */}
       <div className="flex flex-1 items-center justify-center py-10">
         <div className="flex min-h-[608px] w-full max-w-[560px] flex-col">
-          <div>
+          {/* copy — MESMA altura do bloco título+OAuth+divisor do form
+              (263px: do "Entrar na conta" até o "OU COM EMAIL"), pra que o
+              dashboard abaixo comece exatamente onde começa o card de e-mail */}
+          <div className="h-[263px] flex-none">
             <h2 className="font-display text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] xl:text-[38px]">
               {t("A operação da sua")}{" "}
               <span className="bg-grad-signal bg-clip-text text-transparent">
@@ -249,13 +252,12 @@ export default function PainelVivoLogin({
             </p>
           </div>
 
-          {/* dashboard + notificações — preenche o espaço abaixo da copy,
-              centralizado e ampliado (scale) pra equilibrar a coluna. Sem
-              margem: o flex-1 centraliza com folga igual em cima e embaixo. */}
+          {/* dashboard + notificações — preenche EXATAMENTE a faixa do card
+              de e-mail do form (do "OU COM EMAIL" ao rodapé do card) */}
           <div className="flex flex-1 items-center justify-center">
           <div
             className="relative w-full"
-            style={{ transform: "scale(1.12)", transformOrigin: "center" }}
+            style={{ transform: "scale(1.135)", transformOrigin: "center" }}
           >
           <MiniDashboard />
 
