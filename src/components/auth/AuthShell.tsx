@@ -27,12 +27,31 @@ export default function AuthShell({
   titulo,
   subtitulo,
   children,
+  painelEsquerdo,
 }: {
   titulo: string;
   subtitulo?: string;
   children: React.ReactNode;
+  /**
+   * Conteúdo customizado do painel de marca (desktop). Quando presente,
+   * substitui o painel padrão (gradiente + bullets) — usado pelo login
+   * (tela 07: mini-dashboard vivo). Signup e demais telas seguem no padrão.
+   */
+  painelEsquerdo?: React.ReactNode;
 }) {
   const t = useT();
+  if (painelEsquerdo) {
+    return (
+      <div className="min-h-screen bg-main text-primary lg:grid lg:grid-cols-[1.15fr_1fr]">
+        <aside className="relative hidden lg:flex flex-col overflow-hidden border-r border-border">
+          {painelEsquerdo}
+        </aside>
+        <LadoFormulario titulo={titulo} subtitulo={subtitulo}>
+          {children}
+        </LadoFormulario>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-main text-primary lg:grid lg:grid-cols-2">
       {/* ===== Painel de marca (desktop) ===== */}
@@ -77,47 +96,64 @@ export default function AuthShell({
         </p>
       </aside>
 
-      {/* ===== Lado do formulário ===== */}
-      <main className="relative flex flex-col">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
-          style={{
-            background:
-              "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
-          }}
-        />
-
-        {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
-        <div className="relative flex items-center justify-between px-6 h-16">
-          <Link href="/" className="lg:hidden">
-            <LogoGC size={26} variant="gradient" withWordmark />
-          </Link>
-          <div className="ml-auto flex items-center gap-3">
-            <LanguageSwitcher />
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
-            >
-              <ArrowLeft size={13} />
-              {t("Voltar ao site")}
-            </Link>
-          </div>
-        </div>
-
-        {/* Conteúdo (form) */}
-        <div className="relative flex-1 flex items-center justify-center px-6 py-10">
-          <div className="w-full max-w-[400px]">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
-              {subtitulo && (
-                <p className="mt-1.5 text-sm text-secondary">{subtitulo}</p>
-              )}
-            </div>
-            {children}
-          </div>
-        </div>
-      </main>
+      <LadoFormulario titulo={titulo} subtitulo={subtitulo}>
+        {children}
+      </LadoFormulario>
     </div>
+  );
+}
+
+/** Lado do formulário — comum ao painel padrão e ao customizado. */
+function LadoFormulario({
+  titulo,
+  subtitulo,
+  children,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  children: React.ReactNode;
+}) {
+  const t = useT();
+  return (
+    <main className="relative flex flex-col">
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
+        style={{
+          background:
+            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
+        }}
+      />
+
+      {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
+      <div className="relative flex items-center justify-between px-6 h-16">
+        <Link href="/" className="lg:hidden">
+          <LogoGC size={26} variant="gradient" withWordmark />
+        </Link>
+        <div className="ml-auto flex items-center gap-3">
+          <LanguageSwitcher />
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
+          >
+            <ArrowLeft size={13} />
+            {t("Voltar ao site")}
+          </Link>
+        </div>
+      </div>
+
+      {/* Conteúdo (form) */}
+      <div className="relative flex-1 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-[400px]">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
+            {subtitulo && (
+              <p className="mt-1.5 text-sm text-secondary">{subtitulo}</p>
+            )}
+          </div>
+          {children}
+        </div>
+      </div>
+    </main>
   );
 }
