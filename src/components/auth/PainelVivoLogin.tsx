@@ -201,7 +201,12 @@ function MiniDashboard() {
   );
 }
 
-export default function PainelVivoLogin() {
+export default function PainelVivoLogin({
+  comNavExterna = false,
+}: {
+  /** Esconde o logo próprio quando a página já tem nav de topo (evita 2 logos). */
+  comNavExterna?: boolean;
+}) {
   const t = useT();
   return (
     <div
@@ -212,12 +217,15 @@ export default function PainelVivoLogin() {
       }}
     >
       {/* barra do logo — espelha a topbar (h-16) do lado do form pra alinhar
-          o eixo vertical das duas colunas. logo 30, leva pra página inicial */}
-      <div className="flex h-16 items-center">
-        <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
-          <LogoGC size={30} variant="gradient" withWordmark />
-        </Link>
-      </div>
+          o eixo vertical das duas colunas. logo 30, leva pra página inicial.
+          Escondida quando a nav externa já tem o logo. */}
+      {!comNavExterna && (
+        <div className="flex h-16 items-center">
+          <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
+            <LogoGC size={30} variant="gradient" withWordmark />
+          </Link>
+        </div>
+      )}
 
       {/* região central — mesma estrutura (flex-1 + py-10) da coluna do form.
           O bloco tem min-height igual à do card de login: título em cima,

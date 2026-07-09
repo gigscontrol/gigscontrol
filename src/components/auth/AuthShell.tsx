@@ -28,6 +28,7 @@ export default function AuthShell({
   subtitulo,
   children,
   painelEsquerdo,
+  comNavExterna = false,
 }: {
   titulo: string;
   subtitulo?: string;
@@ -38,15 +39,27 @@ export default function AuthShell({
    * (tela 07: mini-dashboard vivo). Signup e demais telas seguem no padrão.
    */
   painelEsquerdo?: React.ReactNode;
+  /**
+   * Quando a página já tem a nav de topo (LandingNav, ex.: /login): encolhe
+   * a altura pra caber abaixo dela (sem scroll) e esconde a topbar interna
+   * (idioma + "voltar"), que a nav externa já provê.
+   */
+  comNavExterna?: boolean;
 }) {
   const t = useT();
+  // Altura: página inteira, ou "menos a nav de topo" (72px) quando embutida.
+  const altura = comNavExterna ? "lg:min-h-[calc(100dvh-72px)]" : "min-h-screen";
   if (painelEsquerdo) {
     return (
-      <div className="min-h-screen bg-main text-primary lg:grid lg:grid-cols-[1.15fr_1fr]">
+      <div className={`${altura} bg-main text-primary lg:grid lg:grid-cols-[1.15fr_1fr]`}>
         <aside className="relative hidden lg:flex flex-col overflow-hidden border-r border-border">
           {painelEsquerdo}
         </aside>
-        <LadoFormulario titulo={titulo} subtitulo={subtitulo}>
+        <LadoFormulario
+          titulo={titulo}
+          subtitulo={subtitulo}
+          semTopbar={comNavExterna}
+        >
           {children}
         </LadoFormulario>
       </div>
@@ -108,10 +121,13 @@ function LadoFormulario({
   titulo,
   subtitulo,
   children,
+  semTopbar = false,
 }: {
   titulo: string;
   subtitulo?: string;
   children: React.ReactNode;
+  /** Esconde a topbar interna quando a página já tem nav de topo própria. */
+  semTopbar?: boolean;
 }) {
   const t = useT();
   return (
@@ -125,22 +141,25 @@ function LadoFormulario({
         }}
       />
 
-      {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
-      <div className="relative flex items-center justify-between px-6 h-16">
-        <Link href="/" className="lg:hidden">
-          <LogoGC size={26} variant="gradient" withWordmark />
-        </Link>
-        <div className="ml-auto flex items-center gap-3">
-          <LanguageSwitcher />
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
-          >
-            <ArrowLeft size={13} />
-            {t("Voltar ao site")}
+      {/* Topo: logo (mobile) + seletor de idioma + voltar ao site.
+          Escondido quando a nav externa já cobre isso (login com LandingNav). */}
+      {!semTopbar && (
+        <div className="relative flex items-center justify-between px-6 h-16">
+          <Link href="/" className="lg:hidden">
+            <LogoGC size={26} variant="gradient" withWordmark />
           </Link>
+          <div className="ml-auto flex items-center gap-3">
+            <LanguageSwitcher />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors"
+            >
+              <ArrowLeft size={13} />
+              {t("Voltar ao site")}
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Conteúdo (form) */}
       <div className="relative flex-1 flex items-center justify-center px-6 py-10">
