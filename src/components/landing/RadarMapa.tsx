@@ -104,7 +104,7 @@ export default function RadarMapa({ pais }: { pais: string }) {
 
   return (
     <section
-      className="grid gap-6 border-t border-[rgba(255,255,255,.06)] px-6 pb-[54px] pt-12 sm:px-12 lg:grid-cols-[1fr_1.05fr]"
+      className="grid scroll-mt-[72px] items-center gap-6 border-t border-[rgba(255,255,255,.06)] px-6 pb-[54px] pt-12 sm:px-12 lg:min-h-dvh lg:grid-cols-[1fr_1.05fr] lg:py-6"
       style={{
         background:
           "radial-gradient(60% 80% at 22% 40%, rgba(61,123,255,.08), rgba(11,13,18,0) 60%)",

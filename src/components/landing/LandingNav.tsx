@@ -47,12 +47,17 @@ export default function LandingNav() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-30 border-b border-[rgba(255,255,255,.05)] bg-[rgba(11,13,18,.85)] backdrop-blur-xl">
-      <div className="grid items-center gap-4 px-6 py-3 sm:px-6 lg:grid-cols-[1fr_auto_1fr]">
-        {/* logo */}
-        <Link href="/" className="w-fit">
-          <LogoGC size={21} variant="gradient" withWordmark />
-        </Link>
+    <nav className="sticky top-0 z-30 h-[72px] border-b border-[rgba(255,255,255,.05)] bg-[rgba(11,13,18,.85)] backdrop-blur-xl">
+      <div className="grid h-full items-center gap-4 px-6 sm:px-6 lg:grid-cols-[1fr_auto_1fr]">
+        {/* logo — clicar volta pro topo, como se tivesse acabado de entrar */}
+        <a
+          href="#inicio"
+          className="w-fit"
+          onClick={() => setAtivo("inicio")}
+          aria-label="Gigs Control — início"
+        >
+          <LogoGC size={30} variant="gradient" withWordmark />
+        </a>
 
         {/* links centrados (desktop) */}
         <div className="hidden items-center gap-[26px] lg:flex">

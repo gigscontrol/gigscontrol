@@ -288,7 +288,7 @@ export default function HeroSidebarViva() {
   return (
     <section
       id="inicio"
-      className="grid gap-6 px-6 pb-[58px] pt-[54px] sm:px-12 lg:grid-cols-[1fr_1.05fr]"
+      className="grid items-center gap-6 px-6 pb-[58px] pt-[54px] sm:px-12 lg:min-h-[calc(100dvh-72px)] lg:grid-cols-[1fr_1.05fr] lg:py-6"
       style={{
         background:
           "radial-gradient(70% 90% at 22% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",

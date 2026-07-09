@@ -88,7 +88,7 @@ export default function SolucoesGrid() {
   return (
     <section
       id="solucoes"
-      className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12"
+      className="flex scroll-mt-[72px] flex-col justify-center border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12 lg:min-h-dvh lg:py-10"
     >
       <div className="mb-3 text-center font-mono text-[10px] font-semibold tracking-[.24em] text-[#5B93FF]">
         {t("MÓDULOS")}

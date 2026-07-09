@@ -211,12 +211,14 @@ export default function PainelVivoLogin() {
           "radial-gradient(130% 90% at 10% 0%, rgba(61,123,255,.12), rgba(11,13,18,0) 55%)",
       }}
     >
-      <Link href="/" className="w-fit">
-        <LogoGC size={24} variant="gradient" withWordmark />
+      {/* logo igual ao da landing (nav): tamanho 30, leva pra página inicial */}
+      <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
+        <LogoGC size={30} variant="gradient" withWordmark />
       </Link>
 
-      <div>
-        <h2 className="font-display text-3xl font-extrabold leading-[1.08] tracking-[-0.03em]">
+      {/* bloco central — centralizado e proporcional ao lado do form */}
+      <div className="mx-auto w-full max-w-[560px]">
+        <h2 className="font-display text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] xl:text-[38px]">
           {t("A operação da sua")}{" "}
           <span className="bg-grad-signal bg-clip-text text-transparent">
             {t("agência musical")}
@@ -224,14 +226,14 @@ export default function PainelVivoLogin() {
           <br />
           {t("em um só lugar")}
         </h2>
-        <p className="mt-2.5 max-w-[400px] text-[13.5px] leading-[1.55] text-secondary">
+        <p className="mt-3 max-w-[460px] text-[15px] leading-[1.55] text-secondary">
           {t(
             "Entre e acompanhe shows, orçamentos, contratos e cachês em tempo real."
           )}
         </p>
 
         {/* mini-dashboard + notificações flutuando */}
-        <div className="relative mt-[30px] max-w-[460px]">
+        <div className="relative mt-9 w-full">
           <MiniDashboard />
 
           <Notificacao
@@ -284,7 +286,7 @@ export default function PainelVivoLogin() {
         </div>
       </div>
 
-      <div className="mt-[26px] font-mono text-[10px] text-[#4E545E]">
+      <div className="mx-auto mt-[26px] w-full max-w-[560px] font-mono text-[10px] text-[#4E545E]">
         © {new Date().getFullYear()} GIGS CONTROL — {t("GESTÃO PARA A MÚSICA")}
       </div>
     </div>
