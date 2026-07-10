@@ -222,27 +222,31 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
           "radial-gradient(70% 90% at 78% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",
       }}
     >
-      {/* copy — desliza da esquerda ao entrar no viewport */}
-      <div className="gcrv-l flex flex-col justify-center gap-[22px]">
-        <BadgeSecao>{t("02 · Se organiza pra vender")}</BadgeSecao>
-        <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
-          {t("Uma agenda")} <Grad>{t("inteligente")}</Grad>
-          <br />
-          {t("para quem vive de eventos.")}
-        </h2>
-        <p className="max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base">
-          {t(
-            "Crie, acompanhe e organize shows, negociações, envios de propostas, contratos e compromissos em um calendário completo. Tudo organizado para que nenhuma oportunidade passe despercebida."
-          )}
-        </p>
-        <CtasSecao />
-        <ChecksSecao
-          itens={[
-            "Agenda inteligente e completa",
-            "Orçamentos e vendas em um só lugar",
-            "Financeiro detalhado em tempo real",
-          ]}
-        />
+      {/* copy — desliza da esquerda ao entrar no viewport. Como aqui a copy
+          é a coluna ESQUERDA, o bloco encosta no CENTRO (ml-auto), espelhando
+          o recuo do 01/03 — e não fica grudado na borda da página. */}
+      <div className="gcrv-l flex flex-col justify-center">
+        <div className="flex flex-col gap-[22px] lg:ml-auto lg:w-fit">
+          <BadgeSecao>{t("02 · Se organiza pra vender")}</BadgeSecao>
+          <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
+            {t("Uma agenda")} <Grad>{t("inteligente")}</Grad>
+            <br />
+            {t("para quem vive de eventos.")}
+          </h2>
+          <p className="max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base">
+            {t(
+              "Crie, acompanhe e organize shows, negociações, envios de propostas, contratos e compromissos em um calendário completo. Tudo organizado para que nenhuma oportunidade passe despercebida."
+            )}
+          </p>
+          <CtasSecao />
+          <ChecksSecao
+            itens={[
+              "Agenda inteligente e completa",
+              "Orçamentos e vendas em um só lugar",
+              "Financeiro detalhado em tempo real",
+            ]}
+          />
+        </div>
       </div>
 
       {/* calendário + popups — desliza da direita ao entrar no viewport */}
