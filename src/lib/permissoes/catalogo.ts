@@ -102,6 +102,8 @@ export const CATALOGO: Permissao[] = [
   { chave: "contatos.criar", modulo: "contatos", nivel: "artista", label: "Criar contato", existe: true },
   { chave: "contatos.editar", modulo: "contatos", nivel: "artista", label: "Editar contato", existe: true },
   { chave: "contatos.excluir", modulo: "contatos", nivel: "artista", label: "Excluir contato", existe: true },
+  // Sem rota implementada ainda (achado só referência na página de Privacidade,
+  // texto de política — não há endpoint de exportação real). Slot futuro.
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },
 
   // ---------------- AGÊNCIA (workspace — administrativo, NÃO por-artista) ----------------
@@ -116,6 +118,21 @@ export const CATALOGO: Permissao[] = [
   { chave: "agencia.criar_perfil", modulo: "agencia", nivel: "workspace", label: "Criar perfis", existe: false },
   { chave: "agencia.editar_perfil", modulo: "agencia", nivel: "workspace", label: "Editar perfis", existe: false },
   { chave: "agencia.config_agencia", modulo: "agencia", nivel: "workspace", label: "Configurações da agência", existe: true },
+
+  // ---------------- AGÊNCIA — slots futuros (workspace) ----------------
+  // Anotações HOJE não passa pelo catálogo: é um flag dedicado e binário
+  // (profiles.pode_criar_anotacoes / sessao.podeCriarAnotacoes, ligado na
+  // AbaEquipe — ver src/lib/api/permissoes.ts:podeCriarPastaAnotacao). Marcado
+  // existe:false de propósito: não há enforcement por CHAVE do catálogo, então
+  // "existe:true" aqui seria uma promessa falsa. Se um dia migrar pro modelo de
+  // vínculo, esta chave assume o papel do flag.
+  { chave: "agencia.criar_pastas_anotacoes", modulo: "agencia", nivel: "workspace", label: "Criar pastas de anotações (hoje é o toggle \"Liberar anotações\" da Equipe)", existe: false },
+  // Lixeira e Histórico/auditoria HOJE são admin-only hard-coded (papel ===
+  // "admin"/isSuperAdmin), sem checagem de chave — ver src/app/api/lixeira/route.ts
+  // (verificarAdminDoWorkspace) e src/app/api/historico/route.ts. Não há
+  // enforcement por catálogo pra delegar a outro papel → slots futuros.
+  { chave: "agencia.ver_lixeira", modulo: "agencia", nivel: "workspace", label: "Ver e restaurar itens da lixeira", existe: false },
+  { chave: "agencia.ver_historico", modulo: "agencia", nivel: "workspace", label: "Ver o histórico/auditoria do workspace", existe: false },
 ];
 
 /** Set de todas as chaves válidas (validação rápida). */
