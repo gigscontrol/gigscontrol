@@ -408,6 +408,8 @@ function Etapa1Cadastro({
       ? digs.slice(paisCountry.ddi.length)
       : digs;
   });
+  const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -473,6 +475,7 @@ function Etapa1Cadastro({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           whatsapp: telefone,
+          cor_acento: cor,
           cidade_ibge_id: cidade.ibgeId ?? "",
           cidade_nome: cidade.nome,
           cidade_uf: cidade.uf,
@@ -575,6 +578,14 @@ function Etapa1Cadastro({
             onChange={setTelDigits}
           />
         </label>
+
+        <CampoCor
+          cor={cor}
+          onChange={setCor}
+          aberto={colorPickerOpen}
+          setAberto={setColorPickerOpen}
+          label={t("Cor de identificação")}
+        />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
@@ -863,8 +874,6 @@ function Etapa3Agencia({
     "idle" | "checando" | "ok" | "em-uso" | "invalido"
   >(slugAtual ? "ok" : "idle");
   const [slugMsg, setSlugMsg] = useState<string | null>(null);
-  const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -937,17 +946,6 @@ function Etapa3Agencia({
           const b = await rs.json().catch(() => ({}));
           throw new Error((b.erro as string) ?? "Falha ao definir username.");
         }
-      }
-      // 2. Cor de preferência
-      const r = await fetch("/api/workspace", {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cor_acento: cor }),
-      });
-      if (!r.ok) {
-        const b = await r.json().catch(() => ({}));
-        throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
       }
       await onRecarregar();
       onAvancar();
@@ -1023,9 +1021,6 @@ function Etapa3Agencia({
           </span>
         </label>
 
-        {/* Cor */}
-        <CampoCor cor={cor} onChange={setCor} aberto={colorPickerOpen} setAberto={setColorPickerOpen} />
-
         {erro && (
           <div
             className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
@@ -1073,17 +1068,19 @@ function CampoCor({
   onChange,
   aberto,
   setAberto,
+  label,
 }: {
   cor: string;
   onChange: (c: string) => void;
   aberto: boolean;
   setAberto: (v: boolean) => void;
+  label?: string;
 }) {
   const t = useT();
   const ref = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex flex-col gap-1.5 relative">
-      <span className="text-xs font-medium text-secondary">{t("Cor de preferência")}</span>
+      <span className="text-xs font-medium text-secondary">{label ?? t("Cor de preferência")}</span>
       <button
         ref={ref}
         type="button"
