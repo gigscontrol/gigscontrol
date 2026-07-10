@@ -298,9 +298,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        const s = await montarSessao(data.user.id);
+        let s = await montarSessao(data.user.id);
         if (!s) {
-          // Usuário existe no Auth mas não tem profile no banco
+          // Auto-cura: conta confirmada no Auth mas sem profile — o callback
+          // de confirmação de e-mail não chegou a criar o workspace/profile.
+          // Recria a partir do user_metadata do signup e tenta montar de novo.
+          try {
+            const rep = await fetch("/api/auth/reparar-perfil", {
+              method: "POST",
+              credentials: "include",
+            });
+            if (rep.ok) s = await montarSessao(data.user.id);
+          } catch {
+            // rede/erro — cai no tratamento de "sem perfil" abaixo
+          }
+        }
+        if (!s) {
+          // Usuário existe no Auth mas não tem profile (e o reparo não resolveu)
           await supabase.auth.signOut();
           return {
             ok: false,
