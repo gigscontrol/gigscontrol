@@ -1223,7 +1223,7 @@ type DadosContaUsuario = {
   senhaPadraoValor: string | null;
 };
 
-function ModalUsuario({
+export function ModalUsuario({
   modo,
   inicial,
   slugAgencia,
@@ -1231,12 +1231,18 @@ function ModalUsuario({
   onCriar,
   onEditar,
   onResetarSenha,
+  modoInline = false,
 }: {
   modo: "criar" | "editar";
   inicial?: UsuarioEquipe;
   /** Slug da agência — usado pra montar o handle "raiz-slug" na criação. */
   slugAgencia: string;
   onFechar: () => void;
+  /**
+   * Inline (sem wrapper de Modal) — pro onboarding embedar o form completo
+   * na etapa da equipe, igual a etapa do artista faz com ModalNovoArtista.
+   */
+  modoInline?: boolean;
   onCriar: (dados: {
     nome: string;
     username_raiz: string;
@@ -1398,13 +1404,7 @@ function ModalUsuario({
     }
   }
 
-  return (
-    <Modal
-      isOpen
-      onClose={onFechar}
-      title={modo === "criar" ? t("Criar usuário") : t("Editar usuário")}
-      maxWidth={520}
-    >
+  const conteudo = (
       <div className="flex flex-col gap-4">
         {modo === "criar" ? (
           <>
@@ -1727,14 +1727,38 @@ function ModalUsuario({
         )}
 
         <div className="flex justify-end gap-2 pt-2 border-t border-border">
-          <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
-            {t("Cancelar")}
-          </button>
-          <button onClick={salvar} className="btn btn-primary" disabled={salvando}>
-            {salvando ? t("Salvando...") : (<><Check size={14} /> {t("Salvar")}</>)}
+          {!modoInline && (
+            <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
+              {t("Cancelar")}
+            </button>
+          )}
+          <button
+            onClick={salvar}
+            className={`btn btn-primary ${modoInline ? "flex-1 justify-center" : ""}`}
+            disabled={salvando}
+          >
+            {salvando ? (
+              t("Salvando...")
+            ) : (
+              <>
+                <Check size={14} />{" "}
+                {modoInline && modo === "criar" ? t("Convidar") : t("Salvar")}
+              </>
+            )}
           </button>
         </div>
       </div>
+  );
+
+  if (modoInline) return conteudo;
+  return (
+    <Modal
+      isOpen
+      onClose={onFechar}
+      title={modo === "criar" ? t("Criar usuário") : t("Editar usuário")}
+      maxWidth={520}
+    >
+      {conteudo}
     </Modal>
   );
 }

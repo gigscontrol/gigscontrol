@@ -36,6 +36,7 @@ import {
   ModalCredenciais,
   SeletorDeCor,
 } from "@/components/configuracoes/AbaArtistas";
+import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT, useMoeda } from "@/lib/i18n";
 import { TRIAL_ATIVADO } from "@/lib/flags";
@@ -1132,59 +1133,7 @@ function Etapa5Equipe({
   // Lê o slug do status (fresco a cada onRecarregar) — mesma razão da
   // Etapa 4: useAuth().sessao.workspace.slug fica stale após a Etapa 3.
   const slug = status.identidade.slug ?? "";
-  const [nome, setNome] = useState("");
-  // Login (handle) — raiz digitada; auto-sugere a partir do nome.
-  const [usernameRaiz, setUsernameRaiz] = useState("");
-  const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ senha: string; login: string } | null>(null);
-
-  const usernameCompleto = usernameRaiz.trim()
-    ? `${usernameRaiz.trim().toLowerCase()}-${slug}`
-    : "";
-  const usernameValido =
-    usernameRaiz.trim().length >= 3 &&
-    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(usernameRaiz.trim());
-
-  // Auto-sugere o login a partir do nome até o admin tocar no campo.
-  useEffect(() => {
-    if (usernameFoiEditado) return;
-    setUsernameRaiz(
-      nome
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-    );
-  }, [nome, usernameFoiEditado]);
-
-  async function salvar() {
-    setErro(null);
-    if (!nome.trim()) return setErro(t("Informe o nome."));
-    if (!usernameValido)
-      return setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
-    setSalvando(true);
-    try {
-      const r = await adicionarUsuario({
-        nome: nome.trim(),
-        username_raiz: usernameRaiz.trim().toLowerCase(),
-        // Onboarding cria só o acesso; artistas/permissões se definem na Equipe.
-        artistIds: [],
-      });
-      setResultado({
-        senha: r.senhaTemporaria,
-        login: r.usuario.username ?? usernameCompleto,
-      });
-      await onRecarregar();
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvando(false);
-    }
-  }
 
   return (
     <div>
@@ -1195,8 +1144,8 @@ function Etapa5Equipe({
           style={{ color: "var(--brand)" }}
         />
         <h2 className="text-xl font-bold tracking-tight">{t("Convide a equipe")}</h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Crie o acesso de quem vai te ajudar a tocar a agência. As permissões você define depois, por artista. Pode pular se ainda tá começando sozinho.")}
+        <p className="mt-1 text-sm text-secondary max-w-md mx-auto">
+          {t("Cadastre quem vai te ajudar a tocar a agência — o acesso é criado na hora. As permissões você define depois, por artista. Pode pular se ainda tá começando sozinho.")}
         </p>
       </div>
 
@@ -1227,89 +1176,36 @@ function Etapa5Equipe({
           </button>
         </div>
       ) : (
-        <div className="card flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{t("Nome completo")}</span>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Marina Souza"
-              className="campo-input"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{t("Login (username)")}</span>
-            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              <input
-                value={usernameRaiz}
-                onChange={(e) => {
-                  setUsernameFoiEditado(true);
-                  setUsernameRaiz(
-                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                  );
-                }}
-                placeholder="marinasouza"
-                style={{
-                  width: `${Math.max(
-                    usernameRaiz.length || "marinasouza".length,
-                    4
-                  )}ch`,
-                }}
-                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
-              />
-              <span className="text-sm text-muted font-mono whitespace-nowrap">
-                -{slug || "agencia"}
-              </span>
-            </div>
-            {usernameCompleto && !usernameValido && (
-              <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
-                {t("Use 3+ caracteres (letras, números, hífen).")}
-              </span>
-            )}
-            {usernameValido && usernameCompleto && (
-              <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
-                {t("Login completo:")}{" "}
-                <strong className="font-mono text-primary">{usernameCompleto}</strong>
-              </span>
-            )}
-          </label>
-
-          <p className="text-[0.7rem] text-muted">
-            {t("Isto cria só o acesso (login + senha). Você define o que essa pessoa pode ver e fazer depois, na aba Equipe de cada artista.")}
-          </p>
-
-          {erro && (
-            <div
-              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
-              style={{
-                backgroundColor: "rgba(239,68,68,0.08)",
-                color: "var(--danger)",
-                border: "1px solid rgba(239,68,68,0.3)",
+        <>
+          {/* Form COMPLETO da equipe — reusa o ModalUsuario da dashboard
+              inline (igual a Etapa do Artista faz com ModalNovoArtista),
+              pra o membro nascer com apelido/país/nascimento/documento/
+              e-mail/telefone/cor + login + artistas, idêntico ao "Criar
+              usuário". A criação e as credenciais são tratadas aqui. */}
+          <div className="card">
+            <ModalUsuario
+              modoInline
+              modo="criar"
+              slugAgencia={slug}
+              onFechar={() => {}}
+              onEditar={() => {}}
+              onCriar={async (dados) => {
+                const r = await adicionarUsuario(dados);
+                setResultado({
+                  senha: r.senhaTemporaria,
+                  login: r.usuario.username ?? "",
+                });
+                await onRecarregar();
               }}
-            >
-              <AlertTriangle size={12} />
-              {erro}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={salvar}
-              disabled={salvando}
-              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-            >
-              {salvando ? t("Convidando...") : t("Convidar")}
-            </button>
-            <button
-              onClick={onAvancar}
-              className="text-xs text-muted hover:text-secondary"
-            >
-              {t("Pular e finalizar")}
-            </button>
+            />
           </div>
-        </div>
+          <button
+            onClick={onAvancar}
+            className="text-xs text-muted hover:text-secondary block mx-auto mt-3"
+          >
+            {t("Pular e finalizar")}
+          </button>
+        </>
       )}
     </div>
   );
