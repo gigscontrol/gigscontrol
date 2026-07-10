@@ -59,6 +59,10 @@ export type NovoArtistaInput = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  /** Data de nascimento (YYYY-MM-DD). */
+  dataNascimento?: string;
+  /** E-mail de contato do artista. */
+  email?: string;
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
@@ -483,6 +487,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.razaoSocial) payload.razao_social = input.razaoSocial;
       if (input.endereco) payload.endereco = input.endereco;
       if (input.telefone) payload.telefone = input.telefone;
+      if (input.dataNascimento) payload.data_nascimento = input.dataNascimento;
+      if (input.email) payload.email = input.email;
       if (input.taxaModo) payload.taxa_modo = input.taxaModo;
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
