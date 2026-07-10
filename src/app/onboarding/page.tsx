@@ -134,6 +134,9 @@ function OnboardingInner() {
   const [carregando, setCarregando] = useState(true);
   const [etapa, setEtapa] = useState(1);
   const [finalizando, setFinalizando] = useState(false);
+  // Erro vindo do POST de conclusão (402 = falta plano, 409 = falta artista).
+  // O servidor é a fonte da verdade; aqui só exibimos e mandamos pra etapa certa.
+  const [erroConclusao, setErroConclusao] = useState<string | null>(null);
 
   /**
    * Refetcha o status. Por padrão NÃO toggla `carregando`, pra não
@@ -171,13 +174,27 @@ function OnboardingInner() {
   async function concluir() {
     if (finalizando) return;
     setFinalizando(true);
+    setErroConclusao(null);
     try {
-      await fetch("/api/workspace/onboarding", {
+      const r = await fetch("/api/workspace/onboarding", {
         method: "POST",
         credentials: "include",
       });
+      if (!r.ok) {
+        // Servidor barrou: 402 = falta plano/pagamento, 409 = falta artista.
+        // Mostra o motivo e volta pra etapa que resolve.
+        const b = (await r.json().catch(() => ({}))) as { erro?: string };
+        setErroConclusao(
+          b.erro ?? t("Não foi possível finalizar. Verifique as etapas.")
+        );
+        if (r.status === 402) setEtapa(2);
+        else if (r.status === 409) setEtapa(3);
+        setFinalizando(false);
+        return;
+      }
       router.replace("/app");
     } catch {
+      setErroConclusao(t("Falha de conexão. Tente novamente."));
       setFinalizando(false);
     }
   }
@@ -229,13 +246,6 @@ function OnboardingInner() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <button
-              onClick={concluir}
-              disabled={finalizando}
-              className="text-xs text-muted hover:text-secondary transition-colors disabled:opacity-50"
-            >
-              {t("Pular tudo")}
-            </button>
           </div>
         </div>
       </nav>
@@ -284,6 +294,20 @@ function OnboardingInner() {
               />
             )}
           </div>
+
+          {/* Erro de conclusão (barrado pelo servidor: falta plano/artista) */}
+          {erroConclusao && (
+            <div
+              className="mt-4 flex items-center gap-2 text-xs rounded-md px-3 py-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertTriangle size={12} /> {erroConclusao}
+            </div>
+          )}
 
           {/* Navegação inferior */}
           <div className="mt-6 flex justify-between items-center">
