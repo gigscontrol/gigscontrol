@@ -67,6 +67,7 @@ function SignupInner() {
   const [nomeAgencia, setNomeAgencia] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -126,6 +127,9 @@ function SignupInner() {
     const avalSenha = avaliarSenha(senha);
     if (!avalSenha.podeUsar) {
       return setErro(avalSenha.motivos[0] ?? t("Escolha uma senha mais segura."));
+    }
+    if (senha !== confirmarSenha) {
+      return setErro(t("As senhas não coincidem."));
     }
     if (!aceitouTermos) return setErro(t("Você precisa aceitar os Termos de Uso."));
 
@@ -207,6 +211,8 @@ function SignupInner() {
         emailStatus={emailStatus}
         senha={senha}
         setSenha={setSenha}
+        confirmarSenha={confirmarSenha}
+        setConfirmarSenha={setConfirmarSenha}
         aceitouTermos={aceitouTermos}
         setAceitouTermos={setAceitouTermos}
         erro={erro}
@@ -231,6 +237,8 @@ function FormCadastro({
   emailStatus,
   senha,
   setSenha,
+  confirmarSenha,
+  setConfirmarSenha,
   aceitouTermos,
   setAceitouTermos,
   erro,
@@ -246,6 +254,8 @@ function FormCadastro({
   emailStatus: "idle" | "invalido" | "checando" | "em-uso" | "ok";
   senha: string;
   setSenha: (v: string) => void;
+  confirmarSenha: string;
+  setConfirmarSenha: (v: string) => void;
   aceitouTermos: boolean;
   setAceitouTermos: (v: boolean) => void;
   erro: string | null;
@@ -256,6 +266,8 @@ function FormCadastro({
   const podeEnviar =
     emailStatus === "ok" &&
     avaliarSenha(senha).podeUsar &&
+    senha === confirmarSenha &&
+    confirmarSenha.length > 0 &&
     aceitouTermos &&
     nome.trim().length > 0 &&
     nomeAgencia.trim().length > 0 &&
@@ -307,6 +319,24 @@ function FormCadastro({
           onChange={setSenha}
           autoComplete="new-password"
         />
+        <div className="flex flex-col gap-1.5">
+          <CampoSenha
+            label={t("Confirmar senha")}
+            value={confirmarSenha}
+            onChange={setConfirmarSenha}
+            autoComplete="new-password"
+            mostrarForca={false}
+          />
+          {confirmarSenha.length > 0 && senha !== confirmarSenha && (
+            <span
+              className="text-[0.7rem] flex items-center gap-1"
+              style={{ color: "var(--danger)" }}
+            >
+              <AlertCircle size={11} />
+              {t("As senhas não coincidem.")}
+            </span>
+          )}
+        </div>
 
         <label className="flex items-start gap-2 text-xs text-secondary cursor-pointer mt-1">
           <input

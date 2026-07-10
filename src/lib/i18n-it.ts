@@ -1792,6 +1792,7 @@ export const IT: Record<string, string> = {
   "Criar conta": "Crea account",
   "7 dias grátis. Sem cartão de crédito.": "7 giorni gratis. Nessuna carta di credito.",
   "Crie sua conta e comece a organizar sua agência.": "Crea il tuo account e inizia a organizzare la tua agenzia.",
+  "Confirmar senha": "Conferma password",
   "Cadastrar com": "Registrati con",
   "Seu nome": "Il tuo nome",
   "João da Silva": "João da Silva",
