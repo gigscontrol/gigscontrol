@@ -5,7 +5,9 @@ import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";
-const TITULO = "GIGS CONTROL — Gestão para a música";
+// Título da aba do navegador — só a marca, limpo. (A descrição rica abaixo
+// segue cobrindo SEO/social.)
+const TITULO = "Gigs Control";
 const DESCRICAO =
   "CRM e gestão completa para DJs, cantores, MCs e agências musicais. Agenda, orçamentos, vendas e financeiro em um só lugar.";
 
