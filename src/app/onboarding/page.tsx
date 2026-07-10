@@ -369,6 +369,25 @@ function Stepper({ etapaAtual }: { etapaAtual: number }) {
 // ============================================================
 // Etapa 1 — Bem-vindo
 // ============================================================
+// Data de nascimento: no BR o input nativo depende do locale do navegador, então
+// pra garantir DD/MM/AAAA usamos um input de texto mascarado só no BR.
+function mascararDataBR(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  let out = d.slice(0, 2);
+  if (d.length >= 3) out += "/" + d.slice(2, 4);
+  if (d.length >= 5) out += "/" + d.slice(4, 8);
+  return out;
+}
+function brParaIso(display: string): string {
+  const d = display.replace(/\D/g, "");
+  if (d.length !== 8) return "";
+  return `${d.slice(4, 8)}-${d.slice(2, 4)}-${d.slice(0, 2)}`;
+}
+function isoParaBr(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
 function Etapa1Cadastro({
   status,
   onAvancar,
@@ -394,6 +413,9 @@ function Etapa1Cadastro({
   const [nomeAgencia, setNomeAgencia] = useState(id.nomeAgencia);
   const [nome, setNome] = useState(p.nome || "");
   const [nascimento, setNascimento] = useState<string>(p.dataNascimento ?? "");
+  const [nascimentoTxt, setNascimentoTxt] = useState<string>(() =>
+    isoParaBr(p.dataNascimento ?? "")
+  );
   const [doc, setDoc] = useState<string>(p.documento ?? "");
 
   // Telefone — unificado com o WhatsApp da agência.
@@ -524,33 +546,51 @@ function Etapa1Cadastro({
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            {t("Nome da agência")} <span className="text-danger">*</span>
-          </span>
-          <input
-            value={nomeAgencia}
-            onChange={(e) => setNomeAgencia(e.target.value)}
-            maxLength={40}
-            className={campo}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
             {t("Nome completo")} <span className="text-danger">*</span>
           </span>
           <input value={nome} onChange={(e) => setNome(e.target.value)} className={campo} />
         </label>
 
         <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
+          <input
+            value={p.email}
+            disabled
+            className="bg-main border border-border rounded-md px-3 py-2 text-sm text-muted cursor-not-allowed"
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("O e-mail é seu login e não pode ser alterado.")}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
             {t("Data de nascimento")} <span className="text-danger">*</span>
           </span>
-          <input
-            type="date"
-            value={nascimento}
-            onChange={(e) => setNascimento(e.target.value)}
-            className={campo}
-          />
+          {pais === "BR" ? (
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="DD/MM/AAAA"
+              value={nascimentoTxt}
+              onChange={(e) => {
+                const m = mascararDataBR(e.target.value);
+                setNascimentoTxt(m);
+                setNascimento(brParaIso(m));
+              }}
+              className={`${campo} placeholder:text-muted`}
+            />
+          ) : (
+            <input
+              type="date"
+              value={nascimento}
+              onChange={(e) => {
+                setNascimento(e.target.value);
+                setNascimentoTxt(isoParaBr(e.target.value));
+              }}
+              className={campo}
+            />
+          )}
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -577,19 +617,19 @@ function Etapa1Cadastro({
           />
         </label>
 
-        <SeletorDeCor cor={cor} onChange={setCor} />
-
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
-          <input
-            value={p.email}
-            disabled
-            className="bg-main border border-border rounded-md px-3 py-2 text-sm text-muted cursor-not-allowed"
-          />
-          <span className="text-[0.7rem] text-muted">
-            {t("O e-mail é seu login e não pode ser alterado.")}
+          <span className="text-xs font-medium text-secondary">
+            {t("Nome da agência")} <span className="text-danger">*</span>
           </span>
+          <input
+            value={nomeAgencia}
+            onChange={(e) => setNomeAgencia(e.target.value)}
+            maxLength={40}
+            className={campo}
+          />
         </label>
+
+        <SeletorDeCor cor={cor} onChange={setCor} />
 
         {erro && (
           <div
