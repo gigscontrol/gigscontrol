@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -13,7 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
-import type { PlanoId } from "@/lib/planos";
+import type { PlanoId, CicloCobranca } from "@/lib/planos";
+import { PLANOS, getPlano } from "@/lib/planos";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
 import CampoSenha from "@/components/CampoSenha";
@@ -34,11 +35,32 @@ import { TRIAL_ATIVADO } from "@/lib/flags";
  * em /auth/callback — que cria workspace + profile.
  */
 export default function SignupPage() {
+  // useSearchParams() exige um boundary <Suspense> no App Router, senão
+  // o build da Vercel quebra ("should be wrapped in a suspense boundary").
+  return (
+    <Suspense fallback={null}>
+      <SignupInner />
+    </Suspense>
+  );
+}
+
+function SignupInner() {
   const router = useRouter();
   const t = useT();
-  // Plano fixo no signup — o usuário escolhe de verdade na Etapa 2
-  // do /onboarding (com opção de trial grátis 7 dias).
-  const planoFixoInicial: PlanoId = "individual";
+  const searchParams = useSearchParams();
+
+  // Intenção de compra vinda da vitrine (/planos): plano + ciclo escolhidos.
+  // Validamos contra a lista oficial; ausente/inválido cai no fallback.
+  const planoParam = searchParams.get("plano");
+  const planoEscolhido: PlanoId = PLANOS.some((p) => p.id === planoParam)
+    ? (planoParam as PlanoId)
+    : "individual";
+  // Só mostra o cabeçalho de contexto quando veio um plano VÁLIDO na URL.
+  const temPlanoNaUrl = PLANOS.some((p) => p.id === planoParam);
+
+  const cicloParam = searchParams.get("ciclo");
+  const cicloEscolhido: CicloCobranca =
+    cicloParam === "anual" ? "anual" : "mensal";
 
   // Form
   const [nome, setNome] = useState("");
@@ -134,7 +156,8 @@ export default function SignupPage() {
           data: {
             nome: nome.trim(),
             nome_agencia: nomeAgencia.trim(),
-            plano_escolhido: planoFixoInicial,
+            plano_escolhido: planoEscolhido,
+            ciclo_escolhido: cicloEscolhido,
           },
         },
       });
@@ -157,6 +180,23 @@ export default function SignupPage() {
       titulo={t("Criar conta")}
       subtitulo={t(TRIAL_ATIVADO ? "7 dias grátis. Sem cartão de crédito." : "Crie sua conta e comece a organizar sua agência.")}
     >
+      {temPlanoNaUrl && (
+        <div className="card mb-3 flex items-center justify-between gap-2 py-2.5">
+          <span className="text-xs text-secondary">
+            {t("Você está assinando:")}{" "}
+            <strong className="text-primary">{getPlano(planoEscolhido).nome}</strong>
+            {" · "}
+            {cicloEscolhido === "anual" ? t("Anual") : t("Mensal")}
+          </span>
+          <Link
+            href="/planos"
+            className="text-xs text-muted hover:text-secondary underline transition-colors flex-shrink-0"
+          >
+            {t("trocar")}
+          </Link>
+        </div>
+      )}
+
       <FormCadastro
         nome={nome}
         setNome={setNome}

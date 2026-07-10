@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import BotoesOAuth from "@/components/BotoesOAuth";
@@ -15,7 +15,9 @@ import { useT } from "@/lib/i18n";
 export default function LoginPage() {
   return (
     <AuthProvider>
-      <LoginInner />
+      <Suspense fallback={null}>
+        <LoginInner />
+      </Suspense>
     </AuthProvider>
   );
 }
@@ -24,18 +26,28 @@ function LoginInner() {
   const router = useRouter();
   const t = useT();
   const { sessao, login } = useAuth();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
 
+  // ?next= só é aceito se for um path interno seguro (evita open-redirect)
+  const next = searchParams.get("next");
+  const destinoNext =
+    typeof next === "string" && next.startsWith("/") && !next.startsWith("//")
+      ? next
+      : null;
+
   // Se já está logado, vai direto pro destino certo
   useEffect(() => {
     if (sessao) {
-      router.replace(sessao.tipo === "super-admin" ? "/admin" : "/app");
+      router.replace(
+        sessao.tipo === "super-admin" ? "/admin" : destinoNext ?? "/app"
+      );
     }
-  }, [sessao, router]);
+  }, [sessao, router, destinoNext]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +56,9 @@ function LoginInner() {
     const res = await login(email, senha);
     setEnviando(false);
     if (res.ok) {
-      router.replace(res.tipo === "super-admin" ? "/admin" : "/app");
+      router.replace(
+        res.tipo === "super-admin" ? "/admin" : destinoNext ?? "/app"
+      );
     } else {
       setErro(res.erro ?? t("Não foi possível entrar."));
     }

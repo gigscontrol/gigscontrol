@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { PlanoId } from "@/lib/planos";
+import type { PlanoId, CicloCobranca } from "@/lib/planos";
 
 /**
  * Gera um slug a partir do nome (lowercase, sem acentos, só letras
@@ -45,6 +45,7 @@ export type DadosSignupMeta = {
   nome?: string;
   nome_agencia?: string;
   plano_escolhido?: PlanoId;
+  ciclo_escolhido?: CicloCobranca;
 };
 
 export type ResultadoSetup = {
@@ -86,6 +87,10 @@ export async function setupWorkspaceParaNovoUsuario(
       : user.email.split("@")[0];
   const planoId: PlanoId =
     (meta.plano_escolhido as PlanoId | undefined) ?? "individual";
+  // Ciclo escolhido na vitrine (mensal|anual). Valida o valor: só aceita
+  // "anual", senão cai em "mensal".
+  const cicloId: CicloCobranca =
+    (meta.ciclo_escolhido as CicloCobranca) === "anual" ? "anual" : "mensal";
 
   // 2. Gera slug único a partir do nome da agência (workspaces.slug é
   //    NOT NULL desde a migração 21). Se já estiver em uso, adiciona
@@ -102,7 +107,7 @@ export async function setupWorkspaceParaNovoUsuario(
       plano: planoId,
       slug,
       status: "trial",
-      ciclo: "mensal",
+      ciclo: cicloId,
     })
     .select("id")
     .single();
