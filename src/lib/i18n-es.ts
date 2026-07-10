@@ -1791,6 +1791,7 @@ export const ES: Record<string, string> = {
   "Não foi possível entrar.": "No se pudo iniciar sesión.",
   "Criar conta": "Crear cuenta",
   "7 dias grátis. Sem cartão de crédito.": "7 días gratis. Sin tarjeta de crédito.",
+  "Crie sua conta e comece a organizar sua agência.": "Crea tu cuenta y empieza a organizar tu agencia.",
   "Cadastrar com": "Registrarse con",
   "Seu nome": "Su nombre",
   "João da Silva": "Juan García",

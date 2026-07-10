@@ -19,6 +19,7 @@ import AuthShell from "@/components/auth/AuthShell";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
 import { useT } from "@/lib/i18n";
+import { TRIAL_ATIVADO } from "@/lib/flags";
 
 /**
  * Tela de cadastro (signup) — uma única etapa:
@@ -154,7 +155,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       titulo={t("Criar conta")}
-      subtitulo={t("7 dias grátis. Sem cartão de crédito.")}
+      subtitulo={t(TRIAL_ATIVADO ? "7 dias grátis. Sem cartão de crédito." : "Crie sua conta e comece a organizar sua agência.")}
     >
       <FormCadastro
         nome={nome}
