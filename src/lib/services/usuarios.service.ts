@@ -137,6 +137,8 @@ export async function criarUsuarioDaEquipe(
       razao_social: input.razao_social ?? null,
       endereco: input.endereco ?? null,
       telefone: input.telefone ?? null,
+      data_nascimento: input.data_nascimento ?? null,
+      email_contato: input.email_contato ?? null,
       cidade_id: input.cidade_id ?? null,
     });
 

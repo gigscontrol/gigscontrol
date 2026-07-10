@@ -258,6 +258,8 @@ export default function AbaEquipe() {
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) {
     try {
@@ -1247,6 +1249,8 @@ function ModalUsuario({
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) => void | Promise<void>;
   onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
@@ -1273,6 +1277,8 @@ function ModalUsuario({
   const [razaoSocial, setRazaoSocial] = useState("");
   const [endereco, setEndereco] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [emailContato, setEmailContato] = useState("");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1367,6 +1373,8 @@ function ModalUsuario({
           razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
           telefone: telefone.trim() || undefined,
           endereco: endereco.trim() || undefined,
+          data_nascimento: dataNascimento || undefined,
+          email_contato: emailContato.trim() || undefined,
           cidade_id: cidadeId,
         });
       } catch (e) {
@@ -1401,16 +1409,18 @@ function ModalUsuario({
         {modo === "criar" ? (
           <>
             <Secao titulo={t("Dados básicos")}>
-              <Campo label={t("Nome")}>
+              <Campo label={t("Apelido")}>
                 <input
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder={t("Nome completo")}
+                  placeholder={t("Como te chamam")}
                   className="campo-input"
                   autoFocus
                 />
+                <span className="text-[0.7rem] text-muted mt-1 block">
+                  {t("É o nome que aparece pros outros usuários da sua agência.")}
+                </span>
               </Campo>
-              <SeletorDeCor cor={cor} onChange={setCor} />
               <Campo label={t("País e cidade onde reside")}>
                 <CidadeGlobalAutocomplete
                   value={cidadeSel}
@@ -1437,8 +1447,24 @@ function ModalUsuario({
                 setEndereco={setEndereco}
                 telefone={telefone}
                 setTelefone={setTelefone}
+                dataNascimento={dataNascimento}
+                setDataNascimento={setDataNascimento}
+                email={emailContato}
+                setEmail={setEmailContato}
               />
             </Secao>
+
+            <SeletorDeCor cor={cor} onChange={setCor} />
+
+            {/* Tag visual do tipo de cadastro */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+                style={{ backgroundColor: "var(--brand)" }}
+              >
+                {t("Equipe")}
+              </span>
+            </div>
 
             <Secao titulo={t("Acesso ao sistema")}>
               <Campo label={t("Login (username)")}>

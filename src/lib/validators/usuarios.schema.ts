@@ -52,6 +52,11 @@ export const usuarioCreateSchema = z.object({
   razao_social: z.string().max(140).optional(),
   endereco: z.string().max(300).optional(),
   telefone: z.string().max(40).optional(),
+  data_nascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  email_contato: z.string().max(120).optional(),
   cidade_id: uuidLike.optional(),
 });
 export type UsuarioCreateInput = z.infer<typeof usuarioCreateSchema>;
