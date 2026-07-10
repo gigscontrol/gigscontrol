@@ -78,6 +78,7 @@ type Status = {
   };
   pessoa: {
     nome: string;
+    nomeLegal: string;
     email: string;
     emailVerificado: boolean;
     pais: string;
@@ -385,7 +386,8 @@ function Etapa1Cadastro({
       : null
   );
   const [nomeAgencia, setNomeAgencia] = useState(id.nomeAgencia);
-  const [nome, setNome] = useState(p.nome || "");
+  const [apelido, setApelido] = useState(p.nome || "");
+  const [nome, setNome] = useState(p.nomeLegal || "");
   const [nascimento, setNascimento] = useState<string>(p.dataNascimento ?? "");
   const [doc, setDoc] = useState<string>(p.documento ?? "");
 
@@ -473,6 +475,7 @@ function Etapa1Cadastro({
 
   async function salvar() {
     setErro(null);
+    if (!apelido.trim()) return setErro(t("Informe seu apelido."));
     if (!nome.trim()) return setErro(t("Informe seu nome completo."));
     if (!nomeAgencia.trim()) return setErro(t("Informe o nome da agência."));
     if (!cidade) return setErro(t("Informe a cidade."));
@@ -498,7 +501,8 @@ function Etapa1Cadastro({
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nome: nome.trim(),
+          nome: apelido.trim(),
+          nome_legal: nome.trim(),
           pais,
           documento_tipo: docTipo,
           documento: docNorm,
@@ -569,6 +573,21 @@ function Etapa1Cadastro({
       </div>
 
       <div className="card flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Apelido")} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={apelido}
+            onChange={(e) => setApelido(e.target.value)}
+            placeholder={t("Como te chamam")}
+            className={campo}
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("É o nome que aparece pros outros usuários da sua agência.")}
+          </span>
+        </label>
+
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
             {t("País e cidade")} <span className="text-danger">*</span>

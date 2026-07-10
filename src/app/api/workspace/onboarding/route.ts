@@ -101,11 +101,12 @@ export async function GET() {
     const { data: meuProfile } = await admin
       .from("profiles")
       .select(
-        "nome, email, pais, documento_tipo, documento, telefone, data_nascimento"
+        "nome, nome_legal, email, pais, documento_tipo, documento, telefone, data_nascimento"
       )
       .eq("id", r.sessao.userId)
       .maybeSingle<{
         nome: string | null;
+        nome_legal: string | null;
         email: string | null;
         pais: string | null;
         documento_tipo: string | null;
@@ -197,6 +198,7 @@ export async function GET() {
       },
       pessoa: {
         nome: meuProfile?.nome ?? "",
+        nomeLegal: meuProfile?.nome_legal ?? "",
         email: meuProfile?.email ?? "",
         emailVerificado,
         pais: meuProfile?.pais ?? "BR",

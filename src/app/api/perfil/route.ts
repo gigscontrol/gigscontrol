@@ -12,6 +12,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
  */
 const schema = z.object({
   nome: z.string().min(1).max(120).optional(),
+  nome_legal: z.string().max(120).nullable().optional(),
   pais: z.string().min(2).max(2).optional(),
   documento_tipo: z.string().max(20).nullable().optional(),
   documento: z.string().max(60).nullable().optional(),
