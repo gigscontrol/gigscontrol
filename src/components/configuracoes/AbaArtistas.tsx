@@ -46,6 +46,7 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
+import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
 import Modal from "../Modal";
@@ -1440,6 +1441,8 @@ export function ModalNovoArtista({
   const [razaoSocial, setRazaoSocial] = useState("");
   const [endereco, setEndereco] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [email, setEmail] = useState("");
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -1550,6 +1553,8 @@ export function ModalNovoArtista({
       input.nomeLegal = nomeLegal.trim();
       input.documento = documento.trim();
       input.documentoTipo = documentoTipo;
+      if (dataNascimento) input.dataNascimento = dataNascimento;
+      if (email.trim()) input.email = email.trim();
       if (documentoTipo === "cnpj" && razaoSocial.trim())
         input.razaoSocial = razaoSocial.trim();
       if (endereco.trim()) input.endereco = endereco.trim();
@@ -1658,6 +1663,10 @@ export function ModalNovoArtista({
             setEndereco={setEndereco}
             telefone={telefone}
             setTelefone={setTelefone}
+            dataNascimento={dataNascimento}
+            setDataNascimento={setDataNascimento}
+            email={email}
+            setEmail={setEmail}
           />
 
           {/* Seção 2 — Acesso ao sistema */}
@@ -4055,6 +4064,10 @@ export function CamposDadosContrato({
   setEndereco,
   telefone,
   setTelefone,
+  dataNascimento,
+  setDataNascimento,
+  email,
+  setEmail,
 }: {
   pais: Country;
   setPais: (v: Country) => void;
@@ -4070,6 +4083,11 @@ export function CamposDadosContrato({
   setEndereco: (v: string) => void;
   telefone: string;
   setTelefone: (v: string) => void;
+  /** Opcionais — só aparecem quando o setter é passado (form de artista). */
+  dataNascimento?: string;
+  setDataNascimento?: (v: string) => void;
+  email?: string;
+  setEmail?: (v: string) => void;
 }) {
   const t = useT();
   const isBR = pais.code === "BR";
@@ -4091,6 +4109,25 @@ export function CamposDadosContrato({
           className="campo-input"
         />
       </Campo>
+
+      {setDataNascimento && (
+        <Campo label={t("Data de nascimento")}>
+          {isBR ? (
+            <InputDataBR
+              value={dataNascimento ?? ""}
+              onChange={setDataNascimento}
+              className="campo-input"
+            />
+          ) : (
+            <input
+              type="date"
+              value={dataNascimento ?? ""}
+              onChange={(e) => setDataNascimento(e.target.value)}
+              className="campo-input"
+            />
+          )}
+        </Campo>
+      )}
 
       {isBR ? (
         <>
@@ -4134,6 +4171,18 @@ export function CamposDadosContrato({
       ) : (
         <Campo label={configDocumento(pais.code).label}>
           <InputDocumento pais={pais.code} value={documento} onChange={setDocumento} />
+        </Campo>
+      )}
+
+      {setEmail && (
+        <Campo label={t("E-mail")} className="md:col-span-2">
+          <input
+            type="email"
+            value={email ?? ""}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="contato@email.com"
+            className="campo-input"
+          />
         </Campo>
       )}
 
