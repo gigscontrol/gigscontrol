@@ -114,6 +114,12 @@ export async function GET() {
         data_nascimento: string | null;
       }>();
 
+    // E-mail verificado? (auth.users.email_confirmed_at)
+    const { data: authInfo } = await admin.auth.admin.getUserById(
+      r.sessao.userId
+    );
+    const emailVerificado = !!authInfo?.user?.email_confirmed_at;
+
     // Counts em paralelo
     const [{ count: nArtistas }, { count: nContratantes }, { count: nCasas }, { count: nEquipe }] =
       await Promise.all([
@@ -192,6 +198,7 @@ export async function GET() {
       pessoa: {
         nome: meuProfile?.nome ?? "",
         email: meuProfile?.email ?? "",
+        emailVerificado,
         pais: meuProfile?.pais ?? "BR",
         documentoTipo: meuProfile?.documento_tipo ?? null,
         documento: meuProfile?.documento ?? null,

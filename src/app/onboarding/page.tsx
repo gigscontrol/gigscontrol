@@ -79,6 +79,7 @@ type Status = {
   pessoa: {
     nome: string;
     email: string;
+    emailVerificado: boolean;
     pais: string;
     documentoTipo: string | null;
     documento: string | null;
@@ -531,18 +532,6 @@ function Etapa1Cadastro({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
-          <input
-            value={p.email}
-            disabled
-            className="bg-main border border-border rounded-md px-3 py-2 text-sm text-muted cursor-not-allowed"
-          />
-          <span className="text-[0.7rem] text-muted">
-            {t("O e-mail é seu login e não pode ser alterado.")}
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
             {t("Data de nascimento")} <span className="text-danger">*</span>
           </span>
@@ -568,6 +557,46 @@ function Etapa1Cadastro({
             placeholder={docCfg.placeholder}
             className={`${campo} placeholder:text-muted`}
           />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
+          <div
+            className="flex items-center gap-2 border rounded-md px-3 py-2"
+            style={{
+              backgroundColor: p.emailVerificado
+                ? "rgba(34,197,94,0.08)"
+                : "transparent",
+              borderColor: p.emailVerificado
+                ? "var(--success)"
+                : "var(--border-color)",
+            }}
+          >
+            <input
+              value={p.email}
+              disabled
+              className="flex-1 bg-transparent outline-none text-sm text-muted cursor-not-allowed"
+            />
+            {p.emailVerificado && (
+              <Check
+                size={14}
+                style={{ color: "var(--success)" }}
+                className="flex-shrink-0"
+              />
+            )}
+          </div>
+          {p.emailVerificado ? (
+            <span
+              className="text-[0.7rem]"
+              style={{ color: "var(--success)" }}
+            >
+              {t("E-mail verificado — é o seu login e não pode ser alterado.")}
+            </span>
+          ) : (
+            <span className="text-[0.7rem] text-muted">
+              {t("O e-mail é seu login e não pode ser alterado.")}
+            </span>
+          )}
         </label>
 
         <label className="flex flex-col gap-1.5">
