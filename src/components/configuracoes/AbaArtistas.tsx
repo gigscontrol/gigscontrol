@@ -46,6 +46,7 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
@@ -2960,35 +2961,19 @@ function ModalEditarArtista({
                 />
               </Campo>
 
-              {/* Linha 2: Tipo de documento | Endereço */}
-              <Campo label={t("Tipo de documento")}>
-                <ToggleTipoDocumento
-                  documentoTipo={documentoTipo}
-                  setDocumentoTipo={setDocumentoTipo}
+              {/* Linha 2: CPF / CNPJ (detecta pelo nº de dígitos) | Endereço */}
+              <Campo label={t("CPF / CNPJ")}>
+                <InputDocumentoBR
                   documento={documento}
                   setDocumento={setDocumento}
+                  setDocumentoTipo={setDocumentoTipo}
                 />
               </Campo>
               <Campo label={t("Endereço (opcional)")}>
                 <CamposEndereco value={endereco} onChange={setEndereco} />
               </Campo>
 
-              {/* Linha 3: número do CPF/CNPJ | Telefone */}
-              <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
-                <input
-                  value={documento}
-                  onChange={(e) =>
-                    setDocumento(mascararDocumento(e.target.value, documentoTipo))
-                  }
-                  inputMode="numeric"
-                  placeholder={
-                    documentoTipo === "cpf"
-                      ? "000.000.000-00"
-                      : "00.000.000/0000-00"
-                  }
-                  className="campo-input font-mono"
-                />
-              </Campo>
+              {/* Linha 3: Telefone */}
               <Campo label={t("Telefone (opcional)")}>
                 <input
                   value={telefone}
@@ -3000,7 +2985,7 @@ function ModalEditarArtista({
               </Campo>
 
               {/* Razão social — linha inteira, só quando CNPJ */}
-              {documentoTipo === "cnpj" && (
+              {tipoDocumentoPorDigitos(documento) === "cnpj" && (
                 <Campo
                   label={t("Razão social / Nome da empresa")}
                   className="md:col-span-2"
@@ -3933,31 +3918,46 @@ export function SeletorDeCor({
 
 // ---- Documento (CPF/CNPJ) + telefone: máscara e validação ----
 
-/** Formata CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) conforme digita. */
-function mascararDocumento(valor: string, tipo: DocumentoTipo): string {
-  const d = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
-  if (tipo === "cpf") {
-    if (d.length > 9)
-      return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-    if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-    if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
-    return d;
-  }
-  if (d.length > 12)
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(
-      8,
-      12
-    )}-${d.slice(12)}`;
-  if (d.length > 8)
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
-  return d;
-}
-
 /** Valida só a contagem de dígitos (11=CPF, 14=CNPJ) — não faz checksum. */
 function documentoValido(valor: string, tipo: DocumentoTipo): boolean {
   return valor.replace(/\D/g, "").length === (tipo === "cpf" ? 11 : 14);
+}
+
+/** Deriva o tipo por contagem de dígitos: 12+ dígitos = CNPJ, senão CPF. */
+export function tipoDocumentoPorDigitos(valor: string): DocumentoTipo {
+  return valor.replace(/\D/g, "").length > 11 ? "cnpj" : "cpf";
+}
+
+/**
+ * Campo ÚNICO de CPF/CNPJ (BR) — SEM seletor de tipo. Detecta pela
+ * quantidade de dígitos enquanto o usuário digita (11 = CPF, 14 = CNPJ) e
+ * formata conforme (mascararCpfCnpj). Sincroniza o `documentoTipo` no pai
+ * (o que dispara a razão social quando vira CNPJ).
+ */
+export function InputDocumentoBR({
+  documento,
+  setDocumento,
+  setDocumentoTipo,
+  className,
+}: {
+  documento: string;
+  setDocumento: (v: string) => void;
+  setDocumentoTipo?: (v: DocumentoTipo) => void;
+  className?: string;
+}) {
+  return (
+    <input
+      value={mascararCpfCnpj(documento)}
+      onChange={(e) => {
+        const masked = mascararCpfCnpj(e.target.value);
+        setDocumento(masked);
+        setDocumentoTipo?.(tipoDocumentoPorDigitos(masked));
+      }}
+      inputMode="numeric"
+      placeholder={"CPF ou CNPJ"}
+      className={className ?? "campo-input font-mono"}
+    />
+  );
 }
 
 /** Máscara leve de telefone BR: (11) 98888-7777. */
@@ -4045,37 +4045,6 @@ function CamposEndereco({
  * QUADRADOS (6px) pra acompanhar os outros campos (campo-input) — sem mexer
  * no `.pill` global (usado nos filtros). Trocar o tipo re-aplica a máscara.
  */
-function ToggleTipoDocumento({
-  documentoTipo,
-  setDocumentoTipo,
-  documento,
-  setDocumento,
-}: {
-  documentoTipo: DocumentoTipo;
-  setDocumentoTipo: (v: DocumentoTipo) => void;
-  documento: string;
-  setDocumento: (v: string) => void;
-}) {
-  const t = useT();
-  return (
-    <div className="pill-group !rounded-md">
-      {(["cpf", "cnpj"] as const).map((tipo) => (
-        <button
-          key={tipo}
-          type="button"
-          onClick={() => {
-            setDocumentoTipo(tipo);
-            setDocumento(mascararDocumento(documento, tipo));
-          }}
-          className={`pill !rounded-[4px] ${documentoTipo === tipo ? "active" : ""}`}
-        >
-          {tipo === "cpf" ? t("CPF (pessoa física)") : t("CNPJ (empresa)")}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /**
  * Campos do CONTRATADO (sem wrapper) — reusados na Seção (cadastro / edição
  * em modal) e no card do perfil editável inline. O `nome` do artista é o
@@ -4163,30 +4132,15 @@ export function CamposDadosContrato({
 
       {isBR ? (
         <>
-          <Campo label={t("Tipo de documento")}>
-            <ToggleTipoDocumento
-              documentoTipo={documentoTipo}
-              setDocumentoTipo={setDocumentoTipo}
+          <Campo label={t("CPF / CNPJ")}>
+            <InputDocumentoBR
               documento={documento}
               setDocumento={setDocumento}
+              setDocumentoTipo={setDocumentoTipo}
             />
           </Campo>
 
-          <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
-            <input
-              value={documento}
-              onChange={(e) =>
-                setDocumento(mascararDocumento(e.target.value, documentoTipo))
-              }
-              inputMode="numeric"
-              placeholder={
-                documentoTipo === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"
-              }
-              className="campo-input font-mono"
-            />
-          </Campo>
-
-          {documentoTipo === "cnpj" && (
+          {tipoDocumentoPorDigitos(documento) === "cnpj" && (
             <Campo
               label={t("Razão social / Nome da empresa")}
               className="md:col-span-2"
