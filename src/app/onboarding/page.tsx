@@ -30,7 +30,8 @@ import PhoneInput, {
   contarDigitos,
   type Country,
 } from "@/components/PhoneInput";
-import { montarTelefoneE164 } from "@/lib/data/countries";
+import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
+import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
 import {
   ModalNovoArtista,
   ModalCredenciais,
@@ -75,10 +76,19 @@ type Status = {
     logoUrl: string | null;
     primeiroNomeAdmin: string | null;
   };
+  pessoa: {
+    nome: string;
+    email: string;
+    pais: string;
+    documentoTipo: string | null;
+    documento: string | null;
+    telefone: string | null;
+    dataNascimento: string | null;
+  };
 };
 
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
-  { id: 1, label: "Conta", descricao: "Conta criada" },
+  { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
   { id: 3, label: "Agência", descricao: "Identidade" },
   { id: 4, label: "Artista", descricao: "1º DJ" },
@@ -93,6 +103,9 @@ const ETAPAS: { id: number; label: string; descricao: string }[] = [
  * pagamento NÃO conta, pra não pular o passo sem concluir o pagamento.
  */
 function etapaInicial(d: Status): number {
+  // Etapa 1 agora é o cadastro completo (dados pessoais + agência). Volta
+  // pra ela enquanto faltarem os campos obrigatórios de pessoa.
+  if (!d.pessoa?.documento || !d.pessoa?.dataNascimento) return 1;
   const planoOk =
     d.subscriptionStatus === "ativa" ||
     (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
@@ -242,9 +255,10 @@ function OnboardingInner() {
           {/* Conteúdo */}
           <div className="mt-8">
             {etapa === 1 && (
-              <Etapa1Bemvindo
-                nomeAgencia={status.identidade.nomeAgencia}
+              <Etapa1Cadastro
+                status={status}
                 onAvancar={avancar}
+                onRecarregar={recarregar}
               />
             )}
             {etapa === 2 && (
@@ -356,43 +370,248 @@ function Stepper({ etapaAtual }: { etapaAtual: number }) {
 // ============================================================
 // Etapa 1 — Bem-vindo
 // ============================================================
-function Etapa1Bemvindo({
-  nomeAgencia,
+function Etapa1Cadastro({
+  status,
   onAvancar,
+  onRecarregar,
 }: {
-  nomeAgencia: string;
+  status: Status;
   onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
+  const { atualizarNomeAgencia } = useWorkspace();
+  const id = status.identidade;
+  const p = status.pessoa;
+
+  // País de origem — dirige o rótulo/formato do documento e o telefone.
+  const [pais, setPais] = useState<string>(p.pais || "BR");
+  // Cidade da agência (unificada: vale pra agência).
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
+    id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
+      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf, pais: "BR" }
+      : null
+  );
+  const [nomeAgencia, setNomeAgencia] = useState(id.nomeAgencia);
+  const [nome, setNome] = useState(p.nome || "");
+  const [nascimento, setNascimento] = useState<string>(p.dataNascimento ?? "");
+  const [doc, setDoc] = useState<string>(p.documento ?? "");
+
+  // Telefone — unificado com o WhatsApp da agência.
+  const telE164 = id.whatsapp ?? p.telefone ?? "";
+  const paisCountry =
+    COUNTRIES.find((c) => c.code === (p.pais || "BR")) ?? DEFAULT_COUNTRY;
+  const [telCountry, setTelCountry] = useState<Country>(paisCountry);
+  const [telDigits, setTelDigits] = useState<string>(() => {
+    const digs = telE164.replace(/\D/g, "");
+    return digs.startsWith(paisCountry.ddi)
+      ? digs.slice(paisCountry.ddi.length)
+      : digs;
+  });
+
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const docCfg = configDocumento(pais);
+  const campo =
+    "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary focus:border-border-strong outline-none";
+
+  async function salvar() {
+    setErro(null);
+    if (!nome.trim()) return setErro(t("Informe seu nome completo."));
+    if (!nomeAgencia.trim()) return setErro(t("Informe o nome da agência."));
+    if (!cidade) return setErro(t("Informe a cidade."));
+    if (!nascimento) return setErro(t("Informe a data de nascimento."));
+    if (!doc.trim()) return setErro(t("Informe o documento."));
+    if (contarDigitos(telDigits) < telCountry.minDigits)
+      return setErro(t("Telefone incompleto."));
+
+    setSalvando(true);
+    try {
+      const telefone = montarTelefoneE164(telCountry, telDigits);
+      const docNorm = normalizarDocumento(pais, doc);
+      const docTipo =
+        pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
+
+      // 1. Dados pessoais → profile
+      const rp = await fetch("/api/perfil", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          pais,
+          documento_tipo: docTipo,
+          documento: docNorm,
+          telefone,
+          data_nascimento: nascimento,
+        }),
+      });
+      if (!rp.ok) {
+        const b = await rp.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? t("Falha ao salvar seus dados."));
+      }
+
+      // 2. Nome da agência (atualiza a sidebar)
+      if (nomeAgencia.trim() !== id.nomeAgencia) {
+        await atualizarNomeAgencia(nomeAgencia.trim());
+      }
+
+      // 3. Cidade + WhatsApp da agência (o telefone vale pra agência)
+      const rw = await fetch("/api/workspace", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whatsapp: telefone,
+          cidade_ibge_id: cidade.ibgeId ?? "",
+          cidade_nome: cidade.nome,
+          cidade_uf: cidade.uf,
+        }),
+      });
+      if (!rw.ok) {
+        const b = await rw.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? `HTTP ${rw.status}`);
+      }
+
+      await onRecarregar();
+      onAvancar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
-    <div className="text-center">
-      <div
-        className="h-16 w-16 mx-auto rounded-full flex items-center justify-center mb-4"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(61,123,255,0.2), rgba(61,123,255,0.05))",
-          color: "var(--brand)",
-        }}
-      >
-        <PartyPopper size={28} />
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Complete seu cadastro")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Esses dados aparecem nos seus contratos e orçamentos.")}
+        </p>
       </div>
-      <h1 className="text-2xl font-bold tracking-tight">
-        {t("Bem-vindo ao GIGS CONTROL!")}
-      </h1>
-      <p className="mt-2 text-sm text-secondary max-w-md mx-auto">
-        {t("Sua conta da")}{" "}
-        <strong className="text-primary">{nomeAgencia}</strong> {t("está criada.")}{" "}
-        {t("Vamos configurar os essenciais em 4 passos rápidos.")}
-      </p>
-      <button
-        onClick={onAvancar}
-        className="btn btn-primary text-sm mt-6 py-2.5 px-6"
-        style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-      >
-        <Sparkles size={14} />
-        {t("Vamos lá")}
-        <ArrowRight size={14} />
-      </button>
+
+      <div className="card flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("País de origem")} <span className="text-danger">*</span>
+          </span>
+          <select value={pais} onChange={(e) => setPais(e.target.value)} className={campo}>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Cidade")} <span className="text-danger">*</span>
+          </span>
+          <CidadeGlobalAutocomplete value={cidade} onChange={setCidade} />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Nome da agência")} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={nomeAgencia}
+            onChange={(e) => setNomeAgencia(e.target.value)}
+            maxLength={40}
+            className={campo}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Nome completo")} <span className="text-danger">*</span>
+          </span>
+          <input value={nome} onChange={(e) => setNome(e.target.value)} className={campo} />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Data de nascimento")} <span className="text-danger">*</span>
+          </span>
+          <input
+            type="date"
+            value={nascimento}
+            onChange={(e) => setNascimento(e.target.value)}
+            className={campo}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {docCfg.label} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={docCfg.format(doc)}
+            onChange={(e) => setDoc(e.target.value)}
+            placeholder={docCfg.placeholder}
+            className={`${campo} placeholder:text-muted`}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Telefone")} <span className="text-danger">*</span>
+          </span>
+          <PhoneInput
+            country={telCountry}
+            onCountryChange={setTelCountry}
+            value={telDigits}
+            onChange={setTelDigits}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
+          <input
+            value={p.email}
+            disabled
+            className="bg-main border border-border rounded-md px-3 py-2 text-sm text-muted cursor-not-allowed"
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("O e-mail é seu login e não pode ser alterado.")}
+          </span>
+        </label>
+
+        {erro && (
+          <div
+            className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+            style={{
+              backgroundColor: "rgba(239,68,68,0.08)",
+              color: "var(--danger)",
+              border: "1px solid rgba(239,68,68,0.3)",
+            }}
+          >
+            <AlertTriangle size={12} /> {erro}
+          </div>
+        )}
+
+        <button
+          onClick={salvar}
+          disabled={salvando}
+          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {salvando ? (
+            <>
+              <Loader2 size={14} className="animate-spin" /> {t("Salvando...")}
+            </>
+          ) : (
+            <>
+              {t("Salvar e continuar")} <ArrowRight size={14} />
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -630,57 +849,18 @@ function Etapa3Agencia({
   onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
-  const { atualizarNomeAgencia } = useWorkspace();
   const id = status.identidade;
   const slugAtual = id.slug ?? "";
 
-  // Normaliza um nome em slug (lowercase, sem acentos, só [a-z0-9])
-  function normalizarSlug(s: string): string {
-    return s
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-  }
-
-  // Nome
-  const [nome, setNome] = useState(id.nomeAgencia);
-  // Slug — pré-popula com o slug que o signup gerou automaticamente.
-  // Auto-preenche enquanto o usuário não tocar manualmente (igual artista).
   const [slug, setSlug] = useState<string>(slugAtual);
-  const [slugEditado, setSlugEditado] = useState(false);
   const [slugCheck, setSlugCheck] = useState<
     "idle" | "checando" | "ok" | "em-uso" | "invalido"
-  >("idle");
+  >(slugAtual ? "ok" : "idle");
   const [slugMsg, setSlugMsg] = useState<string | null>(null);
-  // Cidade (autocomplete IBGE)
-  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
-    id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
-      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf, pais: "BR" }
-      : null
-  );
-  // WhatsApp
-  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
-  const [telDigits, setTelDigits] = useState(() => {
-    const tel = id.whatsapp ?? "";
-    const digs = tel.replace(/\D/g, "");
-    return digs.startsWith("55") && digs.length >= 12 ? digs.slice(2) : digs;
-  });
-  // Cor de preferência
   const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
-  // Auto-fill: quando o nome muda e o user ainda não tocou no slug,
-  // espelha o nome normalizado
-  function aoMudarNome(novo: string) {
-    setNome(novo);
-    if (!slugEditado) {
-      setSlug(normalizarSlug(novo));
-    }
-  }
 
   // Debounce do check de disponibilidade do slug (400ms)
   useEffect(() => {
@@ -732,10 +912,6 @@ function Etapa3Agencia({
 
   async function salvar() {
     setErro(null);
-    if (!nome.trim()) return setErro(t("Informe o nome da agência."));
-    if (!cidade) return setErro(t("Informe a cidade da agência."));
-    if (contarDigitos(telDigits) < country.minDigits)
-      return setErro(t("WhatsApp incompleto."));
     if (!slug.trim()) return setErro(t("Informe o username da agência."));
     if (slug.trim() !== slugAtual && slugCheck !== "ok") {
       return setErro(t("Username inválido ou em uso."));
@@ -756,22 +932,12 @@ function Etapa3Agencia({
           throw new Error((b.erro as string) ?? "Falha ao definir username.");
         }
       }
-      // 2. Nome via workspace-context (atualiza sidebar)
-      if (nome.trim() !== id.nomeAgencia) {
-        await atualizarNomeAgencia(nome.trim());
-      }
-      // 3. Resto numa única chamada
+      // 2. Cor de preferência
       const r = await fetch("/api/workspace", {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          whatsapp: montarTelefoneE164(country, telDigits),
-          cor_acento: cor,
-          cidade_ibge_id: cidade.ibgeId ?? "",
-          cidade_nome: cidade.nome,
-          cidade_uf: cidade.uf,
-        }),
+        body: JSON.stringify({ cor_acento: cor }),
       });
       if (!r.ok) {
         const b = await r.json().catch(() => ({}));
@@ -789,29 +955,13 @@ function Etapa3Agencia({
   return (
     <div>
       <div className="text-center mb-6">
-        <h2 className="text-xl font-bold tracking-tight">{t("Sua agência")}</h2>
+        <h2 className="text-xl font-bold tracking-tight">{t("Personalize sua agência")}</h2>
         <p className="mt-1 text-sm text-secondary">
-          {t("Esses dados aparecem nos orçamentos e na dashboard.")}
+          {t("Escolha o username e a cor da sua agência.")}
         </p>
       </div>
 
       <div className="card flex flex-col gap-4">
-        {/* Nome */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Nome da agência")} <span className="text-danger">*</span>
-          </span>
-          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-            <Building2 size={14} className="text-muted flex-shrink-0" />
-            <input
-              value={nome}
-              onChange={(e) => aoMudarNome(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
-              maxLength={40}
-            />
-          </div>
-        </label>
-
         {/* Username da agência (slug) */}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
@@ -831,12 +981,9 @@ function Etapa3Agencia({
             <span className="text-muted text-sm">-</span>
             <input
               value={slug}
-              onChange={(e) => {
-                setSlugEditado(true);
-                setSlug(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                );
-              }}
+              onChange={(e) =>
+                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+              }
               placeholder="ex: agenciaelo"
               className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
               maxLength={30}
@@ -868,32 +1015,6 @@ function Etapa3Agencia({
             </span>
             {t("). Cada agência tem um username único — ninguém mais pode usar.")}
           </span>
-        </label>
-
-        {/* Cidade */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Cidade")} <span className="text-danger">*</span>
-          </span>
-          <CidadeGlobalAutocomplete
-            value={cidade}
-            onChange={setCidade}
-            placeholder="Ex: São Paulo, Belo Horizonte..."
-          />
-        </label>
-
-        {/* WhatsApp */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            WhatsApp <span className="text-danger">*</span>
-          </span>
-
-          <PhoneInput
-            country={country}
-            onCountryChange={setCountry}
-            value={telDigits}
-            onChange={setTelDigits}
-          />
         </label>
 
         {/* Cor */}

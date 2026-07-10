@@ -96,13 +96,23 @@ export async function GET() {
       .eq("workspace_id", workspaceId)
       .maybeSingle();
 
-    // Nome do admin logado — usado como exemplo no campo de slug
-    // (ex: "joao-twobookings" em vez de "dudu-twobookings").
+    // Dados pessoais do admin logado — pré-preenchem a Etapa 1 (cadastro
+    // completo) e o `nome` serve de exemplo no campo de slug.
     const { data: meuProfile } = await admin
       .from("profiles")
-      .select("nome")
+      .select(
+        "nome, email, pais, documento_tipo, documento, telefone, data_nascimento"
+      )
       .eq("id", r.sessao.userId)
-      .maybeSingle<{ nome: string | null }>();
+      .maybeSingle<{
+        nome: string | null;
+        email: string | null;
+        pais: string | null;
+        documento_tipo: string | null;
+        documento: string | null;
+        telefone: string | null;
+        data_nascimento: string | null;
+      }>();
 
     // Counts em paralelo
     const [{ count: nArtistas }, { count: nContratantes }, { count: nCasas }, { count: nEquipe }] =
@@ -178,6 +188,15 @@ export async function GET() {
             .replace(/[̀-ͯ]/g, "")
             .toLowerCase()
             .replace(/[^a-z0-9]/g, "") || null,
+      },
+      pessoa: {
+        nome: meuProfile?.nome ?? "",
+        email: meuProfile?.email ?? "",
+        pais: meuProfile?.pais ?? "BR",
+        documentoTipo: meuProfile?.documento_tipo ?? null,
+        documento: meuProfile?.documento ?? null,
+        telefone: meuProfile?.telefone ?? null,
+        dataNascimento: meuProfile?.data_nascimento ?? null,
       },
       nomeAgencia: ws.nome,
     });

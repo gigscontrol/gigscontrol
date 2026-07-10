@@ -282,7 +282,7 @@ function FormCadastro({
       <form onSubmit={onSubmit} className="card flex flex-col gap-4">
         <Campo
           icon={<User size={14} />}
-          label={t("Seu nome")}
+          label={t("Nome completo")}
           value={nome}
           onChange={setNome}
           placeholder={t("João da Silva")}
