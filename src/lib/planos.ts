@@ -73,6 +73,7 @@ export const PLANOS: Plano[] = [
     precoAnual: 1490,
     precoMensalUsd: 59,
     precoAnualUsd: 590,
+    destaque: true,
     recursos: [
       "1 artista",
       "3 usuários da equipe",
@@ -95,7 +96,6 @@ export const PLANOS: Plano[] = [
     precoAnual: 3670,
     precoMensalUsd: 137,
     precoAnualUsd: 1370,
-    destaque: true,
     recursos: [
       "3 artistas",
       "9 usuários da equipe",
