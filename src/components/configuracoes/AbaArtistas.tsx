@@ -46,7 +46,6 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
-import { mascararCpfCnpj } from "@/lib/formatters";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
@@ -3929,10 +3928,11 @@ export function tipoDocumentoPorDigitos(valor: string): DocumentoTipo {
 }
 
 /**
- * Campo ÚNICO de CPF/CNPJ (BR) — SEM seletor de tipo. Detecta pela
- * quantidade de dígitos enquanto o usuário digita (11 = CPF, 14 = CNPJ) e
- * formata conforme (mascararCpfCnpj). Sincroniza o `documentoTipo` no pai
- * (o que dispara a razão social quando vira CNPJ).
+ * Campo ÚNICO de CPF/CNPJ (BR) — SEM seletor de tipo. Delega no
+ * `InputDocumento` compartilhado (MESMO visual/placeholder/máscara do site
+ * inteiro) e só acrescenta a sincronização do `documentoTipo` no pai,
+ * derivado pela contagem de dígitos (11 = CPF, 14 = CNPJ) — o que dispara a
+ * razão social quando vira CNPJ.
  */
 export function InputDocumentoBR({
   documento,
@@ -3946,16 +3946,15 @@ export function InputDocumentoBR({
   className?: string;
 }) {
   return (
-    <input
-      value={mascararCpfCnpj(documento)}
-      onChange={(e) => {
-        const masked = mascararCpfCnpj(e.target.value);
-        setDocumento(masked);
-        setDocumentoTipo?.(tipoDocumentoPorDigitos(masked));
+    <InputDocumento
+      pais="BR"
+      value={documento}
+      onChange={(v) => {
+        setDocumento(v);
+        setDocumentoTipo?.(tipoDocumentoPorDigitos(v));
       }}
       inputMode="numeric"
-      placeholder={"CPF ou CNPJ"}
-      className={className ?? "campo-input font-mono"}
+      className={className}
     />
   );
 }
@@ -4040,11 +4039,6 @@ function CamposEndereco({
   );
 }
 
-/**
- * Toggle CPF / CNPJ. Reaproveita o visual do `.pill` mas com cantos
- * QUADRADOS (6px) pra acompanhar os outros campos (campo-input) — sem mexer
- * no `.pill` global (usado nos filtros). Trocar o tipo re-aplica a máscara.
- */
 /**
  * Campos do CONTRATADO (sem wrapper) — reusados na Seção (cadastro / edição
  * em modal) e no card do perfil editável inline. O `nome` do artista é o
