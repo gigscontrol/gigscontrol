@@ -151,7 +151,9 @@ export async function criarUsuarioDaEquipe(
         userId: created.user.id,
         artistId,
         perfis: [],
-        permissoes: [],
+        // Permissões já definidas no modal de criação (se houver); caso
+        // contrário o vínculo nasce vazio (definido depois na aba Equipe).
+        permissoes: input.permissoes_por_artista?.[artistId] ?? [],
       });
     }
 

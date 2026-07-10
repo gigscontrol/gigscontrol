@@ -244,6 +244,8 @@ type WorkspaceContextValue = {
     username_raiz: string;
     /** Artistas com quem trabalha (cria vínculo vazio; função definida na Equipe). */
     artistIds: string[];
+    /** Permissões já definidas no modal (mapa artistId → chaves); opcional. */
+    permissoes_por_artista?: Record<string, string[]>;
     /** Dados pessoais (opcionais) — country-aware, servem para contrato. */
     cor?: string;
     pais?: string;
@@ -662,6 +664,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       nome: string;
       username_raiz: string;
       artistIds: string[];
+      permissoes_por_artista?: Record<string, string[]>;
       cor?: string;
       pais?: string;
       nome_legal?: string;

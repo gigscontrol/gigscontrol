@@ -26,6 +26,7 @@ import {
   NotebookPen,
   Ban,
   AtSign,
+  SlidersHorizontal,
 } from "lucide-react";
 import Modal from "../Modal";
 import PageHeader from "../PageHeader";
@@ -47,6 +48,7 @@ import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalA
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { BRASIL, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
+import { EditorPermissoesVinculo } from "./EquipeDoArtista";
 import type { DocumentoTipo } from "@/types";
 
 /** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
@@ -250,6 +252,7 @@ export default function AbaEquipe() {
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    permissoes_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -1247,6 +1250,7 @@ export function ModalUsuario({
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    permissoes_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -1273,6 +1277,11 @@ export function ModalUsuario({
   const [copiouUsername, setCopiouUsername] = useState(false);
   // Artistas com quem trabalha (a função é definida depois na aba Equipe).
   const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
+  // Permissões já definidas por artista no próprio modal de criação
+  // (mapa artistId → chaves). Vazio = vínculo nasce sem permissão.
+  const [permsPorArtista, setPermsPorArtista] = useState<Record<string, string[]>>({});
+  // Artista cujo editor de permissões está aberto (modal empilhado). null = fechado.
+  const [editandoPermsDe, setEditandoPermsDe] = useState<string | null>(null);
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
   const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
   const [cor, setCor] = useState<string>(CORES[0]);
@@ -1337,8 +1346,18 @@ export function ModalUsuario({
   function toggleArtista(id: string) {
     setArtistIdsSel((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        // Desmarcar o artista limpa as permissões que tinham sido definidas.
+        setPermsPorArtista((p) => {
+          if (!(id in p)) return p;
+          const resto = { ...p };
+          delete resto[id];
+          return resto;
+        });
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -1367,10 +1386,18 @@ export function ModalUsuario({
             /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
           }
         }
+        // Só manda permissões dos artistas realmente selecionados e com ao
+        // menos 1 chave — vínculo sem permissão nasce vazio de qualquer forma.
+        const permsPayload: Record<string, string[]> = {};
+        for (const aid of artistIds) {
+          const chaves = permsPorArtista[aid];
+          if (chaves && chaves.length > 0) permsPayload[aid] = chaves;
+        }
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
           artistIds,
+          permissoes_por_artista: Object.keys(permsPayload).length > 0 ? permsPayload : undefined,
           cor,
           pais: paisPessoal.code,
           nome_legal: nomeLegal.trim() || undefined,
@@ -1413,7 +1440,7 @@ export function ModalUsuario({
                 <input
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder={t("Como te chamam")}
+                  placeholder={t("Como essa pessoa é chamada")}
                   className="campo-input"
                   autoFocus
                 />
@@ -1543,34 +1570,51 @@ export function ModalUsuario({
                 <div className="flex flex-col gap-1.5">
                   {artistas.map((dj) => {
                     const sel = artistIdsSel.has(dj.id);
+                    const nPerms = permsPorArtista[dj.id]?.length ?? 0;
                     return (
-                      <button
+                      <div
                         key={dj.id}
-                        type="button"
-                        onClick={() => toggleArtista(dj.id)}
-                        className="flex items-center gap-2.5 rounded-md border p-2 text-left transition-colors"
+                        className="flex items-center gap-2.5 rounded-md border p-2 transition-colors"
                         style={{
                           borderColor: sel ? "var(--brand)" : "var(--border-color)",
                           backgroundColor: sel ? "var(--brand-weak)" : "transparent",
                         }}
                       >
-                        <span
-                          className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
-                          style={{
-                            backgroundColor: sel ? "var(--brand)" : "transparent",
-                            borderColor: sel ? "var(--brand)" : "var(--border-strong)",
-                          }}
+                        <button
+                          type="button"
+                          onClick={() => toggleArtista(dj.id)}
+                          className="flex items-center gap-2.5 text-left flex-1 min-w-0"
                         >
-                          {sel && <Check size={11} className="text-white" />}
-                        </span>
-                        <span
-                          className="h-6 w-6 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: dj.color }}
-                        />
-                        <span className="text-sm font-medium text-primary flex-1 truncate">
-                          {dj.name}
-                        </span>
-                      </button>
+                          <span
+                            className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                            style={{
+                              backgroundColor: sel ? "var(--brand)" : "transparent",
+                              borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                            }}
+                          >
+                            {sel && <Check size={11} className="text-white" />}
+                          </span>
+                          <span
+                            className="h-6 w-6 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: dj.color }}
+                          />
+                          <span className="text-sm font-medium text-primary flex-1 truncate">
+                            {dj.name}
+                          </span>
+                        </button>
+                        {sel && (
+                          <button
+                            type="button"
+                            onClick={() => setEditandoPermsDe(dj.id)}
+                            className="btn-ghost text-[0.7rem] inline-flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
+                            style={{ color: nPerms > 0 ? "var(--brand)" : "var(--text-muted)" }}
+                            title={t("Definir permissões deste artista")}
+                          >
+                            <SlidersHorizontal size={12} />
+                            {nPerms > 0 ? t("{n} permissões", { n: nPerms }) : t("Permissões")}
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -1747,6 +1791,26 @@ export function ModalUsuario({
             )}
           </button>
         </div>
+
+        {/* Editor de permissões do artista selecionado — modal empilhado
+            (fechar/salvar aqui NÃO fecha o ModalUsuario). */}
+        {editandoPermsDe && (() => {
+          const dj = artistas.find((a) => a.id === editandoPermsDe);
+          if (!dj) return null;
+          return (
+            <EditorPermissoesVinculo
+              key={editandoPermsDe}
+              nomeUsuario={nome.trim() || t("Novo usuário")}
+              nomeArtista={dj.name}
+              permissoes={permsPorArtista[editandoPermsDe] ?? []}
+              onSalvar={(chaves) => {
+                setPermsPorArtista((p) => ({ ...p, [editandoPermsDe]: chaves }));
+                setEditandoPermsDe(null);
+              }}
+              onFechar={() => setEditandoPermsDe(null)}
+            />
+          );
+        })()}
       </div>
   );
 
