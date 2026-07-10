@@ -187,7 +187,7 @@ function CardPlano({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
 
 export default function PlanosCarrossel() {
   const t = useT();
-  const [ciclo, setCiclo] = useState<CicloCobranca>("anual");
+  const [ciclo, setCiclo] = useState<CicloCobranca>("mensal");
   const [pagina, setPagina] = useState(0);
 
   return (
@@ -233,8 +233,18 @@ export default function PlanosCarrossel() {
             }
           >
             {t("Anual")}
-            <span className="rounded-[5px] bg-[rgba(255,255,255,.22)] px-1.5 py-[3px] font-mono text-[8.5px] font-bold tracking-[.1em]">
-              {t("ECONOMIZE {pct}%", { pct: 17 })}
+            {/* fundo verde pulsando (mesmo verde/pulso do ponto das seções
+                01/02/03) atrás do texto — chama atenção pra economia já que
+                Mensal vem ativo por padrão */}
+            <span className="relative inline-flex items-center overflow-hidden rounded-[5px] px-1.5 py-[3px] font-mono text-[8.5px] font-bold tracking-[.1em] text-[#07130B]">
+              <span
+                aria-hidden
+                className="gcanim absolute inset-0 bg-[#3CE08C]"
+                style={{ animation: "gcPulse 2.2s ease-in-out infinite" }}
+              />
+              <span className="relative">
+                {t("ECONOMIZE {pct}%", { pct: 17 })}
+              </span>
             </span>
           </button>
         </div>

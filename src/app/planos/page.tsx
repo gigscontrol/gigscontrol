@@ -22,7 +22,7 @@ import { useT, useMoeda } from "@/lib/i18n";
 
 export default function PlanosPage() {
   const t = useT();
-  const [ciclo, setCiclo] = useState<CicloCobranca>("anual");
+  const [ciclo, setCiclo] = useState<CicloCobranca>("mensal");
   const [inicio, setInicio] = useState(0);
   // Quantos cards aparecem por vez — responsivo (1 no mobile, 2 em tablet, 3 desktop)
   const [visiveis, setVisiveis] = useState(3);
