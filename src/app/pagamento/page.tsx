@@ -39,6 +39,7 @@ type OnboardingStatus = {
     precoMensal: number;
     tagline?: string;
   } | null;
+  ciclo?: string;
   nomeAgencia: string;
 };
 
@@ -79,7 +80,7 @@ export default function PagamentoPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: status.plano.id, ciclo: "mensal" }),
+        body: JSON.stringify({ plano: status.plano.id, ciclo: status.ciclo ?? "mensal" }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.url) {

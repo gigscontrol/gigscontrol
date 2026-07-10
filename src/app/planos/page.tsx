@@ -366,7 +366,7 @@ function PlanoCard({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
       </ul>
 
       <Link
-        href="/login"
+        href={`/signup?plano=${plano.id}&ciclo=${ciclo}`}
         className="btn text-sm w-full justify-center"
         style={
           plano.destaque

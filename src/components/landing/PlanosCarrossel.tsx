@@ -119,7 +119,7 @@ function CardPlano({ plano, ciclo }: { plano: Plano; ciclo: CicloCobranca }) {
       </div>
 
       <Link
-        href="/login"
+        href={`/signup?plano=${plano.id}&ciclo=${ciclo}`}
         className="rounded-[10px] py-3 text-center text-[13.5px] font-bold"
         style={
           plano.destaque

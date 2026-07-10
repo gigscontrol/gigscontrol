@@ -64,7 +64,7 @@ export async function GET() {
     const { data: ws, error: errWs } = await admin
       .from("workspaces")
       .select(
-        "id, nome, slug, plano, logo_url, onboarding_completo, whatsapp, " +
+        "id, nome, slug, plano, ciclo, logo_url, onboarding_completo, whatsapp, " +
           "cor_acento, cidade_ibge_id, cidade_nome, cidade_uf"
       )
       .eq("id", workspaceId)
@@ -73,6 +73,7 @@ export async function GET() {
         nome: string;
         slug: string;
         plano: string;
+        ciclo: string | null;
         logo_url: string | null;
         onboarding_completo: boolean;
         whatsapp: string | null;
@@ -136,7 +137,7 @@ export async function GET() {
       subscriptionStatus: sub?.status ?? "trial",
       estadoAcesso: calcEstado(sub?.status ?? "trial", sub?.trial_termina_em ?? null),
       adminContato: meuProfile?.nome ?? null,
-      ciclo: sub?.ciclo ?? "mensal",
+      ciclo: sub?.ciclo ?? ws?.ciclo ?? "mensal",
       trialTerminaEm: sub?.trial_termina_em ?? null,
       plano: plano
         ? {
