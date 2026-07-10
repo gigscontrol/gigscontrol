@@ -305,7 +305,7 @@ function FormCadastro({
           label={t("Nome da agência")}
           value={nomeAgencia}
           onChange={setNomeAgencia}
-          placeholder={t("Agência Estrela")}
+          placeholder={t("Agência Talents")}
           autoComplete="organization"
         />
         <CampoEmail

@@ -1796,7 +1796,7 @@ export const FR: Record<string, string> = {
   "Cadastrar com": "S'inscrire avec",
   "Seu nome": "Votre nom",
   "João da Silva": "Jean Dupont",
-  "Agência Estrela": "Agence Étoile",
+  "Agência Talents": "Agence Talents",
   "Criando conta…": "Création du compte…",
   "Criar conta e enviar verificação": "Créer un compte et envoyer la vérification",
   "Já tem conta? Entre aqui": "Vous avez déjà un compte ? Connectez-vous ici",

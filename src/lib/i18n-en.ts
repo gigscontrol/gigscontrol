@@ -2522,7 +2522,7 @@ const SWEEP10: Record<string, string> = {
   "Seu nome": "Your name",
   "João da Silva": "John Smith",
   "Nome da agência": "Agency name",
-  "Agência Estrela": "Star Agency",
+  "Agência Talents": "Talents Agency",
   "E-mail": "Email",
   "Criando conta…": "Creating account…",
   "Criar conta e enviar verificação": "Create account and send verification",
