@@ -91,9 +91,8 @@ type Status = {
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Agência", descricao: "Identidade" },
-  { id: 4, label: "Artista", descricao: "1º DJ" },
-  { id: 5, label: "Equipe", descricao: "Convidar membro" },
+  { id: 3, label: "Artista", descricao: "1º DJ" },
+  { id: 4, label: "Equipe", descricao: "Convidar membro" },
 ];
 
 /**
@@ -111,10 +110,9 @@ function etapaInicial(d: Status): number {
     d.subscriptionStatus === "ativa" ||
     (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
   if (!planoOk) return 2;
-  if (!d.checklist.agenciaConfigurada) return 3;
-  if (!d.checklist.temArtista) return 4;
-  if (!d.checklist.temEquipe) return 5;
-  return 5;
+  if (!d.checklist.temArtista) return 3;
+  if (!d.checklist.temEquipe) return 4;
+  return 4;
 }
 
 export default function OnboardingPage() {
@@ -183,7 +181,7 @@ function OnboardingInner() {
   }
 
   function avancar() {
-    if (etapa < 5) setEtapa(etapa + 1);
+    if (etapa < 4) setEtapa(etapa + 1);
     else void concluir();
   }
 
@@ -270,20 +268,13 @@ function OnboardingInner() {
               />
             )}
             {etapa === 3 && (
-              <Etapa3Agencia
-                status={status}
-                onAvancar={avancar}
-                onRecarregar={recarregar}
-              />
-            )}
-            {etapa === 4 && (
               <Etapa4Artista
                 status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
             )}
-            {etapa === 5 && (
+            {etapa === 4 && (
               <Etapa5Equipe
                 status={status}
                 onAvancar={avancar}
@@ -410,9 +401,62 @@ function Etapa1Cadastro({
       : digs;
   });
   const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
+  const slugAtual = id.slug ?? "";
+  const [slug, setSlug] = useState<string>(slugAtual);
+  const [slugCheck, setSlugCheck] = useState<
+    "idle" | "checando" | "ok" | "em-uso" | "invalido"
+  >(slugAtual ? "ok" : "idle");
+  const [slugMsg, setSlugMsg] = useState<string | null>(null);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Debounce do check de disponibilidade do username/slug (400ms)
+  useEffect(() => {
+    const v = slug.trim().toLowerCase();
+    if (!v) {
+      setSlugCheck("idle");
+      setSlugMsg(null);
+      return;
+    }
+    if (v === slugAtual) {
+      setSlugCheck("ok");
+      setSlugMsg("Username atual");
+      return;
+    }
+    setSlugCheck("checando");
+    setSlugMsg(null);
+    const ctrl = new AbortController();
+    const tm = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
+          { credentials: "include", signal: ctrl.signal }
+        );
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const body = (await r.json()) as { disponivel: boolean; erro?: string };
+        if (body.disponivel) {
+          setSlugCheck("ok");
+          setSlugMsg("Disponível");
+        } else if (body.erro) {
+          setSlugCheck("invalido");
+          setSlugMsg(body.erro);
+        } else {
+          setSlugCheck("em-uso");
+          setSlugMsg("Já em uso por outra agência.");
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          setSlugCheck("invalido");
+          setSlugMsg("Falha na checagem.");
+        }
+      }
+    }, 400);
+    return () => {
+      ctrl.abort();
+      clearTimeout(tm);
+    };
+  }, [slug, slugAtual]);
 
   const docCfg = configDocumento(pais);
   const campo =
@@ -436,6 +480,10 @@ function Etapa1Cadastro({
     if (!doc.trim()) return setErro(t("Informe o documento."));
     if (contarDigitos(telDigits) < telCountry.minDigits)
       return setErro(t("Telefone incompleto."));
+    if (!slug.trim()) return setErro(t("Informe o username da agência."));
+    if (slug.trim() !== slugAtual && slugCheck !== "ok") {
+      return setErro(t("Username inválido ou em uso."));
+    }
 
     setSalvando(true);
     try {
@@ -466,6 +514,20 @@ function Etapa1Cadastro({
       // 2. Nome da agência (atualiza a sidebar)
       if (nomeAgencia.trim() !== id.nomeAgencia) {
         await atualizarNomeAgencia(nomeAgencia.trim());
+      }
+
+      // 2b. Username da agência (se mudou) — rota especial sem cota
+      if (slug.trim() !== slugAtual) {
+        const rs = await fetch("/api/workspace/slug/definir-inicial", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: slug.trim().toLowerCase() }),
+        });
+        if (!rs.ok) {
+          const b = await rs.json().catch(() => ({}));
+          throw new Error((b.erro as string) ?? t("Falha ao definir username."));
+        }
       }
 
       // 3. Cidade + WhatsApp da agência (o telefone vale pra agência)
@@ -611,6 +673,8 @@ function Etapa1Cadastro({
           />
         </label>
 
+        <SeletorDeCor cor={cor} onChange={setCor} />
+
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
             {t("Nome da agência")} <span className="text-danger">*</span>
@@ -623,7 +687,59 @@ function Etapa1Cadastro({
           />
         </label>
 
-        <SeletorDeCor cor={cor} onChange={setCor} />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Username da agência")} <span className="text-danger">*</span>
+          </span>
+          <div
+            className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+            style={{
+              borderColor:
+                slugCheck === "ok"
+                  ? "var(--success)"
+                  : slugCheck === "em-uso" || slugCheck === "invalido"
+                  ? "var(--danger)"
+                  : "var(--border-color)",
+            }}
+          >
+            <span className="text-muted text-sm">-</span>
+            <input
+              value={slug}
+              onChange={(e) =>
+                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+              }
+              placeholder="ex: agenciaelo"
+              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+              maxLength={30}
+            />
+            {slugCheck === "checando" && (
+              <Loader2 size={14} className="animate-spin text-muted" />
+            )}
+            {slugCheck === "ok" && (
+              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+            )}
+          </div>
+          {slugMsg && (
+            <span
+              className="text-[0.7rem]"
+              style={{
+                color:
+                  slugCheck === "ok" || slug === slugAtual
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+            >
+              {slugMsg}
+            </span>
+          )}
+          <span className="text-[0.65rem] text-muted leading-relaxed">
+            {t("Vai pro fim do login dos seus artistas e equipe (ex:")}{" "}
+            <span className="font-mono text-primary">
+              {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
+            </span>
+            {t("). Cada agência tem um username único — ninguém mais pode usar.")}
+          </span>
+        </label>
 
         {erro && (
           <div
@@ -874,211 +990,6 @@ function Etapa2Plano({
             {t("Teste grátis disponível apenas no plano Individual.")}
           </p>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Etapa 3 — Configurar agência
-// ============================================================
-function Etapa3Agencia({
-  status,
-  onAvancar,
-  onRecarregar,
-}: {
-  status: Status;
-  onAvancar: () => void;
-  onRecarregar: () => Promise<void>;
-}) {
-  const t = useT();
-  const id = status.identidade;
-  const slugAtual = id.slug ?? "";
-
-  const [slug, setSlug] = useState<string>(slugAtual);
-  const [slugCheck, setSlugCheck] = useState<
-    "idle" | "checando" | "ok" | "em-uso" | "invalido"
-  >(slugAtual ? "ok" : "idle");
-  const [slugMsg, setSlugMsg] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  // Debounce do check de disponibilidade do slug (400ms)
-  useEffect(() => {
-    const v = slug.trim().toLowerCase();
-    if (!v) {
-      setSlugCheck("idle");
-      setSlugMsg(null);
-      return;
-    }
-    // Mesmo slug atual: já está OK (a gente vai pular o update no salvar)
-    if (v === slugAtual) {
-      setSlugCheck("ok");
-      setSlugMsg("Username atual");
-      return;
-    }
-    setSlugCheck("checando");
-    setSlugMsg(null);
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(
-          `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
-          { credentials: "include", signal: ctrl.signal }
-        );
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const body = (await r.json()) as { disponivel: boolean; erro?: string };
-        if (body.disponivel) {
-          setSlugCheck("ok");
-          setSlugMsg("Disponível");
-        } else if (body.erro) {
-          setSlugCheck("invalido");
-          setSlugMsg(body.erro);
-        } else {
-          setSlugCheck("em-uso");
-          setSlugMsg("Já em uso por outra agência.");
-        }
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          setSlugCheck("invalido");
-          setSlugMsg("Falha na checagem.");
-        }
-      }
-    }, 400);
-    return () => {
-      ctrl.abort();
-      clearTimeout(t);
-    };
-  }, [slug, slugAtual]);
-
-  async function salvar() {
-    setErro(null);
-    if (!slug.trim()) return setErro(t("Informe o username da agência."));
-    if (slug.trim() !== slugAtual && slugCheck !== "ok") {
-      return setErro(t("Username inválido ou em uso."));
-    }
-
-    setSalvando(true);
-    try {
-      // 1. Se o slug mudou, define agora (rota especial sem cota)
-      if (slug.trim() !== slugAtual) {
-        const rs = await fetch("/api/workspace/slug/definir-inicial", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: slug.trim().toLowerCase() }),
-        });
-        if (!rs.ok) {
-          const b = await rs.json().catch(() => ({}));
-          throw new Error((b.erro as string) ?? "Falha ao definir username.");
-        }
-      }
-      await onRecarregar();
-      onAvancar();
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  return (
-    <div>
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold tracking-tight">{t("Personalize sua agência")}</h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Escolha o username e a cor da sua agência.")}
-        </p>
-      </div>
-
-      <div className="card flex flex-col gap-4">
-        {/* Username da agência (slug) */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Username da agência")} <span className="text-danger">*</span>
-          </span>
-          <div
-            className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
-            style={{
-              borderColor:
-                slugCheck === "ok"
-                  ? "var(--success)"
-                  : slugCheck === "em-uso" || slugCheck === "invalido"
-                  ? "var(--danger)"
-                  : "var(--border-color)",
-            }}
-          >
-            <span className="text-muted text-sm">-</span>
-            <input
-              value={slug}
-              onChange={(e) =>
-                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
-              }
-              placeholder="ex: agenciaelo"
-              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
-              maxLength={30}
-            />
-            {slugCheck === "checando" && (
-              <Loader2 size={14} className="animate-spin text-muted" />
-            )}
-            {slugCheck === "ok" && (
-              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
-            )}
-          </div>
-          {slugMsg && (
-            <span
-              className="text-[0.7rem]"
-              style={{
-                color:
-                  slugCheck === "ok" || slug === slugAtual
-                    ? "var(--success)"
-                    : "var(--danger)",
-              }}
-            >
-              {slugMsg}
-            </span>
-          )}
-          <span className="text-[0.65rem] text-muted leading-relaxed">
-            {t("Vai pro fim do login dos seus artistas e equipe (ex:")}{" "}
-            <span className="font-mono text-primary">
-              {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
-            </span>
-            {t("). Cada agência tem um username único — ninguém mais pode usar.")}
-          </span>
-        </label>
-
-        {erro && (
-          <div
-            className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
-            style={{
-              backgroundColor: "rgba(239,68,68,0.08)",
-              color: "var(--danger)",
-              border: "1px solid rgba(239,68,68,0.3)",
-            }}
-          >
-            <AlertTriangle size={12} />
-            {erro}
-          </div>
-        )}
-
-        <button
-          onClick={salvar}
-          disabled={salvando}
-          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-        >
-          {salvando ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              {t("Salvando...")}
-            </>
-          ) : (
-            <>
-              {t("Salvar e continuar")}
-              <ArrowRight size={14} />
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
