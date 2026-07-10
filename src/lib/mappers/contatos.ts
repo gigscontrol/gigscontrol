@@ -83,6 +83,7 @@ export type CasaRow = {
   endereco: string | null;
   contato_responsavel: string | null;
   telefone: string | null;
+  criado_em: string | null;
   lat: number | string | null;
   lng: number | string | null;
   geo_precision: string | null;
@@ -98,6 +99,7 @@ export function rowParaCasa(row: CasaRow): Casa {
     endereco: row.endereco ?? undefined,
     contatoResponsavel: row.contato_responsavel ?? undefined,
     telefone: row.telefone ?? undefined,
+    criadoEm: row.criado_em ?? undefined,
   };
   const lat = paraNumero(row.lat);
   const lng = paraNumero(row.lng);

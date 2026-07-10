@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   FileText,
+  FileSignature,
   CalendarCheck2,
   ExternalLink,
   Instagram,
@@ -29,13 +30,18 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Modal from "./Modal";
+import BookingSection from "./agenda/BookingSection";
+import NotasDoShow from "./anotacoes/NotasDoShow";
+import { useAnotacoes } from "@/lib/anotacoes-context";
 import { useShows } from "@/lib/shows-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
+import { useContratos } from "@/lib/contratos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { mascararCpfCnpj } from "@/lib/formatters";
+import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -64,9 +70,21 @@ export default function ShowDetalheModal({
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
+  const { contratos, assinantesPorContrato } = useContratos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
+  const { notas } = useAnotacoes();
   const [processando, setProcessando] = useState(false);
+  const [mostrarFormCancel, setMostrarFormCancel] = useState(false);
+  const [motivoCancel, setMotivoCancel] = useState("");
+  const [notasAbertas, setNotasAbertas] = useState(false);
+
+  // Reseta o formulário de cancelamento (e fecha as anotações) ao trocar de show.
+  useEffect(() => {
+    setMostrarFormCancel(false);
+    setMotivoCancel("");
+    setNotasAbertas(false);
+  }, [showId]);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
   if (!show) {
@@ -78,26 +96,33 @@ export default function ShowDetalheModal({
   }
 
   const dj = artistas.find((d) => d.id === show.djId);
+  const notasDoShow = notas.filter((n) => n.showId === show.id);
   const cancelado = show.status === "cancelado";
   // Grey-out (UX; servidor é a autoridade). Cancelar/reativar = alterar evento
   // → agenda.editar_todos. podeUI já libera legado/admin.
   const podeGerenciarShow = podeUI(show.djId || null, "agenda.editar_todos");
 
-  async function cancelarOuReativar() {
-    if (processando || !show) return;
-    if (
-      !cancelado &&
-      !window.confirm(
-        t("Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).")
-      )
-    ) {
-      return;
-    }
+  async function confirmarCancelamento() {
+    const m = motivoCancel.trim();
+    if (!m || processando || !show) return;
     setProcessando(true);
     try {
-      await updateShow(show.id, {
-        status: cancelado ? "confirmado" : "cancelado",
-      });
+      await updateShow(show.id, { status: "cancelado", cancelamentoMotivo: m });
+      setMostrarFormCancel(false);
+      setMotivoCancel("");
+    } catch (e) {
+      window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function reverterCancelamento() {
+    if (processando || !show) return;
+    if (!window.confirm(t("Reverter o cancelamento e reativar o show?"))) return;
+    setProcessando(true);
+    try {
+      await updateShow(show.id, { status: "confirmado" });
     } catch (e) {
       window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {
@@ -114,6 +139,10 @@ export default function ShowDetalheModal({
     ? orcamentos.find((o) => String(o.id) === show.orcamentoId)
     : null;
   const venda = show.vendaId ? vendas.find((v) => String(v.id) === show.vendaId) : null;
+
+  // Status contratual do show (Fase 3) — derivado da venda vinculada.
+  const resumoContrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
+  const rotuloContrato = rotuloContratoShow(resumoContrato, t);
 
   // -------- Dados consolidados (venda > orçamento > casa > show) --------
   const nomeEvento = venda?.nomeEvento;
@@ -235,33 +264,111 @@ export default function ShowDetalheModal({
           {tipoEvento && (
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[tipoEvento])}</span>
           )}
+          {show.vendaId && (
+            <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
+              <FileSignature size={11} />
+              {rotuloContrato.texto}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Cancelar / reativar o show — reflete a cor no Google Agenda */}
-      <div className="flex items-center justify-between gap-2 mb-5">
-        {cancelado ? (
-          <span className="badge badge-danger inline-flex items-center gap-1">
-            <AlertTriangle size={11} /> {t("Show cancelado")}
-          </span>
-        ) : (
-          <span />
-        )}
-        <button
-          type="button"
-          onClick={cancelarOuReativar}
-          disabled={processando || !podeGerenciarShow}
-          title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
-          className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+      {/* Cancelamento — o evento PERMANECE na agenda; só muda a aparência
+          (vermelho/riscado) e a cor no Google. O servidor carimba quem/quando;
+          o motivo é obrigatório. Reverter empilha no histórico (nada se perde). */}
+      {cancelado ? (
+        <div
+          className="mb-5 rounded-md border p-3"
+          style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.08)" }}
         >
-          {processando
-            ? t("Salvando…")
-            : cancelado
-            ? t("Reativar show")
-            : t("Cancelar show")}
-        </button>
-      </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="badge badge-danger inline-flex items-center gap-1">
+              <AlertTriangle size={11} /> {t("Show cancelado")}
+            </span>
+            <button
+              type="button"
+              onClick={reverterCancelamento}
+              disabled={processando || !podeGerenciarShow}
+              title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+              className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ color: "var(--success)" }}
+            >
+              {processando ? t("Salvando…") : t("Reverter cancelamento")}
+            </button>
+          </div>
+          {show.cancelamento && (
+            <div className="mt-2.5 flex flex-col gap-1 text-xs">
+              <div className="text-secondary">
+                {t("Cancelado por")}{" "}
+                <span className="font-semibold text-primary">
+                  {show.cancelamento.porNome}
+                </span>
+                {show.cancelamento.em && (
+                  <span className="text-muted"> · {formatarDataHora(show.cancelamento.em)}</span>
+                )}
+              </div>
+              <div className="text-secondary">
+                <span className="text-muted">{t("Motivo:")}</span> {show.cancelamento.motivo}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : mostrarFormCancel ? (
+        <div className="mb-5 rounded-md border border-border bg-elevated p-3">
+          <label className="stat-label block mb-1.5">
+            {t("Motivo do cancelamento")} *
+          </label>
+          <textarea
+            value={motivoCancel}
+            onChange={(e) => setMotivoCancel(e.target.value)}
+            rows={2}
+            maxLength={300}
+            autoFocus
+            placeholder={t("Ex.: contratante desistiu, conflito de agenda…")}
+            className="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm text-primary resize-none outline-none focus:border-border-strong"
+          />
+          <div className="flex items-center justify-between gap-2 mt-2">
+            <p className="text-[0.65rem] text-muted">
+              {t("O evento não é apagado — fica vermelho na agenda e no Google.")}
+            </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setMostrarFormCancel(false);
+                  setMotivoCancel("");
+                }}
+                disabled={processando}
+                className="btn-ghost text-xs"
+              >
+                {t("Voltar")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmarCancelamento}
+                disabled={processando || !motivoCancel.trim()}
+                className="text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--danger)" }}
+              >
+                {processando ? t("Salvando…") : t("Confirmar cancelamento")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-end mb-5">
+          <button
+            type="button"
+            onClick={() => setMostrarFormCancel(true)}
+            disabled={!podeGerenciarShow}
+            title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+            className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{ color: "var(--danger)" }}
+          >
+            {t("Cancelar show")}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-5">
         {/* ===== CONTRATANTE ===== */}
@@ -394,6 +501,7 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
+
         {/* ===== PAGAMENTO ===== */}
         {venda && venda.parcelas.length > 0 && (
           <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
@@ -491,9 +599,86 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
+        {/* ===== HOSPEDAGEM / BOOKING ===== */}
+        {(show.booking || podeGerenciarShow) && (
+          <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
+            <BookingSection
+              showId={show.id}
+              booking={show.booking}
+              podeEditar={podeGerenciarShow}
+              onSave={async (booking) => {
+                await updateShow(show.id, { booking });
+              }}
+            />
+          </Bloco>
+        )}
+
+        {/* ===== ANOTAÇÕES DO SHOW — linha-resumo (estética dos Documentos
+            vinculados); a escrita/thread abre num modal próprio. ===== */}
+        <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
+          <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              {notasDoShow.length === 0 ? (
+                <span className="text-sm text-muted">{t("Sem nenhuma anotação")}</span>
+              ) : (
+                <>
+                  <span className="badge badge-neutral inline-flex items-center gap-1">
+                    <StickyNote size={11} />
+                    {notasDoShow.length === 1 ? t("Anotação") : t("Anotações")}
+                  </span>
+                  <span
+                    className="font-mono text-sm font-bold tabular-nums"
+                    style={{ color: "var(--brand)" }}
+                  >
+                    {notasDoShow.length}/4
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotasAbertas(true)}
+              className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+            >
+              {notasDoShow.length === 0 ? t("Fazer anotação") : t("Ver anotações")}
+              <ExternalLink size={11} />
+            </button>
+          </div>
+        </Bloco>
+
+        {/* Modal — thread de anotações do show (campo de texto vive aqui) */}
+        <Modal
+          isOpen={notasAbertas}
+          onClose={() => setNotasAbertas(false)}
+          title={t("Anotações")}
+          subtitle={show.venue || show.location || undefined}
+          maxWidth={560}
+        >
+          <div className="max-h-[65vh] overflow-y-auto pr-1">
+            <NotasDoShow showId={show.id} />
+          </div>
+        </Modal>
+
         {/* ===== ORIGEM (links) ===== */}
-        {(orcamento || venda) && (
+        {(orcamento || venda || resumoContrato.contrato) && (
           <Bloco icon={<Hash size={14} />} title={t("Documentos vinculados")}>
+            {resumoContrato.contrato && (
+              <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border mb-2">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
+                    <FileSignature size={11} />
+                    {t("Contrato")}
+                  </span>
+                  <span
+                    className="font-mono text-sm font-bold tabular-nums"
+                    style={{ color: "var(--brand)" }}
+                  >
+                    {resumoContrato.contrato.numero}
+                  </span>
+                  <span className="text-xs text-muted">· {rotuloContrato.texto}</span>
+                </div>
+              </div>
+            )}
             {venda && (
               <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
                 <div className="flex items-center gap-2 min-w-0">
@@ -566,6 +751,19 @@ export default function ShowDetalheModal({
 }
 
 // ---------- Auxiliares ----------
+
+/** "07/07/2026 · 14:30" a partir de um timestamp ISO. Vazio se inválido. */
+function formatarDataHora(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function Bloco({
   icon,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import LogoGC from "@/components/LogoGC";
+import LandingNav from "@/components/landing/LandingNav";
 import { Check, ArrowRight, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   PLANOS,
@@ -18,7 +18,6 @@ import {
   type CicloCobranca,
   type Plano,
 } from "@/lib/planos";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT, useMoeda } from "@/lib/i18n";
 
 export default function PlanosPage() {
@@ -46,20 +45,8 @@ export default function PlanosPage() {
 
   return (
     <div className="min-h-screen bg-main text-primary">
-      {/* NAV */}
-      <nav className="sticky top-0 z-40 border-b border-border bg-main/90 backdrop-blur-md">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <LogoGC size={28} variant="gradient" withWordmark />
-          </Link>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <Link href="/login" className="btn btn-secondary text-sm">
-              {t("Entrar")}
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* NAV — mesmo menu de topo da landing (links viram /#seção aqui) */}
+      <LandingNav />
 
       {/* HEADER */}
       <section className="relative overflow-hidden max-w-[1200px] mx-auto px-6 pt-16 pb-8 text-center">

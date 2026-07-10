@@ -35,6 +35,8 @@ export type SessaoAutenticada = {
   papel: Papel;
   artistaId: string | null;
   escopo: EscopoSessao;
+  /** Permissão dedicada de criar pastas de anotações (admin sempre pode). */
+  podeCriarAnotacoes: boolean;
   /**
    * Funções operacionais e DJs atendidos. Vazio quando o papel é admin
    * ou artista, ou quando o operacional ainda não foi configurado.
@@ -90,7 +92,7 @@ export async function autenticar(): Promise<
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, nome, email, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em"
+      "id, nome, email, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em, pode_criar_anotacoes"
     )
     .eq("id", user.id)
     .single<{
@@ -105,6 +107,7 @@ export async function autenticar(): Promise<
       funcoes: unknown;
       status: string;
       deletado_em: string | null;
+      pode_criar_anotacoes: boolean;
     }>();
 
   if (!profile) {
@@ -193,6 +196,7 @@ export async function autenticar(): Promise<
       papel: profile.papel,
       artistaId: profile.artista_id,
       escopo: normalizarEscopo(profile.escopo),
+      podeCriarAnotacoes: profile.pode_criar_anotacoes ?? false,
       funcoes,
       vinculos,
       privacidade,

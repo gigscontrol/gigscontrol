@@ -10,7 +10,8 @@ const COLS = `
   observacoes, info_extra, detalhes_evento,
   data_show, horario, fuso_horario, validade, show_id,
   taxa_agencia_valor, taxa_modo_aplicado,
-  criado_por, criado_em, atualizado_em
+  criado_por, criado_em, atualizado_em,
+  criador:profiles!orcamentos_criado_por_fkey ( nome )
 `;
 
 export async function listarOrcamentos(

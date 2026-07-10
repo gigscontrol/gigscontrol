@@ -8,6 +8,7 @@ import {
   Trash2,
   FileText,
   Sparkles,
+  Globe,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -26,6 +27,8 @@ import { ESTILO_PADRAO } from "@/lib/mappers/contratoModelo";
 import {
   NOME_MODELO_EXEMPLO,
   SECOES_MODELO_EXEMPLO,
+  NOME_MODELO_GLOBAL,
+  SECOES_MODELO_GLOBAL,
 } from "@/lib/contratos/modeloExemplo";
 
 const ACCENT = "#3D7BFF";
@@ -116,6 +119,16 @@ export default function ModelosPage() {
       modeloId: null,
       nome: NOME_MODELO_EXEMPLO,
       secoes: clonarSecoes(SECOES_MODELO_EXEMPLO),
+      estilo: ESTILO_PADRAO,
+    });
+    setVista("editor");
+  }
+
+  function abrirGlobal() {
+    setEditando({
+      modeloId: null,
+      nome: NOME_MODELO_GLOBAL,
+      secoes: clonarSecoes(SECOES_MODELO_GLOBAL),
       estilo: ESTILO_PADRAO,
     });
     setVista("editor");
@@ -250,6 +263,42 @@ export default function ModelosPage() {
               <button
                 type="button"
                 onClick={abrirExemplo}
+                disabled={noLimite}
+                title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
+                className="btn flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: ACCENT, color: "#fff" }}
+              >
+                <Copy size={15} />
+                {t("Duplicar e editar")}
+              </button>
+            </div>
+          </div>
+
+          {/* Card do modelo global (internacional, em inglês) */}
+          <div className="card">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <div
+                  className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                >
+                  <Globe size={18} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="badge" style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
+                      {t("Internacional")}
+                    </span>
+                  </div>
+                  <div className="section-title mt-1.5">{NOME_MODELO_GLOBAL}</div>
+                  <p className="section-subtitle mt-1 max-w-2xl">
+                    {t("Contrato de apresentação artística no padrão internacional, em inglês (com Force Majeure e lei aplicável). É um ponto de partida — revise com um advogado antes de usar.")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={abrirGlobal}
                 disabled={noLimite}
                 title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
                 className="btn flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"

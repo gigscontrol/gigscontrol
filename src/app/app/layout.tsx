@@ -9,8 +9,10 @@ import ControlePagamentos from "@/components/ControlePagamentos";
 import VendasDashboard from "@/components/VendasDashboard";
 import AgendaDashboard from "@/components/AgendaDashboard";
 import AgendaEscala from "@/components/AgendaEscala";
+import AnotacoesPage from "@/components/anotacoes/AnotacoesPage";
 import Contatos from "@/components/Contatos";
 import ContatosDashboard from "@/components/ContatosDashboard";
+import MapaPage from "@/components/contatos/MapaPage";
 import NovoOrcamento from "@/components/NovoOrcamento";
 import HistoricoOrcamentos from "@/components/HistoricoOrcamentos";
 import OrcamentoDetalhe from "@/components/OrcamentoDetalhe";
@@ -30,6 +32,7 @@ import { OrcamentosProvider } from "@/lib/orcamentos-context";
 import { VendasProvider } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
+import { AnotacoesProvider } from "@/lib/anotacoes-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
@@ -67,13 +70,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <VendasProvider>
                   <ModelosProvider>
                     <ContratosProvider>
-                      <AuthGuard>
-                        <NavProvider>
-                          <PreferenciasApply />
-                          <AppRoot />
-                          {children}
-                        </NavProvider>
-                      </AuthGuard>
+                      <AnotacoesProvider>
+                        <AuthGuard>
+                          <NavProvider>
+                            <PreferenciasApply />
+                            <AppRoot />
+                            {children}
+                          </NavProvider>
+                        </AuthGuard>
+                      </AnotacoesProvider>
                     </ContratosProvider>
                   </ModelosProvider>
                 </VendasProvider>
@@ -277,6 +282,7 @@ function resolverRota(seg: string[]): Rota {
   }
   if (a === "financeiro") {
     if (b === "pagamentos") return rotaBase("financeiro", "financeiro-pagamentos");
+    if (b === "cobrancas") return rotaBase("financeiro", "financeiro-cobrancas");
     return rotaBase("financeiro", "dashboard");
   }
   if (a === "contratos") {
@@ -288,6 +294,7 @@ function resolverRota(seg: string[]): Rota {
   }
   if (a === "contatos") {
     if (b === "lista") return rotaBase("contatos", "contatos-lista");
+    if (b === "mapa") return rotaBase("contatos", "contatos-mapa");
     return rotaBase("contatos", "dashboard");
   }
   if (a === "agencia") {
@@ -297,6 +304,7 @@ function resolverRota(seg: string[]): Rota {
   }
   // agenda é o default (inclui "/app" puro)
   if (a === "agenda" && b === "shows") return rotaBase("agenda", "agenda-completa");
+  if (a === "agenda" && b === "anotacoes") return rotaBase("agenda", "agenda-anotacoes");
   return rotaBase("agenda", "dashboard");
 }
 
@@ -305,6 +313,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
   switch (page) {
     case "agenda-completa":
       return `${BASE}/agenda/shows`;
+    case "agenda-anotacoes":
+      return `${BASE}/agenda/anotacoes`;
     case "vendas-historico":
       return `${BASE}/vendas/orcamentos`;
     case "vendas-novo-orcamento":
@@ -319,6 +329,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/vendas/vendas/${id ?? ""}`;
     case "financeiro-pagamentos":
       return `${BASE}/financeiro/pagamentos`;
+    case "financeiro-cobrancas":
+      return `${BASE}/financeiro/cobrancas`;
     case "contratos-novo":
       return `${BASE}/contratos/novo`;
     case "contratos-modelos":
@@ -329,6 +341,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/contratos/pastas`;
     case "contatos-lista":
       return `${BASE}/contatos/lista`;
+    case "contatos-mapa":
+      return `${BASE}/contatos/mapa`;
     case "agencia-artistas":
       return `${BASE}/agencia/artistas`;
     case "agencia-equipe":
@@ -551,6 +565,9 @@ function AppRoot() {
           {activeTab === "financeiro" && activePage === "financeiro-pagamentos" && (
             <ControlePagamentos />
           )}
+          {activeTab === "financeiro" && activePage === "financeiro-cobrancas" && (
+            <ControlePagamentos modo="cobrancas" />
+          )}
 
           {/* Vendas */}
           {activeTab === "vendas" && activePage === "dashboard" && (
@@ -636,6 +653,9 @@ function AppRoot() {
               onNovaVendaNoDia={novaVendaNoDia}
             />
           )}
+          {activeTab === "agenda" && activePage === "agenda-anotacoes" && (
+            <AnotacoesPage />
+          )}
 
           {/* Contatos */}
           {activeTab === "contatos" && activePage === "dashboard" && (
@@ -644,6 +664,7 @@ function AppRoot() {
           {activeTab === "contatos" && activePage === "contatos-lista" && (
             <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
           )}
+          {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
 
           {/* Contratos */}
           {activeTab === "contratos" && activePage === "dashboard" && (

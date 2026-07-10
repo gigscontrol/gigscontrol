@@ -86,6 +86,49 @@ export type DJ = {
 
 export type ShowStatus = "confirmado" | "pendente" | "logistica" | "cancelado";
 
+/** Auditoria de um cancelamento de show — carimbada pelo SERVIDOR (a partir
+ *  da sessão), nunca enviada pelo cliente. Vive em shows.meta.cancelamento. */
+export type CancelamentoInfo = {
+  /** userId de quem cancelou. */
+  por: string;
+  /** Nome (snapshot) de quem cancelou — pra exibir sem re-consultar. */
+  porNome: string;
+  /** Quando (timestamp ISO). */
+  em: string;
+  /** Motivo informado (obrigatório). */
+  motivo: string;
+};
+
+/**
+ * Booking / hospedagem de um show (Agenda — Fases 4-5). Vive em
+ * `shows.meta.booking`. Fluxo: "solicitado" (pedido ao contratante) →
+ * "informado" (dados preenchidos). O voucher fica no bucket `vouchers`.
+ */
+export type BookingShow = {
+  status: "solicitado" | "informado";
+  hotelNome?: string;
+  endereco?: string;
+  quarto?: string;
+  telefone?: string;
+  /** Link/coords do mapa (Google Maps etc.). */
+  localizacao?: string;
+  /** ISO "YYYY-MM-DD" (ou com hora). */
+  checkin?: string;
+  checkout?: string;
+  /** Quantidade de quartos. */
+  quartos?: number;
+  /** Ocupação (quem fica em cada quarto) — texto livre. */
+  ocupacao?: string;
+  pago?: boolean;
+  /** Path do voucher no bucket `vouchers`. */
+  voucherPath?: string;
+  observacoes?: string;
+  solicitadoEm?: string;
+  informadoEm?: string;
+  atualizadoPor?: string;
+  atualizadoEm?: string;
+};
+
 export type Show = {
   id: string;
   /** Dia do mês (1-31) — derivado de `data` para casar com a grid da agenda. */
@@ -104,6 +147,12 @@ export type Show = {
   valor?: number;
   orcamentoId?: string;
   vendaId?: string;
+  /** Cancelamento atual (só quando status === "cancelado"). */
+  cancelamento?: CancelamentoInfo;
+  /** Cancelamentos anteriores (empilhados a cada reversão) — mantém histórico. */
+  cancelamentoHistorico?: CancelamentoInfo[];
+  /** Booking / hospedagem (Fases 4-5). */
+  booking?: BookingShow;
 };
 
 export type AgendaItemTipo = "evento" | "voo" | "transporte";
@@ -129,7 +178,7 @@ export type AgendaItem = {
 };
 
 export type DateRange = "Mês atual" | "Mês passado" | "Ano" | "Personalizado";
-export type AgendaDateRange = "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
+export type AgendaDateRange = "Visão geral" | "Mês anterior" | "Mês atual" | "Próximo mês" | "Personalizado";
 
 export type ActiveTab =
   | "agenda"
@@ -141,6 +190,7 @@ export type ActiveTab =
 export type ActivePage =
   | "dashboard"
   | "agenda-completa"
+  | "agenda-anotacoes"
   | "vendas-novo-orcamento"
   | "vendas-historico"
   | "vendas-orcamento-detalhe"
@@ -148,15 +198,17 @@ export type ActivePage =
   | "vendas-historico-vendas"
   | "vendas-venda-detalhe"
   | "financeiro-pagamentos"
+  | "financeiro-cobrancas"
   | "contratos-novo"
   | "contratos-modelos"
   | "contratos-historico"
   | "contratos-pastas"
   | "contatos-lista"
+  | "contatos-mapa"
   | "agencia-artistas"
   | "agencia-equipe";
 
-export type ContatoCategoria = "contratantes" | "casas" | "cidades" | "mapa";
+export type ContatoCategoria = "contratantes" | "casas" | "cidades";
 export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
 
 // ----------- Entidades de Contatos -----------
@@ -196,6 +248,8 @@ export type Casa = {
   contatoResponsavel?: string;
   telefone?: string;
   observacoes?: string;
+  /** Data de cadastro (ISO) — exposta p/ filtro de período no Gerenciar. */
+  criadoEm?: string;
   /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
   lat?: number;
   lng?: number;
@@ -306,6 +360,9 @@ export type Orcamento = {
   /** Orçamento detalhado: infos do evento pra pré-preencher a venda. */
   detalhesEvento?: DetalhesEvento;
   showId?: string;
+  /** Vendedor responsável (quem criou): userId + nome (via JOIN com profiles). */
+  criadoPor?: string;
+  criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
 };
@@ -386,6 +443,8 @@ export type ParcelaMeta = {
   };
   /** Log de cobranças enviadas (quantas vezes cobrou e não foi pago). */
   cobrancas?: { em: string; por?: string; porNome?: string }[];
+  /** Fixada (📌) — cobrança priorizada, aparece na fila "Fixadas" do topo. */
+  fixada?: boolean;
 };
 
 /**
@@ -486,6 +545,9 @@ export type Venda = {
   observacoes?: string;
   /** Texto livre opcional — copiado do orçamento ao concretizar. Editável depois. */
   infoExtra?: string;
+  /** Vendedor responsável (quem criou): userId + nome (via JOIN com profiles). */
+  criadoPor?: string;
+  criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
 };

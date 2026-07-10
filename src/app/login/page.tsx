@@ -7,6 +7,8 @@ import { ArrowRight, User, AlertCircle } from "lucide-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
+import PainelVivoLogin from "@/components/auth/PainelVivoLogin";
+import LandingNav from "@/components/landing/LandingNav";
 import CampoSenha from "@/components/CampoSenha";
 import { useT } from "@/lib/i18n";
 
@@ -49,10 +51,15 @@ function LoginInner() {
   }
 
   return (
-    <AuthShell
-      titulo={t("Entrar na conta")}
-      subtitulo={t("Acesse o painel da sua agência")}
-    >
+    <>
+      {/* Mesmo menu de topo da landing (links viram /#seção; logo → home) */}
+      <LandingNav />
+      <AuthShell
+        titulo={t("Entrar na conta")}
+        subtitulo={t("Acesse o painel da sua agência")}
+        painelEsquerdo={<PainelVivoLogin comNavExterna />}
+        comNavExterna
+      >
       {/* OAuth — Google + Facebook */}
       <div className="card mb-3">
         <BotoesOAuth prefixo={t("Entrar com")} />
@@ -141,6 +148,7 @@ function LoginInner() {
               </Link>
             </div>
           </form>
-    </AuthShell>
+      </AuthShell>
+    </>
   );
 }

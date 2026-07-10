@@ -38,6 +38,7 @@ export type ProfileRow = {
   funcoes: Record<string, unknown> | null;
   status: string | null;
   deletado_em: string | null;
+  pode_criar_anotacoes: boolean | null;
   /**
    * true = a senha do usuário ainda é a aleatória gerada pelo sistema
    * (criação ou último reset). false = o próprio usuário já trocou no
@@ -86,6 +87,8 @@ export type UsuarioEquipe = {
   escopo: EscopoUsuario;
   funcoes: Funcoes;
   ativo: boolean;
+  /** Permissão dedicada (workspace-level): criar pastas de anotações. */
+  podeCriarAnotacoes?: boolean;
   // Dados pessoais (opcionais).
   cor?: string;
   pais?: string;
@@ -148,6 +151,7 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   if (row.endereco) u.endereco = row.endereco;
   if (row.telefone) u.telefone = row.telefone;
   if (row.cidade_id) u.cidadeId = row.cidade_id;
+  if (row.pode_criar_anotacoes) u.podeCriarAnotacoes = true;
   return u;
 }
 
@@ -181,6 +185,7 @@ export type UsuarioEscrita = {
   escopo?: EscopoUsuario;
   funcoes?: Funcoes;
   status?: "ativo" | "bloqueado" | "desativado";
+  pode_criar_anotacoes?: boolean;
   /** Marca true ao criar ou resetar; false quando o usuário troca pelo painel. */
   senha_padrao?: boolean;
   /** Valor da senha aleatória (plaintext). Só viaja junto com `senha_padrao=true`. */

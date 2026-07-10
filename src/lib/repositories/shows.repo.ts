@@ -13,11 +13,32 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 // shows cujo artista foi soft-deletado (mandado pra lixeira).
 const SELECT_COM_JOINS = `
   id, workspace_id, artist_id, contratante_id, casa_id, cidade_id,
-  data, horario, status, valor, orcamento_id, venda_id, criado_em, criado_por,
+  data, horario, status, valor, orcamento_id, venda_id, criado_em, criado_por, meta,
   artist:artists ( id, nome, deletado_em ),
   casa:casas ( id, nome ),
   cidade:cidades ( id, nome, estado )
 `;
+
+/**
+ * Conta shows do workspace com voucher de HOTEL (booking) anexado no ciclo —
+ * cota PRÓPRIA, separada da aérea. Usa meta.booking.atualizadoEm como carimbo do
+ * upload (o path é gravado no PATCH que atualiza o booking, logo após o upload).
+ */
+export async function contarBookingVouchersDesde(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  desdeIso: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("shows")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("deletado_em", null)
+    .not("meta->booking->>voucherPath", "is", null)
+    .gte("meta->booking->>atualizadoEm", desdeIso);
+  if (error) throw error;
+  return count ?? 0;
+}
 
 export async function listarShows(
   supabase: SupabaseClient,

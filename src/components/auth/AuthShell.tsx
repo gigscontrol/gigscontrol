@@ -27,12 +27,44 @@ export default function AuthShell({
   titulo,
   subtitulo,
   children,
+  painelEsquerdo,
+  comNavExterna = false,
 }: {
   titulo: string;
   subtitulo?: string;
   children: React.ReactNode;
+  /**
+   * Conteúdo customizado do painel de marca (desktop). Quando presente,
+   * substitui o painel padrão (gradiente + bullets) — usado pelo login
+   * (tela 07: mini-dashboard vivo). Signup e demais telas seguem no padrão.
+   */
+  painelEsquerdo?: React.ReactNode;
+  /**
+   * Quando a página já tem a nav de topo (LandingNav, ex.: /login): encolhe
+   * a altura pra caber abaixo dela (sem scroll) e esconde a topbar interna
+   * (idioma + "voltar"), que a nav externa já provê.
+   */
+  comNavExterna?: boolean;
 }) {
   const t = useT();
+  // Altura: página inteira, ou "menos a nav de topo" (72px) quando embutida.
+  const altura = comNavExterna ? "lg:min-h-[calc(100dvh-72px)]" : "min-h-screen";
+  if (painelEsquerdo) {
+    return (
+      <div className={`${altura} bg-main text-primary lg:grid lg:grid-cols-[1.15fr_1fr]`}>
+        <aside className="relative hidden lg:flex flex-col overflow-hidden border-r border-border">
+          {painelEsquerdo}
+        </aside>
+        <LadoFormulario
+          titulo={titulo}
+          subtitulo={subtitulo}
+          semTopbar={comNavExterna}
+        >
+          {children}
+        </LadoFormulario>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-main text-primary lg:grid lg:grid-cols-2">
       {/* ===== Painel de marca (desktop) ===== */}
@@ -77,18 +109,41 @@ export default function AuthShell({
         </p>
       </aside>
 
-      {/* ===== Lado do formulário ===== */}
-      <main className="relative flex flex-col">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
-          style={{
-            background:
-              "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
-          }}
-        />
+      <LadoFormulario titulo={titulo} subtitulo={subtitulo}>
+        {children}
+      </LadoFormulario>
+    </div>
+  );
+}
 
-        {/* Topo: logo (mobile) + seletor de idioma + voltar ao site */}
+/** Lado do formulário — comum ao painel padrão e ao customizado. */
+function LadoFormulario({
+  titulo,
+  subtitulo,
+  children,
+  semTopbar = false,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  children: React.ReactNode;
+  /** Esconde a topbar interna quando a página já tem nav de topo própria. */
+  semTopbar?: boolean;
+}) {
+  const t = useT();
+  return (
+    <main className="relative flex flex-col">
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
+        style={{
+          background:
+            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
+        }}
+      />
+
+      {/* Topo: logo (mobile) + seletor de idioma + voltar ao site.
+          Escondido quando a nav externa já cobre isso (login com LandingNav). */}
+      {!semTopbar && (
         <div className="relative flex items-center justify-between px-6 h-16">
           <Link href="/" className="lg:hidden">
             <LogoGC size={26} variant="gradient" withWordmark />
@@ -104,20 +159,20 @@ export default function AuthShell({
             </Link>
           </div>
         </div>
+      )}
 
-        {/* Conteúdo (form) */}
-        <div className="relative flex-1 flex items-center justify-center px-6 py-10">
-          <div className="w-full max-w-[400px]">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
-              {subtitulo && (
-                <p className="mt-1.5 text-sm text-secondary">{subtitulo}</p>
-              )}
-            </div>
-            {children}
+      {/* Conteúdo (form) */}
+      <div className="relative flex-1 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-[400px]">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
+            {subtitulo && (
+              <p className="mt-1.5 text-sm text-secondary">{subtitulo}</p>
+            )}
           </div>
+          {children}
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

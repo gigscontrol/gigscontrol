@@ -15,9 +15,12 @@ import {
   CalendarCheck2,
   ShoppingCart,
   Wallet,
+  Pin,
   FileSignature,
   Building2,
   Music,
+  Map,
+  NotebookPen,
   LayoutTemplate,
   FolderOpen,
   ChevronsLeft,
@@ -68,6 +71,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "agenda-completa", label: "Agenda de Shows", icon: CalendarRange },
+      { page: "agenda-anotacoes", label: "Anotações", icon: NotebookPen },
     ],
   },
   {
@@ -99,6 +103,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "financeiro-pagamentos", label: "Controle de Pagamentos", icon: Wallet },
+      { page: "financeiro-cobrancas", label: "Fixados", icon: Pin },
     ],
   },
   {
@@ -120,6 +125,7 @@ const MODULES: ModuleDef[] = [
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { page: "contatos-lista", label: "Gerenciar Contatos", icon: Users },
+      { page: "contatos-mapa", label: "Mapa", icon: Map },
     ],
   },
   {

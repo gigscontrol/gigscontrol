@@ -51,6 +51,8 @@ export type VendaRow = {
   atualizado_em: string | null;
   taxa_agencia_valor: number | string | null;
   taxa_modo_aplicado: TaxaAgenciaModo | null;
+  /** JOIN com profiles (criado_por) — nome do vendedor. */
+  criador?: { nome: string | null } | null;
 };
 
 function paraNumero(v: number | string | null | undefined): number {
@@ -115,6 +117,8 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
     observacoes: row.observacoes ?? undefined,
     infoExtra: row.info_extra ?? undefined,
+    criadoPor: row.criado_por ?? undefined,
+    criadoPorNome: row.criador?.nome ?? undefined,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
   };

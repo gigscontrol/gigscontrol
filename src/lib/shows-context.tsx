@@ -9,7 +9,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { Show } from "@/types";
+import type { Show, BookingShow } from "@/types";
 import { useAuth } from "./auth-context";
 
 /**
@@ -38,7 +38,13 @@ export type AddShowInput = Omit<Show, "id" | "dayId" | "dj" | "location" | "venu
   dayId?: number;
 };
 
-export type UpdateShowInput = Partial<AddShowInput>;
+export type UpdateShowInput = Partial<AddShowInput> & {
+  /** Motivo ao cancelar. O servidor carimba quem/quando em shows.meta —
+   *  não é campo do Show, só trafega no PATCH. */
+  cancelamentoMotivo?: string;
+  /** Booking/hospedagem — mesclado em shows.meta.booking pelo servidor. */
+  booking?: BookingShow;
+};
 
 type ShowsContextValue = {
   shows: Show[];
@@ -64,6 +70,10 @@ function camelParaApi(s: AddShowInput | UpdateShowInput): Record<string, unknown
   if (s.valor !== undefined) out.valor = s.valor ?? null;
   if (s.orcamentoId !== undefined) out.orcamento_id = s.orcamentoId || null;
   if (s.vendaId !== undefined) out.venda_id = s.vendaId || null;
+  const motivo = (s as UpdateShowInput).cancelamentoMotivo;
+  if (motivo !== undefined) out.cancelamentoMotivo = motivo;
+  const booking = (s as UpdateShowInput).booking;
+  if (booking !== undefined) out.booking = booking;
   return out;
 }
 

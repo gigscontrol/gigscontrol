@@ -2,23 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Compass } from "lucide-react";
+import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight } from "lucide-react";
 import PageHeader from "./PageHeader";
+import DateRangeSelector from "./DateRangeSelector";
 import Modal from "./Modal";
 import ContratanteForm from "./forms/ContratanteForm";
 import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
-import MapaDobras from "./contatos/MapaDobras";
 import MiniLixeira from "./MiniLixeira";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatBRL } from "@/lib/contatos-stats";
 import { MODULE_THEMES } from "@/types";
-import type { ContatoCategoria, Contratante, Casa, Cidade } from "@/types";
+import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange } from "@/types";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -34,6 +34,40 @@ const TIPO_CASA_LABEL: Record<string, string> = {
   arena: "Arena",
   outro: "Outro",
 };
+
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const ATALHOS_CONTATOS: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+
+/** {ano, mes(0-based), tudo}. "Visão geral" = tudo (sem recorte). */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number; tudo: boolean } {
+  const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
+}
+
+/** Casa a data de cadastro (ISO) no período. Sem data de cadastro → SEMPRE visível
+ *  (registro legado não some do Gerenciar por causa do filtro de período). */
+function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return true;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}
 
 export default function Contatos({
   categoriaInicial = "contratantes",
@@ -52,6 +86,14 @@ export default function Contatos({
 
   const [categoria, setCategoria] = useState<ContatoCategoria>(categoriaInicial);
   const [search, setSearch] = useState("");
+  const { workspaceCriadoEm } = useWorkspace();
+  const [range, setRange] = useState<AgendaDateRange>("Visão geral");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const periodo = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
   const [selecionado, setSelecionado] = useState<Selecionado>(null);
   const [modal, setModal] = useState<
     | { type: "novo-contratante" }
@@ -135,8 +177,10 @@ export default function Contatos({
 
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
-    const base = contratantes.filter((c) =>
-      passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist)
+    const base = contratantes.filter(
+      (c) =>
+        passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist) &&
+        dataNoMes(c.criadoEm, periodo)
     );
     if (!search.trim()) return base;
     const q = search.toLowerCase();
@@ -147,11 +191,13 @@ export default function Contatos({
         c.telefone.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
     );
-  }, [contratantes, search, cidades, filtrosPorDj]);
+  }, [contratantes, search, cidades, filtrosPorDj, periodo]);
 
   const casasFiltradas = useMemo(() => {
-    const base = casas.filter((c) =>
-      passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist)
+    const base = casas.filter(
+      (c) =>
+        passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist) &&
+        dataNoMes(c.criadoEm, periodo)
     );
     if (!search.trim()) return base;
     const q = search.toLowerCase();
@@ -161,7 +207,7 @@ export default function Contatos({
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
         TIPO_CASA_LABEL[c.tipo]?.toLowerCase().includes(q)
     );
-  }, [casas, search, cidades, filtrosPorDj]);
+  }, [casas, search, cidades, filtrosPorDj, periodo]);
 
   const cidadesFiltradas = useMemo(() => {
     const base = cidades.filter((c) =>
@@ -198,22 +244,34 @@ export default function Contatos({
         subtitle="Contratantes, casas/eventos e cidades — sua base de relacionamento"
         accentColor={accent}
         actions={
-          <button
-            onClick={() => {
-              if (categoria === "contratantes") setModal({ type: "novo-contratante" });
-              else if (categoria === "casas") setModal({ type: "novo-casa" });
-              else setModal({ type: "novo-cidade" });
-            }}
-            className="btn btn-primary"
-          >
-            <Plus size={16} />
-            {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <DateRangeSelector
+              options={ATALHOS_CONTATOS}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+            <button
+              onClick={() => {
+                if (categoria === "contratantes") setModal({ type: "novo-contratante" });
+                else if (categoria === "casas") setModal({ type: "novo-casa" });
+                else setModal({ type: "novo-cidade" });
+              }}
+              className="btn btn-primary"
+            >
+              <Plus size={16} />
+              {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
+            </button>
+          </div>
         }
       />
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <SummaryTile
           icon={<Users size={16} />}
           label={t("Contratantes")}
@@ -238,46 +296,26 @@ export default function Contatos({
           accent={accent}
           onClick={() => setCategoria("cidades")}
         />
-        <SummaryTile
-          icon={<Compass size={16} />}
-          label={t("Mapa de Dobras")}
-          value={cidadesFiltradas.filter((c) => c.latitude !== undefined).length}
-          active={categoria === "mapa"}
-          accent={accent}
-          onClick={() => setCategoria("mapa")}
-        />
       </div>
 
-      {/* Busca (não aparece no mapa) */}
-      {categoria !== "mapa" && (
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar em {categoria}...", { categoria })}
-            className="input"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
-              {t("Limpar")}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Mapa de Dobras (busca por raio) */}
-      {categoria === "mapa" && (
-        <MapaDobras
-          cidades={cidadesFiltradas}
-          casas={casasFiltradas}
-          contratantes={contratantesFiltrados}
+      {/* Busca */}
+      <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+        <Search size={15} className="text-muted flex-shrink-0" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("Buscar em {categoria}...", { categoria })}
+          className="input"
         />
-      )}
+        {search && (
+          <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
+            {t("Limpar")}
+          </button>
+        )}
+      </div>
 
       {/* Tabela conforme categoria */}
-      {categoria !== "mapa" && (
       <div className="card p-0 overflow-hidden">
         {categoria === "contratantes" && (
           <TabelaContratantes
@@ -312,7 +350,6 @@ export default function Contatos({
           />
         )}
       </div>
-      )}
 
       {/* Mini-lixeira da categoria ativa — só admin vê, e só se houver
           algum item dessa categoria na lixeira. */}

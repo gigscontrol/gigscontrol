@@ -12,21 +12,57 @@ import {
   Ban,
   BellRing,
   Paperclip,
+  Pin,
   ChevronRight,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import DateRangeSelector from "./DateRangeSelector";
 import ParcelaDetalheModal from "./ParcelaDetalheModal";
 import { useVendas } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatBRL } from "@/lib/whatsapp";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type StatusParcela,
   type Parcela,
+  type AgendaDateRange,
 } from "@/types";
 import { useT } from "@/lib/i18n";
+
+const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+
+/** {ano, mes(0-based), tudo}. "Visão geral" = all-time. */
+function resolverMes(
+  range: AgendaDateRange,
+  customMonth: string | null,
+  customYear: number | null
+): { ano: number; mes: number; tudo: boolean } {
+  const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
+  if (range === "Mês anterior") {
+    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Próximo mês") {
+    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
+  }
+  if (range === "Personalizado" && customMonth && customYear !== null) {
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
+  }
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
+}
+
+function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return false;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}
 
 /** Linha achatada: uma parcela + dados da venda dona */
 type LinhaParcela = {
@@ -52,15 +88,30 @@ function fmtData(iso?: string): string {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
 }
 
-export default function ControlePagamentos() {
+export default function ControlePagamentos({
+  modo = "completo",
+}: {
+  modo?: "completo" | "cobrancas";
+}) {
   const t = useT();
+  const ehCobrancas = modo === "cobrancas";
   const accent = "var(--brand)";
-  const { vendas } = useVendas();
+  const { vendas, acaoParcela } = useVendas();
   const artistas = useArtistas();
+  const { workspaceCriadoEm } = useWorkspace();
 
   const [search, setSearch] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
   const [detalhe, setDetalhe] = useState<{ vendaId: string; parcelaId: string } | null>(null);
+  // Seletor de período (padrão: Visão geral). Filtra por data de vencimento.
+  const [range, setRange] = useState<AgendaDateRange>("Visão geral");
+  const [customMonth, setCustomMonth] = useState<string | null>(null);
+  const [customYear, setCustomYear] = useState<number | null>(null);
+  const periodo = useMemo(
+    () => resolverMes(range, customMonth, customYear),
+    [range, customMonth, customYear]
+  );
+  const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
@@ -89,22 +140,28 @@ export default function ControlePagamentos() {
     );
   }, [vendas, artistas]);
 
+  // Recorte do período (por data de vencimento). "Visão geral" = todas.
+  const parcelasPeriodo = useMemo(
+    () => todasParcelas.filter((l) => dataNoMes(l.parcela.dataVencimento, periodo)),
+    [todasParcelas, periodo]
+  );
+
   // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado.
   const totais = useMemo(() => {
     let recebido = 0;
     let aReceber = 0;
     let atrasado = 0;
-    for (const l of todasParcelas) {
+    for (const l of parcelasPeriodo) {
       if (l.status === "cancelado") continue;
       if (l.status === "pago") recebido += l.parcela.valor;
       else if (l.status === "atrasado") atrasado += l.parcela.valor;
       else aReceber += l.parcela.valor;
     }
     return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
-  }, [todasParcelas]);
+  }, [parcelasPeriodo]);
 
   const lista = useMemo(() => {
-    return todasParcelas.filter((l) => {
+    return parcelasPeriodo.filter((l) => {
       if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -115,20 +172,72 @@ export default function ControlePagamentos() {
       }
       return true;
     });
-  }, [todasParcelas, filtroStatus, search]);
+  }, [parcelasPeriodo, filtroStatus, search]);
 
   const contadores = useMemo(() => {
     const c = { pago: 0, pendente: 0, atrasado: 0, cancelado: 0 };
-    todasParcelas.forEach((l) => c[l.status]++);
+    parcelasPeriodo.forEach((l) => c[l.status]++);
     return c;
-  }, [todasParcelas]);
+  }, [parcelasPeriodo]);
+
+  // Fixadas (📌) — fila de cobranças a fazer. Independe do período (all-time),
+  // só as em aberto (não pagas/canceladas).
+  const fixadas = useMemo(
+    () =>
+      todasParcelas.filter(
+        (l) => l.parcela.meta?.fixada && l.status !== "pago" && l.status !== "cancelado"
+      ),
+    [todasParcelas]
+  );
+
+  // Fila da página "Fixadas / Cobranças": fixadas + atrasadas (em aberto).
+  const filaCobrancas = useMemo(
+    () =>
+      todasParcelas.filter(
+        (l) =>
+          (l.parcela.meta?.fixada || l.status === "atrasado") &&
+          l.status !== "pago" &&
+          l.status !== "cancelado"
+      ),
+    [todasParcelas]
+  );
+
+  async function toggleFixar(l: LinhaParcela) {
+    try {
+      await acaoParcela(l.vendaId, l.parcela.id, { fixar: !l.parcela.meta?.fixada });
+    } catch {
+      /* silencioso — o estado não muda se falhar */
+    }
+  }
+
+  // Na página "Cobranças", a lista é a fila (fixadas + atrasadas); senão, o
+  // recorte por período + filtros.
+  const itensLista = ehCobrancas ? filaCobrancas : lista;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Controle de Pagamentos"
-        subtitle="Todas as parcelas de todas as vendas — clique numa parcela para ver detalhes, informar pagamento, cobrar ou cancelar"
+        title={ehCobrancas ? "Fixados" : "Controle de Pagamentos"}
+        subtitle={
+          ehCobrancas
+            ? t("Cobranças fixadas e parcelas atrasadas — a fila do que precisa cobrar")
+            : `${t("Parcelas de todas as vendas — informe pagamento, cobre ou cancele")} · ${tituloPeriodo}`
+        }
         accentColor={accent}
+        actions={
+          ehCobrancas ? undefined : (
+            <DateRangeSelector
+              options={ATALHOS_FIN}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+          )
+        }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -138,6 +247,7 @@ export default function ControlePagamentos() {
         <StatCard title={t("Atrasado")} value={formatBRL(totais.atrasado)} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
       </div>
 
+      {!ehCobrancas && (
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
@@ -152,7 +262,7 @@ export default function ControlePagamentos() {
 
         <div className="pill-group">
           <button type="button" className={`pill ${filtroStatus === "todos" ? "active" : ""}`} onClick={() => setFiltroStatus("todos")}>
-            {t("Todas ({n})", { n: todasParcelas.length })}
+            {t("Todas ({n})", { n: parcelasPeriodo.length })}
           </button>
           <button type="button" className={`pill ${filtroStatus === "pendente" ? "active" : ""}`} onClick={() => setFiltroStatus("pendente")}>
             <Clock size={11} />
@@ -174,35 +284,63 @@ export default function ControlePagamentos() {
           )}
         </div>
       </div>
+      )}
 
-      {lista.length === 0 ? (
+      {!ehCobrancas && fixadas.length > 0 && (
+        <div className="card mb-4" style={{ borderColor: "var(--warning)" }}>
+          <div className="section-title mb-3 inline-flex items-center gap-2">
+            <Pin size={15} style={{ color: "var(--warning)" }} />
+            {t("Fixadas — cobranças a fazer")} · {fixadas.length}
+          </div>
+          <div className="flex flex-col gap-2">
+            {fixadas.map((l) => (
+              <ParcelaRow
+                key={`fix-${l.vendaId}-${l.parcela.id}`}
+                linha={l}
+                accent={accent}
+                onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+                onToggleFixar={() => toggleFixar(l)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {itensLista.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <Wallet size={18} className="text-muted" />
           </div>
           <div className="section-title mb-1">
-            {todasParcelas.length === 0 ? t("Nenhuma parcela registrada") : t("Nenhum resultado")}
+            {ehCobrancas
+              ? t("Nenhuma cobrança pendente 🎉")
+              : todasParcelas.length === 0
+                ? t("Nenhuma parcela registrada")
+                : t("Nenhum resultado")}
           </div>
           <div className="section-subtitle">
-            {todasParcelas.length === 0
-              ? t("As parcelas aparecem aqui quando você concretiza uma venda")
-              : t("Ajuste os filtros ou a busca")}
+            {ehCobrancas
+              ? t("Nada fixado nem atrasado — tudo em dia!")
+              : todasParcelas.length === 0
+                ? t("As parcelas aparecem aqui quando você concretiza uma venda")
+                : t("Ajuste os filtros ou a busca")}
           </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {lista.map((l) => (
+          {itensLista.map((l) => (
             <ParcelaRow
               key={`${l.vendaId}-${l.parcela.id}`}
               linha={l}
               accent={accent}
               onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+              onToggleFixar={() => toggleFixar(l)}
             />
           ))}
         </div>
       )}
 
-      {totais.atrasado > 0 && (
+      {!ehCobrancas && totais.atrasado > 0 && (
         <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "rgba(239,68,68,0.06)" }}>
           <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
           <div className="text-sm text-secondary">
@@ -230,10 +368,12 @@ function ParcelaRow({
   linha: l,
   accent,
   onClick,
+  onToggleFixar,
 }: {
   linha: LinhaParcela;
   accent: string;
   onClick: () => void;
+  onToggleFixar: () => void;
 }) {
   const t = useT();
   const st = LABELS_STATUS_PARCELA[l.status];
@@ -241,13 +381,32 @@ function ParcelaRow({
   const meta = l.parcela.meta;
   const nCobrancas = meta?.cobrancas?.length ?? 0;
   const temComprovante = !!meta?.pagamento?.comprovantePath;
+  const fixada = !!meta?.fixada;
+  const podeFixar = l.status !== "pago" && l.status !== "cancelado";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="card card-interactive w-full text-left flex items-center gap-4 py-3 px-4"
-    >
+    <div className="card card-interactive w-full flex items-center gap-2 py-3 px-4">
+      {/* Fixar (📌) — cobrança prioritária */}
+      <button
+        type="button"
+        onClick={onToggleFixar}
+        disabled={!podeFixar && !fixada}
+        title={fixada ? t("Desafixar") : t("Fixar cobrança")}
+        className="flex-shrink-0 p-1 rounded hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <Pin
+          size={15}
+          style={{
+            color: fixada ? "var(--warning)" : "var(--text-muted)",
+            fill: fixada ? "var(--warning)" : "none",
+          }}
+        />
+      </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 flex items-center gap-4 text-left min-w-0"
+      >
       {/* Vencimento */}
       <div className="tabular-nums whitespace-nowrap min-w-[104px]">
         <div className="font-semibold text-primary text-sm">{venc.toLocaleDateString("pt-BR")}</div>
@@ -308,6 +467,7 @@ function ParcelaRow({
       </div>
 
       <ChevronRight size={16} className="text-muted flex-shrink-0" />
-    </button>
+      </button>
+    </div>
   );
 }

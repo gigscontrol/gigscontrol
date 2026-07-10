@@ -8,6 +8,9 @@ import {
   MapPin,
   Music,
   CheckCircle2,
+  Copy,
+  ClipboardPaste,
+  MessageCircle,
   Sparkles,
   Plus,
   Minus,
@@ -39,6 +42,8 @@ import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
+import { parseFechamento } from "@/lib/parseFechamento";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
@@ -93,6 +98,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
+  const [copiadoWA, setCopiadoWA] = useState(false);
+  const [previewWA, setPreviewWA] = useState(false);
+  const [resultadoColagem, setResultadoColagem] = useState<{
+    preenchidos: string[];
+    naoPreenchidos: string[];
+    avisos: string[];
+    erro?: string;
+  } | null>(null);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
 
@@ -476,6 +489,56 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
     const venda = await criarVenda(input);
     onSaved(venda.id);
+  }
+
+  // Passo 3 (volta) — cola a lista que o contratante devolveu e auto-preenche.
+  async function aplicarColagem() {
+    let texto = "";
+    try {
+      texto = await navigator.clipboard.readText();
+    } catch {
+      setResultadoColagem({
+        preenchidos: [],
+        naoPreenchidos: [],
+        avisos: [],
+        erro: "Não consegui ler a área de transferência do navegador. Copie a lista de novo e tente.",
+      });
+      return;
+    }
+    if (!texto.trim()) {
+      setResultadoColagem({
+        preenchidos: [],
+        naoPreenchidos: [],
+        avisos: [],
+        erro: "Não há nada copiado. Copie a lista que o contratante devolveu e clique de novo.",
+      });
+      return;
+    }
+    const { campos, naoPreenchidos, avisos } = parseFechamento(texto);
+    const feitos: string[] = [];
+    const set = (v: string | undefined, fn: (x: string) => void, rotulo: string) => {
+      if (v) {
+        fn(v);
+        feitos.push(rotulo);
+      }
+    };
+    set(campos.contratanteNome, setContratanteNome, "Nome");
+    set(campos.contratanteEmail, setContratanteEmail, "E-mail");
+    set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
+    set(campos.contratanteEndereco, setContratanteEndereco, "Endereço");
+    set(campos.nomeEvento, setNomeEvento, "Evento");
+    set(campos.eventoInstagram, setEventoInstagram, "Instagram");
+    set(campos.nomeLocal, setNomeLocal, "Local");
+    set(campos.capacidadePublico, setCapacidadePublico, "Capacidade");
+    set(campos.enderecoLocal, setEnderecoLocal, "Endereço do evento");
+    set(campos.dataShow, setDataShow, "Data");
+    set(campos.horario, setHorarioInicio, "Horário");
+    if (campos.horarioFim) setHorarioFim(campos.horarioFim);
+    if (campos.lineUp && campos.lineUp.length) {
+      setLineUp(campos.lineUp);
+      feitos.push("Line-Up");
+    }
+    setResultadoColagem({ preenchidos: feitos, naoPreenchidos, avisos });
   }
 
   const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
@@ -1213,6 +1276,116 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         />
       </SectionCard>
 
+      {/* Passo 3 — lista de fechamento pro WhatsApp, ACIMA dos botões. Serve pra
+          COLETAR o que falta do contratante (e-mail, CPF, endereço…) antes de
+          concretizar. Reflete o formulário atual. */}
+      {(() => {
+        const dadosFechamento = {
+          contratanteNome,
+          contratanteEmail,
+          contratanteTelefone: telDigits.replace(/\D/g, "")
+            ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
+            : "",
+          contratanteDocumento,
+          contratanteEndereco,
+          nomeEvento,
+          eventoInstagram,
+          nomeLocal,
+          capacidadePublico: capacidadePublico ? Number(capacidadePublico) : undefined,
+          enderecoLocal,
+          dataShow,
+          horario: horarioInicio,
+          horarioFim,
+          cache: cache ? parseFloat(cache.replace(",", ".")) : undefined,
+          lineUp,
+          efeitos,
+          camarim,
+          hotel,
+          logistica,
+        };
+        const texto = textoFechamentoVenda(dadosFechamento);
+        return (
+          <div
+            className="card mb-4 flex items-start gap-3"
+            style={{ borderColor: "var(--success)", backgroundColor: "var(--success-weak)" }}
+          >
+            <MessageCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-secondary">
+                {t("Lista de fechamento pro contratante — copie e mande no WhatsApp pra ele completar só o que falta (e-mail, CPF, endereço…).")}
+              </div>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(texto);
+                      setCopiadoWA(true);
+                      setTimeout(() => setCopiadoWA(false), 2500);
+                    } catch {
+                      /* clipboard indisponível */
+                    }
+                  }}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                >
+                  {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewWA((v) => !v)}
+                  className="btn-ghost text-xs"
+                >
+                  {previewWA ? t("Ocultar prévia") : t("Ver prévia")}
+                </button>
+                <button
+                  type="button"
+                  onClick={aplicarColagem}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                >
+                  <ClipboardPaste size={14} />
+                  {t("Colar resposta e preencher")}
+                </button>
+              </div>
+              {previewWA && (
+                <textarea
+                  readOnly
+                  value={texto}
+                  rows={14}
+                  className="w-full mt-2 bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
+                />
+              )}
+
+              {resultadoColagem && (
+                <div className="mt-2 flex flex-col gap-1 text-xs">
+                  {resultadoColagem.erro ? (
+                    <div style={{ color: "var(--danger)" }}>{resultadoColagem.erro}</div>
+                  ) : (
+                    <>
+                      {resultadoColagem.preenchidos.length > 0 ? (
+                        <div style={{ color: "var(--success)" }}>
+                          ✓ {t("Preenchi:")} {resultadoColagem.preenchidos.join(", ")}.
+                        </div>
+                      ) : (
+                        <div className="text-muted">
+                          {t("Não encontrei campos reconhecíveis no que estava copiado.")}
+                        </div>
+                      )}
+                      {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].length > 0 && (
+                        <div style={{ color: "var(--warning)" }}>
+                          ⚠ {t("Não preenchi (confira/preencha manual):")}{" "}
+                          {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].join(", ")}.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Ações sticky */}
       <div className="sticky bottom-4 mt-6 flex justify-between items-center gap-2 bg-surface border border-border rounded-lg px-4 py-3 shadow-lg">
         <button onClick={onCancel} className="btn btn-secondary">
@@ -1237,6 +1410,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           {salvando ? t("Concretizando...") : t("Concretizar Venda")}
         </button>
       </div>
+
     </div>
   );
 }

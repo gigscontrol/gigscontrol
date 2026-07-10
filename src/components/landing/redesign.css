@@ -1,0 +1,865 @@
+/**
+ * Animações e utilitários da landing redesenhada (tela 13 do guia) e do
+ * painel vivo do login (tela 07). Só transform/opacity — nada de layout
+ * animado. Tudo desligado em prefers-reduced-motion.
+ *
+ * Nomenclatura (do guia de redesign):
+ *  gcFloat  — notificações flutuando (login)
+ *  gcPulse  — pontinho verde "ao vivo" dos badges de seção
+ *  gcSbW/gcSbL/gcMa1-6/gcSm1-6 — sidebar viva do hero (loop 24s)
+ *  gcD1-12 / gcE1-12 — calendário vivo: dia acende + popup sobe (loop 30s)
+ *  gcSweep/gcPingB/gcPingW/gcPingL/gcRev3 — radar (loop 16s)
+ *  gcrv / gcrv-l / gcrv-r / gcrv-s / gcsolc — reveals on-scroll (+ .gcin)
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ===== flutuação / pulso ===== */
+@keyframes gcFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes gcPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ===== hero: sidebar viva (loop 24s) ===== */
+@keyframes gcSbW {
+  0%,
+  6% {
+    width: 68px;
+  }
+  10%,
+  94% {
+    width: 240px;
+  }
+  98%,
+  100% {
+    width: 68px;
+  }
+}
+@keyframes gcSbL {
+  0%,
+  9% {
+    opacity: 0;
+  }
+  12%,
+  93% {
+    opacity: 1;
+  }
+  97%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcMa1 {
+  0%,
+  12.5% {
+    background: rgba(61, 123, 255, 0);
+  }
+  14%,
+  24.75% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  26.25%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm1 {
+  0%,
+  12.5% {
+    max-height: 0;
+    opacity: 0;
+  }
+  14.5%,
+  24.25% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  26.25%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+@keyframes gcMa2 {
+  0%,
+  26.25% {
+    background: rgba(61, 123, 255, 0);
+  }
+  27.75%,
+  38.5% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  40%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm2 {
+  0%,
+  26.25% {
+    max-height: 0;
+    opacity: 0;
+  }
+  28.25%,
+  38% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  40%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+@keyframes gcMa3 {
+  0%,
+  40% {
+    background: rgba(61, 123, 255, 0);
+  }
+  41.5%,
+  52.25% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  53.75%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm3 {
+  0%,
+  40% {
+    max-height: 0;
+    opacity: 0;
+  }
+  42%,
+  51.75% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  53.75%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+@keyframes gcMa4 {
+  0%,
+  53.75% {
+    background: rgba(61, 123, 255, 0);
+  }
+  55.25%,
+  66% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  67.5%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm4 {
+  0%,
+  53.75% {
+    max-height: 0;
+    opacity: 0;
+  }
+  55.75%,
+  65.5% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  67.5%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+@keyframes gcMa5 {
+  0%,
+  67.5% {
+    background: rgba(61, 123, 255, 0);
+  }
+  69%,
+  79.75% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  81.25%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm5 {
+  0%,
+  67.5% {
+    max-height: 0;
+    opacity: 0;
+  }
+  69.5%,
+  79.25% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  81.25%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+@keyframes gcMa6 {
+  0%,
+  81.25% {
+    background: rgba(61, 123, 255, 0);
+  }
+  82.75%,
+  93.5% {
+    background: rgba(61, 123, 255, 0.14);
+  }
+  95%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcSm6 {
+  0%,
+  81.25% {
+    max-height: 0;
+    opacity: 0;
+  }
+  83.25%,
+  93% {
+    max-height: 190px;
+    opacity: 1;
+  }
+  95%,
+  100% {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+/* ===== calendário vivo (loop 30s): dia acende (gcD) + popup sobe (gcE) ===== */
+@keyframes gcE1 {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  0.5%,
+  6% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  7.5%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD1 {
+  0% {
+    background: rgba(61, 123, 255, 0);
+  }
+  0.5%,
+  6% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  7.5%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE2 {
+  0%,
+  8.33% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  8.83%,
+  14.33% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  15.83%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD2 {
+  0%,
+  8.33% {
+    background: rgba(61, 123, 255, 0);
+  }
+  8.83%,
+  14.33% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  15.83%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE3 {
+  0%,
+  16.67% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  17.17%,
+  22.67% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  24.17%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD3 {
+  0%,
+  16.67% {
+    background: rgba(245, 166, 35, 0);
+  }
+  17.17%,
+  22.67% {
+    background: rgba(245, 166, 35, 0.8);
+  }
+  24.17%,
+  100% {
+    background: rgba(245, 166, 35, 0);
+  }
+}
+@keyframes gcE4 {
+  0%,
+  25% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  25.5%,
+  31% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  32.5%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD4 {
+  0%,
+  25% {
+    background: rgba(61, 123, 255, 0);
+  }
+  25.5%,
+  31% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  32.5%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE5 {
+  0%,
+  33.33% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  33.83%,
+  39.33% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  40.83%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD5 {
+  0%,
+  33.33% {
+    background: rgba(31, 158, 90, 0);
+  }
+  33.83%,
+  39.33% {
+    background: rgba(31, 158, 90, 0.85);
+  }
+  40.83%,
+  100% {
+    background: rgba(31, 158, 90, 0);
+  }
+}
+@keyframes gcE6 {
+  0%,
+  41.67% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  42.17%,
+  47.67% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  49.17%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD6 {
+  0%,
+  41.67% {
+    background: rgba(61, 123, 255, 0);
+  }
+  42.17%,
+  47.67% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  49.17%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE7 {
+  0%,
+  50% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  50.5%,
+  56% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  57.5%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD7 {
+  0%,
+  50% {
+    background: rgba(61, 123, 255, 0);
+  }
+  50.5%,
+  56% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  57.5%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE8 {
+  0%,
+  58.33% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  58.83%,
+  64.33% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  65.83%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD8 {
+  0%,
+  58.33% {
+    background: rgba(61, 123, 255, 0);
+  }
+  58.83%,
+  64.33% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  65.83%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE9 {
+  0%,
+  66.67% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  67.17%,
+  72.67% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  74.17%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD9 {
+  0%,
+  66.67% {
+    background: rgba(61, 123, 255, 0);
+  }
+  67.17%,
+  72.67% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  74.17%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+@keyframes gcE10 {
+  0%,
+  75% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  75.5%,
+  81% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  82.5%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD10 {
+  0%,
+  75% {
+    background: rgba(245, 166, 35, 0);
+  }
+  75.5%,
+  81% {
+    background: rgba(245, 166, 35, 0.8);
+  }
+  82.5%,
+  100% {
+    background: rgba(245, 166, 35, 0);
+  }
+}
+@keyframes gcE11 {
+  0%,
+  83.33% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  83.83%,
+  89.33% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90.83%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD11 {
+  0%,
+  83.33% {
+    background: rgba(31, 158, 90, 0);
+  }
+  83.83%,
+  89.33% {
+    background: rgba(31, 158, 90, 0.85);
+  }
+  90.83%,
+  100% {
+    background: rgba(31, 158, 90, 0);
+  }
+}
+@keyframes gcE12 {
+  0%,
+  91.67% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  92.17%,
+  97.67% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  99.17%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gcD12 {
+  0%,
+  91.67% {
+    background: rgba(61, 123, 255, 0);
+  }
+  92.17%,
+  97.67% {
+    background: rgba(61, 123, 255, 0.85);
+  }
+  99.17%,
+  100% {
+    background: rgba(61, 123, 255, 0);
+  }
+}
+
+/* células do calendário */
+.calD {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  font: 500 10.5px "JetBrains Mono", monospace;
+  color: #8e96a8;
+  border-radius: 6px;
+}
+.calE {
+  height: 24px;
+}
+
+/* ===== radar (loop 16s) ===== */
+@keyframes gcSweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes gcPingB {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(61, 123, 255, 0.5);
+  }
+  2%,
+  5% {
+    transform: scale(2);
+    box-shadow: 0 0 22px 6px rgba(61, 123, 255, 0.95);
+  }
+  10%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 5px rgba(61, 123, 255, 0.5);
+  }
+}
+@keyframes gcPingW {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(198, 204, 216, 0.35);
+  }
+  2%,
+  5% {
+    transform: scale(2);
+    box-shadow: 0 0 18px 5px rgba(235, 242, 255, 0.9);
+  }
+  10%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(198, 204, 216, 0.35);
+  }
+}
+@keyframes gcPingL {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(125, 176, 255, 0.35);
+  }
+  2%,
+  5% {
+    transform: scale(1.7);
+    box-shadow: 0 0 18px 5px rgba(125, 176, 255, 0.9);
+  }
+  10%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px rgba(125, 176, 255, 0.35);
+  }
+}
+@keyframes gcRev3 {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  2%,
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ===== reveals on-scroll (IntersectionObserver adiciona .gcin) ===== */
+.gcrv {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.gcrv-l {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.gcrv-r {
+  opacity: 0;
+  transform: translateX(30px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.gcrv-s {
+  opacity: 0;
+  transform: scale(0.3);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.gcin {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* cards de Soluções: reveal + hover lift com glow azul */
+.gcsolc {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.gcsolc.gcin:hover {
+  transform: translateY(-5px) !important;
+  border-color: rgba(61, 123, 255, 0.45) !important;
+  box-shadow: 0 18px 44px -18px rgba(61, 123, 255, 0.45);
+}
+
+/* setas do carrossel + links do footer */
+.gcparr {
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+.gcparr:hover {
+  border-color: rgba(61, 123, 255, 0.55);
+  background: #151b28;
+}
+.gcflink {
+  transition: color 0.25s ease;
+  cursor: pointer;
+}
+.gcflink:hover {
+  color: #f1f3f7;
+}
+
+/* ===== carrossel de planos ===== */
+.gcptrack {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (min-width: 1024px) {
+  .gcptrack {
+    transition: transform 0.65s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .gcptrack.gcpg1 {
+    transform: translateX(calc(-100% - 16px));
+  }
+}
+@media (max-width: 1023px) {
+  /* no mobile o carrossel vira scroll nativo com snap */
+  .gcpviewport {
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gcptrack > * {
+    flex: 0 0 min(85%, 320px) !important;
+    scroll-snap-align: center;
+  }
+  .gcparr,
+  .gcpdots {
+    display: none !important;
+  }
+}
+
+/* ===== FAQ (details nativo) ===== */
+details.gcfaq > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.gcfaq > summary::-webkit-details-marker {
+  display: none;
+}
+@keyframes gcfaqin {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+details.gcfaq[open] .gcfaqa {
+  animation: gcfaqin 0.4s ease;
+}
+details.gcfaq .gcplus path {
+  transition: opacity 0.3s ease;
+}
+details.gcfaq[open] .gcplus .gcvert {
+  opacity: 0;
+}
+
+/* ===== responsivo: mockups com posições absolutas encolhem/crescem ===== */
+@media (min-width: 1280px) {
+  /* desktop largo: calendário e radar ~10% maiores */
+  .gcvis-scale {
+    transform: scale(1.1);
+    transform-origin: center center;
+  }
+}
+@media (max-width: 900px) {
+  .gcvis-scale {
+    transform: scale(0.72);
+    transform-origin: center center;
+  }
+}
+@media (max-width: 480px) {
+  .gcvis-scale {
+    transform: scale(0.58);
+  }
+}
+
+/* ===== reduced motion: mata tudo ===== */
+@media (prefers-reduced-motion: reduce) {
+  .gcrv,
+  .gcrv-l,
+  .gcrv-r,
+  .gcrv-s,
+  .gcsolc {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .gc-motion,
+  .gc-motion *,
+  .gcanim {
+    animation: none !important;
+  }
+}
