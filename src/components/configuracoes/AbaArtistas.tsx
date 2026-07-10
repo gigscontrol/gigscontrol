@@ -1635,8 +1635,6 @@ export function ModalNovoArtista({
               )}
             </Campo>
 
-            <SeletorDeCor cor={cor} onChange={setCor} />
-
             <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
@@ -1668,6 +1666,18 @@ export function ModalNovoArtista({
             email={email}
             setEmail={setEmail}
           />
+
+          <SeletorDeCor cor={cor} onChange={setCor} />
+
+          {/* Tag visual do tipo de cadastro */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+              style={{ backgroundColor: "var(--brand)" }}
+            >
+              {t("Artista")}
+            </span>
+          </div>
 
           {/* Seção 2 — Acesso ao sistema */}
           <Secao titulo={t("Acesso ao sistema")}>
