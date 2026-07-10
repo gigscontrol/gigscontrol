@@ -416,6 +416,15 @@ function Etapa1Cadastro({
   const campo =
     "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary focus:border-border-strong outline-none";
 
+  // Um país só: o seletor do campo Cidade é a fonte da verdade. Ao trocar o
+  // país (ou escolher cidade de outro país), o documento e o DDI do telefone
+  // seguem junto.
+  function sincronizarPais(code: string) {
+    setPais(code);
+    const cc = COUNTRIES.find((x) => x.code === code);
+    if (cc) setTelCountry(cc);
+  }
+
   async function salvar() {
     setErro(null);
     if (!nome.trim()) return setErro(t("Informe seu nome completo."));
@@ -497,22 +506,19 @@ function Etapa1Cadastro({
       <div className="card flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">
-            {t("País de origem")} <span className="text-danger">*</span>
+            {t("País e cidade")} <span className="text-danger">*</span>
           </span>
-          <select value={pais} onChange={(e) => setPais(e.target.value)} className={campo}>
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Cidade")} <span className="text-danger">*</span>
+          <CidadeGlobalAutocomplete
+            value={cidade}
+            onChange={(c) => {
+              setCidade(c);
+              if (c?.pais) sincronizarPais(c.pais);
+            }}
+            onPaisChange={(country) => sincronizarPais(country.code)}
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("O país aqui define o seu documento e o DDI do telefone.")}
           </span>
-          <CidadeGlobalAutocomplete value={cidade} onChange={setCidade} />
         </label>
 
         <label className="flex flex-col gap-1.5">
