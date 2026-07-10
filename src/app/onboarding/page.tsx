@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -14,7 +14,6 @@ import {
   Building2,
   Phone,
   MapPin,
-  Palette,
   AtSign,
   Lock,
   AlertTriangle,
@@ -24,7 +23,6 @@ import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
-import ColorPicker from "@/components/ColorPicker";
 import PhoneInput, {
   DEFAULT_COUNTRY,
   contarDigitos,
@@ -35,6 +33,7 @@ import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
 import {
   ModalNovoArtista,
   ModalCredenciais,
+  SeletorDeCor,
 } from "@/components/configuracoes/AbaArtistas";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT, useMoeda } from "@/lib/i18n";
@@ -409,7 +408,6 @@ function Etapa1Cadastro({
       : digs;
   });
   const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -579,13 +577,7 @@ function Etapa1Cadastro({
           />
         </label>
 
-        <CampoCor
-          cor={cor}
-          onChange={setCor}
-          aberto={colorPickerOpen}
-          setAberto={setColorPickerOpen}
-          label={t("Cor de identificação")}
-        />
+        <SeletorDeCor cor={cor} onChange={setCor} />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
@@ -1054,59 +1046,6 @@ function Etapa3Agencia({
           )}
         </button>
       </div>
-    </div>
-  );
-}
-
-/**
- * Campo de cor com botão "pílula" + popover do ColorPicker quando aberto.
- * Usa useRef no botão pra ancorar o popover de forma correta (sem
- * gambiarra com document.activeElement).
- */
-function CampoCor({
-  cor,
-  onChange,
-  aberto,
-  setAberto,
-  label,
-}: {
-  cor: string;
-  onChange: (c: string) => void;
-  aberto: boolean;
-  setAberto: (v: boolean) => void;
-  label?: string;
-}) {
-  const t = useT();
-  const ref = useRef<HTMLButtonElement>(null);
-  return (
-    <div className="flex flex-col gap-1.5 relative">
-      <span className="text-xs font-medium text-secondary">{label ?? t("Cor de preferência")}</span>
-      <button
-        ref={ref}
-        type="button"
-        onClick={() => setAberto(!aberto)}
-        className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors"
-      >
-        <span
-          className="h-5 w-5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: cor }}
-        />
-        <span className="font-mono text-sm text-primary flex-1 text-left">
-          {cor.toUpperCase()}
-        </span>
-        <Palette size={14} className="text-muted" />
-      </button>
-      {aberto && (
-        <ColorPicker
-          cor={cor}
-          anchorRef={ref}
-          onApply={(c) => {
-            onChange(c);
-            setAberto(false);
-          }}
-          onClose={() => setAberto(false)}
-        />
-      )}
     </div>
   );
 }
