@@ -3,7 +3,8 @@
 /**
  * Seção "Um plano para cada operação" (tela 13 do guia).
  *
- * Toggle Mensal/Anual (anual −17%, padrão) + carrossel com 3 cards por
+ * Toggle Mensal/Anual (mensal é o padrão; anual com desconto de até 17%) +
+ * carrossel com 3 cards por
  * página, setas laterais e dots: página 1 = Individual/Equipe/Time
  * ("Essenciais"), página 2 = Agência/Agência Plus/Agência Max. Valores REAIS
  * de src/lib/planos.ts, na moeda da região (BRL/USD). Equipe = "Mais

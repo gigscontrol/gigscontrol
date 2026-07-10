@@ -37,12 +37,13 @@ import {
 } from "@/components/configuracoes/AbaArtistas";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT, useMoeda } from "@/lib/i18n";
+import { TRIAL_ATIVADO } from "@/lib/flags";
 
 /**
  * /onboarding — wizard linear de 5 etapas pra novos admins.
  *
  *   1. Bem-vindo ✓
- *   2. Plano (com opção trial grátis 7d)
+ *   2. Plano (trial grátis 7d fica atrás do flag TRIAL_ATIVADO)
  *   3. Configurar agência (nome + cidade + whatsapp + slug + cor + logo)
  *   4. Cadastrar primeiro artista
  *   5. Convidar primeiro membro da equipe
@@ -397,7 +398,7 @@ function Etapa1Bemvindo({
 }
 
 // ============================================================
-// Etapa 2 — Plano (todos os 5 + trial só no Individual)
+// Etapa 2 — Plano (todos os 6; trial só no Individual, atrás do flag TRIAL_ATIVADO)
 // ============================================================
 function Etapa2Plano({
   planoEscolhido,
@@ -469,11 +470,17 @@ function Etapa2Plano({
     <div>
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold tracking-tight">{t("Escolha o plano")}</h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Plano")} <strong className="text-warning">Individual</strong> {t("tem")}{" "}
-          <strong className="text-warning">{t("7 dias grátis")}</strong> {t("sem cartão.")}{" "}
-          {t("Demais planos: cobrança imediata.")}
-        </p>
+        {TRIAL_ATIVADO ? (
+          <p className="mt-1 text-sm text-secondary">
+            {t("Plano")} <strong className="text-warning">Individual</strong> {t("tem")}{" "}
+            <strong className="text-warning">{t("7 dias grátis")}</strong> {t("sem cartão.")}{" "}
+            {t("Demais planos: cobrança imediata.")}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-secondary">
+            {t("Escolha o plano ideal para a sua agência. Você pode trocar de plano quando quiser.")}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
@@ -490,7 +497,7 @@ function Etapa2Plano({
               style={{
                 borderColor: sel ? "var(--brand)" : undefined,
                 boxShadow: sel ? "0 0 0 1px var(--brand)" : undefined,
-                paddingTop: temTrial || popular ? 24 : undefined,
+                paddingTop: (TRIAL_ATIVADO && temTrial) || popular ? 24 : undefined,
               }}
             >
               {/* Badges no topo */}
@@ -503,7 +510,7 @@ function Etapa2Plano({
                     {t("Mais popular")}
                   </span>
                 )}
-                {temTrial && (
+                {TRIAL_ATIVADO && temTrial && (
                   <span
                     className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-black"
                     style={{ backgroundColor: "#fbbf24" }}
@@ -577,8 +584,8 @@ function Etapa2Plano({
           )}
         </button>
 
-        {/* Botão amarelo: trial grátis (só Individual) */}
-        {isIndividual && (
+        {/* Botão amarelo: trial grátis (só Individual, atrás do flag) */}
+        {TRIAL_ATIVADO && isIndividual && (
           <button
             onClick={iniciarTrial}
             disabled={acao !== null}
@@ -600,7 +607,7 @@ function Etapa2Plano({
         )}
 
         {/* Se não é Individual, lembra que não tem trial */}
-        {!isIndividual && (
+        {TRIAL_ATIVADO && !isIndividual && (
           <p className="text-[0.65rem] text-muted text-center">
             {t("Teste grátis disponível apenas no plano Individual.")}
           </p>

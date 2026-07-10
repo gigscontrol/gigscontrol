@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { TRIAL_ATIVADO } from "@/lib/flags";
 
 /**
  * POST /api/workspace/iniciar-trial
@@ -25,6 +26,15 @@ const schema = z.object({
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+
+  // Defesa em profundidade: o trial está desligado por flag. Recusa mesmo se
+  // alguém chamar a rota direto, antes de qualquer escrita no banco.
+  if (!TRIAL_ATIVADO) {
+    return NextResponse.json(
+      { erro: "O teste grátis está desativado no momento." },
+      { status: 403 }
+    );
+  }
 
   if (r.sessao.papel !== "admin") {
     return NextResponse.json(
