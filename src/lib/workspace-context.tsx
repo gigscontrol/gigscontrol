@@ -533,6 +533,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.razaoSocial !== undefined) payload.razao_social = patch.razaoSocial;
       if (patch.endereco !== undefined) payload.endereco = patch.endereco;
       if (patch.telefone !== undefined) payload.telefone = patch.telefone;
+      if (patch.dataNascimento !== undefined)
+        payload.data_nascimento = patch.dataNascimento;
+      if (patch.email !== undefined) payload.email = patch.email;
       if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;

@@ -121,6 +121,8 @@ type ArtistaParaEdicao = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  dataNascimento?: string;
+  email?: string;
   taxaModo: TaxaAgenciaModo;
   taxaValor?: number;
   riderCamarim: string[];
@@ -757,6 +759,8 @@ export default function AbaArtistas() {
                         razaoSocial: djSelecionado.razaoSocial,
                         endereco: djSelecionado.endereco,
                         telefone: djSelecionado.telefone,
+                        dataNascimento: djSelecionado.dataNascimento,
+                        email: djSelecionado.email,
                         taxaModo: djSelecionado.taxaModo ?? "sem-taxa",
                         taxaValor: djSelecionado.taxaValor,
                         riderCamarim: djSelecionado.riderCamarim ?? [],
@@ -2044,6 +2048,8 @@ function ModalEditarArtista({
   const [razaoSocial, setRazaoSocial] = useState(artista.razaoSocial ?? "");
   const [endereco, setEndereco] = useState(artista.endereco ?? "");
   const [telefone, setTelefone] = useState(artista.telefone ?? "");
+  const [dataNascimento, setDataNascimento] = useState(artista.dataNascimento ?? "");
+  const [emailContato, setEmailContato] = useState(artista.email ?? "");
 
   // Dados da conta (email + verificado) — async ao abrir
   const [conta, setConta] = useState<DadosConta | null>(null);
@@ -2192,6 +2198,8 @@ function ModalEditarArtista({
         razaoSocial: documentoTipo === "cnpj" ? razaoSocial.trim() : "",
         endereco: endereco.trim(),
         telefone: telefone.trim(),
+        dataNascimento: dataNascimento || undefined,
+        email: emailContato.trim() || undefined,
       };
       // Username e email só se mudaram (evita trabalho desnecessário no backend)
       if (usernameMudou) {
@@ -2258,8 +2266,6 @@ function ModalEditarArtista({
               )}
             </Campo>
 
-            <SeletorDeCor cor={cor} onChange={setCor} />
-
             <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
@@ -2286,7 +2292,23 @@ function ModalEditarArtista({
             setEndereco={setEndereco}
             telefone={telefone}
             setTelefone={setTelefone}
+            dataNascimento={dataNascimento}
+            setDataNascimento={setDataNascimento}
+            email={emailContato}
+            setEmail={setEmailContato}
           />
+
+          <SeletorDeCor cor={cor} onChange={setCor} />
+
+          {/* Tag visual do tipo de cadastro */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+              style={{ backgroundColor: "var(--brand)" }}
+            >
+              {t("Artista")}
+            </span>
+          </div>
 
           {/* Seção 2 — Acesso */}
           <Secao titulo={t("Acesso ao sistema")}>
