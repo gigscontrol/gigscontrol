@@ -202,6 +202,23 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   const papel = sessao.usuario.papel;
+
+  // BLOQUEIO DO WORKSPACE (cascata da cobrança): quando o admin não pagou/venceu,
+  // o estado vem "bloqueado" pra TODOS os papéis. Não renderiza o app por baixo —
+  // só o modal, que trava a tela pra qualquer usuário (admin vê o caminho de
+  // pagar; artista/equipe veem o aviso pra falar com o administrador). O gate
+  // server-side (`exigirAcesso`) barra as mutações em paralelo (402).
+  if (acesso?.estado === "bloqueado") {
+    return (
+      <BloqueioModal
+        papel={papel}
+        adminContato={acesso.adminContato}
+        plano={acesso.plano}
+        ciclo={acesso.ciclo}
+      />
+    );
+  }
+
   return (
     <>
       {acesso?.estado === "graca" && (
@@ -213,14 +230,6 @@ function AuthGuard({ children }: { children: ReactNode }) {
         />
       )}
       {children}
-      {acesso?.estado === "bloqueado" && (
-        <BloqueioModal
-          papel={papel}
-          adminContato={acesso.adminContato}
-          plano={acesso.plano}
-          ciclo={acesso.ciclo}
-        />
-      )}
     </>
   );
 }

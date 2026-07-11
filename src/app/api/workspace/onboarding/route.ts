@@ -3,7 +3,9 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { getPlano, type PlanoId } from "@/lib/planos";
 // Fonte única da regra de acesso (mesma usada pelo gate server-side de mutação).
-import { estadoAcessoDe as calcEstado } from "@/lib/acesso";
+// `estadoAcessoDeSub` trata corretamente a AUSÊNCIA de subscription (legado →
+// "ok"); não hardcodar "ativa"/"trial" aqui — o estado é do workspace real.
+import { estadoAcessoDeSub } from "@/lib/acesso";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -63,7 +65,8 @@ export async function GET() {
   if ("response" in r) return r.response;
 
   // Onboarding é só do admin — mas TODO usuário precisa do estado de acesso
-  // (graça/bloqueio) e de quem é o admin, pra avisar.
+  // (graça/bloqueio) e de quem é o admin, pra avisar. O estado é do WORKSPACE:
+  // se o admin não pagou/venceu, o não-admin também é bloqueado (cascata).
   if (r.sessao.papel !== "admin") {
     const adminDb = criarClienteAdmin();
     const wsId = r.sessao.workspaceId;
@@ -72,7 +75,7 @@ export async function GET() {
         .from("subscriptions")
         .select("status, trial_termina_em")
         .eq("workspace_id", wsId)
-        .maybeSingle<{ status: string; trial_termina_em: string | null }>(),
+        .maybeSingle<{ status: string | null; trial_termina_em: string | null }>(),
       adminDb
         .from("profiles")
         .select("nome")
@@ -82,12 +85,12 @@ export async function GET() {
         .limit(1)
         .maybeSingle<{ nome: string | null }>(),
     ]);
-    const statusNA = subNA?.status ?? "ativa";
     return NextResponse.json({
       onboardingCompleto: true,
       naoAdmin: true,
-      subscriptionStatus: statusNA,
-      estadoAcesso: calcEstado(statusNA, subNA?.trial_termina_em ?? null),
+      subscriptionStatus: subNA?.status ?? null,
+      // Estado REAL do workspace (sem hardcode). Ausência de sub = legado → "ok".
+      estadoAcesso: estadoAcessoDeSub(subNA ?? null),
       adminContato: adminProfile?.nome ?? null,
     });
   }
@@ -130,7 +133,7 @@ export async function GET() {
       .from("subscriptions")
       .select("status, ciclo, trial_termina_em")
       .eq("workspace_id", workspaceId)
-      .maybeSingle();
+      .maybeSingle<{ status: string | null; ciclo: string | null; trial_termina_em: string | null }>();
 
     // Dados pessoais do admin logado — pré-preenchem a Etapa 1 (cadastro
     // completo) e o `nome` serve de exemplo no campo de slug.
@@ -188,7 +191,9 @@ export async function GET() {
     return NextResponse.json({
       onboardingCompleto: !!ws.onboarding_completo,
       subscriptionStatus: sub?.status ?? "trial",
-      estadoAcesso: calcEstado(sub?.status ?? "trial", sub?.trial_termina_em ?? null),
+      // Estado REAL do workspace: ausência de sub = legado → "ok"; trial sem
+      // data → "bloqueado". Nunca hardcodar o status.
+      estadoAcesso: estadoAcessoDeSub(sub ?? null),
       adminContato: meuProfile?.nome ?? null,
       ciclo: sub?.ciclo ?? ws?.ciclo ?? "mensal",
       trialTerminaEm: sub?.trial_termina_em ?? null,

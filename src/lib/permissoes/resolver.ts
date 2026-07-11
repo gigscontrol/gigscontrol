@@ -103,10 +103,30 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
       if (ehLeitura) return priv.contratosVer;
       return priv.contratosCriar; // criar/editar/excluir
     case "contatos":
+      // Leitura governada por priv.contatos: "nenhum" nega, "proprios"/"todos"
+      // liberam VER (a lista é filtrada no servidor por escopoContatosDoArtista).
+      // Artista nunca MUTA contatos (não cria/edita/exclui).
+      if (ehLeitura) return priv.contatos !== "nenhum";
+      return false;
     case "agencia":
     default:
-      return false; // artista nunca acessa contatos/agência por aqui
+      return false; // artista nunca acessa agência por aqui
   }
+}
+
+/**
+ * Escopo de CONTATOS (contratantes/casas) que o ARTISTA enxerga, governado por
+ * `artists.privacidade.contatos` (config do admin):
+ *   - "nenhum"   → não vê nenhum contato (lista vazia);
+ *   - "proprios" → só os contatos ligados aos SHOWS/vendas/orçamentos DELE
+ *                  (derivado por artist_id no servidor);
+ *   - "todos"    → todos os contatos do workspace.
+ * Sem privacidade carregada → PRIVACIDADE_DJ_PADRAO ("proprios", seguro).
+ */
+export function escopoContatosDoArtista(
+  priv?: PrivacidadeDj
+): "nenhum" | "proprios" | "todos" {
+  return (priv ?? PRIVACIDADE_DJ_PADRAO).contatos;
 }
 
 /**

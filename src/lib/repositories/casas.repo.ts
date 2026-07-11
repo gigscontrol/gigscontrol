@@ -5,12 +5,17 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 const COLS =
   "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em";
 
-export async function listarCasas(supabase: SupabaseClient): Promise<CasaRow[]> {
-  const { data, error } = await supabase
+export async function listarCasas(
+  supabase: SupabaseClient,
+  aplicarFiltro?: <Q>(q: Q) => Q
+): Promise<CasaRow[]> {
+  let q = supabase
     .from("casas")
     .select(COLS)
     .is("deletado_em", null)
     .order("nome", { ascending: true });
+  if (aplicarFiltro) q = aplicarFiltro(q);
+  const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as CasaRow[];
 }

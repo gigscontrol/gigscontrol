@@ -15,8 +15,13 @@ type RouteCtx = { params: { id: string } };
 export async function GET(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
-  if (g) return g;
+  // Artista lê por id respeitando privacidade.contatos (checada em
+  // contratanteVisivelParaSessao → 404 fora do escopo). Demais papéis: gate
+  // atual. PATCH/DELETE seguem bloqueando artista (não muta contatos).
+  if (r.sessao.papel !== "artista") {
+    const g = verificarAcessoContatos(r.sessao);
+    if (g) return g;
+  }
   try {
     const contratante = await buscarContratantePorId(r.sessao.supabase, params.id);
     // 404 (não 403) fora do escopo pra não vazar existência.

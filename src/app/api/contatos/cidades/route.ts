@@ -6,13 +6,24 @@ import {
 } from "@/lib/services/cidades.service";
 import { cidadeCreateSchema } from "@/lib/validators/contatos.schema";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { escopoContatosDoArtista } from "@/lib/permissoes/resolver";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
-  if (bloqueio) return bloqueio;
+  // Cidades é catálogo (rótulos/coords, sem PII de contato). O ARTISTA lê o
+  // catálogo para nomear os próprios shows/contatos — salvo quando a
+  // privacidade é "nenhum" (não vê contato algum → lista vazia). Demais papéis:
+  // gate atual (para eles é no-op; só artista era barrado).
+  if (r.sessao.papel === "artista") {
+    if (escopoContatosDoArtista(r.sessao.privacidade) === "nenhum") {
+      return NextResponse.json({ cidades: [] });
+    }
+  } else {
+    const bloqueio = verificarAcessoContatos(r.sessao);
+    if (bloqueio) return bloqueio;
+  }
   try {
     const cidades = await listarCidadesDoWorkspace(r.sessao.supabase);
     return NextResponse.json({ cidades });
