@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   Plus,
@@ -20,10 +20,7 @@ import {
   Eye,
   EyeOff,
   Search,
-  PauseCircle,
-  PlayCircle,
   Users,
-  NotebookPen,
   Ban,
   AtSign,
   SlidersHorizontal,
@@ -39,7 +36,7 @@ import {
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
-import { PERFIS } from "@/lib/permissoes/perfis";
+import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
@@ -220,18 +217,6 @@ export default function AbaEquipe() {
         return true;
       });
 
-  async function alternarBloqueio(u: UsuarioEquipe) {
-    try {
-      await atualizarUsuario(u.id, { ativo: !u.ativo });
-      setToast({
-        msg: t(u.ativo ? "Usuário bloqueado." : "Usuário desbloqueado."),
-        tipo: "sucesso",
-      });
-    } catch (e) {
-      setToast({ msg: (e as Error).message, tipo: "erro" });
-    }
-  }
-
   async function aoRestaurarUsuario(id: string, nomeUsr: string) {
     setAcaoLixeira(`restaurar-${id}`);
     try {
@@ -282,6 +267,7 @@ export default function AbaEquipe() {
       await atualizarUsuario(id, {
         nome: dados.nome,
         ativo: dados.ativo,
+        pode_criar_anotacoes: dados.pode_criar_anotacoes,
         cor: dados.cor,
         pais: dados.pais,
         nome_legal: dados.nome_legal,
@@ -621,52 +607,15 @@ export default function AbaEquipe() {
                 </div>
               </div>
 
-              {/* Ações */}
+              {/* Ações — bloquear/resetar senha/anotações agora ficam DENTRO
+                  do Editar (junto do acesso ao sistema). Aqui só Editar +
+                  Remover. */}
               <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                 <button
                   onClick={() => setEditando(selecionado)}
                   className="btn btn-secondary text-xs inline-flex items-center gap-1"
                 >
                   <Pencil size={13} /> {t("Editar")}
-                </button>
-                <button
-                  onClick={() =>
-                    atualizarUsuario(selecionado.id, {
-                      pode_criar_anotacoes: !selecionado.podeCriarAnotacoes,
-                    }).catch(() => undefined)
-                  }
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{
-                    color: selecionado.podeCriarAnotacoes ? "var(--success)" : "var(--text-muted)",
-                  }}
-                  title={t("Pode criar pastas de anotações na Agenda")}
-                >
-                  <NotebookPen size={14} />
-                  {selecionado.podeCriarAnotacoes ? t("Cria anotações") : t("Liberar anotações")}
-                </button>
-                <button
-                  onClick={() => alternarBloqueio(selecionado)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{
-                    color: selecionado.ativo ? "var(--warning)" : "var(--success)",
-                  }}
-                >
-                  {selecionado.ativo ? (
-                    <>
-                      <PauseCircle size={14} /> {t("Bloquear")}
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle size={14} /> {t("Desbloquear")}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => aoResetarSenha(selecionado)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{ color: "var(--brand)" }}
-                >
-                  <KeyRound size={14} /> {t("Resetar senha")}
                 </button>
                 <button
                   onClick={() => setConfirmarRemover(selecionado)}
@@ -1239,6 +1188,7 @@ type DadosContaUsuario = {
 type PatchEditarUsuario = {
   nome?: string;
   ativo?: boolean;
+  pode_criar_anotacoes?: boolean;
   cor?: string;
   pais?: string;
   nome_legal?: string;
@@ -1332,6 +1282,11 @@ export function ModalUsuario({
   const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
   const [dataNascimento, setDataNascimento] = useState(inicial?.dataNascimento ?? "");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
+  // Permissão dedicada: pode criar pastas de anotações na Agenda (movida do
+  // painel de detalhe pra cá, T3).
+  const [podeCriarAnotacoes, setPodeCriarAnotacoes] = useState<boolean>(
+    inicial?.podeCriarAnotacoes ?? false
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -1356,6 +1311,59 @@ export function ModalUsuario({
   const [conta, setConta] = useState<DadosContaUsuario | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(modo === "editar");
   const [copiouSenhaPadrao, setCopiouSenhaPadrao] = useState(false);
+  // Feedback de copiar o login (handle) no card de Acesso ao sistema do editar.
+  const [copiouLoginEditar, setCopiouLoginEditar] = useState(false);
+
+  // ---- Permissões por artista (T8) — só no modo editar ----
+  // Vínculos do membro (artista × perfis × permissões). null = carregando.
+  const [vinculosEdit, setVinculosEdit] = useState<VinculoResumo[] | null>(null);
+  const [vinculosEditErro, setVinculosEditErro] = useState(false);
+  // Artista cujo editor de permissões está aberto no modo editar (modal
+  // empilhado). null = fechado.
+  const [editandoVinculoDe, setEditandoVinculoDe] = useState<string | null>(null);
+  const [salvandoVinculo, setSalvandoVinculo] = useState(false);
+
+  const carregarVinculos = useCallback(async () => {
+    if (modo !== "editar" || !inicial?.id) return;
+    setVinculosEdit(null);
+    setVinculosEditErro(false);
+    try {
+      const res = await fetch(`/api/usuarios/${inicial.id}/vinculos`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = (await res.json()) as { vinculos: VinculoResumo[] };
+      setVinculosEdit(d.vinculos ?? []);
+    } catch {
+      setVinculosEdit([]);
+      setVinculosEditErro(true);
+    }
+  }, [modo, inicial?.id]);
+
+  useEffect(() => {
+    void carregarVinculos();
+  }, [carregarVinculos]);
+
+  // Salva as permissões de UM vínculo (usuário × artista) — reutiliza o
+  // endpoint PUT já existente da equipe do artista, depois recarrega a lista.
+  async function salvarVinculo(artistaId: string, permissoes: string[], perfis: string[]) {
+    if (!inicial?.id) return;
+    setSalvandoVinculo(true);
+    try {
+      const res = await fetch(`/api/artistas/${artistaId}/equipe/${inicial.id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ perfis, permissoes }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.erro ?? t("Falha ao salvar."));
+      setEditandoVinculoDe(null);
+      await carregarVinculos();
+    } finally {
+      setSalvandoVinculo(false);
+    }
+  }
 
   useEffect(() => {
     if (modo !== "editar" || !inicial?.id) return;
@@ -1474,6 +1482,7 @@ export function ModalUsuario({
       await onEditar(inicial.id, {
         nome: nome.trim(),
         ativo,
+        pode_criar_anotacoes: podeCriarAnotacoes,
         cor,
         pais: paisPessoal.code,
         nome_legal: nomeLegal.trim() || undefined,
@@ -1771,33 +1780,51 @@ export function ModalUsuario({
           </>
         )}
 
-        {/* Seções específicas do EQUIPE em cards (grid), igual ao editar do
-            artista: Acesso ao sistema + Senha. */}
+        {/* Card ÚNICO "Acesso ao sistema" — idêntico ao editar do artista:
+            Login (display) + E-mail (display read-only + selo) + toggle
+            Acesso ativo + toggle Anotações + Senha/gerar nova. */}
         {modo === "editar" && (
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {/* Card — Acesso ao sistema */}
-            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
-                {t("Acesso ao sistema")}
-              </div>
-              <LinhaEscopo
-                label={t("Acesso ativo")}
-                descricaoLigado={t("O usuário pode entrar normalmente")}
-                descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
-                valor={ativo}
-                onChange={setAtivo}
-              />
+          <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <KeyRound size={12} style={{ color: "var(--brand)" }} />
+              {t("Acesso ao sistema")}
             </div>
 
-            {/* Card — Senha */}
-            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                <Lock size={12} style={{ color: "var(--brand)" }} />
-                {t("Senha")}
+            {/* (1) Login (handle) — display read-only. O admin NÃO troca o
+                login do membro; só copia. Membros antigos (login por e-mail)
+                têm username null → oculta. */}
+            {inicial?.username && (
+              <div>
+                <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(inicial.username!)
+                      .then(() => {
+                        setCopiouLoginEditar(true);
+                        setTimeout(() => setCopiouLoginEditar(false), 2000);
+                      });
+                  }}
+                  className="w-full flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors text-left"
+                >
+                  <AtSign size={14} className="text-muted flex-shrink-0" />
+                  <span className="font-mono text-sm text-primary flex-1 truncate">
+                    {inicial.username}
+                  </span>
+                  {copiouLoginEditar ? (
+                    <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                  ) : (
+                    <Copy size={14} className="text-muted" />
+                  )}
+                </button>
               </div>
+            )}
+
+            {/* (2) E-mail — display read-only + selo Verificado/Não verificado.
+                O admin NÃO edita o e-mail do membro. */}
             {carregandoConta ? (
-              <div className="flex items-center gap-2 text-sm text-muted py-2">
+              <div className="flex items-center gap-2 text-sm text-muted py-1">
                 <Loader2 size={14} className="animate-spin" />
                 {t("Carregando dados da conta...")}
               </div>
@@ -1805,100 +1832,256 @@ export function ModalUsuario({
               <p className="text-xs text-danger">
                 {t("Não foi possível carregar a conta.")}
               </p>
-            ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
-              <>
-                {/* Senha padrão conhecida: mostra + botão copiar */}
-                <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
-                  <Lock size={14} className="text-muted flex-shrink-0" />
-                  <span className="font-mono text-sm text-primary flex-1 break-all select-all">
-                    {conta.senhaPadraoValor}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard
-                        .writeText(conta.senhaPadraoValor!)
-                        .then(() => {
-                          setCopiouSenhaPadrao(true);
-                          setTimeout(
-                            () => setCopiouSenhaPadrao(false),
-                            2000
-                          );
-                        });
-                    }}
-                    className="btn-ghost p-1.5 rounded"
-                    aria-label={t("Copiar senha")}
-                  >
-                    {copiouSenhaPadrao ? (
-                      <CheckCircle2
-                        size={14}
-                        style={{ color: "var(--success)" }}
-                      />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                  </button>
-                </div>
-                <div
-                  className="text-[0.7rem] inline-flex items-center gap-1"
-                  style={{ color: "var(--warning)" }}
-                >
-                  <AlertTriangle size={11} />
-                  {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
-                </div>
-              </>
-            ) : conta.senhaPadrao ? (
-              <div
-                className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
-                style={{
-                  backgroundColor: "rgba(245,158,11,0.08)",
-                  color: "var(--warning)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                }}
-              >
-                <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-                <span>
-                  {t("Usuário ainda está com a")}{" "}<strong>{t("senha padrão")}</strong>{" "}
-                  {t("gerada pelo sistema, mas o valor não está disponível (usuário criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
-                </span>
-              </div>
             ) : (
-              <div
-                className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
-                style={{
-                  backgroundColor: "rgba(34,197,94,0.08)",
-                  color: "var(--success)",
-                  border: "1px solid rgba(34,197,94,0.2)",
-                }}
-              >
-                <Lock size={13} className="flex-shrink-0" />
-                <span>{t("Senha já foi alterada pelo usuário.")}</span>
+              <div>
+                <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
+                {conta.emailFakeInterno ? (
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                    <Mail size={14} className="text-muted flex-shrink-0" />
+                    <span className="flex-1 text-sm text-muted italic">
+                      {t("Sem e-mail")}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <span className="flex-1 text-sm text-secondary break-all">
+                        {conta.email}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-[0.7rem]">
+                      {conta.emailVerificado ? (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--success)" }}
+                        >
+                          <ShieldCheck size={11} /> {t("Verificado")}
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--warning)" }}
+                        >
+                          <AlertTriangle size={11} /> {t("Não verificado")}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
-            {onResetarSenha && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    confirm(
-                      t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
-                    )
-                  ) {
-                    void onResetarSenha();
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-1"
-                style={{
-                  borderColor: "var(--brand)",
-                  color: "var(--brand)",
-                }}
-              >
-                <KeyRound size={14} />
-                {t("Gerar nova senha aleatória")}
-              </button>
-            )}
+            {/* (3) Toggle Acesso ativo */}
+            <LinhaEscopo
+              label={t("Acesso ativo")}
+              descricaoLigado={t("O usuário pode entrar normalmente")}
+              descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
+              valor={ativo}
+              onChange={setAtivo}
+            />
+
+            {/* Toggle — pode criar pastas de anotações (T3) */}
+            <LinhaEscopo
+              label={t("Pode criar pastas de anotações")}
+              descricaoLigado={t("Pode criar pastas de anotações na Agenda")}
+              descricaoDesligado={t("Não pode criar pastas de anotações na Agenda")}
+              valor={podeCriarAnotacoes}
+              onChange={setPodeCriarAnotacoes}
+            />
+
+            {/* (4) Senha — mostra a padrão (se houver) + copiar + gerar nova */}
+            <div>
+              <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
+              {carregandoConta ? (
+                <div className="flex items-center gap-2 text-sm text-muted py-1">
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("Carregando dados da conta...")}
+                </div>
+              ) : !conta ? (
+                <p className="text-xs text-danger">
+                  {t("Não foi possível carregar a conta.")}
+                </p>
+              ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
+                <>
+                  {/* Senha padrão conhecida: mostra + botão copiar */}
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                    <Lock size={14} className="text-muted flex-shrink-0" />
+                    <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                      {conta.senhaPadraoValor}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard
+                          .writeText(conta.senhaPadraoValor!)
+                          .then(() => {
+                            setCopiouSenhaPadrao(true);
+                            setTimeout(
+                              () => setCopiouSenhaPadrao(false),
+                              2000
+                            );
+                          });
+                      }}
+                      className="btn-ghost p-1.5 rounded"
+                      aria-label={t("Copiar senha")}
+                    >
+                      {copiouSenhaPadrao ? (
+                        <CheckCircle2
+                          size={14}
+                          style={{ color: "var(--success)" }}
+                        />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </button>
+                  </div>
+                  <div
+                    className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                    style={{ color: "var(--warning)" }}
+                  >
+                    <AlertTriangle size={11} />
+                    {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
+                  </div>
+                </>
+              ) : conta.senhaPadrao ? (
+                <div
+                  className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
+                  style={{
+                    backgroundColor: "rgba(245,158,11,0.08)",
+                    color: "var(--warning)",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                  }}
+                >
+                  <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    {t("Usuário ainda está com a")}{" "}<strong>{t("senha padrão")}</strong>{" "}
+                    {t("gerada pelo sistema, mas o valor não está disponível (usuário criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
+                  style={{
+                    backgroundColor: "rgba(34,197,94,0.08)",
+                    color: "var(--success)",
+                    border: "1px solid rgba(34,197,94,0.2)",
+                  }}
+                >
+                  <Lock size={13} className="flex-shrink-0" />
+                  <span>{t("Senha já foi alterada pelo usuário.")}</span>
+                </div>
+              )}
+
+              {onResetarSenha && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
+                      )
+                    ) {
+                      void onResetarSenha();
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-2"
+                  style={{
+                    borderColor: "var(--brand)",
+                    color: "var(--brand)",
+                  }}
+                >
+                  <KeyRound size={14} />
+                  {t("Gerar nova senha aleatória")}
+                </button>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Permissões por artista (T8) — lista os DJs com quem o membro
+            trabalha; cada linha abre o EditorPermissoesVinculo. */}
+        {modo === "editar" && (
+          <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <Users size={12} style={{ color: "var(--brand)" }} />
+              {t("Permissões por artista")}
+            </div>
+            <p className="text-xs text-muted -mt-1">
+              {t("O que este membro pode fazer com cada DJ — vale só para aquele artista.")}
+            </p>
+            {vinculosEdit === null ? (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Loader2 size={14} className="animate-spin" />
+                {t("Carregando…")}
+              </div>
+            ) : vinculosEditErro ? (
+              <div className="text-sm text-danger">
+                {t("Não foi possível carregar. Tente recarregar a página.")}
+              </div>
+            ) : vinculosEdit.length === 0 ? (
+              <div className="text-sm text-muted">
+                {t("Nenhum artista vinculado. Vincule na aba Equipe do artista.")}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {vinculosEdit.map((v) => {
+                  const dj = artistas.find((a) => a.id === v.artistId);
+                  return (
+                    <div
+                      key={v.artistId}
+                      className="flex items-center gap-3 rounded-md border border-border bg-elevated p-2.5"
+                    >
+                      <span
+                        className="h-8 w-8 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dj?.color ?? "var(--border-strong)" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-primary truncate">
+                          {dj?.name ?? v.artistId}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          {v.perfis.length > 0 ? (
+                            v.perfis.map((pid) => {
+                              const perfil = PERFIS.find((x) => x.id === pid);
+                              return (
+                                <span
+                                  key={pid}
+                                  className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                                  style={{
+                                    backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                    color: perfil?.cor ?? "#3D7BFF",
+                                  }}
+                                >
+                                  {perfil?.nome ?? pid}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-[0.65rem] text-muted">
+                              {t("Personalizado")}
+                            </span>
+                          )}
+                          <span className="text-[0.65rem] text-muted">
+                            {t("{n} permissões", { n: v.permissoes.length })}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoVinculoDe(v.artistId)}
+                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5 rounded flex-shrink-0"
+                        style={{ color: "var(--brand)" }}
+                        title={t("Editar permissões deste artista")}
+                      >
+                        <SlidersHorizontal size={13} />
+                        {t("Editar")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1935,7 +2118,7 @@ export function ModalUsuario({
         )}
 
         {/* Editor de permissões do artista selecionado — modal empilhado
-            (fechar/salvar aqui NÃO fecha o ModalUsuario). */}
+            (fechar/salvar aqui NÃO fecha o ModalUsuario). Usado na CRIAÇÃO. */}
         {editandoPermsDe && (() => {
           const dj = artistas.find((a) => a.id === editandoPermsDe);
           if (!dj) return null;
@@ -1950,6 +2133,28 @@ export function ModalUsuario({
                 setEditandoPermsDe(null);
               }}
               onFechar={() => setEditandoPermsDe(null)}
+            />
+          );
+        })()}
+
+        {/* Editor de permissões por vínculo — modo EDITAR (T8). Persiste via
+            o endpoint da equipe do artista e recarrega a lista. */}
+        {modo === "editar" && editandoVinculoDe && (() => {
+          const dj = artistas.find((a) => a.id === editandoVinculoDe);
+          if (!dj) return null;
+          const vinculo = (vinculosEdit ?? []).find((v) => v.artistId === editandoVinculoDe);
+          return (
+            <EditorPermissoesVinculo
+              key={editandoVinculoDe}
+              nomeUsuario={nome.trim() || inicial?.nome || t("Usuário")}
+              nomeArtista={dj.name}
+              permissoes={vinculo?.permissoes ?? []}
+              perfisIniciais={(vinculo?.perfis ?? []) as PerfilId[]}
+              podeSalvar={!salvandoVinculo}
+              onSalvar={(chaves, perfis) =>
+                salvarVinculo(editandoVinculoDe, chaves, perfis)
+              }
+              onFechar={() => setEditandoVinculoDe(null)}
             />
           );
         })()}
