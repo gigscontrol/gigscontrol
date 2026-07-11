@@ -1,0 +1,39 @@
+-- Índices cobrindo as FKs sem índice (37 flagadas pelo advisor de performance).
+-- Puro ganho: acelera joins e ON DELETE, sem risco de dados. (activity_logs
+-- omitida de propósito — tabela morta, será removida em migration posterior.)
+create index if not exists idx_agenda_items_artist_id on agenda_items(artist_id);
+create index if not exists idx_agenda_items_criado_por on agenda_items(criado_por);
+create index if not exists idx_anotacao_pastas_criado_por on anotacao_pastas(criado_por);
+create index if not exists idx_anotacoes_atualizado_por on anotacoes(atualizado_por);
+create index if not exists idx_anotacoes_criado_por on anotacoes(criado_por);
+create index if not exists idx_anotacoes_workspace_id on anotacoes(workspace_id);
+create index if not exists idx_casas_cidade_id on casas(cidade_id);
+create index if not exists idx_contratantes_cidade_id on contratantes(cidade_id);
+create index if not exists idx_contratantes_criado_por on contratantes(criado_por);
+create index if not exists idx_contrato_signatarios_workspace_id on contrato_signatarios(workspace_id);
+create index if not exists idx_contratos_criado_por on contratos(criado_por);
+create index if not exists idx_contratos_modelo_id on contratos(modelo_id);
+create index if not exists idx_orcamentos_artist_id on orcamentos(artist_id);
+create index if not exists idx_orcamentos_casa_id on orcamentos(casa_id);
+create index if not exists idx_orcamentos_cidade_id on orcamentos(cidade_id);
+create index if not exists idx_orcamentos_contratante_id on orcamentos(contratante_id);
+create index if not exists idx_orcamentos_criado_por on orcamentos(criado_por);
+create index if not exists idx_orcamentos_show_id on orcamentos(show_id);
+create index if not exists idx_profiles_artista_id on profiles(artista_id);
+create index if not exists idx_profiles_cidade_id on profiles(cidade_id);
+create index if not exists idx_shows_artist_id on shows(artist_id);
+create index if not exists idx_shows_casa_id on shows(casa_id);
+create index if not exists idx_shows_cidade_id on shows(cidade_id);
+create index if not exists idx_shows_contratante_id on shows(contratante_id);
+create index if not exists idx_shows_criado_por on shows(criado_por);
+create index if not exists idx_shows_orcamento_id on shows(orcamento_id);
+create index if not exists idx_shows_venda_id on shows(venda_id);
+create index if not exists idx_subscriptions_plano on subscriptions(plano);
+create index if not exists idx_vendas_artist_id on vendas(artist_id);
+create index if not exists idx_vendas_casa_id on vendas(casa_id);
+create index if not exists idx_vendas_cidade_id on vendas(cidade_id);
+create index if not exists idx_vendas_contratante_id on vendas(contratante_id);
+create index if not exists idx_vendas_criado_por on vendas(criado_por);
+create index if not exists idx_vendas_orcamento_id on vendas(orcamento_id);
+create index if not exists idx_workspace_slug_history_alterado_por on workspace_slug_history(alterado_por);
+create index if not exists idx_workspaces_plano on workspaces(plano);
