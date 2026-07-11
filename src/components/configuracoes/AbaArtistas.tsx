@@ -56,11 +56,7 @@ import {
   type NovoArtistaInput,
 } from "@/lib/workspace-context";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
-import {
-  splitEndereco,
-  joinEndereco,
-  formatEndereco,
-} from "@/lib/endereco";
+import { formatEndereco } from "@/lib/endereco";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import {
@@ -2767,69 +2763,38 @@ function ModalEditarArtista({
             </div>
           </div>
 
-          {/* Corpo do header: Cor (linha toda) + grid 2-col.
-              Esquerda: nome + documento (tipo / número).
-              Direita: cidade, endereço, telefone.
-              Razão social ocupa a linha toda e só aparece quando CNPJ. */}
+          {/* Corpo do header: Cor + país/cidade (com onPaisChange p/ o
+              documento e o DDI seguirem o país) + dados pessoais
+              país-aware (mesmo conteúdo do layout modal). */}
           <div className="flex flex-col gap-4">
             <SeletorDeCor cor={cor} onChange={setCor} />
             <div className="border-t border-border" />
-            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-              {/* Linha 1: Nome | Cidade */}
-              <Campo label={t("Nome completo (civil)")}>
-                <input
-                  value={nomeLegal}
-                  onChange={(e) => setNomeLegal(e.target.value)}
-                  placeholder={t("Ex: João da Silva")}
-                  className="campo-input"
-                />
-              </Campo>
-              <Campo label={t("Cidade onde reside")}>
-                <CidadeGlobalAutocomplete
-                  value={cidade}
-                  onChange={setCidade}
-                  placeholder={t("Cidade onde reside")}
-                />
-              </Campo>
-
-              {/* Linha 2: CPF / CNPJ (detecta pelo nº de dígitos) | Endereço */}
-              <Campo label={t("CPF / CNPJ")}>
-                <InputDocumentoBR
-                  documento={documento}
-                  setDocumento={setDocumento}
-                  setDocumentoTipo={setDocumentoTipo}
-                />
-              </Campo>
-              <Campo label={t("Endereço (opcional)")}>
-                <CamposEndereco value={endereco} onChange={setEndereco} />
-              </Campo>
-
-              {/* Linha 3: Telefone */}
-              <Campo label={t("Telefone (opcional)")}>
-                <input
-                  value={telefone}
-                  onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
-                  inputMode="tel"
-                  placeholder="(11) 98888-7777"
-                  className="campo-input"
-                />
-              </Campo>
-
-              {/* Razão social — linha inteira, só quando CNPJ */}
-              {tipoDocumentoPorDigitos(documento) === "cnpj" && (
-                <Campo
-                  label={t("Razão social / Nome da empresa")}
-                  className="md:col-span-2"
-                >
-                  <input
-                    value={razaoSocial}
-                    onChange={(e) => setRazaoSocial(e.target.value)}
-                    placeholder={t("Ex: Silva Produções Artísticas LTDA")}
-                    className="campo-input"
-                  />
-                </Campo>
-              )}
-            </div>
+            <Campo label={t("País e cidade onde reside")}>
+              <CidadeGlobalAutocomplete
+                value={cidade}
+                onChange={setCidade}
+                onPaisChange={setPais}
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
+              />
+            </Campo>
+            <SecaoDadosContrato
+              pais={pais}
+              setPais={setPais}
+              nomeLegal={nomeLegal}
+              setNomeLegal={setNomeLegal}
+              documentoTipo={documentoTipo}
+              setDocumentoTipo={setDocumentoTipo}
+              documento={documento}
+              setDocumento={setDocumento}
+              razaoSocial={razaoSocial}
+              setRazaoSocial={setRazaoSocial}
+              endereco={endereco}
+              setEndereco={setEndereco}
+              telefone={telefone}
+              setTelefone={setTelefone}
+              dataNascimento={dataNascimento}
+              setDataNascimento={setDataNascimento}
+            />
           </div>
         </div>
       </div>
@@ -3725,15 +3690,6 @@ export function InputDocumentoBR({
 }
 
 /** Máscara leve de telefone BR: (11) 98888-7777. */
-function mascararTelefone(valor: string): string {
-  const d = valor.replace(/\D/g, "").slice(0, 11);
-  if (d.length > 10) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  if (d.length > 6) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  if (d.length > 2) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length > 0) return `(${d}`;
-  return "";
-}
-
 /**
  * Validação dos dados do CONTRATADO (obrigatórios pro contrato): nome
  * completo + documento sempre; razão social quando CNPJ. Devolve a 1ª
@@ -3754,54 +3710,6 @@ function validarDadosContrato(
   if (documentoTipo === "cnpj" && !razaoSocial.trim())
     return t("Informe a razão social / nome da empresa (CNPJ).");
   return null;
-}
-
-/**
- * Endereço em 3 inputs (Rua 70% · Número 10%, até 5 dígitos · Complemento 20%)
- * sobre uma única string `value` (formato interno "rua||numero||complemento").
- * Cada alteração rejunta as 3 partes — o estado `endereco` do form não muda.
- */
-function CamposEndereco({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const t = useT();
-  const { rua, numero, complemento } = splitEndereco(value);
-  return (
-    <div className="flex gap-2">
-      <input
-        value={rua}
-        onChange={(e) => onChange(joinEndereco(e.target.value, numero, complemento))}
-        placeholder={t("Rua / Avenida")}
-        className="campo-input flex-[7] min-w-0"
-      />
-      <input
-        value={numero}
-        onChange={(e) =>
-          onChange(
-            joinEndereco(
-              rua,
-              e.target.value.replace(/\D/g, "").slice(0, 5),
-              complemento
-            )
-          )
-        }
-        inputMode="numeric"
-        maxLength={5}
-        placeholder={t("Nº")}
-        className="campo-input flex-[1] min-w-[3rem] text-center px-1"
-      />
-      <input
-        value={complemento}
-        onChange={(e) => onChange(joinEndereco(rua, numero, e.target.value))}
-        placeholder={t("Compl.")}
-        className="campo-input flex-[2] min-w-0"
-      />
-    </div>
-  );
 }
 
 /**
