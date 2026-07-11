@@ -1,9 +1,33 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
-// Cabeçalhos de segurança aplicados a TODAS as respostas. São os "seguros"
-// (não quebram Stripe/Supabase/Sentry/pdfjs). CSP NÃO entra aqui de propósito:
-// exige rollout testado (Report-Only primeiro) pra não bloquear os iframes do
-// Stripe, o worker do pdfjs e scripts inline do Next — fica de follow-up.
+// Content-Security-Policy em REPORT-ONLY. O browser só REPORTA violações no
+// console (não bloqueia nada) — é o rollout seguro. Depois de navegar o app
+// inteiro logado e confirmar zero violação legítima, troca-se o header por
+// `Content-Security-Policy` (enforcing). Hosts de terceiros mapeados do código:
+//   - Google Fonts: @import no globals.css (googleapis=CSS, gstatic=arquivos)
+//   - flagcdn: bandeiras dos seletores de país/DDI (Flag.tsx)
+//   - cartocdn/openstreetmap: tiles do mapa Leaflet (MapaRaio/MapaDobras)
+//   - Supabase: REST + realtime (wss) + storage (logos/comprovantes)
+//   - Sentry: ingest (só ativo com DSN setado)
+//   - Stripe: defensivo (checkout hoje é redirect; Payment Element é futuro)
+// 'unsafe-inline'/'unsafe-eval'/'wasm-unsafe-eval' seguem liberados (hidratação
+// do Next + wasm do pdfjs); endurecer com nonce fica de follow-up.
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://js.stripe.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://flagcdn.com https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.ingest.sentry.io https://*.sentry.io",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join("; ");
+
+// Cabeçalhos de segurança aplicados a TODAS as respostas.
 const securityHeaders = [
   // Força HTTPS por 2 anos (o site já roda 100% em HTTPS na Vercel + domínio).
   {
@@ -23,6 +47,8 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(), geolocation=(self), interest-cohort=()",
   },
+  // CSP em Report-Only (ver comentário acima): observa, não bloqueia.
+  { key: "Content-Security-Policy-Report-Only", value: csp },
 ];
 
 /** @type {import('next').NextConfig} */
