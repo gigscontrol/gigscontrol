@@ -118,7 +118,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
         { erro: "Contrato não encontrado." },
         { status: 404 }
       );
-    await removerContratoPorId(r.sessao.supabase, params.id);
+    await removerContratoPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover contrato.");

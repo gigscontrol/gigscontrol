@@ -115,7 +115,8 @@ export async function atualizarContratantePorId(
 
 export async function removerContratantePorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }

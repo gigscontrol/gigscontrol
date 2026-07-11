@@ -67,7 +67,8 @@ export async function atualizarAgendaItemNoWorkspace(
 
 export async function removerAgendaItemPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }

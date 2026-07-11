@@ -312,7 +312,7 @@ export async function criarVendaCompleta(
   } catch (e) {
     // Cleanup compensatório: a venda ficou meio-feita → soft-delete pra não
     // deixar órfão nem travar a re-tentativa. (best-effort + log)
-    await removerVendaRow(supabase, vendaRow.id).catch((err) =>
+    await removerVendaRow(supabase, vendaRow.id, criadoPor).catch((err) =>
       console.error("[criarVendaCompleta] falha ao limpar venda parcial:", err)
     );
     throw e;
@@ -356,9 +356,10 @@ export async function atualizarVendaPorId(
 
 export async function removerVendaPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await removerVendaRow(supabase, id);
+  await removerVendaRow(supabase, id, deletadoPor);
 }
 
 // ---------- Parcelas ----------

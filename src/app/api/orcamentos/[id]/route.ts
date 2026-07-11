@@ -115,7 +115,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   }
 
   try {
-    await removerOrcamentoPorId(r.sessao.supabase, params.id);
+    await removerOrcamentoPorId(r.sessao.supabase, params.id, r.sessao.userId);
     await auditAndNotify(r.sessao, {
       modulo: "orcamento",
       tipo: "remover",

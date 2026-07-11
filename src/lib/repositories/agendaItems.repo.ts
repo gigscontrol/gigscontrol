@@ -93,8 +93,9 @@ export async function atualizarAgendaItem(
 
 export async function removerAgendaItem(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — mantém o histórico (igual shows).
-  await softDelete(supabase, "agenda_items", id);
+  await softDelete(supabase, "agenda_items", id, deletadoPor);
 }

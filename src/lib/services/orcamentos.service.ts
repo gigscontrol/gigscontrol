@@ -167,9 +167,10 @@ export async function atualizarOrcamentoPorId(
 
 export async function removerOrcamentoPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }
 
 /**

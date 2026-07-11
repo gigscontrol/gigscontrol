@@ -76,9 +76,10 @@ export async function listarShowsDeletados(
 
 export async function moverShowParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "shows", id);
+  await softDelete(supabase, "shows", id, deletadoPor);
 }
 
 export async function restaurarShow(
@@ -135,8 +136,9 @@ export async function atualizarShow(
 
 export async function removerShow(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
-  await moverShowParaLixeira(supabase, id);
+  await moverShowParaLixeira(supabase, id, deletadoPor);
 }

@@ -203,14 +203,15 @@ export async function atualizarUsuarioDaEquipe(
  */
 export async function removerUsuarioDaEquipe(
   admin: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   const atual = await buscarProfile(admin, id);
   if (!atual) return;
   if (atual.papel === "admin" || atual.papel === "artista") {
     throw new Error("Este usuário não pode ser removido por esta rota.");
   }
-  await moverProfileParaLixeira(admin, id);
+  await moverProfileParaLixeira(admin, id, deletadoPor);
 }
 
 /**

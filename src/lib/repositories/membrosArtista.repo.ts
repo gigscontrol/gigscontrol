@@ -122,11 +122,19 @@ export async function upsertVinculo(
 export async function removerVinculo(
   admin: SupabaseClient,
   userId: string,
-  artistId: string
+  artistId: string,
+  deletadoPor?: string
 ): Promise<void> {
+  // Soft-delete inline (não usa o helper `softDelete` porque filtra por
+  // chave composta user_id + artist_id, não por id). `deletadoPor` grava
+  // quem apagou quando presente.
+  const patch: { deletado_em: string; deletado_por?: string } = {
+    deletado_em: new Date().toISOString(),
+  };
+  if (deletadoPor) patch.deletado_por = deletadoPor;
   const { error } = await admin
     .from("membros_artista")
-    .update({ deletado_em: new Date().toISOString() })
+    .update(patch)
     .eq("user_id", userId)
     .eq("artist_id", artistId)
     .is("deletado_em", null);

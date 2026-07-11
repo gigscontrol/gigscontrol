@@ -99,9 +99,10 @@ export async function atualizarProfile(
 /** Soft delete: marca deletado_em = now(). */
 export async function moverProfileParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "profiles", id);
+  await softDelete(supabase, "profiles", id, deletadoPor);
 }
 
 export async function restaurarProfile(

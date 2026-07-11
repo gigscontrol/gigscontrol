@@ -45,9 +45,10 @@ export async function listarOrcamentosDeletados(
 
 export async function moverOrcamentoParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "orcamentos", id);
+  await softDelete(supabase, "orcamentos", id, deletadoPor);
 }
 
 export async function restaurarOrcamento(
@@ -116,8 +117,9 @@ export async function atualizarOrcamento(
 
 export async function removerOrcamento(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
-  await moverOrcamentoParaLixeira(supabase, id);
+  await moverOrcamentoParaLixeira(supabase, id, deletadoPor);
 }

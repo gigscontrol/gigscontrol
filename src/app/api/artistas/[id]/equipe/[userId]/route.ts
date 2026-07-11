@@ -103,7 +103,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   if (bloqueio) return bloqueio;
 
   try {
-    await removerVinculoDoArtista(admin, params.userId, params.id);
+    await removerVinculoDoArtista(admin, params.userId, params.id, r.sessao.userId);
     await auditAndNotify(r.sessao, {
       modulo: "equipe",
       tipo: "remover",

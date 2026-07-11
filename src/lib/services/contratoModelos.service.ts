@@ -91,7 +91,8 @@ export async function atualizarModeloPorId(
 
 export async function removerModeloPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }

@@ -94,9 +94,10 @@ export async function atualizarPastaPorId(
 
 export async function removerPastaPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repo.removerPasta(supabase, id);
+  await repo.removerPasta(supabase, id, deletadoPor);
 }
 
 // ---- Notas ----
@@ -141,7 +142,8 @@ export async function atualizarNotaPorId(
 
 export async function removerNotaPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repo.removerNota(supabase, id);
+  await repo.removerNota(supabase, id, deletadoPor);
 }
