@@ -35,18 +35,14 @@ import {
   useWorkspace,
   useArtistas,
   LABELS_PAPEL_EQUIPE,
-  ESCOPO_PADRAO,
   type UsuarioEquipe,
-  type PapelEquipe,
-  type EscopoUsuario,
-  type Funcoes,
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import { PERFIS } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
-import { BRASIL, type Country } from "@/lib/data/countries";
+import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
 import type { DocumentoTipo } from "@/types";
@@ -278,21 +274,25 @@ export default function AbaEquipe() {
     }
   }
 
-  async function aoEditar(id: string, dados: Partial<UsuarioEquipe>) {
+  async function aoEditar(id: string, dados: PatchEditarUsuario) {
     try {
-      const patch: {
-        nome?: string;
-        papel?: PapelEquipe;
-        escopo?: EscopoUsuario;
-        funcoes?: Funcoes;
-        ativo?: boolean;
-      } = {
+      // Repassa apelido + dados de pessoa (snake_case, já no formato que o
+      // backend espera) + bloqueio. `cidade_id`/`razao_social` só vão quando
+      // preenchidos (o `salvar` já os deixa undefined quando não se aplicam).
+      await atualizarUsuario(id, {
         nome: dados.nome,
-        escopo: dados.escopo,
-        funcoes: dados.funcoes,
         ativo: dados.ativo,
-      };
-      await atualizarUsuario(id, patch);
+        cor: dados.cor,
+        pais: dados.pais,
+        nome_legal: dados.nome_legal,
+        documento_tipo: dados.documento_tipo,
+        documento: dados.documento,
+        razao_social: dados.razao_social,
+        endereco: dados.endereco,
+        telefone: dados.telefone,
+        data_nascimento: dados.data_nascimento,
+        cidade_id: dados.cidade_id,
+      });
       setEditando(null);
       setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
     } catch (e) {
@@ -1226,6 +1226,26 @@ type DadosContaUsuario = {
   senhaPadraoValor: string | null;
 };
 
+/**
+ * Patch enviado pelo modo EDITAR — apelido + dados de pessoa (snake_case, o
+ * mesmo formato que `atualizarUsuario` repassa pro backend) + bloqueio.
+ * E-mail fica de fora de propósito (bloqueado; o membro cadastra depois).
+ */
+type PatchEditarUsuario = {
+  nome?: string;
+  ativo?: boolean;
+  cor?: string;
+  pais?: string;
+  nome_legal?: string;
+  documento_tipo?: string;
+  documento?: string;
+  razao_social?: string;
+  endereco?: string;
+  telefone?: string;
+  data_nascimento?: string;
+  cidade_id?: string;
+};
+
 export function ModalUsuario({
   modo,
   inicial,
@@ -1263,7 +1283,7 @@ export function ModalUsuario({
     email_contato?: string;
     cidade_id?: string;
   }) => void | Promise<void>;
-  onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
+  onEditar: (id: string, dados: PatchEditarUsuario) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
   onResetarSenha?: () => void | Promise<void>;
 }) {
@@ -1283,16 +1303,29 @@ export function ModalUsuario({
   // Artista cujo editor de permissões está aberto (modal empilhado). null = fechado.
   const [editandoPermsDe, setEditandoPermsDe] = useState<string | null>(null);
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
-  const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
-  const [cor, setCor] = useState<string>(CORES[0]);
+  // No modo editar, pré-preenche a partir do `inicial` (mesmo conjunto de
+  // estados do modo criar) — igual o editar do artista faz.
+  const [paisPessoal, setPaisPessoal] = useState<Country>(
+    () =>
+      COUNTRIES.find((p) => p.code === (inicial?.pais ?? "BR").toUpperCase()) ??
+      BRASIL
+  );
+  const [cor, setCor] = useState<string>(inicial?.cor ?? CORES[0]);
+  // Cidade: o `inicial` só carrega o UUID (cidadeId), não o nome/uf — então
+  // o autocomplete começa vazio no editar. Só manda `cidade_id` se o admin
+  // escolher uma cidade nova (senão o backend mantém a atual).
   const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
-  const [nomeLegal, setNomeLegal] = useState("");
-  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
-  const [documento, setDocumento] = useState("");
-  const [razaoSocial, setRazaoSocial] = useState("");
-  const [endereco, setEndereco] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [dataNascimento, setDataNascimento] = useState("");
+  const [nomeLegal, setNomeLegal] = useState(inicial?.nomeLegal ?? "");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
+    // `inicial.documentoTipo` vem tipado como string no workspace-context;
+    // aqui só existem os tipos válidos de DocumentoTipo, então estreitamos.
+    (inicial?.documentoTipo as DocumentoTipo | undefined) ?? "cpf"
+  );
+  const [documento, setDocumento] = useState(inicial?.documento ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(inicial?.razaoSocial ?? "");
+  const [endereco, setEndereco] = useState(inicial?.endereco ?? "");
+  const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
+  const [dataNascimento, setDataNascimento] = useState(inicial?.dataNascimento ?? "");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1416,12 +1449,37 @@ export function ModalUsuario({
       return;
     }
 
-    // Editar: só nome + bloqueio. O acesso é gerenciado por artista.
+    // Editar: apelido + dados de pessoa + bloqueio. O acesso (perfis/permissões
+    // por artista) continua gerenciado na aba Equipe do artista. E-mail fica
+    // bloqueado (o membro cadastra depois).
     if (!inicial) return;
     setSalvando(true);
     setErro(null);
     try {
-      await onEditar(inicial.id, { nome: nome.trim(), ativo });
+      // Cidade (opcional): só resolve/envia se o admin escolher uma nova —
+      // senão o backend mantém a atual (o autocomplete começa vazio no editar).
+      let cidadeId: string | undefined;
+      if (cidadeSel) {
+        try {
+          cidadeId = (await resolverCidade(cidadeSel)).id;
+        } catch {
+          /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
+        }
+      }
+      await onEditar(inicial.id, {
+        nome: nome.trim(),
+        ativo,
+        cor,
+        pais: paisPessoal.code,
+        nome_legal: nomeLegal.trim() || undefined,
+        documento_tipo: documentoTipo,
+        documento: documento.trim() || undefined,
+        razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
+        endereco: endereco.trim() || undefined,
+        telefone: telefone.trim() || undefined,
+        data_nascimento: dataNascimento || undefined,
+        cidade_id: cidadeId,
+      });
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -1619,22 +1677,93 @@ export function ModalUsuario({
           </>
         ) : (
           <>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder={t("Nome completo")}
-                className="campo-input"
-                autoFocus
+            {/* HEADER estilo artista: barra colorida (a cor) + avatar (1ª
+                letra do apelido) + input do APELIDO grande/bold, e
+                Cancelar + "Salvar alterações" no canto. */}
+            <div className="card p-0 overflow-hidden">
+              <div
+                style={{
+                  height: 4,
+                  background: `linear-gradient(90deg, ${cor}, ${cor}66)`,
+                }}
               />
-            </label>
-            <div className="rounded-md border border-border p-3 flex items-start gap-2">
-              <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-secondary leading-relaxed">
-                {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
-              </p>
+              <div className="p-5 flex flex-col gap-4">
+                <div className="flex items-start gap-4 flex-wrap">
+                  <span
+                    className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${cor}, ${cor}99)`,
+                    }}
+                  >
+                    {(nome.trim().charAt(0) || "?").toUpperCase()}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder={t("Apelido")}
+                      className="campo-input text-xl font-bold"
+                      autoFocus
+                    />
+                    <span className="text-[0.7rem] text-muted mt-1 block">
+                      {t("É o nome que aparece pros outros usuários da sua agência.")}
+                    </span>
+                  </div>
+
+                  {/* Ações: Cancelar / Salvar alterações */}
+                  <div className="ml-auto flex items-center gap-2 flex-wrap">
+                    <button onClick={onFechar} className="btn btn-secondary text-sm" disabled={salvando}>
+                      {t("Cancelar")}
+                    </button>
+                    <button
+                      onClick={salvar}
+                      disabled={salvando}
+                      className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                    >
+                      <Check size={14} />
+                      {salvando ? t("Salvando...") : t("Salvar alterações")}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Cor de identificação */}
+            <SeletorDeCor cor={cor} onChange={setCor} />
+
+            {/* País e cidade onde reside — o onPaisChange faz o documento e o
+                DDI seguirem o país. */}
+            <Secao titulo={t("País e cidade onde reside")}>
+              <CidadeGlobalAutocomplete
+                value={cidadeSel}
+                onChange={setCidadeSel}
+                onPaisChange={setPaisPessoal}
+                placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
+              />
+            </Secao>
+
+            {/* Dados pessoais — nome completo, nascimento, documento
+                país-aware, telefone, endereço único. SEM e-mail (bloqueado). */}
+            <Secao titulo={t("Dados pessoais")}>
+              <CamposDadosContrato
+                pais={paisPessoal}
+                setPais={setPaisPessoal}
+                nomeLegal={nomeLegal}
+                setNomeLegal={setNomeLegal}
+                documentoTipo={documentoTipo}
+                setDocumentoTipo={setDocumentoTipo}
+                documento={documento}
+                setDocumento={setDocumento}
+                razaoSocial={razaoSocial}
+                setRazaoSocial={setRazaoSocial}
+                endereco={endereco}
+                setEndereco={setEndereco}
+                telefone={telefone}
+                setTelefone={setTelefone}
+                dataNascimento={dataNascimento}
+                setDataNascimento={setDataNascimento}
+              />
+            </Secao>
           </>
         )}
 
@@ -1766,27 +1895,31 @@ export function ModalUsuario({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-border">
-          {!modoInline && (
-            <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
-              {t("Cancelar")}
-            </button>
-          )}
-          <button
-            onClick={salvar}
-            className={`btn btn-primary ${modoInline ? "flex-1 justify-center" : ""}`}
-            disabled={salvando}
-          >
-            {salvando ? (
-              t("Salvando...")
-            ) : (
-              <>
-                <Check size={14} />{" "}
-                {modoInline && modo === "criar" ? t("Convidar") : t("Salvar")}
-              </>
+        {/* Footer (Cancelar/Salvar) — só no modo criar. No editar as ações
+            ficam no HEADER (estilo artista). */}
+        {modo === "criar" && (
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            {!modoInline && (
+              <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
+                {t("Cancelar")}
+              </button>
             )}
-          </button>
-        </div>
+            <button
+              onClick={salvar}
+              className={`btn btn-primary ${modoInline ? "flex-1 justify-center" : ""}`}
+              disabled={salvando}
+            >
+              {salvando ? (
+                t("Salvando...")
+              ) : (
+                <>
+                  <Check size={14} />{" "}
+                  {modoInline ? t("Convidar") : t("Salvar")}
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Editor de permissões do artista selecionado — modal empilhado
             (fechar/salvar aqui NÃO fecha o ModalUsuario). */}
@@ -1815,8 +1948,10 @@ export function ModalUsuario({
     <Modal
       isOpen
       onClose={onFechar}
-      title={modo === "criar" ? t("Criar usuário") : t("Editar usuário")}
-      maxWidth={520}
+      // No editar o próprio HEADER (card com barra/avatar/apelido) faz de
+      // título — sem barra de título redundante, igual o editar do artista.
+      title={modo === "criar" ? t("Criar usuário") : ""}
+      maxWidth={modo === "editar" ? 620 : 520}
     >
       {conteudo}
     </Modal>
