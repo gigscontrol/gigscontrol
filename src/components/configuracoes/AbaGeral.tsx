@@ -24,6 +24,7 @@ import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import CidadeGlobalAutocomplete, {
   type CidadeEscolhida,
 } from "@/components/CidadeGlobalAutocomplete";
+import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import PhoneInput, {
   DEFAULT_COUNTRY,
@@ -320,6 +321,17 @@ type PerfilPessoa = {
   documento: string | null;
   telefone: string | null;
   data_nascimento: string | null;
+  cidade_id: string | null;
+  /** Cidade embutida (join em cidades por cidade_id) — pré-preenche o seletor. */
+  cidade: {
+    nome: string;
+    estado: string | null;
+    ibge_id: string | null;
+    geoname_id: string | null;
+    latitude: number | string | null;
+    longitude: number | string | null;
+    pais: string | null;
+  } | null;
 };
 
 function MeusDados({
@@ -364,7 +376,7 @@ function MeusDados({
         const { data: profile, error: errProfile } = await supabase
           .from("profiles")
           .select(
-            "nome, nome_legal, pais, documento_tipo, documento, telefone, data_nascimento"
+            "nome, nome_legal, pais, documento_tipo, documento, telefone, data_nascimento, cidade_id, cidade:cidades!cidade_id(nome, estado, ibge_id, geoname_id, latitude, longitude, pais)"
           )
           .eq("id", u.id)
           .single<PerfilPessoa>();
@@ -382,6 +394,22 @@ function MeusDados({
         setNomeLegal(profile.nome_legal ?? "");
         setNascimento(profile.data_nascimento ?? "");
         setDoc(profile.documento ?? "");
+        // Pré-preenche o seletor com a cidade salva (join). Cidade legada (sem
+        // ibge/geoname) fica vazia — o autocomplete não tem como reidentificá-la.
+        const cr = profile.cidade;
+        setCidade(
+          cr && (cr.ibge_id || cr.geoname_id)
+            ? {
+                nome: cr.nome,
+                uf: cr.estado ?? "",
+                pais: cr.pais ?? "BR",
+                ...(cr.ibge_id ? { ibgeId: cr.ibge_id } : {}),
+                ...(cr.geoname_id ? { geonameId: cr.geoname_id } : {}),
+                ...(cr.latitude != null ? { latitude: Number(cr.latitude) } : {}),
+                ...(cr.longitude != null ? { longitude: Number(cr.longitude) } : {}),
+              }
+            : null
+        );
 
         const cc =
           COUNTRIES.find((c) => c.code === paisInicial) ?? DEFAULT_COUNTRY;
@@ -422,6 +450,18 @@ function MeusDados({
       const docTipo =
         pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
 
+      // Cidade (opcional): resolve a seleção pro UUID do catálogo (lookup-or-
+      // create no próprio workspace). Sem cidade = limpa (null). Falha ao
+      // resolver = não mexe no cidade_id atual (undefined → não vai no body).
+      let cidade_id: string | null | undefined = null;
+      if (cidade) {
+        try {
+          cidade_id = (await resolverCidade(cidade)).id;
+        } catch {
+          cidade_id = undefined;
+        }
+      }
+
       // Só campos de PESSOA — o endpoint /api/perfil grava só o próprio
       // profile e NÃO aceita nada de papel/permissão.
       const r = await fetch("/api/perfil", {
@@ -436,6 +476,7 @@ function MeusDados({
           documento: docNorm,
           telefone,
           data_nascimento: nascimento,
+          ...(cidade_id !== undefined ? { cidade_id } : {}),
         }),
       });
       if (!r.ok) {
