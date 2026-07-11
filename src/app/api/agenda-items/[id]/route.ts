@@ -92,7 +92,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   }
 
   try {
-    await removerAgendaItemPorId(r.sessao.supabase, params.id);
+    await removerAgendaItemPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover item.");

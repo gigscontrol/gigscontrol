@@ -102,9 +102,10 @@ export async function atualizarArtista(
 /** Soft delete — marca deletado_em = now(). */
 export async function moverArtistaParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "artists", id);
+  await softDelete(supabase, "artists", id, deletadoPor);
 }
 
 /** Restaura — zera deletado_em. */

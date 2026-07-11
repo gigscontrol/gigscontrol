@@ -63,8 +63,12 @@ export async function atualizarPasta(
   return data as unknown as PastaRow;
 }
 
-export async function removerPasta(supabase: SupabaseClient, id: string): Promise<void> {
-  await softDelete(supabase, "anotacao_pastas", id);
+export async function removerPasta(
+  supabase: SupabaseClient,
+  id: string,
+  deletadoPor?: string
+): Promise<void> {
+  await softDelete(supabase, "anotacao_pastas", id, deletadoPor);
 }
 
 // ============================================================
@@ -155,8 +159,12 @@ export async function atualizarNota(
   return data as unknown as NotaRow;
 }
 
-export async function removerNota(supabase: SupabaseClient, id: string): Promise<void> {
-  await softDelete(supabase, "anotacoes", id);
+export async function removerNota(
+  supabase: SupabaseClient,
+  id: string,
+  deletadoPor?: string
+): Promise<void> {
+  await softDelete(supabase, "anotacoes", id, deletadoPor);
 }
 
 /** Notas vivas de um show (pro limite de 4 por show). */

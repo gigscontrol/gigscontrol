@@ -82,9 +82,10 @@ export async function escoposDeVendas(
 
 export async function moverVendaParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "vendas", id);
+  await softDelete(supabase, "vendas", id, deletadoPor);
 }
 
 export async function restaurarVenda(
@@ -142,9 +143,10 @@ export async function atualizarVendaRow(
 
 export async function removerVendaRow(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — vai pra lixeira por 30 dias. Hard delete real
   // acontece via pg_cron (parcelas vão junto por FK CASCADE).
-  await moverVendaParaLixeira(supabase, id);
+  await moverVendaParaLixeira(supabase, id, deletadoPor);
 }

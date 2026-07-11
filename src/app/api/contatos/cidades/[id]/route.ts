@@ -61,7 +61,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const g = verificarAcessoContatos(r.sessao);
   if (g) return g;
   try {
-    await removerCidadePorId(r.sessao.supabase, params.id);
+    await removerCidadePorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover cidade.");

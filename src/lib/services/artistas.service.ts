@@ -482,9 +482,10 @@ export async function alternarSuspensaoArtista(
 /** Soft delete: move pra lixeira (recuperável por 30 dias). */
 export async function removerArtistaPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await moverArtistaParaLixeira(supabase, id);
+  await moverArtistaParaLixeira(supabase, id, deletadoPor);
 }
 
 /**

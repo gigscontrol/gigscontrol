@@ -79,7 +79,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     const existente = await buscarModeloPorId(r.sessao.supabase, params.id);
     if (!existente)
       return NextResponse.json({ erro: "Modelo não encontrado." }, { status: 404 });
-    await removerModeloPorId(r.sessao.supabase, params.id);
+    await removerModeloPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover modelo.");

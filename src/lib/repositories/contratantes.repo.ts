@@ -36,9 +36,10 @@ export async function listarContratantesDeletados(
 
 export async function moverContratanteParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "contratantes", id);
+  await softDelete(supabase, "contratantes", id, deletadoPor);
 }
 
 export async function restaurarContratante(
@@ -93,8 +94,9 @@ export async function atualizarContratante(
 
 export async function removerContratante(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
-  await moverContratanteParaLixeira(supabase, id);
+  await moverContratanteParaLixeira(supabase, id, deletadoPor);
 }

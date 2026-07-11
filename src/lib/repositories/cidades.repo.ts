@@ -31,9 +31,10 @@ export async function listarCidadesDeletadas(
 
 export async function moverCidadeParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "cidades", id);
+  await softDelete(supabase, "cidades", id, deletadoPor);
 }
 
 export async function restaurarCidade(
@@ -85,9 +86,13 @@ export async function atualizarCidade(
   return data as unknown as CidadeRow;
 }
 
-export async function removerCidade(supabase: SupabaseClient, id: string): Promise<void> {
+export async function removerCidade(
+  supabase: SupabaseClient,
+  id: string,
+  deletadoPor?: string
+): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
-  await moverCidadeParaLixeira(supabase, id);
+  await moverCidadeParaLixeira(supabase, id, deletadoPor);
 }
 
 /** Busca uma cidade do workspace pelo ID do IBGE (catálogo nacional). */

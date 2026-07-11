@@ -14,6 +14,17 @@ import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 import { setPreferencias as setPreferenciasGlobais } from "./preferencias";
+import {
+  ESCOPO_PADRAO,
+  type EscopoUsuario,
+  type Funcoes,
+  type UsuarioEquipe as UsuarioEquipeBase,
+} from "./mappers/usuario";
+
+// Reexportados para quem importava esses tipos/valores daqui — a fonte
+// única agora é o mapper (src/lib/mappers/usuario.ts).
+export { ESCOPO_PADRAO };
+export type { EscopoUsuario, Funcoes };
 
 /**
  * Configurações do workspace (a agência) — módulo de Configurações do admin.
@@ -87,65 +98,20 @@ export type NovoArtistaResultado = {
 /** Papéis administrativos suportados na aba Equipe. */
 export type PapelEquipe = Extract<Papel, "produtor" | "vendedor" | "financeiro">;
 
-/** Flags de privacidade do usuário (escopo). */
-export type EscopoUsuario = {
-  verTodosContatos: boolean;
-  verTodasVendas: boolean;
-  editarTodosEventos: boolean;
-};
-
-export const ESCOPO_PADRAO: EscopoUsuario = {
-  verTodosContatos: true,
-  verTodasVendas: true,
-  editarTodosEventos: true,
-};
-
 /**
- * Funções operacionais e DJs atendidos.
- * Vazio quando o usuário ainda não foi configurado.
- */
-export type Funcoes = {
-  vendedor?: string[];
-  financeiro?: string[];
-  produtor?: string[];
-};
-
-/**
- * Usuário da equipe.
+ * Usuário da equipe (visão do cliente).
+ *
+ * Mesmo shape do mapper (fonte única: `UsuarioEquipeBase`, incluindo
+ * `EscopoUsuario`/`Funcoes`), só estreitando `papel` para os 3 papéis
+ * operacionais que a aba Equipe do cliente lida com (o admin nunca
+ * aparece nesta lista).
  *
  * Cada usuário operacional pode acumular múltiplas FUNÇÕES (vendedor /
  * financeiro / produtor) e cada uma carrega sua própria lista de DJs
  * atendidos. O campo `papel` continua existindo como "função primária"
  * pra compatibilidade com policies e código legado.
  */
-export type UsuarioEquipe = {
-  id: string;
-  nome: string;
-  email: string;
-  /**
-   * Handle de login "raiz-slug". Membros novos nascem com ele; membros
-   * antigos (criados por e-mail) têm `null` e logam pelo e-mail real.
-   */
-  username: string | null;
-  papel: PapelEquipe;
-  escopo: EscopoUsuario;
-  funcoes: Funcoes;
-  ativo: boolean;
-  /** Permissão dedicada: criar pastas de anotações na Agenda. */
-  podeCriarAnotacoes?: boolean;
-  // Dados pessoais (opcionais) — country-aware, servem para contrato.
-  cor?: string;
-  pais?: string;
-  nomeLegal?: string;
-  documentoTipo?: string;
-  documento?: string;
-  razaoSocial?: string;
-  endereco?: string;
-  telefone?: string;
-  dataNascimento?: string;
-  emailContato?: string;
-  cidadeId?: string;
-};
+export type UsuarioEquipe = Omit<UsuarioEquipeBase, "papel"> & { papel: PapelEquipe };
 
 // ----------------------------------------------------------------
 // Estado inicial

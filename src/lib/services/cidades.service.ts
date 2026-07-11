@@ -61,9 +61,10 @@ export async function atualizarCidadePorId(
 
 export async function removerCidadePorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }
 
 /**

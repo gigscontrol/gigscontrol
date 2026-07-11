@@ -88,7 +88,8 @@ export async function atualizarModelo(
 
 export async function removerModelo(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "contrato_modelos", id);
+  await softDelete(supabase, "contrato_modelos", id, deletadoPor);
 }
