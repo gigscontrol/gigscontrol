@@ -104,5 +104,20 @@ export const usuarioUpdateSchema = z.object({
   ativo: z.boolean().optional(),
   /** Permissão dedicada (workspace-level): criar pastas de anotações. */
   pode_criar_anotacoes: z.boolean().optional(),
+  // Dados pessoais (opcionais) — servem para contrato. País dirige documento.
+  // Sem email_contato aqui: e-mail de contato do admin é bloqueado no update.
+  cor: z.string().max(20).optional(),
+  pais: z.string().length(2).optional(),
+  nome_legal: z.string().max(120).optional(),
+  documento_tipo: z.enum(["cpf", "cnpj"]).optional(),
+  documento: z.string().max(40).optional(),
+  razao_social: z.string().max(140).optional(),
+  endereco: z.string().max(300).optional(),
+  telefone: z.string().max(40).optional(),
+  data_nascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  cidade_id: uuidLike.optional(),
 });
 export type UsuarioUpdateInput = z.infer<typeof usuarioUpdateSchema>;

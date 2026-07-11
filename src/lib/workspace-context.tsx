@@ -131,6 +131,18 @@ export type UsuarioEquipe = {
   ativo: boolean;
   /** Permissão dedicada: criar pastas de anotações na Agenda. */
   podeCriarAnotacoes?: boolean;
+  // Dados pessoais (opcionais) — country-aware, servem para contrato.
+  cor?: string;
+  pais?: string;
+  nomeLegal?: string;
+  documentoTipo?: string;
+  documento?: string;
+  razaoSocial?: string;
+  endereco?: string;
+  telefone?: string;
+  dataNascimento?: string;
+  emailContato?: string;
+  cidadeId?: string;
 };
 
 // ----------------------------------------------------------------
@@ -268,6 +280,17 @@ type WorkspaceContextValue = {
       funcoes: Funcoes;
       ativo: boolean;
       pode_criar_anotacoes: boolean;
+      // Dados pessoais (opcionais) — country-aware, servem para contrato.
+      cor: string;
+      pais: string;
+      nome_legal: string;
+      documento_tipo: string;
+      documento: string;
+      razao_social: string;
+      endereco: string;
+      telefone: string;
+      data_nascimento: string;
+      cidade_id: string;
     }>
   ) => Promise<UsuarioEquipe>;
   removerUsuario: (id: string) => Promise<void>;
@@ -705,6 +728,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         funcoes: Funcoes;
         ativo: boolean;
         pode_criar_anotacoes: boolean;
+        // Dados pessoais (opcionais) — country-aware, servem para contrato.
+        cor: string;
+        pais: string;
+        nome_legal: string;
+        documento_tipo: string;
+        documento: string;
+        razao_social: string;
+        endereco: string;
+        telefone: string;
+        data_nascimento: string;
+        cidade_id: string;
       }>
     ): Promise<UsuarioEquipe> => {
       const res = await fetch(`/api/usuarios/${id}`, {
