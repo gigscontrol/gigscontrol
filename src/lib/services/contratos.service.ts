@@ -168,7 +168,10 @@ export async function removerContratoPorId(
  * SUM em SQL é um follow-up que NÃO muda o contrato deste endpoint.
  */
 export type ContratosResumo = {
+  /** Total de contratos NO PERÍODO. */
   total: number;
+  /** Total de contratos SEM filtro de período (pro empty-state "nenhum ainda"). */
+  totalGeral: number;
   porStatus: Record<ContratoStatus, number>;
   taxa: number;
   aguardando: number;
@@ -249,6 +252,7 @@ export async function resumoContratosDoWorkspace(
 
   return {
     total: contratosPeriodo.length,
+    totalGeral: contratos.length,
     porStatus,
     taxa,
     aguardando,

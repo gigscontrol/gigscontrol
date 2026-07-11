@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   FileText,
   FileSignature,
@@ -19,7 +19,7 @@ import PageHeader from "../PageHeader";
 import StatCard from "../StatCard";
 import Modal from "../Modal";
 import DateRangeSelector from "../DateRangeSelector";
-import { useContratos } from "@/lib/contratos-context";
+import type { ContratosResumo } from "@/lib/services/contratos.service";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
@@ -78,13 +78,6 @@ function resolverMes(
   return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
-
 /** Qual card está aberto no modal de resumo (null = fechado). */
 type Resumo = null | "total" | ContratoStatus;
 
@@ -102,7 +95,6 @@ export default function DashboardContratos({
   onAbrirContrato,
 }: Props) {
   const t = useT();
-  const { contratos, assinantesPorContrato, carregando, erro } = useContratos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
@@ -118,70 +110,63 @@ export default function DashboardContratos({
     [range, customMonth, customYear]
   );
   const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
-  const contratosPeriodo = useMemo(
-    () => contratos.filter((c) => dataNoMes(c.criadoEm, periodo)),
-    [contratos, periodo]
-  );
+
+  // Bordas [inicio, fim] do mês selecionado em horário LOCAL (null/null = Visão
+  // geral). O SERVIDOR computa os KPIs por esse período — o dashboard não
+  // carrega mais o array inteiro de contratos (passo 1 da paginação).
+  const { inicio, fim } = useMemo<{ inicio: string | null; fim: string | null }>(() => {
+    if (periodo.tudo) return { inicio: null, fim: null };
+    const ini = new Date(periodo.ano, periodo.mes, 1, 0, 0, 0, 0);
+    const f = new Date(periodo.ano, periodo.mes + 1, 0, 23, 59, 59, 999);
+    return { inicio: ini.toISOString(), fim: f.toISOString() };
+  }, [periodo]);
+
+  // KPIs vindos de /api/contratos/resumo (refetch a cada mudança de período).
+  const [kpis, setKpis] = useState<ContratosResumo | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  useEffect(() => {
+    let ativo = true;
+    setCarregando(true);
+    setErro(null);
+    const qs = new URLSearchParams();
+    if (inicio) qs.set("inicio", inicio);
+    if (fim) qs.set("fim", fim);
+    (async () => {
+      try {
+        const res = await fetch(`/api/contratos/resumo?${qs.toString()}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error();
+        const data = (await res.json()) as { resumo: ContratosResumo };
+        if (ativo) setKpis(data.resumo);
+      } catch {
+        if (ativo) setErro(t("Não foi possível carregar os contratos."));
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [inicio, fim, t]);
 
   // "Novo Contrato" não fixa artista (é escolhido no wizard) → habilita se
   // o usuário PODE criar contrato em algum artista.
   const podeCriar = artistas.some((a) => podeUI(a.id, "contratos.criar"));
 
-  // Total + contagem por status + a lista (ordenada) por status.
-  const { total, porStatus, listaPorStatus } = useMemo(() => {
-    const contagem: Record<ContratoStatus, number> = {
-      rascunho: 0,
-      enviado: 0,
-      assinado: 0,
-      cancelado: 0,
-    };
-    const lista: Record<ContratoStatus, Contrato[]> = {
-      rascunho: [],
-      enviado: [],
-      assinado: [],
-      cancelado: [],
-    };
-    const ordenados = [...contratosPeriodo].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
-    for (const c of ordenados) {
-      contagem[c.status] += 1;
-      lista[c.status].push(c);
-    }
-    return { total: contratosPeriodo.length, porStatus: contagem, listaPorStatus: lista };
-  }, [contratosPeriodo]);
-
-  // Taxa de assinatura = assinados / (enviados + assinados).
-  const taxa = useMemo(() => {
-    const denom = porStatus.enviado + porStatus.assinado;
-    return denom > 0 ? Math.round((porStatus.assinado / denom) * 100) : 0;
-  }, [porStatus]);
-
-  // Aguardando = enviados que ainda NÃO têm nenhuma assinatura coletada.
-  const aguardando = useMemo(
-    () =>
-      contratosPeriodo.filter(
-        (c) =>
-          c.status === "enviado" &&
-          !(assinantesPorContrato[c.id] ?? []).some((a) => a.status === "assinado")
-      ).length,
-    [contratosPeriodo, assinantesPorContrato]
-  );
-
-  // Vendas do período SEM contrato ativo — precisam gerar um.
-  const vendasSemContrato = useMemo(() => {
-    const comContrato = new Set(
-      contratos.filter((c) => c.status !== "cancelado" && c.vendaId).map((c) => c.vendaId)
-    );
-    return vendas.filter((v) => dataNoMes(v.criadoEm, periodo) && !comContrato.has(v.id)).length;
-  }, [vendas, contratos, periodo]);
-
-  // Últimos 5 do período por criadoEm desc.
-  const recentes = useMemo<Contrato[]>(
-    () =>
-      [...contratosPeriodo]
-        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
-        .slice(0, 5),
-    [contratosPeriodo]
-  );
+  // Deriva os valores de exibição do resumo (zeros enquanto carrega).
+  const VAZIO_STATUS: Record<ContratoStatus, number> = { rascunho: 0, enviado: 0, assinado: 0, cancelado: 0 };
+  const VAZIO_LISTA: Record<ContratoStatus, Contrato[]> = { rascunho: [], enviado: [], assinado: [], cancelado: [] };
+  const total = kpis?.total ?? 0;
+  const porStatus = kpis?.porStatus ?? VAZIO_STATUS;
+  const listaPorStatus = kpis?.listaPorStatus ?? VAZIO_LISTA;
+  const taxa = kpis?.taxa ?? 0;
+  const aguardando = kpis?.aguardando ?? 0;
+  const vendasSemContrato = kpis?.vendasSemContrato ?? 0;
+  const recentes = kpis?.recentes ?? [];
+  // Empty-state = nenhum contrato NO WORKSPACE (independente do período).
+  const semNenhum = !!kpis && kpis.totalGeral === 0;
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -224,7 +209,7 @@ export default function DashboardContratos({
         <div className="card flex items-center justify-center py-12 text-center text-sm text-danger">
           {erro}
         </div>
-      ) : contratos.length === 0 ? (
+      ) : semNenhum ? (
         <div className="card flex flex-col items-center justify-center py-12 text-center">
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <FileText size={18} className="text-muted" />
