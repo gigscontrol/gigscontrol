@@ -45,6 +45,21 @@ export class VendaDuplicadaError extends Error {
   }
 }
 
+/**
+ * Soma das parcelas não bate com o cachê. Guard de integridade financeira do
+ * servidor (o cliente já valida, mas integração externa/request adulterado não).
+ */
+export class ParcelasNaoBatemError extends Error {
+  status = 400;
+  constructor(soma: number, cache: number) {
+    super(
+      `As parcelas somam R$ ${soma.toFixed(2)}, mas o cachê é R$ ${cache.toFixed(2)}. ` +
+        `Ajuste as parcelas para que a soma bata com o cachê.`
+    );
+    this.name = "ParcelasNaoBatemError";
+  }
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function normalizarUuid(v: string | null | undefined): string | null {
@@ -174,6 +189,21 @@ export async function criarVendaCompleta(
       .maybeSingle();
     if (existente) {
       throw new VendaDuplicadaError(existente.numero as string);
+    }
+  }
+
+  // GUARD DE INTEGRIDADE FINANCEIRA: se há parcelas, a soma dos valores tem que
+  // bater com o cachê. O cliente (ConcretizarVenda) já valida, mas uma integração
+  // externa (n8n/zapier — o schema aceita string de propósito) ou um request
+  // adulterado poderia gravar parcelas que não fecham, e aí os dashboards
+  // divergem ("a receber" != "faturamento"). Tolerância p/ arredondamento de
+  // centavos ao ratear percentuais.
+  const parcelasIn = input.parcelas ?? [];
+  if (parcelasIn.length > 0) {
+    const somaParcelas = parcelasIn.reduce((acc, p) => acc + (p.valor ?? 0), 0);
+    const tolerancia = 0.01 * parcelasIn.length + 0.01;
+    if (Math.abs(somaParcelas - input.cache) > tolerancia) {
+      throw new ParcelasNaoBatemError(somaParcelas, input.cache);
     }
   }
 
