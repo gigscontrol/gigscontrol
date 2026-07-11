@@ -11,10 +11,15 @@ import { respostaDeErro } from "@/lib/api/erros";
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
-  if (bloqueio) return bloqueio;
+  // Artista NÃO é barrado aqui: a lista é filtrada por privacidade.contatos no
+  // serviço (nenhum → vazia; proprios → só das casas dos eventos dele; todos →
+  // tudo). Demais papéis: gate atual (para eles é no-op).
+  if (r.sessao.papel !== "artista") {
+    const bloqueio = verificarAcessoContatos(r.sessao);
+    if (bloqueio) return bloqueio;
+  }
   try {
-    const casas = await listarCasasDoWorkspace(r.sessao.supabase);
+    const casas = await listarCasasDoWorkspace(r.sessao.supabase, r.sessao);
     return NextResponse.json({ casas });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar casas.");

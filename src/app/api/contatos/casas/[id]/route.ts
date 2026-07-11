@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { casaVisivelParaSessao } from "@/lib/services/contatosAcesso";
 import {
   buscarCasaPorId,
   atualizarCasaPorId,
@@ -14,11 +15,17 @@ type RouteCtx = { params: { id: string } };
 export async function GET(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
-  if (g) return g;
+  // Artista lê por id respeitando privacidade.contatos (checada em
+  // casaVisivelParaSessao → 404 fora do escopo). Demais papéis: gate atual.
+  if (r.sessao.papel !== "artista") {
+    const g = verificarAcessoContatos(r.sessao);
+    if (g) return g;
+  }
   try {
     const casa = await buscarCasaPorId(r.sessao.supabase, params.id);
-    if (!casa) return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
+    // 404 (não 403) fora do escopo pra não vazar existência.
+    if (!casa || !(await casaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
+      return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
     return NextResponse.json({ casa });
   } catch (e) {
     return respostaDeErro(e, "Falha ao buscar casa.");
