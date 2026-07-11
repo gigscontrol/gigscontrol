@@ -82,8 +82,10 @@ export type PrivacidadeDj = {
   contratosVer: boolean;
   /** Pode gerar contrato. */
   contratosCriar: boolean;
-  /** "todos" = agência inteira | "proprios" = só dos shows dele. */
-  contatos: "todos" | "proprios";
+  /** Acesso total à própria agenda — cria/edita/exclui os próprios eventos; false = só leitura. */
+  agendaTotal: boolean;
+  /** nenhum = não vê contatos; proprios = só dos shows dele; todos = agência inteira. */
+  contatos: "nenhum" | "proprios" | "todos";
 };
 
 export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
@@ -95,6 +97,7 @@ export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
   financeiroInformar: false,
   contratosVer: true,
   contratosCriar: false,
+  agendaTotal: false,
   contatos: "proprios",
 };
 

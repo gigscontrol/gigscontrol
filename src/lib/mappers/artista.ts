@@ -61,7 +61,9 @@ function normalizarRider(raw: unknown): string[] {
  * Normaliza o JSON do banco para o tipo PrivacidadeDj.
  * Merge campo-a-campo sobre PRIVACIDADE_DJ_PADRAO: cada boolean só é
  * aceito se for de fato boolean; o enum `contatos` só aceita
- * 'todos'|'proprios'. Qualquer outro valor cai no default.
+ * 'nenhum'|'proprios'|'todos'. Qualquer outro valor cai no default.
+ * Retrocompat: registros antigos SEM `agendaTotal` viram false (padrão);
+ * `contatos` legado ('todos'/'proprios') continua válido.
  */
 export function privacidadeValida(raw: unknown): PrivacidadeDj {
   if (!raw || typeof raw !== "object") return { ...PRIVACIDADE_DJ_PADRAO };
@@ -77,8 +79,9 @@ export function privacidadeValida(raw: unknown): PrivacidadeDj {
     financeiroInformar: bool("financeiroInformar"),
     contratosVer: bool("contratosVer"),
     contratosCriar: bool("contratosCriar"),
+    agendaTotal: bool("agendaTotal"),
     contatos:
-      r.contatos === "todos" || r.contatos === "proprios"
+      r.contatos === "nenhum" || r.contatos === "proprios" || r.contatos === "todos"
         ? r.contatos
         : PRIVACIDADE_DJ_PADRAO.contatos,
   };

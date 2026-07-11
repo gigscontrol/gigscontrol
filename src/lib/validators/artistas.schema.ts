@@ -102,7 +102,8 @@ export const artistaCreateSchema = z.object({
       financeiroInformar: z.boolean().optional(),
       contratosVer: z.boolean().optional(),
       contratosCriar: z.boolean().optional(),
-      contatos: z.enum(["todos", "proprios"]).optional(),
+      agendaTotal: z.boolean().optional(),
+      contatos: z.enum(["nenhum", "proprios", "todos"]).optional(),
     })
     .optional(),
 });
