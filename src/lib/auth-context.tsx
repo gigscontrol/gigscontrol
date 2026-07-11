@@ -289,6 +289,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (error || !data.user) {
+          // Fallback do login por HANDLE: se o membro cadastrou e verificou
+          // um e-mail real, o e-mail de auth deixou de ser o interno
+          // determinístico, então a derivação acima não bate. A rota resolve
+          // o handle → e-mail atual no servidor e loga (o cookie de sessão é
+          // compartilhado com o browser via @supabase/ssr). Só pra handle
+          // (sem "@") — login por e-mail real segue direto acima.
+          if (!id.includes("@")) {
+            try {
+              const res = await fetch("/api/auth/login-handle", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ handle: id, senha }),
+              });
+              if (res.ok) {
+                // Sincroniza o cliente com o cookie que o servidor gravou.
+                const { data: sess } = await supabase.auth.getSession();
+                const uid = sess.session?.user?.id;
+                if (uid) {
+                  const s = await montarSessao(uid);
+                  if (s && !s.usuario.ativo) {
+                    await supabase.auth.signOut();
+                    return { ok: false, erro: "Esta conta está desativada." };
+                  }
+                  if (s) {
+                    setSessao(s);
+                    return { ok: true, tipo: s.tipo };
+                  }
+                }
+                // Sessão não propagou pro cliente em memória — recarrega pra
+                // reinicializar a partir do cookie já gravado.
+                if (typeof window !== "undefined") {
+                  window.location.reload();
+                  return { ok: true, tipo: "cliente" };
+                }
+              }
+            } catch {
+              // rede/erro — cai na mensagem de erro padrão abaixo.
+            }
+          }
           return {
             ok: false,
             erro:
