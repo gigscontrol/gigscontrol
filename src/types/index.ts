@@ -46,10 +46,14 @@ export type DJ = {
   // ----------- Cadastro completo (etapa 21+) -----------
   /** Username único (formato: usuario-slugDaAgencia) — usado pra login. */
   username?: string;
-  /** Cidade onde reside — referência do IBGE (catálogo nacional). */
+  /** Cidade onde reside — referência do IBGE (catálogo nacional; legado só-BR). */
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  /** Cidade global (catálogo `cidades`) — canônico, funciona pra qualquer país. */
+  cidadeId?: string;
+  /** Cidade completa (join por cidade_id) — pré-preenche o seletor no editar. */
+  cidade?: Cidade;
   // ------- Dados do CONTRATADO (para contratos / migração 37) -------
   /** País de origem (ISO2) — dirige documento/DDI/endereço (migração 52). */
   pais?: string;

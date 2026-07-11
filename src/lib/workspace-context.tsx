@@ -57,10 +57,12 @@ export type NovoArtistaInput = {
   cor?: string;
   /** Parte do username digitada pelo admin — o backend concatena o slug. */
   usernameRaiz: string;
-  /** Cidade onde reside (do catálogo IBGE). */
+  /** Cidade onde reside (do catálogo IBGE — legado só-BR). */
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  /** Cidade global (catálogo `cidades`) — canônico, funciona pra qualquer país. */
+  cidadeId?: string;
   /** Dados do CONTRATADO (para contratos). */
   /** País de origem (ISO2) — dirige documento/DDI/endereço. */
   pais?: string;
@@ -475,6 +477,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
       if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
       if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.cidadeId) payload.cidade_id = input.cidadeId;
       if (input.pais) payload.pais = input.pais;
       if (input.nomeLegal) payload.nome_legal = input.nomeLegal;
       if (input.documento) payload.documento = input.documento;
@@ -520,6 +523,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.cidadeId !== undefined) payload.cidade_id = patch.cidadeId;
       if (patch.pais !== undefined) payload.pais = patch.pais;
       if (patch.nomeLegal !== undefined) payload.nome_legal = patch.nomeLegal;
       if (patch.documento !== undefined) payload.documento = patch.documento;

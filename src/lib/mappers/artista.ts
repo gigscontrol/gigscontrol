@@ -1,5 +1,6 @@
-import type { DJ, TaxaAgenciaModo } from "@/types";
+import type { DJ, TaxaAgenciaModo, Cidade } from "@/types";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
+import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
 export type ArtistaRow = {
   id: string;
@@ -9,10 +10,14 @@ export type ArtistaRow = {
   acesso_suspenso: boolean | null;
   deletado_em: string | null;
   criado_em: string | null;
-  // Cadastro completo (migração 21)
+  // Cadastro completo (migração 21) — cidade denormalizada só-BR (legado)
   cidade_ibge_id: string | null;
   cidade_nome: string | null;
   cidade_uf: string | null;
+  // Cidade global canônica (migração 82, FK cidades)
+  cidade_id: string | null;
+  /** Cidade embutida (join por cidade_id) — só nos SELECTs que embedam. */
+  cidade?: CidadeRow | null;
   // Dados do contratado p/ contrato (migração 37) + país (migração 52)
   pais: string | null;
   nome_legal: string | null;
@@ -102,6 +107,8 @@ export function rowParaDj(row: ArtistaRow): DJ {
   if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
   if (row.cidade_nome) dj.cidadeNome = row.cidade_nome;
   if (row.cidade_uf) dj.cidadeUf = row.cidade_uf;
+  if (row.cidade_id) dj.cidadeId = row.cidade_id;
+  if (row.cidade) dj.cidade = rowParaCidade(row.cidade);
   if (row.pais) dj.pais = row.pais;
   if (row.nome_legal) dj.nomeLegal = row.nome_legal;
   if (row.documento_tipo === "cpf" || row.documento_tipo === "cnpj")
@@ -149,6 +156,7 @@ export type ArtistaEscrita = {
   cidade_ibge_id?: string | null;
   cidade_nome?: string | null;
   cidade_uf?: string | null;
+  cidade_id?: string | null;
   pais?: string | null;
   nome_legal?: string | null;
   documento_tipo?: string | null;

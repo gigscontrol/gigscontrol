@@ -45,6 +45,7 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
@@ -68,6 +69,7 @@ import {
   LIMITE_RIDER_TECNICO,
   type TaxaAgenciaModo,
   type DocumentoTipo,
+  type Cidade,
 } from "@/types";
 
 /**
@@ -109,6 +111,8 @@ type ArtistaParaEdicao = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  cidadeId?: string;
+  cidade?: Cidade;
   pais?: string;
   nomeLegal?: string;
   documentoTipo?: DocumentoTipo;
@@ -739,6 +743,8 @@ export default function AbaArtistas() {
                         cidadeIbgeId: djSelecionado.cidadeIbgeId,
                         cidadeNome: djSelecionado.cidadeNome,
                         cidadeUf: djSelecionado.cidadeUf,
+                        cidadeId: djSelecionado.cidadeId,
+                        cidade: djSelecionado.cidade,
                         pais: djSelecionado.pais,
                         nomeLegal: djSelecionado.nomeLegal,
                         documentoTipo: djSelecionado.documentoTipo,
@@ -1523,6 +1529,12 @@ export function ModalNovoArtista({
         input.cidadeIbgeId = cidade.ibgeId ?? "";
         input.cidadeNome = cidade.nome;
         input.cidadeUf = cidade.uf;
+        // Cidade global canônica: resolve pro UUID do catálogo (qualquer país).
+        try {
+          input.cidadeId = (await resolverCidade(cidade)).id;
+        } catch {
+          /* segue sem cidade_id se não resolver */
+        }
       }
       input.taxaModo = taxaModo;
       if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
@@ -1990,14 +2002,18 @@ function ModalEditarArtista({
   const [nome, setNome] = useState(artista.nome);
   const [cor, setCor] = useState(artista.cor);
   const [cidade, setCidade] = useState<CidadeEscolhida | null>(
-    artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
-      ? {
-          ibgeId: artista.cidadeIbgeId,
-          nome: artista.cidadeNome,
-          uf: artista.cidadeUf,
-          pais: "BR",
-        }
-      : null
+    () =>
+      // Prefere a cidade GLOBAL (join por cidade_id — qualquer país); cai no
+      // denormalizado legado (só-BR) pra artistas antigos sem cidade_id.
+      cidadeParaEscolhida(artista.cidade ?? null) ??
+      (artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
+        ? {
+            ibgeId: artista.cidadeIbgeId,
+            nome: artista.cidadeNome,
+            uf: artista.cidadeUf,
+            pais: "BR",
+          }
+        : null)
   );
   const [usernameRaiz, setUsernameRaiz] = useState(usernameRaizInicial);
   // Feedback do botão de copiar senha aleatória do bloco "Senha".
@@ -2142,12 +2158,21 @@ function ModalEditarArtista({
     }
     setEnviando(true);
     try {
+      // Cidade global canônica: resolve pro UUID do catálogo (qualquer país).
+      // Falha ao resolver → cidadeId undefined → atualizarArtista mantém o atual.
+      let cidadeId: string | undefined;
+      try {
+        cidadeId = (await resolverCidade(cidade!)).id;
+      } catch {
+        /* segue sem */
+      }
       const patch: Partial<NovoArtistaInput> = {
         nome: nome.trim(),
         cor,
         cidadeIbgeId: cidade!.ibgeId ?? "",
         cidadeNome: cidade!.nome,
         cidadeUf: cidade!.uf,
+        cidadeId,
         taxaModo,
         taxaValor:
           taxaModo === "perc-fixa" || taxaModo === "valor-fixo"

@@ -65,6 +65,8 @@ export const artistaCreateSchema = z.object({
   cidade_ibge_id: z.string().min(1).max(20).optional(),
   cidade_nome: z.string().min(1).max(120).optional(),
   cidade_uf: z.string().length(2).optional(),
+  // Cidade global (catálogo `cidades`) — canônico; o client resolve pro UUID.
+  cidade_id: z.string().uuid().nullable().optional(),
   // Taxa de agência
   taxa_modo: taxaModoSchema.optional(),
   taxa_valor: z.number().min(0).max(999999).optional(),

@@ -222,10 +222,12 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         const dj = djDoShow(s);
         // Sem cidade não dá pra dizer se é viagem — inclui por garantia.
         if (!cid) return true;
-        // Exclui se a cidade do show é a cidade natal do DJ (match por IBGE).
-        if (cid.ibgeId && dj?.cidadeIbgeId && cid.ibgeId === dj.cidadeIbgeId) {
-          return false;
-        }
+        // Exclui se a cidade do show é a cidade natal do DJ. Match por cidade_id
+        // global (qualquer país); fallback no IBGE denormalizado (legado só-BR).
+        const mesmaCidade =
+          (!!dj?.cidadeId && cid.id === dj.cidadeId) ||
+          (!!cid.ibgeId && !!dj?.cidadeIbgeId && cid.ibgeId === dj.cidadeIbgeId);
+        if (mesmaCidade) return false;
         return true;
       })
       .map((s) => {

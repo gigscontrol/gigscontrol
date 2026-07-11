@@ -147,6 +147,7 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   if (input.cidade_ibge_id !== undefined) out.cidade_ibge_id = input.cidade_ibge_id ?? null;
   if (input.cidade_nome !== undefined) out.cidade_nome = input.cidade_nome ?? null;
   if (input.cidade_uf !== undefined) out.cidade_uf = input.cidade_uf ?? null;
+  if (input.cidade_id !== undefined) out.cidade_id = input.cidade_id ?? null;
   if (input.pais !== undefined) out.pais = input.pais ?? null;
   if (input.nome_legal !== undefined) out.nome_legal = input.nome_legal ?? null;
   if (input.documento !== undefined) out.documento = input.documento ?? null;
@@ -269,6 +270,7 @@ export async function criarArtistaCompleto(
     if (input.cidade_ibge_id) escrita.cidade_ibge_id = input.cidade_ibge_id;
     if (input.cidade_nome) escrita.cidade_nome = input.cidade_nome;
     if (input.cidade_uf) escrita.cidade_uf = input.cidade_uf;
+    if (input.cidade_id) escrita.cidade_id = input.cidade_id;
     if (input.pais) escrita.pais = input.pais;
     if (input.nome_legal) escrita.nome_legal = input.nome_legal;
     if (input.documento) escrita.documento = input.documento;
