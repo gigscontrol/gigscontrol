@@ -60,6 +60,9 @@ export type ProfileRow = {
   razao_social: string | null;
   endereco: string | null;
   telefone: string | null;
+  // Pessoa (migrations 72/73) — nascimento + e-mail de CONTATO (≠ login).
+  data_nascimento: string | null;
+  email_contato: string | null;
   cidade_id: string | null;
 };
 
@@ -98,6 +101,8 @@ export type UsuarioEquipe = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  dataNascimento?: string;
+  emailContato?: string;
   cidadeId?: string;
 };
 
@@ -150,6 +155,8 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   if (row.razao_social) u.razaoSocial = row.razao_social;
   if (row.endereco) u.endereco = row.endereco;
   if (row.telefone) u.telefone = row.telefone;
+  if (row.data_nascimento) u.dataNascimento = row.data_nascimento;
+  if (row.email_contato) u.emailContato = row.email_contato;
   if (row.cidade_id) u.cidadeId = row.cidade_id;
   if (row.pode_criar_anotacoes) u.podeCriarAnotacoes = true;
   return u;
@@ -199,5 +206,7 @@ export type UsuarioEscrita = {
   razao_social?: string | null;
   endereco?: string | null;
   telefone?: string | null;
+  data_nascimento?: string | null;
+  email_contato?: string | null;
   cidade_id?: string | null;
 };

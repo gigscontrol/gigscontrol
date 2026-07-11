@@ -39,12 +39,12 @@ import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-co
 import Configuracoes from "@/components/configuracoes/Configuracoes";
 import AbaArtistas from "@/components/configuracoes/AbaArtistas";
 import AbaEquipe from "@/components/configuracoes/AbaEquipe";
-import EmConstrucao from "@/components/EmConstrucao";
 import ModelosPage from "@/components/contratos/ModelosPage";
 import NovoContratoPage from "@/components/contratos/NovoContratoPage";
 import HistoricoPage from "@/components/contratos/HistoricoPage";
 import MeusContratosPage from "@/components/contratos/MeusContratosPage";
 import DashboardContratos from "@/components/contratos/DashboardContratos";
+import AgenciaDashboard from "@/components/agencia/AgenciaDashboard";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 import type { ContratoStatus } from "@/lib/mappers/contrato";
@@ -692,7 +692,7 @@ function AppRoot() {
 
           {/* Agência */}
           {activeTab === "agencia" && activePage === "dashboard" && (
-            <EmConstrucao titulo="Agência" subtitulo="Dashboard" cor={MODULE_THEMES.agencia.color} />
+            <AgenciaDashboard />
           )}
           {activeTab === "agencia" && activePage === "agencia-artistas" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">

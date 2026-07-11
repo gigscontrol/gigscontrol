@@ -54,6 +54,11 @@ export const artistaCreateSchema = z.object({
   razao_social: z.string().max(140).optional(),
   endereco: z.string().max(200).optional(),
   telefone: z.string().max(30).optional(),
+  data_nascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  email: z.string().max(120).optional(),
   // Acesso ao sistema (criado junto)
   username_raiz: usernameRaizSchema,
   // Cidade onde reside (referência IBGE)
@@ -97,7 +102,8 @@ export const artistaCreateSchema = z.object({
       financeiroInformar: z.boolean().optional(),
       contratosVer: z.boolean().optional(),
       contratosCriar: z.boolean().optional(),
-      contatos: z.enum(["todos", "proprios"]).optional(),
+      agendaTotal: z.boolean().optional(),
+      contatos: z.enum(["nenhum", "proprios", "todos"]).optional(),
     })
     .optional(),
 });

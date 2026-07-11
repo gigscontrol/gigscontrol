@@ -10,7 +10,6 @@ import {
   X,
   AlertCircle,
   PauseCircle,
-  PlayCircle,
   RotateCcw,
   Copy,
   Check,
@@ -46,6 +45,7 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
+import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
 import Modal from "../Modal";
@@ -55,11 +55,7 @@ import {
   type NovoArtistaInput,
 } from "@/lib/workspace-context";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
-import {
-  splitEndereco,
-  joinEndereco,
-  formatEndereco,
-} from "@/lib/endereco";
+import { formatEndereco } from "@/lib/endereco";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import {
@@ -120,12 +116,16 @@ type ArtistaParaEdicao = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  dataNascimento?: string;
+  email?: string;
   taxaModo: TaxaAgenciaModo;
   taxaValor?: number;
   riderCamarim: string[];
   riderEfeitos: string[];
   riderTecnico: string[];
   privacidade: PrivacidadeDj;
+  /** Acesso do artista ao sistema — true = suspenso/bloqueado. */
+  acessoSuspenso?: boolean;
 };
 
 const MODOS_TAXA: TaxaAgenciaModo[] = [
@@ -142,7 +142,6 @@ export default function AbaArtistas() {
     artistas,
     adicionarArtista,
     removerArtista,
-    alternarSuspensaoArtista,
     resetarSenhaArtista,
     reordenarArtistas,
     lixeiraArtistas,
@@ -334,15 +333,6 @@ export default function AbaArtistas() {
       );
     return lista;
   }, [artistas, modoReordenar, muitosDJs, filtroStatus, busca]);
-
-  function resetarSenhaDoPerfil(id: string, nome: string) {
-    if (!confirm(t("Gerar uma nova senha aleatória pro artista {nome}?", { nome }))) return;
-    resetarSenhaArtista(id)
-      .then((nova) =>
-        setCredenciaisGeradas({ nomeArtista: nome, username: "—", senha: nova })
-      )
-      .catch((e) => setToast({ msg: (e as Error).message, tipo: "erro" }));
-  }
 
   return (
     <div className="flex flex-col gap-5 w-full">
@@ -756,12 +746,15 @@ export default function AbaArtistas() {
                         razaoSocial: djSelecionado.razaoSocial,
                         endereco: djSelecionado.endereco,
                         telefone: djSelecionado.telefone,
+                        dataNascimento: djSelecionado.dataNascimento,
+                        email: djSelecionado.email,
                         taxaModo: djSelecionado.taxaModo ?? "sem-taxa",
                         taxaValor: djSelecionado.taxaValor,
                         riderCamarim: djSelecionado.riderCamarim ?? [],
                         riderEfeitos: djSelecionado.riderEfeitos ?? [],
                         riderTecnico: djSelecionado.riderTecnico ?? [],
                         privacidade: djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
+                        acessoSuspenso: djSelecionado.acessoSuspenso,
                       })
                     }
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
@@ -775,34 +768,6 @@ export default function AbaArtistas() {
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
                   >
                     <Users size={13} /> {t("Equipe")}
-                  </button>
-                  <button
-                    onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
-                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                    style={{
-                      color: djSelecionado.acessoSuspenso
-                        ? "var(--success)"
-                        : "var(--warning)",
-                    }}
-                  >
-                    {djSelecionado.acessoSuspenso ? (
-                      <>
-                        <PlayCircle size={14} /> {t("Reativar")}
-                      </>
-                    ) : (
-                      <>
-                        <PauseCircle size={14} /> {t("Suspender")}
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() =>
-                      resetarSenhaDoPerfil(djSelecionado.id, djSelecionado.name)
-                    }
-                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    <KeyRound size={14} /> {t("Resetar senha")}
                   </button>
                   <button
                     onClick={() => setRemovendo(djSelecionado.id)}
@@ -973,50 +938,68 @@ export default function AbaArtistas() {
               )}
             </div>
 
-            {/* Privacidade (read-only; edita no formulário) */}
+            {/* Permissões (read-only; edita no formulário) */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
-                {t("Privacidade")}
+                {t("Permissões")}
               </div>
               {(() => {
                 const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
-                const grupos = [
-                  { label: t("Orçamentos"), ver: priv.orcamentosVer, agiu: priv.orcamentosCriar, agirLabel: t("Vê e cria") },
-                  { label: t("Vendas"), ver: priv.vendasVer, agiu: priv.vendasCriar, agirLabel: t("Vê e fecha") },
-                  { label: t("Financeiro"), ver: priv.financeiroVer, agiu: priv.financeiroInformar, agirLabel: t("Vê e informa") },
-                  { label: t("Contratos"), ver: priv.contratosVer, agiu: priv.contratosCriar, agirLabel: t("Vê e cria") },
+                // Nível "sem acesso / só vê / acesso total" pra cada módulo.
+                type NivelBadge = { label: string; cls: string; forte: boolean };
+                const nivelBadge = (ver: boolean, agiu: boolean): NivelBadge =>
+                  agiu
+                    ? { label: t("Acesso total"), cls: "badge-success", forte: true }
+                    : ver
+                    ? { label: t("Somente leitura"), cls: "badge-info", forte: true }
+                    : { label: t("Sem acesso"), cls: "badge-neutral", forte: false };
+                const vendas = nivelBadge(
+                  priv.vendasVer || priv.orcamentosVer,
+                  priv.vendasCriar || priv.orcamentosCriar
+                );
+                const grupos: { label: string; badge: NivelBadge }[] = [
+                  {
+                    label: t("Agenda"),
+                    badge: priv.agendaTotal
+                      ? { label: t("Acesso total"), cls: "badge-success", forte: true }
+                      : { label: t("Somente leitura"), cls: "badge-info", forte: true },
+                  },
+                  { label: t("Vendas"), badge: vendas },
+                  { label: t("Financeiro"), badge: nivelBadge(priv.financeiroVer, priv.financeiroInformar) },
+                  { label: t("Contratos"), badge: nivelBadge(priv.contratosVer, priv.contratosCriar) },
                 ];
                 return (
                   <div className="flex flex-col gap-2">
-                    {grupos.map((g) => {
-                      const txt = g.agiu ? g.agirLabel : g.ver ? t("Só vê") : t("Não vê");
-                      const cls = g.agiu ? "badge-success" : g.ver ? "badge-info" : "badge-neutral";
-                      return (
-                        <div key={g.label} className="flex items-center justify-between gap-2">
-                          <span className="text-sm text-secondary">{g.label}</span>
-                          <span
-                            className={`badge ${cls}`}
-                            style={g.ver ? undefined : { opacity: 0.55 }}
-                          >
-                            {txt}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {grupos.map((g) => (
+                      <div key={g.label} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-secondary">{g.label}</span>
+                        <span
+                          className={`badge ${g.badge.cls}`}
+                          style={g.badge.forte ? undefined : { opacity: 0.55 }}
+                        >
+                          {g.badge.label}
+                        </span>
+                      </div>
+                    ))}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-secondary">{t("Contatos")}</span>
                       <span
-                        className={`badge ${priv.contatos === "todos" ? "badge-info" : "badge-neutral"}`}
+                        className={`badge ${
+                          priv.contatos === "todos"
+                            ? "badge-info"
+                            : priv.contatos === "proprios"
+                            ? "badge-info"
+                            : "badge-neutral"
+                        }`}
+                        style={priv.contatos === "nenhum" ? { opacity: 0.55 } : undefined}
                       >
-                        {priv.contatos === "todos" ? t("Toda a agência") : t("Só dos shows dele")}
+                        {priv.contatos === "todos"
+                          ? t("Todos os contatos da agência")
+                          : priv.contatos === "proprios"
+                          ? t("Somente os seus contatos")
+                          : t("Sem acesso")}
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-secondary inline-flex items-center gap-1">
-                        <Lock size={11} /> {t("Agenda")}
-                      </span>
-                      <span className="text-xs text-muted">{t("Sempre só a dele")}</span>
                     </div>
                   </div>
                 );
@@ -1432,6 +1415,9 @@ export function ModalNovoArtista({
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>([]);
   const [riderTecnico, setRiderTecnico] = useState<string[]>([]);
 
+  // Seção — Privacidade (o que o artista pode ver/fazer). Começa no padrão.
+  const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(PRIVACIDADE_DJ_PADRAO);
+
   // Seção — Dados pessoais (CONTRATADO)
   const [pais, setPais] = useState<Country>(BRASIL);
   const [nomeLegal, setNomeLegal] = useState("");
@@ -1440,6 +1426,7 @@ export function ModalNovoArtista({
   const [razaoSocial, setRazaoSocial] = useState("");
   const [endereco, setEndereco] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -1544,12 +1531,14 @@ export function ModalNovoArtista({
       if (riderCamarim.length > 0) input.riderCamarim = riderCamarim;
       if (riderEfeitos.length > 0) input.riderEfeitos = riderEfeitos;
       if (riderTecnico.length > 0) input.riderTecnico = riderTecnico;
+      input.privacidade = privacidade;
 
       // Dados do CONTRATADO (obrigatórios — validados acima)
       input.pais = pais.code;
       input.nomeLegal = nomeLegal.trim();
       input.documento = documento.trim();
       input.documentoTipo = documentoTipo;
+      if (dataNascimento) input.dataNascimento = dataNascimento;
       if (documentoTipo === "cnpj" && razaoSocial.trim())
         input.razaoSocial = razaoSocial.trim();
       if (endereco.trim()) input.endereco = endereco.trim();
@@ -1606,7 +1595,7 @@ export function ModalNovoArtista({
                     setUsernameRaiz(normalizarUsername(v));
                   }
                 }}
-                placeholder={t("Ex.: DJ Lunar")}
+                placeholder={t("Ex: DJ Lunar")}
                 className="campo-input"
                 autoFocus
               />
@@ -1629,8 +1618,6 @@ export function ModalNovoArtista({
                 </p>
               )}
             </Campo>
-
-            <SeletorDeCor cor={cor} onChange={setCor} />
 
             <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
@@ -1658,7 +1645,21 @@ export function ModalNovoArtista({
             setEndereco={setEndereco}
             telefone={telefone}
             setTelefone={setTelefone}
+            dataNascimento={dataNascimento}
+            setDataNascimento={setDataNascimento}
           />
+
+          <SeletorDeCor cor={cor} onChange={setCor} />
+
+          {/* Tag visual do tipo de cadastro */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+              style={{ backgroundColor: "var(--brand)" }}
+            >
+              {t("Artista")}
+            </span>
+          </div>
 
           {/* Seção 2 — Acesso ao sistema */}
           <Secao titulo={t("Acesso ao sistema")}>
@@ -1864,6 +1865,11 @@ export function ModalNovoArtista({
             />
           </Secao>
 
+          {/* Seção 7 — Privacidade (permissões do DJ) */}
+          <Secao titulo={t("Permissões — o que ele pode ver/fazer")}>
+            <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
+          </Secao>
+
           {erro && (
             <div
               className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
@@ -1994,11 +2000,6 @@ function ModalEditarArtista({
       : null
   );
   const [usernameRaiz, setUsernameRaiz] = useState(usernameRaizInicial);
-  const [emailEditavel, setEmailEditavel] = useState("");
-  // Modo de exibição do bloco de e-mail. Por padrão mostra só leitura
-  // (e-mail em cinza ou aviso "não cadastrou"); só revela o input
-  // quando o admin clica em "Definir e-mail" / "Editar".
-  const [editandoEmail, setEditandoEmail] = useState(false);
   // Feedback do botão de copiar senha aleatória do bloco "Senha".
   const [copiouSenhaPadrao, setCopiouSenhaPadrao] = useState(false);
   const [taxaModo, setTaxaModo] = useState<TaxaAgenciaModo>(artista.taxaModo);
@@ -2009,6 +2010,9 @@ function ModalEditarArtista({
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>(artista.riderEfeitos);
   const [riderTecnico, setRiderTecnico] = useState<string[]>(artista.riderTecnico);
   const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
+  // Acesso ao sistema: ligado = pode entrar; desligado = bloqueado/suspenso.
+  // Mapeia !acessoSuspenso; salvo no patch como acesso_suspenso.
+  const [acessoAtivo, setAcessoAtivo] = useState(!artista.acessoSuspenso);
 
   // Dados pessoais (CONTRATADO) — pré-preenchidos do artista.
   const [pais, setPais] = useState<Country>(
@@ -2025,6 +2029,7 @@ function ModalEditarArtista({
   const [razaoSocial, setRazaoSocial] = useState(artista.razaoSocial ?? "");
   const [endereco, setEndereco] = useState(artista.endereco ?? "");
   const [telefone, setTelefone] = useState(artista.telefone ?? "");
+  const [dataNascimento, setDataNascimento] = useState(artista.dataNascimento ?? "");
 
   // Dados da conta (email + verificado) — async ao abrir
   const [conta, setConta] = useState<DadosConta | null>(null);
@@ -2047,7 +2052,6 @@ function ModalEditarArtista({
       .then((d) => {
         if (!ativo) return;
         setConta(d);
-        setEmailEditavel(d.emailFakeInterno ? "" : d.email);
       })
       .catch(() => {
         if (!ativo) return;
@@ -2094,15 +2098,6 @@ function ModalEditarArtista({
   const temColisao = colisaoNome !== null || colisaoUsername !== null;
 
   const usernameMudou = usernameRaiz.trim() !== usernameRaizInicial;
-  // Email mudou quando: tem conta carregada, o admin digitou algo não
-  // vazio, e ou (a) o artista nunca tinha e-mail real (estava no fake
-  // interno) ou (b) o que ele digitou é diferente do atual. Antes
-  // bloqueava o save quando estava fake — bug.
-  const emailMudou =
-    !!conta &&
-    emailEditavel.trim().length > 0 &&
-    (conta.emailFakeInterno ||
-      emailEditavel.trim().toLowerCase() !== conta.email.toLowerCase());
 
   function validar(): string | null {
     const n = nome.trim();
@@ -2126,9 +2121,6 @@ function ModalEditarArtista({
       return t("Esse login já está em uso por outro artista da sua agência.");
     if (colisaoUsername === "lixeira")
       return t("Esse login pertence a um artista da lixeira. Restaure ou apague antes de reutilizar.");
-    if (emailEditavel.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEditavel.trim())) {
-      return t("E-mail inválido.");
-    }
     if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
       const v = parseFloat(taxaValor.replace(",", "."));
       if (!Number.isFinite(v) || v <= 0) {
@@ -2165,6 +2157,8 @@ function ModalEditarArtista({
         riderEfeitos,
         riderTecnico,
         privacidade,
+        // Acesso ao sistema — toggle "Acesso ativo" mapeia !acessoSuspenso.
+        acesso_suspenso: !acessoAtivo,
         // Dados do CONTRATADO (sempre enviados — validados acima).
         pais: pais.code,
         nomeLegal: nomeLegal.trim(),
@@ -2173,13 +2167,13 @@ function ModalEditarArtista({
         razaoSocial: documentoTipo === "cnpj" ? razaoSocial.trim() : "",
         endereco: endereco.trim(),
         telefone: telefone.trim(),
+        dataNascimento: dataNascimento || undefined,
+        // E-mail: o admin não define mais — o próprio artista cadastra e
+        // verifica depois do 1º login. Aqui só exibimos o e-mail da conta.
       };
-      // Username e email só se mudaram (evita trabalho desnecessário no backend)
+      // Username só se mudou (evita trabalho desnecessário no backend)
       if (usernameMudou) {
         patch.usernameRaiz = usernameRaiz.trim().toLowerCase();
-      }
-      if (emailMudou) {
-        patch.emailConta = emailEditavel.trim();
       }
       await atualizarArtista(artista.id, patch);
       onSalvo();
@@ -2239,8 +2233,6 @@ function ModalEditarArtista({
               )}
             </Campo>
 
-            <SeletorDeCor cor={cor} onChange={setCor} />
-
             <Campo label={t("País e cidade onde reside")}>
               <CidadeGlobalAutocomplete
                 value={cidade}
@@ -2267,7 +2259,21 @@ function ModalEditarArtista({
             setEndereco={setEndereco}
             telefone={telefone}
             setTelefone={setTelefone}
+            dataNascimento={dataNascimento}
+            setDataNascimento={setDataNascimento}
           />
+
+          <SeletorDeCor cor={cor} onChange={setCor} />
+
+          {/* Tag visual do tipo de cadastro */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+              style={{ backgroundColor: "var(--brand)" }}
+            >
+              {t("Artista")}
+            </span>
+          </div>
 
           {/* Seção 2 — Acesso */}
           <Secao titulo={t("Acesso ao sistema")}>
@@ -2381,66 +2387,17 @@ function ModalEditarArtista({
             ) : (
               <>
                 <Campo label={t("E-mail cadastrado")}>
-                  {editandoEmail ? (
-                    <>
-                      {/* Modo edição: input + cancelar */}
-                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-                        <Mail size={14} className="text-muted flex-shrink-0" />
-                        <input
-                          type="email"
-                          value={emailEditavel}
-                          onChange={(e) => setEmailEditavel(e.target.value)}
-                          placeholder={t("email@exemplo.com")}
-                          className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
-                          autoFocus
-                        />
-                      </div>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditandoEmail(false);
-                            // Restaura valor original (vazio se estava fake)
-                            setEmailEditavel(
-                              conta.emailFakeInterno ? "" : conta.email
-                            );
-                          }}
-                          className="text-[0.7rem] text-muted hover:text-secondary underline"
-                        >
-                          {t("Cancelar")}
-                        </button>
-                        {emailMudou && (
-                          <span
-                            className="text-[0.7rem] inline-flex items-center gap-1"
-                            style={{ color: "var(--warning)" }}
-                          >
-                            <AlertTriangle size={11} />
-                            {t("Salve o modal pra confirmar a troca.")}
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  ) : conta.emailFakeInterno ? (
-                    <>
-                      {/* Sem e-mail real */}
-                      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
-                        <Mail size={14} className="text-muted flex-shrink-0" />
-                        <span className="flex-1 text-sm text-muted italic">
-                          {t("Usuário não cadastrou nenhum email")}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setEditandoEmail(true)}
-                        className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
-                        style={{ color: "var(--brand)" }}
-                      >
-                        <Pencil size={11} /> {t("Definir e-mail")}
-                      </button>
-                    </>
+                  {conta.emailFakeInterno ? (
+                    /* Sem e-mail real — o próprio artista cadastra depois. */
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <span className="flex-1 text-sm text-muted italic">
+                        {t("Usuário não cadastrou nenhum email")}
+                      </span>
+                    </div>
                   ) : (
                     <>
-                      {/* Tem e-mail real — leitura em cinza + editar */}
+                      {/* Tem e-mail real — só leitura, com selo de verificação. */}
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                         <Mail size={14} className="text-muted flex-shrink-0" />
                         <span className="flex-1 text-sm text-secondary break-all">
@@ -2465,14 +2422,6 @@ function ModalEditarArtista({
                             {t("Não verificado")}
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setEditandoEmail(true)}
-                          className="inline-flex items-center gap-1 hover:underline"
-                          style={{ color: "var(--brand)" }}
-                        >
-                          <Pencil size={11} /> {t("Editar")}
-                        </button>
                       </div>
                     </>
                   )}
@@ -2667,119 +2616,8 @@ function ModalEditarArtista({
           </Secao>
 
           {/* Seção 8 — Privacidade (permissões do DJ) */}
-          <Secao titulo={t("Privacidade — o que ele pode ver/fazer")}>
-            <div className="flex flex-col gap-1.5">
-              <TogglePriv
-                label={t("Ver orçamentos")}
-                sub={t("Vê os orçamentos dele")}
-                valor={privacidade.orcamentosVer}
-                onChange={(v) =>
-                  setPrivacidade((p) => ({
-                    ...p,
-                    orcamentosVer: v,
-                    orcamentosCriar: v ? p.orcamentosCriar : false,
-                  }))
-                }
-              />
-              <TogglePriv
-                label={t("Criar orçamentos")}
-                sub={t("Pode gerar orçamento")}
-                valor={privacidade.orcamentosCriar}
-                disabled={!privacidade.orcamentosVer}
-                onChange={(v) => setPrivacidade((p) => ({ ...p, orcamentosCriar: v }))}
-              />
-              <TogglePriv
-                label={t("Ver vendas")}
-                sub={t("Vê o histórico de vendas dele")}
-                valor={privacidade.vendasVer}
-                onChange={(v) =>
-                  setPrivacidade((p) => ({
-                    ...p,
-                    vendasVer: v,
-                    vendasCriar: v ? p.vendasCriar : false,
-                  }))
-                }
-              />
-              <TogglePriv
-                label={t("Fechar vendas")}
-                sub={t("Pode concretizar venda")}
-                valor={privacidade.vendasCriar}
-                disabled={!privacidade.vendasVer}
-                onChange={(v) => setPrivacidade((p) => ({ ...p, vendasCriar: v }))}
-              />
-              <TogglePriv
-                label={t("Ver financeiro")}
-                sub={t("Vê o financeiro dele")}
-                valor={privacidade.financeiroVer}
-                onChange={(v) =>
-                  setPrivacidade((p) => ({
-                    ...p,
-                    financeiroVer: v,
-                    financeiroInformar: v ? p.financeiroInformar : false,
-                  }))
-                }
-              />
-              <TogglePriv
-                label={t("Informar pagamento")}
-                sub={t("Pode registrar pagamento no financeiro")}
-                valor={privacidade.financeiroInformar}
-                disabled={!privacidade.financeiroVer}
-                onChange={(v) => setPrivacidade((p) => ({ ...p, financeiroInformar: v }))}
-              />
-              <TogglePriv
-                label={t("Ver contratos")}
-                sub={t("Vê os contratos dele")}
-                valor={privacidade.contratosVer}
-                onChange={(v) =>
-                  setPrivacidade((p) => ({
-                    ...p,
-                    contratosVer: v,
-                    contratosCriar: v ? p.contratosCriar : false,
-                  }))
-                }
-              />
-              <TogglePriv
-                label={t("Criar contratos")}
-                sub={t("Pode gerar contrato")}
-                valor={privacidade.contratosCriar}
-                disabled={!privacidade.contratosVer}
-                onChange={(v) => setPrivacidade((p) => ({ ...p, contratosCriar: v }))}
-              />
-
-              {/* Contatos */}
-              <div className="p-2.5 rounded-md border border-border bg-elevated">
-                <div className="text-sm font-medium text-primary mb-2">
-                  {t("Contatos que ele enxerga")}
-                </div>
-                <div className="pill-group">
-                  <button
-                    type="button"
-                    onClick={() => setPrivacidade((p) => ({ ...p, contatos: "proprios" }))}
-                    className={`pill ${privacidade.contatos === "proprios" ? "active" : ""}`}
-                  >
-                    {t("Só dos shows dele")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPrivacidade((p) => ({ ...p, contatos: "todos" }))}
-                    className={`pill ${privacidade.contatos === "todos" ? "active" : ""}`}
-                  >
-                    {t("Toda a agência")}
-                  </button>
-                </div>
-              </div>
-
-              {/* Agenda — trava de sistema */}
-              <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
-                <Lock size={13} className="text-muted flex-shrink-0" />
-                <span className="text-sm text-secondary">
-                  {t("Agenda — ele sempre vê só a própria (trava do sistema).")}
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-muted mt-2 leading-relaxed">
-              {t("Por enquanto isso")} <strong className="text-secondary">{t("configura")}</strong> {t("as permissões. A restrição efetiva no acesso do DJ (esconder/bloquear de fato) entra numa próxima etapa.")}
-            </p>
+          <Secao titulo={t("Permissões — o que ele pode ver/fazer")}>
+            <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
           </Secao>
 
           {erro && (
@@ -2894,85 +2732,38 @@ function ModalEditarArtista({
             </div>
           </div>
 
-          {/* Corpo do header: Cor (linha toda) + grid 2-col.
-              Esquerda: nome + documento (tipo / número).
-              Direita: cidade, endereço, telefone.
-              Razão social ocupa a linha toda e só aparece quando CNPJ. */}
+          {/* Corpo do header: Cor + país/cidade (com onPaisChange p/ o
+              documento e o DDI seguirem o país) + dados pessoais
+              país-aware (mesmo conteúdo do layout modal). */}
           <div className="flex flex-col gap-4">
             <SeletorDeCor cor={cor} onChange={setCor} />
             <div className="border-t border-border" />
-            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-              {/* Linha 1: Nome | Cidade */}
-              <Campo label={t("Nome completo (civil)")}>
-                <input
-                  value={nomeLegal}
-                  onChange={(e) => setNomeLegal(e.target.value)}
-                  placeholder={t("Ex: João da Silva")}
-                  className="campo-input"
-                />
-              </Campo>
-              <Campo label={t("Cidade onde reside")}>
-                <CidadeGlobalAutocomplete
-                  value={cidade}
-                  onChange={setCidade}
-                  placeholder={t("Cidade onde reside")}
-                />
-              </Campo>
-
-              {/* Linha 2: Tipo de documento | Endereço */}
-              <Campo label={t("Tipo de documento")}>
-                <ToggleTipoDocumento
-                  documentoTipo={documentoTipo}
-                  setDocumentoTipo={setDocumentoTipo}
-                  documento={documento}
-                  setDocumento={setDocumento}
-                />
-              </Campo>
-              <Campo label={t("Endereço (opcional)")}>
-                <CamposEndereco value={endereco} onChange={setEndereco} />
-              </Campo>
-
-              {/* Linha 3: número do CPF/CNPJ | Telefone */}
-              <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
-                <input
-                  value={documento}
-                  onChange={(e) =>
-                    setDocumento(mascararDocumento(e.target.value, documentoTipo))
-                  }
-                  inputMode="numeric"
-                  placeholder={
-                    documentoTipo === "cpf"
-                      ? "000.000.000-00"
-                      : "00.000.000/0000-00"
-                  }
-                  className="campo-input font-mono"
-                />
-              </Campo>
-              <Campo label={t("Telefone (opcional)")}>
-                <input
-                  value={telefone}
-                  onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
-                  inputMode="tel"
-                  placeholder="(11) 98888-7777"
-                  className="campo-input"
-                />
-              </Campo>
-
-              {/* Razão social — linha inteira, só quando CNPJ */}
-              {documentoTipo === "cnpj" && (
-                <Campo
-                  label={t("Razão social / Nome da empresa")}
-                  className="md:col-span-2"
-                >
-                  <input
-                    value={razaoSocial}
-                    onChange={(e) => setRazaoSocial(e.target.value)}
-                    placeholder={t("Ex: Silva Produções Artísticas LTDA")}
-                    className="campo-input"
-                  />
-                </Campo>
-              )}
-            </div>
+            <Campo label={t("País e cidade onde reside")}>
+              <CidadeGlobalAutocomplete
+                value={cidade}
+                onChange={setCidade}
+                onPaisChange={setPais}
+                placeholder={t("Ex: São Paulo, Belo Horizonte...")}
+              />
+            </Campo>
+            <SecaoDadosContrato
+              pais={pais}
+              setPais={setPais}
+              nomeLegal={nomeLegal}
+              setNomeLegal={setNomeLegal}
+              documentoTipo={documentoTipo}
+              setDocumentoTipo={setDocumentoTipo}
+              documento={documento}
+              setDocumento={setDocumento}
+              razaoSocial={razaoSocial}
+              setRazaoSocial={setRazaoSocial}
+              endereco={endereco}
+              setEndereco={setEndereco}
+              telefone={telefone}
+              setTelefone={setTelefone}
+              dataNascimento={dataNascimento}
+              setDataNascimento={setDataNascimento}
+            />
           </div>
         </div>
       </div>
@@ -3092,66 +2883,17 @@ function ModalEditarArtista({
           ) : (
             <>
               <Campo label={t("E-mail cadastrado")}>
-                {editandoEmail ? (
-                  <>
-                    {/* Modo edição: input + cancelar */}
-                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-                      <Mail size={14} className="text-muted flex-shrink-0" />
-                      <input
-                        type="email"
-                        value={emailEditavel}
-                        onChange={(e) => setEmailEditavel(e.target.value)}
-                        placeholder={t("email@exemplo.com")}
-                        className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted min-w-0"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditandoEmail(false);
-                          // Restaura valor original (vazio se estava fake)
-                          setEmailEditavel(
-                            conta.emailFakeInterno ? "" : conta.email
-                          );
-                        }}
-                        className="text-[0.7rem] text-muted hover:text-secondary underline"
-                      >
-                        {t("Cancelar")}
-                      </button>
-                      {emailMudou && (
-                        <span
-                          className="text-[0.7rem] inline-flex items-center gap-1"
-                          style={{ color: "var(--warning)" }}
-                        >
-                          <AlertTriangle size={11} />
-                          {t("Salve pra confirmar a troca.")}
-                        </span>
-                      )}
-                    </div>
-                  </>
-                ) : conta.emailFakeInterno ? (
-                  <>
-                    {/* Sem e-mail real */}
-                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
-                      <Mail size={14} className="text-muted flex-shrink-0" />
-                      <span className="flex-1 text-sm text-muted italic">
-                        {t("Usuário não cadastrou nenhum email")}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditandoEmail(true)}
-                      className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1 hover:underline"
-                      style={{ color: "var(--brand)" }}
-                    >
-                      <Pencil size={11} /> {t("Definir e-mail")}
-                    </button>
-                  </>
+                {conta.emailFakeInterno ? (
+                  /* Sem e-mail real — o próprio artista cadastra depois. */
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                    <Mail size={14} className="text-muted flex-shrink-0" />
+                    <span className="flex-1 text-sm text-muted italic">
+                      {t("Usuário não cadastrou nenhum email")}
+                    </span>
+                  </div>
                 ) : (
                   <>
-                    {/* Tem e-mail real — leitura em cinza + editar */}
+                    {/* Tem e-mail real — só leitura, com selo de verificação. */}
                     <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                       <Mail size={14} className="text-muted flex-shrink-0" />
                       <span className="flex-1 text-sm text-secondary break-all">
@@ -3176,18 +2918,19 @@ function ModalEditarArtista({
                           {t("Não verificado")}
                         </span>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setEditandoEmail(true)}
-                        className="inline-flex items-center gap-1 hover:underline"
-                        style={{ color: "var(--brand)" }}
-                      >
-                        <Pencil size={11} /> {t("Editar")}
-                      </button>
                     </div>
                   </>
                 )}
               </Campo>
+
+              {/* ---- Acesso ativo (liga/desliga a entrada no sistema) ---- */}
+              <LinhaEscopo
+                label={t("Acesso ativo")}
+                descricaoLigado={t("O artista pode entrar no sistema.")}
+                descricaoDesligado={t("Acesso bloqueado — o artista não consegue entrar.")}
+                valor={acessoAtivo}
+                onChange={setAcessoAtivo}
+              />
 
               {/* ---- Senha ---- */}
               <Campo label={t("Senha")}>
@@ -3287,98 +3030,16 @@ function ModalEditarArtista({
           )}
         </div>
 
-        {/* Privacidade */}
+        {/* Permissões */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
-            {t("Privacidade")}
+            {t("Permissões")}
           </div>
           <p className="text-xs text-muted -mt-1">
             {t("Escolha o nível de cada área. Cada opção diz exatamente o que o DJ pode fazer.")}
           </p>
-          <div className="flex flex-col gap-4">
-            <SegmentedChoice
-              titulo={t("Orçamentos")}
-              valor={nivelDe(privacidade.orcamentosVer, privacidade.orcamentosCriar)}
-              opcoes={[
-                { val: "nenhum", label: t("Não vê") },
-                { val: "ver", label: t("Só vê") },
-                { val: "agir", label: t("Vê e cria") },
-              ]}
-              onChange={(n) =>
-                setPrivacidade((p) => ({
-                  ...p,
-                  orcamentosVer: n !== "nenhum",
-                  orcamentosCriar: n === "agir",
-                }))
-              }
-            />
-            <SegmentedChoice
-              titulo={t("Vendas")}
-              valor={nivelDe(privacidade.vendasVer, privacidade.vendasCriar)}
-              opcoes={[
-                { val: "nenhum", label: t("Não vê") },
-                { val: "ver", label: t("Só vê") },
-                { val: "agir", label: t("Vê e fecha") },
-              ]}
-              onChange={(n) =>
-                setPrivacidade((p) => ({
-                  ...p,
-                  vendasVer: n !== "nenhum",
-                  vendasCriar: n === "agir",
-                }))
-              }
-            />
-            <SegmentedChoice
-              titulo={t("Financeiro")}
-              valor={nivelDe(privacidade.financeiroVer, privacidade.financeiroInformar)}
-              opcoes={[
-                { val: "nenhum", label: t("Não vê") },
-                { val: "ver", label: t("Só vê") },
-                { val: "agir", label: t("Vê e informa") },
-              ]}
-              onChange={(n) =>
-                setPrivacidade((p) => ({
-                  ...p,
-                  financeiroVer: n !== "nenhum",
-                  financeiroInformar: n === "agir",
-                }))
-              }
-            />
-            <SegmentedChoice
-              titulo={t("Contratos")}
-              valor={nivelDe(privacidade.contratosVer, privacidade.contratosCriar)}
-              opcoes={[
-                { val: "nenhum", label: t("Não vê") },
-                { val: "ver", label: t("Só vê") },
-                { val: "agir", label: t("Vê e cria") },
-              ]}
-              onChange={(n) =>
-                setPrivacidade((p) => ({
-                  ...p,
-                  contratosVer: n !== "nenhum",
-                  contratosCriar: n === "agir",
-                }))
-              }
-            />
-            <SegmentedChoice
-              titulo={t("Contatos")}
-              valor={privacidade.contatos}
-              opcoes={[
-                { val: "proprios", label: t("Só dos shows dele") },
-                { val: "todos", label: t("Toda a agência") },
-              ]}
-              onChange={(c) => setPrivacidade((p) => ({ ...p, contatos: c }))}
-            />
-
-            {/* Agenda — trava de sistema */}
-            <div className="p-2.5 rounded-md border border-border bg-elevated opacity-60 flex items-center gap-2">
-              <Lock size={13} className="text-muted flex-shrink-0" />
-              <span className="text-sm text-secondary">
-                {t("Agenda — ele sempre vê só a própria (trava do sistema).")}
-              </span>
-            </div>
-          </div>
+          <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
         </div>
 
         {/* Rider de camarim */}
@@ -3512,49 +3173,6 @@ function ModalEditarArtista({
   );
 }
 
-/** Toggle on/off de uma permissão (estilo switch), na cor da Agência. */
-function TogglePriv({
-  label,
-  sub,
-  valor,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  sub: string;
-  valor: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated ${
-        disabled ? "opacity-50" : ""
-      }`}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-primary">{label}</div>
-        <div className="text-xs text-muted">{sub}</div>
-      </div>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(!valor)}
-        className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0 disabled:cursor-not-allowed"
-        style={{
-          backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
-        }}
-        aria-label={label}
-      >
-        <span
-          className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform"
-          style={{ transform: valor ? "translateX(22px)" : "translateX(2px)" }}
-        />
-      </button>
-    </div>
-  );
-}
-
 // Nível de acesso de um módulo: nenhum → só vê → vê e age (cria/fecha/informa).
 // Mapeia pros dois booleanos do modelo (Ver / Criar|Informar) sem mudar o schema.
 type NivelAcessoTipo = "nenhum" | "ver" | "agir";
@@ -3614,6 +3232,121 @@ function SegmentedChoice<T extends string>({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Bloco COMPLETO de privacidade do DJ — 5 seletores segmentados (pills).
+ *
+ * Encapsula o mapeamento seletor <-> objeto `PrivacidadeDj` (ida e volta),
+ * pra que criar (ModalNovoArtista) e editar (ModalEditarArtista) usem
+ * EXATAMENTE a mesma UI e a mesma conversão. O componente recebe o objeto
+ * inteiro e um onChange que devolve o objeto atualizado.
+ *
+ * Linhas: Agenda · Vendas · Financeiro · Contratos · Contatos.
+ */
+function PrivacidadePills({
+  valor,
+  onChange,
+}: {
+  valor: PrivacidadeDj;
+  onChange: (v: PrivacidadeDj) => void;
+}) {
+  const t = useT();
+
+  // Deriva o nível do seletor a partir dos dois booleanos (ver/agir).
+  // Vendas usa o par (vendasVer|orcamentosVer, vendasCriar|orcamentosCriar).
+  const nivelVendas: NivelAcessoTipo = valor.vendasVer || valor.orcamentosVer
+    ? valor.vendasCriar || valor.orcamentosCriar
+      ? "agir"
+      : "ver"
+    : "nenhum";
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Agenda — 2 estados (leitura / total) */}
+      <SegmentedChoice
+        titulo={t("Agenda")}
+        valor={valor.agendaTotal ? "total" : "leitura"}
+        opcoes={[
+          { val: "leitura", label: t("Somente leitura") },
+          { val: "total", label: t("Acesso total") },
+        ]}
+        onChange={(v) => onChange({ ...valor, agendaTotal: v === "total" })}
+      />
+
+      {/* Vendas — 3 estados; controla orçamentos E vendas juntos */}
+      <SegmentedChoice
+        titulo={t("Vendas")}
+        valor={nivelVendas}
+        opcoes={[
+          { val: "nenhum", label: t("Sem acesso") },
+          { val: "ver", label: t("Somente leitura") },
+          { val: "agir", label: t("Acesso total") },
+        ]}
+        onChange={(n) =>
+          onChange({
+            ...valor,
+            vendasVer: n !== "nenhum",
+            orcamentosVer: n !== "nenhum",
+            vendasCriar: n === "agir",
+            orcamentosCriar: n === "agir",
+          })
+        }
+      />
+
+      {/* Financeiro — 3 estados */}
+      <SegmentedChoice
+        titulo={t("Financeiro")}
+        valor={nivelDe(valor.financeiroVer, valor.financeiroInformar)}
+        opcoes={[
+          { val: "nenhum", label: t("Sem acesso") },
+          { val: "ver", label: t("Somente leitura") },
+          { val: "agir", label: t("Acesso total") },
+        ]}
+        onChange={(n) =>
+          onChange({
+            ...valor,
+            financeiroVer: n !== "nenhum",
+            financeiroInformar: n === "agir",
+          })
+        }
+      />
+
+      {/* Contratos — 3 estados */}
+      <SegmentedChoice
+        titulo={t("Contratos")}
+        valor={nivelDe(valor.contratosVer, valor.contratosCriar)}
+        opcoes={[
+          { val: "nenhum", label: t("Sem acesso") },
+          { val: "ver", label: t("Somente leitura") },
+          { val: "agir", label: t("Acesso total") },
+        ]}
+        onChange={(n) =>
+          onChange({
+            ...valor,
+            contratosVer: n !== "nenhum",
+            contratosCriar: n === "agir",
+          })
+        }
+      />
+
+      {/* Contatos — 3 estados (nenhum / próprios / todos) */}
+      <SegmentedChoice
+        titulo={t("Contatos")}
+        valor={valor.contatos}
+        opcoes={[
+          { val: "nenhum", label: t("Sem acesso") },
+          { val: "proprios", label: t("Somente os seus contatos") },
+          { val: "todos", label: t("Todos os contatos da agência") },
+        ]}
+        onChange={(c) => onChange({ ...valor, contatos: c })}
+      />
+
+      <p className="text-xs text-muted leading-relaxed">
+        {t("Nenhum artista vê os dados de outro (agenda, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima.")}
+      </p>
     </div>
   );
 }
@@ -3892,43 +3625,49 @@ export function SeletorDeCor({
 
 // ---- Documento (CPF/CNPJ) + telefone: máscara e validação ----
 
-/** Formata CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) conforme digita. */
-function mascararDocumento(valor: string, tipo: DocumentoTipo): string {
-  const d = valor.replace(/\D/g, "").slice(0, tipo === "cpf" ? 11 : 14);
-  if (tipo === "cpf") {
-    if (d.length > 9)
-      return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-    if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-    if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
-    return d;
-  }
-  if (d.length > 12)
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(
-      8,
-      12
-    )}-${d.slice(12)}`;
-  if (d.length > 8)
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
-  return d;
-}
-
 /** Valida só a contagem de dígitos (11=CPF, 14=CNPJ) — não faz checksum. */
 function documentoValido(valor: string, tipo: DocumentoTipo): boolean {
   return valor.replace(/\D/g, "").length === (tipo === "cpf" ? 11 : 14);
 }
 
-/** Máscara leve de telefone BR: (11) 98888-7777. */
-function mascararTelefone(valor: string): string {
-  const d = valor.replace(/\D/g, "").slice(0, 11);
-  if (d.length > 10) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  if (d.length > 6) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  if (d.length > 2) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length > 0) return `(${d}`;
-  return "";
+/** Deriva o tipo por contagem de dígitos: 12+ dígitos = CNPJ, senão CPF. */
+export function tipoDocumentoPorDigitos(valor: string): DocumentoTipo {
+  return valor.replace(/\D/g, "").length > 11 ? "cnpj" : "cpf";
 }
 
+/**
+ * Campo ÚNICO de CPF/CNPJ (BR) — SEM seletor de tipo. Delega no
+ * `InputDocumento` compartilhado (MESMO visual/placeholder/máscara do site
+ * inteiro) e só acrescenta a sincronização do `documentoTipo` no pai,
+ * derivado pela contagem de dígitos (11 = CPF, 14 = CNPJ) — o que dispara a
+ * razão social quando vira CNPJ.
+ */
+export function InputDocumentoBR({
+  documento,
+  setDocumento,
+  setDocumentoTipo,
+  className,
+}: {
+  documento: string;
+  setDocumento: (v: string) => void;
+  setDocumentoTipo?: (v: DocumentoTipo) => void;
+  className?: string;
+}) {
+  return (
+    <InputDocumento
+      pais="BR"
+      value={documento}
+      onChange={(v) => {
+        setDocumento(v);
+        setDocumentoTipo?.(tipoDocumentoPorDigitos(v));
+      }}
+      inputMode="numeric"
+      className={className}
+    />
+  );
+}
+
+/** Máscara leve de telefone BR: (11) 98888-7777. */
 /**
  * Validação dos dados do CONTRATADO (obrigatórios pro contrato): nome
  * completo + documento sempre; razão social quando CNPJ. Devolve a 1ª
@@ -3952,90 +3691,6 @@ function validarDadosContrato(
 }
 
 /**
- * Endereço em 3 inputs (Rua 70% · Número 10%, até 5 dígitos · Complemento 20%)
- * sobre uma única string `value` (formato interno "rua||numero||complemento").
- * Cada alteração rejunta as 3 partes — o estado `endereco` do form não muda.
- */
-function CamposEndereco({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const t = useT();
-  const { rua, numero, complemento } = splitEndereco(value);
-  return (
-    <div className="flex gap-2">
-      <input
-        value={rua}
-        onChange={(e) => onChange(joinEndereco(e.target.value, numero, complemento))}
-        placeholder={t("Rua / Avenida")}
-        className="campo-input flex-[7] min-w-0"
-      />
-      <input
-        value={numero}
-        onChange={(e) =>
-          onChange(
-            joinEndereco(
-              rua,
-              e.target.value.replace(/\D/g, "").slice(0, 5),
-              complemento
-            )
-          )
-        }
-        inputMode="numeric"
-        maxLength={5}
-        placeholder={t("Nº")}
-        className="campo-input flex-[1] min-w-[3rem] text-center px-1"
-      />
-      <input
-        value={complemento}
-        onChange={(e) => onChange(joinEndereco(rua, numero, e.target.value))}
-        placeholder={t("Compl.")}
-        className="campo-input flex-[2] min-w-0"
-      />
-    </div>
-  );
-}
-
-/**
- * Toggle CPF / CNPJ. Reaproveita o visual do `.pill` mas com cantos
- * QUADRADOS (6px) pra acompanhar os outros campos (campo-input) — sem mexer
- * no `.pill` global (usado nos filtros). Trocar o tipo re-aplica a máscara.
- */
-function ToggleTipoDocumento({
-  documentoTipo,
-  setDocumentoTipo,
-  documento,
-  setDocumento,
-}: {
-  documentoTipo: DocumentoTipo;
-  setDocumentoTipo: (v: DocumentoTipo) => void;
-  documento: string;
-  setDocumento: (v: string) => void;
-}) {
-  const t = useT();
-  return (
-    <div className="pill-group !rounded-md">
-      {(["cpf", "cnpj"] as const).map((tipo) => (
-        <button
-          key={tipo}
-          type="button"
-          onClick={() => {
-            setDocumentoTipo(tipo);
-            setDocumento(mascararDocumento(documento, tipo));
-          }}
-          className={`pill !rounded-[4px] ${documentoTipo === tipo ? "active" : ""}`}
-        >
-          {tipo === "cpf" ? t("CPF (pessoa física)") : t("CNPJ (empresa)")}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/**
  * Campos do CONTRATADO (sem wrapper) — reusados na Seção (cadastro / edição
  * em modal) e no card do perfil editável inline. O `nome` do artista é o
  * nome artístico; aqui ficam os dados legais que vão pro contrato.
@@ -4055,6 +3710,10 @@ export function CamposDadosContrato({
   setEndereco,
   telefone,
   setTelefone,
+  dataNascimento,
+  setDataNascimento,
+  email,
+  setEmail,
 }: {
   pais: Country;
   setPais: (v: Country) => void;
@@ -4070,6 +3729,11 @@ export function CamposDadosContrato({
   setEndereco: (v: string) => void;
   telefone: string;
   setTelefone: (v: string) => void;
+  /** Opcionais — só aparecem quando o setter é passado (form de artista). */
+  dataNascimento?: string;
+  setDataNascimento?: (v: string) => void;
+  email?: string;
+  setEmail?: (v: string) => void;
 }) {
   const t = useT();
   const isBR = pais.code === "BR";
@@ -4092,32 +3756,36 @@ export function CamposDadosContrato({
         />
       </Campo>
 
+      {setDataNascimento && (
+        <Campo label={t("Data de nascimento")}>
+          {isBR ? (
+            <InputDataBR
+              value={dataNascimento ?? ""}
+              onChange={setDataNascimento}
+              className="campo-input"
+            />
+          ) : (
+            <input
+              type="date"
+              value={dataNascimento ?? ""}
+              onChange={(e) => setDataNascimento(e.target.value)}
+              className="campo-input"
+            />
+          )}
+        </Campo>
+      )}
+
       {isBR ? (
         <>
-          <Campo label={t("Tipo de documento")}>
-            <ToggleTipoDocumento
-              documentoTipo={documentoTipo}
-              setDocumentoTipo={setDocumentoTipo}
+          <Campo label={t("CPF / CNPJ")}>
+            <InputDocumentoBR
               documento={documento}
               setDocumento={setDocumento}
+              setDocumentoTipo={setDocumentoTipo}
             />
           </Campo>
 
-          <Campo label={documentoTipo === "cpf" ? "CPF" : "CNPJ"}>
-            <input
-              value={documento}
-              onChange={(e) =>
-                setDocumento(mascararDocumento(e.target.value, documentoTipo))
-              }
-              inputMode="numeric"
-              placeholder={
-                documentoTipo === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"
-              }
-              className="campo-input font-mono"
-            />
-          </Campo>
-
-          {documentoTipo === "cnpj" && (
+          {tipoDocumentoPorDigitos(documento) === "cnpj" && (
             <Campo
               label={t("Razão social / Nome da empresa")}
               className="md:col-span-2"
@@ -4134,6 +3802,18 @@ export function CamposDadosContrato({
       ) : (
         <Campo label={configDocumento(pais.code).label}>
           <InputDocumento pais={pais.code} value={documento} onChange={setDocumento} />
+        </Campo>
+      )}
+
+      {setEmail && (
+        <Campo label={t("E-mail")} className="md:col-span-2">
+          <input
+            type="email"
+            value={email ?? ""}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="contato@email.com"
+            className="campo-input"
+          />
         </Campo>
       )}
 
@@ -4202,6 +3882,52 @@ export function Campo({
       <span className="text-xs font-medium text-secondary">{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Linha de toggle no estilo LinhaEscopo (mesma cara da AbaEquipe): rótulo +
+ * descrição que muda conforme o estado + switch. Usada no card "Acesso ao
+ * sistema" do editar do artista pra ligar/desligar o acesso.
+ */
+function LinhaEscopo({
+  label,
+  descricaoLigado,
+  descricaoDesligado,
+  valor,
+  onChange,
+}: {
+  label: string;
+  descricaoLigado: string;
+  descricaoDesligado: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-primary">{label}</div>
+        <div className="text-xs text-muted">
+          {valor ? descricaoLigado : descricaoDesligado}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!valor)}
+        className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
+        style={{
+          backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
+        }}
+        aria-label={label}
+      >
+        <span
+          className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform"
+          style={{
+            transform: valor ? "translateX(22px)" : "translateX(2px)",
+          }}
+        />
+      </button>
+    </div>
   );
 }
 

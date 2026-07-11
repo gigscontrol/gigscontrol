@@ -59,6 +59,10 @@ export type NovoArtistaInput = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  /** Data de nascimento (YYYY-MM-DD). */
+  dataNascimento?: string;
+  /** E-mail de contato do artista. */
+  email?: string;
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
@@ -70,6 +74,8 @@ export type NovoArtistaInput = {
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
   emailConta?: string;
+  /** Só usado em PATCH — acesso do artista ao sistema (true = suspenso). */
+  acesso_suspenso?: boolean;
 };
 
 export type NovoArtistaResultado = {
@@ -127,6 +133,18 @@ export type UsuarioEquipe = {
   ativo: boolean;
   /** Permissão dedicada: criar pastas de anotações na Agenda. */
   podeCriarAnotacoes?: boolean;
+  // Dados pessoais (opcionais) — country-aware, servem para contrato.
+  cor?: string;
+  pais?: string;
+  nomeLegal?: string;
+  documentoTipo?: string;
+  documento?: string;
+  razaoSocial?: string;
+  endereco?: string;
+  telefone?: string;
+  dataNascimento?: string;
+  emailContato?: string;
+  cidadeId?: string;
 };
 
 // ----------------------------------------------------------------
@@ -240,6 +258,8 @@ type WorkspaceContextValue = {
     username_raiz: string;
     /** Artistas com quem trabalha (cria vínculo vazio; função definida na Equipe). */
     artistIds: string[];
+    /** Permissões já definidas no modal (mapa artistId → chaves); opcional. */
+    permissoes_por_artista?: Record<string, string[]>;
     /** Dados pessoais (opcionais) — country-aware, servem para contrato. */
     cor?: string;
     pais?: string;
@@ -249,6 +269,8 @@ type WorkspaceContextValue = {
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
@@ -260,6 +282,17 @@ type WorkspaceContextValue = {
       funcoes: Funcoes;
       ativo: boolean;
       pode_criar_anotacoes: boolean;
+      // Dados pessoais (opcionais) — country-aware, servem para contrato.
+      cor: string;
+      pais: string;
+      nome_legal: string;
+      documento_tipo: string;
+      documento: string;
+      razao_social: string;
+      endereco: string;
+      telefone: string;
+      data_nascimento: string;
+      cidade_id: string;
     }>
   ) => Promise<UsuarioEquipe>;
   removerUsuario: (id: string) => Promise<void>;
@@ -483,6 +516,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.razaoSocial) payload.razao_social = input.razaoSocial;
       if (input.endereco) payload.endereco = input.endereco;
       if (input.telefone) payload.telefone = input.telefone;
+      if (input.dataNascimento) payload.data_nascimento = input.dataNascimento;
+      if (input.email) payload.email = input.email;
       if (input.taxaModo) payload.taxa_modo = input.taxaModo;
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
@@ -527,12 +562,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.razaoSocial !== undefined) payload.razao_social = patch.razaoSocial;
       if (patch.endereco !== undefined) payload.endereco = patch.endereco;
       if (patch.telefone !== undefined) payload.telefone = patch.telefone;
+      if (patch.dataNascimento !== undefined)
+        payload.data_nascimento = patch.dataNascimento;
+      if (patch.email !== undefined) payload.email = patch.email;
       if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
       if (patch.riderTecnico !== undefined) payload.rider_tecnico = patch.riderTecnico;
       if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
+      if (patch.acesso_suspenso !== undefined)
+        payload.acesso_suspenso = patch.acesso_suspenso;
 
       const res = await fetch(`/api/artistas/${id}`, {
         method: "PATCH",
@@ -651,6 +691,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       nome: string;
       username_raiz: string;
       artistIds: string[];
+      permissoes_por_artista?: Record<string, string[]>;
       cor?: string;
       pais?: string;
       nome_legal?: string;
@@ -659,6 +700,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       razao_social?: string;
       endereco?: string;
       telefone?: string;
+      data_nascimento?: string;
+      email_contato?: string;
       cidade_id?: string;
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
@@ -689,6 +732,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         funcoes: Funcoes;
         ativo: boolean;
         pode_criar_anotacoes: boolean;
+        // Dados pessoais (opcionais) — country-aware, servem para contrato.
+        cor: string;
+        pais: string;
+        nome_legal: string;
+        documento_tipo: string;
+        documento: string;
+        razao_social: string;
+        endereco: string;
+        telefone: string;
+        data_nascimento: string;
+        cidade_id: string;
       }>
     ): Promise<UsuarioEquipe> => {
       const res = await fetch(`/api/usuarios/${id}`, {

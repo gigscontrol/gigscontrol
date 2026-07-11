@@ -4,6 +4,42 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { getPlano, type PlanoId } from "@/lib/planos";
 // Fonte única da regra de acesso (mesma usada pelo gate server-side de mutação).
 import { estadoAcessoDe as calcEstado } from "@/lib/acesso";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * "Plano feito" = assinatura ATIVA (pagou) OU trial de verdade (status
+ * trial + data de término preenchida). O registro "trial sem data" que o
+ * checkout cria ANTES do pagamento NÃO conta — senão dá pra concluir o
+ * onboarding sem pagar. Mesma regra do `etapaInicial()` no client.
+ */
+async function planoDoWorkspaceOk(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<boolean> {
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("status, trial_termina_em")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle<{ status: string; trial_termina_em: string | null }>();
+  const status = sub?.status ?? "trial";
+  return (
+    status === "ativa" ||
+    (status === "trial" && !!sub?.trial_termina_em)
+  );
+}
+
+/** Conta artistas ativos (não deletados) do workspace. */
+async function contarArtistasAtivos(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<number> {
+  const { count } = await admin
+    .from("artists")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .is("deletado_em", null);
+  return count ?? 0;
+}
 
 /**
  * GET /api/workspace/onboarding
@@ -96,13 +132,30 @@ export async function GET() {
       .eq("workspace_id", workspaceId)
       .maybeSingle();
 
-    // Nome do admin logado — usado como exemplo no campo de slug
-    // (ex: "joao-twobookings" em vez de "dudu-twobookings").
+    // Dados pessoais do admin logado — pré-preenchem a Etapa 1 (cadastro
+    // completo) e o `nome` serve de exemplo no campo de slug.
     const { data: meuProfile } = await admin
       .from("profiles")
-      .select("nome")
+      .select(
+        "nome, nome_legal, email, pais, documento_tipo, documento, telefone, data_nascimento"
+      )
       .eq("id", r.sessao.userId)
-      .maybeSingle<{ nome: string | null }>();
+      .maybeSingle<{
+        nome: string | null;
+        nome_legal: string | null;
+        email: string | null;
+        pais: string | null;
+        documento_tipo: string | null;
+        documento: string | null;
+        telefone: string | null;
+        data_nascimento: string | null;
+      }>();
+
+    // E-mail verificado? (auth.users.email_confirmed_at)
+    const { data: authInfo } = await admin.auth.admin.getUserById(
+      r.sessao.userId
+    );
+    const emailVerificado = !!authInfo?.user?.email_confirmed_at;
 
     // Counts em paralelo
     const [{ count: nArtistas }, { count: nContratantes }, { count: nCasas }, { count: nEquipe }] =
@@ -179,6 +232,17 @@ export async function GET() {
             .toLowerCase()
             .replace(/[^a-z0-9]/g, "") || null,
       },
+      pessoa: {
+        nome: meuProfile?.nome ?? "",
+        nomeLegal: meuProfile?.nome_legal ?? "",
+        email: meuProfile?.email ?? "",
+        emailVerificado,
+        pais: meuProfile?.pais ?? "BR",
+        documentoTipo: meuProfile?.documento_tipo ?? null,
+        documento: meuProfile?.documento ?? null,
+        telefone: meuProfile?.telefone ?? null,
+        dataNascimento: meuProfile?.data_nascimento ?? null,
+      },
       nomeAgencia: ws.nome,
     });
   } catch (e) {
@@ -193,8 +257,15 @@ export async function GET() {
  * POST /api/workspace/onboarding
  *
  * Marca o onboarding como completo. Idempotente — chamar 2x não faz
- * mal. Disparado quando o admin clica "Concluir" no checklist, ou
- * "Pular por agora".
+ * mal. Disparado pela Etapa 4 (Equipe) do wizard: no fim do fluxo normal
+ * ou no "Pular e finalizar".
+ *
+ * SEGURANÇA DE COBRANÇA: esta flag é a ÚNICA barreira que impede cair na
+ * dashboard sem pagar (o guard do /app só manda pro onboarding enquanto
+ * ela é false). Por isso VALIDAMOS no servidor antes de marcar:
+ *  - precisa de plano pago OU trial real (402 se não);
+ *  - precisa de pelo menos 1 artista (409 se não).
+ * A única etapa pulável é a Equipe.
  */
 export async function POST() {
   const r = await autenticarComWorkspace();
@@ -206,11 +277,50 @@ export async function POST() {
     );
   }
   const admin = criarClienteAdmin();
+  const workspaceId = r.sessao.workspaceId;
   try {
+    // Idempotência: se já concluiu, não revalida (evita travar quem já
+    // está dentro caso a assinatura mude de estado depois).
+    const { data: ws, error: errWs } = await admin
+      .from("workspaces")
+      .select("onboarding_completo")
+      .eq("id", workspaceId)
+      .single<{ onboarding_completo: boolean }>();
+    if (errWs || !ws) {
+      return NextResponse.json(
+        { erro: "Workspace não encontrado." },
+        { status: 404 }
+      );
+    }
+    if (ws.onboarding_completo) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // 1) Plano pago ou trial real — senão manda de volta pra etapa do plano.
+    const planoOk = await planoDoWorkspaceOk(admin, workspaceId);
+    if (!planoOk) {
+      return NextResponse.json(
+        {
+          erro:
+            "Escolha um plano e conclua o pagamento (ou inicie o teste grátis) antes de finalizar.",
+        },
+        { status: 402 }
+      );
+    }
+
+    // 2) Pelo menos 1 artista cadastrado.
+    const nArtistas = await contarArtistasAtivos(admin, workspaceId);
+    if (nArtistas < 1) {
+      return NextResponse.json(
+        { erro: "Cadastre pelo menos um artista antes de finalizar." },
+        { status: 409 }
+      );
+    }
+
     const { error } = await admin
       .from("workspaces")
       .update({ onboarding_completo: true })
-      .eq("id", r.sessao.workspaceId);
+      .eq("id", workspaceId);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (e) {

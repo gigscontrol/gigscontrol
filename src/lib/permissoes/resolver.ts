@@ -89,9 +89,9 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
   const ehLeitura = acao.startsWith("ver");
   switch (modulo) {
     case "agenda":
-      // Vê a própria agenda (e detalhes/cachê). NÃO cria/edita/exclui show —
-      // a privacidade não expõe esse controle, então fica read-only.
-      return ehLeitura;
+      // Vê a própria agenda (e detalhes/cachê) sempre. Cria/edita/exclui os
+      // próprios eventos só com agendaTotal ligado; senão fica read-only.
+      return ehLeitura || priv.agendaTotal;
     case "vendas":
       if (ehLeitura) return priv.vendasVer || priv.orcamentosVer;
       if (acao.includes("orcamento")) return priv.orcamentosCriar;

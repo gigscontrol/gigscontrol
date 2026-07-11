@@ -65,6 +65,10 @@ export type DJ = {
   endereco?: string;
   /** Telefone de contato (opcional). */
   telefone?: string;
+  /** Data de nascimento (YYYY-MM-DD). */
+  dataNascimento?: string;
+  /** E-mail de contato. */
+  email?: string;
   /** Modo de taxa de agência. Default 'sem-taxa'. */
   taxaModo?: TaxaAgenciaModo;
   /** Em modos perc-*: percentual (ex 15 = 15%). Em modos valor-*: R$. */
