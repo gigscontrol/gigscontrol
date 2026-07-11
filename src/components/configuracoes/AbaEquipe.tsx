@@ -38,7 +38,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
-import { resolverCidade } from "@/lib/cidade-helpers";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
@@ -1266,10 +1266,14 @@ export function ModalUsuario({
       BRASIL
   );
   const [cor, setCor] = useState<string>(inicial?.cor ?? CORES[0]);
-  // Cidade: o `inicial` só carrega o UUID (cidadeId), não o nome/uf — então
-  // o autocomplete começa vazio no editar. Só manda `cidade_id` se o admin
-  // escolher uma cidade nova (senão o backend mantém a atual).
-  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
+  // Cidade: o `inicial.cidade` (join no backend por cidade_id) traz nome/uf/país,
+  // então no editar o autocomplete já abre PRÉ-PREENCHIDO. Sem cidade (modo criar,
+  // ou cidade legada sem ibge/geoname) começa vazio. No submit só resolve/manda
+  // cidade_id se houver seleção — a cidade inalterada resolve pro mesmo id
+  // (lookup idempotente), então não muda nada; escolher outra troca.
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
+    () => cidadeParaEscolhida(inicial?.cidade ?? null)
+  );
   const [nomeLegal, setNomeLegal] = useState(inicial?.nomeLegal ?? "");
   const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
     // `inicial.documentoTipo` vem tipado como string no workspace-context;
