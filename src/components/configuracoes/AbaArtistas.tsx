@@ -10,7 +10,6 @@ import {
   X,
   AlertCircle,
   PauseCircle,
-  PlayCircle,
   RotateCcw,
   Copy,
   Check,
@@ -125,6 +124,8 @@ type ArtistaParaEdicao = {
   riderEfeitos: string[];
   riderTecnico: string[];
   privacidade: PrivacidadeDj;
+  /** Acesso do artista ao sistema — true = suspenso/bloqueado. */
+  acessoSuspenso?: boolean;
 };
 
 const MODOS_TAXA: TaxaAgenciaModo[] = [
@@ -141,7 +142,6 @@ export default function AbaArtistas() {
     artistas,
     adicionarArtista,
     removerArtista,
-    alternarSuspensaoArtista,
     resetarSenhaArtista,
     reordenarArtistas,
     lixeiraArtistas,
@@ -333,15 +333,6 @@ export default function AbaArtistas() {
       );
     return lista;
   }, [artistas, modoReordenar, muitosDJs, filtroStatus, busca]);
-
-  function resetarSenhaDoPerfil(id: string, nome: string) {
-    if (!confirm(t("Gerar uma nova senha aleatória pro artista {nome}?", { nome }))) return;
-    resetarSenhaArtista(id)
-      .then((nova) =>
-        setCredenciaisGeradas({ nomeArtista: nome, username: "—", senha: nova })
-      )
-      .catch((e) => setToast({ msg: (e as Error).message, tipo: "erro" }));
-  }
 
   return (
     <div className="flex flex-col gap-5 w-full">
@@ -763,6 +754,7 @@ export default function AbaArtistas() {
                         riderEfeitos: djSelecionado.riderEfeitos ?? [],
                         riderTecnico: djSelecionado.riderTecnico ?? [],
                         privacidade: djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
+                        acessoSuspenso: djSelecionado.acessoSuspenso,
                       })
                     }
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
@@ -776,34 +768,6 @@ export default function AbaArtistas() {
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
                   >
                     <Users size={13} /> {t("Equipe")}
-                  </button>
-                  <button
-                    onClick={() => alternarSuspensaoArtista(djSelecionado.id)}
-                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                    style={{
-                      color: djSelecionado.acessoSuspenso
-                        ? "var(--success)"
-                        : "var(--warning)",
-                    }}
-                  >
-                    {djSelecionado.acessoSuspenso ? (
-                      <>
-                        <PlayCircle size={14} /> {t("Reativar")}
-                      </>
-                    ) : (
-                      <>
-                        <PauseCircle size={14} /> {t("Suspender")}
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() =>
-                      resetarSenhaDoPerfil(djSelecionado.id, djSelecionado.name)
-                    }
-                    className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    <KeyRound size={14} /> {t("Resetar senha")}
                   </button>
                   <button
                     onClick={() => setRemovendo(djSelecionado.id)}
@@ -974,11 +938,11 @@ export default function AbaArtistas() {
               )}
             </div>
 
-            {/* Privacidade (read-only; edita no formulário) */}
+            {/* Permissões (read-only; edita no formulário) */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
-                {t("Privacidade")}
+                {t("Permissões")}
               </div>
               {(() => {
                 const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
@@ -1902,7 +1866,7 @@ export function ModalNovoArtista({
           </Secao>
 
           {/* Seção 7 — Privacidade (permissões do DJ) */}
-          <Secao titulo={t("Privacidade — o que ele pode ver/fazer")}>
+          <Secao titulo={t("Permissões — o que ele pode ver/fazer")}>
             <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
           </Secao>
 
@@ -2046,6 +2010,9 @@ function ModalEditarArtista({
   const [riderEfeitos, setRiderEfeitos] = useState<string[]>(artista.riderEfeitos);
   const [riderTecnico, setRiderTecnico] = useState<string[]>(artista.riderTecnico);
   const [privacidade, setPrivacidade] = useState<PrivacidadeDj>(artista.privacidade);
+  // Acesso ao sistema: ligado = pode entrar; desligado = bloqueado/suspenso.
+  // Mapeia !acessoSuspenso; salvo no patch como acesso_suspenso.
+  const [acessoAtivo, setAcessoAtivo] = useState(!artista.acessoSuspenso);
 
   // Dados pessoais (CONTRATADO) — pré-preenchidos do artista.
   const [pais, setPais] = useState<Country>(
@@ -2190,6 +2157,8 @@ function ModalEditarArtista({
         riderEfeitos,
         riderTecnico,
         privacidade,
+        // Acesso ao sistema — toggle "Acesso ativo" mapeia !acessoSuspenso.
+        acesso_suspenso: !acessoAtivo,
         // Dados do CONTRATADO (sempre enviados — validados acima).
         pais: pais.code,
         nomeLegal: nomeLegal.trim(),
@@ -2647,7 +2616,7 @@ function ModalEditarArtista({
           </Secao>
 
           {/* Seção 8 — Privacidade (permissões do DJ) */}
-          <Secao titulo={t("Privacidade — o que ele pode ver/fazer")}>
+          <Secao titulo={t("Permissões — o que ele pode ver/fazer")}>
             <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
           </Secao>
 
@@ -2954,6 +2923,15 @@ function ModalEditarArtista({
                 )}
               </Campo>
 
+              {/* ---- Acesso ativo (liga/desliga a entrada no sistema) ---- */}
+              <LinhaEscopo
+                label={t("Acesso ativo")}
+                descricaoLigado={t("O artista pode entrar no sistema.")}
+                descricaoDesligado={t("Acesso bloqueado — o artista não consegue entrar.")}
+                valor={acessoAtivo}
+                onChange={setAcessoAtivo}
+              />
+
               {/* ---- Senha ---- */}
               <Campo label={t("Senha")}>
                 {conta.senhaPadrao && conta.senhaPadraoValor ? (
@@ -3052,11 +3030,11 @@ function ModalEditarArtista({
           )}
         </div>
 
-        {/* Privacidade */}
+        {/* Permissões */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
             <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
-            {t("Privacidade")}
+            {t("Permissões")}
           </div>
           <p className="text-xs text-muted -mt-1">
             {t("Escolha o nível de cada área. Cada opção diz exatamente o que o DJ pode fazer.")}
@@ -3904,6 +3882,52 @@ export function Campo({
       <span className="text-xs font-medium text-secondary">{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Linha de toggle no estilo LinhaEscopo (mesma cara da AbaEquipe): rótulo +
+ * descrição que muda conforme o estado + switch. Usada no card "Acesso ao
+ * sistema" do editar do artista pra ligar/desligar o acesso.
+ */
+function LinhaEscopo({
+  label,
+  descricaoLigado,
+  descricaoDesligado,
+  valor,
+  onChange,
+}: {
+  label: string;
+  descricaoLigado: string;
+  descricaoDesligado: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-primary">{label}</div>
+        <div className="text-xs text-muted">
+          {valor ? descricaoLigado : descricaoDesligado}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!valor)}
+        className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
+        style={{
+          backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
+        }}
+        aria-label={label}
+      >
+        <span
+          className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white transition-transform"
+          style={{
+            transform: valor ? "translateX(22px)" : "translateX(2px)",
+          }}
+        />
+      </button>
+    </div>
   );
 }
 

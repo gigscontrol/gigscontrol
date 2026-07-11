@@ -74,6 +74,8 @@ export type NovoArtistaInput = {
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
   emailConta?: string;
+  /** Só usado em PATCH — acesso do artista ao sistema (true = suspenso). */
+  acesso_suspenso?: boolean;
 };
 
 export type NovoArtistaResultado = {
@@ -569,6 +571,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
       if (patch.riderTecnico !== undefined) payload.rider_tecnico = patch.riderTecnico;
       if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
+      if (patch.acesso_suspenso !== undefined)
+        payload.acesso_suspenso = patch.acesso_suspenso;
 
       const res = await fetch(`/api/artistas/${id}`, {
         method: "PATCH",
