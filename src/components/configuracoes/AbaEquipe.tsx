@@ -1730,65 +1730,72 @@ export function ModalUsuario({
                     </button>
                   </div>
                 </div>
+
+                {/* Corpo do card: cor + país/cidade + dados pessoais — TUDO
+                    DENTRO do card, igual ao editar do artista (não solto no
+                    fundo). */}
+                <div className="flex flex-col gap-4">
+                  <SeletorDeCor cor={cor} onChange={setCor} />
+                  <div className="border-t border-border" />
+                  <Secao titulo={t("País e cidade onde reside")}>
+                    <CidadeGlobalAutocomplete
+                      value={cidadeSel}
+                      onChange={setCidadeSel}
+                      onPaisChange={setPaisPessoal}
+                      placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
+                    />
+                  </Secao>
+                  <Secao titulo={t("Dados pessoais")}>
+                    <CamposDadosContrato
+                      pais={paisPessoal}
+                      setPais={setPaisPessoal}
+                      nomeLegal={nomeLegal}
+                      setNomeLegal={setNomeLegal}
+                      documentoTipo={documentoTipo}
+                      setDocumentoTipo={setDocumentoTipo}
+                      documento={documento}
+                      setDocumento={setDocumento}
+                      razaoSocial={razaoSocial}
+                      setRazaoSocial={setRazaoSocial}
+                      endereco={endereco}
+                      setEndereco={setEndereco}
+                      telefone={telefone}
+                      setTelefone={setTelefone}
+                      dataNascimento={dataNascimento}
+                      setDataNascimento={setDataNascimento}
+                    />
+                  </Secao>
+                </div>
               </div>
             </div>
-
-            {/* Cor de identificação */}
-            <SeletorDeCor cor={cor} onChange={setCor} />
-
-            {/* País e cidade onde reside — o onPaisChange faz o documento e o
-                DDI seguirem o país. */}
-            <Secao titulo={t("País e cidade onde reside")}>
-              <CidadeGlobalAutocomplete
-                value={cidadeSel}
-                onChange={setCidadeSel}
-                onPaisChange={setPaisPessoal}
-                placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
-              />
-            </Secao>
-
-            {/* Dados pessoais — nome completo, nascimento, documento
-                país-aware, telefone, endereço único. SEM e-mail (bloqueado). */}
-            <Secao titulo={t("Dados pessoais")}>
-              <CamposDadosContrato
-                pais={paisPessoal}
-                setPais={setPaisPessoal}
-                nomeLegal={nomeLegal}
-                setNomeLegal={setNomeLegal}
-                documentoTipo={documentoTipo}
-                setDocumentoTipo={setDocumentoTipo}
-                documento={documento}
-                setDocumento={setDocumento}
-                razaoSocial={razaoSocial}
-                setRazaoSocial={setRazaoSocial}
-                endereco={endereco}
-                setEndereco={setEndereco}
-                telefone={telefone}
-                setTelefone={setTelefone}
-                dataNascimento={dataNascimento}
-                setDataNascimento={setDataNascimento}
-              />
-            </Secao>
           </>
         )}
 
+        {/* Seções específicas do EQUIPE em cards (grid), igual ao editar do
+            artista: Acesso ao sistema + Senha. */}
         {modo === "editar" && (
-          <LinhaEscopo
-            label={t("Acesso ativo")}
-            descricaoLigado={t("O usuário pode entrar normalmente")}
-            descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
-            valor={ativo}
-            onChange={setAtivo}
-          />
-        )}
-
-        {/* ---- Bloco Senha (só no modo editar) ---- */}
-        {modo === "editar" && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            <div className="flex items-center gap-1.5">
-              <Lock size={14} style={{ color: "var(--brand)" }} />
-              <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {/* Card — Acesso ao sistema */}
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
+                {t("Acesso ao sistema")}
+              </div>
+              <LinhaEscopo
+                label={t("Acesso ativo")}
+                descricaoLigado={t("O usuário pode entrar normalmente")}
+                descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
+                valor={ativo}
+                onChange={setAtivo}
+              />
             </div>
+
+            {/* Card — Senha */}
+            <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+                <Lock size={12} style={{ color: "var(--brand)" }} />
+                {t("Senha")}
+              </div>
             {carregandoConta ? (
               <div className="flex items-center gap-2 text-sm text-muted py-2">
                 <Loader2 size={14} className="animate-spin" />
@@ -1891,6 +1898,7 @@ export function ModalUsuario({
                 {t("Gerar nova senha aleatória")}
               </button>
             )}
+            </div>
           </div>
         )}
 
