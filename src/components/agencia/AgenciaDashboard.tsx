@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   History,
   Music,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import type { HistoricoAcao, ModuloHistorico } from "@/lib/mappers/historico";
 import PageHeader from "../PageHeader";
 import StatCard from "../StatCard";
@@ -44,12 +45,21 @@ const MODULO_HISTORICO: Record<
 export default function AgenciaDashboard() {
   const t = useT();
   const { artistas, equipe } = useWorkspace();
+  const { sessao } = useAuth();
   const accent = "var(--brand)";
+
+  // /api/historico é admin-only (403 pra outros papéis) — só busca e só
+  // mostra o card "Últimas ações" quando o papel logado é admin.
+  const isAdmin = sessao?.usuario.papel === "admin";
 
   const [acoes, setAcoes] = useState<HistoricoAcao[]>([]);
   const [carregandoAcoes, setCarregandoAcoes] = useState(true);
 
   useEffect(() => {
+    if (!isAdmin) {
+      setCarregandoAcoes(false);
+      return;
+    }
     let ativo = true;
     (async () => {
       try {
@@ -71,31 +81,14 @@ export default function AgenciaDashboard() {
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [isAdmin]);
 
-  return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
-      <PageHeader
-        title="Agência"
-        subtitle="Visão geral dos seus artistas, equipe e atividade recente."
-      />
-
-      <div className="grid grid-cols-2 gap-4 mt-2">
-        <StatCard
-          title={t("Artistas")}
-          value={artistas.length}
-          icon={<Music size={15} />}
-          accentColor={accent}
-        />
-        <StatCard
-          title={t("Equipe")}
-          value={equipe.length}
-          icon={<Users size={15} />}
-          accentColor="var(--warning)"
-        />
-      </div>
-
-      {/* Últimas ações do workspace (artistas / equipe / etc.) */}
+  // Card "Últimas ações" — admin-only (o /api/historico responde 403 pra
+  // outros papéis). Fora do JSX principal pra manter a renderização condicional
+  // simples e legível.
+  let ultimasAcoesCard: ReactNode = null;
+  if (isAdmin) {
+    ultimasAcoesCard = (
       <div className="card mt-4">
         <div className="flex items-center gap-2 mb-4">
           <History size={16} style={{ color: accent }} />
@@ -155,6 +148,32 @@ export default function AgenciaDashboard() {
           </div>
         )}
       </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+      <PageHeader
+        title="Agência"
+        subtitle="Visão geral dos seus artistas, equipe e atividade recente."
+      />
+
+      <div className="grid grid-cols-2 gap-4 mt-2">
+        <StatCard
+          title={t("Artistas")}
+          value={artistas.length}
+          icon={<Music size={15} />}
+          accentColor={accent}
+        />
+        <StatCard
+          title={t("Equipe")}
+          value={equipe.length}
+          icon={<Users size={15} />}
+          accentColor="var(--warning)"
+        />
+      </div>
+
+      {ultimasAcoesCard}
     </div>
   );
 }
