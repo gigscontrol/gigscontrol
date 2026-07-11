@@ -1293,7 +1293,6 @@ export function ModalUsuario({
   const [endereco, setEndereco] = useState("");
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
-  const [emailContato, setEmailContato] = useState("");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -1407,7 +1406,6 @@ export function ModalUsuario({
           telefone: telefone.trim() || undefined,
           endereco: endereco.trim() || undefined,
           data_nascimento: dataNascimento || undefined,
-          email_contato: emailContato.trim() || undefined,
           cidade_id: cidadeId,
         });
       } catch (e) {
@@ -1476,8 +1474,6 @@ export function ModalUsuario({
                 setTelefone={setTelefone}
                 dataNascimento={dataNascimento}
                 setDataNascimento={setDataNascimento}
-                email={emailContato}
-                setEmail={setEmailContato}
               />
             </Secao>
 
@@ -1504,10 +1500,10 @@ export function ModalUsuario({
                         e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
                       );
                     }}
-                    placeholder="joaovendas"
+                    placeholder="marinasouza"
                     style={{
                       width: `${Math.max(
-                        usernameRaiz.length || "joaovendas".length,
+                        usernameRaiz.length || "marinasouza".length,
                         4
                       )}ch`,
                     }}

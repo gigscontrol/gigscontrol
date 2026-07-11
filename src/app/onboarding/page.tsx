@@ -634,7 +634,12 @@ function Etapa1Cadastro({
           <span className="text-xs font-medium text-secondary">
             {t("Nome completo")} <span className="text-danger">*</span>
           </span>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} className={campo} />
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder={t("Ex: João Silva")}
+            className={campo}
+          />
         </label>
 
         <label className="flex flex-col gap-1.5">
