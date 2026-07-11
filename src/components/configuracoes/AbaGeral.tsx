@@ -13,11 +13,25 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  ShieldCheck,
+  User as UserIcon,
 } from "lucide-react";
 import Toast from "../Toast";
 import Modal from "../Modal";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import { criarClienteBrowser } from "@/lib/db/supabase-browser";
+import CidadeGlobalAutocomplete, {
+  type CidadeEscolhida,
+} from "@/components/CidadeGlobalAutocomplete";
+import InputDataBR from "@/components/inputs/InputDataBR";
+import PhoneInput, {
+  DEFAULT_COUNTRY,
+  contarDigitos,
+  type Country,
+} from "@/components/PhoneInput";
+import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
+import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
 import AbaSeguranca from "./AbaSeguranca";
 
 /**
@@ -141,8 +155,13 @@ export default function AbaGeral() {
 
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      {/* Blocos abaixo só pra admin. Não-admin (artista, vendedor etc)
-          vê só a seção de Segurança no final. */}
+      {/* ---- Meus dados (pessoa) — visível pra TODOS (admin, artista, equipe).
+          Cada um edita os PRÓPRIOS dados via PATCH /api/perfil. Não expõe
+          nada de permissão/papel — é só dados de pessoa. ---- */}
+      <MeusDados onToast={(msg, tipo) => setToast({ msg, tipo })} />
+
+      {/* Blocos abaixo só pra admin (identidade da agência). Não-admin
+          (artista, vendedor etc) vê só os próprios dados + Segurança. */}
       {isAdmin && (
         <>
       {/* ---- Logo ---- */}
@@ -249,22 +268,6 @@ export default function AbaGeral() {
         </button>
       </section>
 
-      {/* ---- E-mail cadastrado (somente leitura) ---- */}
-      <section className="card">
-        <div className="section-title mb-1">{t("E-mail cadastrado")}</div>
-        <div className="section-subtitle mb-4">
-          {t("E-mail principal da conta admin. Pra trocar, vá em")}{" "}
-          <strong className="text-primary">{t("Segurança")}</strong>.
-        </div>
-
-        <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2.5">
-          <Mail size={14} className="text-muted flex-shrink-0" />
-          <span className="text-sm text-primary flex-1 font-mono">
-            {sessao?.usuario?.email ?? "—"}
-          </span>
-        </div>
-      </section>
-
       {/* ---- Username da agência ---- */}
       <SlugSection
         primeiroNomeAdmin={slugificarPrimeiroNome(sessao?.usuario?.nome) || "voce"}
@@ -295,6 +298,339 @@ export default function AbaGeral() {
         onClose={() => setToast(null)}
       />
     </div>
+  );
+}
+
+// ============================================================
+// Meus dados — formulário de PESSOA do próprio usuário (todos os papéis)
+// ============================================================
+
+/**
+ * Espelha a Etapa 1 do onboarding (Etapa1Cadastro), porém SÓ os campos de
+ * PESSOA — sem nada de agência/permissão. Salva via PATCH /api/perfil (que
+ * grava só o próprio profile). Carrega os dados atuais lendo a própria linha
+ * de `profiles` pelo cliente browser (RLS deixa o usuário ler o próprio row)
+ * e o estado de verificação do e-mail via supabase.auth.getUser().
+ */
+type PerfilPessoa = {
+  nome: string;
+  nome_legal: string | null;
+  pais: string | null;
+  documento_tipo: string | null;
+  documento: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+};
+
+function MeusDados({
+  onToast,
+}: {
+  onToast: (msg: string, tipo: "sucesso" | "erro") => void;
+}) {
+  const t = useT();
+  const supabase = useMemo(() => criarClienteBrowser(), []);
+
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  // E-mail + verificação (auth.users). Verificado => trava (é o login).
+  const [email, setEmail] = useState("");
+  const [emailVerificado, setEmailVerificado] = useState(false);
+
+  // Campos de pessoa.
+  const [pais, setPais] = useState<string>("BR");
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(null);
+  const [apelido, setApelido] = useState("");
+  const [nomeLegal, setNomeLegal] = useState("");
+  const [nascimento, setNascimento] = useState<string>("");
+  const [doc, setDoc] = useState<string>("");
+  const [telCountry, setTelCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [telDigits, setTelDigits] = useState<string>("");
+
+  const campo =
+    "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary focus:border-border-strong outline-none";
+  const docCfg = configDocumento(pais);
+
+  // Carrega o profile + estado de verificação do e-mail.
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const u = userData.user;
+        if (!u) throw new Error(t("Sessão expirada. Faça login de novo."));
+
+        const { data: profile, error: errProfile } = await supabase
+          .from("profiles")
+          .select(
+            "nome, nome_legal, pais, documento_tipo, documento, telefone, data_nascimento"
+          )
+          .eq("id", u.id)
+          .single<PerfilPessoa>();
+        if (errProfile || !profile) {
+          throw new Error(t("Não foi possível carregar seus dados."));
+        }
+        if (!ativo) return;
+
+        setEmail(u.email ?? "");
+        setEmailVerificado(!!u.email_confirmed_at);
+
+        const paisInicial = (profile.pais || "BR").toUpperCase();
+        setPais(paisInicial);
+        setApelido(profile.nome ?? "");
+        setNomeLegal(profile.nome_legal ?? "");
+        setNascimento(profile.data_nascimento ?? "");
+        setDoc(profile.documento ?? "");
+
+        const cc =
+          COUNTRIES.find((c) => c.code === paisInicial) ?? DEFAULT_COUNTRY;
+        setTelCountry(cc);
+        const digs = (profile.telefone ?? "").replace(/\D/g, "");
+        setTelDigits(digs.startsWith(cc.ddi) ? digs.slice(cc.ddi.length) : digs);
+      } catch (e) {
+        if (ativo) setErro((e as Error).message);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [supabase, t]);
+
+  // Um país só: o seletor da Cidade dirige documento + DDI do telefone.
+  function sincronizarPais(code: string) {
+    setPais(code);
+    const cc = COUNTRIES.find((x) => x.code === code);
+    if (cc) setTelCountry(cc);
+  }
+
+  async function salvar() {
+    setErro(null);
+    if (!apelido.trim()) return setErro(t("Informe seu apelido."));
+    if (!nomeLegal.trim()) return setErro(t("Informe seu nome completo."));
+    if (!nascimento) return setErro(t("Informe a data de nascimento."));
+    if (!doc.trim()) return setErro(t("Informe o documento."));
+    if (contarDigitos(telDigits) < telCountry.minDigits)
+      return setErro(t("Telefone incompleto."));
+
+    setSalvando(true);
+    try {
+      const telefone = montarTelefoneE164(telCountry, telDigits);
+      const docNorm = normalizarDocumento(pais, doc);
+      const docTipo =
+        pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
+
+      // Só campos de PESSOA — o endpoint /api/perfil grava só o próprio
+      // profile e NÃO aceita nada de papel/permissão.
+      const r = await fetch("/api/perfil", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: apelido.trim(),
+          nome_legal: nomeLegal.trim(),
+          pais,
+          documento_tipo: docTipo,
+          documento: docNorm,
+          telefone,
+          data_nascimento: nascimento,
+        }),
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? t("Falha ao salvar seus dados."));
+      }
+      onToast(t("Dados salvos."), "sucesso");
+    } catch (e) {
+      onToast((e as Error).message, "erro");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (carregando) {
+    return (
+      <section className="card">
+        <div className="flex items-center gap-2 mb-1">
+          <UserIcon size={16} style={{ color: "var(--brand)" }} />
+          <div className="section-title">{t("Meus dados")}</div>
+        </div>
+        <div className="text-sm text-muted flex items-center gap-2 mt-3">
+          <Loader2 size={14} className="animate-spin" /> {t("Carregando...")}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card flex flex-col gap-4">
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <UserIcon size={16} style={{ color: "var(--brand)" }} />
+          <div className="section-title">{t("Meus dados")}</div>
+        </div>
+        <div className="section-subtitle">
+          {t("Seus dados pessoais. Aparecem nos contratos e orçamentos gerados pelo sistema.")}
+        </div>
+      </div>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {t("Apelido")} <span className="text-danger">*</span>
+        </span>
+        <input
+          value={apelido}
+          onChange={(e) => setApelido(e.target.value)}
+          placeholder={t("Como te chamam")}
+          className={campo}
+        />
+        <span className="text-[0.7rem] text-muted">
+          {t("É o nome que aparece pros outros usuários da sua agência.")}
+        </span>
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {t("País e cidade onde reside")}
+        </span>
+        <CidadeGlobalAutocomplete
+          value={cidade}
+          onChange={(c) => {
+            setCidade(c);
+            if (c?.pais) sincronizarPais(c.pais);
+          }}
+          onPaisChange={(country) => sincronizarPais(country.code)}
+        />
+        <span className="text-[0.7rem] text-muted">
+          {t("O país aqui define o seu documento e o DDI do telefone.")}
+        </span>
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {t("Nome completo")} <span className="text-danger">*</span>
+        </span>
+        <input
+          value={nomeLegal}
+          onChange={(e) => setNomeLegal(e.target.value)}
+          placeholder={t("Ex: João Silva")}
+          className={campo}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {t("Data de nascimento")} <span className="text-danger">*</span>
+        </span>
+        {pais === "BR" ? (
+          <InputDataBR value={nascimento} onChange={setNascimento} />
+        ) : (
+          <input
+            type="date"
+            value={nascimento}
+            onChange={(e) => setNascimento(e.target.value)}
+            className={campo}
+          />
+        )}
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {docCfg.label} <span className="text-danger">*</span>
+        </span>
+        <input
+          value={docCfg.format(doc)}
+          onChange={(e) => setDoc(e.target.value)}
+          placeholder={docCfg.placeholder}
+          className={`${campo} placeholder:text-muted`}
+        />
+      </label>
+
+      {/* E-mail — travado quando verificado (é o login). Quando NÃO
+          verificado (ex.: membro com e-mail interno), a troca acontece no
+          card "E-mail de acesso" logo abaixo (Segurança). */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
+        <div
+          className="flex items-center gap-2 border rounded-md px-3 py-2"
+          style={{
+            backgroundColor: emailVerificado
+              ? "rgba(34,197,94,0.08)"
+              : "var(--bg-elevated)",
+            borderColor: emailVerificado
+              ? "var(--success)"
+              : "var(--border-color)",
+          }}
+        >
+          <Mail size={14} className="text-muted flex-shrink-0" />
+          <input
+            value={email}
+            disabled
+            className="flex-1 bg-transparent outline-none text-sm text-muted cursor-not-allowed break-all"
+          />
+          {emailVerificado && (
+            <span
+              className="inline-flex items-center gap-1 text-[0.7rem] flex-shrink-0"
+              style={{ color: "var(--success)" }}
+            >
+              <ShieldCheck size={12} /> {t("Verificado")}
+            </span>
+          )}
+        </div>
+        {emailVerificado ? (
+          <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
+            {t("E-mail verificado — é o seu login e não pode ser alterado.")}
+          </span>
+        ) : (
+          <span className="text-[0.7rem] text-muted">
+            {t("Cadastre ou troque seu e-mail no bloco de acesso abaixo.")}
+          </span>
+        )}
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-secondary">
+          {t("Telefone")} <span className="text-danger">*</span>
+        </span>
+        <PhoneInput
+          country={telCountry}
+          onCountryChange={setTelCountry}
+          value={telDigits}
+          onChange={setTelDigits}
+        />
+      </label>
+
+      {erro && (
+        <div
+          className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+          style={{
+            backgroundColor: "rgba(239,68,68,0.08)",
+            color: "var(--danger)",
+            border: "1px solid rgba(239,68,68,0.3)",
+          }}
+        >
+          <AlertTriangle size={12} /> {erro}
+        </div>
+      )}
+
+      <button
+        onClick={salvar}
+        disabled={salvando}
+        className="btn btn-primary text-sm w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {salvando ? (
+          <>
+            <Loader2 size={14} className="animate-spin" /> {t("Salvando...")}
+          </>
+        ) : (
+          <>
+            <Check size={14} /> {t("Salvar meus dados")}
+          </>
+        )}
+      </button>
+    </section>
   );
 }
 

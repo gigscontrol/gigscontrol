@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Eye, EyeOff, ShieldCheck, Lock, Mail } from "lucide-react";
 import Toast from "../Toast";
@@ -35,11 +35,31 @@ export default function AbaSeguranca() {
   // cadastrar um e-mail real: o Supabase manda um link de confirmação e, após
   // confirmar, o e-mail vira o de acesso (verificado, verde pra agência) e o
   // login passa a valer pelo username OU pelo e-mail.
+  //
+  // REGRA: um e-mail VERIFICADO (email_confirmed_at) é o login e NÃO pode
+  // ser trocado por aqui — o card fica travado, só de leitura, com selo
+  // Verificado. Sem verificar (ex.: membro com e-mail interno) libera o
+  // cadastro/troca via updateUser.
   const emailAtual = sessao?.usuario?.email ?? "";
-  const semEmailReal = /@interno\.gigscontrol\.app$/i.test(emailAtual);
+  const [emailVerificado, setEmailVerificado] = useState(false);
+
+  // Estado real de verificação vem do auth.users (email_confirmed_at). Não dá
+  // pra inferir só pelo domínio: um e-mail real cadastrado mas ainda não
+  // confirmado também precisa continuar editável.
+  useEffect(() => {
+    let ativo = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (ativo) setEmailVerificado(!!data.user?.email_confirmed_at);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [supabase]);
+
   const [novoEmail, setNovoEmail] = useState("");
   const [salvandoEmail, setSalvandoEmail] = useState(false);
   const emailValido =
+    !emailVerificado &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoEmail.trim()) &&
     novoEmail.trim().toLowerCase() !== emailAtual.toLowerCase();
 
@@ -133,17 +153,20 @@ export default function AbaSeguranca() {
         <div className="flex items-center gap-2 mb-1">
           <Mail size={16} style={{ color: "var(--brand)" }} />
           <div className="section-title">
-            {semEmailReal ? t("Cadastrar e-mail de acesso") : t("E-mail de acesso")}
+            {emailVerificado
+              ? t("E-mail de acesso")
+              : t("Cadastrar e-mail de acesso")}
           </div>
         </div>
         <div className="section-subtitle mb-4">
-          {semEmailReal
-            ? t("Cadastre um e-mail seu. Enviamos um link pra confirmar — depois disso você pode entrar tanto pelo seu login de usuário quanto pelo e-mail.")
-            : t("Este é o seu e-mail de acesso. Você também pode entrar pelo seu login de usuário.")}
+          {emailVerificado
+            ? t("Este é o seu e-mail de acesso, já verificado. Ele é o seu login e não pode ser alterado.")
+            : t("Cadastre um e-mail seu. Enviamos um link pra confirmar — depois disso você pode entrar tanto pelo seu login de usuário quanto pelo e-mail.")}
         </div>
 
-        {!semEmailReal && (
-          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 mb-3">
+        {emailVerificado ? (
+          // Verificado: só leitura + selo. Sem input/botão — não editável.
+          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
             <Mail size={14} className="text-muted flex-shrink-0" />
             <span className="flex-1 text-sm text-secondary break-all">{emailAtual}</span>
             <span
@@ -153,33 +176,31 @@ export default function AbaSeguranca() {
               <ShieldCheck size={12} /> {t("Verificado")}
             </span>
           </div>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-secondary">
+                {t("Seu e-mail")}
+              </span>
+              <input
+                type="email"
+                value={novoEmail}
+                onChange={(e) => setNovoEmail(e.target.value)}
+                className="campo-input"
+                placeholder="voce@email.com"
+                autoComplete="email"
+              />
+            </label>
+
+            <button
+              onClick={salvarEmail}
+              disabled={!emailValido || salvandoEmail}
+              className="btn btn-primary text-sm w-full justify-center mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {salvandoEmail ? t("Enviando...") : t("Cadastrar e confirmar")}
+            </button>
+          </>
         )}
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-secondary">
-            {semEmailReal ? t("Seu e-mail") : t("Trocar e-mail")}
-          </span>
-          <input
-            type="email"
-            value={novoEmail}
-            onChange={(e) => setNovoEmail(e.target.value)}
-            className="campo-input"
-            placeholder="voce@email.com"
-            autoComplete="email"
-          />
-        </label>
-
-        <button
-          onClick={salvarEmail}
-          disabled={!emailValido || salvandoEmail}
-          className="btn btn-primary text-sm w-full justify-center mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {salvandoEmail
-            ? t("Enviando...")
-            : semEmailReal
-            ? t("Cadastrar e confirmar")
-            : t("Trocar e-mail")}
-        </button>
       </section>
 
       {/* ---- Alterar senha ---- */}
