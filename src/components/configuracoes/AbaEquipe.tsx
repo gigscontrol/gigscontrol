@@ -490,6 +490,23 @@ export default function AbaEquipe() {
             <Plus size={14} /> {t("Criar usuário")}
           </button>
         </div>
+      ) : selecionado && editando && editando.id === selecionado.id ? (
+        /* Edição INLINE no painel do membro (mesmo padrão do editar do
+           artista) — sem abrir janela/Modal. */
+        <ModalUsuario
+          modoInline
+          modo="editar"
+          inicial={editando}
+          slugAgencia={slugAgencia}
+          onFechar={() => setEditando(null)}
+          onCriar={aoCriar}
+          onEditar={aoEditar}
+          onResetarSenha={async () => {
+            const u = editando;
+            setEditando(null);
+            await aoResetarSenha(u);
+          }}
+        />
       ) : !selecionado ? null : (
         <>
           {/* Header do perfil */}
@@ -1020,27 +1037,15 @@ export default function AbaEquipe() {
         {t("manda pra Lixeira (recuperável por 30 dias).")}
       </div>
 
-      {/* Modal criação/edição */}
-      {(criando || editando) && (
+      {/* Modal de CRIAÇÃO (o EDITAR é inline no painel do membro — igual
+          ao editar do artista; ver a branch de edição acima). */}
+      {criando && (
         <ModalUsuario
-          modo={criando ? "criar" : "editar"}
-          inicial={editando ?? undefined}
+          modo="criar"
           slugAgencia={slugAgencia}
-          onFechar={() => {
-            setCriando(false);
-            setEditando(null);
-          }}
+          onFechar={() => setCriando(false)}
           onCriar={aoCriar}
           onEditar={aoEditar}
-          onResetarSenha={async () => {
-            if (!editando) return;
-            // Dispara o reset, fecha o modal de edição e o parent mostra
-            // o modal de credenciais com a nova senha. Mesmo padrão de
-            // AbaArtistas.
-            const u = editando;
-            setEditando(null);
-            await aoResetarSenha(u);
-          }}
         />
       )}
 
