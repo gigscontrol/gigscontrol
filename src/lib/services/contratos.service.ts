@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Contrato } from "@/lib/mappers/contrato";
+import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
 import { rowParaContrato, type ContratoEscrita } from "@/lib/mappers/contrato";
+import { resumoAssinantesDoWorkspace } from "@/lib/services/contratoSignatarios.service";
+import { listarVendasDoWorkspace } from "@/lib/services/vendas.service";
 import {
   listarContratos as repoListar,
   buscarContrato as repoBuscar,
@@ -146,4 +148,112 @@ export async function removerContratoPorId(
   deletadoPor?: string
 ): Promise<void> {
   await repoRemover(supabase, id, deletadoPor);
+}
+
+/**
+ * Resumo (KPIs) do dashboard de contratos, computado NO SERVIDOR — o passo 1 da
+ * paginação: o cliente recebe só os números + as listinhas curtas, não o array
+ * inteiro de contratos.
+ *
+ * CORRETO POR CONSTRUÇÃO: reusa EXATAMENTE o mesmo caminho de escopo que a
+ * listagem (`listarContratosDoWorkspace`) e as MESMAS fórmulas do
+ * DashboardContratos, só que aqui. Por isso os números batem 1:1 com o que o
+ * dashboard mostra hoje.
+ *
+ * Período: [inicio, fim] em ISO (instantes). Ambos null = "Visão geral" (tudo).
+ * O cliente resolve o mês/atalho pra esses limites e envia.
+ *
+ * NOTA DE ESCALA: nesta fase ainda carrega as listas escopadas no servidor
+ * (contratos/vendas/assinantes) pra garantir paridade exata. Trocar por COUNT/
+ * SUM em SQL é um follow-up que NÃO muda o contrato deste endpoint.
+ */
+export type ContratosResumo = {
+  total: number;
+  porStatus: Record<ContratoStatus, number>;
+  taxa: number;
+  aguardando: number;
+  vendasSemContrato: number;
+  recentes: Contrato[];
+  listaPorStatus: Record<ContratoStatus, Contrato[]>;
+};
+
+export async function resumoContratosDoWorkspace(
+  supabase: SupabaseClient,
+  // Mesma sessão estreitada que `autenticarComWorkspace` devolve (workspaceId
+  // garantido). resumoAssinantesDoWorkspace exige o id como string.
+  sessao: SessaoAutenticada & { workspaceId: string },
+  inicio: string | null,
+  fim: string | null
+): Promise<ContratosResumo> {
+  const [contratos, assinantes, vendas] = await Promise.all([
+    listarContratosDoWorkspace(supabase, sessao),
+    resumoAssinantesDoWorkspace(supabase, sessao.workspaceId),
+    listarVendasDoWorkspace(supabase, sessao),
+  ]);
+
+  const ini = inicio ? new Date(inicio).getTime() : null;
+  const f = fim ? new Date(fim).getTime() : null;
+  const noPeriodo = (iso: string | null | undefined): boolean => {
+    if (ini === null && f === null) return true; // Visão geral
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return false;
+    if (ini !== null && t < ini) return false;
+    if (f !== null && t > f) return false;
+    return true;
+  };
+
+  const contratosPeriodo = contratos.filter((c) => noPeriodo(c.criadoEm));
+  const ordenados = [...contratosPeriodo].sort((a, b) =>
+    b.criadoEm.localeCompare(a.criadoEm)
+  );
+
+  const porStatus: Record<ContratoStatus, number> = {
+    rascunho: 0,
+    enviado: 0,
+    assinado: 0,
+    cancelado: 0,
+  };
+  const listaPorStatus: Record<ContratoStatus, Contrato[]> = {
+    rascunho: [],
+    enviado: [],
+    assinado: [],
+    cancelado: [],
+  };
+  for (const c of ordenados) {
+    porStatus[c.status] += 1;
+    // Só as 5 primeiras por status (o modal do dashboard mostra até 5).
+    if (listaPorStatus[c.status].length < 5) listaPorStatus[c.status].push(c);
+  }
+
+  const denom = porStatus.enviado + porStatus.assinado;
+  const taxa = denom > 0 ? Math.round((porStatus.assinado / denom) * 100) : 0;
+
+  // Aguardando = enviados no período SEM nenhuma assinatura coletada.
+  const aguardando = contratosPeriodo.filter(
+    (c) =>
+      c.status === "enviado" &&
+      !(assinantes[c.id] ?? []).some((a) => a.status === "assinado")
+  ).length;
+
+  // Vendas do período SEM contrato ativo (não-cancelado) vinculado. O conjunto
+  // "com contrato" usa TODOS os contratos (qualquer período), igual ao dashboard.
+  const comContrato = new Set(
+    contratos
+      .filter((c) => c.status !== "cancelado" && c.vendaId)
+      .map((c) => c.vendaId)
+  );
+  const vendasSemContrato = vendas.filter(
+    (v) => noPeriodo(v.criadoEm) && !comContrato.has(v.id)
+  ).length;
+
+  return {
+    total: contratosPeriodo.length,
+    porStatus,
+    taxa,
+    aguardando,
+    vendasSemContrato,
+    recentes: ordenados.slice(0, 5),
+    listaPorStatus,
+  };
 }
