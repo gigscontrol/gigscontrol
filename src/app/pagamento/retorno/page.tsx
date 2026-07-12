@@ -38,11 +38,16 @@ function RetornoInner() {
   const [confirmado, setConfirmado] = useState(false);
   const [demorou, setDemorou] = useState(false);
 
-  // Polling do status quando o retorno é de sucesso.
+  // Polling do status quando o retorno é de sucesso. Modelo pré-pago: o
+  // critério é `acessoAte` no futuro (não mais subscriptionStatus==='ativa',
+  // que não cobre o crédito de dias do Mercado Pago). Janela mais longa
+  // (~2min, 4s de intervalo) pra cobrir o PIX — que só confirma quando o
+  // pagador escaneia o QR Code, mais lento que o retorno síncrono do cartão.
   useEffect(() => {
     if (status !== "success") return;
     let ativo = true;
     let n = 0;
+    const MAX_TENTATIVAS = 30; // 30 × 4s ≈ 2min
 
     const checar = async () => {
       try {
@@ -50,8 +55,14 @@ function RetornoInner() {
           credentials: "include",
         });
         if (r.ok) {
-          const d = (await r.json()) as { subscriptionStatus: string };
-          if (d.subscriptionStatus === "ativa") {
+          const d = (await r.json()) as {
+            subscriptionStatus: string;
+            acessoAte: string | null;
+          };
+          const acessoOk = d.acessoAte
+            ? new Date(d.acessoAte).getTime() > Date.now()
+            : d.subscriptionStatus === "ativa";
+          if (acessoOk) {
             if (ativo) {
               setConfirmado(true);
               setTimeout(() => router.replace("/onboarding"), 1000);
@@ -69,11 +80,11 @@ function RetornoInner() {
       n += 1;
       if (ativo) setTentativas(n);
       const ok = await checar();
-      if (ok || n >= 12) {
+      if (ok || n >= MAX_TENTATIVAS) {
         clearInterval(loop);
         if (!ok && ativo) setDemorou(true);
       }
-    }, 2000);
+    }, 4000);
 
     // primeira checagem imediata
     void checar();

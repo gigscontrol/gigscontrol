@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { Lock, Loader2 } from "lucide-react";
 import { useT, useMoeda } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import { getPlano, valorMensal, formatarPreco, type PlanoId } from "@/lib/planos";
-import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
+import { getPlano, valorMensal, formatarPreco, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import SeletorGateway from "@/components/checkout/SeletorGateway";
 
 type Props = {
   papel: string;
@@ -95,12 +95,17 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
               {t("Renove pra reativar o acesso do seu workspace.")}
             </p>
             {embutido ? (
-              // Checkout embutido dentro do modal (no lugar do redirect).
+              // Seletor de gateway dentro do modal (no lugar do redirect).
               <div className="mt-5 text-left">
-                <CheckoutEmbutido
-                  plano={plano.id}
-                  ciclo={ciclo}
-                  onIndisponivel={degradarParaHosted}
+                <SeletorGateway
+                  plano={plano.id as PlanoId}
+                  ciclo={ciclo as CicloCobranca}
+                  onFallbackHosted={degradarParaHosted}
+                  onSucessoMercadoPago={() => {
+                    // Acesso já estendido no servidor — recarrega pra o
+                    // AuthGuard reavaliar e desmontar o modal.
+                    window.location.reload();
+                  }}
                 />
               </div>
             ) : (

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
@@ -85,15 +86,35 @@ export async function POST(request: Request) {
       .eq("id", workspaceId);
     if (errWs) throw errWs;
 
+    // Modelo pré-pago: o trial de 7d grava a VALIDADE em `acesso_ate` (o gate
+    // deriva daí). `trial_termina_em` fica só como legado/exibição. Status
+    // 'trial' preservado pra o front distinguir do pago.
     const { error } = await admin.from("subscriptions").insert({
       workspace_id: workspaceId,
       plano: parsed.data.plano,
       ciclo: "mensal",
       status: "trial",
       trial_termina_em: fimTrial,
+      acesso_ate: fimTrial,
+      provider: "cortesia",
       inicio_em: new Date().toISOString().slice(0, 10),
     });
     if (error) throw error;
+
+    // Registra a concessão no ledger de pagamentos (linha 'cortesia'), pra o
+    // histórico refletir de onde vieram os 7 dias. Best-effort: se falhar, o
+    // acesso já foi concedido acima — não trava o trial.
+    await admin.from("pagamentos").insert({
+      workspace_id: workspaceId,
+      provider: "cortesia",
+      provider_payment_id: `cortesia_${randomUUID()}`,
+      plano: parsed.data.plano,
+      ciclo: "mensal",
+      metodo: "cortesia",
+      dias_concedidos: 7,
+      status: "aprovado",
+      acesso_ate_resultante: fimTrial,
+    });
 
     return NextResponse.json({ ok: true, trialTerminaEm: fimTrial });
   } catch (e) {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies, headers } from "next/headers";
 import { autenticarComWorkspace } from "@/lib/api/session";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   listarContratosDoWorkspace,
   criarContratoNoWorkspace,
@@ -8,14 +10,8 @@ import {
 } from "@/lib/services/contratos.service";
 import { verificarCriarContrato } from "@/lib/api/permissoes";
 import { contratoCreateSchema } from "@/lib/validators/contratos.schema";
-import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import {
-  cobrarExcedente,
-  infoSubscription,
-  SemCartaoError,
-  AutenticacaoRequeridaError,
-} from "@/lib/services/stripe.service";
-import { PRECO_EXCEDENTE, type PlanoId } from "@/lib/planos";
+import { PRECO_EXCEDENTE, type PlanoId, type Moeda } from "@/lib/planos";
+import { regiaoDe, resolverPais } from "@/lib/regiao";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
@@ -69,9 +65,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Flags do excedente pago (fora do schema do contrato).
-  const extra = (raw ?? {}) as { pagarExcedente?: boolean; idem?: string };
-
   try {
     const contrato = await criarContratoNoWorkspace(
       r.sessao.supabase,
@@ -86,82 +79,75 @@ export async function POST(request: Request) {
       return respostaDeErro(e, "Falha ao criar contrato.");
     }
 
-    // Limite do ciclo atingido. Se há assinatura ativa (cartão), oferece pagar
-    // o contrato EXCEDENTE por unidade; senão, só bloqueia.
+    // Limite do ciclo atingido. MODELO PRÉ-PAGO: o excedente é um checkout
+    // avulso (não mais cobrança off-session no cartão salvo). Se JÁ existe um
+    // crédito 'excedente_disponivel' pago (registrado pelo webhook), CONSOME-o
+    // atomicamente e cria o contrato pulando o limite. Senão, devolve 402 com
+    // `checkoutNecessario` pra o front abrir o /api/contratos/excedente-checkout.
     const admin = criarClienteAdmin();
-    const { data: sub } = await admin
-      .from("subscriptions")
-      .select("mp_preference_id, status")
-      .eq("workspace_id", r.sessao.workspaceId)
-      .maybeSingle<{ mp_preference_id: string | null; status: string | null }>();
-    const subId = sub?.mp_preference_id ?? null;
-    if (!subId || sub?.status !== "ativa") {
-      return NextResponse.json({ erro: e.message }, { status: 409 });
+    const consumido = await consumirCreditoExcedente(admin, r.sessao.workspaceId);
+    if (consumido) {
+      const contrato = await criarContratoNoWorkspace(
+        r.sessao.supabase,
+        r.sessao.workspaceId,
+        ws.plano as PlanoId,
+        parsed.data,
+        r.sessao.userId,
+        true // pularLimite: o excedente pago já foi consumido acima
+      );
+      return NextResponse.json({ contrato }, { status: 201 });
     }
 
-    if (!extra.pagarExcedente) {
-      // Oferece: devolve o preço na moeda REAL da assinatura.
-      let moeda: "brl" | "usd" = "brl";
-      try {
-        moeda = (await infoSubscription(subId)).moeda;
-      } catch {
-        /* mantém brl */
-      }
-      return NextResponse.json(
-        {
-          excedente: true,
-          limite: e.limite,
-          plano: e.plano,
-          valor: PRECO_EXCEDENTE[moeda],
-          moeda,
-        },
-        { status: 402 }
-      );
-    }
-
-    // Confirmou o pagamento → cobra o excedente e cria pulando o limite.
-    if (!extra.idem) {
-      return NextResponse.json({ erro: "Token de pagamento ausente." }, { status: 400 });
-    }
-    try {
-      await cobrarExcedente({
-        subscriptionId: subId,
-        descricao: `Contrato excedente — plano ${e.plano}`,
-        idempotencyKey: `exc_${extra.idem}`,
-      });
-    } catch (ce) {
-      // Sem cartão salvo → o client manda o usuário atualizar o pagamento.
-      if (ce instanceof SemCartaoError) {
-        return NextResponse.json(
-          { semCartao: true, erro: ce.message },
-          { status: 402 }
-        );
-      }
-      // 3DS exigido → o client confirma via stripe-js (mesma idem key) e
-      // re-submete. Devolve o clientSecret pra concluir a autenticação.
-      if (ce instanceof AutenticacaoRequeridaError) {
-        return NextResponse.json(
-          {
-            requiresAction: true,
-            clientSecret: ce.clientSecret,
-            erro: ce.message,
-          },
-          { status: 402 }
-        );
-      }
-      return NextResponse.json(
-        { erro: (ce as Error).message ?? "Falha ao cobrar o excedente. Verifique o cartão." },
-        { status: 402 }
-      );
-    }
-    const contrato = await criarContratoNoWorkspace(
-      r.sessao.supabase,
-      r.sessao.workspaceId,
-      ws.plano as PlanoId,
-      parsed.data,
-      r.sessao.userId,
-      true
+    const moeda = moedaDaRegiao();
+    return NextResponse.json(
+      {
+        erro: e.message,
+        excedente: true,
+        checkoutNecessario: true,
+        valor: PRECO_EXCEDENTE[moeda], // centavos
+        moeda,
+      },
+      { status: 402 }
     );
-    return NextResponse.json({ contrato, excedentePago: true }, { status: 201 });
   }
+}
+
+/**
+ * Consome UM crédito de excedente disponível (pago via checkout avulso e
+ * registrado pelo webhook com status 'excedente_disponivel'). Vira
+ * 'excedente_usado'. Atômico: o guard `.eq('status','excedente_disponivel')`
+ * garante que dois pedidos concorrentes não consumam o MESMO crédito (o
+ * segundo update não casa nenhuma linha). Retorna true se consumiu.
+ */
+async function consumirCreditoExcedente(
+  admin: ReturnType<typeof criarClienteAdmin>,
+  workspaceId: string
+): Promise<boolean> {
+  const { data: cred } = await admin
+    .from("pagamentos")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "excedente_disponivel")
+    .order("criado_em", { ascending: true })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+  if (!cred) return false;
+
+  const { data: upd, error } = await admin
+    .from("pagamentos")
+    .update({ status: "excedente_usado" })
+    .eq("id", cred.id)
+    .eq("status", "excedente_disponivel") // guard: só consome se ainda disponível
+    .select("id");
+  if (error) return false;
+  return (upd?.length ?? 0) > 0;
+}
+
+/** Moeda de cobrança pela região (BR → BRL, exterior → USD). */
+function moedaDaRegiao(): Moeda {
+  const pais = resolverPais(
+    headers().get("x-vercel-ip-country"),
+    cookies().get("gc-pais")?.value
+  );
+  return regiaoDe(pais).moeda;
 }

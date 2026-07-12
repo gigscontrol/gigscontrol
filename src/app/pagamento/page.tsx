@@ -17,8 +17,9 @@ import {
   valorMensal,
   formatarPreco,
   type PlanoId,
+  type CicloCobranca,
 } from "@/lib/planos";
-import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
+import SeletorGateway from "@/components/checkout/SeletorGateway";
 
 /**
  * Página /pagamento — Checkout de assinatura (Stripe).
@@ -34,6 +35,8 @@ import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
 type OnboardingStatus = {
   onboardingCompleto: boolean;
   subscriptionStatus: string;
+  /** Validade do acesso (modelo pré-pago) — fonte de verdade de "já pago". */
+  acessoAte: string | null;
   plano: {
     id: string;
     nome: string;
@@ -53,10 +56,13 @@ export default function PagamentoPage() {
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  // Quando a chave pública da Stripe não está setada, o CheckoutEmbutido
-  // avisa e a gente degrada pro fluxo hospedado (botão + redirect).
+  // Quando os gateways embutidos (Stripe/MP) não estão disponíveis, o
+  // SeletorGateway avisa e a gente degrada pro fluxo hospedado (redirect).
   const [usarHosted, setUsarHosted] = useState(false);
   const degradarParaHosted = useCallback(() => setUsarHosted(true), []);
+  // Pagamento aprovado no Mercado Pago (cartão ou PIX): a rota já estendeu
+  // o acesso antes de responder — segue igual ao retorno confirmado da Stripe.
+  const [confirmadoMp, setConfirmadoMp] = useState(false);
 
   // Carrega status do onboarding ao montar
   useEffect(() => {
@@ -67,14 +73,24 @@ export default function PagamentoPage() {
       })
       .then((d) => {
         setStatus(d);
-        // Se já está ativo, pula direto
-        if (d.subscriptionStatus === "ativa") {
+        // Se já tem validade de acesso futura, pula direto.
+        const acessoOk = d.acessoAte
+          ? new Date(d.acessoAte).getTime() > Date.now()
+          : d.subscriptionStatus === "ativa";
+        if (acessoOk) {
           router.replace(d.onboardingCompleto ? "/app" : "/onboarding");
         }
       })
       .catch((e) => setErroCarregamento((e as Error).message))
       .finally(() => setCarregando(false));
   }, [router]);
+
+  // Confirmou no Mercado Pago dentro desta página: mesmo destino do redirect
+  // de sucesso da Stripe.
+  useEffect(() => {
+    if (!confirmadoMp || !status) return;
+    router.replace(status.onboardingCompleto ? "/app" : "/onboarding");
+  }, [confirmadoMp, status, router]);
 
   async function irParaCheckout() {
     if (indo || !status?.plano) return;
@@ -185,17 +201,18 @@ export default function PagamentoPage() {
               </div>
 
               {plano && !usarHosted ? (
-                // Checkout embutido (iframe da Stripe na nossa página).
+                // Gateway embutido (Mercado Pago Brick ou iframe da Stripe).
                 <>
                   <p className="text-sm text-secondary mb-4">
                     {t(
-                      "Preencha os dados do cartão abaixo pra concluir a assinatura."
+                      "Preencha os dados do pagamento abaixo pra concluir a assinatura."
                     )}
                   </p>
-                  <CheckoutEmbutido
-                    plano={plano.id}
-                    ciclo={status.ciclo ?? "mensal"}
-                    onIndisponivel={degradarParaHosted}
+                  <SeletorGateway
+                    plano={plano.id as PlanoId}
+                    ciclo={(status.ciclo as CicloCobranca) ?? "mensal"}
+                    onFallbackHosted={degradarParaHosted}
+                    onSucessoMercadoPago={() => setConfirmadoMp(true)}
                   />
                   <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
                     {t(

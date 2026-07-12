@@ -9,7 +9,6 @@ import {
   Ban,
   PlayCircle,
   PauseCircle,
-  CircleDot,
 } from "lucide-react";
 import { usePlataforma } from "@/lib/plataforma-context";
 import {
@@ -17,10 +16,15 @@ import {
   type Assinatura,
   type StatusAssinatura,
 } from "@/lib/plataforma";
-import { getPlano, precoPorMes, formatarPreco, type PlanoId } from "@/lib/planos";
+import { getPlano, formatarPreco, type PlanoId } from "@/lib/planos";
+
+/** Centavos → reais/dólares (pagamentos.valor é gravado em centavos). */
+function fmtCentavos(centavos: number, moeda: "brl" | "usd"): string {
+  return formatarPreco(centavos / 100, moeda);
+}
 
 export default function AdminAssinaturas() {
-  const { assinaturas, planos } = usePlataforma();
+  const { assinaturas, planos, receita } = usePlataforma();
   const [search, setSearch] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<StatusAssinatura | "todos">(
     "todos"
@@ -49,6 +53,27 @@ export default function AdminAssinaturas() {
           Gestão de todas as assinaturas dos clientes
         </p>
       </div>
+
+      {receita && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <ReceitaCard
+            label="Receita realizada — 30 dias"
+            brl={receita.ultimos30dBrl}
+            usd={receita.ultimos30dUsd}
+          />
+          <ReceitaCard
+            label="Receita realizada — 12 meses"
+            brl={receita.ultimos12mBrl}
+            usd={receita.ultimos12mUsd}
+          />
+          <div className="card">
+            <div className="stat-label mb-2">Workspaces com validade futura</div>
+            <div className="text-xl font-bold text-primary tabular-nums">
+              {receita.workspacesComValidadeFutura}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card p-0 overflow-hidden">
         <div className="p-4 border-b border-border flex flex-wrap items-center gap-3">
@@ -88,7 +113,8 @@ export default function AdminAssinaturas() {
                 <Th>Cliente</Th>
                 <Th>Plano</Th>
                 <Th>Uso</Th>
-                <Th>Receita/mês</Th>
+                <Th>Válido até</Th>
+                <Th>Último pagamento</Th>
                 <Th>Status</Th>
                 <Th className="w-[1%]"></Th>
               </tr>
@@ -119,10 +145,38 @@ export default function AdminAssinaturas() {
                       <br />
                       {a.usuariosEmUso}/{plano.maxUsuariosAdicionais} adicionais
                     </Td>
-                    <Td className="tabular-nums font-semibold">
-                      {a.status === "ativa"
-                        ? formatarPreco(precoPorMes(plano, a.ciclo, a.moeda), a.moeda)
-                        : "—"}
+                    <Td className="tabular-nums text-xs">
+                      <div>
+                        {a.acessoAte
+                          ? new Date(a.acessoAte).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </div>
+                      <div style={{ color: corDias(a.diasRestantes) }}>
+                        {fmtDias(a.diasRestantes)}
+                      </div>
+                    </Td>
+                    <Td className="text-xs">
+                      {a.ultimoPagamento ? (
+                        <>
+                          <div className="text-secondary">
+                            {new Date(a.ultimoPagamento.data).toLocaleDateString(
+                              "pt-BR"
+                            )}{" "}
+                            ·{" "}
+                            {a.ultimoPagamento.valor != null && a.ultimoPagamento.moeda
+                              ? fmtCentavos(a.ultimoPagamento.valor, a.ultimoPagamento.moeda)
+                              : "—"}
+                          </div>
+                          <div className="text-muted capitalize">
+                            {a.ultimoPagamento.provider}
+                            {a.ultimoPagamento.metodo
+                              ? ` · ${a.ultimoPagamento.metodo}`
+                              : ""}
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </Td>
                     <Td>
                       <span className={`badge ${st.badge}`}>{st.label}</span>
@@ -194,6 +248,36 @@ function ModalGerenciar({
         </div>
 
         <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
+          <div className="bg-elevated/40 border border-border rounded-md p-3 text-xs text-secondary flex flex-col gap-1">
+            <div>
+              Válido até:{" "}
+              <strong style={{ color: corDias(assinatura.diasRestantes) }}>
+                {assinatura.acessoAte
+                  ? new Date(assinatura.acessoAte).toLocaleDateString("pt-BR")
+                  : "—"}{" "}
+                ({fmtDias(assinatura.diasRestantes)})
+              </strong>
+            </div>
+            {assinatura.ultimoPagamento && (
+              <div>
+                Último pagamento:{" "}
+                <strong className="text-primary capitalize">
+                  {new Date(assinatura.ultimoPagamento.data).toLocaleDateString(
+                    "pt-BR"
+                  )}{" "}
+                  via {assinatura.ultimoPagamento.provider}
+                </strong>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="stat-label mb-2">
+              Dar dias grátis (soma na validade)
+            </div>
+            <DarDiasGratis workspaceId={assinatura.workspaceId} />
+          </div>
+
           <div>
             <div className="stat-label mb-2">Status da assinatura</div>
             <div className="grid grid-cols-2 gap-2">
@@ -201,7 +285,7 @@ function ModalGerenciar({
                 ativo={assinatura.status === "ativa"}
                 cor="var(--success)"
                 icon={<PlayCircle size={14} />}
-                label="Ativar"
+                label="Reativar"
                 onClick={() =>
                   alterarStatusAssinatura(assinatura.workspaceId, "ativa")
                 }
@@ -213,15 +297,6 @@ function ModalGerenciar({
                 label="Suspender"
                 onClick={() =>
                   alterarStatusAssinatura(assinatura.workspaceId, "suspensa")
-                }
-              />
-              <BotaoStatus
-                ativo={assinatura.status === "trial"}
-                cor="var(--warning)"
-                icon={<CircleDot size={14} />}
-                label="Marcar teste"
-                onClick={() =>
-                  alterarStatusAssinatura(assinatura.workspaceId, "trial")
                 }
               />
               <BotaoStatus
@@ -292,6 +367,91 @@ function ModalGerenciar({
       </div>
     </div>
   );
+}
+
+function DarDiasGratis({ workspaceId }: { workspaceId: string }) {
+  const { estenderDiasAssinatura } = usePlataforma();
+  const [agindo, setAgindo] = useState<number | null>(null);
+  const [diasCustom, setDiasCustom] = useState("");
+
+  async function darDias(dias: number) {
+    if (agindo || !dias || dias <= 0) return;
+    setAgindo(dias);
+    try {
+      await estenderDiasAssinatura(workspaceId, dias);
+    } finally {
+      setAgindo(null);
+      setDiasCustom("");
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {[7, 15, 30].map((d) => (
+        <button
+          key={d}
+          onClick={() => void darDias(d)}
+          disabled={!!agindo}
+          className="btn btn-secondary text-sm disabled:opacity-50"
+        >
+          {agindo === d ? "…" : `+${d} dias`}
+        </button>
+      ))}
+      <input
+        type="number"
+        min={1}
+        max={365}
+        value={diasCustom}
+        onChange={(e) => setDiasCustom(e.target.value)}
+        placeholder="nº"
+        className="w-20 bg-elevated border border-border rounded-md px-2 py-1.5 text-sm text-primary outline-none focus:border-border-strong"
+      />
+      <button
+        onClick={() => void darDias(parseInt(diasCustom, 10))}
+        disabled={!!agindo || !diasCustom}
+        className="btn btn-secondary text-sm disabled:opacity-50"
+      >
+        Aplicar
+      </button>
+    </div>
+  );
+}
+
+function ReceitaCard({
+  label,
+  brl,
+  usd,
+}: {
+  label: string;
+  brl: number;
+  usd: number;
+}) {
+  return (
+    <div className="card">
+      <div className="stat-label mb-2">{label}</div>
+      <div className="text-xl font-bold text-primary tabular-nums">
+        {fmtCentavos(brl, "brl")}
+      </div>
+      {usd > 0 && (
+        <div className="text-sm text-muted tabular-nums mt-0.5">
+          + {fmtCentavos(usd, "usd")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function fmtDias(d: number | null | undefined): string {
+  if (d == null) return "sem validade";
+  if (d < 0) return `expirado há ${Math.abs(d)} dia${Math.abs(d) === 1 ? "" : "s"}`;
+  if (d === 0) return "expira hoje";
+  return `${d} dia${d === 1 ? "" : "s"} restante${d === 1 ? "" : "s"}`;
+}
+function corDias(d: number | null | undefined): string {
+  if (d == null) return "var(--text-muted)";
+  if (d < 0) return "var(--danger)";
+  if (d <= 3) return "var(--warning)";
+  return "var(--text-secondary)";
 }
 
 function BotaoStatus({

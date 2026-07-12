@@ -15,7 +15,7 @@ import {
   type UsuarioPlataforma,
   type StatusUsuario,
 } from "./plataforma";
-import type { KpisPlataforma } from "./services/plataforma.service";
+import type { KpisPlataforma, ReceitaRealizada } from "./services/plataforma.service";
 import { PLANOS, type Plano, type PlanoId } from "./planos";
 
 /**
@@ -30,6 +30,8 @@ type PlataformaContextValue = {
   assinaturas: Assinatura[];
   carregandoAssinaturas: boolean;
   recarregarAssinaturas: () => Promise<void>;
+  /** Receita REALIZADA (não projetada) — soma de `pagamentos` no período, por moeda. */
+  receita: ReceitaRealizada | null;
   alterarStatusAssinatura: (
     workspaceId: string,
     status: StatusAssinatura
@@ -70,6 +72,7 @@ async function jsonOuErro(res: Response): Promise<Record<string, unknown>> {
 export function PlataformaProvider({ children }: { children: ReactNode }) {
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
   const [carregandoAssinaturas, setCarregandoAssinaturas] = useState(false);
+  const [receita, setReceita] = useState<ReceitaRealizada | null>(null);
 
   const [usuarios, setUsuarios] = useState<UsuarioPlataforma[]>([]);
   const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
@@ -85,8 +88,10 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/admin/assinaturas", { credentials: "include" });
       const body = await jsonOuErro(res);
       setAssinaturas((body.assinaturas as Assinatura[]) ?? []);
+      setReceita((body.receita as ReceitaRealizada) ?? null);
     } catch {
       setAssinaturas([]);
+      setReceita(null);
     } finally {
       setCarregandoAssinaturas(false);
     }
@@ -187,6 +192,7 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       assinaturas,
       carregandoAssinaturas,
       recarregarAssinaturas,
+      receita,
       alterarStatusAssinatura,
       alterarPlanoAssinatura,
       estenderDiasAssinatura,
@@ -206,6 +212,7 @@ export function PlataformaProvider({ children }: { children: ReactNode }) {
       assinaturas,
       carregandoAssinaturas,
       recarregarAssinaturas,
+      receita,
       alterarStatusAssinatura,
       alterarPlanoAssinatura,
       estenderDiasAssinatura,

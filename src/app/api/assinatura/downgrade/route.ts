@@ -2,26 +2,32 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { agendarDowngrade } from "@/lib/services/stripe.service";
 import { excedentesParaPlano, mensagemExcedentes } from "@/lib/services/limites";
 import { PLANOS, ehDowngrade, getPlano, type PlanoId } from "@/lib/planos";
 
 /**
  * POST /api/assinatura/downgrade  { plano }
  *
- * Agenda um DOWNGRADE pro fim do período atual (não devolve dinheiro; só vira
- * na próxima renovação). Regras:
- *  - Só admin, assinatura ATIVA (paga), e só pra plano INFERIOR.
- *  - VALIDA o uso atual: se artistas/usuários/modelos excedem o destino,
- *    recusa (409) com a lista do que remover — nada pode passar o limite do
- *    plano-alvo.
- *  - Cria um Stripe Subscription Schedule (mantém o plano atual até o fim do
- *    período, aí cai pro destino sem rateio). Ao renovar no preço menor, o
- *    webhook reconcilia o plano no MESMO instante (fecha o "paga menos, mantém
- *    benefícios"). Enquanto pendente, o cadastro já respeita o limite do destino.
+ * MODELO PRÉ-PAGO por validade. Não há mais Subscription Schedule da Stripe:
+ * o plano vale enquanto durar a validade paga. O downgrade aqui só MARCA a
+ * intenção — reusa as colunas da mig 46 com semântica nova:
+ *  - `downgrade_para`        = plano-alvo a oferecer NA PRÓXIMA COMPRA.
+ *  - `downgrade_efetivo_em`  = `acesso_ate` (quando a validade atual acaba).
+ *
+ * Enquanto marcado, `planoEfetivoParaLimites` já aplica o limite do destino
+ * (fecha o "carrega tudo no top, agenda downgrade, mantém recursos"). Por isso
+ * VALIDA o uso atual: se artistas/usuários/modelos excedem o destino, recusa
+ * (409) com o que remover. Não cobra nem estende nada.
  */
 const schema = z.object({
-  plano: z.enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"]),
+  plano: z.enum([
+    "individual",
+    "equipe",
+    "time",
+    "agencia",
+    "agencia-plus",
+    "agencia-max",
+  ]),
 });
 
 export async function POST(request: Request) {
@@ -45,28 +51,21 @@ export async function POST(request: Request) {
   const admin = criarClienteAdmin();
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, mp_preference_id, plano, status, downgrade_para")
+    .select("id, plano, acesso_ate, downgrade_para")
     .eq("workspace_id", r.sessao.workspaceId)
     .maybeSingle<{
       id: string;
-      mp_preference_id: string | null;
       plano: string | null;
-      status: string | null;
+      acesso_ate: string | null;
       downgrade_para: string | null;
     }>();
 
-  if (!sub?.mp_preference_id) {
-    return NextResponse.json({ erro: "Sem assinatura na Stripe." }, { status: 409 });
-  }
-  if (sub.status !== "ativa") {
-    return NextResponse.json(
-      { erro: "A assinatura precisa estar ativa (paga) pra agendar downgrade." },
-      { status: 409 }
-    );
+  if (!sub) {
+    return NextResponse.json({ erro: "Sem assinatura." }, { status: 409 });
   }
   if (sub.downgrade_para) {
     return NextResponse.json(
-      { erro: "Já existe um downgrade agendado. Cancele antes de agendar outro." },
+      { erro: "Já existe um downgrade marcado. Cancele antes de marcar outro." },
       { status: 409 }
     );
   }
@@ -88,36 +87,18 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    const { efetivoEm, ciclo, moeda, valorNovo } = await agendarDowngrade({
-      subscriptionId: sub.mp_preference_id,
-      plano: novo,
-    });
-    const efetivoData = efetivoEm
-      ? new Date(efetivoEm * 1000).toISOString().slice(0, 10)
-      : null;
-    const { error } = await admin
-      .from("subscriptions")
-      .update({ downgrade_para: novo, downgrade_efetivo_em: efetivoData })
-      .eq("id", sub.id);
-    if (error) {
-      console.error(
-        "[downgrade] schedule criado mas o registro no DB falhou:",
-        error.message
-      );
-    }
-    return NextResponse.json({
-      ok: true,
-      plano: novo,
-      efetivoEm: efetivoData,
-      valorNovo,
-      moeda,
-      ciclo,
-    });
-  } catch (e) {
+  // Efetivo no fim da validade atual (só rótulo — o corte real é a expiração).
+  const efetivoData = sub.acesso_ate ? sub.acesso_ate.slice(0, 10) : null;
+  const { error } = await admin
+    .from("subscriptions")
+    .update({ downgrade_para: novo, downgrade_efetivo_em: efetivoData })
+    .eq("id", sub.id);
+  if (error) {
     return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao agendar o downgrade." },
+      { erro: error.message ?? "Falha ao marcar o downgrade." },
       { status: 500 }
     );
   }
+
+  return NextResponse.json({ ok: true, plano: novo, efetivoEm: efetivoData });
 }

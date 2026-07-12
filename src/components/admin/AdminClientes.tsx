@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -16,6 +16,7 @@ import {
   Mail,
   Clock,
   TrendingUp,
+  Receipt,
 } from "lucide-react";
 import { usePlataforma } from "@/lib/plataforma-context";
 import { useAuth } from "@/lib/auth-context";
@@ -28,6 +29,12 @@ import {
 } from "@/lib/plataforma";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano, precoPorMes, formatarPreco } from "@/lib/planos";
+import type { HistoricoPagamento } from "@/lib/services/plataforma.service";
+
+/** Centavos → reais/dólares (pagamentos.valor é gravado em centavos). */
+function fmtCentavos(centavos: number, moeda: "brl" | "usd"): string {
+  return formatarPreco(centavos / 100, moeda);
+}
 
 export default function AdminClientes() {
   const { assinaturas, usuarios } = usePlataforma();
@@ -96,7 +103,8 @@ export default function AdminClientes() {
               <tr className="border-b border-border bg-surface-2/40">
                 <Th>Cliente</Th>
                 <Th>Plano</Th>
-                <Th>Próximo pagamento</Th>
+                <Th>Válido até</Th>
+                <Th>Último pagamento</Th>
                 <Th>Status</Th>
                 <Th className="w-[1%]"></Th>
               </tr>
@@ -137,15 +145,29 @@ export default function AdminClientes() {
                     </Td>
                     <Td className="text-secondary tabular-nums text-xs">
                       <div>
-                        {assinatura.proximaCobranca
-                          ? new Date(
-                              assinatura.proximaCobranca + "T12:00:00"
-                            ).toLocaleDateString("pt-BR")
+                        {assinatura.acessoAte
+                          ? new Date(assinatura.acessoAte).toLocaleDateString("pt-BR")
                           : "—"}
                       </div>
                       <div style={{ color: corDias(assinatura.diasRestantes) }}>
                         {fmtDias(assinatura.diasRestantes)}
                       </div>
+                    </Td>
+                    <Td className="text-xs">
+                      {assinatura.ultimoPagamento ? (
+                        <>
+                          <div className="text-secondary">
+                            {new Date(
+                              assinatura.ultimoPagamento.data
+                            ).toLocaleDateString("pt-BR")}
+                          </div>
+                          <div className="text-muted capitalize">
+                            {assinatura.ultimoPagamento.provider}
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </Td>
                     <Td>
                       <span className={`badge ${st.badge}`}>{st.label}</span>
@@ -189,6 +211,28 @@ function DetalheCliente({
   const assinatura = assinaturas.find((a) => a.workspaceId === workspaceId);
   const uso = getUsoWorkspace(workspaceId);
   const equipe = usuarios.filter((u) => u.workspaceId === workspaceId);
+
+  // Histórico real de pagamentos (ledger `pagamentos`, migração 84).
+  const [historico, setHistorico] = useState<HistoricoPagamento[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  useEffect(() => {
+    let cancelado = false;
+    setCarregandoHistorico(true);
+    fetch(`/api/admin/assinaturas/${workspaceId}`, { credentials: "include" })
+      .then((res) => res.json())
+      .then((body: { pagamentos?: HistoricoPagamento[] }) => {
+        if (!cancelado) setHistorico(body.pagamentos ?? []);
+      })
+      .catch(() => {
+        if (!cancelado) setHistorico([]);
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoHistorico(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [workspaceId]);
 
   if (!assinatura) {
     return (
@@ -282,27 +326,31 @@ function DetalheCliente({
           icon={<CalendarCheck2 size={16} />}
           label="Último pagamento"
           value={
-            uso
-              ? new Date(uso.ultimoPagamento + "T12:00:00").toLocaleDateString(
-                  "pt-BR"
-                )
+            assinatura.ultimoPagamento
+              ? new Date(assinatura.ultimoPagamento.data).toLocaleDateString("pt-BR")
               : "—"
           }
           sub={
-            uso && uso.valorUltimoPagamento > 0
-              ? formatarPreco(uso.valorUltimoPagamento)
+            assinatura.ultimoPagamento
+              ? `${
+                  assinatura.ultimoPagamento.valor != null &&
+                  assinatura.ultimoPagamento.moeda
+                    ? fmtCentavos(
+                        assinatura.ultimoPagamento.valor,
+                        assinatura.ultimoPagamento.moeda
+                      )
+                    : "—"
+                } · ${assinatura.ultimoPagamento.provider}`
               : "Sem cobrança"
           }
           color="var(--brand)"
         />
         <InfoCard
           icon={<CalendarClock size={16} />}
-          label="Próximo pagamento"
+          label="Válido até"
           value={
-            assinatura.proximaCobranca
-              ? new Date(
-                  assinatura.proximaCobranca + "T12:00:00"
-                ).toLocaleDateString("pt-BR")
+            assinatura.acessoAte
+              ? new Date(assinatura.acessoAte).toLocaleDateString("pt-BR")
               : "—"
           }
           sub={fmtDias(assinatura.diasRestantes)}
@@ -362,6 +410,46 @@ function DetalheCliente({
         ) : (
           <div className="text-sm text-muted">
             Sem dados de uso para este cliente.
+          </div>
+        )}
+      </div>
+
+      {/* Histórico de pagamentos — ledger `pagamentos` (migração 84) */}
+      <div className="card mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Receipt size={16} style={{ color: "var(--brand)" }} />
+          <div className="section-title">Histórico de pagamentos</div>
+        </div>
+        {carregandoHistorico ? (
+          <div className="text-sm text-muted">Carregando…</div>
+        ) : historico.length === 0 ? (
+          <div className="text-sm text-muted">
+            Nenhum pagamento registrado ainda.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {historico.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated text-sm"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-primary font-medium">
+                    {new Date(p.data).toLocaleDateString("pt-BR")}{" "}
+                    <span className="text-muted font-normal capitalize">
+                      · {p.provider}
+                      {p.metodo ? ` · ${p.metodo}` : ""}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted">
+                    +{p.dias} dias {p.plano ? `· ${p.plano}` : ""}
+                  </div>
+                </div>
+                <div className="text-secondary font-semibold tabular-nums">
+                  {p.valor != null && p.moeda ? fmtCentavos(p.valor, p.moeda) : "—"}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -481,7 +569,7 @@ function GerenciarAssinatura({ assinatura }: { assinatura: Assinatura }) {
   }
 
   const acoes: { s: StatusAssinatura; label: string; cor: string }[] = [
-    { s: "ativa", label: "Ativar", cor: "var(--success)" },
+    { s: "ativa", label: "Reativar", cor: "var(--success)" },
     { s: "suspensa", label: "Suspender", cor: "var(--warning)" },
     { s: "cancelada", label: "Cancelar", cor: "var(--danger)" },
   ];

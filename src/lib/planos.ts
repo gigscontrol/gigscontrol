@@ -275,33 +275,48 @@ export function cabeNoPlano(params: {
   return out;
 }
 
+/** Dias corridos de um ciclo (mensal=30, anual=365). Espelha diasDoCiclo do service. */
+export function diasDeCiclo(ciclo: CicloCobranca): number {
+  return ciclo === "anual" ? 365 : 30;
+}
+
 /**
- * Estimativa do valor a pagar AGORA ao dar upgrade, por rateio linear:
- * a diferença de preço (novo − atual) × fração do ciclo ainda não usada.
- * O valor EXATO é calculado pela Stripe (proration) na confirmação.
+ * Preço POR DIA de um plano no ciclo/moeda dados: valorDoCiclo / diasDoCiclo.
+ * (mensal → preço mensal / 30; anual → preço anual total / 365.)
  */
-export function estimarUpgrade(params: {
+export function precoDia(plano: PlanoId, ciclo: CicloCobranca, moeda: Moeda = "brl"): number {
+  const p = getPlano(plano);
+  const valor = ciclo === "anual" ? valorAnual(p, moeda) : valorMensal(p, moeda);
+  return valor / diasDeCiclo(ciclo);
+}
+
+/**
+ * Crédito de upgrade em DIAS (modelo PRÉ-PAGO por validade).
+ *
+ * No pré-pago não há rateio/proration: o admin paga o plano novo por um ciclo
+ * inteiro via checkout normal e a sobra de VALOR do plano atual (os dias ainda
+ * não usados) é convertida em DIAS EXTRAS do plano novo:
+ *
+ *   creditoDias = floor(diasRestantes × precoDiaAtual / precoDiaNovo)
+ *
+ * (o que resta de valor no plano atual, dividido pelo preço/dia do novo).
+ * Como o novo é sempre SUPERIOR (precoDiaNovo > precoDiaAtual), o crédito é
+ * sempre ≤ diasRestantes. A moeda é a MESMA da compra (mesmo cliente/checkout).
+ */
+export function creditoDiasUpgrade(params: {
   atual: PlanoId;
   novo: PlanoId;
   ciclo: CicloCobranca;
   moeda: Moeda;
   diasRestantes: number;
-  /** Dias reais do ciclo (do período do Stripe). Sem isso, cai em 30/365. */
-  diasCiclo?: number;
 }): number {
   const { atual, novo, ciclo, moeda, diasRestantes } = params;
-  const diasCiclo =
-    params.diasCiclo && params.diasCiclo > 0
-      ? params.diasCiclo
-      : ciclo === "anual"
-        ? 365
-        : 30;
-  const fracao = Math.max(0, Math.min(1, diasRestantes / diasCiclo));
-  const precoAtual =
-    ciclo === "anual" ? valorAnual(getPlano(atual), moeda) : valorMensal(getPlano(atual), moeda);
-  const precoNovo =
-    ciclo === "anual" ? valorAnual(getPlano(novo), moeda) : valorMensal(getPlano(novo), moeda);
-  return Math.max(0, (precoNovo - precoAtual) * fracao);
+  const dias = Math.max(0, Math.floor(diasRestantes));
+  if (dias <= 0) return 0;
+  const pDiaAtual = precoDia(atual, ciclo, moeda);
+  const pDiaNovo = precoDia(novo, ciclo, moeda);
+  if (pDiaNovo <= 0) return 0;
+  return Math.max(0, Math.floor((dias * pDiaAtual) / pDiaNovo));
 }
 
 /** Preço mensal cru na moeda escolhida */

@@ -32,7 +32,7 @@ import {
   valorAnual,
 } from "@/lib/planos";
 import PlanoCard from "@/components/PlanoCard";
-import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
+import SeletorGateway from "@/components/checkout/SeletorGateway";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
@@ -70,6 +70,8 @@ type Status = {
   onboardingCompleto: boolean;
   subscriptionStatus: string;
   trialTerminaEm: string | null;
+  /** Validade do acesso (modelo pré-pago) — fonte de verdade de "plano ok". */
+  acessoAte: string | null;
   ciclo?: string;
   planoEscolhido: string;
   checklist: {
@@ -112,22 +114,31 @@ const ETAPAS: { id: number; label: string; descricao: string }[] = [
 ];
 
 /**
+ * "Plano ok" (modelo pré-pago) = tem validade de acesso FUTURA
+ * (`acessoAte` > agora) — seja por pagamento real (Stripe/MP) ou trial de
+ * verdade. O stub "trial sem data" que o checkout cria antes do pagamento
+ * NÃO conta, pra não pular o passo sem concluir o pagamento. Cai de volta
+ * pro subscriptionStatus (legado) quando `acessoAte` ainda não veio da API.
+ */
+function planoOkDe(d: Status): boolean {
+  if (d.acessoAte) return new Date(d.acessoAte).getTime() > Date.now();
+  return (
+    d.subscriptionStatus === "ativa" ||
+    (d.subscriptionStatus === "trial" && !!d.trialTerminaEm)
+  );
+}
+
+/**
  * Etapa em que o onboarding deve RETOMAR — a 1ª não concluída. Sem isso o
- * wizard voltava pro passo do plano depois de pagar (loop). "Plano feito"
- * = assinatura ATIVA (pagou) OU trial de verdade (status trial + data de
- * término) — o registro "trial sem data" que o checkout cria antes do
- * pagamento NÃO conta, pra não pular o passo sem concluir o pagamento.
+ * wizard voltava pro passo do plano depois de pagar (loop).
  */
 function etapaInicial(d: Status): number {
   // Etapa 1 agora é o cadastro completo (dados pessoais + agência). Volta
   // pra ela enquanto faltarem os campos obrigatórios de pessoa.
   if (!d.pessoa?.documento || !d.pessoa?.dataNascimento) return 1;
-  const planoOk =
-    d.subscriptionStatus === "ativa" ||
-    (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
   // Pagamento é a etapa 3. Sem plano escolhido → volta pro Plano (2); escolhido
   // mas ainda não pago → fica no Pagamento (3).
-  if (!planoOk) return d.planoEscolhido ? 3 : 2;
+  if (!planoOkDe(d)) return d.planoEscolhido ? 3 : 2;
   if (!d.checklist.temArtista) return 4;
   if (!d.checklist.temEquipe) return 5;
   return 5;
@@ -1074,11 +1085,12 @@ function Etapa3Pagamento({
   const [usarHosted, setUsarHosted] = useState(false);
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Pagamento aprovado no Mercado Pago (cartão ou PIX): a rota já estendeu o
+  // acesso antes de responder — avança o wizard igual ao retorno da Stripe.
+  const [confirmadoMp, setConfirmadoMp] = useState(false);
   const degradar = useCallback(() => setUsarHosted(true), []);
 
-  const planoOk =
-    status.subscriptionStatus === "ativa" ||
-    (status.subscriptionStatus === "trial" && !!status.trialTerminaEm);
+  const planoOk = planoOkDe(status) || confirmadoMp;
 
   const plano = status.planoEscolhido
     ? getPlano(status.planoEscolhido as PlanoId)
@@ -1172,10 +1184,11 @@ function Etapa3Pagamento({
 
         {!usarHosted ? (
           <>
-            <CheckoutEmbutido
+            <SeletorGateway
               plano={plano.id}
               ciclo={ciclo}
-              onIndisponivel={degradar}
+              onFallbackHosted={degradar}
+              onSucessoMercadoPago={() => setConfirmadoMp(true)}
             />
             <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
               {t(

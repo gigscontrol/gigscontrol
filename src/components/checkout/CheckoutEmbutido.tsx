@@ -31,6 +31,12 @@ type Props = {
   plano: string;
   ciclo: string;
   /**
+   * Crédito de upgrade em DIAS (modelo pré-pago), opcional — repassado pro
+   * metadata da Checkout Session; o webhook recalcula e saneia, nunca confia
+   * no valor cru. Omitido em checkout de plano novo (sem crédito).
+   */
+  creditoDias?: number;
+  /**
    * Chamado quando a chave pública não está configurada — o pai deve
    * degradar pro checkout hospedado (redirect) em vez de mostrar o iframe.
    */
@@ -47,7 +53,7 @@ function getStripe(): Promise<Stripe | null> {
   return stripePromise;
 }
 
-export default function CheckoutEmbutido({ plano, ciclo, onIndisponivel }: Props) {
+export default function CheckoutEmbutido({ plano, ciclo, creditoDias, onIndisponivel }: Props) {
   const t = useT();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -79,7 +85,12 @@ export default function CheckoutEmbutido({ plano, ciclo, onIndisponivel }: Props
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ plano, ciclo, ui: "embedded" }),
+              body: JSON.stringify({
+                plano,
+                ciclo,
+                ui: "embedded",
+                ...(creditoDias ? { creditoDias } : {}),
+              }),
             });
             const body = await res.json().catch(() => ({}));
             if (!res.ok || !body.clientSecret) {
@@ -117,7 +128,7 @@ export default function CheckoutEmbutido({ plano, ciclo, onIndisponivel }: Props
         /* já destruído — ignora */
       }
     };
-  }, [plano, ciclo, onIndisponivel, t]);
+  }, [plano, ciclo, creditoDias, onIndisponivel, t]);
 
   if (erro) {
     return (

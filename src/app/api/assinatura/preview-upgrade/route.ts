@@ -2,18 +2,32 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { infoSubscription } from "@/lib/services/stripe.service";
-import { PLANOS, ehUpgrade, estimarUpgrade, type PlanoId } from "@/lib/planos";
+import {
+  PLANOS,
+  ehUpgrade,
+  creditoDiasUpgrade,
+  diasDeCiclo,
+  type PlanoId,
+  type CicloCobranca,
+  type Moeda,
+} from "@/lib/planos";
 
 /**
  * POST /api/assinatura/preview-upgrade  { plano }
  *
- * Estima quanto o admin paga AGORA pra subir pro `plano` (diferença rateada
- * pelos dias restantes do ciclo). É só uma ESTIMATIVA — o valor exato é
- * calculado pela Stripe na confirmação (/api/assinatura/upgrade).
+ * Prévia do upgrade no modelo PRÉ-PAGO por validade: quantos DIAS de acesso o
+ * pagamento do plano novo concede — o ciclo inteiro (30/365) MAIS o crédito em
+ * dias da sobra de valor do plano atual (`creditoDias`). Não altera nada.
  */
 const schema = z.object({
-  plano: z.enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"]),
+  plano: z.enum([
+    "individual",
+    "equipe",
+    "time",
+    "agencia",
+    "agencia-plus",
+    "agencia-max",
+  ]),
 });
 
 export async function POST(request: Request) {
@@ -37,47 +51,58 @@ export async function POST(request: Request) {
   const admin = criarClienteAdmin();
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("mp_preference_id, plano, status")
+    .select("plano, ciclo, acesso_ate")
     .eq("workspace_id", r.sessao.workspaceId)
     .maybeSingle<{
-      mp_preference_id: string | null;
       plano: string | null;
-      status: string | null;
+      ciclo: string | null;
+      acesso_ate: string | null;
     }>();
 
-  if (!sub?.mp_preference_id) {
-    return NextResponse.json({ erro: "Sem assinatura na Stripe." }, { status: 409 });
-  }
-  if (sub.status !== "ativa") {
-    return NextResponse.json(
-      { erro: "A assinatura precisa estar ativa (paga) pra fazer upgrade." },
-      { status: 409 }
-    );
-  }
-
-  const atual: PlanoId = PLANOS.some((p) => p.id === sub.plano)
-    ? (sub.plano as PlanoId)
+  const atual: PlanoId = PLANOS.some((p) => p.id === sub?.plano)
+    ? (sub!.plano as PlanoId)
     : "individual";
   const novo = parsed.data.plano;
   if (!ehUpgrade(atual, novo)) {
     return NextResponse.json({ erro: "Só dá pra SUBIR de plano por aqui." }, { status: 400 });
   }
 
-  try {
-    // Ciclo + moeda vêm do Stripe (estado real), não do banco.
-    const { moeda, ciclo, diasRestantes, periodEnd, periodStart } =
-      await infoSubscription(sub.mp_preference_id);
-    // Dias reais do ciclo (28-31 / 365-366) em vez de 30/365 fixos.
-    const diasCiclo =
-      periodStart && periodEnd
-        ? Math.max(1, Math.round((periodEnd - periodStart) / 86_400))
-        : undefined;
-    const valorAgora = estimarUpgrade({ atual, novo, ciclo, moeda, diasRestantes, diasCiclo });
-    return NextResponse.json({ valorAgora, moeda, diasRestantes, ciclo, atual, novo });
-  } catch (e) {
-    return NextResponse.json(
-      { erro: (e as Error).message ?? "Falha ao estimar o upgrade." },
-      { status: 500 }
-    );
-  }
+  const ciclo: CicloCobranca = sub?.ciclo === "anual" ? "anual" : "mensal";
+  const moeda = await moedaDoUltimoPagamento(admin, r.sessao.workspaceId);
+  const diasRestantes = diasRestantesDe(sub?.acesso_ate ?? null);
+  const creditoDias = creditoDiasUpgrade({ atual, novo, ciclo, moeda, diasRestantes });
+  const diasConcedidos = diasDeCiclo(ciclo) + creditoDias;
+
+  return NextResponse.json({
+    atual,
+    novo,
+    ciclo,
+    moeda,
+    diasRestantes,
+    creditoDias,
+    diasConcedidos,
+  });
+}
+
+/** Dias restantes (arredonda pra cima) a partir da validade; 0 se vencida/nula. */
+function diasRestantesDe(acessoAte: string | null): number {
+  if (!acessoAte) return 0;
+  const ms = new Date(acessoAte).getTime() - Date.now();
+  return ms > 0 ? Math.ceil(ms / 86_400_000) : 0;
+}
+
+/** Moeda do último pagamento do workspace (BRL default se não houver). */
+async function moedaDoUltimoPagamento(
+  admin: ReturnType<typeof criarClienteAdmin>,
+  workspaceId: string
+): Promise<Moeda> {
+  const { data } = await admin
+    .from("pagamentos")
+    .select("moeda")
+    .eq("workspace_id", workspaceId)
+    .not("moeda", "is", null)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ moeda: string | null }>();
+  return data?.moeda === "usd" ? "usd" : "brl";
 }

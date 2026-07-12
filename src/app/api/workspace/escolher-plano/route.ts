@@ -59,14 +59,14 @@ export async function POST(request: Request) {
   // do que o Stripe cobra e, em trial, tentaria burlar limites sem pagar.
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id, status, trial_termina_em")
+    .select("id, status, acesso_ate")
     .eq("workspace_id", r.sessao.workspaceId)
-    .maybeSingle<{ id: string; status: string; trial_termina_em: string | null }>();
-  // Um stub de checkout INCOMPLETO (status 'trial' SEM trial_termina_em) nasce só
-  // de o admin visitar /pagamento no modo embedded — sem pagar. NÃO é assinatura,
-  // então deve poder re-selecionar o plano. Só bloqueia se for assinatura REAL:
-  // ativa/paga (status != 'trial') OU trial grátis de verdade (trial_termina_em setado).
-  const ehStubIncompleto = sub?.status === "trial" && !sub.trial_termina_em;
+    .maybeSingle<{ id: string; status: string; acesso_ate: string | null }>();
+  // Um stub de checkout INCOMPLETO (SEM `acesso_ate` = nunca pagou) nasce só de
+  // o admin visitar /pagamento no modo embedded — sem pagar. NÃO é assinatura,
+  // então deve poder re-selecionar o plano. Só bloqueia se JÁ tem validade
+  // (acesso_ate setado): assinatura paga OU trial grátis de verdade.
+  const ehStubIncompleto = !sub?.acesso_ate;
   if (sub && !ehStubIncompleto) {
     return NextResponse.json(
       { erro: "Mude o plano em Configurações › Plano & Assinatura." },
