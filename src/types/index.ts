@@ -37,7 +37,7 @@ export const LIMITE_RIDER_TECNICO = 20;
 
 export type DocumentoTipo = "cpf" | "cnpj";
 
-export type DJ = {
+export type Artista = {
   id: string;
   name: string;
   color: string;
@@ -143,8 +143,10 @@ export type Show = {
   dayId: number;
   /** Data ISO (YYYY-MM-DD). Fonte da verdade para qualquer cálculo de data. */
   data?: string;
-  djId: string;
-  dj: string;
+  artistaId: string;
+  /** Nome denormalizado do artista — preenchido pelo mapper a partir de
+   *  `artists.nome`. Derivado, não persiste no write. */
+  artistaNome: string;
   location: string;
   venue: string;
   time: string;
@@ -217,7 +219,7 @@ export type ActivePage =
   | "agencia-equipe";
 
 export type ContatoCategoria = "contratantes" | "casas" | "cidades";
-export type UserRole = "admin" | "dj" | "vendedor" | "financeiro";
+export type UserRole = "admin" | "artista" | "vendedor" | "financeiro";
 
 // ----------- Entidades de Contatos -----------
 
@@ -339,7 +341,7 @@ export type Orcamento = {
   contratanteId: string;
   cidadeId: string;
   casaId?: string; // ✱ opcional - só em casa-noturna/festival quando preenchido
-  djId: string;
+  artistaId: string;
 
   // show — agora opcionais (preenchidos ao converter em venda)
   dataShow?: string;
@@ -533,7 +535,7 @@ export type Venda = {
   casaId?: string;
 
   // 🎵 Show
-  djId: string; // artista da agência (uuid quando vier do banco)
+  artistaId: string; // artista da agência (uuid quando vier do banco)
   lineUp?: string[]; // outros artistas do evento (não obrigatório)
   cache: number;
   duracaoHoras: number;
@@ -570,7 +572,7 @@ export type ModuleTheme = {
 
 // Cor de ação ÚNICA (Signal Blue) — as cores por módulo foram removidas.
 // `color` continua existindo pra não quebrar quem consome MODULE_THEMES,
-// mas todas apontam pro Signal Blue. A cor pessoal do artista é `dj.color`.
+// mas todas apontam pro Signal Blue. A cor pessoal do artista é `artista.color`.
 const SIGNAL = "#3D7BFF";
 export const MODULE_THEMES: Record<ActiveTab, ModuleTheme> = {
   agenda: { key: "agenda", label: "Agenda", color: SIGNAL },

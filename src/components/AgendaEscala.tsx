@@ -9,7 +9,7 @@ import { useAgendaItems, type NovoAgendaItem } from "@/lib/agenda-items-context"
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
-import type { AgendaDateRange, Show, ShowStatus, DJ, AgendaItem } from "@/types";
+import type { AgendaDateRange, Show, ShowStatus, Artista, AgendaItem } from "@/types";
 import ShowDetalheModal from "./ShowDetalheModal";
 import Modal from "./Modal";
 import InputHora from "./inputs/InputHora";
@@ -82,7 +82,7 @@ function StatusBadge({ status }: { status: ShowStatus }) {
   );
 }
 
-function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () => void }) {
+function EventCard({ show, artista, onClick }: { show: Show; artista?: Artista; onClick?: () => void }) {
   const t = useT();
   const { contratos, assinantesPorContrato } = useContratos();
   const cancelado = show.status === "cancelado";
@@ -96,7 +96,7 @@ function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () =>
         cancelado ? "opacity-60" : ""
       }`}
       style={{
-        borderLeft: `3px solid ${cancelado ? "var(--danger)" : dj ? dj.color : "transparent"}`,
+        borderLeft: `3px solid ${cancelado ? "var(--danger)" : artista ? artista.color : "transparent"}`,
       }}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -105,7 +105,7 @@ function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () =>
             cancelado ? "line-through" : ""
           }`}
         >
-          {show.dj}
+          {show.artistaNome}
         </span>
         <StatusBadge status={show.status} />
       </div>
@@ -138,14 +138,14 @@ function EventCard({ show, dj, onClick }: { show: Show; dj?: DJ; onClick?: () =>
 }
 
 type Props = {
-  selectedDJs: string[];
+  selectedArtistas: string[];
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
   /** "Novo Show" no "+" de um dia → abre Nova Venda Direta com a data. */
   onNovaVendaNoDia?: (dataISO: string) => void;
 };
 
-export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
+export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
   const t = useT();
   const { shows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
@@ -310,12 +310,12 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
     return () => clearTimeout(timer);
   }, [activeDateRange]);
 
-  const filteredShows = shows.filter((show) => selectedDJs.includes(show.djId));
+  const filteredShows = shows.filter((show) => selectedArtistas.includes(show.artistaId));
   const { itens: agendaItens, criar: criarItem, editar: editarItem, remover: removerItem } =
     useAgendaItems();
-  // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo DJ.
+  // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo artista.
   const filteredItens = agendaItens.filter(
-    (i) => i.artistIds.length === 0 || i.artistIds.some((id) => selectedDJs.includes(id))
+    (i) => i.artistIds.length === 0 || i.artistIds.some((id) => selectedArtistas.includes(id))
   );
   const [novoItemDia, setNovoItemDia] = useState<DayCell | null>(null);
   const [eventoFormDia, setEventoFormDia] = useState<DayCell | null>(null);
@@ -471,7 +471,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         <EventoFormModal
           day={eventoFormDia}
           artistas={artistas}
-          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          defaultArtistIds={selectedArtistas.length === 1 ? selectedArtistas : []}
           onClose={() => setEventoFormDia(null)}
           onCriar={async (input) => {
             await criarItem(input);
@@ -485,7 +485,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         <VooFormModal
           day={vooFormDia}
           artistas={artistas}
-          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          defaultArtistIds={selectedArtistas.length === 1 ? selectedArtistas : []}
           onClose={() => setVooFormDia(null)}
           onCriar={async (input) => {
             await criarItem(input);
@@ -499,7 +499,7 @@ export default function AgendaEscala({ selectedDJs, onAbrirOrcamento, onAbrirVen
         <TransporteFormModal
           day={transporteFormDia}
           artistas={artistas}
-          defaultArtistIds={selectedDJs.length === 1 ? selectedDJs : []}
+          defaultArtistIds={selectedArtistas.length === 1 ? selectedArtistas : []}
           onClose={() => setTransporteFormDia(null)}
           onCriar={async (input) => {
             await criarItem(input);
@@ -587,7 +587,7 @@ function DayCellComponent({
   day: DayCell;
   shows: Show[];
   itens: AgendaItem[];
-  artistas: DJ[];
+  artistas: Artista[];
   accent: string;
   podeCriarAlgum: boolean;
   onShowClick: (id: string) => void;
@@ -635,7 +635,7 @@ function DayCellComponent({
           <EventCard
             key={show.id}
             show={show}
-            dj={artistas.find((d) => d.id === show.djId)}
+            artista={artistas.find((d) => d.id === show.artistaId)}
             onClick={() => onShowClick(show.id)}
           />
         ))}
@@ -796,7 +796,7 @@ function formatarDataBR(iso: string): string {
 }
 
 /** Nomes dos artistas (juntos) a partir dos ids; undefined se vazio. */
-function labelArtistas(ids: string[], artistas: DJ[]): string | undefined {
+function labelArtistas(ids: string[], artistas: Artista[]): string | undefined {
   if (!ids.length) return undefined;
   const nomes = ids
     .map((id) => artistas.find((a) => a.id === id)?.name)
@@ -852,7 +852,7 @@ function CampoForm({ label, children }: { label: string; children: ReactNode }) 
   );
 }
 
-/** Seleção múltipla de artistas em chips (cor do DJ quando ativo). Reusado por
+/** Seleção múltipla de artistas em chips (cor do artista quando ativo). Reusado por
  *  Evento (label "Artistas") e Voo (label "Passageiros"). */
 function SeletorArtistas({
   artistas,
@@ -861,7 +861,7 @@ function SeletorArtistas({
   label,
   hintVazio,
 }: {
-  artistas: DJ[];
+  artistas: Artista[];
   value: string[];
   onChange: (ids: string[]) => void;
   label: string;
@@ -971,7 +971,7 @@ function PassoArtista({
   onContinuar,
   cor,
 }: {
-  artistas: DJ[];
+  artistas: Artista[];
   value: string[];
   onChange: (ids: string[]) => void;
   onCancelar: () => void;
@@ -1010,7 +1010,7 @@ function VoltarArtista({
   ids,
   onVoltar,
 }: {
-  artistas: DJ[];
+  artistas: Artista[];
   ids: string[];
   onVoltar: () => void;
 }) {
@@ -1138,7 +1138,7 @@ function EventoFormModal({
   onCriar,
 }: {
   day?: DayCell;
-  artistas: DJ[];
+  artistas: Artista[];
   defaultArtistIds: string[];
   itemEditar?: AgendaItem;
   onClose: () => void;
@@ -1351,7 +1351,7 @@ function VooFormModal({
   onCriar,
 }: {
   day?: DayCell;
-  artistas: DJ[];
+  artistas: Artista[];
   defaultArtistIds: string[];
   itemEditar?: AgendaItem;
   onClose: () => void;
@@ -1817,7 +1817,7 @@ function TransporteFormModal({
   onCriar,
 }: {
   day?: DayCell;
-  artistas: DJ[];
+  artistas: Artista[];
   defaultArtistIds: string[];
   itemEditar?: AgendaItem;
   onClose: () => void;
@@ -2050,7 +2050,7 @@ function formatarBagagemExtra(raw: string, labelNao: string): string {
  * Cabeçalho do detalhe: o(s) artista(s) do item em destaque, no mesmo estilo
  * "coloridinho" dos cards de show da agenda (barrinha colorida na lateral).
  */
-function CabecalhoArtistas({ artistas }: { artistas: DJ[] }) {
+function CabecalhoArtistas({ artistas }: { artistas: Artista[] }) {
   if (artistas.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2">
@@ -2190,7 +2190,7 @@ function ItemDetalheModal({
   onExcluir,
 }: {
   item: AgendaItem;
-  artistasDoItem: DJ[];
+  artistasDoItem: Artista[];
   podeUI: (artistaId: string | null, chave: string) => boolean;
   onClose: () => void;
   onEditar: () => void;
@@ -2298,7 +2298,7 @@ function MobileDayCard({
   day: DayCell;
   shows: Show[];
   itens: AgendaItem[];
-  artistas: DJ[];
+  artistas: Artista[];
   accent: string;
   podeCriarAlgum: boolean;
   onShowClick: (id: string) => void;
@@ -2340,7 +2340,7 @@ function MobileDayCard({
         <EventCard
           key={show.id}
           show={show}
-          dj={artistas.find((d) => d.id === show.djId)}
+          artista={artistas.find((d) => d.id === show.artistaId)}
           onClick={() => onShowClick(show.id)}
         />
       ))}

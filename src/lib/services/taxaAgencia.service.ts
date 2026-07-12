@@ -2,11 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TaxaAgenciaModo } from "@/types";
 import { calcularTaxaAgencia } from "@/lib/taxaAgencia";
 import { buscarArtista } from "@/lib/repositories/artistas.repo";
-import { rowParaDj } from "@/lib/mappers/artista";
+import { rowParaArtista } from "@/lib/mappers/artista";
 
 /**
  * Resolve a taxa da agência (comissão) no SERVIDOR — fonte da verdade. O
- * cliente só faz preview e não enxerga o fee de artistas alheios (redigirDj o
+ * cliente só faz preview e não enxerga o fee de artistas alheios (redigirArtista o
  * esconde). Busca o artista, lê o modo/valor configurado e aplica o cálculo.
  *
  * `preservarVariavelSemInput` (usado em UPDATE/concretização): se o modo é
@@ -29,15 +29,15 @@ export async function resolverTaxaAgencia(
   if (!params.artistId || params.cache == null) return null;
   const row = await buscarArtista(supabase, params.artistId);
   if (!row) return null;
-  const dj = rowParaDj(row);
+  const artista = rowParaArtista(row);
   const variavel =
-    dj.taxaModo === "perc-variavel" || dj.taxaModo === "valor-variavel";
+    artista.taxaModo === "perc-variavel" || artista.taxaModo === "valor-variavel";
   if (params.preservarVariavelSemInput && variavel && params.taxaDigitada == null) {
     return null;
   }
   const { valor, modoAplicado } = calcularTaxaAgencia({
-    modo: dj.taxaModo,
-    taxaValorArtista: dj.taxaValor ?? null,
+    modo: artista.taxaModo,
+    taxaValorArtista: artista.taxaValor ?? null,
     cache: params.cache,
     entradaVariavel: params.taxaDigitada ?? null,
   });

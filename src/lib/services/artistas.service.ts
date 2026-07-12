@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DJ, TaxaAgenciaModo } from "@/types";
-import { rowParaDj, type ArtistaEscrita } from "@/lib/mappers/artista";
+import type { Artista, TaxaAgenciaModo } from "@/types";
+import { rowParaArtista, type ArtistaEscrita } from "@/lib/mappers/artista";
 import {
   listarArtistas as repoListar,
   buscarArtista as repoBuscar,
@@ -169,7 +169,7 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
 export async function listarArtistasDoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string
-): Promise<DJ[]> {
+): Promise<Artista[]> {
   const rows = await repoListar(supabase, workspaceId);
   if (rows.length === 0) return [];
 
@@ -188,16 +188,16 @@ export async function listarArtistasDoWorkspace(
   }
 
   return rows.map((r) =>
-    rowParaDj({ ...r, username: mapaUsername.get(r.id) ?? null })
+    rowParaArtista({ ...r, username: mapaUsername.get(r.id) ?? null })
   );
 }
 
 export async function buscarArtistaPorId(
   supabase: SupabaseClient,
   id: string
-): Promise<DJ | null> {
+): Promise<Artista | null> {
   const row = await repoBuscarComUsername(supabase, id);
-  return row ? rowParaDj(row) : null;
+  return row ? rowParaArtista(row) : null;
 }
 
 /**
@@ -217,7 +217,7 @@ export async function criarArtistaCompleto(
   workspaceId: string,
   planoId: PlanoId,
   input: ArtistaCreateInput
-): Promise<{ artista: DJ; senhaTemporaria: string; usernameCompleto: string }> {
+): Promise<{ artista: Artista; senhaTemporaria: string; usernameCompleto: string }> {
   // 1. Plano — usa o plano-destino se há downgrade agendado (trava o excesso).
   const plano = getPlano(await planoEfetivoParaLimites(admin, workspaceId, planoId));
   const total = await contarArtistas(admin, workspaceId);
@@ -328,8 +328,8 @@ export async function criarArtistaCompleto(
   }
 
   // Devolve com username embutido pro mapper
-  const dj = rowParaDj({ ...artistaRow, username: usernameCompleto });
-  return { artista: dj, senhaTemporaria, usernameCompleto };
+  const artista = rowParaArtista({ ...artistaRow, username: usernameCompleto });
+  return { artista: artista, senhaTemporaria, usernameCompleto };
 }
 
 /**
@@ -435,7 +435,7 @@ export async function atualizarArtistaPorId(
   admin: SupabaseClient,
   id: string,
   input: ArtistaUpdateInput
-): Promise<DJ> {
+): Promise<Artista> {
   // Username e email precisam ser tratados em separado (mexem em auth + profile)
   if (input.username_raiz) {
     // Pra saber o workspace, busca pelo próprio artista
@@ -465,20 +465,20 @@ export async function atualizarArtistaPorId(
   // Recarrega completo com username pra devolver
   const final = await repoBuscarComUsername(admin, id);
   if (!final) throw new Error("Artista não encontrado após atualização.");
-  return rowParaDj(final);
+  return rowParaArtista(final);
 }
 
 /** Inverte o flag `acesso_suspenso`. */
 export async function alternarSuspensaoArtista(
   supabase: SupabaseClient,
   id: string
-): Promise<DJ> {
+): Promise<Artista> {
   const atual = await repoBuscar(supabase, id);
   if (!atual) throw new Error("Artista não encontrado.");
   const row = await repoAtualizar(supabase, id, {
     acesso_suspenso: !atual.acesso_suspenso,
   });
-  return rowParaDj(row);
+  return rowParaArtista(row);
 }
 
 /** Soft delete: move pra lixeira (recuperável por 30 dias). */

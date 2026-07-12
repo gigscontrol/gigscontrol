@@ -1,4 +1,4 @@
-import type { DJ, TaxaAgenciaModo, Cidade } from "@/types";
+import type { Artista, TaxaAgenciaModo, Cidade } from "@/types";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
 import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
@@ -92,8 +92,8 @@ export function privacidadeValida(raw: unknown): PrivacidadeDj {
   };
 }
 
-export function rowParaDj(row: ArtistaRow): DJ {
-  const dj: DJ = {
+export function rowParaArtista(row: ArtistaRow): Artista {
+  const artista: Artista = {
     id: row.id,
     name: row.nome,
     color: row.cor ?? "#3b82f6",
@@ -104,27 +104,27 @@ export function rowParaDj(row: ArtistaRow): DJ {
     riderTecnico: normalizarRider(row.rider_tecnico),
     privacidade: privacidadeValida(row.privacidade),
   };
-  if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
-  if (row.cidade_nome) dj.cidadeNome = row.cidade_nome;
-  if (row.cidade_uf) dj.cidadeUf = row.cidade_uf;
-  if (row.cidade_id) dj.cidadeId = row.cidade_id;
-  if (row.cidade) dj.cidade = rowParaCidade(row.cidade);
-  if (row.pais) dj.pais = row.pais;
-  if (row.nome_legal) dj.nomeLegal = row.nome_legal;
+  if (row.cidade_ibge_id) artista.cidadeIbgeId = row.cidade_ibge_id;
+  if (row.cidade_nome) artista.cidadeNome = row.cidade_nome;
+  if (row.cidade_uf) artista.cidadeUf = row.cidade_uf;
+  if (row.cidade_id) artista.cidadeId = row.cidade_id;
+  if (row.cidade) artista.cidade = rowParaCidade(row.cidade);
+  if (row.pais) artista.pais = row.pais;
+  if (row.nome_legal) artista.nomeLegal = row.nome_legal;
   if (row.documento_tipo === "cpf" || row.documento_tipo === "cnpj")
-    dj.documentoTipo = row.documento_tipo;
-  if (row.documento) dj.documento = row.documento;
-  if (row.razao_social) dj.razaoSocial = row.razao_social;
-  if (row.endereco) dj.endereco = row.endereco;
-  if (row.telefone) dj.telefone = row.telefone;
-  if (row.data_nascimento) dj.dataNascimento = row.data_nascimento;
-  if (row.email) dj.email = row.email;
+    artista.documentoTipo = row.documento_tipo;
+  if (row.documento) artista.documento = row.documento;
+  if (row.razao_social) artista.razaoSocial = row.razao_social;
+  if (row.endereco) artista.endereco = row.endereco;
+  if (row.telefone) artista.telefone = row.telefone;
+  if (row.data_nascimento) artista.dataNascimento = row.data_nascimento;
+  if (row.email) artista.email = row.email;
   if (row.taxa_valor !== null && row.taxa_valor !== undefined) {
     const n = Number(row.taxa_valor);
-    if (Number.isFinite(n)) dj.taxaValor = n;
+    if (Number.isFinite(n)) artista.taxaValor = n;
   }
-  if (row.username) dj.username = row.username;
-  return dj;
+  if (row.username) artista.username = row.username;
+  return artista;
 }
 
 /**
@@ -134,8 +134,8 @@ export function rowParaDj(row: ArtistaRow): DJ {
  * usuário logado (workspace-context), então não pode vazar CPF/endereço/telefone
  * /razão social nem o fee de todos os artistas.
  */
-export function redigirDj(dj: DJ): DJ {
-  const limpo: DJ = { ...dj, taxaModo: "sem-taxa" };
+export function redigirArtista(artista: Artista): Artista {
+  const limpo: Artista = { ...artista, taxaModo: "sem-taxa" };
   delete limpo.taxaValor;
   delete limpo.nomeLegal;
   delete limpo.documentoTipo;

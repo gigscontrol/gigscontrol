@@ -106,10 +106,10 @@ export default function HistoricoPage({
   const artistas = useArtistas();
   const { podeUI } = useAuth();
 
-  // artistId de um contrato vem da venda vinculada (contrato.vendaId → venda.djId).
+  // artistId de um contrato vem da venda vinculada (contrato.vendaId → venda.artistaId).
   const artistaDoContrato = (c: Contrato): string | null => {
     const v = vendas.find((venda) => venda.id === c.vendaId);
-    return v?.djId || null;
+    return v?.artistaId || null;
   };
   const podeExcluir = (c: Contrato) => podeUI(artistaDoContrato(c), "contratos.excluir");
   const podeEditar = (c: Contrato) =>

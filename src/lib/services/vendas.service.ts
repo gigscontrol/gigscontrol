@@ -365,7 +365,7 @@ export async function atualizarVendaPorId(
     const artistId =
       input.artist_id !== undefined
         ? normalizarUuid(input.artist_id ?? null)
-        : atual?.djId ?? null;
+        : atual?.artistaId ?? null;
     const cache = input.cache !== undefined ? input.cache : atual?.cache ?? null;
     const taxa = await resolverTaxaAgencia(supabase, {
       artistId,

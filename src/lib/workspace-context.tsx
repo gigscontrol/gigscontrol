@@ -9,7 +9,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DJ, TaxaAgenciaModo, DocumentoTipo } from "@/types";
+import type { Artista, TaxaAgenciaModo, DocumentoTipo } from "@/types";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
@@ -49,7 +49,7 @@ export type WorkspacePreferencias = {
   fusoPadrao: string | null;
 };
 
-export type ArtistaWS = DJ;
+export type ArtistaWS = Artista;
 
 /** Payload do form de novo artista (mandado pra /api/artistas POST). */
 export type NovoArtistaInput = {
@@ -83,7 +83,7 @@ export type NovoArtistaInput = {
   riderCamarim?: string[];
   riderEfeitos?: string[];
   riderTecnico?: string[];
-  /** Privacidade do DJ — gravada direto no jsonb artists.privacidade. */
+  /** Privacidade do artista — gravada direto no jsonb artists.privacidade. */
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
   emailConta?: string;
@@ -943,7 +943,7 @@ export function useWorkspace() {
   return ctx;
 }
 
-export function useArtistas(): DJ[] {
+export function useArtistas(): Artista[] {
   return useWorkspace().artistas;
 }
 

@@ -34,11 +34,11 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
     return [...vendas]
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
       .filter((v) => {
-        if (filtroDJ !== "todos" && v.djId !== filtroDJ) return false;
+        if (filtroDJ !== "todos" && v.artistaId !== filtroDJ) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const cid = cidades.find((c) => c.id === v.cidadeId);
-          const dj = artistas.find((d) => d.id === v.djId);
+          const artista = artistas.find((d) => d.id === v.artistaId);
           const orc = v.orcamentoId
             ? orcamentos.find((o) => o.id === v.orcamentoId)
             : null;
@@ -50,7 +50,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             v.nomeEvento,
             v.nomeLocal,
             cid?.nome ?? "",
-            dj?.name ?? "",
+            artista?.name ?? "",
             orc?.numero ?? "",
           ]
             .join(" ")
@@ -112,7 +112,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
             className={`pill ${filtroDJ === "todos" ? "active" : ""}`}
             onClick={() => setFiltroDJ("todos")}
           >
-            {t("Todos DJs")}
+            {t("Todos artistas")}
           </button>
           {artistas.map((d) => (
             <button
@@ -160,7 +160,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                   <Th>{t("Nº")}</Th>
                   <Th>{t("Contratante")}</Th>
                   <Th>{t("Evento")}</Th>
-                  <Th>{t("DJ")}</Th>
+                  <Th>{t("Artista")}</Th>
                   <Th>{t("Cidade")}</Th>
                   <Th>{t("Data show")}</Th>
                   <Th className="text-right">{t("Cachê")}</Th>
@@ -171,7 +171,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               <tbody>
                 {lista.map((v) => {
                   const cid = cidades.find((c) => c.id === v.cidadeId);
-                  const dj = artistas.find((d) => d.id === v.djId);
+                  const artista = artistas.find((d) => d.id === v.artistaId);
                   const orc = v.orcamentoId
                     ? orcamentos.find((o) => o.id === v.orcamentoId)
                     : null;
@@ -195,7 +195,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           </span>
                         )}
                       </Td>
-                      <Td className="text-secondary">{dj?.name ?? "—"}</Td>
+                      <Td className="text-secondary">{artista?.name ?? "—"}</Td>
                       <Td className="text-secondary">
                         {cid ? `${cid.nome}/${cid.estado}` : "—"}
                       </Td>

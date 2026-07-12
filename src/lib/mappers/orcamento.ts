@@ -86,7 +86,7 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     contratanteId: row.contratante_id ?? "",
     cidadeId: row.cidade_id ?? "",
     casaId: row.casa_id ?? undefined,
-    djId: row.artist_id ?? "",
+    artistaId: row.artist_id ?? "",
     dataShow: row.data_show ?? undefined,
     horario: row.horario ?? undefined,
     fusoHorario: row.fuso_horario ?? undefined,

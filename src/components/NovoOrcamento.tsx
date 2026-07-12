@@ -52,7 +52,7 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type TipoEvento,
-  type DJ,
+  type Artista,
   type Contratante,
   type DetalhesEvento,
 } from "@/types";
@@ -71,7 +71,7 @@ const TIPOS_EVENTO: { value: TipoEvento; label: string; icon: typeof PartyPopper
 ];
 
 type DjBlock = {
-  djId: string;
+  artistaId: string;
   valorCache: string;
   duracaoHoras: number;
   duracaoMinutos: number;
@@ -79,13 +79,13 @@ type DjBlock = {
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
   logistica: LogisticaSelecao;
-  /** Texto livre opcional anexado ao fim do orçamento deste DJ. */
+  /** Texto livre opcional anexado ao fim do orçamento deste artista. */
   infoExtra: string;
 };
 
-function novoBlocoDj(djId: string): DjBlock {
+function novoBlocoDj(artistaId: string): DjBlock {
   return {
-    djId,
+    artistaId,
     valorCache: "",
     duracaoHoras: 1,
     duracaoMinutos: 0,
@@ -148,13 +148,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);
   const [modalAddDj, setModalAddDj] = useState(false);
 
-  // Quando a lista de artistas carregar, preenche o djId do bloco
-  // inicial (era estático via DJS[0] antes; agora vem do hook).
+  // Quando a lista de artistas carregar, preenche o artistaId do bloco
+  // inicial (era estático via fallback estático antes; agora vem do hook).
   useEffect(() => {
     if (artistas.length === 0) return;
     setBlocos((prev) =>
-      prev.length === 1 && !prev[0].djId
-        ? [{ ...prev[0], djId: artistas[0].id }]
+      prev.length === 1 && !prev[0].artistaId
+        ? [{ ...prev[0], artistaId: artistas[0].id }]
         : prev
     );
   }, [artistas]);
@@ -165,8 +165,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [salvos, setSalvos] = useState<Array<{
     id: string;
     numero: string;
-    djNome: string;
-    djCor: string;
+    artistaNome: string;
+    artistaCor: string;
     telefoneE164: string;
     texto: string;
     linkWA: string;
@@ -192,7 +192,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   function validateStep2(): boolean {
     const errs: Record<string, string> = {};
     blocos.forEach((b, i) => {
-      if (!b.djId) errs[`dj-${i}`] = t("Selecione um DJ");
+      if (!b.artistaId) errs[`artista-${i}`] = t("Selecione um artista");
       const valor = parseFloat(b.valorCache.replace(",", "."));
       if (!b.valorCache || isNaN(valor) || valor <= 0) errs[`valor-${i}`] = t("Valor obrigatório");
       if (b.duracaoHoras < 1 && b.duracaoMinutos < 15) errs[`dur-${i}`] = t("Duração mínima 15 min");
@@ -209,8 +209,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     setErrors({});
   }
 
-  function adicionarDj(djId: string) {
-    setBlocos((prev) => [...prev, novoBlocoDj(djId)]);
+  function adicionarDj(artistaId: string) {
+    setBlocos((prev) => [...prev, novoBlocoDj(artistaId)]);
     setModalAddDj(false);
   }
 
@@ -360,7 +360,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     let contratanteIdResolvido: string | null = null;
     let cidadeIdResolvido: string | null = null;
 
-    // Mesmos detalhes de evento pra todos os DJs — o evento é o mesmo, muda só o DJ.
+    // Mesmos detalhes de evento pra todos os artistas — o evento é o mesmo, muda só o artista.
     const detalhesEvento = montarDetalhesEvento();
 
     // for-of sequencial — precisamos resolver contratante/cidade do bloco 0
@@ -388,7 +388,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         contratante: cInput,
         casa: casaInput,
         cidade: cidInput,
-        djId: b.djId,
+        artistaId: b.artistaId,
         valorCache: valor,
         duracaoHoras: b.duracaoHoras,
         duracaoMinutos: b.duracaoMinutos > 0 ? b.duracaoMinutos : undefined,
@@ -411,15 +411,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         estado: cidadeResolvida.estado,
         regiao: cidadeResolvida.regiao,
       };
-      const dj = artistas.find((d) => d.id === b.djId);
+      const artista = artistas.find((d) => d.id === b.artistaId);
       const e164 = getTelefoneSelecionadoE164();
-      const texto = gerarTextoWhatsApp(orc, { cidade: cidadeObj, dj });
+      const texto = gerarTextoWhatsApp(orc, { cidade: cidadeObj, artista });
 
       resultados.push({
         id: orc.id,
         numero: orc.numero,
-        djNome: dj?.name ?? "—",
-        djCor: dj?.color ?? "#888",
+        artistaNome: artista?.name ?? "—",
+        artistaCor: artista?.color ?? "#888",
         telefoneE164: e164,
         texto,
         linkWA: montarLinkWhatsApp(e164, texto),
@@ -462,7 +462,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           subtitle={
             salvos.length === 1
               ? "Copie a mensagem ou envie pelo WhatsApp"
-              : "Um orçamento por DJ — envie cada um separadamente"
+              : "Um orçamento por artista — envie cada um separadamente"
           }
           accentColor={accent}
         />
@@ -473,11 +473,11 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${s.djCor}25`, color: s.djCor }}
+                  style={{ backgroundColor: `${s.artistaCor}25`, color: s.artistaCor }}
                 >
                   <User size={14} />
                 </div>
-                <span className="text-sm font-semibold text-primary truncate">{s.djNome}</span>
+                <span className="text-sm font-semibold text-primary truncate">{s.artistaNome}</span>
                 <span className="text-xs font-mono tabular-nums" style={{ color: accent }}>
                   {s.numero}
                 </span>
@@ -567,13 +567,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   // ============ WIZARD ============
-  const djsDisponiveis = artistas.filter((d) => !blocos.some((b) => b.djId === d.id));
+  const djsDisponiveis = artistas.filter((d) => !blocos.some((b) => b.artistaId === d.id));
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Novo Orçamento"
-        subtitle="Você pode incluir mais de um DJ — cada um gera um orçamento próprio"
+        subtitle="Você pode incluir mais de um artista — cada um gera um orçamento próprio"
         accentColor={accent}
         actions={
           <button onClick={onCancel} className="btn btn-ghost">
@@ -1000,19 +1000,19 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               style={{ color: accent }}
             >
               <Plus size={16} />
-              {t("Adicionar outro DJ ao orçamento")}
+              {t("Adicionar outro artista ao orçamento")}
               <span className="text-xs text-muted font-normal">
                 {t("· gera um orçamento separado")}
               </span>
             </button>
           )}
 
-          {/* Modal de seleção de DJ — via Portal */}
+          {/* Modal de seleção de artista — via Portal */}
           <Modal
             isOpen={modalAddDj}
             onClose={() => setModalAddDj(false)}
-            title={t("Adicionar DJ ao orçamento")}
-            subtitle={t("Cada DJ gera um orçamento separado (ORC-XXXX)")}
+            title={t("Adicionar artista ao orçamento")}
+            subtitle={t("Cada artista gera um orçamento separado (ORC-XXXX)")}
             maxWidth={440}
           >
             <div className="flex flex-col gap-2">
@@ -1059,9 +1059,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))}
+            disabled={blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))}
             title={
-              blocos.every((b) => !podeUI(b.djId || null, "vendas.criar_orcamento"))
+              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))
                 ? "Você não tem permissão para isso."
                 : undefined
             }
@@ -1079,7 +1079,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   );
 }
 
-// ============ Bloco de DJ ============
+// ============ Bloco de Artista ============
 
 function BlocoOrcamentoDj({
   bloco,
@@ -1098,7 +1098,7 @@ function BlocoOrcamentoDj({
   indice: number;
   totalBlocos: number;
   accent: string;
-  artistas: DJ[];
+  artistas: Artista[];
   onChange: (patch: Partial<DjBlock>) => void;
   onRemove: () => void;
   errors: Record<string, string>;
@@ -1107,30 +1107,30 @@ function BlocoOrcamentoDj({
   tipoEvento: TipoEvento | null;
 }) {
   const t = useT();
-  const dj = artistas.find((d) => d.id === bloco.djId);
+  const artista = artistas.find((d) => d.id === bloco.artistaId);
   const valor = parseFloat(bloco.valorCache.replace(",", "."));
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-border bg-surface overflow-hidden">
-      {/* Cabeçalho com cor do DJ */}
+      {/* Cabeçalho com cor do artista */}
       <div
         className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border"
         style={{
-          background: dj
-            ? `linear-gradient(90deg, ${dj.color}15 0%, transparent 60%)`
+          background: artista
+            ? `linear-gradient(90deg, ${artista.color}15 0%, transparent 60%)`
             : "var(--bg-surface-2)",
         }}
       >
         <div className="flex items-center gap-2 min-w-0">
           <div
             className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ backgroundColor: dj?.color ?? "var(--bg-elevated)", color: "#fff" }}
+            style={{ backgroundColor: artista?.color ?? "var(--bg-elevated)", color: "#fff" }}
           >
             {indice + 1}
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold text-primary truncate">
-              {dj?.name ?? "—"}
+              {artista?.name ?? "—"}
             </div>
             <div className="text-[0.7rem] text-muted">
               {t("Orçamento {n} de {m}", { n: indice + 1, m: totalBlocos })}
@@ -1152,10 +1152,10 @@ function BlocoOrcamentoDj({
       </div>
 
       <div className="p-5 flex flex-col gap-4">
-        {/* DJ + Valor + Duração */}
+        {/* Artista + Valor + Duração */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
-          <Field label="DJ" required error={errors[`dj-${indice}`]}>
-            <Select value={bloco.djId} onChange={(e) => onChange({ djId: e.target.value })}>
+          <Field label="Artista" required error={errors[`artista-${indice}`]}>
+            <Select value={bloco.artistaId} onChange={(e) => onChange({ artistaId: e.target.value })}>
               {artistas.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}

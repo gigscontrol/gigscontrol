@@ -376,7 +376,7 @@ function AppRoot() {
   // abaixo sincroniza com a lista real de artistas do workspace assim
   // que ela carrega. (Estado de UI — preservado entre navegações porque
   // este componente vive no layout, que o Next não remonta.)
-  const [selectedDJs, setSelectedDJs] = useState<string[]>([]);
+  const [selectedArtistas, setSelectedArtistas] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Sincronização com a lista real de artistas:
@@ -400,7 +400,7 @@ function AppRoot() {
       // No mount, espera 1 ciclo pra dar tempo do fetch — mas se já
       // tem artistas, inicializa imediatamente.
       if (idsAtuais.size > 0) {
-        setSelectedDJs(Array.from(idsAtuais));
+        setSelectedArtistas(Array.from(idsAtuais));
         artistasIdsPrevRef.current = idsAtuais;
         jaInicializouRef.current = true;
       }
@@ -411,7 +411,7 @@ function AppRoot() {
     const novos = [...idsAtuais].filter((id) => !artistasIdsPrevRef.current.has(id));
     const removidos = [...artistasIdsPrevRef.current].filter((id) => !idsAtuais.has(id));
     if (novos.length > 0 || removidos.length > 0) {
-      setSelectedDJs((prev) => {
+      setSelectedArtistas((prev) => {
         const semRemovidos = prev.filter((id) => !removidos.includes(id));
         return Array.from(new Set([...semRemovidos, ...novos]));
       });
@@ -529,8 +529,8 @@ function AppRoot() {
         setActiveTab={handleTabChange}
         activePage={activePage}
         setActivePage={handlePageChange}
-        selectedDJs={selectedDJs}
-        setSelectedDJs={setSelectedDJs}
+        selectedArtistas={selectedArtistas}
+        setSelectedArtistas={setSelectedArtistas}
         isOpenMobile={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
         configAberta={configAberta}
@@ -566,7 +566,7 @@ function AppRoot() {
           {/* Financeiro */}
           {activeTab === "financeiro" && activePage === "dashboard" && (
             <Dashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirVenda={abrirVenda}
             />
@@ -581,7 +581,7 @@ function AppRoot() {
           {/* Vendas */}
           {activeTab === "vendas" && activePage === "dashboard" && (
             <VendasDashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
@@ -649,14 +649,14 @@ function AppRoot() {
           {/* Agenda */}
           {activeTab === "agenda" && activePage === "dashboard" && (
             <AgendaDashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirShow={(id) => setShowModalId(id)}
             />
           )}
           {activeTab === "agenda" && activePage === "agenda-completa" && (
             <AgendaEscala
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
               onNovaVendaNoDia={novaVendaNoDia}
@@ -671,7 +671,7 @@ function AppRoot() {
             <ContatosDashboard onAbrirCategoria={abrirContatos} />
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
-            <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
+            <Contatos categoriaInicial={contatoCategoria} selectedArtistas={selectedArtistas} />
           )}
           {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
 

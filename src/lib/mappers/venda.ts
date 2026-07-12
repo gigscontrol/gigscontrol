@@ -99,7 +99,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     cidadeId: row.cidade_id ?? "",
     casaId: row.casa_id ?? undefined,
 
-    djId: row.artist_id ?? "",
+    artistaId: row.artist_id ?? "",
     lineUp: Array.isArray(row.line_up) ? row.line_up : undefined,
     cache: paraNumero(row.cache),
     duracaoHoras: row.duracao_horas ?? 0,

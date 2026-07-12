@@ -109,9 +109,9 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   const { artistas } = useWorkspace();
   const { podeUI } = useAuth();
 
-  // artistId do contrato vem da venda vinculada (contrato.vendaId → venda.djId).
+  // artistId do contrato vem da venda vinculada (contrato.vendaId → venda.artistaId).
   // Definir/editar signatários = editar o contrato.
-  const artistaId = vendas.find((v) => v.id === contrato.vendaId)?.djId || null;
+  const artistaId = vendas.find((v) => v.id === contrato.vendaId)?.artistaId || null;
   const podeEditarSignatarios =
     podeUI(artistaId, "contratos.editar") ||
     podeUI(artistaId, "contratos.editar_todos");
@@ -138,7 +138,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
 
   function linhasIniciais(): LinhaForm[] {
     const venda = vendas.find((v) => v.id === contrato.vendaId);
-    const artista = artistas.find((a) => a.id === venda?.djId);
+    const artista = artistas.find((a) => a.id === venda?.artistaId);
     return [
       {
         nome: venda?.contratanteNome ?? "",

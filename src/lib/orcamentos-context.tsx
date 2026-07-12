@@ -44,7 +44,7 @@ export type NovoOrcamentoInput = {
   casa: CasaInput;
   cidade: CidadeInput;
   /** UUID do artista (vem do workspace.artistas). */
-  djId: string;
+  artistaId: string;
   valorCache: number;
   duracaoHoras: number;
   duracaoMinutos?: number;
@@ -99,7 +99,7 @@ function orcamentoParaApi(o: Partial<Orcamento>): Record<string, unknown> {
   if (o.contratanteId !== undefined) out.contratante_id = o.contratanteId || null;
   if (o.casaId !== undefined) out.casa_id = o.casaId || null;
   if (o.cidadeId !== undefined) out.cidade_id = o.cidadeId || null;
-  if (o.djId !== undefined) out.artist_id = o.djId || null;
+  if (o.artistaId !== undefined) out.artist_id = o.artistaId || null;
   if (o.valorCache !== undefined) out.valor_cache = o.valorCache;
   if (o.duracaoHoras !== undefined) out.duracao_horas = o.duracaoHoras;
   if (o.duracaoMinutos !== undefined) out.duracao_minutos = o.duracaoMinutos;
@@ -194,7 +194,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         contratante_id: contratanteIdResolvido,
         casa_id: casaIdResolvido ?? null,
         cidade_id: cidadeIdResolvido,
-        artist_id: input.djId || null,
+        artist_id: input.artistaId || null,
         valor_cache: input.valorCache,
         duracao_horas: input.duracaoHoras,
         duracao_minutos: input.duracaoMinutos,
@@ -219,7 +219,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
       const body = await jsonOuErro(res);
       const criado = body.orcamento as Orcamento;
 
-      const comDj: Orcamento = { ...criado, djId: input.djId };
+      const comDj: Orcamento = { ...criado, artistaId: input.artistaId };
       setOrcamentos((prev) => [comDj, ...prev]);
       return comDj;
     },
@@ -238,7 +238,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
       });
       const body = await jsonOuErro(res);
       const atual = body.orcamento as Orcamento;
-      setOrcamentos((prev) => prev.map((p) => (p.id === id ? { ...p, ...atual, djId: p.djId } : p)));
+      setOrcamentos((prev) => prev.map((p) => (p.id === id ? { ...p, ...atual, artistaId: p.artistaId } : p)));
       return atual;
     },
     []
@@ -277,7 +277,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
       const showCriado = (body.show as { id?: string } | null)?.id;
       const faltamDados = !!body.faltamDados;
       setOrcamentos((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...atual, djId: p.djId } : p))
+        prev.map((p) => (p.id === id ? { ...p, ...atual, artistaId: p.artistaId } : p))
       );
       return { orcamento: atual, showCriado, faltamDados };
     },
@@ -295,7 +295,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         contratante_id: original.contratanteId || null,
         casa_id: original.casaId || null,
         cidade_id: original.cidadeId || null,
-        artist_id: original.djId || null,
+        artist_id: original.artistaId || null,
         valor_cache: original.valorCache,
         duracao_horas: original.duracaoHoras,
         duracao_minutos: original.duracaoMinutos,
@@ -318,7 +318,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
       });
       const body = await jsonOuErro(res);
       const criado = body.orcamento as Orcamento;
-      const comDj: Orcamento = { ...criado, djId: original.djId };
+      const comDj: Orcamento = { ...criado, artistaId: original.artistaId };
       setOrcamentos((prev) => [comDj, ...prev]);
       return comDj;
     },

@@ -71,10 +71,10 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
 
 export default function Contatos({
   categoriaInicial = "contratantes",
-  selectedDJs = [],
+  selectedArtistas = [],
 }: {
   categoriaInicial?: ContatoCategoria;
-  selectedDJs?: string[];
+  selectedArtistas?: string[];
 }) {
   const t = useT();
   const accent = MODULE_THEMES.contatos.color;
@@ -107,17 +107,17 @@ export default function Contatos({
 
   // ----------------------------------------------------------------
   // Filtro por DJ selecionado (sidebar):
-  //  - "comHist" = aparece em show/orçamento/venda cujo djId pertence
+  //  - "comHist" = aparece em show/orçamento/venda cujo artistaId pertence
   //    a um DJ ATIVO (não está na lixeira). Registros vinculados a DJs
   //    já excluídos são ignorados — assim, contato que era exclusivo
   //    de um DJ deletado "vira manual" e passa a aparecer sempre.
-  //  - "ativos" = subset de comHist em que pelo menos 1 dos djIds está
-  //    em selectedDJs (DJs marcados na sidebar).
+  //  - "ativos" = subset de comHist em que pelo menos 1 dos artistaIds está
+  //    em selectedArtistas (DJs marcados na sidebar).
   // Regra final em passaFiltroDj: sem histórico → sempre visível;
   // com histórico → só se algum DJ marcado é dono.
   // ----------------------------------------------------------------
   const filtrosPorDj = useMemo(() => {
-    const djSet = new Set(selectedDJs);
+    const artistaSet = new Set(selectedArtistas);
     const djsAtivosSet = new Set(artistasAtivos.map((a) => a.id));
     const contratantesAtivos = new Set<string>();
     const contratantesComHist = new Set<string>();
@@ -127,32 +127,32 @@ export default function Contatos({
     const cidadesComHist = new Set<string>();
 
     const marcar = (
-      djId: string | null | undefined,
+      artistaId: string | null | undefined,
       contId: string | null | undefined,
       casaId: string | null | undefined,
       cidadeId: string | null | undefined
     ) => {
       // Ignora registros de DJs deletados/inexistentes — o contato passa
       // a se comportar como manual.
-      if (!djId || !djsAtivosSet.has(djId)) return;
-      const djOk = djSet.has(djId);
+      if (!artistaId || !djsAtivosSet.has(artistaId)) return;
+      const artistaOk = artistaSet.has(artistaId);
       if (contId) {
         contratantesComHist.add(contId);
-        if (djOk) contratantesAtivos.add(contId);
+        if (artistaOk) contratantesAtivos.add(contId);
       }
       if (casaId) {
         casasComHist.add(casaId);
-        if (djOk) casasAtivas.add(casaId);
+        if (artistaOk) casasAtivas.add(casaId);
       }
       if (cidadeId) {
         cidadesComHist.add(cidadeId);
-        if (djOk) cidadesAtivas.add(cidadeId);
+        if (artistaOk) cidadesAtivas.add(cidadeId);
       }
     };
 
-    for (const s of shows) marcar(s.djId, s.contratanteId, s.casaId ?? null, s.cidadeId);
-    for (const o of orcamentos) marcar(o.djId, o.contratanteId, o.casaId ?? null, o.cidadeId);
-    for (const v of vendas) marcar(v.djId, v.contratanteId, v.casaId ?? null, v.cidadeId);
+    for (const s of shows) marcar(s.artistaId, s.contratanteId, s.casaId ?? null, s.cidadeId);
+    for (const o of orcamentos) marcar(o.artistaId, o.contratanteId, o.casaId ?? null, o.cidadeId);
+    for (const v of vendas) marcar(v.artistaId, v.contratanteId, v.casaId ?? null, v.cidadeId);
 
     return {
       contratantesAtivos,
@@ -162,7 +162,7 @@ export default function Contatos({
       cidadesAtivas,
       cidadesComHist,
     };
-  }, [shows, orcamentos, vendas, selectedDJs, artistasAtivos]);
+  }, [shows, orcamentos, vendas, selectedArtistas, artistasAtivos]);
 
   function passaFiltroDj(
     id: string,
@@ -362,7 +362,7 @@ export default function Contatos({
         isOpen={modal?.type === "novo-contratante" || modal?.type === "edit-contratante"}
         onClose={() => setModal(null)}
         title={modal?.type === "edit-contratante" ? t("Editar contratante") : t("Novo contratante")}
-        subtitle={t("Cliente que contrata os DJs da agência")}
+        subtitle={t("Cliente que contrata os artistas da agência")}
       >
         <ContratanteForm
           initial={modal?.type === "edit-contratante" ? modal.item : undefined}
@@ -596,7 +596,7 @@ function TabelaCidades({
             <Th className="text-right">{t("Casas")}</Th>
             <Th className="text-right">{t("Shows")}</Th>
             <Th className="text-right">{t("Faturado")}</Th>
-            <Th>{t("Top DJ")}</Th>
+            <Th>{t("Top artista")}</Th>
             <Th className="w-[1%]"></Th>
           </tr>
         </thead>
@@ -618,10 +618,10 @@ function TabelaCidades({
                   {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
                 </Td>
                 <Td className="text-secondary">
-                  {stats.topDJ ? (
+                  {stats.topArtista ? (
                     <span>
-                      {stats.topDJ.nome}{" "}
-                      <span className="text-muted">({stats.topDJ.shows})</span>
+                      {stats.topArtista.nome}{" "}
+                      <span className="text-muted">({stats.topArtista.shows})</span>
                     </span>
                   ) : (
                     "—"

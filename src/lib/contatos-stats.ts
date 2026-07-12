@@ -35,16 +35,16 @@ export function getContratanteStats(
 export type CasaStats = {
   totalShows: number;
   faturamento: number;
-  djsQueTocaram: string[]; // nomes únicos
+  artistasQueTocaram: string[]; // nomes únicos
 };
 
 export function getCasaStats(casaId: string, shows: Show[]): CasaStats {
   const aqui = shows.filter((s) => s.casaId === casaId);
-  const djsUnicos = Array.from(new Set(aqui.map((s) => s.dj)));
+  const artistasUnicos = Array.from(new Set(aqui.map((s) => s.artistaNome)));
   return {
     totalShows: aqui.length,
     faturamento: aqui.reduce((acc, s) => acc + (s.valor ?? 0), 0),
-    djsQueTocaram: djsUnicos,
+    artistasQueTocaram: artistasUnicos,
   };
 }
 
@@ -54,7 +54,7 @@ export type CidadeStats = {
   totalShows: number;
   faturamento: number;
   totalCasas: number;
-  topDJ?: { nome: string; shows: number };
+  topArtista?: { nome: string; shows: number };
 };
 
 export function getCidadeStats(
@@ -65,21 +65,21 @@ export function getCidadeStats(
   const aqui = shows.filter((s) => s.cidadeId === cidadeId);
   const totalCasas = casas.filter((c) => c.cidadeId === cidadeId).length;
 
-  // Conta shows por DJ
-  const porDJ = new Map<string, number>();
+  // Conta shows por artista
+  const porArtista = new Map<string, number>();
   aqui.forEach((s) => {
-    porDJ.set(s.dj, (porDJ.get(s.dj) ?? 0) + 1);
+    porArtista.set(s.artistaNome, (porArtista.get(s.artistaNome) ?? 0) + 1);
   });
-  let topDJ: { nome: string; shows: number } | undefined;
-  porDJ.forEach((qtd, nome) => {
-    if (!topDJ || qtd > topDJ.shows) topDJ = { nome, shows: qtd };
+  let topArtista: { nome: string; shows: number } | undefined;
+  porArtista.forEach((qtd, nome) => {
+    if (!topArtista || qtd > topArtista.shows) topArtista = { nome, shows: qtd };
   });
 
   return {
     totalShows: aqui.length,
     faturamento: aqui.reduce((acc, s) => acc + (s.valor ?? 0), 0),
     totalCasas,
-    topDJ,
+    topArtista,
   };
 }
 

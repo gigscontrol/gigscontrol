@@ -94,7 +94,7 @@ type Status = {
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Artista", descricao: "1º DJ" },
+  { id: 3, label: "Artista", descricao: "1º artista" },
   { id: 4, label: "Equipe", descricao: "Convidar membro" },
 ];
 

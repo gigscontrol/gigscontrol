@@ -87,7 +87,7 @@ function bookingValido(raw: unknown): BookingShow | undefined {
 
 /**
  * Converte uma row do banco no objeto `Show` que a UI usa.
- * Os campos denormalizados (`dj`, `location`, `venue`) são preenchidos
+ * Os campos denormalizados (`artistaNome`, `location`, `venue`) são preenchidos
  * a partir dos joins quando disponíveis.
  */
 export function rowParaShow(row: ShowRow): Show {
@@ -111,8 +111,8 @@ export function rowParaShow(row: ShowRow): Show {
     id: row.id,
     dayId: diaDoMes(row.data),
     data: row.data ?? undefined,
-    djId: row.artist_id ?? "",
-    dj: row.artist?.nome ?? "",
+    artistaId: row.artist_id ?? "",
+    artistaNome: row.artist?.nome ?? "",
     location,
     venue: row.casa?.nome ?? "",
     time: row.horario ?? "",
@@ -131,7 +131,7 @@ export function rowParaShow(row: ShowRow): Show {
 
 /**
  * Campos aceitos no INSERT/UPDATE.
- * `dj`, `location`, `venue`, `dayId` são derivados — não persistem.
+ * `artistaNome`, `location`, `venue`, `dayId` são derivados — não persistem.
  */
 export type ShowEscrita = {
   workspace_id?: string;

@@ -44,7 +44,7 @@ export type CtxPermissao = {
 
 type FuncaoLegada = "vendedor" | "financeiro" | "produtor";
 
-function djLegado(ctx: CtxPermissao, funcao: FuncaoLegada, artistaId: string): boolean {
+function artistaLegado(ctx: CtxPermissao, funcao: FuncaoLegada, artistaId: string): boolean {
   const arr = ctx.funcoes?.[funcao] ?? [];
   return arr.includes(artistaId);
 }
@@ -61,9 +61,9 @@ function fallbackLegado(ctx: CtxPermissao, artistaId: string, chave: string): bo
       // Hoje a agenda não tem trava por função — toda a equipe opera.
       return true;
     case "vendas":
-      return djLegado(ctx, "vendedor", artistaId) || djLegado(ctx, "financeiro", artistaId);
+      return artistaLegado(ctx, "vendedor", artistaId) || artistaLegado(ctx, "financeiro", artistaId);
     case "financeiro":
-      return djLegado(ctx, "financeiro", artistaId);
+      return artistaLegado(ctx, "financeiro", artistaId);
     case "contratos":
       // Hoje contratos é admin-only (admin já retornou true antes daqui).
       return false;
@@ -179,7 +179,7 @@ export function artistasVisiveis(
   // Fallback legado: união dos DJs das funções.
   const set = new Set<string>();
   for (const f of ["vendedor", "financeiro", "produtor"] as const) {
-    for (const dj of ctx.funcoes?.[f] ?? []) set.add(dj);
+    for (const artista of ctx.funcoes?.[f] ?? []) set.add(artista);
   }
   return [...set];
 }

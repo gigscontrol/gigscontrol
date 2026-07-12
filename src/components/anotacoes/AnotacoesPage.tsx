@@ -99,11 +99,11 @@ export default function AnotacoesPage() {
   const rotuloDoShow = (id: string): { titulo: string; sub: string } => {
     const s = showDe(id);
     if (!s) return { titulo: t("Show"), sub: "" };
-    const dj = artistas.find((d) => d.id === s.djId);
+    const artista = artistas.find((d) => d.id === s.artistaId);
     const data = s.data ? s.data.split("-").reverse().slice(0, 2).join("/") : "";
     return {
       titulo: s.venue || s.location || t("Show"),
-      sub: [dj?.name, data].filter(Boolean).join(" · "),
+      sub: [artista?.name, data].filter(Boolean).join(" · "),
     };
   };
 

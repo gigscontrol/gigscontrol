@@ -17,7 +17,7 @@ import { useAuth } from "./auth-context";
  *
  * Mantém um cache local da lista para renderização imediata. Cada mutação
  * faz a chamada à API e, em caso de sucesso, atualiza o cache com o
- * retorno do servidor (que já vem com `dj`, `location` e `venue` resolvidos
+ * retorno do servidor (que já vem com `artistaNome`, `location` e `venue` resolvidos
  * via JOIN).
  *
  * `addShow` aceita o payload no formato legado (camelCase) usado pela UI
@@ -27,9 +27,9 @@ import { useAuth } from "./auth-context";
  * 5 e 6 migrarem essas entidades.
  */
 
-export type AddShowInput = Omit<Show, "id" | "dayId" | "dj" | "location" | "venue"> & {
-  /** Permitido continuar passando `dj` legado — ignorado pela API. */
-  dj?: string;
+export type AddShowInput = Omit<Show, "id" | "dayId" | "artistaNome" | "location" | "venue"> & {
+  /** Permitido continuar passando `artistaNome` legado — ignorado pela API. */
+  artistaNome?: string;
   /** Idem — ignorado. */
   location?: string;
   /** Idem — ignorado. */
@@ -60,7 +60,7 @@ const ShowsContext = createContext<ShowsContextValue | null>(null);
 
 function camelParaApi(s: AddShowInput | UpdateShowInput): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if (s.djId !== undefined) out.artist_id = s.djId || null;
+  if (s.artistaId !== undefined) out.artist_id = s.artistaId || null;
   if (s.contratanteId !== undefined) out.contratante_id = s.contratanteId || null;
   if (s.casaId !== undefined) out.casa_id = s.casaId || null;
   if (s.cidadeId !== undefined) out.cidade_id = s.cidadeId || null;

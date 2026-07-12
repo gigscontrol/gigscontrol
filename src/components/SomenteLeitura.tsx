@@ -51,8 +51,8 @@ function ehAcaoDeEscrita(el: HTMLElement): boolean {
     "criar orçamento",
     "criar venda",
     "adicionar parcela",
-    "adicionar dj",
-    "+ dj",
+    "adicionar artista",
+    "+ artista",
     "salvar alterações",
   ];
   return PALAVRAS_ESCRITA.some((p) => txt.includes(p));
