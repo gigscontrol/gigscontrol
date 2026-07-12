@@ -19,8 +19,6 @@ export type Funcoes = {
   produtor?: string[];
 };
 
-export const FUNCOES_VAZIA: Funcoes = {};
-
 /** Linha da tabela `profiles`. */
 export type ProfileRow = {
   id: string;

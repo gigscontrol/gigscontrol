@@ -137,19 +137,3 @@ export const CATALOGO: Permissao[] = [
 
 /** Set de todas as chaves válidas (validação rápida). */
 export const CHAVES_VALIDAS: ReadonlySet<string> = new Set(CATALOGO.map((p) => p.chave));
-
-/** Permissões de um módulo. */
-export function permsDoModulo(modulo: ModuloPermissao): Permissao[] {
-  return CATALOGO.filter((p) => p.modulo === modulo);
-}
-
-/** Só as permissões por-artista (as que vão no vínculo membros_artista). */
-export const CHAVES_ARTISTA: string[] = CATALOGO.filter((p) => p.nivel === "artista").map((p) => p.chave);
-
-/** Só as permissões de workspace (administrativas). */
-export const CHAVES_WORKSPACE: string[] = CATALOGO.filter((p) => p.nivel === "workspace").map((p) => p.chave);
-
-/** true se a chave existe e é enforçável hoje. */
-export function chaveExiste(chave: string): boolean {
-  return CATALOGO.some((p) => p.chave === chave && p.existe);
-}

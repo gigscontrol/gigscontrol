@@ -26,24 +26,6 @@ export function splitEndereco(
   };
 }
 
-/**
- * Une as 3 partes na string a guardar. Remove "|" das partes (pra não
- * colidir com o separador) e tira separadores sobrando no fim. Devolve ""
- * quando tudo está vazio (campo opcional não preenchido).
- */
-export function joinEndereco(
-  rua: string,
-  numero: string,
-  complemento: string
-): string {
-  const limpa = (s: string) => s.replace(/\|/g, "").trim();
-  const r = limpa(rua);
-  const n = limpa(numero);
-  const c = limpa(complemento);
-  if (!r && !n && !c) return "";
-  return [r, n, c].join(SEP).replace(/(\|\|)+$/, "");
-}
-
 /** Formata pra leitura humana: "Rua X, nº 123, Apto 4". Vazio → "". */
 export function formatEndereco(valor: string | null | undefined): string {
   const { rua, numero, complemento } = splitEndereco(valor);

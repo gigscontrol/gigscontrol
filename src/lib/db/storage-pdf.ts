@@ -31,24 +31,3 @@ export async function baixarPdfContrato(
   if (error || !data) throw error ?? new Error("PDF do contrato não encontrado.");
   return data.arrayBuffer();
 }
-
-/** URL assinada (temporária) pro PDF-fonte — usada no editor de posicionamento. */
-export async function urlPdfContrato(
-  admin: SupabaseClient,
-  caminho: string,
-  expiraSeg = 3600
-): Promise<string | null> {
-  const { data, error } = await admin.storage
-    .from(BUCKET)
-    .createSignedUrl(caminho, expiraSeg);
-  if (error) return null;
-  return data?.signedUrl ?? null;
-}
-
-/** Remove o PDF-fonte (best-effort, ao trocar/apagar). */
-export async function removerPdfContrato(
-  admin: SupabaseClient,
-  caminho: string
-): Promise<void> {
-  await admin.storage.from(BUCKET).remove([caminho]).catch(() => undefined);
-}

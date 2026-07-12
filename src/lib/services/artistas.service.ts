@@ -192,14 +192,6 @@ export async function listarArtistasDoWorkspace(
   );
 }
 
-export async function buscarArtistaPorId(
-  supabase: SupabaseClient,
-  id: string
-): Promise<Artista | null> {
-  const row = await repoBuscarComUsername(supabase, id);
-  return row ? rowParaArtista(row) : null;
-}
-
 /**
  * Cria um artista COMPLETO:
  *  1. Valida limite do plano.

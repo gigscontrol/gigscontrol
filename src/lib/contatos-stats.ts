@@ -90,13 +90,5 @@ export function getCidadeNome(cidadeId: string, cidades: Cidade[]) {
   return c ? `${c.nome}, ${c.estado}` : "—";
 }
 
-export function getContratanteNome(
-  contratanteId: string | undefined,
-  contratantes: Contratante[]
-) {
-  if (!contratanteId) return "—";
-  return contratantes.find((x) => x.id === contratanteId)?.nome ?? "—";
-}
-
 /** Moeda resumida (0 casas). Delega no formatador único. */
 export const formatBRL = (v: number) => formatarMoeda(v, "BRL", 0);
