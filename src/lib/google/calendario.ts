@@ -50,10 +50,10 @@ function montarLogistica(l?: { aereaQtd: number; transladoTerrestre: boolean }):
 }
 
 /** Monta a descrição do evento na ordem definida pelo cliente. */
-function montarDescricao(input: VendaCreateInput, djNome: string | null): string {
+function montarDescricao(input: VendaCreateInput, artistaNome: string | null): string {
   const linhas: string[] = [];
 
-  if (djNome) linhas.push(`🎧 Artista: ${djNome}`);
+  if (artistaNome) linhas.push(`🎧 Artista: ${artistaNome}`);
 
   const contratante = [input.contratante_nome, input.contratante_telefone]
     .filter(Boolean)
@@ -142,14 +142,14 @@ export async function sincronizarShowNoGoogle(
     .select("nome")
     .eq("id", artistId)
     .maybeSingle();
-  const djNome = (artista as { nome?: string } | null)?.nome ?? null;
+  const artistaNome = (artista as { nome?: string } | null)?.nome ?? null;
 
   const titulo = `🎧 ${input.nome_evento || input.nome_local || "Show"}`;
   const local = [input.nome_local, input.endereco_local].filter(Boolean).join(", ");
 
   const evento: Record<string, unknown> = {
     summary: titulo,
-    description: montarDescricao(input, djNome),
+    description: montarDescricao(input, artistaNome),
     // SEMPRE dia inteiro na data agendada (end.date é exclusivo no Google).
     start: { date: input.data_show },
     end: { date: addDias(input.data_show, 1) },

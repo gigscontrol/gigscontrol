@@ -1,4 +1,4 @@
-import type { Orcamento, Contratante, Casa, Cidade, DJ } from "@/types";
+import type { Orcamento, Contratante, Casa, Cidade, Artista } from "@/types";
 import { TEXTO_TRANSLADO } from "@/types";
 import { formatarMoeda } from "./formatters";
 
@@ -25,18 +25,18 @@ export function gerarTextoWhatsApp(
     contratante?: Contratante;
     casa?: Casa;
     cidade?: Cidade;
-    dj?: DJ;
+    artista?: Artista;
   }
 ): string {
   const cidadeNome = ctx.cidade?.nome ?? "—";
-  const djNome = ctx.dj?.name ?? "—";
+  const artistaNome = ctx.artista?.name ?? "—";
   const valor = formatBRL(orc.valorCache);
   const duracao = formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0);
 
   const linhas: string[] = [];
   linhas.push(`*Valores de cachê ${cidadeNome}*`);
   linhas.push("");
-  linhas.push(`*${djNome}*`);
+  linhas.push(`*${artistaNome}*`);
   linhas.push(`${valor} por ${duracao} de show.`);
 
   const camarim = orc.camarim.filter((i) => i.qtd > 0);

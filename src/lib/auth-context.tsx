@@ -16,7 +16,7 @@ import {
   type Permissoes,
   type Papel,
 } from "./permissoes";
-import { DEFAULT_SELECTED_DJ_IDS } from "./djs";
+import { DEFAULT_SELECTED_ARTISTA_IDS } from "./artistas-fallback";
 import { criarClienteBrowser } from "./db/supabase-browser";
 import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
 
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return calcularPermissoes(sessao.usuario.papel, {
       artistaId: sessao.usuario.artistaId,
       escopoVendedor: sessao.usuario.escopoVendedor,
-      todosArtistasIds: DEFAULT_SELECTED_DJ_IDS,
+      todosArtistasIds: DEFAULT_SELECTED_ARTISTA_IDS,
     });
   }, [sessao]);
 

@@ -147,7 +147,7 @@ export async function atualizarOrcamentoPorId(
     const artistId =
       input.artist_id !== undefined
         ? normalizarUuid(input.artist_id ?? null)
-        : atual?.djId ?? null;
+        : atual?.artistaId ?? null;
     const cache =
       input.valor_cache !== undefined ? input.valor_cache : atual?.valorCache ?? null;
     const taxa = await resolverTaxaAgencia(supabase, {
@@ -206,7 +206,7 @@ export async function aceitarOrcamentoPorId(
 
   // Cria show + atualiza orçamento.
   const show = await criarShowNoWorkspace(supabase, workspaceId, {
-    artist_id: normalizarUuid(atual.djId),
+    artist_id: normalizarUuid(atual.artistaId),
     contratante_id: normalizarUuid(atual.contratanteId),
     casa_id: normalizarUuid(atual.casaId ?? null),
     cidade_id: normalizarUuid(atual.cidadeId),

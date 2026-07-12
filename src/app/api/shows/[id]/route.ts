@@ -32,9 +32,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         { status: 404 }
       );
     }
-    // Inclui show SEM artista (djId vazio → null): item geral = admin-only
+    // Inclui show SEM artista (artistaId vazio → null): item geral = admin-only
     // (podeVerAgenda(null) só passa admin/legado). Antes escapava do gate.
-    if (!podeVerAgenda(r.sessao, show.djId || null)) {
+    if (!podeVerAgenda(r.sessao, show.artistaId || null)) {
       return NextResponse.json(
         { erro: "Você não tem acesso a este show." },
         { status: 403 }

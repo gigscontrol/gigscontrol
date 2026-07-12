@@ -22,6 +22,9 @@ const schema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
     .nullable()
     .optional(),
+  // Cidade onde reside (FK cidades). O client resolve a seleção pro UUID do
+  // catálogo do próprio workspace antes de mandar; null limpa.
+  cidade_id: z.string().uuid().nullable().optional(),
 });
 
 export async function PATCH(request: Request) {

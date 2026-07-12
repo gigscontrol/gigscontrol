@@ -5,6 +5,11 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 const COLS =
   "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, escopo, funcoes, status, deletado_em, pode_criar_anotacoes, senha_padrao, senha_padrao_valor, cor, pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, data_nascimento, cidade_id";
 
+// COLS + a cidade embutida (join em cidades por cidade_id). Usado só no roster
+// da equipe, pra o editar já abrir com o seletor de cidade pré-preenchido
+// (nome/uf/país). O mapper rowParaUsuario lê `cidade` quando presente.
+const COLS_COM_CIDADE = `${COLS}, cidade:cidades!cidade_id(id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id)`;
+
 /** Lista equipe ativa (papel != admin/artista, deletado_em is null). */
 export async function listarUsuariosEquipe(
   supabase: SupabaseClient,
@@ -12,7 +17,7 @@ export async function listarUsuariosEquipe(
 ): Promise<ProfileRow[]> {
   const { data, error } = await supabase
     .from("profiles")
-    .select(COLS)
+    .select(COLS_COM_CIDADE)
     .eq("workspace_id", workspaceId)
     .is("deletado_em", null)
     .not("papel", "in", "(admin,artista)")

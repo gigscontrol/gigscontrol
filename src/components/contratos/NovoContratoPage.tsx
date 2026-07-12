@@ -105,7 +105,7 @@ export default function NovoContratoPage() {
   // Permissão de criar contrato. Com venda escolhida, gate pelo artista dela;
   // sem venda (artista escolhido depois), habilita se PODE em qualquer artista.
   const podeCriar = venda
-    ? podeUI(venda.djId || null, "contratos.criar")
+    ? podeUI(venda.artistaId || null, "contratos.criar")
     : artistas.some((a) => podeUI(a.id, "contratos.criar"));
 
   // (Re)preenche os valores quando muda o modelo ou a venda. Edições do
@@ -120,8 +120,8 @@ export default function NovoContratoPage() {
     base.agencia = agencia;
     base.data_hoje = hojeBR();
     if (venda) {
-      const dj = artistas.find((a) => a.id === venda.djId) ?? null;
-      Object.assign(base, valoresDeVenda({ venda, dj, agencia, numero: "" }));
+      const artista = artistas.find((a) => a.id === venda.artistaId) ?? null;
+      Object.assign(base, valoresDeVenda({ venda, artista, agencia, numero: "" }));
     }
     setValores(base);
     setGerado(null);
@@ -378,12 +378,12 @@ export default function NovoContratoPage() {
                 >
                   <option value="">{t("Sem venda (preencher manual)")}</option>
                   {vendas.map((v) => {
-                    const dj = artistas.find((a) => a.id === v.djId);
+                    const artista = artistas.find((a) => a.id === v.artistaId);
                     return (
                       <option key={v.id} value={v.id}>
                         {v.numero} · {v.nomeEvento || "evento"} ·{" "}
                         {dataBR(v.dataShow)}
-                        {dj ? ` · ${dj.name}` : ""}
+                        {artista ? ` · ${artista.name}` : ""}
                       </option>
                     );
                   })}

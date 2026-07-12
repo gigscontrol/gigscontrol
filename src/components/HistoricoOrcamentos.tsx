@@ -59,7 +59,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
       .filter((o) => {
         if (filtroStatus !== "todos" && o.status !== filtroStatus) return false;
-        if (filtroDJ !== "todos" && o.djId !== filtroDJ) return false;
+        if (filtroDJ !== "todos" && o.artistaId !== filtroDJ) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const cont = contratantes.find((c) => c.id === o.contratanteId);
@@ -71,7 +71,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
             cont?.telefone ?? "",
             cid?.nome ?? "",
             cs?.nome ?? "",
-            artistas.find((d) => d.id === o.djId)?.name ?? "",
+            artistas.find((d) => d.id === o.artistaId)?.name ?? "",
           ]
             .join(" ")
             .toLowerCase();
@@ -99,8 +99,8 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
     if (!orc) return;
     const cont = contratantes.find((c) => c.id === orc.contratanteId);
     const cid = cidades.find((c) => c.id === orc.cidadeId);
-    const dj = artistas.find((d) => d.id === orc.djId);
-    const texto = gerarTextoWhatsApp(orc, { contratante: cont, cidade: cid, dj });
+    const artista = artistas.find((d) => d.id === orc.artistaId);
+    const texto = gerarTextoWhatsApp(orc, { contratante: cont, cidade: cid, artista });
     const link = montarLinkWhatsApp(cont?.telefone ?? "", texto);
     window.open(link, "_blank", "noopener,noreferrer");
   }
@@ -214,7 +214,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
             className={`pill ${filtroDJ === "todos" ? "active" : ""}`}
             onClick={() => setFiltroDJ("todos")}
           >
-            {t("Todos DJs")}
+            {t("Todos artistas")}
           </button>
           {artistas.map((d) => (
             <button
@@ -265,7 +265,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                   <Th>{t("Nº")}</Th>
                   <Th>{t("Contratante")}</Th>
                   <Th>{t("Tipo")}</Th>
-                  <Th>{t("DJ")}</Th>
+                  <Th>{t("Artista")}</Th>
                   <Th>{t("Cidade")}</Th>
                   <Th>{t("Data show")}</Th>
                   <Th className="text-right">{t("Valor")}</Th>
@@ -277,7 +277,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                 {lista.map((o) => {
                   const cont = contratantes.find((c) => c.id === o.contratanteId);
                   const cid = cidades.find((c) => c.id === o.cidadeId);
-                  const dj = artistas.find((d) => d.id === o.djId);
+                  const artista = artistas.find((d) => d.id === o.artistaId);
                   const st = LABELS_STATUS_ORCAMENTO[o.status];
                   return (
                     <tr
@@ -290,7 +290,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                       <Td>
                         <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[o.tipoEvento])}</span>
                       </Td>
-                      <Td className="text-secondary">{dj?.name ?? "—"}</Td>
+                      <Td className="text-secondary">{artista?.name ?? "—"}</Td>
                       <Td className="text-secondary">
                         {cid ? `${cid.nome}/${cid.estado}` : "—"}
                       </Td>
@@ -319,9 +319,9 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
                           onDelete={() => handleRemover(o.id)}
                           onTransformar={() => onTransformarEmVenda(o.id)}
                           status={o.status}
-                          podeEditar={podeUI(o.djId || null, "vendas.editar_orcamento")}
-                          podeConverter={podeUI(o.djId || null, "vendas.converter")}
-                          podeExcluir={podeUI(o.djId || null, "vendas.excluir_orcamento")}
+                          podeEditar={podeUI(o.artistaId || null, "vendas.editar_orcamento")}
+                          podeConverter={podeUI(o.artistaId || null, "vendas.converter")}
+                          podeExcluir={podeUI(o.artistaId || null, "vendas.excluir_orcamento")}
                         />
                       </Td>
                     </tr>

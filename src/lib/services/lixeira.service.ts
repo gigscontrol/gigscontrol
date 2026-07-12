@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DJ, Orcamento, Venda, Contratante, Casa, Cidade, Show } from "@/types";
-import { rowParaDj } from "@/lib/mappers/artista";
+import type { Artista, Orcamento, Venda, Contratante, Casa, Cidade, Show } from "@/types";
+import { rowParaArtista } from "@/lib/mappers/artista";
 import { rowParaUsuario, type UsuarioEquipe } from "@/lib/mappers/usuario";
 import { rowParaOrcamento } from "@/lib/mappers/orcamento";
 import { rowParaVenda } from "@/lib/mappers/venda";
@@ -66,7 +66,7 @@ type ItemBase = {
   diasRestantes: number;
 };
 
-export type ItemLixeiraArtista = ItemBase & { tipo: "artista"; artista: DJ };
+export type ItemLixeiraArtista = ItemBase & { tipo: "artista"; artista: Artista };
 export type ItemLixeiraUsuario = ItemBase & { tipo: "usuario"; usuario: UsuarioEquipe };
 export type ItemLixeiraOrcamento = ItemBase & { tipo: "orcamento"; orcamento: Orcamento };
 export type ItemLixeiraVenda = ItemBase & { tipo: "venda"; venda: Venda };
@@ -147,7 +147,7 @@ export async function listarLixeira(
 
   const artistas: ItemLixeiraArtista[] = artistasRows.map((row) => ({
     tipo: "artista",
-    artista: rowParaDj({ ...row, username: mapaUsername.get(row.id) ?? null }),
+    artista: rowParaArtista({ ...row, username: mapaUsername.get(row.id) ?? null }),
     deletadoEm: row.deletado_em ?? "",
     diasRestantes: diasRestantes(row.deletado_em),
   }));

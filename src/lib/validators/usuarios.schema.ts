@@ -35,7 +35,7 @@ const funcoesSchema = z
       0,
     {
       message:
-        "Selecione pelo menos 1 função com 1 DJ para o usuário operacional.",
+        "Selecione pelo menos 1 função com 1 artista para o usuário operacional.",
     }
   );
 

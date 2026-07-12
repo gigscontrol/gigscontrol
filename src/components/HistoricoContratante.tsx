@@ -72,7 +72,7 @@ export default function HistoricoContratante({ contratanteId }: Props) {
               const st = LABELS_STATUS_ORCAMENTO[o.status];
               const local = nomeCasa(o.casaId) || o.detalhesEvento?.nomeLocal || "";
               const linha = [
-                nomeArtista(o.djId),
+                nomeArtista(o.artistaId),
                 o.detalhesEvento?.nomeEvento,
                 local,
                 nomeCidade(o.cidadeId),
@@ -115,7 +115,7 @@ export default function HistoricoContratante({ contratanteId }: Props) {
           <div className="flex flex-col gap-1.5">
             {vnds.slice(0, MAX).map((v) => {
               const linha = [
-                nomeArtista(v.djId),
+                nomeArtista(v.artistaId),
                 v.nomeEvento,
                 v.nomeLocal || nomeCasa(v.casaId),
                 nomeCidade(v.cidadeId),

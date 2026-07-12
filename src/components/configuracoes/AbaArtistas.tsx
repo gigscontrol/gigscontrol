@@ -45,6 +45,7 @@ import EquipeDoArtista from "./EquipeDoArtista";
 import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
@@ -68,6 +69,7 @@ import {
   LIMITE_RIDER_TECNICO,
   type TaxaAgenciaModo,
   type DocumentoTipo,
+  type Cidade,
 } from "@/types";
 
 /**
@@ -109,6 +111,8 @@ type ArtistaParaEdicao = {
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  cidadeId?: string;
+  cidade?: Cidade;
   pais?: string;
   nomeLegal?: string;
   documentoTipo?: DocumentoTipo;
@@ -222,7 +226,7 @@ export default function AbaArtistas() {
 
   // ---- Top bar de DJs + perfil (redesign) ----
   const ultimoVistoRef = useRef<string | null>(null);
-  const [djSelecionadoId, setDjSelecionadoId] = useState<string | null>(null);
+  const [artistaSelecionadoId, setArtistaSelecionadoId] = useState<string | null>(null);
   const [conta, setConta] = useState<DadosConta | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(false);
   const [modoReordenar, setModoReordenar] = useState(false);
@@ -234,7 +238,7 @@ export default function AbaArtistas() {
   const [senhaReveladaCard, setSenhaReveladaCard] = useState(false);
   useEffect(() => {
     setSenhaReveladaCard(false);
-  }, [djSelecionadoId]);
+  }, [artistaSelecionadoId]);
 
   // Retorno do OAuth do Google: /api/google/callback redireciona pra cá com
   // ?google=ok|erro (&artista &email &msg). Mostra um toast, seleciona o
@@ -245,7 +249,7 @@ export default function AbaArtistas() {
     const g = params.get("google");
     if (!g) return;
     const artista = params.get("artista");
-    if (artista) setDjSelecionadoId(artista);
+    if (artista) setArtistaSelecionadoId(artista);
     if (g === "ok") {
       const email = params.get("email");
       setToast({
@@ -265,34 +269,34 @@ export default function AbaArtistas() {
   // Mantém uma seleção válida (default = primeiro, ou o último visto).
   useEffect(() => {
     if (artistas.length === 0) {
-      if (djSelecionadoId !== null) setDjSelecionadoId(null);
+      if (artistaSelecionadoId !== null) setArtistaSelecionadoId(null);
       return;
     }
-    const existe = djSelecionadoId && artistas.some((a) => a.id === djSelecionadoId);
+    const existe = artistaSelecionadoId && artistas.some((a) => a.id === artistaSelecionadoId);
     if (!existe) {
       const fb =
         ultimoVistoRef.current &&
         artistas.some((a) => a.id === ultimoVistoRef.current)
           ? ultimoVistoRef.current
           : artistas[0].id;
-      setDjSelecionadoId(fb);
+      setArtistaSelecionadoId(fb);
     }
-  }, [artistas, djSelecionadoId]);
+  }, [artistas, artistaSelecionadoId]);
 
   useEffect(() => {
-    if (djSelecionadoId) ultimoVistoRef.current = djSelecionadoId;
-  }, [djSelecionadoId]);
+    if (artistaSelecionadoId) ultimoVistoRef.current = artistaSelecionadoId;
+  }, [artistaSelecionadoId]);
 
   // Carrega email/senha da conta do DJ selecionado (igual o modal de editar).
   useEffect(() => {
-    if (!djSelecionadoId) {
+    if (!artistaSelecionadoId) {
       setConta(null);
       return;
     }
     let ativo = true;
     setCarregandoConta(true);
     setConta(null);
-    fetch(`/api/artistas/${djSelecionadoId}/conta`, { credentials: "include" })
+    fetch(`/api/artistas/${artistaSelecionadoId}/conta`, { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return (await res.json()) as DadosConta;
@@ -309,11 +313,11 @@ export default function AbaArtistas() {
     return () => {
       ativo = false;
     };
-  }, [djSelecionadoId]);
+  }, [artistaSelecionadoId]);
 
-  const djSelecionado = useMemo(
-    () => artistas.find((a) => a.id === djSelecionadoId) ?? null,
-    [artistas, djSelecionadoId]
+  const artistaSelecionado = useMemo(
+    () => artistas.find((a) => a.id === artistaSelecionadoId) ?? null,
+    [artistas, artistaSelecionadoId]
   );
 
   // Fila de chips: tudo no modo Reordenar; filtra por busca/status só com
@@ -384,7 +388,7 @@ export default function AbaArtistas() {
           <div className="flex-1 flex items-center gap-2 overflow-x-auto py-1">
             {filaChips.map((a) => {
               const suspenso = !!a.acessoSuspenso;
-              const ativo = a.id === djSelecionadoId;
+              const ativo = a.id === artistaSelecionadoId;
               const sendoArrastado = arrastandoId === a.id;
               const ehAlvo = sobreId === a.id && arrastandoId && arrastandoId !== a.id;
               return (
@@ -395,7 +399,7 @@ export default function AbaArtistas() {
                   onClick={() => {
                     if (!modoReordenar) {
                       setEditando(null);
-                      setDjSelecionadoId(a.id);
+                      setArtistaSelecionadoId(a.id);
                     }
                   }}
                   onDragStart={(e) => {
@@ -542,7 +546,7 @@ export default function AbaArtistas() {
       </div>
 
       {/* Perfil do DJ selecionado */}
-      {!djSelecionado ? (
+      {!artistaSelecionado ? (
         <div className="card flex flex-col items-center justify-center text-center gap-3 py-16">
           <div
             className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center"
@@ -562,7 +566,7 @@ export default function AbaArtistas() {
             <Plus size={14} /> {t("Adicionar artista")}
           </button>
         </div>
-      ) : editando && editando.id === djSelecionado.id ? (
+      ) : editando && editando.id === artistaSelecionado.id ? (
         <ModalEditarArtista
           modoInline
           artista={editando}
@@ -605,38 +609,38 @@ export default function AbaArtistas() {
             <div
               style={{
                 height: 4,
-                background: `linear-gradient(90deg, ${djSelecionado.color}, ${djSelecionado.color}66)`,
+                background: `linear-gradient(90deg, ${artistaSelecionado.color}, ${artistaSelecionado.color}66)`,
               }}
             />
             <div className="p-5 flex items-start gap-4 flex-wrap">
               <span
                 className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
                 style={{
-                  background: djSelecionado.acessoSuspenso
+                  background: artistaSelecionado.acessoSuspenso
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${djSelecionado.color}, ${djSelecionado.color}99)`,
+                    : `linear-gradient(135deg, ${artistaSelecionado.color}, ${artistaSelecionado.color}99)`,
                 }}
               >
-                {djSelecionado.name.charAt(0).toUpperCase()}
+                {artistaSelecionado.name.charAt(0).toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="page-title">{djSelecionado.name}</div>
-                  {djSelecionado.acessoSuspenso && (
+                  <div className="page-title">{artistaSelecionado.name}</div>
+                  {artistaSelecionado.acessoSuspenso && (
                     <span className="badge badge-warning">{t("Acesso suspenso")}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap text-xs text-muted mt-1.5">
-                  {djSelecionado.username && (
+                  {artistaSelecionado.username && (
                     <button
                       type="button"
-                      onClick={() => copiarUsername(djSelecionado.username!)}
+                      onClick={() => copiarUsername(artistaSelecionado.username!)}
                       className="inline-flex items-center gap-1 hover:text-primary transition-colors group"
                       title={t("Copiar login")}
                     >
                       <AtSign size={11} />
-                      <span className="font-mono">{djSelecionado.username}</span>
-                      {usernameCopiado === djSelecionado.username ? (
+                      <span className="font-mono">{artistaSelecionado.username}</span>
+                      {usernameCopiado === artistaSelecionado.username ? (
                         <CheckCircle2 size={11} style={{ color: "var(--success)" }} />
                       ) : (
                         <Copy
@@ -646,58 +650,58 @@ export default function AbaArtistas() {
                       )}
                     </button>
                   )}
-                  {djSelecionado.cidadeNome && (
+                  {artistaSelecionado.cidadeNome && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin size={11} />
-                      {djSelecionado.cidadeNome}
-                      {djSelecionado.cidadeUf ? `/${djSelecionado.cidadeUf}` : ""}
+                      {artistaSelecionado.cidadeNome}
+                      {artistaSelecionado.cidadeUf ? `/${artistaSelecionado.cidadeUf}` : ""}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1">
                     <span
                       className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: djSelecionado.color }}
+                      style={{ backgroundColor: artistaSelecionado.color }}
                     />
-                    <span className="font-mono uppercase">{djSelecionado.color}</span>
+                    <span className="font-mono uppercase">{artistaSelecionado.color}</span>
                   </span>
                 </div>
                 {/* Dados para contrato — logo abaixo do nome */}
-                {(djSelecionado.nomeLegal ||
-                  djSelecionado.razaoSocial ||
-                  djSelecionado.documento ||
-                  djSelecionado.endereco ||
-                  djSelecionado.telefone) && (
+                {(artistaSelecionado.nomeLegal ||
+                  artistaSelecionado.razaoSocial ||
+                  artistaSelecionado.documento ||
+                  artistaSelecionado.endereco ||
+                  artistaSelecionado.telefone) && (
                   <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-muted mt-1.5">
-                    {djSelecionado.nomeLegal && (
+                    {artistaSelecionado.nomeLegal && (
                       <span className="inline-flex items-center gap-1">
                         <User size={11} />
-                        {djSelecionado.nomeLegal}
+                        {artistaSelecionado.nomeLegal}
                       </span>
                     )}
-                    {djSelecionado.documentoTipo === "cnpj" &&
-                      djSelecionado.razaoSocial && (
+                    {artistaSelecionado.documentoTipo === "cnpj" &&
+                      artistaSelecionado.razaoSocial && (
                         <span className="inline-flex items-center gap-1">
                           <Building2 size={11} />
-                          {djSelecionado.razaoSocial}
+                          {artistaSelecionado.razaoSocial}
                         </span>
                       )}
-                    {djSelecionado.documento && (
+                    {artistaSelecionado.documento && (
                       <span className="inline-flex items-center gap-1">
                         <FileText size={11} />
-                        {djSelecionado.documentoTipo === "cnpj" ? "CNPJ" : "CPF"}{" "}
-                        {djSelecionado.documento}
+                        {artistaSelecionado.documentoTipo === "cnpj" ? "CNPJ" : "CPF"}{" "}
+                        {artistaSelecionado.documento}
                       </span>
                     )}
-                    {djSelecionado.endereco && (
+                    {artistaSelecionado.endereco && (
                       <span className="inline-flex items-center gap-1">
                         <Home size={11} />
-                        {formatEndereco(djSelecionado.endereco)}
+                        {formatEndereco(artistaSelecionado.endereco)}
                       </span>
                     )}
-                    {djSelecionado.telefone && (
+                    {artistaSelecionado.telefone && (
                       <span className="inline-flex items-center gap-1">
                         <Phone size={11} />
-                        {djSelecionado.telefone}
+                        {artistaSelecionado.telefone}
                       </span>
                     )}
                   </div>
@@ -705,14 +709,14 @@ export default function AbaArtistas() {
               </div>
 
               {/* Ações */}
-              {removendo === djSelecionado.id ? (
+              {removendo === artistaSelecionado.id ? (
                 <div className="ml-auto flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-muted">
-                    {t("Remover {nome}?", { nome: djSelecionado.name })}
+                    {t("Remover {nome}?", { nome: artistaSelecionado.name })}
                   </span>
                   <button
                     onClick={() => {
-                      removerArtista(djSelecionado.id);
+                      removerArtista(artistaSelecionado.id);
                       setRemovendo(null);
                     }}
                     className="btn text-xs px-2.5 py-1"
@@ -732,29 +736,31 @@ export default function AbaArtistas() {
                   <button
                     onClick={() =>
                       setEditando({
-                        id: djSelecionado.id,
-                        nome: djSelecionado.name,
-                        cor: djSelecionado.color,
-                        usernameAtual: djSelecionado.username ?? "",
-                        cidadeIbgeId: djSelecionado.cidadeIbgeId,
-                        cidadeNome: djSelecionado.cidadeNome,
-                        cidadeUf: djSelecionado.cidadeUf,
-                        pais: djSelecionado.pais,
-                        nomeLegal: djSelecionado.nomeLegal,
-                        documentoTipo: djSelecionado.documentoTipo,
-                        documento: djSelecionado.documento,
-                        razaoSocial: djSelecionado.razaoSocial,
-                        endereco: djSelecionado.endereco,
-                        telefone: djSelecionado.telefone,
-                        dataNascimento: djSelecionado.dataNascimento,
-                        email: djSelecionado.email,
-                        taxaModo: djSelecionado.taxaModo ?? "sem-taxa",
-                        taxaValor: djSelecionado.taxaValor,
-                        riderCamarim: djSelecionado.riderCamarim ?? [],
-                        riderEfeitos: djSelecionado.riderEfeitos ?? [],
-                        riderTecnico: djSelecionado.riderTecnico ?? [],
-                        privacidade: djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
-                        acessoSuspenso: djSelecionado.acessoSuspenso,
+                        id: artistaSelecionado.id,
+                        nome: artistaSelecionado.name,
+                        cor: artistaSelecionado.color,
+                        usernameAtual: artistaSelecionado.username ?? "",
+                        cidadeIbgeId: artistaSelecionado.cidadeIbgeId,
+                        cidadeNome: artistaSelecionado.cidadeNome,
+                        cidadeUf: artistaSelecionado.cidadeUf,
+                        cidadeId: artistaSelecionado.cidadeId,
+                        cidade: artistaSelecionado.cidade,
+                        pais: artistaSelecionado.pais,
+                        nomeLegal: artistaSelecionado.nomeLegal,
+                        documentoTipo: artistaSelecionado.documentoTipo,
+                        documento: artistaSelecionado.documento,
+                        razaoSocial: artistaSelecionado.razaoSocial,
+                        endereco: artistaSelecionado.endereco,
+                        telefone: artistaSelecionado.telefone,
+                        dataNascimento: artistaSelecionado.dataNascimento,
+                        email: artistaSelecionado.email,
+                        taxaModo: artistaSelecionado.taxaModo ?? "sem-taxa",
+                        taxaValor: artistaSelecionado.taxaValor,
+                        riderCamarim: artistaSelecionado.riderCamarim ?? [],
+                        riderEfeitos: artistaSelecionado.riderEfeitos ?? [],
+                        riderTecnico: artistaSelecionado.riderTecnico ?? [],
+                        privacidade: artistaSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO,
+                        acessoSuspenso: artistaSelecionado.acessoSuspenso,
                       })
                     }
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
@@ -763,14 +769,14 @@ export default function AbaArtistas() {
                   </button>
                   <button
                     onClick={() =>
-                      setEquipeDe({ id: djSelecionado.id, nome: djSelecionado.name })
+                      setEquipeDe({ id: artistaSelecionado.id, nome: artistaSelecionado.name })
                     }
                     className="btn btn-secondary text-xs inline-flex items-center gap-1"
                   >
                     <Users size={13} /> {t("Equipe")}
                   </button>
                   <button
-                    onClick={() => setRemovendo(djSelecionado.id)}
+                    onClick={() => setRemovendo(artistaSelecionado.id)}
                     className="btn-ghost p-1.5 rounded"
                     style={{ color: "var(--danger)" }}
                     aria-label={t("Remover artista")}
@@ -790,18 +796,18 @@ export default function AbaArtistas() {
                 <KeyRound size={12} style={{ color: "var(--brand)" }} />
                 {t("Acesso ao sistema")}
               </div>
-              {djSelecionado.username && (
+              {artistaSelecionado.username && (
                 <div>
                   <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
                   <button
                     type="button"
-                    onClick={() => copiarUsername(djSelecionado.username!)}
+                    onClick={() => copiarUsername(artistaSelecionado.username!)}
                     className="w-full flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors text-left"
                   >
                     <span className="font-mono text-sm text-primary flex-1 truncate">
-                      {djSelecionado.username}
+                      {artistaSelecionado.username}
                     </span>
-                    {usernameCopiado === djSelecionado.username ? (
+                    {usernameCopiado === artistaSelecionado.username ? (
                       <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
                     ) : (
                       <Copy size={14} className="text-muted" />
@@ -945,7 +951,7 @@ export default function AbaArtistas() {
                 {t("Permissões")}
               </div>
               {(() => {
-                const priv = djSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
+                const priv = artistaSelecionado.privacidade ?? PRIVACIDADE_DJ_PADRAO;
                 // Nível "sem acesso / só vê / acesso total" pra cada módulo.
                 type NivelBadge = { label: string; cls: string; forte: boolean };
                 const nivelBadge = (ver: boolean, agiu: boolean): NivelBadge =>
@@ -1016,9 +1022,9 @@ export default function AbaArtistas() {
                 const membros = equipe.filter(
                   (m) =>
                     m.ativo &&
-                    ((m.funcoes.vendedor ?? []).includes(djSelecionado.id) ||
-                      (m.funcoes.financeiro ?? []).includes(djSelecionado.id) ||
-                      (m.funcoes.produtor ?? []).includes(djSelecionado.id))
+                    ((m.funcoes.vendedor ?? []).includes(artistaSelecionado.id) ||
+                      (m.funcoes.financeiro ?? []).includes(artistaSelecionado.id) ||
+                      (m.funcoes.produtor ?? []).includes(artistaSelecionado.id))
                 );
                 if (membros.length === 0)
                   return (
@@ -1031,7 +1037,7 @@ export default function AbaArtistas() {
                     {membros.map((m) => {
                       const papeis = (
                         ["vendedor", "financeiro", "produtor"] as const
-                      ).filter((p) => (m.funcoes[p] ?? []).includes(djSelecionado.id));
+                      ).filter((p) => (m.funcoes[p] ?? []).includes(artistaSelecionado.id));
                       return (
                         <div key={m.id} className="flex items-center gap-2">
                           <span
@@ -1066,19 +1072,19 @@ export default function AbaArtistas() {
             </div>
 
             {/* Google Calendar — conexão da conta por artista (sync de shows) */}
-            <CardGoogleCalendar artistaId={djSelecionado.id} />
+            <CardGoogleCalendar artistaId={artistaSelecionado.id} />
 
             {/* Rider de camarim */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("Rider de camarim")} ({(djSelecionado.riderCamarim ?? []).length}/
+                {t("Rider de camarim")} ({(artistaSelecionado.riderCamarim ?? []).length}/
                 {LIMITE_RIDER_CAMARIM})
               </div>
-              {(djSelecionado.riderCamarim ?? []).length === 0 ? (
+              {(artistaSelecionado.riderCamarim ?? []).length === 0 ? (
                 <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {(djSelecionado.riderCamarim ?? []).map((item, i) => (
+                  {(artistaSelecionado.riderCamarim ?? []).map((item, i) => (
                     <span
                       key={i}
                       className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
@@ -1093,14 +1099,14 @@ export default function AbaArtistas() {
             {/* Rider de efeitos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("Rider de efeitos")} ({(djSelecionado.riderEfeitos ?? []).length}/
+                {t("Rider de efeitos")} ({(artistaSelecionado.riderEfeitos ?? []).length}/
                 {LIMITE_RIDER_EFEITOS})
               </div>
-              {(djSelecionado.riderEfeitos ?? []).length === 0 ? (
+              {(artistaSelecionado.riderEfeitos ?? []).length === 0 ? (
                 <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {(djSelecionado.riderEfeitos ?? []).map((item, i) => (
+                  {(artistaSelecionado.riderEfeitos ?? []).map((item, i) => (
                     <span
                       key={i}
                       className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
@@ -1115,14 +1121,14 @@ export default function AbaArtistas() {
             {/* Rider técnico */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("Rider técnico")} ({(djSelecionado.riderTecnico ?? []).length}/
+                {t("Rider técnico")} ({(artistaSelecionado.riderTecnico ?? []).length}/
                 {LIMITE_RIDER_TECNICO})
               </div>
-              {(djSelecionado.riderTecnico ?? []).length === 0 ? (
+              {(artistaSelecionado.riderTecnico ?? []).length === 0 ? (
                 <div className="text-sm text-muted">{t("Nenhum item configurado.")}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
-                  {(djSelecionado.riderTecnico ?? []).map((item, i) => (
+                  {(artistaSelecionado.riderTecnico ?? []).map((item, i) => (
                     <span
                       key={i}
                       className="text-xs bg-elevated border border-border rounded-md px-2 py-1 text-secondary"
@@ -1137,7 +1143,7 @@ export default function AbaArtistas() {
             {/* Taxa de agência */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                {(djSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
+                {(artistaSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
                   <Percent size={12} style={{ color: "var(--brand)" }} />
                 ) : (
                   <DollarSign size={12} style={{ color: "var(--brand)" }} />
@@ -1145,10 +1151,10 @@ export default function AbaArtistas() {
                 {t("Taxa de agência")}
               </div>
               {(() => {
-                const modo = djSelecionado.taxaModo ?? "sem-taxa";
+                const modo = artistaSelecionado.taxaModo ?? "sem-taxa";
                 if (modo === "sem-taxa")
                   return <div className="text-sm text-muted">{t("Sem taxa")}</div>;
-                const val = djSelecionado.taxaValor;
+                const val = artistaSelecionado.taxaValor;
                 const sufixo =
                   modo === "perc-fixa" && val !== undefined
                     ? ` ${val}%`
@@ -1236,7 +1242,7 @@ export default function AbaArtistas() {
         <span className="inline-flex items-center gap-0.5 font-medium">
           <GripVertical size={11} /> {t("Reordenar")}
         </span>{" "}
-        {t("na barra de cima e arraste os avatares — a ordem reflete na sidebar de DJs e em todos os filtros do app.")}
+        {t("na barra de cima e arraste os avatares — a ordem reflete na sidebar de artistas e em todos os filtros do app.")}
         <br />
         <strong className="text-primary">{t("Login do artista:")}</strong> {t("aparece ao lado do nome (clique pra copiar). Fica salvo no sistema e você consegue acessar sempre que precisar.")}{" "}
         <br />
@@ -1523,6 +1529,12 @@ export function ModalNovoArtista({
         input.cidadeIbgeId = cidade.ibgeId ?? "";
         input.cidadeNome = cidade.nome;
         input.cidadeUf = cidade.uf;
+        // Cidade global canônica: resolve pro UUID do catálogo (qualquer país).
+        try {
+          input.cidadeId = (await resolverCidade(cidade)).id;
+        } catch {
+          /* segue sem cidade_id se não resolver */
+        }
       }
       input.taxaModo = taxaModo;
       if (taxaModo === "perc-fixa" || taxaModo === "valor-fixo") {
@@ -1990,14 +2002,18 @@ function ModalEditarArtista({
   const [nome, setNome] = useState(artista.nome);
   const [cor, setCor] = useState(artista.cor);
   const [cidade, setCidade] = useState<CidadeEscolhida | null>(
-    artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
-      ? {
-          ibgeId: artista.cidadeIbgeId,
-          nome: artista.cidadeNome,
-          uf: artista.cidadeUf,
-          pais: "BR",
-        }
-      : null
+    () =>
+      // Prefere a cidade GLOBAL (join por cidade_id — qualquer país); cai no
+      // denormalizado legado (só-BR) pra artistas antigos sem cidade_id.
+      cidadeParaEscolhida(artista.cidade ?? null) ??
+      (artista.cidadeIbgeId && artista.cidadeNome && artista.cidadeUf
+        ? {
+            ibgeId: artista.cidadeIbgeId,
+            nome: artista.cidadeNome,
+            uf: artista.cidadeUf,
+            pais: "BR",
+          }
+        : null)
   );
   const [usernameRaiz, setUsernameRaiz] = useState(usernameRaizInicial);
   // Feedback do botão de copiar senha aleatória do bloco "Senha".
@@ -2142,12 +2158,21 @@ function ModalEditarArtista({
     }
     setEnviando(true);
     try {
+      // Cidade global canônica: resolve pro UUID do catálogo (qualquer país).
+      // Falha ao resolver → cidadeId undefined → atualizarArtista mantém o atual.
+      let cidadeId: string | undefined;
+      try {
+        cidadeId = (await resolverCidade(cidade!)).id;
+      } catch {
+        /* segue sem */
+      }
       const patch: Partial<NovoArtistaInput> = {
         nome: nome.trim(),
         cor,
         cidadeIbgeId: cidade!.ibgeId ?? "",
         cidadeNome: cidade!.nome,
         cidadeUf: cidade!.uf,
+        cidadeId,
         taxaModo,
         taxaValor:
           taxaModo === "perc-fixa" || taxaModo === "valor-fixo"
@@ -2565,7 +2590,7 @@ function ModalEditarArtista({
             {t("Permissões")}
           </div>
           <p className="text-xs text-muted -mt-1">
-            {t("Escolha o nível de cada área. Cada opção diz exatamente o que o DJ pode fazer.")}
+            {t("Escolha o nível de cada área. Cada opção diz exatamente o que o artista pode fazer.")}
           </p>
           <PrivacidadePills valor={privacidade} onChange={setPrivacidade} />
         </div>

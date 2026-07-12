@@ -23,6 +23,7 @@ import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
+import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import PhoneInput, {
   DEFAULT_COUNTRY,
@@ -93,7 +94,7 @@ type Status = {
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Artista", descricao: "1º DJ" },
+  { id: 3, label: "Artista", descricao: "1º artista" },
   { id: 4, label: "Equipe", descricao: "Convidar membro" },
 ];
 
@@ -520,7 +521,16 @@ function Etapa1Cadastro({
       const docTipo =
         pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
 
-      // 1. Dados pessoais → profile
+      // Cidade UNIFICADA: a mesma seleção vira o cidade_id do admin (profile) e
+      // a cidade denormalizada da agência (abaixo). Resolve pro UUID do catálogo.
+      let cidadeId: string | undefined;
+      try {
+        cidadeId = (await resolverCidade(cidade)).id;
+      } catch {
+        /* não bloqueia o onboarding se a cidade não resolver */
+      }
+
+      // 1. Dados pessoais → profile (inclui o cidade_id do admin)
       const rp = await fetch("/api/perfil", {
         method: "PATCH",
         credentials: "include",
@@ -533,6 +543,7 @@ function Etapa1Cadastro({
           documento: docNorm,
           telefone,
           data_nascimento: nascimento,
+          ...(cidadeId ? { cidade_id: cidadeId } : {}),
         }),
       });
       if (!rp.ok) {

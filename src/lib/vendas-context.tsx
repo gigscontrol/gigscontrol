@@ -64,7 +64,7 @@ export type NovaVendaInput = {
   casaId?: string;
 
   // Show
-  djId: string; // UUID do artista (workspace.artistas)
+  artistaId: string; // UUID do artista (workspace.artistas)
   lineUp?: string[];
   cache: number;
   duracaoHoras: number;
@@ -132,7 +132,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.horarioFim !== undefined) out.horario_fim = p.horarioFim;
   if (p.cidadeId !== undefined) out.cidade_id = p.cidadeId || null;
   if (p.casaId !== undefined) out.casa_id = p.casaId || null;
-  if (p.djId !== undefined) out.artist_id = p.djId || null;
+  if (p.artistaId !== undefined) out.artist_id = p.artistaId || null;
   if (p.lineUp !== undefined) out.line_up = p.lineUp;
   if (p.cache !== undefined) out.cache = p.cache;
   if (p.duracaoHoras !== undefined) out.duracao_horas = p.duracaoHoras;
@@ -268,7 +268,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         horario_fim: input.horarioFim ?? null,
         cidade_id: input.cidadeId,
         casa_id: input.casaId ?? null,
-        artist_id: input.djId || null,
+        artist_id: input.artistaId || null,
         line_up: input.lineUp ?? [],
         cache: input.cache,
         duracao_horas: input.duracaoHoras,
@@ -299,7 +299,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       const body = await jsonOuErro(res);
       const criada = body.venda as Venda;
 
-      const comDj: Venda = { ...criada, djId: input.djId };
+      const comDj: Venda = { ...criada, artistaId: input.artistaId };
 
       setVendas((prev) => [comDj, ...prev]);
       // O show foi criado/atualizado no servidor — sincroniza a agenda local
@@ -319,7 +319,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       });
       const body = await jsonOuErro(res);
       const atual = body.venda as Venda;
-      setVendas((prev) => prev.map((v) => (v.id === id ? { ...v, ...atual, djId: v.djId } : v)));
+      setVendas((prev) => prev.map((v) => (v.id === id ? { ...v, ...atual, artistaId: v.artistaId } : v)));
       return atual;
     },
     []

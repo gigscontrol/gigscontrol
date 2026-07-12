@@ -160,7 +160,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.dj}</span>
+                          <span className="font-semibold text-primary">{show.artistaNome}</span>
                           <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
@@ -210,7 +210,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} accent={accent} icon={<Banknote size={14} />} />
           <MetricTile label={t("Capacidade")} value={item.capacidade?.toLocaleString("pt-BR") ?? "—"} icon={<Users size={14} />} />
-          <MetricTile label={t("DJs que tocaram")} value={stats.djsQueTocaram.length.toString()} icon={<Music size={14} />} />
+          <MetricTile label={t("Artistas que tocaram")} value={stats.artistasQueTocaram.length.toString()} icon={<Music size={14} />} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
@@ -235,14 +235,14 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
               )}
             </div>
 
-            {stats.djsQueTocaram.length > 0 && (
+            {stats.artistasQueTocaram.length > 0 && (
               <div className="mt-5 pt-5 border-t border-border">
                 <div className="text-xs text-muted mb-2 uppercase tracking-wider font-semibold">
-                  {t("DJs que já tocaram aqui")}
+                  {t("Artistas que já tocaram aqui")}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {stats.djsQueTocaram.map((dj) => (
-                    <span key={dj} className="badge badge-neutral">{dj}</span>
+                  {stats.artistasQueTocaram.map((artista) => (
+                    <span key={artista} className="badge badge-neutral">{artista}</span>
                   ))}
                 </div>
               </div>
@@ -266,7 +266,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.dj}</span>
+                          <span className="font-semibold text-primary">{show.artistaNome}</span>
                           <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
@@ -316,8 +316,8 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} icon={<Banknote size={14} />} />
           <MetricTile
-            label={t("Top DJ")}
-            value={stats.topDJ ? `${stats.topDJ.nome} (${stats.topDJ.shows})` : "—"}
+            label={t("Top artista")}
+            value={stats.topArtista ? `${stats.topArtista.nome} (${stats.topArtista.shows})` : "—"}
             icon={<Music size={14} />}
             small
           />
@@ -363,7 +363,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.dj}</span>
+                          <span className="font-semibold text-primary">{show.artistaNome}</span>
                           <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">

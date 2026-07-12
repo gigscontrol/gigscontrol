@@ -38,7 +38,7 @@ import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
-import { resolverCidade } from "@/lib/cidade-helpers";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
@@ -599,7 +599,7 @@ export default function AbaEquipe() {
                             color: "var(--text-muted)",
                           }}
                         >
-                          {t("{n} DJ(s)", { n: vs.length })}
+                          {t("{n} artista(s)", { n: vs.length })}
                         </span>
                       </>
                     );
@@ -799,7 +799,7 @@ export default function AbaEquipe() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--brand)" }} />
-                {t("Funções e DJs atendidos")}
+                {t("Funções e artistas atendidos")}
               </div>
               {vinculos === null ? (
                 <div className="flex items-center gap-2 text-sm text-muted">
@@ -817,16 +817,16 @@ export default function AbaEquipe() {
               ) : (
                 <div className="flex flex-col gap-3">
                   {vinculos.map((v) => {
-                    const dj = artistas.find((a) => a.id === v.artistId);
+                    const artista = artistas.find((a) => a.id === v.artistId);
                     return (
                       <div key={v.artistId} className="flex flex-col gap-1.5">
                         <div className="inline-flex items-center gap-1.5">
                           <span
                             className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: dj?.color ?? "var(--border-strong)" }}
+                            style={{ backgroundColor: artista?.color ?? "var(--border-strong)" }}
                           />
                           <span className="text-sm font-medium text-primary">
-                            {dj?.name ?? v.artistId}
+                            {artista?.name ?? v.artistId}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -966,7 +966,7 @@ export default function AbaEquipe() {
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
         <strong className="text-primary">{t("Funções:")}</strong>{" "}
-        {t("cada membro pode ter uma ou mais funções e, em cada uma, os DJs que atende — defina em")}{" "}
+        {t("cada membro pode ter uma ou mais funções e, em cada uma, os artistas que atende — defina em")}{" "}
         <span className="inline-flex items-center gap-1 font-medium">
           <Pencil size={11} /> {t("Editar")}
         </span>
@@ -1266,10 +1266,14 @@ export function ModalUsuario({
       BRASIL
   );
   const [cor, setCor] = useState<string>(inicial?.cor ?? CORES[0]);
-  // Cidade: o `inicial` só carrega o UUID (cidadeId), não o nome/uf — então
-  // o autocomplete começa vazio no editar. Só manda `cidade_id` se o admin
-  // escolher uma cidade nova (senão o backend mantém a atual).
-  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
+  // Cidade: o `inicial.cidade` (join no backend por cidade_id) traz nome/uf/país,
+  // então no editar o autocomplete já abre PRÉ-PREENCHIDO. Sem cidade (modo criar,
+  // ou cidade legada sem ibge/geoname) começa vazio. No submit só resolve/manda
+  // cidade_id se houver seleção — a cidade inalterada resolve pro mesmo id
+  // (lookup idempotente), então não muda nada; escolher outra troca.
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
+    () => cidadeParaEscolhida(inicial?.cidade ?? null)
+  );
   const [nomeLegal, setNomeLegal] = useState(inicial?.nomeLegal ?? "");
   const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
     // `inicial.documentoTipo` vem tipado como string no workspace-context;
@@ -1636,12 +1640,12 @@ export function ModalUsuario({
                 </span>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  {artistas.map((dj) => {
-                    const sel = artistIdsSel.has(dj.id);
-                    const nPerms = permsPorArtista[dj.id]?.length ?? 0;
+                  {artistas.map((artista) => {
+                    const sel = artistIdsSel.has(artista.id);
+                    const nPerms = permsPorArtista[artista.id]?.length ?? 0;
                     return (
                       <div
-                        key={dj.id}
+                        key={artista.id}
                         className="flex items-center gap-2.5 rounded-md border p-2 transition-colors"
                         style={{
                           borderColor: sel ? "var(--brand)" : "var(--border-color)",
@@ -1650,7 +1654,7 @@ export function ModalUsuario({
                       >
                         <button
                           type="button"
-                          onClick={() => toggleArtista(dj.id)}
+                          onClick={() => toggleArtista(artista.id)}
                           className="flex items-center gap-2.5 text-left flex-1 min-w-0"
                         >
                           <span
@@ -1664,16 +1668,16 @@ export function ModalUsuario({
                           </span>
                           <span
                             className="h-6 w-6 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: dj.color }}
+                            style={{ backgroundColor: artista.color }}
                           />
                           <span className="text-sm font-medium text-primary flex-1 truncate">
-                            {dj.name}
+                            {artista.name}
                           </span>
                         </button>
                         {sel && (
                           <button
                             type="button"
-                            onClick={() => setEditandoPermsDe(dj.id)}
+                            onClick={() => setEditandoPermsDe(artista.id)}
                             className="btn-ghost text-[0.7rem] inline-flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
                             style={{ color: nPerms > 0 ? "var(--brand)" : "var(--text-muted)" }}
                             title={t("Definir permissões deste artista")}
@@ -2008,7 +2012,7 @@ export function ModalUsuario({
               {t("Permissões por artista")}
             </div>
             <p className="text-xs text-muted -mt-1">
-              {t("O que este membro pode fazer com cada DJ — vale só para aquele artista.")}
+              {t("O que este membro pode fazer com cada artista — vale só para aquele artista.")}
             </p>
             {vinculosEdit === null ? (
               <div className="flex items-center gap-2 text-sm text-muted">
@@ -2026,7 +2030,7 @@ export function ModalUsuario({
             ) : (
               <div className="flex flex-col gap-2">
                 {vinculosEdit.map((v) => {
-                  const dj = artistas.find((a) => a.id === v.artistId);
+                  const artista = artistas.find((a) => a.id === v.artistId);
                   return (
                     <div
                       key={v.artistId}
@@ -2034,11 +2038,11 @@ export function ModalUsuario({
                     >
                       <span
                         className="h-8 w-8 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: dj?.color ?? "var(--border-strong)" }}
+                        style={{ backgroundColor: artista?.color ?? "var(--border-strong)" }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-primary truncate">
-                          {dj?.name ?? v.artistId}
+                          {artista?.name ?? v.artistId}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           {v.perfis.length > 0 ? (
@@ -2120,13 +2124,13 @@ export function ModalUsuario({
         {/* Editor de permissões do artista selecionado — modal empilhado
             (fechar/salvar aqui NÃO fecha o ModalUsuario). Usado na CRIAÇÃO. */}
         {editandoPermsDe && (() => {
-          const dj = artistas.find((a) => a.id === editandoPermsDe);
-          if (!dj) return null;
+          const artista = artistas.find((a) => a.id === editandoPermsDe);
+          if (!artista) return null;
           return (
             <EditorPermissoesVinculo
               key={editandoPermsDe}
               nomeUsuario={nome.trim() || t("Novo usuário")}
-              nomeArtista={dj.name}
+              nomeArtista={artista.name}
               permissoes={permsPorArtista[editandoPermsDe] ?? []}
               onSalvar={(chaves) => {
                 setPermsPorArtista((p) => ({ ...p, [editandoPermsDe]: chaves }));
@@ -2140,14 +2144,14 @@ export function ModalUsuario({
         {/* Editor de permissões por vínculo — modo EDITAR (T8). Persiste via
             o endpoint da equipe do artista e recarrega a lista. */}
         {modo === "editar" && editandoVinculoDe && (() => {
-          const dj = artistas.find((a) => a.id === editandoVinculoDe);
-          if (!dj) return null;
+          const artista = artistas.find((a) => a.id === editandoVinculoDe);
+          if (!artista) return null;
           const vinculo = (vinculosEdit ?? []).find((v) => v.artistId === editandoVinculoDe);
           return (
             <EditorPermissoesVinculo
               key={editandoVinculoDe}
               nomeUsuario={nome.trim() || inicial?.nome || t("Usuário")}
-              nomeArtista={dj.name}
+              nomeArtista={artista.name}
               permissoes={vinculo?.permissoes ?? []}
               perfisIniciais={(vinculo?.perfis ?? []) as PerfilId[]}
               podeSalvar={!salvandoVinculo}

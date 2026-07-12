@@ -241,7 +241,7 @@ export default function AbaLixeira() {
         i.show.id,
         "show",
         i.show.id,
-        `${i.show.dj} • ${i.show.data ?? "sem data"}`,
+        `${i.show.artistaNome} • ${i.show.data ?? "sem data"}`,
         i.show.venue || i.show.location || null,
         i.diasRestantes,
         "var(--brand)",
