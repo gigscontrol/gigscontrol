@@ -78,13 +78,6 @@ export async function definirSignatarios(
   return rows.map(rowParaSignatario);
 }
 
-export async function removerSignatarioPorId(
-  supabase: SupabaseClient,
-  id: string
-): Promise<void> {
-  await repoRemover(supabase, id);
-}
-
 /**
  * Uma exigência da assinatura (foto, selfie, documento…) não foi atendida.
  * O cliente valida na UI, mas o servidor é a fonte da verdade: um POST cru

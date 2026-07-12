@@ -205,11 +205,6 @@ export const PLANOS: Plano[] = [
  */
 export const PRECO_EXCEDENTE: Record<Moeda, number> = { brl: 999, usd: 500 };
 
-/** Preço do excedente formatado (ex.: "R$ 9,99" / "$5.00"). */
-export function precoExcedenteFmt(moeda: Moeda = "brl"): string {
-  return formatarPreco(PRECO_EXCEDENTE[moeda] / 100, moeda);
-}
-
 export function getPlano(id: PlanoId): Plano {
   return PLANOS.find((p) => p.id === id) ?? PLANOS[0];
 }

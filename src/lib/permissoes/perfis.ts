@@ -112,10 +112,3 @@ export function permissoesDosPerfis(perfis: PerfilId[]): string[] {
   }
   return [...set];
 }
-
-/** Mapeia as funções operacionais LEGADAS pro perfil equivalente (backfill). */
-export const FUNCAO_LEGADA_PARA_PERFIL: Record<"vendedor" | "financeiro" | "produtor", PerfilId> = {
-  vendedor: "vendedor",
-  financeiro: "financeiro",
-  produtor: "equipe",
-};
