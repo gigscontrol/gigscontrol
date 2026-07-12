@@ -88,6 +88,11 @@ export default function MercadoPagoBrick({
   const [sdkPronto, setSdkPronto] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  // O Brick chama onError tanto na FALHA DE INIT (public key/credencial ruim,
+  // ANTES de renderizar) quanto em VALIDAÇÃO DE CAMPO (ex.: número de cartão
+  // incompleto enquanto digita). Só o primeiro caso deve degradar pro Stripe —
+  // por isso rastreamos se o Brick chegou a ficar pronto (onReady).
+  const prontoRef = useRef(false);
 
   // Guarda callbacks/valores voláteis pra o onSubmit (registrado uma vez) não
   // fechar sobre versões velhas nem re-montar o Brick a cada render.
@@ -145,16 +150,27 @@ export default function MercadoPagoBrick({
           },
           callbacks: {
             onReady: () => {
+              prontoRef.current = true;
               if (ativo) setCarregando(false);
             },
-            onError: (e: { message?: string } | undefined) => {
-              // Erro de inicialização do Brick (ex.: public key inválida) — o
-              // Brick chama isso em vez de renderizar. Degrada pro pai.
+            onError: (e: { type?: string; message?: string } | undefined) => {
               if (!ativo) return;
-              setCarregando(false);
-              onIndisponivel();
               // eslint-disable-next-line no-console
-              console.error("[MercadoPagoBrick] onError", e?.message);
+              console.error("[MercadoPagoBrick] onError", e?.type, e?.message);
+              if (!prontoRef.current) {
+                // Antes de renderizar = falha de init (credencial/SDK inválida) →
+                // degrada pro Stripe, como o CheckoutEmbutido faz.
+                setCarregando(false);
+                onIndisponivel();
+              } else if (e?.type === "critical") {
+                // Erro CRÍTICO depois de pronto (ex.: credencial recusada ao
+                // processar) → mostra o aviso, mas NÃO troca de aba.
+                cbRef.current.onErro(
+                  e?.message || cbRef.current.t("Falha no pagamento pelo Mercado Pago.")
+                );
+              }
+              // Erro NÃO-crítico depois de pronto = validação de campo enquanto
+              // digita → ignora (o próprio Brick mostra a mensagem inline).
             },
             onSubmit: ({ formData }: PaymentBrickResult) => {
               const c = cbRef.current;
