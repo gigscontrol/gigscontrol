@@ -16,6 +16,7 @@ import {
   Music,
   ChevronRight,
   NotebookPen,
+  Palette,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import Modal from "../Modal";
@@ -206,6 +207,18 @@ export default function AnotacoesPage() {
         />
       ) : (
         <>
+          {/* ===== Pastas ===== */}
+          {(pastas.length > 0 || carregando) && (
+            <div className="stat-label mb-3 inline-flex items-center gap-1.5">
+              <NotebookPen size={13} style={{ color: ACCENT }} />
+              {t("Pastas")}
+              {pastas.length > 0 && (
+                <span className="tabular-nums">
+                  {pastas.length}/{MAX_PASTAS}
+                </span>
+              )}
+            </div>
+          )}
           <PastasGrid
             pastas={pastas}
             carregando={carregando}
@@ -221,8 +234,9 @@ export default function AnotacoesPage() {
               <div className="stat-label mb-3 inline-flex items-center gap-1.5">
                 <Music size={13} style={{ color: ACCENT }} />
                 {t("Notas de show")}
+                <span className="tabular-nums">{gruposDeShow.length}</span>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {gruposDeShow.map((g) => {
                   const rot = rotuloDoShow(g.showId);
                   const autores = Array.from(new Set(g.notas.map((n) => n.criadoPor).filter(Boolean))) as string[];
@@ -266,6 +280,30 @@ export default function AnotacoesPage() {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Empty-state dedicado de Notas de show (só com o workspace já em uso) */}
+          {gruposDeShow.length === 0 && pastas.length > 0 && !carregando && (
+            <div className="mt-8">
+              <div className="stat-label mb-3 inline-flex items-center gap-1.5">
+                <Music size={13} style={{ color: ACCENT }} />
+                {t("Notas de show")}
+              </div>
+              <div className="card flex items-center gap-3 py-6 text-left">
+                <div
+                  className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                >
+                  <Music size={17} />
+                </div>
+                <div className="min-w-0">
+                  <div className="section-title">{t("Nenhuma nota de show ainda")}</div>
+                  <p className="section-subtitle">
+                    {t("Anote detalhes direto no show (na Agenda) e eles aparecem aqui.")}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -370,8 +408,9 @@ function PastasGrid({
                 {p.icone || "📁"}
               </div>
               <span
-                className="badge inline-flex items-center gap-1"
-                style={{ backgroundColor: "rgba(255,255,255,0.05)", color: "var(--text-muted)" }}
+                className={`badge inline-flex items-center gap-1 ${
+                  p.visibilidade === "todos" ? "badge-info" : "badge-neutral"
+                }`}
                 title={t("Quem pode ver")}
               >
                 <Vis size={11} />
@@ -480,6 +519,8 @@ function ThreadPasta({
   const [texto, setTexto] = useState("");
   const [cor, setCor] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [paletaAberta, setPaletaAberta] = useState(false);
+  const [notaFlash, setNotaFlash] = useState<string | null>(null);
 
   const ordenadas = useMemo(
     () => [...notas].sort((a, b) => a.criadoEm.localeCompare(b.criadoEm)),
@@ -487,6 +528,20 @@ function ThreadPasta({
   );
   const fixadas = ordenadas.filter((n) => n.fixada);
   const Vis = VIS_INFO[pasta.visibilidade].icon;
+
+  const irParaNota = (id: string) => {
+    const el = document.getElementById(`nota-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setNotaFlash(id);
+    window.setTimeout(() => setNotaFlash((cur) => (cur === id ? null : cur)), 1400);
+  };
+
+  // Resumo curto pro chip de nota fixada (primeira linha, sem markdown pesado).
+  const resumoNota = (n: Anotacao) => {
+    const linha = (n.titulo || n.conteudo).replace(/[*_#>`-]/g, " ").replace(/\s+/g, " ").trim();
+    return linha.length > 42 ? `${linha.slice(0, 42)}…` : linha || t("Nota fixada");
+  };
 
   const enviar = async () => {
     const conteudo = texto.trim();
@@ -496,6 +551,7 @@ function ThreadPasta({
       await addNota({ pasta_id: pasta.id, conteudo, cor });
       setTexto("");
       setCor(null);
+      setPaletaAberta(false);
     } catch (e) {
       window.alert((e as Error).message || t("Falha ao salvar."));
     } finally {
@@ -503,19 +559,25 @@ function ThreadPasta({
     }
   };
 
-  const bolha = (n: Anotacao, prefixo: string) => (
-    <NotaChat
-      key={`${prefixo}-${n.id}`}
-      nota={n}
-      minha={n.criadoPor === meuId}
-      nome={nomeDe(n.criadoPor)}
-      cor={corDe(n.criadoPor)}
-      accent={ACCENT}
-      podeMexer={souAdmin || n.criadoPor === meuId}
-      onTogglePin={() => updateNota(n.id, { fixada: !n.fixada }).catch(() => undefined)}
-      onSalvar={(conteudo) => updateNota(n.id, { conteudo }).then(() => undefined)}
-      onExcluir={() => removeNota(n.id).catch(() => undefined)}
-    />
+  const bolha = (n: Anotacao) => (
+    <div
+      key={n.id}
+      id={`nota-${n.id}`}
+      className="rounded-xl transition-shadow"
+      style={notaFlash === n.id ? { boxShadow: `0 0 0 2px ${ACCENT}` } : undefined}
+    >
+      <NotaChat
+        nota={n}
+        minha={n.criadoPor === meuId}
+        nome={nomeDe(n.criadoPor)}
+        cor={corDe(n.criadoPor)}
+        accent={ACCENT}
+        podeMexer={souAdmin || n.criadoPor === meuId}
+        onTogglePin={() => updateNota(n.id, { fixada: !n.fixada }).catch(() => undefined)}
+        onSalvar={(conteudo) => updateNota(n.id, { conteudo }).then(() => undefined)}
+        onExcluir={() => removeNota(n.id).catch(() => undefined)}
+      />
+    </div>
   );
 
   return (
@@ -531,9 +593,18 @@ function ThreadPasta({
           </div>
           <div className="min-w-0">
             <div className="section-title truncate">{pasta.nome}</div>
-            <div className="text-xs text-muted inline-flex items-center gap-1">
-              <Vis size={11} /> {t(VIS_INFO[pasta.visibilidade].label)} · {ordenadas.length}{" "}
-              {ordenadas.length === 1 ? t("anotação") : t("anotações")}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span
+                className={`badge inline-flex items-center gap-1 ${
+                  pasta.visibilidade === "todos" ? "badge-info" : "badge-neutral"
+                }`}
+              >
+                <Vis size={11} />
+                {t(VIS_INFO[pasta.visibilidade].label)}
+              </span>
+              <span className="text-xs text-muted">
+                {ordenadas.length} {ordenadas.length === 1 ? t("anotação") : t("anotações")}
+              </span>
             </div>
           </div>
         </div>
@@ -549,57 +620,104 @@ function ThreadPasta({
         )}
       </div>
 
-      {/* Fixadas */}
+      {/* Fixadas — strip compacta de chips que rolam até a nota (sem duplicar o texto) */}
       {fixadas.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 flex flex-col gap-2">
           <div className="stat-label inline-flex items-center gap-1.5">
             <Pin size={12} style={{ color: ACCENT }} /> {t("Fixadas")}
           </div>
-          {fixadas.map((n) => bolha(n, "fix"))}
+          <div className="flex flex-wrap gap-1.5">
+            {fixadas.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => irParaNota(n.id)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs text-secondary hover:text-primary transition-colors max-w-full"
+                style={{ borderColor: `${ACCENT}40`, backgroundColor: `${ACCENT}12` }}
+                title={t("Ir até a nota")}
+              >
+                <Pin size={11} style={{ color: ACCENT }} className="flex-shrink-0" fill="currentColor" />
+                <span className="truncate">{resumoNota(n)}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Thread */}
+      {/* Thread — cada nota aparece UMA vez (fixada ganha destaque na própria bolha) */}
       {ordenadas.length === 0 ? (
         <div className="card text-sm text-muted text-center py-10">
           {t("Nenhuma anotação ainda. Escreva a primeira abaixo. 👇")}
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">{ordenadas.map((n) => bolha(n, "th"))}</div>
+        <div className="flex flex-col gap-2.5">{ordenadas.map((n) => bolha(n))}</div>
       )}
 
-      {/* Compose */}
-      <div className="card sticky bottom-4">
+      {/* Compose — barra de composição de chat */}
+      <div className="sticky bottom-4 rounded-xl border border-border-strong bg-surface-2 p-3 shadow-lg">
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") enviar();
           }}
-          placeholder={t("Escreva uma anotação... (negrito **assim**, listas com -, links http)")}
-          className="input w-full min-h-[70px] resize-y border border-border rounded-md p-2.5 bg-surface"
+          placeholder={t("Escrever em #{pasta}", { pasta: pasta.nome })}
+          className="input w-full min-h-[64px] resize-y border border-border rounded-md p-2.5 bg-surface"
         />
-        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted mr-1">{t("Cor:")}</span>
+        <div className="flex items-center justify-between mt-2.5 gap-2">
+          {/* Cluster de cor (popover) */}
+          <div className="relative">
             <button
-              onClick={() => setCor(null)}
-              className={`h-5 w-5 rounded-full border flex items-center justify-center ${cor === null ? "border-border-strong" : "border-border"}`}
-              title={t("Sem cor")}
+              onClick={() => setPaletaAberta((v) => !v)}
+              className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border bg-surface text-xs text-secondary hover:text-primary hover:border-border-strong transition-colors"
+              title={t("Cor da nota")}
+              aria-expanded={paletaAberta}
             >
-              {cor === null && <Check size={11} className="text-muted" />}
+              <span
+                className="h-4 w-4 rounded-full border border-border-strong flex items-center justify-center flex-shrink-0"
+                style={cor ? { backgroundColor: cor, borderColor: "transparent" } : undefined}
+              >
+                {!cor && <Palette size={11} className="text-muted" />}
+              </span>
+              {cor ? t("Cor") : t("Sem cor")}
             </button>
-            {CORES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCor(c)}
-                className="h-5 w-5 rounded-full border-2"
-                style={{ backgroundColor: c, borderColor: cor === c ? "#fff" : "transparent" }}
-                aria-label={t("Cor")}
-              />
-            ))}
+            {paletaAberta && (
+              <div className="absolute bottom-full left-0 mb-2 z-10 rounded-lg border border-border-strong bg-elevated p-2.5 shadow-xl">
+                <div className="stat-label mb-2">{t("Cor da nota")}</div>
+                <div className="flex items-center gap-1.5 flex-wrap max-w-[220px]">
+                  <button
+                    onClick={() => {
+                      setCor(null);
+                      setPaletaAberta(false);
+                    }}
+                    className={`h-6 w-6 rounded-full border flex items-center justify-center ${cor === null ? "border-border-strong" : "border-border"}`}
+                    title={t("Sem cor")}
+                    aria-label={t("Sem cor")}
+                  >
+                    {cor === null && <Check size={12} className="text-muted" />}
+                  </button>
+                  {CORES.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setCor(c);
+                        setPaletaAberta(false);
+                      }}
+                      className="h-6 w-6 rounded-full border-2 flex items-center justify-center"
+                      style={{ backgroundColor: c, borderColor: cor === c ? "#fff" : "transparent" }}
+                      aria-label={t("Cor")}
+                    >
+                      {cor === c && <Check size={12} className="text-white" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <button onClick={enviar} disabled={!texto.trim() || enviando} className="btn btn-primary disabled:opacity-50">
+          <button
+            onClick={enviar}
+            disabled={!texto.trim() || enviando}
+            className="btn btn-primary disabled:opacity-50"
+          >
             <Send size={14} />
             {enviando ? t("Enviando...") : t("Adicionar")}
           </button>

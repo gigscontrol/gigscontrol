@@ -3,7 +3,7 @@ import type { CasaRow, CasaEscrita } from "@/lib/mappers/contatos";
 import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
-  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em";
+  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em, bloqueado, bloqueado_motivo, bloqueado_por, bloqueado_em";
 
 export async function listarCasas(
   supabase: SupabaseClient,

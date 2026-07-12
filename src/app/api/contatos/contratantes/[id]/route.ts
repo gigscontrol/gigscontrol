@@ -78,7 +78,8 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     const contratante = await atualizarContratantePorId(
       r.sessao.supabase,
       params.id,
-      parsed.data
+      parsed.data,
+      r.sessao.userId
     );
     return NextResponse.json({ contratante });
   } catch (e) {

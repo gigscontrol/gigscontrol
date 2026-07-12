@@ -75,6 +75,9 @@ function contratanteParaApi(
   if (c.endereco !== undefined) out.endereco = c.endereco || null;
   if (c.cidadeId !== undefined) out.cidade_id = c.cidadeId || null;
   if (c.observacoes !== undefined) out.observacoes = c.observacoes || null;
+  // Bloqueio (migração 83) — bloqueado_por/em são carimbados no servidor.
+  if (c.bloqueado !== undefined) out.bloqueado = c.bloqueado;
+  if (c.bloqueadoMotivo !== undefined) out.bloqueado_motivo = c.bloqueadoMotivo || null;
   return out;
 }
 
@@ -88,6 +91,9 @@ function casaParaApi(c: AddCasaInput | UpdateCasaInput): Record<string, unknown>
   if (c.contatoResponsavel !== undefined)
     out.contato_responsavel = c.contatoResponsavel || null;
   if (c.telefone !== undefined) out.telefone = c.telefone || null;
+  // Bloqueio (migração 83) — bloqueado_por/em são carimbados no servidor.
+  if (c.bloqueado !== undefined) out.bloqueado = c.bloqueado;
+  if (c.bloqueadoMotivo !== undefined) out.bloqueado_motivo = c.bloqueadoMotivo || null;
   return out;
 }
 

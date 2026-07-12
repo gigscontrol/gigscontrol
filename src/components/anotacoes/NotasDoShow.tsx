@@ -75,13 +75,13 @@ export default function NotasDoShow({ showId }: { showId: string }) {
         ))
       )}
 
-      {/* Compose — some quando bate o teto */}
+      {/* Compose — barra de composição; some quando bate o teto */}
       {cheio ? (
-        <div className="text-xs text-muted text-center py-1">
+        <div className="text-xs text-muted text-center py-2 mt-1 rounded-md border border-border bg-surface-2">
           {t("Limite de {n} anotações por show atingido.", { n: MAX_POR_SHOW })}
         </div>
       ) : (
-        <div className="flex items-end gap-2">
+        <div className="mt-1 rounded-lg border border-border bg-surface-2 p-2.5 flex items-end gap-2 flex-wrap sm:flex-nowrap focus-within:border-border-strong transition-colors">
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -89,13 +89,13 @@ export default function NotasDoShow({ showId }: { showId: string }) {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") enviar();
             }}
             placeholder={t("Escreva uma anotação sobre o show...")}
-            className="input flex-1 min-h-[44px] max-h-[120px] resize-y border border-border rounded-md p-2 bg-surface"
+            className="input flex-1 basis-full sm:basis-auto min-w-0 min-h-[44px] max-h-[120px] resize-y border border-border rounded-md p-2 bg-surface"
             rows={1}
           />
           <button
             onClick={enviar}
             disabled={!texto.trim() || enviando}
-            className="btn btn-primary disabled:opacity-50 flex-shrink-0"
+            className="btn btn-primary disabled:opacity-50 flex-shrink-0 ml-auto sm:ml-0"
             aria-label={t("Adicionar")}
           >
             <Send size={14} />

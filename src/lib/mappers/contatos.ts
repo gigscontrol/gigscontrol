@@ -87,6 +87,10 @@ export type CasaRow = {
   lat: number | string | null;
   lng: number | string | null;
   geo_precision: string | null;
+  bloqueado: boolean | null;
+  bloqueado_motivo: string | null;
+  bloqueado_por: string | null;
+  bloqueado_em: string | null;
 };
 
 export function rowParaCasa(row: CasaRow): Casa {
@@ -100,6 +104,7 @@ export function rowParaCasa(row: CasaRow): Casa {
     contatoResponsavel: row.contato_responsavel ?? undefined,
     telefone: row.telefone ?? undefined,
     criadoEm: row.criado_em ?? undefined,
+    bloqueado: row.bloqueado ?? false,
   };
   const lat = paraNumero(row.lat);
   const lng = paraNumero(row.lng);
@@ -107,6 +112,9 @@ export function rowParaCasa(row: CasaRow): Casa {
   if (lng !== undefined) casa.lng = lng;
   const prec = geoPrecisaoValida(row.geo_precision);
   if (prec) casa.geoPrecisao = prec;
+  if (row.bloqueado_motivo) casa.bloqueadoMotivo = row.bloqueado_motivo;
+  if (row.bloqueado_por) casa.bloqueadoPor = row.bloqueado_por;
+  if (row.bloqueado_em) casa.bloqueadoEm = row.bloqueado_em;
   return casa;
 }
 
@@ -123,6 +131,10 @@ export type CasaEscrita = {
   lng?: number | null;
   geo_precision?: string | null;
   geocoded_at?: string | null;
+  bloqueado?: boolean;
+  bloqueado_motivo?: string | null;
+  bloqueado_por?: string | null;
+  bloqueado_em?: string | null;
 };
 
 // ============================================================
@@ -145,6 +157,10 @@ export type ContratanteRow = {
   lat: number | string | null;
   lng: number | string | null;
   geo_precision: string | null;
+  bloqueado: boolean | null;
+  bloqueado_motivo: string | null;
+  bloqueado_por: string | null;
+  bloqueado_em: string | null;
 };
 
 export function rowParaContratante(row: ContratanteRow): Contratante {
@@ -159,6 +175,7 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     cidadeId: row.cidade_id ?? "",
     observacoes: row.observacoes ?? undefined,
     criadoEm: row.criado_em ?? "",
+    bloqueado: row.bloqueado ?? false,
   };
   if (row.criado_por) ct.criadoPor = row.criado_por;
   const lat = paraNumero(row.lat);
@@ -167,6 +184,9 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
   if (lng !== undefined) ct.lng = lng;
   const prec = geoPrecisaoValida(row.geo_precision);
   if (prec) ct.geoPrecisao = prec;
+  if (row.bloqueado_motivo) ct.bloqueadoMotivo = row.bloqueado_motivo;
+  if (row.bloqueado_por) ct.bloqueadoPor = row.bloqueado_por;
+  if (row.bloqueado_em) ct.bloqueadoEm = row.bloqueado_em;
   return ct;
 }
 
@@ -185,4 +205,8 @@ export type ContratanteEscrita = {
   lng?: number | null;
   geo_precision?: string | null;
   geocoded_at?: string | null;
+  bloqueado?: boolean;
+  bloqueado_motivo?: string | null;
+  bloqueado_por?: string | null;
+  bloqueado_em?: string | null;
 };

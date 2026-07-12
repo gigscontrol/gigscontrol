@@ -6,7 +6,7 @@ import {
   Users,
   Building2,
   MapPin,
-  Music,
+  Ban,
   ChevronRight,
   UserPlus,
   TrendingUp,
@@ -14,6 +14,14 @@ import {
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
+import {
+  ClickableStat,
+  ResumoModal,
+  ResumoNumero,
+  ResumoLista,
+  ResumoFooter,
+  type ResumoListaItem,
+} from "./DashboardResumo";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
@@ -63,6 +71,9 @@ type Props = {
   onAbrirCategoria?: (cat: ContatoCategoria) => void;
 };
 
+/** Qual card-resumo está aberto (modal na mesma página). */
+type ResumoAberto = "contratantes" | "casas" | "cidades" | "bloqueados" | null;
+
 export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const t = useT();
   const { contratantes, casas, cidades } = useContatos();
@@ -73,6 +84,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const [range, setRange] = useState<AgendaDateRange>("Mês atual");
   const [customMonth, setCustomMonth] = useState<string | null>(null);
   const [customYear, setCustomYear] = useState<number | null>(null);
+  const [resumo, setResumo] = useState<ResumoAberto>(null);
   const periodo = useMemo(
     () => resolverMes(range, customMonth, customYear),
     [range, customMonth, customYear]
@@ -95,6 +107,14 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
     [shows]
   );
 
+  // Contatos bloqueados (contratantes + casas). Card VERMELHO.
+  const contratantesBloqueados = useMemo(
+    () => contratantes.filter((c) => c.bloqueado),
+    [contratantes]
+  );
+  const casasBloqueadas = useMemo(() => casas.filter((c) => c.bloqueado), [casas]);
+  const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
+
   // Ranking de contratantes por faturamento NO PERÍODO (só quem teve atividade).
   const rankingContratantes = useMemo(() => {
     return contratantes
@@ -115,6 +135,65 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   }, [contratantes, vendasPeriodo, showsPeriodo]);
 
   const maxFat = Math.max(1, ...rankingContratantes.map((r) => r.faturamento));
+
+  // ---- Itens dos modais-resumo (até 5 no ResumoLista) ----
+
+  // Top contratantes = ranking do período (com faturamento como valor).
+  const itensContratantes: ResumoListaItem[] = useMemo(
+    () =>
+      rankingContratantes.slice(0, 5).map((r) => ({
+        id: r.contratante.id,
+        titulo: r.contratante.nome,
+        subtitulo: `${r.totalShows} ${r.totalShows === 1 ? t("show") : t("shows")}`,
+        valor: r.faturamento > 0 ? formatBRL(r.faturamento) : "—",
+      })),
+    [rankingContratantes, t]
+  );
+
+  // Top casas por nº de shows (all-time) — visão geral do catálogo.
+  const itensCasas: ResumoListaItem[] = useMemo(() => {
+    const contagem = new Map<string, number>();
+    for (const s of shows) if (s.casaId) contagem.set(s.casaId, (contagem.get(s.casaId) ?? 0) + 1);
+    return casas
+      .map((c) => ({ casa: c, n: contagem.get(c.id) ?? 0 }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5)
+      .map(({ casa, n }) => ({
+        id: casa.id,
+        titulo: casa.nome,
+        subtitulo: `${n} ${n === 1 ? t("show") : t("shows")}`,
+      }));
+  }, [casas, shows, t]);
+
+  // Top cidades por nº de shows (all-time).
+  const itensCidades: ResumoListaItem[] = useMemo(() => {
+    const contagem = new Map<string, number>();
+    for (const s of shows) if (s.cidadeId) contagem.set(s.cidadeId, (contagem.get(s.cidadeId) ?? 0) + 1);
+    return cidades
+      .map((c) => ({ cidade: c, n: contagem.get(c.id) ?? 0 }))
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 5)
+      .map(({ cidade, n }) => ({
+        id: cidade.id,
+        titulo: cidade.nome,
+        subtitulo: `${cidade.estado || cidade.pais || ""} · ${n} ${n === 1 ? t("show") : t("shows")}`,
+      }));
+  }, [cidades, shows, t]);
+
+  // Bloqueados: contratantes + casas, com o motivo como subtítulo.
+  const itensBloqueados: ResumoListaItem[] = useMemo(() => {
+    const cts: ResumoListaItem[] = contratantesBloqueados.map((c) => ({
+      id: `ct-${c.id}`,
+      titulo: c.nome,
+      subtitulo: c.bloqueadoMotivo || t("Contratante bloqueado"),
+    }));
+    const cs: ResumoListaItem[] = casasBloqueadas.map((c) => ({
+      id: `ca-${c.id}`,
+      titulo: c.nome,
+      subtitulo: c.bloqueadoMotivo || t("Casa bloqueada"),
+    }));
+    return [...cts, ...cs].slice(0, 5);
+  }, [contratantesBloqueados, casasBloqueadas, t]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -145,19 +224,25 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         }
       />
 
-      {/* 4 cards — um de cada cor. Os 3 primeiros são totais da base; o 4º
-          (shows) segue o período selecionado. */}
+      {/* 4 cards — um de cada cor. Clicar abre o modal-resumo (mesma página);
+          o rodapé do modal navega para a lista via onAbrirCategoria. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => onAbrirCategoria?.("contratantes")}>
+        <ClickableStat
+          onClick={() => setResumo("contratantes")}
+          ariaLabel={t("Resumo de contratantes")}
+        >
           <StatCard
             title={t("Contratantes")}
             value={contratantes.length}
             icon={<Users size={16} />}
             accentColor="var(--info)"
-            subtitle={t("Toque para gerenciar")}
+            subtitle={t("Toque para ver o resumo")}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onAbrirCategoria?.("casas")}>
+        <ClickableStat
+          onClick={() => setResumo("casas")}
+          ariaLabel={t("Resumo de casas")}
+        >
           <StatCard
             title={t("Casas / Locais")}
             value={casas.length}
@@ -166,7 +251,10 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             subtitle={t("Clubs, festivais, bares")}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onAbrirCategoria?.("cidades")}>
+        <ClickableStat
+          onClick={() => setResumo("cidades")}
+          ariaLabel={t("Resumo de cidades")}
+        >
           <StatCard
             title={t("Cidades")}
             value={cidades.length}
@@ -175,13 +263,18 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             subtitle={t("{n} com shows", { n: cidadesComShows })}
           />
         </ClickableStat>
-        <StatCard
-          title={t("Shows no período")}
-          value={showsPeriodo.length}
-          icon={<Music size={16} />}
-          accentColor="var(--danger)"
-          subtitle={tituloPeriodo}
-        />
+        <ClickableStat
+          onClick={() => setResumo("bloqueados")}
+          ariaLabel={t("Resumo de bloqueados")}
+        >
+          <StatCard
+            title={t("Bloqueados")}
+            value={totalBloqueados}
+            icon={<Ban size={16} />}
+            accentColor="var(--danger)"
+            subtitle={t("Contratantes e casas bloqueados")}
+          />
+        </ClickableStat>
       </div>
 
       {/* Parte de baixo: ranking de contratantes por faturamento no período */}
@@ -266,24 +359,97 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           onClick={() => onAbrirCategoria?.("cidades")}
         />
       </div>
-    </div>
-  );
-}
 
-function ClickableStat({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0"
-    >
-      {children}
-    </button>
+      {/* ---- Modais-resumo (mesma página) ---- */}
+      <ResumoModal
+        isOpen={resumo === "contratantes"}
+        onClose={() => setResumo(null)}
+        title={t("Contratantes")}
+        subtitle={tituloPeriodo}
+        accentColor="var(--info)"
+      >
+        <ResumoNumero
+          valor={contratantes.length}
+          label={t("Contratantes cadastrados")}
+          accentColor="var(--info)"
+        />
+        {itensContratantes.length > 0 && (
+          <ResumoLista
+            itens={itensContratantes}
+            onItemClick={() => onAbrirCategoria?.("contratantes")}
+          />
+        )}
+        <ResumoFooter
+          label={t("Ver mais detalhes")}
+          onClick={() => onAbrirCategoria?.("contratantes")}
+        />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "casas"}
+        onClose={() => setResumo(null)}
+        title={t("Casas / Locais")}
+        accentColor="var(--success)"
+      >
+        <ResumoNumero
+          valor={casas.length}
+          label={t("Casas cadastradas")}
+          accentColor="var(--success)"
+        />
+        {itensCasas.length > 0 && (
+          <ResumoLista itens={itensCasas} onItemClick={() => onAbrirCategoria?.("casas")} />
+        )}
+        <ResumoFooter
+          label={t("Ver mais detalhes")}
+          onClick={() => onAbrirCategoria?.("casas")}
+        />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "cidades"}
+        onClose={() => setResumo(null)}
+        title={t("Cidades")}
+        accentColor="var(--warning)"
+      >
+        <ResumoNumero
+          valor={cidades.length}
+          label={t("Cidades cadastradas")}
+          accentColor="var(--warning)"
+        />
+        {itensCidades.length > 0 && (
+          <ResumoLista itens={itensCidades} onItemClick={() => onAbrirCategoria?.("cidades")} />
+        )}
+        <ResumoFooter
+          label={t("Ver mais detalhes")}
+          onClick={() => onAbrirCategoria?.("cidades")}
+        />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "bloqueados"}
+        onClose={() => setResumo(null)}
+        title={t("Bloqueados")}
+        subtitle={t("Contratantes e casas bloqueados")}
+        accentColor="var(--danger)"
+      >
+        <ResumoNumero
+          valor={totalBloqueados}
+          label={t("Contatos bloqueados")}
+          accentColor="var(--danger)"
+        />
+        {totalBloqueados === 0 ? (
+          <div className="text-sm text-muted text-center py-4">
+            {t("Nenhum contato bloqueado.")}
+          </div>
+        ) : (
+          <ResumoLista itens={itensBloqueados} onItemClick={() => onAbrirCategoria?.("contratantes")} />
+        )}
+        <ResumoFooter
+          label={t("Ver mais detalhes")}
+          onClick={() => onAbrirCategoria?.("contratantes")}
+        />
+      </ResumoModal>
+    </div>
   );
 }
 

@@ -24,7 +24,13 @@ function RetornoInner() {
   const router = useRouter();
   const t = useT();
   const params = useSearchParams();
-  const status = params.get("status") ?? "pending";
+  // Checkout HOSPEDADO volta com ?status=success|cancel. Checkout EMBUTIDO
+  // volta com ?session_id=... (return_url configurado no servidor, sem
+  // status). Tratamos a presença de session_id como sucesso — a ativação
+  // real continua sendo confirmada pelo polling do onboarding.
+  const sessionId = params.get("session_id");
+  const statusParam = params.get("status");
+  const status = statusParam ?? (sessionId ? "success" : "pending");
   // Stripe manda "cancel"; também aceitamos "failure" por compatibilidade.
   const cancelado = status === "cancel" || status === "failure";
 

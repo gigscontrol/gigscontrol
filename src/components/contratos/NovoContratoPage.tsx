@@ -18,7 +18,13 @@ import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import { useContratos, ExcedenteError } from "@/lib/contratos-context";
+import {
+  useContratos,
+  ExcedenteError,
+  ExcedenteRequiresActionError,
+  ExcedenteSemCartaoError,
+} from "@/lib/contratos-context";
+import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import {
   valoresDeVenda,
   preencherSecoes,
@@ -31,6 +37,16 @@ import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 
 const ACCENT = "#3D7BFF";
+
+// stripe-js só pra confirmar o 3DS do excedente (handleNextAction). Memoiza a
+// Promise fora do render (recomendação da Stripe).
+const STRIPE_PK = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+let _stripePromise: Promise<StripeJs | null> | null = null;
+function getStripeJs(): Promise<StripeJs | null> {
+  if (!STRIPE_PK) return Promise.resolve(null);
+  if (!_stripePromise) _stripePromise = loadStripe(STRIPE_PK);
+  return _stripePromise;
+}
 
 // Tokens que costumam ser longos → textarea.
 const LONGOS = new Set([
@@ -89,6 +105,10 @@ export default function NovoContratoPage() {
   const [excedente, setExcedente] = useState<
     { limite: number; plano: string; valor: number; moeda: "brl" | "usd" } | null
   >(null);
+  // Erro acionável dentro do modal do excedente (3DS falhou / sem cartão).
+  const [excedenteErro, setExcedenteErro] = useState<string | null>(null);
+  // true = a cobrança precisou de "atualizar meio de pagamento" (link /pagamento).
+  const [excedenteSemCartao, setExcedenteSemCartao] = useState(false);
 
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -174,10 +194,21 @@ export default function NovoContratoPage() {
       setValores(valoresFinais);
       setGerado(atualizado);
       setExcedente(null);
+      setExcedenteErro(null);
+      setExcedenteSemCartao(false);
     } catch (e) {
       if (e instanceof ExcedenteError) {
         // Limite atingido → abre o modal pra pagar o contrato extra.
         setExcedente(e.info);
+        setExcedenteErro(null);
+        setExcedenteSemCartao(false);
+      } else if (e instanceof ExcedenteRequiresActionError) {
+        // 3DS: confirma o desafio no cartão e re-submete com a MESMA idem key.
+        await confirmar3DS(e.clientSecret, opts?.idem);
+      } else if (e instanceof ExcedenteSemCartaoError) {
+        // Sem cartão salvo → mensagem acionável (atualizar meio de pagamento).
+        setExcedenteSemCartao(true);
+        setExcedenteErro(e.message);
       } else {
         setErro((e as Error).message || t("Não foi possível gerar o contrato."));
       }
@@ -186,7 +217,42 @@ export default function NovoContratoPage() {
     }
   }
 
+  // Confirma o 3DS (handleNextAction) e, se aprovado, re-submete `gerar` com a
+  // MESMA idem key — o mesmo PaymentIntent só é confirmado, sem cobrança dupla.
+  async function confirmar3DS(clientSecret: string, idem?: string) {
+    if (!idem) {
+      setExcedenteErro(
+        t("Não foi possível concluir a autenticação. Tente pagar novamente.")
+      );
+      return;
+    }
+    setGerando(true);
+    try {
+      const stripe = await getStripeJs();
+      if (!stripe) {
+        setExcedenteErro(
+          t("Pagamento indisponível no momento. Tente novamente mais tarde.")
+        );
+        return;
+      }
+      const { error } = await stripe.handleNextAction({ clientSecret });
+      if (error) {
+        setExcedenteErro(
+          error.message ||
+            t("A autenticação do cartão falhou. Tente novamente.")
+        );
+        return;
+      }
+      // Desafio OK → re-submete com a MESMA idem; o PI agora conclui succeeded.
+      await gerar({ pagarExcedente: true, idem });
+    } finally {
+      setGerando(false);
+    }
+  }
+
   async function confirmarExcedente() {
+    setExcedenteErro(null);
+    setExcedenteSemCartao(false);
     let idem: string;
     try {
       idem = crypto.randomUUID();
@@ -286,7 +352,12 @@ export default function NovoContratoPage() {
       {/* Modal do contrato EXCEDENTE (pagar por unidade além do limite) */}
       <Modal
         isOpen={excedente !== null}
-        onClose={() => !gerando && setExcedente(null)}
+        onClose={() => {
+          if (gerando) return;
+          setExcedente(null);
+          setExcedenteErro(null);
+          setExcedenteSemCartao(false);
+        }}
         title={t("Limite de contratos atingido")}
         subtitle={
           excedente
@@ -307,11 +378,35 @@ export default function NovoContratoPage() {
               </span>{" "}
               {t("no cartão salvo. O limite reseta na virada do plano.")}
             </p>
+            {excedenteErro && (
+              <div
+                className="flex flex-col gap-2 text-sm rounded-md px-3 py-2.5"
+                style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "var(--danger)" }}
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+                  <span>{excedenteErro}</span>
+                </div>
+                {excedenteSemCartao && (
+                  <a
+                    href="/pagamento"
+                    className="font-semibold underline underline-offset-2"
+                    style={{ color: ACCENT }}
+                  >
+                    {t("Atualizar meio de pagamento")}
+                  </a>
+                )}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 className="btn btn-secondary text-sm"
-                onClick={() => setExcedente(null)}
+                onClick={() => {
+                  setExcedente(null);
+                  setExcedenteErro(null);
+                  setExcedenteSemCartao(false);
+                }}
                 disabled={gerando}
               >
                 {t("Cancelar")}
@@ -321,7 +416,7 @@ export default function NovoContratoPage() {
                 className="btn btn-primary text-sm disabled:opacity-50"
                 style={{ backgroundColor: ACCENT, color: "#fff" }}
                 onClick={confirmarExcedente}
-                disabled={gerando}
+                disabled={gerando || excedenteSemCartao}
               >
                 {gerando
                   ? t("Cobrando…")

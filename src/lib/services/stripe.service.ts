@@ -119,10 +119,23 @@ export async function obterOuCriarCustomer(params: {
 }
 
 /**
- * Cria a Checkout Session em modo `subscription` e devolve a session
- * (a URL hospedada vem em `session.url`). O `workspaceId` viaja no
- * metadata da session E da subscription — é assim que o webhook sabe
- * qual conta ativar.
+ * Cria a Checkout Session em modo `subscription` e devolve a session.
+ * O `workspaceId` viaja no metadata da session E da subscription — é
+ * assim que o webhook sabe qual conta ativar.
+ *
+ * `ui` controla o modo do checkout (mesma sessão, só a apresentação muda):
+ *  - `'hosted'` (DEFAULT): checkout hospedado da Stripe. A URL vem em
+ *    `session.url` e o cliente é redirecionado pra lá. Sucesso/cancelamento
+ *    voltam pra `/pagamento/retorno` via success_url/cancel_url.
+ *  - `'embedded'`: Embedded Checkout (iframe na nossa página via
+ *    @stripe/stripe-js). Retorna `session.client_secret`; ao concluir, o
+ *    Stripe redireciona pra `return_url` (/pagamento/retorno com o
+ *    session_id na query). NÃO usa success_url/cancel_url (incompatíveis
+ *    com ui_mode=embedded).
+ *
+ * IMPORTANTE: em AMBOS os modos o metadata/client_reference_id são idênticos,
+ * então o webhook `checkout.session.completed` dispara e resolve o workspace
+ * exatamente igual — o embedded não muda nada no webhook.
  */
 export async function criarCheckoutAssinatura(params: {
   workspaceId: string;
@@ -131,22 +144,40 @@ export async function criarCheckoutAssinatura(params: {
   customerId: string;
   moeda?: Moeda;
   baseUrl?: string;
+  ui?: "hosted" | "embedded";
 }): Promise<Stripe.Checkout.Session> {
-  const { workspaceId, plano, ciclo, customerId, moeda = "brl" } = params;
+  const { workspaceId, plano, ciclo, customerId, moeda = "brl", ui = "hosted" } = params;
   const baseUrl = params.baseUrl ?? appUrl();
   const priceId = await resolverPriceId(plano, ciclo, moeda);
 
-  return getStripe().checkout.sessions.create({
-    mode: "subscription",
+  const comum = {
+    mode: "subscription" as const,
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/pagamento/retorno?status=success`,
-    cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
     client_reference_id: workspaceId,
     subscription_data: {
       metadata: { workspaceId, plano, ciclo, moeda },
     },
     metadata: { workspaceId, plano, ciclo, moeda },
+  };
+
+  if (ui === "embedded") {
+    return getStripe().checkout.sessions.create({
+      ...comum,
+      // DESVIO DO SPEC: o spec pede ui_mode:'embedded', mas o SDK pinado
+      // (stripe@22.3.0, build preview) tipa o valor como 'embedded_page'.
+      // No fio da API isso serializa pro embedded correto; usamos o literal
+      // que o typegen exige pra passar no tsc.
+      ui_mode: "embedded_page",
+      // O Stripe substitui {CHECKOUT_SESSION_ID} pelo id real da sessão.
+      return_url: `${baseUrl}/pagamento/retorno?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  }
+
+  return getStripe().checkout.sessions.create({
+    ...comum,
+    success_url: `${baseUrl}/pagamento/retorno?status=success`,
+    cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
   });
 }
 
@@ -339,11 +370,41 @@ export async function cancelarDowngrade(params: {
 }
 
 /**
+ * Não há cartão salvo na assinatura pra cobrar o excedente off-session.
+ * A UI deve mandar o usuário atualizar o meio de pagamento (/pagamento).
+ */
+export class SemCartaoError extends Error {
+  constructor() {
+    super("Nenhum cartão salvo para cobrar o excedente.");
+    this.name = "SemCartaoError";
+  }
+}
+
+/**
+ * O cartão exige autenticação forte (3DS): o PaymentIntent voltou como
+ * `requires_action`. A UI confirma o desafio via stripe-js (mesmo cliente,
+ * mesma idempotencyKey) e re-submete. Carrega o `clientSecret` do PI.
+ */
+export class AutenticacaoRequeridaError extends Error {
+  constructor(
+    public clientSecret: string,
+    public paymentIntentId: string
+  ) {
+    super("O cartão exige autenticação (3DS) para concluir a cobrança.");
+    this.name = "AutenticacaoRequeridaError";
+  }
+}
+
+/**
  * Cobra UMA unidade excedente (ex.: contrato além do limite do ciclo) no cartão
  * salvo da assinatura, NA HORA (off-session). Valor = PRECO_EXCEDENTE na moeda
  * REAL da assinatura (R$ 9,99 / US$ 5). Idempotente pelo `idempotencyKey` (o
- * mesmo clique/retry não cobra 2×). Lança se não houver cartão ou o pagamento
- * não for aprovado.
+ * mesmo clique/retry não cobra 2×).
+ *
+ * Falhas tipadas (a rota propaga pro client com payload estruturado):
+ *  - `SemCartaoError`: assinatura sem cartão salvo → mensagem acionável.
+ *  - `AutenticacaoRequeridaError`: 3DS exigido → carrega o `clientSecret` pra a
+ *    UI confirmar via stripe-js e re-submeter com a MESMA idempotencyKey.
  */
 export async function cobrarExcedente(params: {
   subscriptionId: string;
@@ -367,21 +428,44 @@ export async function cobrarExcedente(params: {
       (cust.invoice_settings?.default_payment_method as string | { id: string } | null) ?? null
     );
   }
-  if (!pmId) throw new Error("Nenhum cartão salvo para cobrar o excedente.");
+  if (!pmId) throw new SemCartaoError();
 
   const valor = PRECO_EXCEDENTE[moeda];
-  const pi = await stripe.paymentIntents.create(
-    {
-      amount: valor,
-      currency: moeda,
-      customer: customerId,
-      payment_method: pmId,
-      off_session: true,
-      confirm: true,
-      description: params.descricao,
-    },
-    { idempotencyKey: params.idempotencyKey }
-  );
+  let pi: Stripe.PaymentIntent;
+  try {
+    pi = await stripe.paymentIntents.create(
+      {
+        amount: valor,
+        currency: moeda,
+        customer: customerId,
+        payment_method: pmId,
+        off_session: true,
+        confirm: true,
+        description: params.descricao,
+      },
+      { idempotencyKey: params.idempotencyKey }
+    );
+  } catch (e) {
+    // Off-session negado por exigir 3DS: a Stripe lança StripeCardError com o
+    // PaymentIntent anexado. Devolve o clientSecret pra a UI confirmar on-session.
+    const err = e as Stripe.errors.StripeError;
+    const pendente = err?.payment_intent;
+    if (
+      err?.code === "authentication_required" &&
+      pendente?.client_secret
+    ) {
+      throw new AutenticacaoRequeridaError(pendente.client_secret, pendente.id);
+    }
+    throw e;
+  }
+
+  // Alguns fluxos retornam requires_action em vez de lançar: mesmo tratamento.
+  if (pi.status === "requires_action") {
+    if (!pi.client_secret) {
+      throw new Error("Pagamento do excedente exige autenticação, mas o token não veio.");
+    }
+    throw new AutenticacaoRequeridaError(pi.client_secret, pi.id);
+  }
   if (pi.status !== "succeeded") {
     throw new Error("Pagamento do excedente não foi aprovado.");
   }

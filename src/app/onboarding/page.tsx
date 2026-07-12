@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
-import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
+import { PLANOS, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import PlanoCard from "@/components/PlanoCard";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
@@ -39,7 +40,7 @@ import {
 } from "@/components/configuracoes/AbaArtistas";
 import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useT, useMoeda } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { TRIAL_ATIVADO } from "@/lib/flags";
 
 /**
@@ -849,10 +850,10 @@ function Etapa2Plano({
 }) {
   const router = useRouter();
   const t = useT();
-  const moeda = useMoeda();
   const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
     planoEscolhido ?? "individual"
   );
+  const [ciclo, setCiclo] = useState<CicloCobranca>("mensal");
   const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -919,72 +920,49 @@ function Etapa2Plano({
             {t("Escolha o plano ideal para a sua agência. Você pode trocar de plano quando quiser.")}
           </p>
         )}
+
+        {/* Toggle Mensal / Anual */}
+        <div className="mt-6 flex items-center justify-center">
+          <div className="inline-flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+            <button
+              type="button"
+              onClick={() => setCiclo("mensal")}
+              className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors ${
+                ciclo === "mensal" ? "bg-elevated text-primary" : "text-muted hover:text-secondary"
+              }`}
+            >
+              {t("Mensal")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCiclo("anual")}
+              className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-2 ${
+                ciclo === "anual" ? "bg-elevated text-primary" : "text-muted hover:text-secondary"
+              }`}
+            >
+              {t("Anual")}
+              <span
+                className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full text-white"
+                style={{ backgroundColor: "var(--brand)" }}
+              >
+                {t("ECONOMIZE")}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
-        {PLANOS.map((p) => {
-          const sel = planoSelecionado === p.id;
-          const popular = p.id === "individual";
-          const temTrial = p.id === "individual";
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPlanoSelecionado(p.id)}
-              className="card text-left transition-all hover:border-border-strong relative flex flex-col"
-              style={{
-                borderColor: sel ? "var(--brand)" : undefined,
-                boxShadow: sel ? "0 0 0 1px var(--brand)" : undefined,
-                paddingTop: (TRIAL_ATIVADO && temTrial) || popular ? 24 : undefined,
-              }}
-            >
-              {/* Badges no topo */}
-              <div className="absolute top-0 left-3 right-3 flex flex-wrap gap-1" style={{ transform: "translateY(-50%)" }}>
-                {popular && (
-                  <span
-                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: "var(--brand)" }}
-                  >
-                    {t("Mais popular")}
-                  </span>
-                )}
-                {TRIAL_ATIVADO && temTrial && (
-                  <span
-                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-black"
-                    style={{ backgroundColor: "#fbbf24" }}
-                  >
-                    {t("Teste grátis 7 dias")}
-                  </span>
-                )}
-              </div>
-
-              <div className="text-sm font-bold text-primary">{p.nome}</div>
-              <div className="text-[0.65rem] text-muted mb-2 line-clamp-2">{p.tagline}</div>
-              <div className="mb-2">
-                <span className="text-base font-bold text-primary">
-                  {formatarPreco(valorMensal(p, moeda), moeda)}
-                </span>
-                <span className="text-[0.6rem] text-muted">{t("/mês")}</span>
-              </div>
-              <ul className="flex flex-col gap-1 text-[0.65rem] text-secondary flex-1">
-                {p.recursos.slice(0, 3).map((r) => (
-                  <li key={r} className="flex items-start gap-1">
-                    <Check size={9} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-                    <span className="line-clamp-2">{r}</span>
-                  </li>
-                ))}
-              </ul>
-              {sel && (
-                <div
-                  className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--brand)" }}
-                >
-                  <Check size={12} className="text-white" />
-                </div>
-              )}
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+        {PLANOS.map((p) => (
+          <PlanoCard
+            key={p.id}
+            plano={p}
+            ciclo={ciclo}
+            selecionado={planoSelecionado === p.id}
+            recomendado={p.id === "individual"}
+            onSelecionar={() => setPlanoSelecionado(p.id)}
+          />
+        ))}
       </div>
 
       {erro && (

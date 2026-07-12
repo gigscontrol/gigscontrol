@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
 
 type Props = {
@@ -14,32 +14,21 @@ type Props = {
 /**
  * Banner do período de GRAÇA (1 dia após a renovação falhar / o trial acabar).
  * Acesso continua liberado; é só um aviso flutuante no topo. Admin tem o botão
- * "Renovar"; os demais (artista/equipe) só veem o aviso pra avisar o admin.
+ * "Renovar" (leva pra /pagamento, onde fica o checkout embutido); os demais
+ * (artista/equipe) só veem o aviso pra avisar o admin.
  */
 export default function BannerPagamento({ papel, adminContato, plano, ciclo }: Props) {
   const t = useT();
-  const [indo, setIndo] = useState(false);
+  const router = useRouter();
   const isAdmin = papel === "admin";
+  // `ciclo` fica na assinatura do workspace (a página /pagamento lê o plano
+  // atual pra montar o checkout); não é passado pela navegação.
+  void ciclo;
 
-  async function renovar() {
-    if (indo || !plano) return;
-    setIndo(true);
-    try {
-      const res = await fetch("/api/checkout/stripe", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: plano.id, ciclo }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok && body.url) {
-        window.location.href = body.url as string;
-        return;
-      }
-    } catch {
-      /* ignora */
-    }
-    setIndo(false);
+  function renovar() {
+    // O checkout embutido vive em /pagamento — navega pra lá em vez de
+    // redirecionar direto pro Stripe.
+    router.push("/pagamento");
   }
 
   return (
@@ -69,11 +58,10 @@ export default function BannerPagamento({ papel, adminContato, plano, ciclo }: P
         {isAdmin && (
           <button
             onClick={renovar}
-            disabled={indo}
-            className="flex-shrink-0 rounded-full px-3 py-1 text-[0.7rem] font-bold text-white disabled:opacity-60"
+            className="flex-shrink-0 rounded-full px-3 py-1 text-[0.7rem] font-bold text-white"
             style={{ background: "var(--warning)" }}
           >
-            {indo ? <Loader2 size={13} className="animate-spin" /> : t("Renovar")}
+            {t("Renovar")}
           </button>
         )}
       </div>

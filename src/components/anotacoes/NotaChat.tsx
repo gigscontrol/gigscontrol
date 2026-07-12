@@ -89,22 +89,35 @@ export default function NotaChat({
         {nome.slice(0, 2).toUpperCase()}
       </span>
 
-      {/* Bolha */}
+      {/* Bolha — minha (direita, tint accent forte) vs alheia (esquerda, elevated) */}
       <div
         className={`max-w-[85%] min-w-[180px] rounded-xl px-3 py-2 border ${
           minha ? "rounded-br-sm" : "rounded-bl-sm"
         }`}
         style={{
-          backgroundColor: minha ? `${accent}16` : "var(--elevated)",
-          borderColor: minha ? `${accent}40` : "var(--border)",
+          backgroundColor: minha ? `${accent}2E` : "var(--surface-3)",
+          borderColor: nota.fixada
+            ? accent
+            : minha
+            ? `${accent}66`
+            : "var(--border-strong)",
+          borderWidth: nota.fixada ? "1.5px" : undefined,
           ...(nota.cor ? { borderLeft: `3px solid ${nota.cor}` } : {}),
         }}
       >
         {/* Header: nome + ações */}
         <div className="flex items-center justify-between gap-3 mb-0.5">
-          <span className="text-xs font-semibold truncate" style={{ color: minha ? accent : cor }}>
+          <span className="text-xs font-semibold truncate inline-flex items-center gap-1" style={{ color: minha ? accent : cor }}>
             {nome}
-            {nota.fixada && <Pin size={10} className="inline ml-1 -mt-0.5" fill="currentColor" />}
+            {nota.fixada && (
+              <span
+                className="badge inline-flex items-center gap-0.5 px-1.5 py-0.5"
+                style={{ color: accent, backgroundColor: `${accent}22` }}
+              >
+                <Pin size={9} fill="currentColor" />
+                {t("Fixada")}
+              </span>
+            )}
           </span>
           <span className="flex items-center gap-0.5 flex-shrink-0">
             {onTogglePin && (

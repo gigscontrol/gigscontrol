@@ -45,7 +45,12 @@ export const casaCreateSchema = z.object({
   telefone: z.string().nullable().optional(),
 });
 export type CasaCreateInput = z.infer<typeof casaCreateSchema>;
-export const casaUpdateSchema = casaCreateSchema.partial();
+// Bloqueio só é aceito no PATCH (bloqueado_por/bloqueado_em são carimbados no
+// servidor com o usuário da sessão — não vêm do cliente).
+export const casaUpdateSchema = casaCreateSchema.partial().extend({
+  bloqueado: z.boolean().optional(),
+  bloqueado_motivo: z.string().nullable().optional(),
+});
 export type CasaUpdateInput = z.infer<typeof casaUpdateSchema>;
 
 // ---------- Contratantes ----------
@@ -61,5 +66,10 @@ export const contratanteCreateSchema = z.object({
   observacoes: z.string().nullable().optional(),
 });
 export type ContratanteCreateInput = z.infer<typeof contratanteCreateSchema>;
-export const contratanteUpdateSchema = contratanteCreateSchema.partial();
+// Bloqueio só é aceito no PATCH (bloqueado_por/bloqueado_em são carimbados no
+// servidor com o usuário da sessão — não vêm do cliente).
+export const contratanteUpdateSchema = contratanteCreateSchema.partial().extend({
+  bloqueado: z.boolean().optional(),
+  bloqueado_motivo: z.string().nullable().optional(),
+});
 export type ContratanteUpdateInput = z.infer<typeof contratanteUpdateSchema>;

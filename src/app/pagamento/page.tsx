@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Lock,
@@ -18,6 +18,7 @@ import {
   formatarPreco,
   type PlanoId,
 } from "@/lib/planos";
+import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
 
 /**
  * Página /pagamento — Checkout de assinatura (Stripe).
@@ -52,6 +53,10 @@ export default function PagamentoPage() {
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
   const [indo, setIndo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Quando a chave pública da Stripe não está setada, o CheckoutEmbutido
+  // avisa e a gente degrada pro fluxo hospedado (botão + redirect).
+  const [usarHosted, setUsarHosted] = useState(false);
+  const degradarParaHosted = useCallback(() => setUsarHosted(true), []);
 
   // Carrega status do onboarding ao montar
   useEffect(() => {
@@ -178,63 +183,88 @@ export default function PagamentoPage() {
                 <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
                 {t("Pagamento por cartão")}
               </div>
-              <p className="text-sm text-secondary mb-4">
-                {t(
-                  "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
-                )}
-              </p>
 
-              <div className="grid grid-cols-2 gap-2 mb-5">
-                <MetodoCard
-                  icon={<CreditCard size={18} />}
-                  label={t("Cartão")}
-                  hint={t("crédito")}
-                />
-                <MetodoCard
-                  icon={<RefreshCw size={18} />}
-                  label={t("Renovação")}
-                  hint={t("automática")}
-                />
-              </div>
+              {plano && !usarHosted ? (
+                // Checkout embutido (iframe da Stripe na nossa página).
+                <>
+                  <p className="text-sm text-secondary mb-4">
+                    {t(
+                      "Preencha os dados do cartão abaixo pra concluir a assinatura."
+                    )}
+                  </p>
+                  <CheckoutEmbutido
+                    plano={plano.id}
+                    ciclo={status.ciclo ?? "mensal"}
+                    onIndisponivel={degradarParaHosted}
+                  />
+                  <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
+                    {t(
+                      "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
+                    )}
+                  </p>
+                </>
+              ) : (
+                // Fallback hospedado: sem chave pública ou sem plano.
+                <>
+                  <p className="text-sm text-secondary mb-4">
+                    {t(
+                      "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
+                    )}
+                  </p>
 
-              {erro && (
-                <div
-                  className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
-                  style={{
-                    backgroundColor: "rgba(239,68,68,0.08)",
-                    color: "var(--danger)",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                  }}
-                >
-                  <AlertTriangle size={12} className="flex-shrink-0" />
-                  {erro}
-                </div>
+                  <div className="grid grid-cols-2 gap-2 mb-5">
+                    <MetodoCard
+                      icon={<CreditCard size={18} />}
+                      label={t("Cartão")}
+                      hint={t("crédito")}
+                    />
+                    <MetodoCard
+                      icon={<RefreshCw size={18} />}
+                      label={t("Renovação")}
+                      hint={t("automática")}
+                    />
+                  </div>
+
+                  {erro && (
+                    <div
+                      className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
+                      style={{
+                        backgroundColor: "rgba(239,68,68,0.08)",
+                        color: "var(--danger)",
+                        border: "1px solid rgba(239,68,68,0.3)",
+                      }}
+                    >
+                      <AlertTriangle size={12} className="flex-shrink-0" />
+                      {erro}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={irParaCheckout}
+                    disabled={indo || !plano}
+                    className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+                    style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                  >
+                    {indo ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        {t("Abrindo o pagamento seguro...")}
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={14} />
+                        {t("Assinar por {preco}", { preco: precoFormatado })}
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
+                    {t(
+                      "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
+                    )}
+                  </p>
+                </>
               )}
-
-              <button
-                onClick={irParaCheckout}
-                disabled={indo || !plano}
-                className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-              >
-                {indo ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    {t("Abrindo o pagamento seguro...")}
-                  </>
-                ) : (
-                  <>
-                    <Lock size={14} />
-                    {t("Assinar por {preco}", { preco: precoFormatado })}
-                  </>
-                )}
-              </button>
-
-              <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
-                {t(
-                  "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
-                )}
-              </p>
             </div>
           </div>
 

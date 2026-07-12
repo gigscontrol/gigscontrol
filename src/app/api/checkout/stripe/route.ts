@@ -14,15 +14,21 @@ import {
  * POST /api/checkout/stripe
  *
  * Cria a Checkout Session (assinatura recorrente) pro plano/ciclo
- * escolhido e devolve a `url` do checkout hospedado da Stripe. O cliente
- * é redirecionado pra lá; a ATIVAÇÃO da assinatura acontece no webhook
- * (`checkout.session.completed`).
+ * escolhido. A ATIVAÇÃO da assinatura acontece no webhook
+ * (`checkout.session.completed`) — igual nos dois modos.
+ *
+ * Resposta depende do modo (`ui` no body):
+ *  - sem `ui` (ou `ui:'hosted'`): devolve `{ url }` do checkout hospedado
+ *    da Stripe; o cliente é redirecionado pra lá. É o comportamento LEGADO
+ *    (os call-sites atuais não passam `ui`, então nada muda pra eles).
+ *  - `ui:'embedded'`: devolve `{ clientSecret }` pra montar o Embedded
+ *    Checkout (iframe) na nossa página via @stripe/stripe-js.
  *
  * Guarda o customer id da Stripe na subscription (reaproveitado em
  * `mp_payment_id`) + provider, mas NÃO muda o status — isso é
  * responsabilidade do webhook.
  *
- * Body: { plano, ciclo }
+ * Body: { plano, ciclo, ui? }
  */
 
 const schema = z.object({
@@ -35,6 +41,7 @@ const schema = z.object({
     "agencia-max",
   ]),
   ciclo: z.enum(["mensal", "anual"]).default("mensal"),
+  ui: z.enum(["hosted", "embedded"]).default("hosted"),
 });
 
 export async function POST(request: Request) {
@@ -60,7 +67,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const { plano, ciclo } = parsed.data;
+  const { plano, ciclo, ui } = parsed.data;
   const workspaceId = r.sessao.workspaceId;
   // Moeda pela região (mesma regra do display) — cobra USD fora do BR.
   const pais = resolverPais(
@@ -87,16 +94,22 @@ export async function POST(request: Request) {
       customerIdExistente: subExistente?.mp_payment_id ?? null,
     });
 
-    // 2) Cria a Checkout Session (modo subscription).
+    // 2) Cria a Checkout Session (modo subscription) no modo pedido.
     const session = await criarCheckoutAssinatura({
       workspaceId,
       plano,
       ciclo,
       customerId,
       moeda,
+      ui,
     });
 
-    if (!session.url) {
+    // Cada modo entrega um campo diferente. Valida o correspondente.
+    if (ui === "embedded") {
+      if (!session.client_secret) {
+        throw new Error("Stripe não retornou o client_secret do checkout.");
+      }
+    } else if (!session.url) {
       throw new Error("Stripe não retornou a URL do checkout.");
     }
 
@@ -133,6 +146,10 @@ export async function POST(request: Request) {
       });
     }
 
+    // Embedded → clientSecret (o front monta o iframe); hosted → url (redirect).
+    if (ui === "embedded") {
+      return NextResponse.json({ clientSecret: session.client_secret });
+    }
     return NextResponse.json({ url: session.url });
   } catch (e) {
     return NextResponse.json(

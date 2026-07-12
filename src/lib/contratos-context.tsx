@@ -68,6 +68,29 @@ export class ExcedenteError extends Error {
   }
 }
 
+/**
+ * A cobrança do excedente exige autenticação 3DS. Carrega o `clientSecret` do
+ * PaymentIntent: a UI confirma via stripe-js e re-submete `criarContrato` com a
+ * MESMA `idem` (sem cobrança dupla — o mesmo PI só é confirmado).
+ */
+export class ExcedenteRequiresActionError extends Error {
+  constructor(public clientSecret: string) {
+    super("O cartão exige autenticação (3DS) para concluir a cobrança.");
+    this.name = "ExcedenteRequiresActionError";
+  }
+}
+
+/**
+ * Não há cartão salvo pra cobrar o excedente off-session. A UI mostra uma
+ * mensagem acionável apontando pra /pagamento (atualizar meio de pagamento).
+ */
+export class ExcedenteSemCartaoError extends Error {
+  constructor(mensagem?: string) {
+    super(mensagem || "Nenhum cartão salvo para cobrar o excedente.");
+    this.name = "ExcedenteSemCartaoError";
+  }
+}
+
 type ContratosContextValue = {
   contratos: Contrato[];
   carregando: boolean;
@@ -196,6 +219,14 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
             valor: Number(b.valor) || 0,
             moeda: b.moeda === "usd" ? "usd" : "brl",
           });
+        }
+        // 3DS: precisa confirmar o desafio no cartão antes de re-submeter.
+        if (b.requiresAction && typeof b.clientSecret === "string") {
+          throw new ExcedenteRequiresActionError(b.clientSecret);
+        }
+        // Sem cartão salvo: mensagem acionável (atualizar meio de pagamento).
+        if (b.semCartao) {
+          throw new ExcedenteSemCartaoError(b.erro as string | undefined);
         }
         throw new Error(
           (b.erro as string) ?? "Falha ao cobrar o excedente. Verifique o cartão."

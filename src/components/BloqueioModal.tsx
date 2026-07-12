@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Lock, Loader2 } from "lucide-react";
 import { useT, useMoeda } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano, valorMensal, formatarPreco, type PlanoId } from "@/lib/planos";
+import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
 
 type Props = {
   papel: string;
@@ -24,6 +25,10 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
   const moeda = useMoeda();
   const { logout } = useAuth();
   const [indo, setIndo] = useState(false);
+  // Admin vê o checkout embutido; se a chave pública faltar, degrada
+  // pro fluxo hospedado (botão "Pagar e renovar" que redireciona).
+  const [usarHosted, setUsarHosted] = useState(false);
+  const degradarParaHosted = useCallback(() => setUsarHosted(true), []);
   const isAdmin = papel === "admin";
 
   async function renovar() {
@@ -52,6 +57,9 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
     ? `${planoFull.nome} · ${formatarPreco(valorMensal(planoFull, moeda), moeda)}/${t("mês")}`
     : "";
 
+  // Admin com plano e checkout embutido disponível → modal largo pro iframe.
+  const embutido = isAdmin && !!plano && !usarHosted;
+
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -59,7 +67,11 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
       role="dialog"
       aria-modal="true"
     >
-      <div className="card w-full max-w-sm p-6 text-center">
+      <div
+        className={`card w-full p-6 text-center ${
+          embutido ? "max-w-lg" : "max-w-sm"
+        }`}
+      >
         <div
           className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full"
           style={{
@@ -82,17 +94,29 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
               )}
               {t("Renove pra reativar o acesso do seu workspace.")}
             </p>
-            <button
-              onClick={renovar}
-              disabled={indo || !plano}
-              className="btn btn-primary mt-5 w-full justify-center disabled:opacity-60"
-            >
-              {indo ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                t("Pagar e renovar")
-              )}
-            </button>
+            {embutido ? (
+              // Checkout embutido dentro do modal (no lugar do redirect).
+              <div className="mt-5 text-left">
+                <CheckoutEmbutido
+                  plano={plano.id}
+                  ciclo={ciclo}
+                  onIndisponivel={degradarParaHosted}
+                />
+              </div>
+            ) : (
+              // Fallback hospedado: sem chave pública ou sem plano.
+              <button
+                onClick={renovar}
+                disabled={indo || !plano}
+                className="btn btn-primary mt-5 w-full justify-center disabled:opacity-60"
+              >
+                {indo ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  t("Pagar e renovar")
+                )}
+              </button>
+            )}
           </>
         ) : (
           <>

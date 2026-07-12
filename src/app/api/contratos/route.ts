@@ -9,7 +9,12 @@ import {
 import { verificarCriarContrato } from "@/lib/api/permissoes";
 import { contratoCreateSchema } from "@/lib/validators/contratos.schema";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { cobrarExcedente, infoSubscription } from "@/lib/services/stripe.service";
+import {
+  cobrarExcedente,
+  infoSubscription,
+  SemCartaoError,
+  AutenticacaoRequeridaError,
+} from "@/lib/services/stripe.service";
 import { PRECO_EXCEDENTE, type PlanoId } from "@/lib/planos";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -125,6 +130,25 @@ export async function POST(request: Request) {
         idempotencyKey: `exc_${extra.idem}`,
       });
     } catch (ce) {
+      // Sem cartão salvo → o client manda o usuário atualizar o pagamento.
+      if (ce instanceof SemCartaoError) {
+        return NextResponse.json(
+          { semCartao: true, erro: ce.message },
+          { status: 402 }
+        );
+      }
+      // 3DS exigido → o client confirma via stripe-js (mesma idem key) e
+      // re-submete. Devolve o clientSecret pra concluir a autenticação.
+      if (ce instanceof AutenticacaoRequeridaError) {
+        return NextResponse.json(
+          {
+            requiresAction: true,
+            clientSecret: ce.clientSecret,
+            erro: ce.message,
+          },
+          { status: 402 }
+        );
+      }
       return NextResponse.json(
         { erro: (ce as Error).message ?? "Falha ao cobrar o excedente. Verifique o cartão." },
         { status: 402 }
