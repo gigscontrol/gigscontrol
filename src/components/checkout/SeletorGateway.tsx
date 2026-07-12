@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, AlertTriangle, CreditCard, QrCode } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import CheckoutEmbutido from "./CheckoutEmbutido";
-import MercadoPagoBrick, { type DadosPixBrick } from "./MercadoPagoBrick";
+import PagamentoStripeElement from "./PagamentoStripeElement";
+import MercadoPagoSecureFields from "./MercadoPagoSecureFields";
+import { type DadosPixBrick } from "./MercadoPagoBrick";
 import PixPendente from "./PixPendente";
+import CampoCupom from "./CampoCupom";
 import { getPlano, valorMensal, valorAnual, type CicloCobranca, type PlanoId, type Moeda } from "@/lib/planos";
 import type { Gateway } from "@/lib/gateway";
 
@@ -21,7 +23,7 @@ import type { Gateway } from "@/lib/gateway";
  *  - Ambos indisponíveis → chama `onFallbackHosted` (o pai mostra o botão de
  *    checkout hospedado da Stripe, igual ao fluxo antigo).
  *
- * Fluxo PIX: MercadoPagoBrick devolve o QR Code via onPix → troca pro
+ * Fluxo PIX: MercadoPagoSecureFields devolve o QR Code via onPix → troca pro
  * PixPendente (polling do status). Aprovado (cartão OU PIX) → onSucesso.
  */
 
@@ -32,6 +34,8 @@ type Props = {
   onFallbackHosted: () => void;
   /** Pagamento aprovado (cartão Stripe via redirect não passa por aqui — só MP). */
   onSucessoMercadoPago: (paymentId: string) => void;
+  /** Cupom resgatado com sucesso (acesso já estendido server-side — sem gateway). */
+  onSucessoCupom?: () => void;
 };
 
 type Opcoes = {
@@ -45,11 +49,13 @@ export default function SeletorGateway({
   ciclo,
   onFallbackHosted,
   onSucessoMercadoPago,
+  onSucessoCupom,
 }: Props) {
   const t = useT();
   const [opcoes, setOpcoes] = useState<Opcoes | null>(null);
   const [carregandoOpcoes, setCarregandoOpcoes] = useState(true);
   const [erroOpcoes, setErroOpcoes] = useState<string | null>(null);
+  const [cupomAplicado, setCupomAplicado] = useState<{ codigo: string; dias: number } | null>(null);
 
   const [aba, setAba] = useState<Gateway | null>(null);
   const [mpIndisponivel, setMpIndisponivel] = useState(false);
@@ -132,7 +138,16 @@ export default function SeletorGateway({
 
   return (
     <div>
-      {mostraAbas && (
+      <CampoCupom
+        plano={plano}
+        ciclo={ciclo}
+        aplicado={cupomAplicado}
+        onAplicado={(c) => setCupomAplicado(c)}
+        onRemovido={() => setCupomAplicado(null)}
+        onSucesso={() => onSucessoCupom?.()}
+      />
+
+      {!cupomAplicado && mostraAbas && (
         <div className="mb-4 inline-flex items-center gap-1 bg-surface border border-border rounded-full p-1 w-full">
           <button
             type="button"
@@ -161,7 +176,7 @@ export default function SeletorGateway({
         </div>
       )}
 
-      {aba === "mercadopago" && mostraMp && (
+      {!cupomAplicado && aba === "mercadopago" && mostraMp && (
         <div>
           {pix ? (
             <PixPendente
@@ -184,7 +199,7 @@ export default function SeletorGateway({
                   {erroMp}
                 </div>
               )}
-              <MercadoPagoBrick
+              <MercadoPagoSecureFields
                 plano={plano}
                 ciclo={ciclo}
                 valor={
@@ -205,10 +220,16 @@ export default function SeletorGateway({
         </div>
       )}
 
-      {aba === "stripe" && mostraStripe && (
-        <CheckoutEmbutido
+      {!cupomAplicado && aba === "stripe" && mostraStripe && (
+        <PagamentoStripeElement
           plano={plano}
           ciclo={ciclo}
+          valor={
+            ciclo === "anual"
+              ? valorAnual(getPlano(plano), opcoes.moeda)
+              : valorMensal(getPlano(plano), opcoes.moeda)
+          }
+          moeda={opcoes.moeda}
           onIndisponivel={marcarStripeIndisponivel}
         />
       )}

@@ -1189,6 +1189,7 @@ function Etapa3Pagamento({
               ciclo={ciclo}
               onFallbackHosted={degradar}
               onSucessoMercadoPago={() => setConfirmadoMp(true)}
+              onSucessoCupom={() => setConfirmadoMp(true)}
             />
             <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
               {t(

@@ -213,6 +213,7 @@ export default function PagamentoPage() {
                     ciclo={(status.ciclo as CicloCobranca) ?? "mensal"}
                     onFallbackHosted={degradarParaHosted}
                     onSucessoMercadoPago={() => setConfirmadoMp(true)}
+                    onSucessoCupom={() => setConfirmadoMp(true)}
                   />
                   <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
                     {t(

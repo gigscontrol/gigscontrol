@@ -251,6 +251,61 @@ export async function POST(request: Request) {
         break;
       }
 
+      case "payment_intent.succeeded": {
+        // Checkout próprio (Payment Element): o PaymentIntent avulso foi pago.
+        // Estende a validade pelas MESMAS regras do fluxo hosted/embedded —
+        // plano/ciclo/credito_dias vêm do metadata do PI (validados server-side).
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const meta = (pi.metadata ?? {}) as Record<string, string>;
+        const workspaceId = meta.workspace_id ?? meta.workspaceId ?? null;
+        // IGNORA PIs sem workspace_id (não reage a PaymentIntents alheios).
+        if (!workspaceId) break;
+
+        const providerPaymentId = pi.id;
+        const customerId = idDe(pi.customer);
+        const moeda: Moeda = (pi.currency === "usd" ? "usd" : "brl") as Moeda;
+
+        // EXCEDENTE (contrato avulso): registra o pagamento SEM conceder dias e
+        // sem mexer no plano/status/validade — igual ao caminho da session.
+        if (meta.excedente === "true") {
+          const { error } = await admin.from("pagamentos").insert({
+            workspace_id: workspaceId,
+            provider: "stripe",
+            provider_payment_id: providerPaymentId,
+            plano: null,
+            ciclo: null,
+            valor: pi.amount ?? null, // já em centavos (Stripe)
+            moeda,
+            metodo: "credit_card",
+            dias_concedidos: 0,
+            status: "excedente_disponivel",
+          });
+          // Reentrega → UNIQUE(provider, payment id) barra (23505). Outros sobem.
+          if (error && error.code !== "23505") throw error;
+          break;
+        }
+
+        // COMPRA DE PLANO: plano/ciclo do metadata (validados); dias derivam do
+        // ciclo e valor é recalculado. A idempotência por pi.id garante que, se
+        // este PI também chegar via checkout.session.completed (fluxo hosted), a
+        // RPC não conceda dias em dobro.
+        if (!planoValido(meta.plano)) break;
+        const ciclo: CicloCobranca = meta.ciclo === "anual" ? "anual" : "mensal";
+        const diasExtras = creditoDiasSeguro(meta.credito_dias);
+
+        await estenderPorPlano(admin, {
+          workspaceId,
+          providerPaymentId,
+          plano: meta.plano,
+          ciclo,
+          moeda,
+          metodo: "credit_card",
+          customerId,
+          diasExtras,
+        });
+        break;
+      }
+
       case "invoice.paid":
       case "invoice.payment_succeeded": {
         // LEGADO (transição suave): renovação de assinante recorrente antigo.

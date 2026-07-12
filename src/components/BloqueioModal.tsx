@@ -106,6 +106,7 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
                     // AuthGuard reavaliar e desmontar o modal.
                     window.location.reload();
                   }}
+                  onSucessoCupom={() => window.location.reload()}
                 />
               </div>
             ) : (

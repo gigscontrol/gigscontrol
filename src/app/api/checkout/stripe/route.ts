@@ -6,10 +6,11 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
 import {
   criarCheckoutPagamento,
+  criarPaymentIntentPagamento,
   obterOuCriarCustomer,
   valorCobranca,
 } from "@/lib/services/stripe.service";
-import { PLANOS, ehUpgrade, creditoDiasUpgrade, type PlanoId } from "@/lib/planos";
+import { PLANOS, PLANO_IDS, ehUpgrade, creditoDiasUpgrade, type PlanoId } from "@/lib/planos";
 
 /**
  * POST /api/checkout/stripe
@@ -24,6 +25,8 @@ import { PLANOS, ehUpgrade, creditoDiasUpgrade, type PlanoId } from "@/lib/plano
  *    Stripe; o cliente é redirecionado pra lá.
  *  - `ui:'embedded'`: devolve `{ clientSecret }` pra montar o Embedded Checkout
  *    (iframe) na nossa página via @stripe/stripe-js.
+ *  - `ui:'payment_element'`: devolve `{ clientSecret }` de um PaymentIntent
+ *    (prefixo `pi_..._secret_`) pra montar o Payment Element no checkout próprio.
  *
  * Guarda o customer id da Stripe na subscription (reaproveitado em
  * `mp_payment_id`) + provider, mas NÃO concede acesso — isso é
@@ -34,16 +37,9 @@ import { PLANOS, ehUpgrade, creditoDiasUpgrade, type PlanoId } from "@/lib/plano
  */
 
 const schema = z.object({
-  plano: z.enum([
-    "individual",
-    "equipe",
-    "time",
-    "agencia",
-    "agencia-plus",
-    "agencia-max",
-  ]),
+  plano: z.enum(PLANO_IDS),
   ciclo: z.enum(["mensal", "anual"]).default("mensal"),
-  ui: z.enum(["hosted", "embedded"]).default("hosted"),
+  ui: z.enum(["hosted", "embedded", "payment_element"]).default("hosted"),
   gateway: z.enum(["stripe", "mercadopago"]).optional(),
   // Crédito de upgrade em DIAS (modelo pré-pago). O valor do client é SÓ a
   // intenção ("este checkout é um upgrade com crédito"): o valor que vai pro
@@ -128,25 +124,49 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2) Cria a Checkout Session (modo payment) no modo de apresentação pedido.
-    const session = await criarCheckoutPagamento({
-      workspaceId,
-      plano,
-      ciclo,
-      customerId,
-      moeda,
-      email: r.sessao.userEmail,
-      embedded: ui === "embedded",
-      creditoDias: creditoDiasReal,
-    });
+    // 2) Cria o objeto de pagamento no modo de apresentação pedido.
+    //    - payment_element: PaymentIntent avulso (checkout próprio, Payment Element).
+    //    - hosted/embedded: Checkout Session (modo payment).
+    let clientSecret: string | null = null;
+    let checkoutUrl: string | null = null;
 
-    // Cada modo entrega um campo diferente. Valida o correspondente.
-    if (ui === "embedded") {
-      if (!session.client_secret) {
-        throw new Error("Stripe não retornou o client_secret do checkout.");
+    if (ui === "payment_element") {
+      const pi = await criarPaymentIntentPagamento({
+        workspaceId,
+        plano,
+        ciclo,
+        customerId,
+        moeda,
+        creditoDias: creditoDiasReal,
+      });
+      if (!pi.client_secret) {
+        throw new Error("Stripe não retornou o client_secret do PaymentIntent.");
       }
-    } else if (!session.url) {
-      throw new Error("Stripe não retornou a URL do checkout.");
+      clientSecret = pi.client_secret;
+    } else {
+      const session = await criarCheckoutPagamento({
+        workspaceId,
+        plano,
+        ciclo,
+        customerId,
+        moeda,
+        email: r.sessao.userEmail,
+        embedded: ui === "embedded",
+        creditoDias: creditoDiasReal,
+      });
+
+      // Cada modo entrega um campo diferente. Valida o correspondente.
+      if (ui === "embedded") {
+        if (!session.client_secret) {
+          throw new Error("Stripe não retornou o client_secret do checkout.");
+        }
+        clientSecret = session.client_secret;
+      } else {
+        if (!session.url) {
+          throw new Error("Stripe não retornou a URL do checkout.");
+        }
+        checkoutUrl = session.url;
+      }
     }
 
     // 3) Salva o plano escolhido no workspace + referência do customer na
@@ -182,11 +202,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // Embedded → clientSecret (o front monta o iframe); hosted → url (redirect).
-    if (ui === "embedded") {
-      return NextResponse.json({ clientSecret: session.client_secret });
+    // embedded/payment_element → clientSecret (o front monta o iframe/Element);
+    // hosted → url (redirect).
+    if (clientSecret) {
+      return NextResponse.json({ clientSecret });
     }
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: checkoutUrl });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao iniciar o checkout." },

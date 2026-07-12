@@ -2,12 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import type {
-  Stripe,
-  StripeEmbeddedCheckout,
-} from "@stripe/stripe-js";
+import type { StripeEmbeddedCheckout } from "@stripe/stripe-js";
 import { useT } from "@/lib/i18n";
+import { getStripe } from "./stripe-client";
 
 /**
  * Embedded Checkout da Stripe (iframe montado na nossa página).
@@ -44,14 +41,6 @@ type Props = {
 };
 
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
-// Memoiza a Promise do loadStripe (recomendação da Stripe: fora do render).
-let stripePromise: Promise<Stripe | null> | null = null;
-function getStripe(): Promise<Stripe | null> {
-  if (!PUBLISHABLE_KEY) return Promise.resolve(null);
-  if (!stripePromise) stripePromise = loadStripe(PUBLISHABLE_KEY);
-  return stripePromise;
-}
 
 export default function CheckoutEmbutido({ plano, ciclo, creditoDias, onIndisponivel }: Props) {
   const t = useT();

@@ -15,7 +15,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
  * upgrade (upgrade = crédito em DIAS).
  */
 
-export type ProviderPagamento = "stripe" | "mercadopago" | "cortesia";
+export type ProviderPagamento = "stripe" | "mercadopago" | "cortesia" | "cupom";
 
 /** Resultado da RPC de extensão. `jaProcessado` = webhook repetido (no-op). */
 export type ResultadoExtensao =

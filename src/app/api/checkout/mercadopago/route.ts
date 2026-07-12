@@ -4,7 +4,7 @@ import { headers, cookies } from "next/headers";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { resolverPais } from "@/lib/regiao";
 import { mpDisponivel } from "@/lib/gateway";
-import { getPlano, valorMensal, valorAnual } from "@/lib/planos";
+import { getPlano, valorMensal, valorAnual, PLANO_IDS } from "@/lib/planos";
 import {
   criarPagamento,
   mercadoPagoConfigurado,
@@ -30,14 +30,7 @@ import { registrarPagamentoEEstenderAcesso } from "@/lib/services/pagamentos.ser
 export const runtime = "nodejs";
 
 const schema = z.object({
-  plano: z.enum([
-    "individual",
-    "equipe",
-    "time",
-    "agencia",
-    "agencia-plus",
-    "agencia-max",
-  ]),
+  plano: z.enum(PLANO_IDS),
   ciclo: z.enum(["mensal", "anual"]).default("mensal"),
   // formData do Brick — shape dinâmico (token, installments, payer, etc.).
   formData: z.record(z.string(), z.unknown()),

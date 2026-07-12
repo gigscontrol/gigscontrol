@@ -11,13 +11,21 @@
  * (cookie `gc-moeda`, definido no middleware): BR → BRL, exterior → USD.
  */
 
-export type PlanoId =
-  | "individual"
-  | "equipe"
-  | "time"
-  | "agencia"
-  | "agencia-plus"
-  | "agencia-max";
+/**
+ * IDs dos 6 planos, na ordem da escada (menor → maior). Fonte única — reusado
+ * nos enums Zod dos endpoints de checkout (stripe/mercadopago/cupom) pra não
+ * duplicar a lista literal.
+ */
+export const PLANO_IDS = [
+  "individual",
+  "equipe",
+  "time",
+  "agencia",
+  "agencia-plus",
+  "agencia-max",
+] as const;
+
+export type PlanoId = (typeof PLANO_IDS)[number];
 
 export type CicloCobranca = "mensal" | "anual";
 

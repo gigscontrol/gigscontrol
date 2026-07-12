@@ -12,7 +12,7 @@ export type StatusAssinatura = "ativa" | "trial" | "suspensa" | "cancelada";
 /** Dados do pagamento mais recente que estendeu a validade (tabela `pagamentos`). */
 export type UltimoPagamento = {
   data: string; // ISO
-  provider: "stripe" | "mercadopago" | "cortesia";
+  provider: "stripe" | "mercadopago" | "cortesia" | "cupom";
   metodo: string | null;
   valor: number | null; // em centavos, na moeda do pagamento
   moeda: Moeda | null;

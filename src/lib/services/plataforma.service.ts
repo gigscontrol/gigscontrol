@@ -204,8 +204,9 @@ export type ReceitaRealizada = {
 
 /**
  * Receita REALIZADA (não projetada): soma `pagamentos.valor` de pagamentos
- * reais (stripe/mercadopago — exclui 'cortesia', que não é receita) no
- * período, por moeda. Substitui o antigo MRR/ARR projetado por ciclo.
+ * reais (stripe/mercadopago — exclui 'cortesia' e 'cupom', que não são
+ * receita: mês grátis) no período, por moeda. Substitui o antigo MRR/ARR
+ * projetado por ciclo.
  */
 export async function receitaRealizada(
   admin: SupabaseClient
@@ -217,7 +218,7 @@ export async function receitaRealizada(
   const { data: pagamentos } = await admin
     .from("pagamentos")
     .select("valor, moeda, provider, criado_em")
-    .neq("provider", "cortesia")
+    .not("provider", "in", "(cortesia,cupom)")
     .gte("criado_em", desde12m);
 
   let ultimos30dBrl = 0;
@@ -253,7 +254,7 @@ export async function receitaRealizada(
 export type HistoricoPagamento = {
   id: string;
   data: string;
-  provider: "stripe" | "mercadopago" | "cortesia";
+  provider: "stripe" | "mercadopago" | "cortesia" | "cupom";
   metodo: string | null;
   valor: number | null;
   moeda: Moeda | null;

@@ -171,6 +171,49 @@ export async function criarCheckoutPagamento(params: {
 }
 
 /**
+ * Cria um PaymentIntent avulso pro Stripe Payment Element (Deferred Intent).
+ *
+ * Substitui o Embedded Checkout na aba Stripe do checkout próprio: em vez de uma
+ * Checkout Session, criamos direto o PaymentIntent e devolvemos o `client_secret`
+ * (prefixo `pi_..._secret_`) pro front montar o Payment Element via
+ * @stripe/stripe-js. NÃO usa `setup_future_usage` (não salvamos cartão) e SÓ
+ * aceita cartão (`payment_method_types: ['card']`) — PIX é exclusivo do MP.
+ *
+ * O metadata é IDÊNTICO ao de `criarCheckoutPagamento` (`{ workspace_id, plano,
+ * ciclo, credito_dias? }`), então o webhook `payment_intent.succeeded` estende a
+ * validade pelas MESMAS regras do fluxo hosted/embedded. O amount é recalculado
+ * server-side (`valorCobranca × 100`) — o client nunca decide o valor.
+ *
+ * `creditoDias` (opcional) = crédito de upgrade em DIAS, somado aos dias do
+ * ciclo pelo webhook (recalculado server-side — o metadata cru NUNCA é confiado).
+ */
+export async function criarPaymentIntentPagamento(params: {
+  workspaceId: string;
+  plano: PlanoId;
+  ciclo: CicloCobranca;
+  customerId: string;
+  moeda?: Moeda;
+  creditoDias?: number;
+}): Promise<Stripe.PaymentIntent> {
+  const { workspaceId, plano, ciclo, customerId, moeda = "brl", creditoDias } = params;
+  const valor = valorCobranca(plano, ciclo, moeda);
+
+  const meta: Record<string, string> = { workspace_id: workspaceId, plano, ciclo };
+  if (typeof creditoDias === "number" && creditoDias > 0) {
+    meta.credito_dias = String(Math.round(creditoDias));
+  }
+
+  return getStripe().paymentIntents.create({
+    amount: Math.round(valor * 100),
+    currency: moeda === "usd" ? "usd" : "brl",
+    customer: customerId,
+    // SÓ cartão (D1) — sem setup_future_usage (não salvamos cartão).
+    payment_method_types: ["card"],
+    metadata: meta,
+  });
+}
+
+/**
  * Cria uma Checkout Session avulsa (mode `payment`) pra cobrar UMA unidade
  * EXCEDENTE (ex.: contrato além do limite do ciclo). Valor = PRECO_EXCEDENTE na
  * moeda. Metadata `{ workspace_id, excedente: 'true' }` — o webhook reconhece o
