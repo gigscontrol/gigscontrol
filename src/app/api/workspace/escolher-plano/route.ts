@@ -26,6 +26,7 @@ const schema = z.object({
     "agencia-plus",
     "agencia-max",
   ]),
+  ciclo: z.enum(["mensal", "anual"]).default("mensal"),
 });
 
 export async function POST(request: Request) {
@@ -58,10 +59,15 @@ export async function POST(request: Request) {
   // do que o Stripe cobra e, em trial, tentaria burlar limites sem pagar.
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("id")
+    .select("id, status, trial_termina_em")
     .eq("workspace_id", r.sessao.workspaceId)
-    .maybeSingle<{ id: string }>();
-  if (sub) {
+    .maybeSingle<{ id: string; status: string; trial_termina_em: string | null }>();
+  // Um stub de checkout INCOMPLETO (status 'trial' SEM trial_termina_em) nasce só
+  // de o admin visitar /pagamento no modo embedded — sem pagar. NÃO é assinatura,
+  // então deve poder re-selecionar o plano. Só bloqueia se for assinatura REAL:
+  // ativa/paga (status != 'trial') OU trial grátis de verdade (trial_termina_em setado).
+  const ehStubIncompleto = sub?.status === "trial" && !sub.trial_termina_em;
+  if (sub && !ehStubIncompleto) {
     return NextResponse.json(
       { erro: "Mude o plano em Configurações › Plano & Assinatura." },
       { status: 409 }
@@ -71,10 +77,22 @@ export async function POST(request: Request) {
   try {
     const { error } = await admin
       .from("workspaces")
-      .update({ plano: parsed.data.plano })
+      .update({ plano: parsed.data.plano, ciclo: parsed.data.ciclo })
       .eq("id", r.sessao.workspaceId);
     if (error) throw error;
-    return NextResponse.json({ ok: true, plano: parsed.data.plano });
+    // Se há um stub de checkout incompleto, sincroniza plano+ciclo nele também —
+    // o status do onboarding lê subscriptions.ciclo ANTES de workspaces.ciclo.
+    if (ehStubIncompleto && sub) {
+      await admin
+        .from("subscriptions")
+        .update({ plano: parsed.data.plano, ciclo: parsed.data.ciclo })
+        .eq("id", sub.id);
+    }
+    return NextResponse.json({
+      ok: true,
+      plano: parsed.data.plano,
+      ciclo: parsed.data.ciclo,
+    });
   } catch (e) {
     return NextResponse.json(
       { erro: (e as Error).message ?? "Falha ao salvar plano." },

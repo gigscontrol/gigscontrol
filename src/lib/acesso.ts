@@ -84,3 +84,24 @@ export async function workspaceBloqueado(workspaceId: string): Promise<boolean> 
   if (error) return false;
   return estadoAcessoDeSub(data ?? null) === "bloqueado";
 }
+
+/**
+ * true se o onboarding do workspace AINDA não foi concluído. Serve pra ISENTAR
+ * o paywall durante o cadastro/assinatura: no passo Pagamento o checkout cria um
+ * stub 'trial' sem data que deixa o workspace 'bloqueado' — mas o usuário ainda
+ * está regularizando e precisa poder concluir/editar as etapas do onboarding.
+ * Depois de concluído (`onboarding_completo = true`), o gate volta a valer normal.
+ * Erro/ausência → false (na dúvida NÃO isenta, mantém o paywall).
+ */
+export async function workspaceOnboardingIncompleto(
+  workspaceId: string
+): Promise<boolean> {
+  const admin = criarClienteAdmin();
+  const { data, error } = await admin
+    .from("workspaces")
+    .select("onboarding_completo")
+    .eq("id", workspaceId)
+    .maybeSingle<{ onboarding_completo: boolean | null }>();
+  if (error || !data) return false;
+  return data.onboarding_completo !== true;
+}

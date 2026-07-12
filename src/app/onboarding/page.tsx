@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -18,11 +18,21 @@ import {
   Lock,
   AlertTriangle,
   Check,
+  ShieldCheck,
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
-import { PLANOS, type PlanoId, type CicloCobranca } from "@/lib/planos";
+import {
+  PLANOS,
+  type PlanoId,
+  type CicloCobranca,
+  getPlano,
+  formatarPreco,
+  valorMensal,
+  valorAnual,
+} from "@/lib/planos";
 import PlanoCard from "@/components/PlanoCard";
+import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
@@ -40,7 +50,7 @@ import {
 } from "@/components/configuracoes/AbaArtistas";
 import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useT } from "@/lib/i18n";
+import { useT, useMoeda } from "@/lib/i18n";
 import { TRIAL_ATIVADO } from "@/lib/flags";
 
 /**
@@ -60,6 +70,7 @@ type Status = {
   onboardingCompleto: boolean;
   subscriptionStatus: string;
   trialTerminaEm: string | null;
+  ciclo?: string;
   planoEscolhido: string;
   checklist: {
     contaCriada: boolean;
@@ -95,8 +106,9 @@ type Status = {
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Artista", descricao: "1º artista" },
-  { id: 4, label: "Equipe", descricao: "Convidar membro" },
+  { id: 3, label: "Pagamento", descricao: "Assinatura" },
+  { id: 4, label: "Artista", descricao: "1º artista" },
+  { id: 5, label: "Equipe", descricao: "Convidar membro" },
 ];
 
 /**
@@ -113,10 +125,12 @@ function etapaInicial(d: Status): number {
   const planoOk =
     d.subscriptionStatus === "ativa" ||
     (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
-  if (!planoOk) return 2;
-  if (!d.checklist.temArtista) return 3;
-  if (!d.checklist.temEquipe) return 4;
-  return 4;
+  // Pagamento é a etapa 3. Sem plano escolhido → volta pro Plano (2); escolhido
+  // mas ainda não pago → fica no Pagamento (3).
+  if (!planoOk) return d.planoEscolhido ? 3 : 2;
+  if (!d.checklist.temArtista) return 4;
+  if (!d.checklist.temEquipe) return 5;
+  return 5;
 }
 
 export default function OnboardingPage() {
@@ -189,8 +203,9 @@ function OnboardingInner() {
         setErroConclusao(
           b.erro ?? t("Não foi possível finalizar. Verifique as etapas.")
         );
-        if (r.status === 402) setEtapa(2);
-        else if (r.status === 409) setEtapa(3);
+        // 402 = falta pagamento → passo Pagamento (3); 409 = falta artista → passo Artista (4)
+        if (r.status === 402) setEtapa(3);
+        else if (r.status === 409) setEtapa(4);
         setFinalizando(false);
         return;
       }
@@ -202,7 +217,7 @@ function OnboardingInner() {
   }
 
   function avancar() {
-    if (etapa < 4) setEtapa(etapa + 1);
+    if (etapa < 5) setEtapa(etapa + 1);
     else void concluir();
   }
 
@@ -259,7 +274,9 @@ function OnboardingInner() {
           className={
             etapa === 2
               ? "w-full max-w-[1180px]"
-              : "w-full max-w-[680px]"
+              : etapa === 3
+                ? "w-full max-w-[920px]"
+                : "w-full max-w-[680px]"
           }
         >
           {/* Stepper */}
@@ -277,18 +294,22 @@ function OnboardingInner() {
             {etapa === 2 && (
               <Etapa2Plano
                 planoEscolhido={status.planoEscolhido as PlanoId}
+                cicloInicial={status.ciclo}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
             )}
             {etapa === 3 && (
+              <Etapa3Pagamento status={status} onAvancar={avancar} />
+            )}
+            {etapa === 4 && (
               <Etapa4Artista
                 status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
             )}
-            {etapa === 4 && (
+            {etapa === 5 && (
               <Etapa5Equipe
                 status={status}
                 onAvancar={avancar}
@@ -841,19 +862,22 @@ function Etapa1Cadastro({
 // ============================================================
 function Etapa2Plano({
   planoEscolhido,
+  cicloInicial,
   onAvancar,
   onRecarregar,
 }: {
   planoEscolhido: PlanoId;
+  cicloInicial?: string;
   onAvancar: () => void;
   onRecarregar: () => Promise<void>;
 }) {
-  const router = useRouter();
   const t = useT();
   const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
     planoEscolhido ?? "individual"
   );
-  const [ciclo, setCiclo] = useState<CicloCobranca>("mensal");
+  const [ciclo, setCiclo] = useState<CicloCobranca>(
+    cicloInicial === "anual" ? "anual" : "mensal"
+  );
   const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -892,13 +916,15 @@ function Etapa2Plano({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: planoSelecionado }),
+        body: JSON.stringify({ plano: planoSelecionado, ciclo }),
       });
       if (!r.ok) {
         const b = await r.json().catch(() => ({}));
         throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
       }
-      router.push("/pagamento");
+      // Avança pro passo Pagamento DENTRO do wizard (não sai mais pra /pagamento).
+      await onRecarregar();
+      onAvancar();
     } catch (e) {
       setErro((e as Error).message);
       setAcao(null);
@@ -1027,6 +1053,175 @@ function Etapa2Plano({
           <p className="text-[0.65rem] text-muted text-center">
             {t("Teste grátis disponível apenas no plano Individual.")}
           </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 3 — Pagamento (checkout embutido no wizard; pula se já pago/trial)
+// ============================================================
+function Etapa3Pagamento({
+  status,
+  onAvancar,
+}: {
+  status: Status;
+  onAvancar: () => void;
+}) {
+  const t = useT();
+  const moeda = useMoeda();
+  const [usarHosted, setUsarHosted] = useState(false);
+  const [indo, setIndo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const degradar = useCallback(() => setUsarHosted(true), []);
+
+  const planoOk =
+    status.subscriptionStatus === "ativa" ||
+    (status.subscriptionStatus === "trial" && !!status.trialTerminaEm);
+
+  const plano = status.planoEscolhido
+    ? getPlano(status.planoEscolhido as PlanoId)
+    : null;
+  const ciclo: CicloCobranca = status.ciclo === "anual" ? "anual" : "mensal";
+  const valor = plano
+    ? ciclo === "anual"
+      ? valorAnual(plano, moeda)
+      : valorMensal(plano, moeda)
+    : 0;
+  const precoFmt = plano ? formatarPreco(valor, moeda) : "—";
+
+  async function irParaHosted() {
+    if (indo || !plano) return;
+    setErro(null);
+    setIndo(true);
+    try {
+      const res = await fetch("/api/checkout/stripe", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: plano.id, ciclo }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) {
+        throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
+      }
+      window.location.href = body.url as string;
+    } catch (e) {
+      setErro((e as Error).message);
+      setIndo(false);
+    }
+  }
+
+  // Já pago (ou trial de verdade): não mostra checkout — confirma e segue.
+  if (planoOk) {
+    return (
+      <div className="text-center">
+        <CheckCircle2
+          size={40}
+          className="mx-auto mb-3"
+          style={{ color: "var(--success)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Pagamento confirmado")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Sua assinatura está ativa. Vamos continuar o cadastro.")}
+        </p>
+        <button
+          onClick={onAvancar}
+          className="btn btn-primary text-sm mt-5 justify-center px-6 py-2.5"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {t("Continuar")}
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  if (!plano) {
+    return (
+      <div className="text-center text-sm text-danger">
+        {t("Plano não encontrado. Volte ao cadastro pra escolher um.")}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Confirme seu plano")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Plano")} <strong className="text-primary">{plano.nome}</strong>
+          {" · "}
+          {ciclo === "anual" ? t("Anual") : t("Mensal")}
+          {" · "}
+          <span className="font-mono">{precoFmt}</span>
+          {ciclo === "anual" ? ` ${t("cobrados no ano")}` : ` ${t("/mês")}`}
+        </p>
+      </div>
+
+      <div className="card max-w-[560px] mx-auto">
+        <div className="section-title mb-3 flex items-center gap-2">
+          <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
+          {t("Pagamento por cartão")}
+        </div>
+
+        {!usarHosted ? (
+          <>
+            <CheckoutEmbutido
+              plano={plano.id}
+              ciclo={ciclo}
+              onIndisponivel={degradar}
+            />
+            <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
+              {t(
+                "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
+              )}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-secondary mb-4">
+              {t(
+                "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
+              )}
+            </p>
+            {erro && (
+              <div
+                className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
+                style={{
+                  backgroundColor: "rgba(239,68,68,0.08)",
+                  color: "var(--danger)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                }}
+              >
+                <AlertTriangle size={12} className="flex-shrink-0" />
+                {erro}
+              </div>
+            )}
+            <button
+              onClick={irParaHosted}
+              disabled={indo}
+              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+            >
+              {indo ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("Abrindo o pagamento seguro...")}
+                </>
+              ) : (
+                <>
+                  <Lock size={14} />
+                  {t("Assinar por {preco}", { preco: precoFmt })}
+                </>
+              )}
+            </button>
+          </>
         )}
       </div>
     </div>

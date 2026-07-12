@@ -57,11 +57,14 @@ export default function PlanoCard({
         onSelecionar ? "hover:border-border-strong cursor-pointer" : ""
       }`}
       style={{
-        borderColor: selecionado ? "var(--brand)" : destacado ? "var(--brand)" : undefined,
+        // Azul (--brand) é EXCLUSIVO do card SELECIONADO — borda + anel 2px — pra
+        // não confundir com o "Mais popular". O recomendado se distingue pelo badge
+        // + um anel branco sutil (neutro), nunca a borda azul da seleção.
+        borderColor: selecionado ? "var(--brand)" : undefined,
         boxShadow: selecionado
           ? "0 0 0 2px var(--brand)"
           : destacado
-            ? "0 0 0 1px var(--brand)"
+            ? "0 0 0 1px rgba(255,255,255,0.14)"
             : undefined,
       }}
     >
