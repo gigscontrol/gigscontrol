@@ -2369,6 +2369,8 @@ const SWEEP9: Record<string, string> = {
   "Tente recarregar a página.": "Try reloading the page.",
   "Pagamento seguro": "Secure payment",
   "Confirme seu plano": "Confirm your plan",
+  "Seu plano está ativo": "Your plan is active",
+  "Para trocar de plano, acesse Configurações › Plano & Assinatura.": "To change your plan, go to Settings › Plan & Subscription.",
   "Falta só um passinho.": "Just one more step.",
   "vai começar a usar o GIGS CONTROL.": "is about to start using GIGS CONTROL.",
   "Pagamento por cartão": "Card payment",

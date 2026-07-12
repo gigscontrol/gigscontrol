@@ -1948,6 +1948,8 @@ export const ES: Record<string, string> = {
   "Tente recarregar a página.": "Intente recargar la página.",
   "Pagamento seguro": "Pago seguro",
   "Confirme seu plano": "Confirme su plan",
+  "Seu plano está ativo": "Tu plan está activo",
+  "Para trocar de plano, acesse Configurações › Plano & Assinatura.": "Para cambiar de plan, ve a Configuración › Plan y Suscripción.",
   "Falta só um passinho.": "Solo un paso más.",
   "vai começar a usar o GIGS CONTROL.": "está a punto de comenzar a usar GIGS CONTROL.",
   "Pagamento por cartão": "Pago con tarjeta",

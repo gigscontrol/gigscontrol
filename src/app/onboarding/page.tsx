@@ -306,12 +306,18 @@ function OnboardingInner() {
               <Etapa2Plano
                 planoEscolhido={status.planoEscolhido as PlanoId}
                 cicloInicial={status.ciclo}
+                planoOk={planoOkDe(status)}
                 onAvancar={avancar}
+                onContinuarPago={() => setEtapa(etapaInicial(status))}
                 onRecarregar={recarregar}
               />
             )}
             {etapa === 3 && (
-              <Etapa3Pagamento status={status} onAvancar={avancar} />
+              <Etapa3Pagamento
+                status={status}
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
             )}
             {etapa === 4 && (
               <Etapa4Artista
@@ -874,12 +880,18 @@ function Etapa1Cadastro({
 function Etapa2Plano({
   planoEscolhido,
   cicloInicial,
+  planoOk,
   onAvancar,
+  onContinuarPago,
   onRecarregar,
 }: {
   planoEscolhido: PlanoId;
   cicloInicial?: string;
+  /** Já pagou/ativou: o passo vira read-only ("plano ativo") em vez de cobrar de novo. */
+  planoOk: boolean;
   onAvancar: () => void;
+  /** Segue DIRETO pro 1º passo pendente (Artista/Equipe), pulando o Pagamento. */
+  onContinuarPago: () => void;
   onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
@@ -940,6 +952,41 @@ function Etapa2Plano({
       setErro((e as Error).message);
       setAcao(null);
     }
+  }
+
+  // Já pago/ativo: NÃO deixa "pagar de novo" (o escolher-plano devolveria 409 →
+  // beco sem saída ao voltar pra cá depois de pagar). Mostra o plano ativo e
+  // segue DIRETO pro 1º passo pendente (Artista/Equipe).
+  if (planoOk) {
+    const p = getPlano(planoSelecionado);
+    return (
+      <div className="text-center">
+        <CheckCircle2
+          size={40}
+          className="mx-auto mb-3"
+          style={{ color: "var(--success)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Seu plano está ativo")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Plano")} <strong className="text-primary">{p.nome}</strong>
+          {" · "}
+          {ciclo === "anual" ? t("Anual") : t("Mensal")}
+        </p>
+        <p className="mt-2 text-[0.7rem] text-muted">
+          {t("Para trocar de plano, acesse Configurações › Plano & Assinatura.")}
+        </p>
+        <button
+          onClick={onContinuarPago}
+          className="btn btn-primary text-sm mt-5 justify-center px-6 py-2.5"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {t("Continuar")}
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -1076,9 +1123,11 @@ function Etapa2Plano({
 function Etapa3Pagamento({
   status,
   onAvancar,
+  onRecarregar,
 }: {
   status: Status;
   onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
   const moeda = useMoeda();
@@ -1188,8 +1237,14 @@ function Etapa3Pagamento({
               plano={plano.id}
               ciclo={ciclo}
               onFallbackHosted={degradar}
-              onSucessoMercadoPago={() => setConfirmadoMp(true)}
-              onSucessoCupom={() => setConfirmadoMp(true)}
+              onSucessoMercadoPago={() => {
+                setConfirmadoMp(true);
+                void onRecarregar();
+              }}
+              onSucessoCupom={() => {
+                setConfirmadoMp(true);
+                void onRecarregar();
+              }}
             />
             <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
               {t(
