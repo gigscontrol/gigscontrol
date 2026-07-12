@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import Script from "next/script";
-import { Loader2, AlertTriangle, QrCode } from "lucide-react";
+import { Loader2, AlertTriangle, QrCode, CreditCard } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { DadosPixBrick } from "./MercadoPagoBrick";
 
@@ -179,6 +179,10 @@ export default function MercadoPagoSecureFields({
   const [montado, setMontado] = useState(false);
   const [erroFatal, setErroFatal] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
+  // Cartão ou PIX — o toggle fica no topo desta seção do Mercado Pago.
+  const [metodo, setMetodo] = useState<"cartao" | "pix">("cartao");
+  // Parcelamento SÓ no anual (mensal e Stripe são 1x). Não anunciamos parcelas.
+  const mostrarParcelas = ciclo === "anual";
 
   // Campos NOSSOS (fora dos iframes).
   const [cardholderName, setCardholderName] = useState("");
@@ -552,6 +556,38 @@ export default function MercadoPagoSecureFields({
         }}
       />
 
+      {/* Toggle Cartão | PIX (dentro da seção do Mercado Pago). */}
+      <div className="mb-4 inline-flex items-center gap-1 bg-surface border border-border rounded-full p-1 w-full">
+        <button
+          type="button"
+          onClick={() => setMetodo("cartao")}
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-colors ${
+            metodo === "cartao"
+              ? "bg-elevated text-primary"
+              : "text-muted hover:text-secondary"
+          }`}
+        >
+          <CreditCard size={13} />
+          {t("Cartão")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMetodo("pix")}
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-colors ${
+            metodo === "pix"
+              ? "bg-elevated text-primary"
+              : "text-muted hover:text-secondary"
+          }`}
+        >
+          <QrCode size={13} />
+          {t("PIX")}
+        </button>
+      </div>
+
+      {/* CARTÃO — os containers dos iframes ficam SEMPRE no DOM (mp.fields
+          precisa deles); quando PIX, só escondemos com `hidden` pra não
+          desmontar e quebrar os secure fields. */}
+      <div className={metodo === "cartao" ? "" : "hidden"}>
       {!montado && (
         <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
@@ -669,12 +705,14 @@ export default function MercadoPagoSecureFields({
           </div>
         )}
 
-        <SelectParcelas
-          parcelas={parcelas}
-          valor={parcelaSel}
-          onChange={setParcelaSel}
-          label={t("Parcelas")}
-        />
+        {mostrarParcelas && (
+          <SelectParcelas
+            parcelas={parcelas}
+            valor={parcelaSel}
+            onChange={setParcelaSel}
+            label={t("Parcelas")}
+          />
+        )}
 
         <div>
           <label
@@ -702,26 +740,43 @@ export default function MercadoPagoSecureFields({
           {processando && <Loader2 size={14} className="animate-spin" />}
           {t("Pagar com cartão")}
         </button>
-
-        {/* Divisor */}
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("ou")}
-          </span>
-          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-        </div>
-
-        <button
-          type="button"
-          onClick={pagarPix}
-          disabled={processando || emailPagador.trim().length === 0}
-          className="btn-secondary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <QrCode size={14} />
-          {t("Pagar com PIX")}
-        </button>
       </div>
+      </div>
+
+      {/* PIX — sem cartão/parcelas, só e-mail pro QR Code. */}
+      {metodo === "pix" && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            {t("Pague na hora com PIX. Geramos um QR Code pra você escanear.")}
+          </p>
+          <div>
+            <label
+              className="block text-xs mb-1"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              {t("E-mail")}
+            </label>
+            <input
+              type="email"
+              className="campo-input"
+              value={emailPagador}
+              onChange={(e) => setEmailPagador(e.target.value)}
+              placeholder="voce@email.com"
+              autoComplete="email"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={pagarPix}
+            disabled={processando || emailPagador.trim().length === 0}
+            className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processando && <Loader2 size={14} className="animate-spin" />}
+            <QrCode size={14} />
+            {t("Gerar código PIX")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

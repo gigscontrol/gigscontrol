@@ -1213,86 +1213,68 @@ function Etapa3Pagamento({
     <div>
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold tracking-tight">
-          {t("Confirme seu plano")}
+          {t("Conclua o pagamento")}
         </h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Plano")} <strong className="text-primary">{plano.nome}</strong>
-          {" · "}
-          {ciclo === "anual" ? t("Anual") : t("Mensal")}
-          {" · "}
-          <span className="font-mono">{precoFmt}</span>
-          {ciclo === "anual" ? ` ${t("cobrados no ano")}` : ` ${t("/mês")}`}
-        </p>
       </div>
 
-      <div className="card max-w-[560px] mx-auto">
-        <div className="section-title mb-3 flex items-center gap-2">
-          <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
-          {t("Pagamento por cartão")}
-        </div>
-
-        {!usarHosted ? (
-          <>
-            <SeletorGateway
-              plano={plano.id}
-              ciclo={ciclo}
-              onFallbackHosted={degradar}
-              onSucessoMercadoPago={() => {
-                setConfirmadoMp(true);
-                void onRecarregar();
-              }}
-              onSucessoCupom={() => {
-                setConfirmadoMp(true);
-                void onRecarregar();
-              }}
-            />
-            <p className="text-[0.65rem] text-muted text-center mt-3 leading-relaxed">
-              {t(
-                "Você pode cancelar a qualquer momento em Configurações. Sem fidelidade."
-              )}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-secondary mb-4">
-              {t(
-                "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
-              )}
-            </p>
-            {erro && (
-              <div
-                className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
-                style={{
-                  backgroundColor: "rgba(239,68,68,0.08)",
-                  color: "var(--danger)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                }}
-              >
-                <AlertTriangle size={12} className="flex-shrink-0" />
-                {erro}
-              </div>
+      {!usarHosted ? (
+        <SeletorGateway
+          plano={plano.id}
+          ciclo={ciclo}
+          onFallbackHosted={degradar}
+          onSucessoMercadoPago={() => {
+            setConfirmadoMp(true);
+            void onRecarregar();
+          }}
+          onSucessoCupom={() => {
+            setConfirmadoMp(true);
+            void onRecarregar();
+          }}
+        />
+      ) : (
+        <div className="card max-w-[560px] mx-auto">
+          <div className="section-title mb-3 flex items-center gap-2">
+            <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
+            {t("Pagamento por cartão")}
+          </div>
+          <p className="text-sm text-secondary mb-4">
+            {t(
+              "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
             )}
-            <button
-              onClick={irParaHosted}
-              disabled={indo}
-              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+          </p>
+          {erro && (
+            <div
+              className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
             >
-              {indo ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  {t("Abrindo o pagamento seguro...")}
-                </>
-              ) : (
-                <>
-                  <Lock size={14} />
-                  {t("Assinar por {preco}", { preco: precoFmt })}
-                </>
-              )}
-            </button>
-          </>
-        )}
-      </div>
+              <AlertTriangle size={12} className="flex-shrink-0" />
+              {erro}
+            </div>
+          )}
+          <button
+            onClick={irParaHosted}
+            disabled={indo}
+            className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+          >
+            {indo ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                {t("Abrindo o pagamento seguro...")}
+              </>
+            ) : (
+              <>
+                <Lock size={14} />
+                {t("Assinar por {preco}", { preco: precoFmt })}
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
