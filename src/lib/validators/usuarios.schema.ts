@@ -1,12 +1,9 @@
 import { z } from "zod";
 import { uuidLike } from "@/lib/validators/uuid";
 import { usernameRaizSchema } from "@/lib/validators/artistas.schema";
-import { CATALOGO } from "@/lib/permissoes/catalogo";
-
-/** Só as chaves por-artista são aceitas num vínculo (as workspace-level são administrativas). */
-const CHAVES_ARTISTA_VALIDAS: ReadonlySet<string> = new Set(
-  CATALOGO.filter((p) => p.nivel === "artista").map((p) => p.chave)
-);
+// Fonte única da verdade das chaves aceitas num vínculo por-artista (as
+// workspace-level agencia.* são administrativas e ficam de fora).
+import { CHAVES_ARTISTA_VALIDAS } from "@/lib/permissoes/catalogo";
 
 const papelEquipeEnum = z.enum(["produtor", "vendedor", "financeiro"]);
 

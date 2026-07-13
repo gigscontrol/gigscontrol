@@ -1,17 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
-  Settings,
+  User,
+  Building2,
   Trash2,
   History,
   Bell,
   SlidersHorizontal,
   CreditCard,
 } from "lucide-react";
-import AbaGeral from "./AbaGeral";
+import PageHeader from "../PageHeader";
+import AbaPerfil from "./AbaPerfil";
+import AbaAgencia from "./AbaAgencia";
 import AbaPreferencias from "./AbaPreferencias";
 import AbaPlano from "./AbaPlano";
 import AbaLixeira from "./AbaLixeira";
@@ -22,19 +26,30 @@ import { useAuth } from "@/lib/auth-context";
 /**
  * Tela de Configurações.
  *
- * - Admin do workspace: vê todas as abas — a aba "Geral" reúne logo,
- *   nome, e-mail, username da agência E alteração da própria senha.
- * - Demais usuários (produtor, vendedor, financeiro, artista):
- *   veem só "Geral" (que pra eles só mostra Alterar senha) e
- *   "Notificações".
+ * - Admin do workspace: vê todas as abas — "Perfil" (dados pessoais + acesso
+ *   + cor do avatar) e "Agência" (nome exibido + username), além de
+ *   Preferências, Plano & Assinatura, Lixeira, Histórico e Notificações.
+ * - Demais usuários (produtor, vendedor, financeiro, artista): veem só
+ *   "Perfil" e "Notificações".
+ *
+ * A sub-aba ativa persiste na URL via ?aba=... (compartilhável / sobrevive a
+ * um refresh), em vez de useState puro.
  */
 
-type AbaConfig = "geral" | "preferencias" | "plano" | "lixeira" | "historico" | "notificacoes";
+type AbaConfig =
+  | "perfil"
+  | "agencia"
+  | "preferencias"
+  | "plano"
+  | "lixeira"
+  | "historico"
+  | "notificacoes";
 
-type AbaDef = { id: AbaConfig; label: string; icon: typeof Settings };
+type AbaDef = { id: AbaConfig; label: string; icon: typeof User };
 
 const ABAS_ADMIN: AbaDef[] = [
-  { id: "geral", label: "Geral", icon: Settings },
+  { id: "perfil", label: "Perfil", icon: User },
+  { id: "agencia", label: "Agência", icon: Building2 },
   { id: "preferencias", label: "Preferências", icon: SlidersHorizontal },
   { id: "plano", label: "Plano & Assinatura", icon: CreditCard },
   { id: "lixeira", label: "Lixeira", icon: Trash2 },
@@ -42,23 +57,44 @@ const ABAS_ADMIN: AbaDef[] = [
   { id: "notificacoes", label: "Notificações", icon: Bell },
 ];
 
-// Usuários comuns veem só Geral (= Alterar senha) e Notificações
+// Usuários comuns veem só Perfil e Notificações
 const ABAS_USUARIO: AbaDef[] = [
-  { id: "geral", label: "Geral", icon: Settings },
+  { id: "perfil", label: "Perfil", icon: User },
   { id: "notificacoes", label: "Notificações", icon: Bell },
 ];
+
+function abaValidaParaPapel(id: string | null, abas: AbaDef[]): AbaConfig | null {
+  const encontrada = abas.find((a) => a.id === id);
+  return encontrada ? encontrada.id : null;
+}
 
 export default function Configuracoes({ onSair }: { onSair: () => void }) {
   const t = useT();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const abas = useMemo(() => (isAdmin ? ABAS_ADMIN : ABAS_USUARIO), [isAdmin]);
-  const [aba, setAba] = useState<AbaConfig>(abas[0]?.id ?? "geral");
+
+  // Fallback local (evita "pisca" antes do primeiro render com searchParams).
+  const [abaFallback, setAbaFallback] = useState<AbaConfig>(abas[0]?.id ?? "perfil");
+  const aba =
+    abaValidaParaPapel(searchParams.get("aba"), abas) ?? abaFallback;
+
+  const setAba = useCallback(
+    (novaAba: AbaConfig) => {
+      setAbaFallback(novaAba);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("aba", novaAba);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1100px] mx-auto w-full">
-      {/* Cabeçalho */}
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <button
         onClick={onSair}
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-3"
@@ -67,16 +103,14 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
         {t("Voltar para a dashboard")}
       </button>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">
-          {isAdmin ? t("Configurações") : t("Minha conta")}
-        </h1>
-        <p className="text-sm text-muted">
-          {isAdmin
-            ? t("Personalize a aparência e gerencie a conta da sua agência. Artistas e equipe agora ficam no módulo Agência.")
-            : t("Configurações da sua conta.")}
-        </p>
-      </div>
+      <PageHeader
+        title={isAdmin ? "Configurações" : "Minha conta"}
+        subtitle={
+          isAdmin
+            ? "Personalize a aparência e gerencie a conta da sua agência. Artistas e equipe agora ficam no módulo Agência."
+            : "Configurações da sua conta."
+        }
+      />
 
       {/* Abas — só mostra a barra se houver mais de uma */}
       {abas.length > 1 && (
@@ -107,7 +141,8 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
       )}
 
       {/* Conteúdo */}
-      {aba === "geral" && <AbaGeral />}
+      {aba === "perfil" && <AbaPerfil />}
+      {aba === "agencia" && isAdmin && <AbaAgencia />}
       {aba === "preferencias" && isAdmin && <AbaPreferencias />}
       {aba === "plano" && isAdmin && <AbaPlano />}
       {aba === "lixeira" && isAdmin && <AbaLixeira />}

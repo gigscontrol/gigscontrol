@@ -41,8 +41,8 @@ export type ProfileRow = {
   pode_criar_anotacoes: boolean | null;
   /**
    * true = a senha do usuário ainda é a aleatória gerada pelo sistema
-   * (criação ou último reset). false = o próprio usuário já trocou no
-   * AbaSeguranca. Default false (existentes não são alarmados).
+   * (criação ou último reset). false = o próprio usuário já trocou na
+   * aba Perfil (card Acesso). Default false (existentes não são alarmados).
    */
   senha_padrao: boolean;
   /**

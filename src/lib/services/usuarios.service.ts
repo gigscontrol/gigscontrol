@@ -173,12 +173,23 @@ export async function atualizarUsuarioDaEquipe(
   id: string,
   input: UsuarioUpdateInput
 ): Promise<UsuarioEquipe> {
+  // GUARDA PARCIAL: quando o alvo é admin ou artista, esta rota de EQUIPE não
+  // pode mexer nos campos SENSÍVEIS de acesso (papel, funções, escopo,
+  // ativo/status) — só a conta-mãe governa cargo/privacidade desses papéis.
+  // Mas os DADOS PESSOAIS (nome, documento, telefone, endereço, etc.) seguem
+  // editáveis. (removerUsuarioDaEquipe/resetarSenhaDoUsuario bloqueiam TOTAL
+  // esses papéis; aqui a proteção é só dos campos perigosos.)
+  const alvo = await buscarProfile(admin, id);
+  const protegido = alvo?.papel === "admin" || alvo?.papel === "artista";
+
   const patch: Parameters<typeof atualizarProfile>[2] = {};
   if (input.nome !== undefined) patch.nome = input.nome;
-  if (input.papel !== undefined) patch.papel = input.papel;
-  if (input.escopo !== undefined) patch.escopo = input.escopo;
-  if (input.funcoes !== undefined) patch.funcoes = input.funcoes;
-  if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
+  if (!protegido) {
+    if (input.papel !== undefined) patch.papel = input.papel;
+    if (input.escopo !== undefined) patch.escopo = input.escopo;
+    if (input.funcoes !== undefined) patch.funcoes = input.funcoes;
+    if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
+  }
   if (input.pode_criar_anotacoes !== undefined)
     patch.pode_criar_anotacoes = input.pode_criar_anotacoes;
   // Dados pessoais (opcionais) — servem para contrato.

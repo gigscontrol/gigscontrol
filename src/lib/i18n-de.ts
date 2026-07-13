@@ -2518,4 +2518,16 @@ export const DE: Record<string, string> = {
   "Pague com cartão de crédito de forma segura.": "Zahlen Sie sicher mit Kreditkarte.",
   "Verifique os dados do cartão.": "Überprüfen Sie die Kartendaten.",
   "Pagar com PIX": "Mit PIX bezahlen",
+  // ---- Config: aba Perfil + Agência (rework WI-3/WI-4, 2026-07-13) ----
+  "Perfil": "Profil",
+  "Cor do meu avatar": "Farbe meines Avatars",
+  "Cor do avatar atualizada.": "Avatar-Farbe aktualisiert.",
+  "Falha ao salvar a cor.": "Farbe konnte nicht gespeichert werden.",
+  "Se você emitir nota fiscal por CNPJ": "Falls Sie über eine CNPJ Rechnungen stellen",
+  "Rua, número, bairro, cidade": "Straße, Nummer, Stadtteil, Stadt",
+  "Aparece nos contratos gerados pelo sistema.": "Erscheint auf den vom System erstellten Verträgen.",
+  "Seu e-mail de login e a senha de acesso à sua dashboard.": "Ihre Login-E-Mail und das Passwort für den Zugriff auf Ihr Dashboard.",
+  "mínimo de 8 caracteres": "mindestens 8 Zeichen",
+  "Razão social": "Firmenname",
+  "Plano & Assinatura": "Tarif & Abo",
 };

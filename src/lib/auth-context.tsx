@@ -15,7 +15,9 @@ import {
   type Workspace,
   type Permissoes,
   type Papel,
+  type PrivacidadeDj,
 } from "./permissoes";
+import { privacidadeValida } from "./mappers/artista";
 import { DEFAULT_SELECTED_ARTISTA_IDS } from "./artistas-fallback";
 import { criarClienteBrowser } from "./db/supabase-browser";
 import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
@@ -45,6 +47,13 @@ export type Sessao = {
    * super-admin (resolvidos pelo papel no motor).
    */
   vinculos?: Record<string, string[]>;
+  /**
+   * Privacidade do artista (papel === "artista"): o que o admin autorizou o
+   * artista a ver/fazer no próprio espaço (artists.privacidade). Alimenta o
+   * motor no grey-out para bater com o servidor (session.ts). `undefined` para
+   * os demais papéis → o resolver usa o padrão seguro (PRIVACIDADE_DJ_PADRAO).
+   */
+  privacidade?: PrivacidadeDj;
   /**
    * Operacional LEGADO genuíno = sem vínculos MAS com `profiles.funcoes`
    * preenchido (usuário anterior ao rework). Distingue, no grey-out, "legado
@@ -215,7 +224,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         typeof profile.funcoes === "object" &&
         Object.keys(profile.funcoes).length > 0;
 
-      return { tipo, usuario, workspace, vinculos, temFuncoesLegado };
+      // Privacidade do artista (config do admin em artists.privacidade). Só o
+      // papel artista precisa — governa o motor no próprio espaço; sem isso o
+      // grey-out do cliente usava sempre o padrão e divergia do servidor.
+      let privacidade: PrivacidadeDj | undefined;
+      if (profile.papel === "artista" && profile.artista_id) {
+        const { data: art } = await supabase
+          .from("artists")
+          .select("privacidade")
+          .eq("id", profile.artista_id)
+          .maybeSingle<{ privacidade: unknown }>();
+        privacidade = privacidadeValida(art?.privacidade ?? null);
+      }
+
+      return { tipo, usuario, workspace, vinculos, privacidade, temFuncoesLegado };
     },
     [supabase]
   );
@@ -411,6 +433,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           papel: sessao.usuario.papel,
           artistaId:
             (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+          privacidade: sessao.privacidade,
           vinculos: sessao.vinculos,
         };
         return motorPode(ctx, artistaId, chave);
@@ -433,6 +456,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           papel,
           artistaId:
             (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+          privacidade: sessao.privacidade,
           vinculos: sessao.vinculos,
         };
         return motorPode(ctx, artistaId, chave);

@@ -5,7 +5,7 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 /**
  * POST /api/auth/senha-trocada
  *
- * Marcado pelo AbaSeguranca DEPOIS que o usuário trocou a própria senha
+ * Marcado pela aba Perfil (card Acesso) DEPOIS que o usuário trocou a própria senha
  * via `supabase.auth.updateUser({ password })`. Apenas baixa a flag
  * `profiles.senha_padrao = false` pro usuário logado — assim o admin do
  * workspace consegue ver no modal de edição que a senha aleatória inicial

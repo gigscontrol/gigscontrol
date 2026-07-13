@@ -137,3 +137,14 @@ export const CATALOGO: Permissao[] = [
 
 /** Set de todas as chaves válidas (validação rápida). */
 export const CHAVES_VALIDAS: ReadonlySet<string> = new Set(CATALOGO.map((p) => p.chave));
+
+/**
+ * Só as chaves de NÍVEL ARTISTA — as únicas que podem ir num VÍNCULO
+ * (membros_artista). Fonte única da verdade: qualquer validação de permissão
+ * por-artista (schema de vínculo, criação de usuário, serviço de equipe) deve
+ * consumir ESTE set, para que chaves administrativas de workspace (agencia.*)
+ * NUNCA sejam gravadas num vínculo por-artista.
+ */
+export const CHAVES_ARTISTA_VALIDAS: ReadonlySet<string> = new Set(
+  CATALOGO.filter((p) => p.nivel === "artista").map((p) => p.chave)
+);
