@@ -169,7 +169,7 @@ export default function CompletarCadastroPage() {
                     type="text"
                     value={nomeAgencia}
                     onChange={(e) => setNomeAgencia(e.target.value)}
-                    placeholder={t("Agência Estrela")}
+                    placeholder={t("Agência Talents")}
                     autoComplete="organization"
                     autoFocus
                     className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
