@@ -244,7 +244,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           ariaLabel={t("Resumo de casas")}
         >
           <StatCard
-            title={t("Casas / Locais")}
+            title={t("Casas de shows")}
             value={casas.length}
             icon={<Building2 size={16} />}
             accentColor="var(--success)"
@@ -388,7 +388,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
       <ResumoModal
         isOpen={resumo === "casas"}
         onClose={() => setResumo(null)}
-        title={t("Casas / Locais")}
+        title={t("Casas de shows")}
         accentColor="var(--success)"
       >
         <ResumoNumero
@@ -442,7 +442,12 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             {t("Nenhum contato bloqueado.")}
           </div>
         ) : (
-          <ResumoLista itens={itensBloqueados} onItemClick={() => onAbrirCategoria?.("contratantes")} />
+          <ResumoLista
+            itens={itensBloqueados}
+            onItemClick={(id) =>
+              onAbrirCategoria?.(id.startsWith("ca-") ? "casas" : "contratantes")
+            }
+          />
         )}
         <ResumoFooter
           label={t("Ver mais detalhes")}

@@ -176,7 +176,10 @@ export function ResumoLista({
   maxItens = 5,
 }: {
   itens: ResumoListaItem[];
-  onItemClick?: (id: string) => void;
+  // Recebe o `id` (compat com os call-sites existentes que ignoram o 2º
+  // argumento) e o `item` completo, para quem precisa inspecionar o item
+  // clicado (ex.: prefixo do id) sem duplicar lógica de busca.
+  onItemClick?: (id: string, item: ResumoListaItem) => void;
   maxItens?: number;
 }) {
   const visiveis = itens.slice(0, maxItens);
@@ -212,7 +215,7 @@ export function ResumoLista({
           <button
             key={item.id}
             type="button"
-            onClick={() => onItemClick(item.id)}
+            onClick={() => onItemClick(item.id, item)}
             className={`${base} hover:border-border-strong transition-colors`}
           >
             {conteudo}

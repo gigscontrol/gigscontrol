@@ -210,7 +210,7 @@ export default function VendasDashboard({
       subtitulo: tituloMes,
     },
     perdidos: {
-      titulo: t("Perdidos"),
+      titulo: t("Orçamentos perdidos"),
       subtitulo: tituloMes,
     },
   };
@@ -299,7 +299,7 @@ export default function VendasDashboard({
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("vendas")} ariaLabel={t("Resumo de vendas")}>
           <StatCard
-            title={t("Vendas Fechadas")}
+            title={t("Vendas fechadas")}
             value={stats.totalVendas}
             icon={<CalendarCheck2 size={16} />}
             accentColor="var(--success)"
@@ -308,16 +308,16 @@ export default function VendasDashboard({
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("negociacao")} ariaLabel={t("Em negociação")}>
           <StatCard
-            title={t("Em Negociação")}
+            title={t("Em negociação")}
             value={stats.porStatus.negociacao}
             icon={<Handshake size={16} />}
             accentColor="var(--warning)"
             subtitle={formatBRL(stats.valorNegociacao)}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => setResumo("perdidos")} ariaLabel={t("Perdidos")}>
+        <ClickableStat onClick={() => setResumo("perdidos")} ariaLabel={t("Orçamentos perdidos")}>
           <StatCard
-            title={t("Perdidos")}
+            title={t("Orçamentos perdidos")}
             value={stats.porStatus.recusado}
             icon={<XCircle size={16} />}
             accentColor="var(--danger)"
@@ -600,7 +600,7 @@ export default function VendasDashboard({
         {resumo === "perdidos" && (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label={t("Perdidos")} valor={stats.porStatus.recusado} accentColor="var(--danger)" />
+              <ResumoNumero label={t("Orçamentos perdidos")} valor={stats.porStatus.recusado} accentColor="var(--danger)" />
               <ResumoNumero label={t("Valor total")} valor={formatBRL(stats.valorPerdidos)} />
             </div>
             {perdidosRecentes.length > 0 ? (

@@ -248,13 +248,13 @@ export default function DashboardContratos({
               <StatCard title={t("Contratos criados")} value={total} icon={<FileText size={16} />} accentColor={ACCENT} subtitle={tituloPeriodo} />
             </ClickableStat>
             <ClickableStat onClick={() => setResumo("assinado")} ariaLabel={t("Ver resumo de assinados")}>
-              <StatCard title={t("Assinados")} value={porStatus.assinado} icon={<CheckCircle2 size={16} />} accentColor="var(--success)" subtitle={t("Finalizados")} />
+              <StatCard title={t("Contratos assinados")} value={porStatus.assinado} icon={<CheckCircle2 size={16} />} accentColor="var(--success)" subtitle={t("Finalizados")} />
             </ClickableStat>
             <ClickableStat onClick={() => setResumo("aguardando")} ariaLabel={t("Ver resumo de aguardando assinatura")}>
               <StatCard title={t("Aguardando assinatura")} value={aguardando} icon={<Clock size={16} />} accentColor="var(--warning)" subtitle={t("Sem nenhuma assinatura")} />
             </ClickableStat>
             <ClickableStat onClick={() => setResumo("cancelado")} ariaLabel={t("Ver resumo de cancelados")}>
-              <StatCard title={t("Cancelados")} value={porStatus.cancelado} icon={<XCircle size={16} />} accentColor="var(--danger)" subtitle={t("Ver resumo")} />
+              <StatCard title={t("Contratos cancelados")} value={porStatus.cancelado} icon={<XCircle size={16} />} accentColor="var(--danger)" subtitle={t("Ver resumo")} />
             </ClickableStat>
           </div>
 
@@ -293,9 +293,13 @@ export default function DashboardContratos({
             ? t("Contratos criados")
             : resumo === "aguardando"
               ? t("Aguardando assinatura")
-              : resumo
-                ? t(STATUS_INFO[resumo].label)
-                : ""
+              : resumo === "assinado"
+                ? t("Contratos assinados")
+                : resumo === "cancelado"
+                  ? t("Contratos cancelados")
+                  : resumo
+                    ? t(STATUS_INFO[resumo].label)
+                    : ""
         }
         subtitle={resumo === "total" ? tituloPeriodo : undefined}
         accentColor={
@@ -376,7 +380,13 @@ export default function DashboardContratos({
         ) : resumo ? (
           <>
             <ResumoNumero
-              label={t(STATUS_INFO[resumo].label)}
+              label={
+                resumo === "assinado"
+                  ? t("Contratos assinados")
+                  : resumo === "cancelado"
+                    ? t("Contratos cancelados")
+                    : t(STATUS_INFO[resumo].label)
+              }
               valor={porStatus[resumo]}
               accentColor={STATUS_INFO[resumo].color === "var(--text-muted)" ? undefined : STATUS_INFO[resumo].color}
             />
