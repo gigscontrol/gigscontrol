@@ -33,29 +33,33 @@ type Props = {
 /** Qual resumo está aberto no modal (null = fechado). */
 type ResumoTipo = null | "orcamentos" | "vendas" | "faturamento" | "conversao";
 
-const ATALHOS_MES: AgendaDateRange[] = ["Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
+const ATALHOS_MES: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-/** Resolve {ano, mes(0-based)} a partir do seletor — mesma lógica da Agenda. */
+/**
+ * Resolve {ano, mes(0-based), tudo} a partir do seletor — mesma lógica da Agenda.
+ * "Visão geral" = all-time (tudo=true), sem filtro de mês.
+ */
 function resolverMes(
   range: AgendaDateRange,
   customMonth: string | null,
   customYear: number | null
-): { ano: number; mes: number } {
+): { ano: number; mes: number; tudo: boolean } {
   const h = new Date();
+  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
   if (range === "Mês anterior") {
     const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth() };
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
   }
   if (range === "Próximo mês") {
     const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth() };
+    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
   }
   if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)) };
+    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
   }
-  return { ano: h.getFullYear(), mes: h.getMonth() };
+  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
 /**
@@ -88,11 +92,11 @@ export default function VendasDashboard({
   const [range, setRange] = useState<AgendaDateRange>("Mês atual");
   const [customMonth, setCustomMonth] = useState<string | null>(null);
   const [customYear, setCustomYear] = useState<number | null>(null);
-  const { ano, mes } = useMemo(
+  const { ano, mes, tudo } = useMemo(
     () => resolverMes(range, customMonth, customYear),
     [range, customMonth, customYear]
   );
-  const tituloMes = `${MESES_LONGO[mes]} ${ano}`;
+  const tituloMes = tudo ? t("Visão geral") : `${MESES_LONGO[mes]} ${ano}`;
 
   // Tudo pela data de CRIAÇÃO: uma venda fechada em junho para um show em
   // outubro conta em junho (foi quando vendi). Orçamentos idem (criação).
@@ -100,16 +104,16 @@ export default function VendasDashboard({
   const orcamentosVisiveis = useMemo(
     () =>
       orcamentos.filter(
-        (o) => selectedArtistas.includes(o.artistaId) && mesAnoBate(o.criadoEm, ano, mes)
+        (o) => selectedArtistas.includes(o.artistaId) && (tudo || mesAnoBate(o.criadoEm, ano, mes))
       ),
-    [orcamentos, selectedArtistas, ano, mes]
+    [orcamentos, selectedArtistas, ano, mes, tudo]
   );
   const vendasVisiveis = useMemo(
     () =>
       vendas.filter(
-        (v) => selectedArtistas.includes(v.artistaId) && mesAnoBate(v.criadoEm, ano, mes)
+        (v) => selectedArtistas.includes(v.artistaId) && (tudo || mesAnoBate(v.criadoEm, ano, mes))
       ),
-    [vendas, selectedArtistas, ano, mes]
+    [vendas, selectedArtistas, ano, mes, tudo]
   );
 
   const stats = useMemo(() => {
