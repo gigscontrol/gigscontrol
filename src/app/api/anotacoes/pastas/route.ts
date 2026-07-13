@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarPastasDoWorkspace,
   criarPastaNoWorkspace,
+  artistasSaoDoWorkspace,
 } from "@/lib/services/anotacoes.service";
 import { pastaCreateSchema } from "@/lib/validators/anotacoes.schema";
 import { contarPastasDoWorkspace } from "@/lib/repositories/anotacoes.repo";
@@ -46,6 +47,19 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  // Membros-artista precisam ser artistas do próprio workspace (só valem em
+  // "selecionados"; os IDs de usuário ficam por conta da RLS de escrita).
+  const artistasMembros =
+    parsed.data.visibilidade === "selecionados"
+      ? (parsed.data.membros ?? []).filter((m) => m.tipo === "artista").map((m) => m.id)
+      : [];
+  if (!(await artistasSaoDoWorkspace(r.sessao.supabase, r.sessao.workspaceId, artistasMembros))) {
+    return NextResponse.json(
+      { erro: "Artista inválido para este workspace." },
       { status: 400 }
     );
   }

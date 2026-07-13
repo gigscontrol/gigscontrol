@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   listarNotasDoWorkspace,
   criarNotaNoWorkspace,
+  artistasSaoDoWorkspace,
 } from "@/lib/services/anotacoes.service";
 import { notaCreateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarPasta, contarNotasDoShow } from "@/lib/repositories/anotacoes.repo";
@@ -43,7 +44,24 @@ export async function POST(request: Request) {
     );
   }
 
+  // Etiqueta de contexto (se veio) tem que ser um artista do próprio workspace.
+  if (
+    !(await artistasSaoDoWorkspace(r.sessao.supabase, r.sessao.workspaceId, [parsed.data.artistId]))
+  ) {
+    return NextResponse.json(
+      { erro: "Artista inválido para este workspace." },
+      { status: 400 }
+    );
+  }
+
   if (parsed.data.pasta_id) {
+    // Nota de PASTA (documento da base de conhecimento) exige título.
+    if (!parsed.data.titulo?.trim()) {
+      return NextResponse.json(
+        { erro: "Dê um título à anotação." },
+        { status: 400 }
+      );
+    }
     // Só adiciona nota em pasta que enxerga (a RLS de leitura da pasta é o gate).
     const pasta = await buscarPasta(r.sessao.supabase, parsed.data.pasta_id);
     if (!pasta)
