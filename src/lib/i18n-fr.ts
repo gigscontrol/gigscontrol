@@ -4,6 +4,9 @@
  */
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "Selecionar": "Sélectionner",
+  "{n} usuários no total": "{n} utilisateurs au total",
+  "cobrado por mês": "facturé mensuellement",
   "Admin": "Admin",
   "Selecionado": "Sélectionné",
   "Ver mais recursos": "Voir plus de fonctionnalités",

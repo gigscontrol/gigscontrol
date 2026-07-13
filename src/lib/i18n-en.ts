@@ -8,6 +8,9 @@
 
 // ---- Booking / Fechamento (auditoria i18n 2026-07-07) ----
 const BOOKING_AUD: Record<string, string> = {
+  "Selecionar": "Select",
+  "{n} usuários no total": "{n} users total",
+  "cobrado por mês": "billed monthly",
   "Admin": "Admin",
   "Selecionado": "Selected",
   "Ver mais recursos": "See more features",

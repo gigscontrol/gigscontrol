@@ -31,7 +31,7 @@ import {
   valorMensal,
   valorAnual,
 } from "@/lib/planos";
-import PlanoCoverflow from "@/components/PlanoCoverflow";
+import PlanoCarrossel from "@/components/PlanoCarrossel";
 import SeletorGateway from "@/components/checkout/SeletorGateway";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
@@ -1039,10 +1039,10 @@ function Etapa2Plano({
       </div>
 
       <div className="mb-8">
-        <PlanoCoverflow
+        <PlanoCarrossel
           ciclo={ciclo}
-          centralIndex={central}
-          onCentralChange={setCentral}
+          selecionadoIndex={central}
+          onSelecionar={setCentral}
         />
       </div>
 
