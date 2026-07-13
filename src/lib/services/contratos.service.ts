@@ -142,7 +142,8 @@ export async function atualizarContratoPorId(
 
 export async function removerContratoPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }

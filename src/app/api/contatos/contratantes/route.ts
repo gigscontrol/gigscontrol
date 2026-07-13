@@ -11,8 +11,13 @@ import { respostaDeErro } from "@/lib/api/erros";
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
-  if (bloqueio) return bloqueio;
+  // Artista NÃO é barrado aqui: a lista é filtrada por privacidade.contatos no
+  // serviço (nenhum → vazia; proprios → só dos eventos dele; todos → tudo).
+  // Demais papéis: gate atual (só artista era bloqueado; para eles é no-op).
+  if (r.sessao.papel !== "artista") {
+    const bloqueio = verificarAcessoContatos(r.sessao);
+    if (bloqueio) return bloqueio;
+  }
   try {
     const contratantes = await listarContratantesDoWorkspace(
       r.sessao.supabase,

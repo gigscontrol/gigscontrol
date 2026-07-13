@@ -39,8 +39,8 @@ type Props = {
   setActiveTab: (tab: ActiveTab) => void;
   activePage: ActivePage;
   setActivePage: (page: ActivePage) => void;
-  selectedDJs: string[];
-  setSelectedDJs: (djs: string[]) => void;
+  selectedArtistas: string[];
+  setSelectedArtistas: (artistas: string[]) => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   /** true quando a tela de Configurações está aberta — nenhum módulo fica ativo */
@@ -145,15 +145,15 @@ export default function Sidebar({
   setActiveTab,
   activePage,
   setActivePage,
-  selectedDJs,
-  setSelectedDJs,
+  selectedArtistas,
+  setSelectedArtistas,
   isOpenMobile,
   onCloseMobile,
   configAberta = false,
 }: Props) {
   const { aparencia } = useWorkspace();
   const { sessao } = useAuth();
-  const DJS = useArtistas();
+  const ARTISTAS = useArtistas();
   const t = useT();
 
   // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
@@ -177,16 +177,16 @@ export default function Sidebar({
 
   const toggleDJ = (id: string) => {
     if (planoIndividual) return; // no-op no Individual
-    if (selectedDJs.includes(id)) {
-      setSelectedDJs(selectedDJs.filter((dj) => dj !== id));
+    if (selectedArtistas.includes(id)) {
+      setSelectedArtistas(selectedArtistas.filter((a) => a !== id));
     } else {
-      setSelectedDJs([...selectedDJs, id]);
+      setSelectedArtistas([...selectedArtistas, id]);
     }
   };
 
-  const allSelected = selectedDJs.length === DJS.length && DJS.length > 0;
+  const allSelected = selectedArtistas.length === ARTISTAS.length && ARTISTAS.length > 0;
   const toggleAll = () => {
-    setSelectedDJs(allSelected ? [] : DJS.map((d) => d.id));
+    setSelectedArtistas(allSelected ? [] : ARTISTAS.map((d) => d.id));
   };
 
   return (
@@ -361,7 +361,7 @@ export default function Sidebar({
         {(
           <div>
             <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
-              <span className="stat-label">DJs</span>
+              <span className="stat-label">Artistas</span>
               {/* "Todos/Limpar" só faz sentido com 2+ artistas (planos
                   Equipe/Agência/etc). Individual = 1 artista = sem toggle. */}
               {!planoIndividual && (
@@ -374,17 +374,17 @@ export default function Sidebar({
               )}
             </div>
             <div className="flex flex-col gap-1">
-              {DJS.map((dj) => {
+              {ARTISTAS.map((artista) => {
                 // No plano Individual, o artista é SEMPRE renderizado
                 // como ativo — não é clicável e não tem estado de
                 // "esconder" porque só existe 1 artista no workspace.
                 const isActiveDj = planoIndividual
                   ? true
-                  : selectedDJs.includes(dj.id);
+                  : selectedArtistas.includes(artista.id);
                 return (
                   <button
-                    key={dj.id}
-                    onClick={() => toggleDJ(dj.id)}
+                    key={artista.id}
+                    onClick={() => toggleDJ(artista.id)}
                     disabled={planoIndividual}
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium
@@ -398,21 +398,21 @@ export default function Sidebar({
                     `}
                     title={
                       planoIndividual
-                        ? dj.name
-                        : `${isActiveDj ? t("Esconder") : t("Mostrar")} ${dj.name}`
+                        ? artista.name
+                        : `${isActiveDj ? t("Esconder") : t("Mostrar")} ${artista.name}`
                     }
                   >
                     <span
                       className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0 transition-all"
                       style={{
-                        backgroundColor: isActiveDj ? dj.color : "var(--bg-elevated)",
+                        backgroundColor: isActiveDj ? artista.color : "var(--bg-elevated)",
                         color: isActiveDj ? "#fff" : "var(--text-muted)",
-                        boxShadow: isActiveDj ? `0 0 0 2px ${dj.color}33` : "none",
+                        boxShadow: isActiveDj ? `0 0 0 2px ${artista.color}33` : "none",
                       }}
                     >
-                      {dj.name.slice(0, 2).toUpperCase()}
+                      {artista.name.slice(0, 2).toUpperCase()}
                     </span>
-                    <span className={`flex-1 text-left truncate ${collapsed ? "lg:hidden" : ""}`}>{dj.name}</span>
+                    <span className={`flex-1 text-left truncate ${collapsed ? "lg:hidden" : ""}`}>{artista.name}</span>
                     {isActiveDj && !planoIndividual && (
                       <Check size={14} className={`text-secondary ${collapsed ? "lg:hidden" : ""}`} />
                     )}
@@ -427,8 +427,8 @@ export default function Sidebar({
       <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
         <div className="text-[0.7rem] text-muted">
           {planoIndividual
-            ? t(DJS.length === 1 ? "{n} artista" : "{n} artistas", { n: DJS.length })
-            : t("{n} de {m} DJs visíveis", { n: selectedDJs.length, m: DJS.length })}
+            ? t(ARTISTAS.length === 1 ? "{n} artista" : "{n} artistas", { n: ARTISTAS.length })
+            : t("{n} de {m} artistas visíveis", { n: selectedArtistas.length, m: ARTISTAS.length })}
         </div>
       </div>
     </aside>

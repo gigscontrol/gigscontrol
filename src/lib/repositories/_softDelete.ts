@@ -6,15 +6,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * workspace/permissão é validado ANTES pela rota/serviço — o filtro aqui é só
  * por id (idêntico às implementações originais, que dependiam da RLS/validação
  * upstream).
+ *
+ * `deletadoPor` (opcional) grava também quem apagou (uuid → profiles). Quando
+ * omitido, a coluna `deletado_por` fica null — retrocompatível com chamadas
+ * antigas.
  */
 export async function softDelete(
   supabase: SupabaseClient,
   tabela: string,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
+  const patch: { deletado_em: string; deletado_por?: string } = {
+    deletado_em: new Date().toISOString(),
+  };
+  if (deletadoPor) patch.deletado_por = deletadoPor;
   const { error } = await supabase
     .from(tabela)
-    .update({ deletado_em: new Date().toISOString() })
+    .update(patch)
     .eq("id", id);
   if (error) throw error;
 }

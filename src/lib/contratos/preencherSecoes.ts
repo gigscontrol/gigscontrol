@@ -1,5 +1,5 @@
 /**
- * Gera os VALORES das variáveis de contrato a partir de uma venda + o DJ +
+ * Gera os VALORES das variáveis de contrato a partir de uma venda + o artista +
  * a agência, e aplica esses valores nas seções do modelo (substituindo os
  * tokens {{...}}) para produzir o conteúdo final do contrato.
  *
@@ -8,7 +8,7 @@
  * na tela de Novo Contrato — todos os valores são editáveis lá.
  */
 import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
-import type { DJ, Venda } from "@/types";
+import type { Artista, Venda } from "@/types";
 import { preencher } from "./variaveis";
 import { formatBRL } from "@/lib/contatos-stats";
 
@@ -30,20 +30,20 @@ export function hojeBR(): string {
 }
 
 /**
- * Monta o mapa de valores a partir da venda. `dj` vem da lista de artistas
- * (por `venda.djId`); `agencia` é o nome do workspace; `numero` é o número
+ * Monta o mapa de valores a partir da venda. `artista` vem da lista de artistas
+ * (por `venda.artistaId`); `agencia` é o nome do workspace; `numero` é o número
  * do contrato que está sendo gerado.
  */
 export function valoresDeVenda(opts: {
   venda: Venda;
-  dj: DJ | null;
+  artista: Artista | null;
   agencia: string;
   numero: string;
 }): Record<string, string> {
-  const { venda, dj, agencia, numero } = opts;
+  const { venda, artista, agencia, numero } = opts;
   return {
     // Artista / Agência
-    artista: dj?.name ?? "",
+    artista: artista?.name ?? "",
     agencia,
     // Contratante (já vem denormalizado na venda)
     contratante: venda.contratanteNome ?? "",
@@ -62,9 +62,9 @@ export function valoresDeVenda(opts: {
     cache: typeof venda.cache === "number" ? formatBRL(venda.cache) : "",
     "forma de pagamento": "",
     // Riders (dos dados do artista)
-    "rider de camarim": juntarRider(dj?.riderCamarim),
-    "rider de efeitos": juntarRider(dj?.riderEfeitos),
-    "rider tecnico": juntarRider(dj?.riderTecnico),
+    "rider de camarim": juntarRider(artista?.riderCamarim),
+    "rider de efeitos": juntarRider(artista?.riderEfeitos),
+    "rider tecnico": juntarRider(artista?.riderTecnico),
     hospedagem: "",
     // Logística
     logistica: "",

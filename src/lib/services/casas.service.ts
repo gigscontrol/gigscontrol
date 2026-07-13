@@ -12,6 +12,8 @@ import type {
   CasaCreateInput,
   CasaUpdateInput,
 } from "@/lib/validators/contatos.schema";
+import type { SessaoAutenticada } from "@/lib/api/session";
+import { casaIdsVisiveis } from "@/lib/services/contatosAcesso";
 import { resolverGeoDoContato } from "@/lib/services/geoContato";
 
 function entradaParaEscrita(input: CasaCreateInput | CasaUpdateInput): CasaEscrita {
@@ -27,7 +29,23 @@ function entradaParaEscrita(input: CasaCreateInput | CasaUpdateInput): CasaEscri
   return out;
 }
 
-export async function listarCasasDoWorkspace(supabase: SupabaseClient): Promise<Casa[]> {
+export async function listarCasasDoWorkspace(
+  supabase: SupabaseClient,
+  sessao?: SessaoAutenticada
+): Promise<Casa[]> {
+  // Só o ARTISTA é filtrado (por privacidade.contatos). Admin/equipe/legado →
+  // "todos" (catálogo do workspace, igual antes). Ver contatosAcesso.ts.
+  if (sessao) {
+    const visiveis = await casaIdsVisiveis(supabase, sessao);
+    if (visiveis !== "todos") {
+      if (visiveis.size === 0) return [];
+      const ids = Array.from(visiveis);
+      const rows = await repoListar(supabase, <Q,>(q: Q) =>
+        (q as unknown as { in(c: string, v: string[]): unknown }).in("id", ids) as Q
+      );
+      return rows.map(rowParaCasa);
+    }
+  }
   const rows = await repoListar(supabase);
   return rows.map(rowParaCasa);
 }
@@ -87,7 +105,8 @@ export async function atualizarCasaPorId(
 
 export async function removerCasaPorId(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await repoRemover(supabase, id);
+  await repoRemover(supabase, id, deletadoPor);
 }

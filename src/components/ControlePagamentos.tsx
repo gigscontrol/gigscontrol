@@ -71,9 +71,9 @@ type LinhaParcela = {
   parcela: Parcela;
   indiceParcela: number;
   totalParcelas: number;
-  djId: string;
-  djNome: string;
-  djColor: string;
+  artistaId: string;
+  artistaNome: string;
+  artistaColor: string;
   contratante: string;
   nomeEvento: string;
   status: StatusParcela;
@@ -116,7 +116,7 @@ export default function ControlePagamentos({
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendas) {
-      const dj = artistas.find((d) => d.id === v.djId);
+      const artista = artistas.find((d) => d.id === v.artistaId);
       v.parcelas.forEach((parcela, idx) => {
         linhas.push({
           vendaId: v.id,
@@ -124,9 +124,9 @@ export default function ControlePagamentos({
           parcela,
           indiceParcela: idx + 1,
           totalParcelas: v.parcelas.length,
-          djId: v.djId,
-          djNome: dj?.name ?? "—",
-          djColor: dj?.color ?? "#888",
+          artistaId: v.artistaId,
+          artistaNome: artista?.name ?? "—",
+          artistaColor: artista?.color ?? "#888",
           contratante: v.contratanteNome,
           nomeEvento: v.nomeEvento,
           status: statusEfetivoParcela(parcela),
@@ -165,7 +165,7 @@ export default function ControlePagamentos({
       if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        const hay = [l.vendaNumero, l.contratante, l.nomeEvento, l.djNome]
+        const hay = [l.vendaNumero, l.contratante, l.nomeEvento, l.artistaNome]
           .join(" ")
           .toLowerCase();
         if (!hay.includes(q)) return false;
@@ -255,7 +255,7 @@ export default function ControlePagamentos({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar por venda, contratante, evento, DJ...")}
+            placeholder={t("Buscar por venda, contratante, evento, artista...")}
             className="input"
           />
         </div>
@@ -432,8 +432,8 @@ function ParcelaRow({
 
       {/* DJ */}
       <div className="hidden md:flex items-center gap-1.5 text-secondary text-sm min-w-0 max-w-[160px]">
-        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.djColor }} />
-        <span className="truncate">{l.djNome}</span>
+        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.artistaColor }} />
+        <span className="truncate">{l.artistaNome}</span>
       </div>
 
       {/* Indicadores (cobrança / comprovante) */}

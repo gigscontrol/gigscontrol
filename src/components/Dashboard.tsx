@@ -60,7 +60,7 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
 }
 
 type Props = {
-  selectedDJs: string[];
+  selectedArtistas: string[];
   onNavigate?: (tab: ActiveTab, page: ActivePage) => void;
   onAbrirVenda?: (id: string) => void;
 };
@@ -71,13 +71,13 @@ type LinhaParcela = {
   parcela: Parcela;
   indice: number;
   total: number;
-  djId: string;
-  djNome: string;
-  djColor: string;
+  artistaId: string;
+  artistaNome: string;
+  artistaColor: string;
   contratante: string;
 };
 
-export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Props) {
+export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }: Props) {
   const t = useT();
   const accent = "var(--brand)";
   const { vendas } = useVendas();
@@ -95,15 +95,15 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
   const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
   const vendasVisiveis = useMemo(
-    () => vendas.filter((v) => selectedDJs.includes(v.djId)),
-    [vendas, selectedDJs]
+    () => vendas.filter((v) => selectedArtistas.includes(v.artistaId)),
+    [vendas, selectedArtistas]
   );
 
   // Achata parcelas
   const parcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendasVisiveis) {
-      const dj = artistas.find((d) => d.id === v.djId);
+      const artista = artistas.find((d) => d.id === v.artistaId);
       v.parcelas.forEach((parcela, idx) => {
         linhas.push({
           vendaId: v.id,
@@ -111,9 +111,9 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           parcela,
           indice: idx + 1,
           total: v.parcelas.length,
-          djId: v.djId,
-          djNome: dj?.name ?? "—",
-          djColor: dj?.color ?? "#888",
+          artistaId: v.artistaId,
+          artistaNome: artista?.name ?? "—",
+          artistaColor: artista?.color ?? "#888",
           contratante: v.contratanteNome,
         });
       });
@@ -157,18 +157,18 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
   }, [parcelasPeriodo]);
 
   // Faturamento por artista — soma as parcelas do período (exclui canceladas).
-  const porDJ = useMemo(() => {
-    return artistas.filter((d) => selectedDJs.includes(d.id))
-      .map((dj) => ({
-        dj,
+  const porArtista = useMemo(() => {
+    return artistas.filter((d) => selectedArtistas.includes(d.id))
+      .map((artista) => ({
+        artista,
         valor: parcelasPeriodo
-          .filter((l) => l.djId === dj.id && statusEfetivoParcela(l.parcela) !== "cancelado")
+          .filter((l) => l.artistaId === artista.id && statusEfetivoParcela(l.parcela) !== "cancelado")
           .reduce((acc, l) => acc + l.parcela.valor, 0),
       }))
       .sort((a, b) => b.valor - a.valor);
-  }, [parcelasPeriodo, selectedDJs, artistas]);
+  }, [parcelasPeriodo, selectedArtistas, artistas]);
 
-  const maxDJ = Math.max(1, ...porDJ.map((p) => p.valor));
+  const maxArtista = Math.max(1, ...porArtista.map((p) => p.valor));
   const pctRecebido =
     totais.total > 0 ? Math.round((totais.recebido / totais.total) * 100) : 0;
 
@@ -291,7 +291,7 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: l.djColor }}
+                      style={{ backgroundColor: l.artistaColor }}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-primary truncate">
@@ -318,22 +318,22 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
           )}
         </div>
 
-        {/* Faturamento por DJ */}
+        {/* Faturamento por artista */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} style={{ color: accent }} />
             <div className="section-title">{t("Faturamento")}</div>
           </div>
-          {porDJ.every((p) => p.valor === 0) ? (
+          {porArtista.every((p) => p.valor === 0) ? (
             <div className="text-sm text-muted text-center py-8">
               {t("Sem vendas registradas.")}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {porDJ.map(({ dj, valor }) => (
-                <div key={dj.id}>
+              {porArtista.map(({ artista, valor }) => (
+                <div key={artista.id}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-primary">{dj.name}</span>
+                    <span className="font-medium text-primary">{artista.name}</span>
                     <span className="tabular-nums text-secondary">
                       {formatBRL(valor)}
                     </span>
@@ -342,8 +342,8 @@ export default function Dashboard({ selectedDJs, onNavigate, onAbrirVenda }: Pro
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${(valor / maxDJ) * 100}%`,
-                        background: gradienteSutil(dj.color),
+                        width: `${(valor / maxArtista) * 100}%`,
+                        background: gradienteSutil(artista.color),
                       }}
                     />
                   </div>

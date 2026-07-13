@@ -137,6 +137,7 @@ export async function criarUsuarioDaEquipe(
       razao_social: input.razao_social ?? null,
       endereco: input.endereco ?? null,
       telefone: input.telefone ?? null,
+      data_nascimento: input.data_nascimento ?? null,
       cidade_id: input.cidade_id ?? null,
     });
 
@@ -149,7 +150,9 @@ export async function criarUsuarioDaEquipe(
         userId: created.user.id,
         artistId,
         perfis: [],
-        permissoes: [],
+        // Permissões já definidas no modal de criação (se houver); caso
+        // contrário o vínculo nasce vazio (definido depois na aba Equipe).
+        permissoes: input.permissoes_por_artista?.[artistId] ?? [],
       });
     }
 
@@ -178,6 +181,17 @@ export async function atualizarUsuarioDaEquipe(
   if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
   if (input.pode_criar_anotacoes !== undefined)
     patch.pode_criar_anotacoes = input.pode_criar_anotacoes;
+  // Dados pessoais (opcionais) — servem para contrato.
+  if (input.cor !== undefined) patch.cor = input.cor;
+  if (input.pais !== undefined) patch.pais = input.pais;
+  if (input.nome_legal !== undefined) patch.nome_legal = input.nome_legal;
+  if (input.documento_tipo !== undefined) patch.documento_tipo = input.documento_tipo;
+  if (input.documento !== undefined) patch.documento = input.documento;
+  if (input.razao_social !== undefined) patch.razao_social = input.razao_social;
+  if (input.endereco !== undefined) patch.endereco = input.endereco;
+  if (input.telefone !== undefined) patch.telefone = input.telefone;
+  if (input.data_nascimento !== undefined) patch.data_nascimento = input.data_nascimento;
+  if (input.cidade_id !== undefined) patch.cidade_id = input.cidade_id;
   const row = await atualizarProfile(admin, id, patch);
   return rowParaUsuario(row);
 }
@@ -189,14 +203,15 @@ export async function atualizarUsuarioDaEquipe(
  */
 export async function removerUsuarioDaEquipe(
   admin: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   const atual = await buscarProfile(admin, id);
   if (!atual) return;
   if (atual.papel === "admin" || atual.papel === "artista") {
     throw new Error("Este usuário não pode ser removido por esta rota.");
   }
-  await moverProfileParaLixeira(admin, id);
+  await moverProfileParaLixeira(admin, id, deletadoPor);
 }
 
 /**

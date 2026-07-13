@@ -24,7 +24,7 @@ import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/
 import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange } from "@/types";
 
 type Props = {
-  selectedDJs: string[];
+  selectedArtistas: string[];
   onNavigate?: (tab: ActiveTab, page: ActivePage) => void;
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
@@ -73,7 +73,7 @@ function mesAnoBate(dataISO: string | undefined, ano: number, mes: number): bool
 }
 
 export default function VendasDashboard({
-  selectedDJs,
+  selectedArtistas,
   onNavigate,
   onAbrirOrcamento,
   onAbrirVenda,
@@ -104,16 +104,16 @@ export default function VendasDashboard({
   const orcamentosVisiveis = useMemo(
     () =>
       orcamentos.filter(
-        (o) => selectedDJs.includes(o.djId) && (tudo || mesAnoBate(o.criadoEm, ano, mes))
+        (o) => selectedArtistas.includes(o.artistaId) && (tudo || mesAnoBate(o.criadoEm, ano, mes))
       ),
-    [orcamentos, selectedDJs, ano, mes, tudo]
+    [orcamentos, selectedArtistas, ano, mes, tudo]
   );
   const vendasVisiveis = useMemo(
     () =>
       vendas.filter(
-        (v) => selectedDJs.includes(v.djId) && (tudo || mesAnoBate(v.criadoEm, ano, mes))
+        (v) => selectedArtistas.includes(v.artistaId) && (tudo || mesAnoBate(v.criadoEm, ano, mes))
       ),
-    [vendas, selectedDJs, ano, mes, tudo]
+    [vendas, selectedArtistas, ano, mes, tudo]
   );
 
   const stats = useMemo(() => {
@@ -317,7 +317,7 @@ export default function VendasDashboard({
           ) : (
             <div className="flex flex-col gap-1.5">
               {orcamentosRecentes.map((o) => {
-                const dj = artistas.find((d) => d.id === o.djId);
+                const artista = artistas.find((d) => d.id === o.artistaId);
                 const st = LABELS_STATUS_ORCAMENTO[o.status];
                 return (
                   <button
@@ -333,7 +333,7 @@ export default function VendasDashboard({
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-primary truncate">
-                        {dj?.name}
+                        {artista?.name}
                       </div>
                       <div className="text-xs text-muted tabular-nums">
                         {formatBRL(o.valorCache)}
@@ -367,7 +367,7 @@ export default function VendasDashboard({
           ) : (
             <div className="flex flex-col gap-1.5">
               {vendasRecentes.map((v) => {
-                const dj = artistas.find((d) => d.id === v.djId);
+                const artista = artistas.find((d) => d.id === v.artistaId);
                 return (
                   <button
                     key={v.id}
@@ -385,7 +385,7 @@ export default function VendasDashboard({
                         {v.nomeEvento}
                       </div>
                       <div className="text-xs text-muted truncate">
-                        {dj?.name} · {v.contratanteNome}
+                        {artista?.name} · {v.contratanteNome}
                       </div>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">

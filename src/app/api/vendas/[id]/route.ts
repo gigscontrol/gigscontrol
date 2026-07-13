@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // Escopo por artista: 404 (não vaza) se a venda está fora do que a sessão vê.
     if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
-    const saida = podeVerFinanceiro(r.sessao, venda.djId || null)
+    const saida = podeVerFinanceiro(r.sessao, venda.artistaId || null)
       ? venda
       : redigirVendaFinanceiro(venda);
     return NextResponse.json({ venda: saida });
@@ -116,7 +116,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   }
 
   try {
-    await removerVendaPorId(r.sessao.supabase, params.id);
+    await removerVendaPorId(r.sessao.supabase, params.id, r.sessao.userId);
     await auditAndNotify(r.sessao, {
       modulo: "venda",
       tipo: "remover",

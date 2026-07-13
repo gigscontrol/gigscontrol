@@ -32,9 +32,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         { status: 404 }
       );
     }
-    // Inclui show SEM artista (djId vazio → null): item geral = admin-only
+    // Inclui show SEM artista (artistaId vazio → null): item geral = admin-only
     // (podeVerAgenda(null) só passa admin/legado). Antes escapava do gate.
-    if (!podeVerAgenda(r.sessao, show.djId || null)) {
+    if (!podeVerAgenda(r.sessao, show.artistaId || null)) {
       return NextResponse.json(
         { erro: "Você não tem acesso a este show." },
         { status: 403 }
@@ -212,7 +212,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   }
 
   try {
-    await removerShowPorId(r.sessao.supabase, params.id);
+    await removerShowPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover show.");

@@ -17,7 +17,7 @@ export type ContratoDescricao = {
   numero: string;
 };
 
-type VendaLike = { id: string; nomeEvento?: string; djId?: string; dataShow?: string };
+type VendaLike = { id: string; nomeEvento?: string; artistaId?: string; dataShow?: string };
 type ArtistaLike = { id: string; name: string };
 
 export function descreverContrato(
@@ -29,8 +29,8 @@ export function descreverContrato(
     ? vendas.find((v) => v.id === contrato.vendaId)
     : undefined;
   const evento = venda?.nomeEvento?.trim() || "";
-  const artista = venda?.djId
-    ? artistas.find((a) => a.id === venda.djId)?.name ?? null
+  const artista = venda?.artistaId
+    ? artistas.find((a) => a.id === venda.artistaId)?.name ?? null
     : null;
   const data = (venda?.dataShow || contrato.dataEmissao) ?? null;
   return {

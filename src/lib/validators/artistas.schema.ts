@@ -54,12 +54,19 @@ export const artistaCreateSchema = z.object({
   razao_social: z.string().max(140).optional(),
   endereco: z.string().max(200).optional(),
   telefone: z.string().max(30).optional(),
+  data_nascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  email: z.string().max(120).optional(),
   // Acesso ao sistema (criado junto)
   username_raiz: usernameRaizSchema,
   // Cidade onde reside (referência IBGE)
   cidade_ibge_id: z.string().min(1).max(20).optional(),
   cidade_nome: z.string().min(1).max(120).optional(),
   cidade_uf: z.string().length(2).optional(),
+  // Cidade global (catálogo `cidades`) — canônico; o client resolve pro UUID.
+  cidade_id: z.string().uuid().nullable().optional(),
   // Taxa de agência
   taxa_modo: taxaModoSchema.optional(),
   taxa_valor: z.number().min(0).max(999999).optional(),
@@ -97,7 +104,8 @@ export const artistaCreateSchema = z.object({
       financeiroInformar: z.boolean().optional(),
       contratosVer: z.boolean().optional(),
       contratosCriar: z.boolean().optional(),
-      contatos: z.enum(["todos", "proprios"]).optional(),
+      agendaTotal: z.boolean().optional(),
+      contatos: z.enum(["nenhum", "proprios", "todos"]).optional(),
     })
     .optional(),
 });

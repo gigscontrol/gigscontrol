@@ -5,12 +5,17 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 const COLS =
   "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em";
 
-export async function listarCasas(supabase: SupabaseClient): Promise<CasaRow[]> {
-  const { data, error } = await supabase
+export async function listarCasas(
+  supabase: SupabaseClient,
+  aplicarFiltro?: <Q>(q: Q) => Q
+): Promise<CasaRow[]> {
+  let q = supabase
     .from("casas")
     .select(COLS)
     .is("deletado_em", null)
     .order("nome", { ascending: true });
+  if (aplicarFiltro) q = aplicarFiltro(q);
+  const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as CasaRow[];
 }
@@ -31,9 +36,10 @@ export async function listarCasasDeletadas(
 
 export async function moverCasaParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "casas", id);
+  await softDelete(supabase, "casas", id, deletadoPor);
 }
 
 export async function restaurarCasa(
@@ -85,7 +91,11 @@ export async function atualizarCasa(
   return data as unknown as CasaRow;
 }
 
-export async function removerCasa(supabase: SupabaseClient, id: string): Promise<void> {
+export async function removerCasa(
+  supabase: SupabaseClient,
+  id: string,
+  deletadoPor?: string
+): Promise<void> {
   // Soft delete — fica na lixeira por 30 dias.
-  await moverCasaParaLixeira(supabase, id);
+  await moverCasaParaLixeira(supabase, id, deletadoPor);
 }

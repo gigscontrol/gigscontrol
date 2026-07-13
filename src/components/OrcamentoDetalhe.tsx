@@ -71,16 +71,16 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const cont = contratantes.find((c) => c.id === orc.contratanteId);
   const cs = orc.casaId ? casas.find((c) => c.id === orc.casaId) : undefined;
   const cid = cidades.find((c) => c.id === orc.cidadeId);
-  const dj = artistas.find((d) => d.id === orc.djId);
+  const artista = artistas.find((d) => d.id === orc.artistaId);
   const st = LABELS_STATUS_ORCAMENTO[orc.status];
 
   // Permissões por artista (podeUI já libera admin/legado).
-  const podeConverter = podeUI(orc.djId || null, "vendas.converter");
-  const podeEditarOrc = podeUI(orc.djId || null, "vendas.editar_orcamento");
-  const podeExcluirOrc = podeUI(orc.djId || null, "vendas.excluir_orcamento");
+  const podeConverter = podeUI(orc.artistaId || null, "vendas.converter");
+  const podeEditarOrc = podeUI(orc.artistaId || null, "vendas.editar_orcamento");
+  const podeExcluirOrc = podeUI(orc.artistaId || null, "vendas.excluir_orcamento");
   const semPermissao = t("Você não tem permissão para isso.");
 
-  const texto = gerarTextoWhatsApp(orc, { contratante: cont, casa: cs, cidade: cid, dj });
+  const texto = gerarTextoWhatsApp(orc, { contratante: cont, casa: cs, cidade: cid, artista });
   const linkWA = montarLinkWhatsApp(cont?.telefone ?? "", texto);
 
   const itensCamarim = orc.camarim.filter((i) => i.qtd > 0);
@@ -235,7 +235,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           <div className="card">
             <div className="section-title mb-4">{t("Dados do show")}</div>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <InfoItem label={t("DJ")} value={dj?.name ?? "—"} />
+              <InfoItem label={t("Artista")} value={artista?.name ?? "—"} />
               <InfoItem
                 label={t("Valor do cachê")}
                 value={formatBRL(orc.valorCache)}

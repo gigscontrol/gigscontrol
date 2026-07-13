@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -14,7 +14,6 @@ import {
   Building2,
   Phone,
   MapPin,
-  Palette,
   AtSign,
   Lock,
   AlertTriangle,
@@ -24,17 +23,21 @@ import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
-import ColorPicker from "@/components/ColorPicker";
+import { resolverCidade } from "@/lib/cidade-helpers";
+import InputDataBR from "@/components/inputs/InputDataBR";
 import PhoneInput, {
   DEFAULT_COUNTRY,
   contarDigitos,
   type Country,
 } from "@/components/PhoneInput";
-import { montarTelefoneE164 } from "@/lib/data/countries";
+import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
+import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
 import {
   ModalNovoArtista,
   ModalCredenciais,
+  SeletorDeCor,
 } from "@/components/configuracoes/AbaArtistas";
+import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useT, useMoeda } from "@/lib/i18n";
 import { TRIAL_ATIVADO } from "@/lib/flags";
@@ -75,14 +78,24 @@ type Status = {
     logoUrl: string | null;
     primeiroNomeAdmin: string | null;
   };
+  pessoa: {
+    nome: string;
+    nomeLegal: string;
+    email: string;
+    emailVerificado: boolean;
+    pais: string;
+    documentoTipo: string | null;
+    documento: string | null;
+    telefone: string | null;
+    dataNascimento: string | null;
+  };
 };
 
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
-  { id: 1, label: "Conta", descricao: "Conta criada" },
+  { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Agência", descricao: "Identidade" },
-  { id: 4, label: "Artista", descricao: "1º DJ" },
-  { id: 5, label: "Equipe", descricao: "Convidar membro" },
+  { id: 3, label: "Artista", descricao: "1º artista" },
+  { id: 4, label: "Equipe", descricao: "Convidar membro" },
 ];
 
 /**
@@ -93,14 +106,16 @@ const ETAPAS: { id: number; label: string; descricao: string }[] = [
  * pagamento NÃO conta, pra não pular o passo sem concluir o pagamento.
  */
 function etapaInicial(d: Status): number {
+  // Etapa 1 agora é o cadastro completo (dados pessoais + agência). Volta
+  // pra ela enquanto faltarem os campos obrigatórios de pessoa.
+  if (!d.pessoa?.documento || !d.pessoa?.dataNascimento) return 1;
   const planoOk =
     d.subscriptionStatus === "ativa" ||
     (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
   if (!planoOk) return 2;
-  if (!d.checklist.agenciaConfigurada) return 3;
-  if (!d.checklist.temArtista) return 4;
-  if (!d.checklist.temEquipe) return 5;
-  return 5;
+  if (!d.checklist.temArtista) return 3;
+  if (!d.checklist.temEquipe) return 4;
+  return 4;
 }
 
 export default function OnboardingPage() {
@@ -120,6 +135,9 @@ function OnboardingInner() {
   const [carregando, setCarregando] = useState(true);
   const [etapa, setEtapa] = useState(1);
   const [finalizando, setFinalizando] = useState(false);
+  // Erro vindo do POST de conclusão (402 = falta plano, 409 = falta artista).
+  // O servidor é a fonte da verdade; aqui só exibimos e mandamos pra etapa certa.
+  const [erroConclusao, setErroConclusao] = useState<string | null>(null);
 
   /**
    * Refetcha o status. Por padrão NÃO toggla `carregando`, pra não
@@ -157,19 +175,33 @@ function OnboardingInner() {
   async function concluir() {
     if (finalizando) return;
     setFinalizando(true);
+    setErroConclusao(null);
     try {
-      await fetch("/api/workspace/onboarding", {
+      const r = await fetch("/api/workspace/onboarding", {
         method: "POST",
         credentials: "include",
       });
+      if (!r.ok) {
+        // Servidor barrou: 402 = falta plano/pagamento, 409 = falta artista.
+        // Mostra o motivo e volta pra etapa que resolve.
+        const b = (await r.json().catch(() => ({}))) as { erro?: string };
+        setErroConclusao(
+          b.erro ?? t("Não foi possível finalizar. Verifique as etapas.")
+        );
+        if (r.status === 402) setEtapa(2);
+        else if (r.status === 409) setEtapa(3);
+        setFinalizando(false);
+        return;
+      }
       router.replace("/app");
     } catch {
+      setErroConclusao(t("Falha de conexão. Tente novamente."));
       setFinalizando(false);
     }
   }
 
   function avancar() {
-    if (etapa < 5) setEtapa(etapa + 1);
+    if (etapa < 4) setEtapa(etapa + 1);
     else void concluir();
   }
 
@@ -215,13 +247,6 @@ function OnboardingInner() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <button
-              onClick={concluir}
-              disabled={finalizando}
-              className="text-xs text-muted hover:text-secondary transition-colors disabled:opacity-50"
-            >
-              {t("Pular tudo")}
-            </button>
           </div>
         </div>
       </nav>
@@ -242,9 +267,10 @@ function OnboardingInner() {
           {/* Conteúdo */}
           <div className="mt-8">
             {etapa === 1 && (
-              <Etapa1Bemvindo
-                nomeAgencia={status.identidade.nomeAgencia}
+              <Etapa1Cadastro
+                status={status}
                 onAvancar={avancar}
+                onRecarregar={recarregar}
               />
             )}
             {etapa === 2 && (
@@ -255,20 +281,13 @@ function OnboardingInner() {
               />
             )}
             {etapa === 3 && (
-              <Etapa3Agencia
-                status={status}
-                onAvancar={avancar}
-                onRecarregar={recarregar}
-              />
-            )}
-            {etapa === 4 && (
               <Etapa4Artista
                 status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
             )}
-            {etapa === 5 && (
+            {etapa === 4 && (
               <Etapa5Equipe
                 status={status}
                 onAvancar={avancar}
@@ -276,6 +295,20 @@ function OnboardingInner() {
               />
             )}
           </div>
+
+          {/* Erro de conclusão (barrado pelo servidor: falta plano/artista) */}
+          {erroConclusao && (
+            <div
+              className="mt-4 flex items-center gap-2 text-xs rounded-md px-3 py-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertTriangle size={12} /> {erroConclusao}
+            </div>
+          )}
 
           {/* Navegação inferior */}
           <div className="mt-6 flex justify-between items-center">
@@ -356,43 +389,448 @@ function Stepper({ etapaAtual }: { etapaAtual: number }) {
 // ============================================================
 // Etapa 1 — Bem-vindo
 // ============================================================
-function Etapa1Bemvindo({
-  nomeAgencia,
+function Etapa1Cadastro({
+  status,
   onAvancar,
+  onRecarregar,
 }: {
-  nomeAgencia: string;
+  status: Status;
   onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
+  const { atualizarNomeAgencia } = useWorkspace();
+  const id = status.identidade;
+  const p = status.pessoa;
+
+  // País de origem — dirige o rótulo/formato do documento e o telefone.
+  const [pais, setPais] = useState<string>(p.pais || "BR");
+  // Cidade da agência (unificada: vale pra agência).
+  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
+    id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
+      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf, pais: "BR" }
+      : null
+  );
+  const [nomeAgencia, setNomeAgencia] = useState(id.nomeAgencia);
+  const [apelido, setApelido] = useState(p.nome || "");
+  const [nome, setNome] = useState(p.nomeLegal || "");
+  const [nascimento, setNascimento] = useState<string>(p.dataNascimento ?? "");
+  const [doc, setDoc] = useState<string>(p.documento ?? "");
+
+  // Telefone — unificado com o WhatsApp da agência.
+  const telE164 = id.whatsapp ?? p.telefone ?? "";
+  const paisCountry =
+    COUNTRIES.find((c) => c.code === (p.pais || "BR")) ?? DEFAULT_COUNTRY;
+  const [telCountry, setTelCountry] = useState<Country>(paisCountry);
+  const [telDigits, setTelDigits] = useState<string>(() => {
+    const digs = telE164.replace(/\D/g, "");
+    return digs.startsWith(paisCountry.ddi)
+      ? digs.slice(paisCountry.ddi.length)
+      : digs;
+  });
+  const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
+  const slugAtual = id.slug ?? "";
+  const [slug, setSlug] = useState<string>(slugAtual);
+  const [slugCheck, setSlugCheck] = useState<
+    "idle" | "checando" | "ok" | "em-uso" | "invalido"
+  >(slugAtual ? "ok" : "idle");
+  const [slugMsg, setSlugMsg] = useState<string | null>(null);
+
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Debounce do check de disponibilidade do username/slug (400ms)
+  useEffect(() => {
+    const v = slug.trim().toLowerCase();
+    if (!v) {
+      setSlugCheck("idle");
+      setSlugMsg(null);
+      return;
+    }
+    if (v === slugAtual) {
+      setSlugCheck("ok");
+      setSlugMsg("Username atual");
+      return;
+    }
+    setSlugCheck("checando");
+    setSlugMsg(null);
+    const ctrl = new AbortController();
+    const tm = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
+          { credentials: "include", signal: ctrl.signal }
+        );
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const body = (await r.json()) as { disponivel: boolean; erro?: string };
+        if (body.disponivel) {
+          setSlugCheck("ok");
+          setSlugMsg("Disponível");
+        } else if (body.erro) {
+          setSlugCheck("invalido");
+          setSlugMsg(body.erro);
+        } else {
+          setSlugCheck("em-uso");
+          setSlugMsg("Já em uso por outra agência.");
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          setSlugCheck("invalido");
+          setSlugMsg("Falha na checagem.");
+        }
+      }
+    }, 400);
+    return () => {
+      ctrl.abort();
+      clearTimeout(tm);
+    };
+  }, [slug, slugAtual]);
+
+  const docCfg = configDocumento(pais);
+  const campo =
+    "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary focus:border-border-strong outline-none";
+
+  // Um país só: o seletor do campo Cidade é a fonte da verdade. Ao trocar o
+  // país (ou escolher cidade de outro país), o documento e o DDI do telefone
+  // seguem junto.
+  function sincronizarPais(code: string) {
+    setPais(code);
+    const cc = COUNTRIES.find((x) => x.code === code);
+    if (cc) setTelCountry(cc);
+  }
+
+  async function salvar() {
+    setErro(null);
+    if (!apelido.trim()) return setErro(t("Informe seu apelido."));
+    if (!nome.trim()) return setErro(t("Informe seu nome completo."));
+    if (!nomeAgencia.trim()) return setErro(t("Informe o nome da agência."));
+    if (!cidade) return setErro(t("Informe a cidade."));
+    if (!nascimento) return setErro(t("Informe a data de nascimento."));
+    if (!doc.trim()) return setErro(t("Informe o documento."));
+    if (contarDigitos(telDigits) < telCountry.minDigits)
+      return setErro(t("Telefone incompleto."));
+    if (!slug.trim()) return setErro(t("Informe o username da agência."));
+    if (slug.trim() !== slugAtual && slugCheck !== "ok") {
+      return setErro(t("Username inválido ou em uso."));
+    }
+
+    setSalvando(true);
+    try {
+      const telefone = montarTelefoneE164(telCountry, telDigits);
+      const docNorm = normalizarDocumento(pais, doc);
+      const docTipo =
+        pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
+
+      // Cidade UNIFICADA: a mesma seleção vira o cidade_id do admin (profile) e
+      // a cidade denormalizada da agência (abaixo). Resolve pro UUID do catálogo.
+      let cidadeId: string | undefined;
+      try {
+        cidadeId = (await resolverCidade(cidade)).id;
+      } catch {
+        /* não bloqueia o onboarding se a cidade não resolver */
+      }
+
+      // 1. Dados pessoais → profile (inclui o cidade_id do admin)
+      const rp = await fetch("/api/perfil", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: apelido.trim(),
+          nome_legal: nome.trim(),
+          pais,
+          documento_tipo: docTipo,
+          documento: docNorm,
+          telefone,
+          data_nascimento: nascimento,
+          ...(cidadeId ? { cidade_id: cidadeId } : {}),
+        }),
+      });
+      if (!rp.ok) {
+        const b = await rp.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? t("Falha ao salvar seus dados."));
+      }
+
+      // 2. Nome da agência (atualiza a sidebar)
+      if (nomeAgencia.trim() !== id.nomeAgencia) {
+        await atualizarNomeAgencia(nomeAgencia.trim());
+      }
+
+      // 2b. Username da agência (se mudou) — rota especial sem cota
+      if (slug.trim() !== slugAtual) {
+        const rs = await fetch("/api/workspace/slug/definir-inicial", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: slug.trim().toLowerCase() }),
+        });
+        if (!rs.ok) {
+          const b = await rs.json().catch(() => ({}));
+          throw new Error((b.erro as string) ?? t("Falha ao definir username."));
+        }
+      }
+
+      // 3. Cidade + WhatsApp da agência (o telefone vale pra agência)
+      const rw = await fetch("/api/workspace", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          whatsapp: telefone,
+          cor_acento: cor,
+          cidade_ibge_id: cidade.ibgeId ?? "",
+          cidade_nome: cidade.nome,
+          cidade_uf: cidade.uf,
+        }),
+      });
+      if (!rw.ok) {
+        const b = await rw.json().catch(() => ({}));
+        throw new Error((b.erro as string) ?? `HTTP ${rw.status}`);
+      }
+
+      await onRecarregar();
+      onAvancar();
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
-    <div className="text-center">
-      <div
-        className="h-16 w-16 mx-auto rounded-full flex items-center justify-center mb-4"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(61,123,255,0.2), rgba(61,123,255,0.05))",
-          color: "var(--brand)",
-        }}
-      >
-        <PartyPopper size={28} />
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Complete seu cadastro")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Esses dados aparecem nos seus contratos e orçamentos.")}
+        </p>
       </div>
-      <h1 className="text-2xl font-bold tracking-tight">
-        {t("Bem-vindo ao GIGS CONTROL!")}
-      </h1>
-      <p className="mt-2 text-sm text-secondary max-w-md mx-auto">
-        {t("Sua conta da")}{" "}
-        <strong className="text-primary">{nomeAgencia}</strong> {t("está criada.")}{" "}
-        {t("Vamos configurar os essenciais em 4 passos rápidos.")}
-      </p>
-      <button
-        onClick={onAvancar}
-        className="btn btn-primary text-sm mt-6 py-2.5 px-6"
-        style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-      >
-        <Sparkles size={14} />
-        {t("Vamos lá")}
-        <ArrowRight size={14} />
-      </button>
+
+      <div className="card flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Apelido")} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={apelido}
+            onChange={(e) => setApelido(e.target.value)}
+            placeholder={t("Como te chamam")}
+            className={campo}
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("É o nome que aparece pros outros usuários da sua agência.")}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("País e cidade")} <span className="text-danger">*</span>
+          </span>
+          <CidadeGlobalAutocomplete
+            value={cidade}
+            onChange={(c) => {
+              setCidade(c);
+              if (c?.pais) sincronizarPais(c.pais);
+            }}
+            onPaisChange={(country) => sincronizarPais(country.code)}
+          />
+          <span className="text-[0.7rem] text-muted">
+            {t("O país aqui define o seu documento e o DDI do telefone.")}
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Nome completo")} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder={t("Ex: João Silva")}
+            className={campo}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Data de nascimento")} <span className="text-danger">*</span>
+          </span>
+          {pais === "BR" ? (
+            <InputDataBR value={nascimento} onChange={setNascimento} />
+          ) : (
+            <input
+              type="date"
+              value={nascimento}
+              onChange={(e) => setNascimento(e.target.value)}
+              className={campo}
+            />
+          )}
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {docCfg.label} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={docCfg.format(doc)}
+            onChange={(e) => setDoc(e.target.value)}
+            placeholder={docCfg.placeholder}
+            className={`${campo} placeholder:text-muted`}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
+          <div
+            className="flex items-center gap-2 border rounded-md px-3 py-2"
+            style={{
+              backgroundColor: p.emailVerificado
+                ? "rgba(34,197,94,0.08)"
+                : "transparent",
+              borderColor: p.emailVerificado
+                ? "var(--success)"
+                : "var(--border-color)",
+            }}
+          >
+            <input
+              value={p.email}
+              disabled
+              className="flex-1 bg-transparent outline-none text-sm text-muted cursor-not-allowed"
+            />
+            {p.emailVerificado && (
+              <Check
+                size={14}
+                style={{ color: "var(--success)" }}
+                className="flex-shrink-0"
+              />
+            )}
+          </div>
+          {p.emailVerificado ? (
+            <span
+              className="text-[0.7rem]"
+              style={{ color: "var(--success)" }}
+            >
+              {t("E-mail verificado — é o seu login e não pode ser alterado.")}
+            </span>
+          ) : (
+            <span className="text-[0.7rem] text-muted">
+              {t("O e-mail é seu login e não pode ser alterado.")}
+            </span>
+          )}
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Telefone")} <span className="text-danger">*</span>
+          </span>
+          <PhoneInput
+            country={telCountry}
+            onCountryChange={setTelCountry}
+            value={telDigits}
+            onChange={setTelDigits}
+          />
+        </label>
+
+        <SeletorDeCor cor={cor} onChange={setCor} />
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Nome da agência")} <span className="text-danger">*</span>
+          </span>
+          <input
+            value={nomeAgencia}
+            onChange={(e) => setNomeAgencia(e.target.value)}
+            maxLength={40}
+            className={campo}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-secondary">
+            {t("Username da agência")} <span className="text-danger">*</span>
+          </span>
+          <div
+            className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+            style={{
+              borderColor:
+                slugCheck === "ok"
+                  ? "var(--success)"
+                  : slugCheck === "em-uso" || slugCheck === "invalido"
+                  ? "var(--danger)"
+                  : "var(--border-color)",
+            }}
+          >
+            <span className="text-muted text-sm">-</span>
+            <input
+              value={slug}
+              onChange={(e) =>
+                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+              }
+              placeholder="ex: agenciaelo"
+              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
+              maxLength={30}
+            />
+            {slugCheck === "checando" && (
+              <Loader2 size={14} className="animate-spin text-muted" />
+            )}
+            {slugCheck === "ok" && (
+              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+            )}
+          </div>
+          {slugMsg && (
+            <span
+              className="text-[0.7rem]"
+              style={{
+                color:
+                  slugCheck === "ok" || slug === slugAtual
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+            >
+              {slugMsg}
+            </span>
+          )}
+          <span className="text-[0.65rem] text-muted leading-relaxed">
+            {t("Vai pro fim do login dos seus artistas e equipe (ex:")}{" "}
+            <span className="font-mono text-primary">
+              {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
+            </span>
+            {t("). Cada agência tem um username único — ninguém mais pode usar.")}
+          </span>
+        </label>
+
+        {erro && (
+          <div
+            className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
+            style={{
+              backgroundColor: "rgba(239,68,68,0.08)",
+              color: "var(--danger)",
+              border: "1px solid rgba(239,68,68,0.3)",
+            }}
+          >
+            <AlertTriangle size={12} /> {erro}
+          </div>
+        )}
+
+        <button
+          onClick={salvar}
+          disabled={salvando}
+          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {salvando ? (
+            <>
+              <Loader2 size={14} className="animate-spin" /> {t("Salvando...")}
+            </>
+          ) : (
+            <>
+              {t("Salvar e continuar")} <ArrowRight size={14} />
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -618,376 +1056,6 @@ function Etapa2Plano({
 }
 
 // ============================================================
-// Etapa 3 — Configurar agência
-// ============================================================
-function Etapa3Agencia({
-  status,
-  onAvancar,
-  onRecarregar,
-}: {
-  status: Status;
-  onAvancar: () => void;
-  onRecarregar: () => Promise<void>;
-}) {
-  const t = useT();
-  const { atualizarNomeAgencia } = useWorkspace();
-  const id = status.identidade;
-  const slugAtual = id.slug ?? "";
-
-  // Normaliza um nome em slug (lowercase, sem acentos, só [a-z0-9])
-  function normalizarSlug(s: string): string {
-    return s
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-  }
-
-  // Nome
-  const [nome, setNome] = useState(id.nomeAgencia);
-  // Slug — pré-popula com o slug que o signup gerou automaticamente.
-  // Auto-preenche enquanto o usuário não tocar manualmente (igual artista).
-  const [slug, setSlug] = useState<string>(slugAtual);
-  const [slugEditado, setSlugEditado] = useState(false);
-  const [slugCheck, setSlugCheck] = useState<
-    "idle" | "checando" | "ok" | "em-uso" | "invalido"
-  >("idle");
-  const [slugMsg, setSlugMsg] = useState<string | null>(null);
-  // Cidade (autocomplete IBGE)
-  const [cidade, setCidade] = useState<CidadeEscolhida | null>(
-    id.cidadeIbgeId && id.cidadeNome && id.cidadeUf
-      ? { ibgeId: id.cidadeIbgeId, nome: id.cidadeNome, uf: id.cidadeUf, pais: "BR" }
-      : null
-  );
-  // WhatsApp
-  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
-  const [telDigits, setTelDigits] = useState(() => {
-    const tel = id.whatsapp ?? "";
-    const digs = tel.replace(/\D/g, "");
-    return digs.startsWith("55") && digs.length >= 12 ? digs.slice(2) : digs;
-  });
-  // Cor de preferência
-  const [cor, setCor] = useState<string>(id.corAcento ?? "#3D7BFF");
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
-
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  // Auto-fill: quando o nome muda e o user ainda não tocou no slug,
-  // espelha o nome normalizado
-  function aoMudarNome(novo: string) {
-    setNome(novo);
-    if (!slugEditado) {
-      setSlug(normalizarSlug(novo));
-    }
-  }
-
-  // Debounce do check de disponibilidade do slug (400ms)
-  useEffect(() => {
-    const v = slug.trim().toLowerCase();
-    if (!v) {
-      setSlugCheck("idle");
-      setSlugMsg(null);
-      return;
-    }
-    // Mesmo slug atual: já está OK (a gente vai pular o update no salvar)
-    if (v === slugAtual) {
-      setSlugCheck("ok");
-      setSlugMsg("Username atual");
-      return;
-    }
-    setSlugCheck("checando");
-    setSlugMsg(null);
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(
-          `/api/workspace/slug/disponivel?slug=${encodeURIComponent(v)}`,
-          { credentials: "include", signal: ctrl.signal }
-        );
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const body = (await r.json()) as { disponivel: boolean; erro?: string };
-        if (body.disponivel) {
-          setSlugCheck("ok");
-          setSlugMsg("Disponível");
-        } else if (body.erro) {
-          setSlugCheck("invalido");
-          setSlugMsg(body.erro);
-        } else {
-          setSlugCheck("em-uso");
-          setSlugMsg("Já em uso por outra agência.");
-        }
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          setSlugCheck("invalido");
-          setSlugMsg("Falha na checagem.");
-        }
-      }
-    }, 400);
-    return () => {
-      ctrl.abort();
-      clearTimeout(t);
-    };
-  }, [slug, slugAtual]);
-
-  async function salvar() {
-    setErro(null);
-    if (!nome.trim()) return setErro(t("Informe o nome da agência."));
-    if (!cidade) return setErro(t("Informe a cidade da agência."));
-    if (contarDigitos(telDigits) < country.minDigits)
-      return setErro(t("WhatsApp incompleto."));
-    if (!slug.trim()) return setErro(t("Informe o username da agência."));
-    if (slug.trim() !== slugAtual && slugCheck !== "ok") {
-      return setErro(t("Username inválido ou em uso."));
-    }
-
-    setSalvando(true);
-    try {
-      // 1. Se o slug mudou, define agora (rota especial sem cota)
-      if (slug.trim() !== slugAtual) {
-        const rs = await fetch("/api/workspace/slug/definir-inicial", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: slug.trim().toLowerCase() }),
-        });
-        if (!rs.ok) {
-          const b = await rs.json().catch(() => ({}));
-          throw new Error((b.erro as string) ?? "Falha ao definir username.");
-        }
-      }
-      // 2. Nome via workspace-context (atualiza sidebar)
-      if (nome.trim() !== id.nomeAgencia) {
-        await atualizarNomeAgencia(nome.trim());
-      }
-      // 3. Resto numa única chamada
-      const r = await fetch("/api/workspace", {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          whatsapp: montarTelefoneE164(country, telDigits),
-          cor_acento: cor,
-          cidade_ibge_id: cidade.ibgeId ?? "",
-          cidade_nome: cidade.nome,
-          cidade_uf: cidade.uf,
-        }),
-      });
-      if (!r.ok) {
-        const b = await r.json().catch(() => ({}));
-        throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
-      }
-      await onRecarregar();
-      onAvancar();
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  return (
-    <div>
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold tracking-tight">{t("Sua agência")}</h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Esses dados aparecem nos orçamentos e na dashboard.")}
-        </p>
-      </div>
-
-      <div className="card flex flex-col gap-4">
-        {/* Nome */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Nome da agência")} <span className="text-danger">*</span>
-          </span>
-          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-            <Building2 size={14} className="text-muted flex-shrink-0" />
-            <input
-              value={nome}
-              onChange={(e) => aoMudarNome(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted"
-              maxLength={40}
-            />
-          </div>
-        </label>
-
-        {/* Username da agência (slug) */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Username da agência")} <span className="text-danger">*</span>
-          </span>
-          <div
-            className="flex items-center gap-1 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
-            style={{
-              borderColor:
-                slugCheck === "ok"
-                  ? "var(--success)"
-                  : slugCheck === "em-uso" || slugCheck === "invalido"
-                  ? "var(--danger)"
-                  : "var(--border-color)",
-            }}
-          >
-            <span className="text-muted text-sm">-</span>
-            <input
-              value={slug}
-              onChange={(e) => {
-                setSlugEditado(true);
-                setSlug(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                );
-              }}
-              placeholder="ex: agenciaelo"
-              className="flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
-              maxLength={30}
-            />
-            {slugCheck === "checando" && (
-              <Loader2 size={14} className="animate-spin text-muted" />
-            )}
-            {slugCheck === "ok" && (
-              <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
-            )}
-          </div>
-          {slugMsg && (
-            <span
-              className="text-[0.7rem]"
-              style={{
-                color:
-                  slugCheck === "ok" || slug === slugAtual
-                    ? "var(--success)"
-                    : "var(--danger)",
-              }}
-            >
-              {slugMsg}
-            </span>
-          )}
-          <span className="text-[0.65rem] text-muted leading-relaxed">
-            {t("Vai pro fim do login dos seus artistas e equipe (ex:")}{" "}
-            <span className="font-mono text-primary">
-              {id.primeiroNomeAdmin || "voce"}-{slug || "agencia"}
-            </span>
-            {t("). Cada agência tem um username único — ninguém mais pode usar.")}
-          </span>
-        </label>
-
-        {/* Cidade */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            {t("Cidade")} <span className="text-danger">*</span>
-          </span>
-          <CidadeGlobalAutocomplete
-            value={cidade}
-            onChange={setCidade}
-            placeholder="Ex: São Paulo, Belo Horizonte..."
-          />
-        </label>
-
-        {/* WhatsApp */}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-secondary">
-            WhatsApp <span className="text-danger">*</span>
-          </span>
-
-          <PhoneInput
-            country={country}
-            onCountryChange={setCountry}
-            value={telDigits}
-            onChange={setTelDigits}
-          />
-        </label>
-
-        {/* Cor */}
-        <CampoCor cor={cor} onChange={setCor} aberto={colorPickerOpen} setAberto={setColorPickerOpen} />
-
-        {erro && (
-          <div
-            className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
-            style={{
-              backgroundColor: "rgba(239,68,68,0.08)",
-              color: "var(--danger)",
-              border: "1px solid rgba(239,68,68,0.3)",
-            }}
-          >
-            <AlertTriangle size={12} />
-            {erro}
-          </div>
-        )}
-
-        <button
-          onClick={salvar}
-          disabled={salvando}
-          className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-        >
-          {salvando ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              {t("Salvando...")}
-            </>
-          ) : (
-            <>
-              {t("Salvar e continuar")}
-              <ArrowRight size={14} />
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Campo de cor com botão "pílula" + popover do ColorPicker quando aberto.
- * Usa useRef no botão pra ancorar o popover de forma correta (sem
- * gambiarra com document.activeElement).
- */
-function CampoCor({
-  cor,
-  onChange,
-  aberto,
-  setAberto,
-}: {
-  cor: string;
-  onChange: (c: string) => void;
-  aberto: boolean;
-  setAberto: (v: boolean) => void;
-}) {
-  const t = useT();
-  const ref = useRef<HTMLButtonElement>(null);
-  return (
-    <div className="flex flex-col gap-1.5 relative">
-      <span className="text-xs font-medium text-secondary">{t("Cor de preferência")}</span>
-      <button
-        ref={ref}
-        type="button"
-        onClick={() => setAberto(!aberto)}
-        className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors"
-      >
-        <span
-          className="h-5 w-5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: cor }}
-        />
-        <span className="font-mono text-sm text-primary flex-1 text-left">
-          {cor.toUpperCase()}
-        </span>
-        <Palette size={14} className="text-muted" />
-      </button>
-      {aberto && (
-        <ColorPicker
-          cor={cor}
-          anchorRef={ref}
-          onApply={(c) => {
-            onChange(c);
-            setAberto(false);
-          }}
-          onClose={() => setAberto(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-// ============================================================
 // Etapa 4 — Primeiro artista (usa o MESMO modal de Configurações)
 // ============================================================
 function Etapa4Artista({
@@ -1105,59 +1173,7 @@ function Etapa5Equipe({
   // Lê o slug do status (fresco a cada onRecarregar) — mesma razão da
   // Etapa 4: useAuth().sessao.workspace.slug fica stale após a Etapa 3.
   const slug = status.identidade.slug ?? "";
-  const [nome, setNome] = useState("");
-  // Login (handle) — raiz digitada; auto-sugere a partir do nome.
-  const [usernameRaiz, setUsernameRaiz] = useState("");
-  const [usernameFoiEditado, setUsernameFoiEditado] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ senha: string; login: string } | null>(null);
-
-  const usernameCompleto = usernameRaiz.trim()
-    ? `${usernameRaiz.trim().toLowerCase()}-${slug}`
-    : "";
-  const usernameValido =
-    usernameRaiz.trim().length >= 3 &&
-    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(usernameRaiz.trim());
-
-  // Auto-sugere o login a partir do nome até o admin tocar no campo.
-  useEffect(() => {
-    if (usernameFoiEditado) return;
-    setUsernameRaiz(
-      nome
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-    );
-  }, [nome, usernameFoiEditado]);
-
-  async function salvar() {
-    setErro(null);
-    if (!nome.trim()) return setErro(t("Informe o nome."));
-    if (!usernameValido)
-      return setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
-    setSalvando(true);
-    try {
-      const r = await adicionarUsuario({
-        nome: nome.trim(),
-        username_raiz: usernameRaiz.trim().toLowerCase(),
-        // Onboarding cria só o acesso; artistas/permissões se definem na Equipe.
-        artistIds: [],
-      });
-      setResultado({
-        senha: r.senhaTemporaria,
-        login: r.usuario.username ?? usernameCompleto,
-      });
-      await onRecarregar();
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvando(false);
-    }
-  }
 
   return (
     <div>
@@ -1168,8 +1184,8 @@ function Etapa5Equipe({
           style={{ color: "var(--brand)" }}
         />
         <h2 className="text-xl font-bold tracking-tight">{t("Convide a equipe")}</h2>
-        <p className="mt-1 text-sm text-secondary">
-          {t("Crie o acesso de quem vai te ajudar a tocar a agência. As permissões você define depois, por artista. Pode pular se ainda tá começando sozinho.")}
+        <p className="mt-1 text-sm text-secondary max-w-md mx-auto">
+          {t("Cadastre quem vai te ajudar a tocar a agência — o acesso é criado na hora. As permissões você define depois, por artista. Pode pular se ainda tá começando sozinho.")}
         </p>
       </div>
 
@@ -1200,89 +1216,36 @@ function Etapa5Equipe({
           </button>
         </div>
       ) : (
-        <div className="card flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{t("Nome completo")}</span>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex.: Marina Souza"
-              className="campo-input"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-secondary">{t("Login (username)")}</span>
-            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
-              <input
-                value={usernameRaiz}
-                onChange={(e) => {
-                  setUsernameFoiEditado(true);
-                  setUsernameRaiz(
-                    e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
-                  );
-                }}
-                placeholder="marinasouza"
-                style={{
-                  width: `${Math.max(
-                    usernameRaiz.length || "marinasouza".length,
-                    4
-                  )}ch`,
-                }}
-                className="bg-transparent outline-none text-sm text-primary placeholder:text-muted font-mono"
-              />
-              <span className="text-sm text-muted font-mono whitespace-nowrap">
-                -{slug || "agencia"}
-              </span>
-            </div>
-            {usernameCompleto && !usernameValido && (
-              <span className="text-[0.7rem]" style={{ color: "var(--danger)" }}>
-                {t("Use 3+ caracteres (letras, números, hífen).")}
-              </span>
-            )}
-            {usernameValido && usernameCompleto && (
-              <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
-                {t("Login completo:")}{" "}
-                <strong className="font-mono text-primary">{usernameCompleto}</strong>
-              </span>
-            )}
-          </label>
-
-          <p className="text-[0.7rem] text-muted">
-            {t("Isto cria só o acesso (login + senha). Você define o que essa pessoa pode ver e fazer depois, na aba Equipe de cada artista.")}
-          </p>
-
-          {erro && (
-            <div
-              className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
-              style={{
-                backgroundColor: "rgba(239,68,68,0.08)",
-                color: "var(--danger)",
-                border: "1px solid rgba(239,68,68,0.3)",
+        <>
+          {/* Form COMPLETO da equipe — reusa o ModalUsuario da dashboard
+              inline (igual a Etapa do Artista faz com ModalNovoArtista),
+              pra o membro nascer com apelido/país/nascimento/documento/
+              e-mail/telefone/cor + login + artistas, idêntico ao "Criar
+              usuário". A criação e as credenciais são tratadas aqui. */}
+          <div className="card">
+            <ModalUsuario
+              modoInline
+              modo="criar"
+              slugAgencia={slug}
+              onFechar={() => {}}
+              onEditar={() => {}}
+              onCriar={async (dados) => {
+                const r = await adicionarUsuario(dados);
+                setResultado({
+                  senha: r.senhaTemporaria,
+                  login: r.usuario.username ?? "",
+                });
+                await onRecarregar();
               }}
-            >
-              <AlertTriangle size={12} />
-              {erro}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={salvar}
-              disabled={salvando}
-              className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
-              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-            >
-              {salvando ? t("Convidando...") : t("Convidar")}
-            </button>
-            <button
-              onClick={onAvancar}
-              className="text-xs text-muted hover:text-secondary"
-            >
-              {t("Pular e finalizar")}
-            </button>
+            />
           </div>
-        </div>
+          <button
+            onClick={onAvancar}
+            className="text-xs text-muted hover:text-secondary block mx-auto mt-3"
+          >
+            {t("Pular e finalizar")}
+          </button>
+        </>
       )}
     </div>
   );

@@ -95,12 +95,12 @@ export default function ShowDetalheModal({
     );
   }
 
-  const dj = artistas.find((d) => d.id === show.djId);
+  const artista = artistas.find((d) => d.id === show.artistaId);
   const notasDoShow = notas.filter((n) => n.showId === show.id);
   const cancelado = show.status === "cancelado";
   // Grey-out (UX; servidor é a autoridade). Cancelar/reativar = alterar evento
   // → agenda.editar_todos. podeUI já libera legado/admin.
-  const podeGerenciarShow = podeUI(show.djId || null, "agenda.editar_todos");
+  const podeGerenciarShow = podeUI(show.artistaId || null, "agenda.editar_todos");
 
   async function confirmarCancelamento() {
     const m = motivoCancel.trim();
@@ -219,8 +219,8 @@ export default function ShowDetalheModal({
       <div
         className="-mx-5 -mt-5 mb-5 px-5 pt-5 pb-4 border-b border-border"
         style={{
-          background: dj
-            ? `linear-gradient(135deg, ${dj.color}26 0%, transparent 75%)`
+          background: artista
+            ? `linear-gradient(135deg, ${artista.color}26 0%, transparent 75%)`
             : "transparent",
         }}
       >
@@ -228,16 +228,16 @@ export default function ShowDetalheModal({
           <div
             className="h-12 w-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
             style={{
-              backgroundColor: dj?.color ?? "var(--bg-elevated)",
+              backgroundColor: artista?.color ?? "var(--bg-elevated)",
               color: "#fff",
-              boxShadow: `0 0 0 3px ${dj?.color ?? "#888"}33`,
+              boxShadow: `0 0 0 3px ${artista?.color ?? "#888"}33`,
             }}
           >
-            {dj?.name.slice(0, 2).toUpperCase() ?? "—"}
+            {artista?.name.slice(0, 2).toUpperCase() ?? "—"}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-base font-bold text-primary truncate">
-              {dj?.name ?? t("Sem DJ")}
+              {artista?.name ?? t("Sem artista")}
             </div>
             <div className="text-xs text-secondary capitalize">{dataLegivel || t("Data não definida")}</div>
           </div>

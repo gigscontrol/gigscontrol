@@ -8,7 +8,7 @@ import {
   UsernameEmUsoError,
   ArtistaNaLixeiraError,
 } from "@/lib/services/artistas.service";
-import { redigirDj } from "@/lib/mappers/artista";
+import { redigirArtista } from "@/lib/mappers/artista";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -25,10 +25,10 @@ export async function GET() {
     const podeTudo = r.sessao.isSuperAdmin || r.sessao.papel === "admin";
     const saida = podeTudo
       ? artistas
-      : artistas.map((dj) =>
-          r.sessao.papel === "artista" && dj.id === r.sessao.artistaId
-            ? dj
-            : redigirDj(dj)
+      : artistas.map((artista) =>
+          r.sessao.papel === "artista" && artista.id === r.sessao.artistaId
+            ? artista
+            : redigirArtista(artista)
         );
     return NextResponse.json({ artistas: saida });
   } catch (e) {

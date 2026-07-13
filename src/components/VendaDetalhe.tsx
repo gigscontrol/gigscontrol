@@ -57,14 +57,14 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     );
   }
 
-  const dj = artistas.find((d) => d.id === venda.djId);
+  const artista = artistas.find((d) => d.id === venda.artistaId);
   // Permissões por artista (podeUI já libera admin/legado).
   const podeEditarVenda =
-    podeUI(venda.djId || null, "vendas.editar_venda") ||
-    podeUI(venda.djId || null, "vendas.editar_todos");
-  const podeExcluirVenda = podeUI(venda.djId || null, "vendas.excluir_venda");
+    podeUI(venda.artistaId || null, "vendas.editar_venda") ||
+    podeUI(venda.artistaId || null, "vendas.editar_todos");
+  const podeExcluirVenda = podeUI(venda.artistaId || null, "vendas.excluir_venda");
   // Booking edita o SHOW → usa a permissão de editar agenda (o servidor exige a mesma).
-  const podeEditarBooking = podeUI(venda.djId || null, "agenda.editar_todos");
+  const podeEditarBooking = podeUI(venda.artistaId || null, "agenda.editar_todos");
   const semPermissao = t("Você não tem permissão para isso.");
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const cancelado = show?.status === "cancelado";
@@ -361,7 +361,7 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         <div className="flex flex-col gap-4">
           <div className="card">
             <SectionTitle icon={<Music size={14} />} title={t("Show")} accent={accent} />
-            <InfoLine label={t("Artista da agência")} value={dj?.name ?? "—"} bold />
+            <InfoLine label={t("Artista da agência")} value={artista?.name ?? "—"} bold />
             <InfoLine
               label={t("Cachê")}
               value={

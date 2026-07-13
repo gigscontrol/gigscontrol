@@ -76,7 +76,8 @@ export async function salvarVinculoDoArtista(
 export async function removerVinculoDoArtista(
   admin: SupabaseClient,
   userId: string,
-  artistId: string
+  artistId: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await removerVinculo(admin, userId, artistId);
+  await removerVinculo(admin, userId, artistId, deletadoPor);
 }

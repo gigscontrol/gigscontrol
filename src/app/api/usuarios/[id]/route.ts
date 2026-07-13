@@ -72,7 +72,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     .maybeSingle();
   try {
     const admin = criarClienteAdmin();
-    await removerUsuarioDaEquipe(admin, params.id);
+    await removerUsuarioDaEquipe(admin, params.id, r.sessao.userId);
     await auditAndNotify(r.sessao, {
       modulo: "equipe",
       tipo: "remover",

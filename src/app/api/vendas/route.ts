@@ -28,7 +28,7 @@ export async function GET() {
     // autorização de ver o financeiro daquele artista; os demais recebem a venda
     // redigida (cachê/valores permanecem — o vendedor precisa do negócio).
     const saida = vendas.map((v) =>
-      podeVerFinanceiro(r.sessao, v.djId || null) ? v : redigirVendaFinanceiro(v)
+      podeVerFinanceiro(r.sessao, v.artistaId || null) ? v : redigirVendaFinanceiro(v)
     );
     return NextResponse.json({ vendas: saida });
   } catch (e) {

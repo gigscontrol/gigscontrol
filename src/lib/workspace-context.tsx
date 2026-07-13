@@ -9,11 +9,22 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DJ, TaxaAgenciaModo, DocumentoTipo } from "@/types";
+import type { Artista, TaxaAgenciaModo, DocumentoTipo } from "@/types";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 import { setPreferencias as setPreferenciasGlobais } from "./preferencias";
+import {
+  ESCOPO_PADRAO,
+  type EscopoUsuario,
+  type Funcoes,
+  type UsuarioEquipe as UsuarioEquipeBase,
+} from "./mappers/usuario";
+
+// Reexportados para quem importava esses tipos/valores daqui — a fonte
+// única agora é o mapper (src/lib/mappers/usuario.ts).
+export { ESCOPO_PADRAO };
+export type { EscopoUsuario, Funcoes };
 
 /**
  * Configurações do workspace (a agência) — módulo de Configurações do admin.
@@ -38,7 +49,7 @@ export type WorkspacePreferencias = {
   fusoPadrao: string | null;
 };
 
-export type ArtistaWS = DJ;
+export type ArtistaWS = Artista;
 
 /** Payload do form de novo artista (mandado pra /api/artistas POST). */
 export type NovoArtistaInput = {
@@ -46,10 +57,12 @@ export type NovoArtistaInput = {
   cor?: string;
   /** Parte do username digitada pelo admin — o backend concatena o slug. */
   usernameRaiz: string;
-  /** Cidade onde reside (do catálogo IBGE). */
+  /** Cidade onde reside (do catálogo IBGE — legado só-BR). */
   cidadeIbgeId?: string;
   cidadeNome?: string;
   cidadeUf?: string;
+  /** Cidade global (catálogo `cidades`) — canônico, funciona pra qualquer país. */
+  cidadeId?: string;
   /** Dados do CONTRATADO (para contratos). */
   /** País de origem (ISO2) — dirige documento/DDI/endereço. */
   pais?: string;
@@ -59,6 +72,10 @@ export type NovoArtistaInput = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  /** Data de nascimento (YYYY-MM-DD). */
+  dataNascimento?: string;
+  /** E-mail de contato do artista. */
+  email?: string;
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
@@ -66,10 +83,12 @@ export type NovoArtistaInput = {
   riderCamarim?: string[];
   riderEfeitos?: string[];
   riderTecnico?: string[];
-  /** Privacidade do DJ — gravada direto no jsonb artists.privacidade. */
+  /** Privacidade do artista — gravada direto no jsonb artists.privacidade. */
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
   emailConta?: string;
+  /** Só usado em PATCH — acesso do artista ao sistema (true = suspenso). */
+  acesso_suspenso?: boolean;
 };
 
 export type NovoArtistaResultado = {
@@ -81,53 +100,20 @@ export type NovoArtistaResultado = {
 /** Papéis administrativos suportados na aba Equipe. */
 export type PapelEquipe = Extract<Papel, "produtor" | "vendedor" | "financeiro">;
 
-/** Flags de privacidade do usuário (escopo). */
-export type EscopoUsuario = {
-  verTodosContatos: boolean;
-  verTodasVendas: boolean;
-  editarTodosEventos: boolean;
-};
-
-export const ESCOPO_PADRAO: EscopoUsuario = {
-  verTodosContatos: true,
-  verTodasVendas: true,
-  editarTodosEventos: true,
-};
-
 /**
- * Funções operacionais e DJs atendidos.
- * Vazio quando o usuário ainda não foi configurado.
- */
-export type Funcoes = {
-  vendedor?: string[];
-  financeiro?: string[];
-  produtor?: string[];
-};
-
-/**
- * Usuário da equipe.
+ * Usuário da equipe (visão do cliente).
+ *
+ * Mesmo shape do mapper (fonte única: `UsuarioEquipeBase`, incluindo
+ * `EscopoUsuario`/`Funcoes`), só estreitando `papel` para os 3 papéis
+ * operacionais que a aba Equipe do cliente lida com (o admin nunca
+ * aparece nesta lista).
  *
  * Cada usuário operacional pode acumular múltiplas FUNÇÕES (vendedor /
  * financeiro / produtor) e cada uma carrega sua própria lista de DJs
  * atendidos. O campo `papel` continua existindo como "função primária"
  * pra compatibilidade com policies e código legado.
  */
-export type UsuarioEquipe = {
-  id: string;
-  nome: string;
-  email: string;
-  /**
-   * Handle de login "raiz-slug". Membros novos nascem com ele; membros
-   * antigos (criados por e-mail) têm `null` e logam pelo e-mail real.
-   */
-  username: string | null;
-  papel: PapelEquipe;
-  escopo: EscopoUsuario;
-  funcoes: Funcoes;
-  ativo: boolean;
-  /** Permissão dedicada: criar pastas de anotações na Agenda. */
-  podeCriarAnotacoes?: boolean;
-};
+export type UsuarioEquipe = Omit<UsuarioEquipeBase, "papel"> & { papel: PapelEquipe };
 
 // ----------------------------------------------------------------
 // Estado inicial
@@ -240,6 +226,8 @@ type WorkspaceContextValue = {
     username_raiz: string;
     /** Artistas com quem trabalha (cria vínculo vazio; função definida na Equipe). */
     artistIds: string[];
+    /** Permissões já definidas no modal (mapa artistId → chaves); opcional. */
+    permissoes_por_artista?: Record<string, string[]>;
     /** Dados pessoais (opcionais) — country-aware, servem para contrato. */
     cor?: string;
     pais?: string;
@@ -249,6 +237,8 @@ type WorkspaceContextValue = {
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) => Promise<ResultadoNovoUsuario>;
   atualizarUsuario: (
@@ -260,6 +250,17 @@ type WorkspaceContextValue = {
       funcoes: Funcoes;
       ativo: boolean;
       pode_criar_anotacoes: boolean;
+      // Dados pessoais (opcionais) — country-aware, servem para contrato.
+      cor: string;
+      pais: string;
+      nome_legal: string;
+      documento_tipo: string;
+      documento: string;
+      razao_social: string;
+      endereco: string;
+      telefone: string;
+      data_nascimento: string;
+      cidade_id: string;
     }>
   ) => Promise<UsuarioEquipe>;
   removerUsuario: (id: string) => Promise<void>;
@@ -476,6 +477,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.cidadeIbgeId) payload.cidade_ibge_id = input.cidadeIbgeId;
       if (input.cidadeNome) payload.cidade_nome = input.cidadeNome;
       if (input.cidadeUf) payload.cidade_uf = input.cidadeUf;
+      if (input.cidadeId) payload.cidade_id = input.cidadeId;
       if (input.pais) payload.pais = input.pais;
       if (input.nomeLegal) payload.nome_legal = input.nomeLegal;
       if (input.documento) payload.documento = input.documento;
@@ -483,6 +485,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.razaoSocial) payload.razao_social = input.razaoSocial;
       if (input.endereco) payload.endereco = input.endereco;
       if (input.telefone) payload.telefone = input.telefone;
+      if (input.dataNascimento) payload.data_nascimento = input.dataNascimento;
+      if (input.email) payload.email = input.email;
       if (input.taxaModo) payload.taxa_modo = input.taxaModo;
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
@@ -519,6 +523,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.cidadeIbgeId !== undefined) payload.cidade_ibge_id = patch.cidadeIbgeId;
       if (patch.cidadeNome !== undefined) payload.cidade_nome = patch.cidadeNome;
       if (patch.cidadeUf !== undefined) payload.cidade_uf = patch.cidadeUf;
+      if (patch.cidadeId !== undefined) payload.cidade_id = patch.cidadeId;
       if (patch.pais !== undefined) payload.pais = patch.pais;
       if (patch.nomeLegal !== undefined) payload.nome_legal = patch.nomeLegal;
       if (patch.documento !== undefined) payload.documento = patch.documento;
@@ -527,12 +532,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.razaoSocial !== undefined) payload.razao_social = patch.razaoSocial;
       if (patch.endereco !== undefined) payload.endereco = patch.endereco;
       if (patch.telefone !== undefined) payload.telefone = patch.telefone;
+      if (patch.dataNascimento !== undefined)
+        payload.data_nascimento = patch.dataNascimento;
+      if (patch.email !== undefined) payload.email = patch.email;
       if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
       if (patch.riderTecnico !== undefined) payload.rider_tecnico = patch.riderTecnico;
       if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
+      if (patch.acesso_suspenso !== undefined)
+        payload.acesso_suspenso = patch.acesso_suspenso;
 
       const res = await fetch(`/api/artistas/${id}`, {
         method: "PATCH",
@@ -651,6 +661,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       nome: string;
       username_raiz: string;
       artistIds: string[];
+      permissoes_por_artista?: Record<string, string[]>;
       cor?: string;
       pais?: string;
       nome_legal?: string;
@@ -659,6 +670,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       razao_social?: string;
       endereco?: string;
       telefone?: string;
+      data_nascimento?: string;
+      email_contato?: string;
       cidade_id?: string;
     }): Promise<ResultadoNovoUsuario> => {
       const res = await fetch("/api/usuarios", {
@@ -689,6 +702,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         funcoes: Funcoes;
         ativo: boolean;
         pode_criar_anotacoes: boolean;
+        // Dados pessoais (opcionais) — country-aware, servem para contrato.
+        cor: string;
+        pais: string;
+        nome_legal: string;
+        documento_tipo: string;
+        documento: string;
+        razao_social: string;
+        endereco: string;
+        telefone: string;
+        data_nascimento: string;
+        cidade_id: string;
       }>
     ): Promise<UsuarioEquipe> => {
       const res = await fetch(`/api/usuarios/${id}`, {
@@ -919,7 +943,7 @@ export function useWorkspace() {
   return ctx;
 }
 
-export function useArtistas(): DJ[] {
+export function useArtistas(): Artista[] {
   return useWorkspace().artistas;
 }
 

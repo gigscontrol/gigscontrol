@@ -1,4 +1,6 @@
 import type { Papel } from "@/lib/permissoes";
+import type { Cidade } from "@/types";
+import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
 /**
  * Mapa de funções operacionais → lista de DJs (artists.id) atendidos.
@@ -16,8 +18,6 @@ export type Funcoes = {
   financeiro?: string[];
   produtor?: string[];
 };
-
-export const FUNCOES_VAZIA: Funcoes = {};
 
 /** Linha da tabela `profiles`. */
 export type ProfileRow = {
@@ -60,7 +60,16 @@ export type ProfileRow = {
   razao_social: string | null;
   endereco: string | null;
   telefone: string | null;
+  // Pessoa (migrations 72/73) — nascimento + e-mail de CONTATO (≠ login).
+  data_nascimento: string | null;
+  email_contato: string | null;
   cidade_id: string | null;
+  /**
+   * Cidade embutida (join em cidades por cidade_id). Presente só nos SELECTs
+   * que embedam o recurso (o roster da equipe) — alimenta o pré-preenchimento
+   * do seletor de cidade no editar.
+   */
+  cidade?: CidadeRow | null;
 };
 
 /** Escopo de privacidade da equipe (flags genéricas). */
@@ -98,7 +107,11 @@ export type UsuarioEquipe = {
   razaoSocial?: string;
   endereco?: string;
   telefone?: string;
+  dataNascimento?: string;
+  emailContato?: string;
   cidadeId?: string;
+  /** Cidade completa (nome/uf/país) — pré-preenche o seletor de cidade no editar. */
+  cidade?: Cidade;
 };
 
 function escopoValido(raw: Record<string, unknown> | null | undefined): EscopoUsuario {
@@ -150,7 +163,10 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   if (row.razao_social) u.razaoSocial = row.razao_social;
   if (row.endereco) u.endereco = row.endereco;
   if (row.telefone) u.telefone = row.telefone;
+  if (row.data_nascimento) u.dataNascimento = row.data_nascimento;
+  if (row.email_contato) u.emailContato = row.email_contato;
   if (row.cidade_id) u.cidadeId = row.cidade_id;
+  if (row.cidade) u.cidade = rowParaCidade(row.cidade);
   if (row.pode_criar_anotacoes) u.podeCriarAnotacoes = true;
   return u;
 }
@@ -199,5 +215,7 @@ export type UsuarioEscrita = {
   razao_social?: string | null;
   endereco?: string | null;
   telefone?: string | null;
+  data_nascimento?: string | null;
+  email_contato?: string | null;
   cidade_id?: string | null;
 };

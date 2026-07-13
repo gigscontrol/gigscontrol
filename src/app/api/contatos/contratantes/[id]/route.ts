@@ -15,8 +15,13 @@ type RouteCtx = { params: { id: string } };
 export async function GET(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
-  if (g) return g;
+  // Artista lê por id respeitando privacidade.contatos (checada em
+  // contratanteVisivelParaSessao → 404 fora do escopo). Demais papéis: gate
+  // atual. PATCH/DELETE seguem bloqueando artista (não muta contatos).
+  if (r.sessao.papel !== "artista") {
+    const g = verificarAcessoContatos(r.sessao);
+    if (g) return g;
+  }
   try {
     const contratante = await buscarContratantePorId(r.sessao.supabase, params.id);
     // 404 (não 403) fora do escopo pra não vazar existência.
@@ -98,7 +103,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
       ))
     )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
-    await removerContratantePorId(r.sessao.supabase, params.id);
+    await removerContratantePorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaDeErro(e, "Falha ao remover contratante.");

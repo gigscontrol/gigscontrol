@@ -27,7 +27,7 @@ import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 import { useT } from "@/lib/i18n";
 
 type Props = {
-  selectedDJs: string[];
+  selectedArtistas: string[];
   onNavigate?: (tab: ActiveTab, page: ActivePage) => void;
   onAbrirShow?: (showId: string) => void;
 };
@@ -86,7 +86,7 @@ function resolverMes(
   return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
-export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }: Props) {
+export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirShow }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.agenda.color;
   const { shows } = useShows();
@@ -128,17 +128,17 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   const showsMes = useMemo(
     () =>
       shows.filter((s) => {
-        if (!selectedDJs.includes(s.djId) || !s.data) return false;
+        if (!selectedArtistas.includes(s.artistaId) || !s.data) return false;
         if (tudo) return true;
         const d = new Date(`${s.data}T12:00:00`);
         return d.getFullYear() === ano && d.getMonth() === mes;
       }),
-    [shows, selectedDJs, ano, mes, tudo]
+    [shows, selectedArtistas, ano, mes, tudo]
   );
 
   const cidadeDoShow = (s: Show) =>
     s.cidadeId ? cidades.find((c) => String(c.id) === s.cidadeId) : undefined;
-  const djDoShow = (s: Show) => artistas.find((d) => d.id === s.djId);
+  const artistaDoShow = (s: Show) => artistas.find((d) => d.id === s.artistaId);
   // Local do evento (a "balada"): venue do show → casa vinculada →
   // nome_local da venda vinculada. Vazio se nenhum estiver setado.
   const localDoEvento = (s: Show): string => {
@@ -219,24 +219,26 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         // histórico inteiro entraria, inclusive viagens já passadas).
         if (tudo && (!s.data || s.data < hoje)) return false;
         const cid = cidadeDoShow(s);
-        const dj = djDoShow(s);
+        const artista = artistaDoShow(s);
         // Sem cidade não dá pra dizer se é viagem — inclui por garantia.
         if (!cid) return true;
-        // Exclui se a cidade do show é a cidade natal do DJ (match por IBGE).
-        if (cid.ibgeId && dj?.cidadeIbgeId && cid.ibgeId === dj.cidadeIbgeId) {
-          return false;
-        }
+        // Exclui se a cidade do show é a cidade natal do DJ. Match por cidade_id
+        // global (qualquer país); fallback no IBGE denormalizado (legado só-BR).
+        const mesmaCidade =
+          (!!artista?.cidadeId && cid.id === artista.cidadeId) ||
+          (!!cid.ibgeId && !!artista?.cidadeIbgeId && cid.ibgeId === artista.cidadeIbgeId);
+        if (mesmaCidade) return false;
         return true;
       })
       .map((s) => {
         const cid = cidadeDoShow(s);
-        const dj = djDoShow(s);
+        const artista = artistaDoShow(s);
         const dias = s.data ? diasEntre(s.data, hoje) : 0;
         return {
           show: s,
           cidade: cid ? `${cid.nome}/${cid.estado}` : s.location || "—",
-          djNome: dj?.name ?? "—",
-          djCor: dj?.color ?? "#888",
+          artistaNome: artista?.name ?? "—",
+          artistaCor: artista?.color ?? "#888",
           dias,
           data: s.data ?? "",
         };
@@ -306,9 +308,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   // Dias importantes (Sex/Sáb/Dom + feriados/vésperas) FUTUROS do mês:
   //   - livre → "Qualquer horário"
   //   - com show → "Disponível para região de {cidade} — checar horário"
-  const gerarDatasDisponiveis = (djId: string): string => {
-    const dj = artistas.find((d) => d.id === djId);
-    const djNome = dj?.name ?? "DJ";
+  const gerarDatasDisponiveis = (artistaId: string): string => {
+    const artista = artistas.find((d) => d.id === artistaId);
+    const artistaNome = artista?.name ?? "Artista";
     const feriados = setFeriados([ano - 1, ano, ano + 1]);
     const diasNoMes = new Date(ano, mes + 1, 0).getDate();
     const linhas: string[] = [];
@@ -325,7 +327,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
           (ehFeriado(dISO, feriados) || ehVesperaDeFeriado(dISO, feriados)));
       if (!importante) continue;
       const ddmm = `${String(dia).padStart(2, "0")}/${String(mes + 1).padStart(2, "0")}`;
-      const showsNoDia = showsMes.filter((s) => s.data === dISO && s.djId === djId);
+      const showsNoDia = showsMes.filter((s) => s.data === dISO && s.artistaId === artistaId);
       if (showsNoDia.length === 0) {
         linhas.push(`${t(DIAS_SEMANA[wd])} ${ddmm} - ${t("Qualquer horário")}`);
       } else {
@@ -344,17 +346,17 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         );
       }
     }
-    const header = `*${t("Datas disponíveis ({djNome}) em {mes}", { djNome, mes: t(MESES_LONGO[mes]) })}*`;
+    const header = `*${t("Datas disponíveis ({artistaNome}) em {mes}", { artistaNome, mes: t(MESES_LONGO[mes]) })}*`;
     if (linhas.length === 0) {
       return `${header}\n\n${t("Nenhuma data importante disponível neste mês.")}`;
     }
     return [header, "", ...linhas].join("\n");
   };
 
-  const copiarDatas = async (djId: string) => {
+  const copiarDatas = async (artistaId: string) => {
     try {
-      await navigator.clipboard.writeText(gerarDatasDisponiveis(djId));
-      setCopiado(djId);
+      await navigator.clipboard.writeText(gerarDatasDisponiveis(artistaId));
+      setCopiado(artistaId);
       setTimeout(() => setCopiado(null), 2000);
     } catch {
       /* clipboard indisponível */
@@ -364,13 +366,13 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
   // Linha de show reutilizada no "Resumo do mês" e nos modais das stats.
   // opts.pendencias → mostra badges das pendências em vez do status.
   const renderLinhaResumo = (show: Show, opts?: { pendencias?: boolean }) => {
-    const dj = djDoShow(show);
+    const artista = artistaDoShow(show);
     const cid = cidadeDoShow(show);
     const diaMes = show.data ? Number(show.data.slice(8, 10)) : show.dayId;
     const balada = localDoEvento(show);
     const cidadeTxt = cid ? `${cid.nome}/${cid.estado}` : show.location || "";
     const headline = balada || cidadeTxt || "Local a definir";
-    const sub = [balada ? cidadeTxt : "", dj?.name, show.time]
+    const sub = [balada ? cidadeTxt : "", artista?.name, show.time]
       .filter(Boolean)
       .join(" · ");
     return (
@@ -387,9 +389,9 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         </div>
         <span
           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
-          style={{ backgroundColor: dj?.color ?? "#888", color: "#fff" }}
+          style={{ backgroundColor: artista?.color ?? "#888", color: "#fff" }}
         >
-          {dj?.name.slice(0, 2).toUpperCase()}
+          {artista?.name.slice(0, 2).toUpperCase()}
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-primary truncate">
@@ -664,13 +666,13 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 >
                   <span
                     className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: v.djCor }}
+                    style={{ backgroundColor: v.artistaCor }}
                   />
                   <span className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-primary block truncate">
                       {v.cidade}
                     </span>
-                    <span className="text-xs text-muted">{v.djNome}</span>
+                    <span className="text-xs text-muted">{v.artistaNome}</span>
                   </span>
                   <span className="text-xs font-semibold tabular-nums" style={{ color: accent }}>
                     {v.dias > 0
@@ -705,7 +707,7 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
         </div>
         {resumo.length === 0 ? (
           <div className="text-sm text-muted text-center py-8">
-            {t("Nenhum show em {mes} para os DJs selecionados.", { mes: tituloMes })}
+            {t("Nenhum show em {mes} para os artistas selecionados.", { mes: tituloMes })}
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-border">
@@ -840,35 +842,35 @@ export default function AgendaDashboard({ selectedDJs, onNavigate, onAbrirShow }
                 </button>
               </div>
             </div>
-            {artistas.filter((d) => selectedDJs.includes(d.id)).length === 0 ? (
-              <div className="text-sm text-muted">{t("Nenhum DJ selecionado.")}</div>
+            {artistas.filter((d) => selectedArtistas.includes(d.id)).length === 0 ? (
+              <div className="text-sm text-muted">{t("Nenhum artista selecionado.")}</div>
             ) : (
               artistas
-                .filter((d) => selectedDJs.includes(d.id))
-                .map((dj) => (
-                  <div key={dj.id}>
+                .filter((d) => selectedArtistas.includes(d.id))
+                .map((artista) => (
+                  <div key={artista.id}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                         <span
                           className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: dj.color }}
+                          style={{ backgroundColor: artista.color }}
                         />
-                        {dj.name}
+                        {artista.name}
                       </span>
                       <button
-                        onClick={() => copiarDatas(dj.id)}
+                        onClick={() => copiarDatas(artista.id)}
                         className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
                       >
-                        {copiado === dj.id ? (
+                        {copiado === artista.id ? (
                           <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
                         ) : (
                           <Copy size={14} />
                         )}
-                        {copiado === dj.id ? t("Copiado!") : t("Copiar")}
+                        {copiado === artista.id ? t("Copiado!") : t("Copiar")}
                       </button>
                     </div>
                     <pre className="text-xs text-secondary bg-elevated border border-border rounded-md p-3 whitespace-pre-wrap font-sans max-h-[35vh] overflow-y-auto leading-relaxed">
-                      {gerarDatasDisponiveis(dj.id)}
+                      {gerarDatasDisponiveis(artista.id)}
                     </pre>
                   </div>
                 ))

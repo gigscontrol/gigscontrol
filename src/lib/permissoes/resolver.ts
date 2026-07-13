@@ -44,7 +44,7 @@ export type CtxPermissao = {
 
 type FuncaoLegada = "vendedor" | "financeiro" | "produtor";
 
-function djLegado(ctx: CtxPermissao, funcao: FuncaoLegada, artistaId: string): boolean {
+function artistaLegado(ctx: CtxPermissao, funcao: FuncaoLegada, artistaId: string): boolean {
   const arr = ctx.funcoes?.[funcao] ?? [];
   return arr.includes(artistaId);
 }
@@ -61,9 +61,9 @@ function fallbackLegado(ctx: CtxPermissao, artistaId: string, chave: string): bo
       // Hoje a agenda não tem trava por função — toda a equipe opera.
       return true;
     case "vendas":
-      return djLegado(ctx, "vendedor", artistaId) || djLegado(ctx, "financeiro", artistaId);
+      return artistaLegado(ctx, "vendedor", artistaId) || artistaLegado(ctx, "financeiro", artistaId);
     case "financeiro":
-      return djLegado(ctx, "financeiro", artistaId);
+      return artistaLegado(ctx, "financeiro", artistaId);
     case "contratos":
       // Hoje contratos é admin-only (admin já retornou true antes daqui).
       return false;
@@ -89,9 +89,9 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
   const ehLeitura = acao.startsWith("ver");
   switch (modulo) {
     case "agenda":
-      // Vê a própria agenda (e detalhes/cachê). NÃO cria/edita/exclui show —
-      // a privacidade não expõe esse controle, então fica read-only.
-      return ehLeitura;
+      // Vê a própria agenda (e detalhes/cachê) sempre. Cria/edita/exclui os
+      // próprios eventos só com agendaTotal ligado; senão fica read-only.
+      return ehLeitura || priv.agendaTotal;
     case "vendas":
       if (ehLeitura) return priv.vendasVer || priv.orcamentosVer;
       if (acao.includes("orcamento")) return priv.orcamentosCriar;
@@ -103,10 +103,30 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
       if (ehLeitura) return priv.contratosVer;
       return priv.contratosCriar; // criar/editar/excluir
     case "contatos":
+      // Leitura governada por priv.contatos: "nenhum" nega, "proprios"/"todos"
+      // liberam VER (a lista é filtrada no servidor por escopoContatosDoArtista).
+      // Artista nunca MUTA contatos (não cria/edita/exclui).
+      if (ehLeitura) return priv.contatos !== "nenhum";
+      return false;
     case "agencia":
     default:
-      return false; // artista nunca acessa contatos/agência por aqui
+      return false; // artista nunca acessa agência por aqui
   }
+}
+
+/**
+ * Escopo de CONTATOS (contratantes/casas) que o ARTISTA enxerga, governado por
+ * `artists.privacidade.contatos` (config do admin):
+ *   - "nenhum"   → não vê nenhum contato (lista vazia);
+ *   - "proprios" → só os contatos ligados aos SHOWS/vendas/orçamentos DELE
+ *                  (derivado por artist_id no servidor);
+ *   - "todos"    → todos os contatos do workspace.
+ * Sem privacidade carregada → PRIVACIDADE_DJ_PADRAO ("proprios", seguro).
+ */
+export function escopoContatosDoArtista(
+  priv?: PrivacidadeDj
+): "nenhum" | "proprios" | "todos" {
+  return (priv ?? PRIVACIDADE_DJ_PADRAO).contatos;
 }
 
 /**
@@ -159,7 +179,7 @@ export function artistasVisiveis(
   // Fallback legado: união dos DJs das funções.
   const set = new Set<string>();
   for (const f of ["vendedor", "financeiro", "produtor"] as const) {
-    for (const dj of ctx.funcoes?.[f] ?? []) set.add(dj);
+    for (const artista of ctx.funcoes?.[f] ?? []) set.add(artista);
   }
   return [...set];
 }

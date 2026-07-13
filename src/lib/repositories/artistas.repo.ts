@@ -2,11 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ArtistaRow, ArtistaEscrita } from "@/lib/mappers/artista";
 import { softDelete } from "./_softDelete";
 
+// Inclui a cidade global embutida (join por cidade_id) em TODAS as leituras —
+// pré-preenche o seletor no editar pra cidade de qualquer país. Os campos
+// denormalizados (cidade_ibge_id/nome/uf) ficam pra exibição + o mapa (legado).
 const COLS =
   "id, workspace_id, nome, cor, acesso_suspenso, deletado_em, criado_em, " +
-  "cidade_ibge_id, cidade_nome, cidade_uf, taxa_modo, taxa_valor, " +
+  "cidade_ibge_id, cidade_nome, cidade_uf, cidade_id, taxa_modo, taxa_valor, " +
   "rider_camarim, rider_efeitos, rider_tecnico, posicao, privacidade, " +
-  "pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone";
+  "pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, " +
+  "data_nascimento, " +
+  "cidade:cidades!cidade_id(id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id)";
 
 /** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */
 export async function listarArtistas(
@@ -101,9 +106,10 @@ export async function atualizarArtista(
 /** Soft delete — marca deletado_em = now(). */
 export async function moverArtistaParaLixeira(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
-  await softDelete(supabase, "artists", id);
+  await softDelete(supabase, "artists", id, deletadoPor);
 }
 
 /** Restaura — zera deletado_em. */

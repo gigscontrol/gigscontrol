@@ -14,7 +14,8 @@ import { FolhaA4, gerarPdfFolha } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
-import { formatarCpfCnpj, documentoValido } from "@/lib/documento";
+import { documentoValido } from "@/lib/documento";
+import { mascararCpfCnpj } from "@/lib/formatters";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import type { ExigenciasSignatario } from "@/lib/mappers/contratoSignatario";
 
@@ -77,7 +78,7 @@ export default function AssinarPage({
       setDados(body as Dados);
       if ((body as Dados).signatario.documento)
         setDocumento(
-          formatarCpfCnpj((body as Dados).signatario.documento ?? "")
+          mascararCpfCnpj((body as Dados).signatario.documento ?? "")
         );
     } catch (e) {
       setErroCarga((e as Error).message);
@@ -316,7 +317,7 @@ export default function AssinarPage({
                 </span>
                 <input
                   value={documento}
-                  onChange={(e) => setDocumento(formatarCpfCnpj(e.target.value))}
+                  onChange={(e) => setDocumento(mascararCpfCnpj(e.target.value))}
                   inputMode="numeric"
                   maxLength={18}
                   placeholder="000.000.000-00"

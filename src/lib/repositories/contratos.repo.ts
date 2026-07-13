@@ -87,10 +87,11 @@ export async function atualizarContrato(
 
 export async function removerContrato(
   supabase: SupabaseClient,
-  id: string
+  id: string,
+  deletadoPor?: string
 ): Promise<void> {
   // Soft delete — marca deletado_em (mesmo padrão dos modelos/orçamentos).
-  await softDelete(supabase, "contratos", id);
+  await softDelete(supabase, "contratos", id, deletadoPor);
 }
 
 export async function proximoNumeroContrato(

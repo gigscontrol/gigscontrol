@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   Plus,
@@ -20,12 +20,10 @@ import {
   Eye,
   EyeOff,
   Search,
-  PauseCircle,
-  PlayCircle,
   Users,
-  NotebookPen,
   Ban,
   AtSign,
+  SlidersHorizontal,
 } from "lucide-react";
 import Modal from "../Modal";
 import PageHeader from "../PageHeader";
@@ -34,19 +32,16 @@ import {
   useWorkspace,
   useArtistas,
   LABELS_PAPEL_EQUIPE,
-  ESCOPO_PADRAO,
   type UsuarioEquipe,
-  type PapelEquipe,
-  type EscopoUsuario,
-  type Funcoes,
 } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
-import { PERFIS } from "@/lib/permissoes/perfis";
+import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
-import { resolverCidade } from "@/lib/cidade-helpers";
-import { BRASIL, type Country } from "@/lib/data/countries";
+import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
+import { EditorPermissoesVinculo } from "./EquipeDoArtista";
 import type { DocumentoTipo } from "@/types";
 
 /** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
@@ -222,18 +217,6 @@ export default function AbaEquipe() {
         return true;
       });
 
-  async function alternarBloqueio(u: UsuarioEquipe) {
-    try {
-      await atualizarUsuario(u.id, { ativo: !u.ativo });
-      setToast({
-        msg: t(u.ativo ? "Usuário bloqueado." : "Usuário desbloqueado."),
-        tipo: "sucesso",
-      });
-    } catch (e) {
-      setToast({ msg: (e as Error).message, tipo: "erro" });
-    }
-  }
-
   async function aoRestaurarUsuario(id: string, nomeUsr: string) {
     setAcaoLixeira(`restaurar-${id}`);
     try {
@@ -250,6 +233,7 @@ export default function AbaEquipe() {
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    permissoes_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -258,6 +242,8 @@ export default function AbaEquipe() {
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) {
     try {
@@ -273,21 +259,26 @@ export default function AbaEquipe() {
     }
   }
 
-  async function aoEditar(id: string, dados: Partial<UsuarioEquipe>) {
+  async function aoEditar(id: string, dados: PatchEditarUsuario) {
     try {
-      const patch: {
-        nome?: string;
-        papel?: PapelEquipe;
-        escopo?: EscopoUsuario;
-        funcoes?: Funcoes;
-        ativo?: boolean;
-      } = {
+      // Repassa apelido + dados de pessoa (snake_case, já no formato que o
+      // backend espera) + bloqueio. `cidade_id`/`razao_social` só vão quando
+      // preenchidos (o `salvar` já os deixa undefined quando não se aplicam).
+      await atualizarUsuario(id, {
         nome: dados.nome,
-        escopo: dados.escopo,
-        funcoes: dados.funcoes,
         ativo: dados.ativo,
-      };
-      await atualizarUsuario(id, patch);
+        pode_criar_anotacoes: dados.pode_criar_anotacoes,
+        cor: dados.cor,
+        pais: dados.pais,
+        nome_legal: dados.nome_legal,
+        documento_tipo: dados.documento_tipo,
+        documento: dados.documento,
+        razao_social: dados.razao_social,
+        endereco: dados.endereco,
+        telefone: dados.telefone,
+        data_nascimento: dados.data_nascimento,
+        cidade_id: dados.cidade_id,
+      });
       setEditando(null);
       setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
     } catch (e) {
@@ -485,6 +476,23 @@ export default function AbaEquipe() {
             <Plus size={14} /> {t("Criar usuário")}
           </button>
         </div>
+      ) : selecionado && editando && editando.id === selecionado.id ? (
+        /* Edição INLINE no painel do membro (mesmo padrão do editar do
+           artista) — sem abrir janela/Modal. */
+        <ModalUsuario
+          modoInline
+          modo="editar"
+          inicial={editando}
+          slugAgencia={slugAgencia}
+          onFechar={() => setEditando(null)}
+          onCriar={aoCriar}
+          onEditar={aoEditar}
+          onResetarSenha={async () => {
+            const u = editando;
+            setEditando(null);
+            await aoResetarSenha(u);
+          }}
+        />
       ) : !selecionado ? null : (
         <>
           {/* Header do perfil */}
@@ -591,7 +599,7 @@ export default function AbaEquipe() {
                             color: "var(--text-muted)",
                           }}
                         >
-                          {t("{n} DJ(s)", { n: vs.length })}
+                          {t("{n} artista(s)", { n: vs.length })}
                         </span>
                       </>
                     );
@@ -599,52 +607,15 @@ export default function AbaEquipe() {
                 </div>
               </div>
 
-              {/* Ações */}
+              {/* Ações — bloquear/resetar senha/anotações agora ficam DENTRO
+                  do Editar (junto do acesso ao sistema). Aqui só Editar +
+                  Remover. */}
               <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                 <button
                   onClick={() => setEditando(selecionado)}
                   className="btn btn-secondary text-xs inline-flex items-center gap-1"
                 >
                   <Pencil size={13} /> {t("Editar")}
-                </button>
-                <button
-                  onClick={() =>
-                    atualizarUsuario(selecionado.id, {
-                      pode_criar_anotacoes: !selecionado.podeCriarAnotacoes,
-                    }).catch(() => undefined)
-                  }
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{
-                    color: selecionado.podeCriarAnotacoes ? "var(--success)" : "var(--text-muted)",
-                  }}
-                  title={t("Pode criar pastas de anotações na Agenda")}
-                >
-                  <NotebookPen size={14} />
-                  {selecionado.podeCriarAnotacoes ? t("Cria anotações") : t("Liberar anotações")}
-                </button>
-                <button
-                  onClick={() => alternarBloqueio(selecionado)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{
-                    color: selecionado.ativo ? "var(--warning)" : "var(--success)",
-                  }}
-                >
-                  {selecionado.ativo ? (
-                    <>
-                      <PauseCircle size={14} /> {t("Bloquear")}
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle size={14} /> {t("Desbloquear")}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => aoResetarSenha(selecionado)}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5"
-                  style={{ color: "var(--brand)" }}
-                >
-                  <KeyRound size={14} /> {t("Resetar senha")}
                 </button>
                 <button
                   onClick={() => setConfirmarRemover(selecionado)}
@@ -828,7 +799,7 @@ export default function AbaEquipe() {
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--brand)" }} />
-                {t("Funções e DJs atendidos")}
+                {t("Funções e artistas atendidos")}
               </div>
               {vinculos === null ? (
                 <div className="flex items-center gap-2 text-sm text-muted">
@@ -846,16 +817,16 @@ export default function AbaEquipe() {
               ) : (
                 <div className="flex flex-col gap-3">
                   {vinculos.map((v) => {
-                    const dj = artistas.find((a) => a.id === v.artistId);
+                    const artista = artistas.find((a) => a.id === v.artistId);
                     return (
                       <div key={v.artistId} className="flex flex-col gap-1.5">
                         <div className="inline-flex items-center gap-1.5">
                           <span
                             className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: dj?.color ?? "var(--border-strong)" }}
+                            style={{ backgroundColor: artista?.color ?? "var(--border-strong)" }}
                           />
                           <span className="text-sm font-medium text-primary">
-                            {dj?.name ?? v.artistId}
+                            {artista?.name ?? v.artistId}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -995,7 +966,7 @@ export default function AbaEquipe() {
 
       <div className="rounded-md border border-border bg-elevated/50 p-3 text-xs text-secondary leading-relaxed">
         <strong className="text-primary">{t("Funções:")}</strong>{" "}
-        {t("cada membro pode ter uma ou mais funções e, em cada uma, os DJs que atende — defina em")}{" "}
+        {t("cada membro pode ter uma ou mais funções e, em cada uma, os artistas que atende — defina em")}{" "}
         <span className="inline-flex items-center gap-1 font-medium">
           <Pencil size={11} /> {t("Editar")}
         </span>
@@ -1015,27 +986,15 @@ export default function AbaEquipe() {
         {t("manda pra Lixeira (recuperável por 30 dias).")}
       </div>
 
-      {/* Modal criação/edição */}
-      {(criando || editando) && (
+      {/* Modal de CRIAÇÃO (o EDITAR é inline no painel do membro — igual
+          ao editar do artista; ver a branch de edição acima). */}
+      {criando && (
         <ModalUsuario
-          modo={criando ? "criar" : "editar"}
-          inicial={editando ?? undefined}
+          modo="criar"
           slugAgencia={slugAgencia}
-          onFechar={() => {
-            setCriando(false);
-            setEditando(null);
-          }}
+          onFechar={() => setCriando(false)}
           onCriar={aoCriar}
           onEditar={aoEditar}
-          onResetarSenha={async () => {
-            if (!editando) return;
-            // Dispara o reset, fecha o modal de edição e o parent mostra
-            // o modal de credenciais com a nova senha. Mesmo padrão de
-            // AbaArtistas.
-            const u = editando;
-            setEditando(null);
-            await aoResetarSenha(u);
-          }}
         />
       )}
 
@@ -1221,7 +1180,28 @@ type DadosContaUsuario = {
   senhaPadraoValor: string | null;
 };
 
-function ModalUsuario({
+/**
+ * Patch enviado pelo modo EDITAR — apelido + dados de pessoa (snake_case, o
+ * mesmo formato que `atualizarUsuario` repassa pro backend) + bloqueio.
+ * E-mail fica de fora de propósito (bloqueado; o membro cadastra depois).
+ */
+type PatchEditarUsuario = {
+  nome?: string;
+  ativo?: boolean;
+  pode_criar_anotacoes?: boolean;
+  cor?: string;
+  pais?: string;
+  nome_legal?: string;
+  documento_tipo?: string;
+  documento?: string;
+  razao_social?: string;
+  endereco?: string;
+  telefone?: string;
+  data_nascimento?: string;
+  cidade_id?: string;
+};
+
+export function ModalUsuario({
   modo,
   inicial,
   slugAgencia,
@@ -1229,16 +1209,23 @@ function ModalUsuario({
   onCriar,
   onEditar,
   onResetarSenha,
+  modoInline = false,
 }: {
   modo: "criar" | "editar";
   inicial?: UsuarioEquipe;
   /** Slug da agência — usado pra montar o handle "raiz-slug" na criação. */
   slugAgencia: string;
   onFechar: () => void;
+  /**
+   * Inline (sem wrapper de Modal) — pro onboarding embedar o form completo
+   * na etapa da equipe, igual a etapa do artista faz com ModalNovoArtista.
+   */
+  modoInline?: boolean;
   onCriar: (dados: {
     nome: string;
     username_raiz: string;
     artistIds: string[];
+    permissoes_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -1247,9 +1234,11 @@ function ModalUsuario({
     razao_social?: string;
     endereco?: string;
     telefone?: string;
+    data_nascimento?: string;
+    email_contato?: string;
     cidade_id?: string;
   }) => void | Promise<void>;
-  onEditar: (id: string, dados: Partial<UsuarioEquipe>) => void | Promise<void>;
+  onEditar: (id: string, dados: PatchEditarUsuario) => void | Promise<void>;
   /** Só passado no modo editar. Reseta a senha do usuário. */
   onResetarSenha?: () => void | Promise<void>;
 }) {
@@ -1263,17 +1252,45 @@ function ModalUsuario({
   const [copiouUsername, setCopiouUsername] = useState(false);
   // Artistas com quem trabalha (a função é definida depois na aba Equipe).
   const [artistIdsSel, setArtistIdsSel] = useState<Set<string>>(new Set());
+  // Permissões já definidas por artista no próprio modal de criação
+  // (mapa artistId → chaves). Vazio = vínculo nasce sem permissão.
+  const [permsPorArtista, setPermsPorArtista] = useState<Record<string, string[]>>({});
+  // Artista cujo editor de permissões está aberto (modal empilhado). null = fechado.
+  const [editandoPermsDe, setEditandoPermsDe] = useState<string | null>(null);
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
-  const [paisPessoal, setPaisPessoal] = useState<Country>(BRASIL);
-  const [cor, setCor] = useState<string>(CORES[0]);
-  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(null);
-  const [nomeLegal, setNomeLegal] = useState("");
-  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>("cpf");
-  const [documento, setDocumento] = useState("");
-  const [razaoSocial, setRazaoSocial] = useState("");
-  const [endereco, setEndereco] = useState("");
-  const [telefone, setTelefone] = useState("");
+  // No modo editar, pré-preenche a partir do `inicial` (mesmo conjunto de
+  // estados do modo criar) — igual o editar do artista faz.
+  const [paisPessoal, setPaisPessoal] = useState<Country>(
+    () =>
+      COUNTRIES.find((p) => p.code === (inicial?.pais ?? "BR").toUpperCase()) ??
+      BRASIL
+  );
+  const [cor, setCor] = useState<string>(inicial?.cor ?? CORES[0]);
+  // Cidade: o `inicial.cidade` (join no backend por cidade_id) traz nome/uf/país,
+  // então no editar o autocomplete já abre PRÉ-PREENCHIDO. Sem cidade (modo criar,
+  // ou cidade legada sem ibge/geoname) começa vazio. No submit só resolve/manda
+  // cidade_id se houver seleção — a cidade inalterada resolve pro mesmo id
+  // (lookup idempotente), então não muda nada; escolher outra troca.
+  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
+    () => cidadeParaEscolhida(inicial?.cidade ?? null)
+  );
+  const [nomeLegal, setNomeLegal] = useState(inicial?.nomeLegal ?? "");
+  const [documentoTipo, setDocumentoTipo] = useState<DocumentoTipo>(
+    // `inicial.documentoTipo` vem tipado como string no workspace-context;
+    // aqui só existem os tipos válidos de DocumentoTipo, então estreitamos.
+    (inicial?.documentoTipo as DocumentoTipo | undefined) ?? "cpf"
+  );
+  const [documento, setDocumento] = useState(inicial?.documento ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(inicial?.razaoSocial ?? "");
+  const [endereco, setEndereco] = useState(inicial?.endereco ?? "");
+  const [telefone, setTelefone] = useState(inicial?.telefone ?? "");
+  const [dataNascimento, setDataNascimento] = useState(inicial?.dataNascimento ?? "");
   const [ativo, setAtivo] = useState<boolean>(inicial?.ativo ?? true);
+  // Permissão dedicada: pode criar pastas de anotações na Agenda (movida do
+  // painel de detalhe pra cá, T3).
+  const [podeCriarAnotacoes, setPodeCriarAnotacoes] = useState<boolean>(
+    inicial?.podeCriarAnotacoes ?? false
+  );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -1298,6 +1315,59 @@ function ModalUsuario({
   const [conta, setConta] = useState<DadosContaUsuario | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(modo === "editar");
   const [copiouSenhaPadrao, setCopiouSenhaPadrao] = useState(false);
+  // Feedback de copiar o login (handle) no card de Acesso ao sistema do editar.
+  const [copiouLoginEditar, setCopiouLoginEditar] = useState(false);
+
+  // ---- Permissões por artista (T8) — só no modo editar ----
+  // Vínculos do membro (artista × perfis × permissões). null = carregando.
+  const [vinculosEdit, setVinculosEdit] = useState<VinculoResumo[] | null>(null);
+  const [vinculosEditErro, setVinculosEditErro] = useState(false);
+  // Artista cujo editor de permissões está aberto no modo editar (modal
+  // empilhado). null = fechado.
+  const [editandoVinculoDe, setEditandoVinculoDe] = useState<string | null>(null);
+  const [salvandoVinculo, setSalvandoVinculo] = useState(false);
+
+  const carregarVinculos = useCallback(async () => {
+    if (modo !== "editar" || !inicial?.id) return;
+    setVinculosEdit(null);
+    setVinculosEditErro(false);
+    try {
+      const res = await fetch(`/api/usuarios/${inicial.id}/vinculos`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = (await res.json()) as { vinculos: VinculoResumo[] };
+      setVinculosEdit(d.vinculos ?? []);
+    } catch {
+      setVinculosEdit([]);
+      setVinculosEditErro(true);
+    }
+  }, [modo, inicial?.id]);
+
+  useEffect(() => {
+    void carregarVinculos();
+  }, [carregarVinculos]);
+
+  // Salva as permissões de UM vínculo (usuário × artista) — reutiliza o
+  // endpoint PUT já existente da equipe do artista, depois recarrega a lista.
+  async function salvarVinculo(artistaId: string, permissoes: string[], perfis: string[]) {
+    if (!inicial?.id) return;
+    setSalvandoVinculo(true);
+    try {
+      const res = await fetch(`/api/artistas/${artistaId}/equipe/${inicial.id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ perfis, permissoes }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.erro ?? t("Falha ao salvar."));
+      setEditandoVinculoDe(null);
+      await carregarVinculos();
+    } finally {
+      setSalvandoVinculo(false);
+    }
+  }
 
   useEffect(() => {
     if (modo !== "editar" || !inicial?.id) return;
@@ -1325,8 +1395,18 @@ function ModalUsuario({
   function toggleArtista(id: string) {
     setArtistIdsSel((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        // Desmarcar o artista limpa as permissões que tinham sido definidas.
+        setPermsPorArtista((p) => {
+          if (!(id in p)) return p;
+          const resto = { ...p };
+          delete resto[id];
+          return resto;
+        });
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -1355,10 +1435,18 @@ function ModalUsuario({
             /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
           }
         }
+        // Só manda permissões dos artistas realmente selecionados e com ao
+        // menos 1 chave — vínculo sem permissão nasce vazio de qualquer forma.
+        const permsPayload: Record<string, string[]> = {};
+        for (const aid of artistIds) {
+          const chaves = permsPorArtista[aid];
+          if (chaves && chaves.length > 0) permsPayload[aid] = chaves;
+        }
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
           artistIds,
+          permissoes_por_artista: Object.keys(permsPayload).length > 0 ? permsPayload : undefined,
           cor,
           pais: paisPessoal.code,
           nome_legal: nomeLegal.trim() || undefined,
@@ -1367,6 +1455,7 @@ function ModalUsuario({
           razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
           telefone: telefone.trim() || undefined,
           endereco: endereco.trim() || undefined,
+          data_nascimento: dataNascimento || undefined,
           cidade_id: cidadeId,
         });
       } catch (e) {
@@ -1377,12 +1466,38 @@ function ModalUsuario({
       return;
     }
 
-    // Editar: só nome + bloqueio. O acesso é gerenciado por artista.
+    // Editar: apelido + dados de pessoa + bloqueio. O acesso (perfis/permissões
+    // por artista) continua gerenciado na aba Equipe do artista. E-mail fica
+    // bloqueado (o membro cadastra depois).
     if (!inicial) return;
     setSalvando(true);
     setErro(null);
     try {
-      await onEditar(inicial.id, { nome: nome.trim(), ativo });
+      // Cidade (opcional): só resolve/envia se o admin escolher uma nova —
+      // senão o backend mantém a atual (o autocomplete começa vazio no editar).
+      let cidadeId: string | undefined;
+      if (cidadeSel) {
+        try {
+          cidadeId = (await resolverCidade(cidadeSel)).id;
+        } catch {
+          /* cidade não resolvida — segue sem (não bloqueia o cadastro) */
+        }
+      }
+      await onEditar(inicial.id, {
+        nome: nome.trim(),
+        ativo,
+        pode_criar_anotacoes: podeCriarAnotacoes,
+        cor,
+        pais: paisPessoal.code,
+        nome_legal: nomeLegal.trim() || undefined,
+        documento_tipo: documentoTipo,
+        documento: documento.trim() || undefined,
+        razao_social: (documentoTipo === "cnpj" ? razaoSocial.trim() : "") || undefined,
+        endereco: endereco.trim() || undefined,
+        telefone: telefone.trim() || undefined,
+        data_nascimento: dataNascimento || undefined,
+        cidade_id: cidadeId,
+      });
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -1390,27 +1505,23 @@ function ModalUsuario({
     }
   }
 
-  return (
-    <Modal
-      isOpen
-      onClose={onFechar}
-      title={modo === "criar" ? t("Criar usuário") : t("Editar usuário")}
-      maxWidth={520}
-    >
+  const conteudo = (
       <div className="flex flex-col gap-4">
         {modo === "criar" ? (
           <>
             <Secao titulo={t("Dados básicos")}>
-              <Campo label={t("Nome")}>
+              <Campo label={t("Apelido")}>
                 <input
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder={t("Nome completo")}
+                  placeholder={t("Como essa pessoa é chamada")}
                   className="campo-input"
                   autoFocus
                 />
+                <span className="text-[0.7rem] text-muted mt-1 block">
+                  {t("É o nome que aparece pros outros usuários da sua agência.")}
+                </span>
               </Campo>
-              <SeletorDeCor cor={cor} onChange={setCor} />
               <Campo label={t("País e cidade onde reside")}>
                 <CidadeGlobalAutocomplete
                   value={cidadeSel}
@@ -1437,8 +1548,22 @@ function ModalUsuario({
                 setEndereco={setEndereco}
                 telefone={telefone}
                 setTelefone={setTelefone}
+                dataNascimento={dataNascimento}
+                setDataNascimento={setDataNascimento}
               />
             </Secao>
+
+            <SeletorDeCor cor={cor} onChange={setCor} />
+
+            {/* Tag visual do tipo de cadastro */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+                style={{ backgroundColor: "var(--brand)" }}
+              >
+                {t("Equipe")}
+              </span>
+            </div>
 
             <Secao titulo={t("Acesso ao sistema")}>
               <Campo label={t("Login (username)")}>
@@ -1451,10 +1576,10 @@ function ModalUsuario({
                         e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
                       );
                     }}
-                    placeholder="joaovendas"
+                    placeholder="marinasouza"
                     style={{
                       width: `${Math.max(
-                        usernameRaiz.length || "joaovendas".length,
+                        usernameRaiz.length || "marinasouza".length,
                         4
                       )}ch`,
                     }}
@@ -1515,36 +1640,53 @@ function ModalUsuario({
                 </span>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  {artistas.map((dj) => {
-                    const sel = artistIdsSel.has(dj.id);
+                  {artistas.map((artista) => {
+                    const sel = artistIdsSel.has(artista.id);
+                    const nPerms = permsPorArtista[artista.id]?.length ?? 0;
                     return (
-                      <button
-                        key={dj.id}
-                        type="button"
-                        onClick={() => toggleArtista(dj.id)}
-                        className="flex items-center gap-2.5 rounded-md border p-2 text-left transition-colors"
+                      <div
+                        key={artista.id}
+                        className="flex items-center gap-2.5 rounded-md border p-2 transition-colors"
                         style={{
                           borderColor: sel ? "var(--brand)" : "var(--border-color)",
                           backgroundColor: sel ? "var(--brand-weak)" : "transparent",
                         }}
                       >
-                        <span
-                          className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
-                          style={{
-                            backgroundColor: sel ? "var(--brand)" : "transparent",
-                            borderColor: sel ? "var(--brand)" : "var(--border-strong)",
-                          }}
+                        <button
+                          type="button"
+                          onClick={() => toggleArtista(artista.id)}
+                          className="flex items-center gap-2.5 text-left flex-1 min-w-0"
                         >
-                          {sel && <Check size={11} className="text-white" />}
-                        </span>
-                        <span
-                          className="h-6 w-6 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: dj.color }}
-                        />
-                        <span className="text-sm font-medium text-primary flex-1 truncate">
-                          {dj.name}
-                        </span>
-                      </button>
+                          <span
+                            className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                            style={{
+                              backgroundColor: sel ? "var(--brand)" : "transparent",
+                              borderColor: sel ? "var(--brand)" : "var(--border-strong)",
+                            }}
+                          >
+                            {sel && <Check size={11} className="text-white" />}
+                          </span>
+                          <span
+                            className="h-6 w-6 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: artista.color }}
+                          />
+                          <span className="text-sm font-medium text-primary flex-1 truncate">
+                            {artista.name}
+                          </span>
+                        </button>
+                        {sel && (
+                          <button
+                            type="button"
+                            onClick={() => setEditandoPermsDe(artista.id)}
+                            className="btn-ghost text-[0.7rem] inline-flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
+                            style={{ color: nPerms > 0 ? "var(--brand)" : "var(--text-muted)" }}
+                            title={t("Definir permissões deste artista")}
+                          >
+                            <SlidersHorizontal size={12} />
+                            {nPerms > 0 ? t("{n} permissões", { n: nPerms }) : t("Permissões")}
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -1553,44 +1695,140 @@ function ModalUsuario({
           </>
         ) : (
           <>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-secondary">{t("Nome")}</span>
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder={t("Nome completo")}
-                className="campo-input"
-                autoFocus
+            {/* HEADER estilo artista: barra colorida (a cor) + avatar (1ª
+                letra do apelido) + input do APELIDO grande/bold, e
+                Cancelar + "Salvar alterações" no canto. */}
+            <div className="card p-0 overflow-hidden">
+              <div
+                style={{
+                  height: 4,
+                  background: `linear-gradient(90deg, ${cor}, ${cor}66)`,
+                }}
               />
-            </label>
-            <div className="rounded-md border border-border p-3 flex items-start gap-2">
-              <ShieldCheck size={14} style={{ color: "var(--brand)" }} className="mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-secondary leading-relaxed">
-                {t("O acesso deste usuário é definido por artista, na aba Equipe de cada artista — lá você controla perfil e permissão por permissão.")}
-              </p>
+              <div className="p-5 flex flex-col gap-4">
+                <div className="flex items-start gap-4 flex-wrap">
+                  <span
+                    className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(135deg, ${cor}, ${cor}99)`,
+                    }}
+                  >
+                    {(nome.trim().charAt(0) || "?").toUpperCase()}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      placeholder={t("Apelido")}
+                      className="campo-input text-xl font-bold"
+                      autoFocus
+                    />
+                    <span className="text-[0.7rem] text-muted mt-1 block">
+                      {t("É o nome que aparece pros outros usuários da sua agência.")}
+                    </span>
+                  </div>
+
+                  {/* Ações: Cancelar / Salvar alterações */}
+                  <div className="ml-auto flex items-center gap-2 flex-wrap">
+                    <button onClick={onFechar} className="btn btn-secondary text-sm" disabled={salvando}>
+                      {t("Cancelar")}
+                    </button>
+                    <button
+                      onClick={salvar}
+                      disabled={salvando}
+                      className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                    >
+                      <Check size={14} />
+                      {salvando ? t("Salvando...") : t("Salvar alterações")}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Corpo do card: cor + país/cidade + dados pessoais — TUDO
+                    DENTRO do card, igual ao editar do artista (não solto no
+                    fundo). */}
+                <div className="flex flex-col gap-4">
+                  <SeletorDeCor cor={cor} onChange={setCor} />
+                  <div className="border-t border-border" />
+                  <Secao titulo={t("País e cidade onde reside")}>
+                    <CidadeGlobalAutocomplete
+                      value={cidadeSel}
+                      onChange={setCidadeSel}
+                      onPaisChange={setPaisPessoal}
+                      placeholder={t("Ex: São Paulo, Rio de Janeiro...")}
+                    />
+                  </Secao>
+                  <Secao titulo={t("Dados pessoais")}>
+                    <CamposDadosContrato
+                      pais={paisPessoal}
+                      setPais={setPaisPessoal}
+                      nomeLegal={nomeLegal}
+                      setNomeLegal={setNomeLegal}
+                      documentoTipo={documentoTipo}
+                      setDocumentoTipo={setDocumentoTipo}
+                      documento={documento}
+                      setDocumento={setDocumento}
+                      razaoSocial={razaoSocial}
+                      setRazaoSocial={setRazaoSocial}
+                      endereco={endereco}
+                      setEndereco={setEndereco}
+                      telefone={telefone}
+                      setTelefone={setTelefone}
+                      dataNascimento={dataNascimento}
+                      setDataNascimento={setDataNascimento}
+                    />
+                  </Secao>
+                </div>
+              </div>
             </div>
           </>
         )}
 
+        {/* Card ÚNICO "Acesso ao sistema" — idêntico ao editar do artista:
+            Login (display) + E-mail (display read-only + selo) + toggle
+            Acesso ativo + toggle Anotações + Senha/gerar nova. */}
         {modo === "editar" && (
-          <LinhaEscopo
-            label={t("Acesso ativo")}
-            descricaoLigado={t("O usuário pode entrar normalmente")}
-            descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
-            valor={ativo}
-            onChange={setAtivo}
-          />
-        )}
-
-        {/* ---- Bloco Senha (só no modo editar) ---- */}
-        {modo === "editar" && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            <div className="flex items-center gap-1.5">
-              <Lock size={14} style={{ color: "var(--brand)" }} />
-              <span className="text-xs font-medium text-secondary">{t("Senha")}</span>
+          <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <KeyRound size={12} style={{ color: "var(--brand)" }} />
+              {t("Acesso ao sistema")}
             </div>
+
+            {/* (1) Login (handle) — display read-only. O admin NÃO troca o
+                login do membro; só copia. Membros antigos (login por e-mail)
+                têm username null → oculta. */}
+            {inicial?.username && (
+              <div>
+                <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(inicial.username!)
+                      .then(() => {
+                        setCopiouLoginEditar(true);
+                        setTimeout(() => setCopiouLoginEditar(false), 2000);
+                      });
+                  }}
+                  className="w-full flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 hover:border-border-strong transition-colors text-left"
+                >
+                  <AtSign size={14} className="text-muted flex-shrink-0" />
+                  <span className="font-mono text-sm text-primary flex-1 truncate">
+                    {inicial.username}
+                  </span>
+                  {copiouLoginEditar ? (
+                    <CheckCircle2 size={14} style={{ color: "var(--success)" }} />
+                  ) : (
+                    <Copy size={14} className="text-muted" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* (2) E-mail — display read-only + selo Verificado/Não verificado.
+                O admin NÃO edita o e-mail do membro. */}
             {carregandoConta ? (
-              <div className="flex items-center gap-2 text-sm text-muted py-2">
+              <div className="flex items-center gap-2 text-sm text-muted py-1">
                 <Loader2 size={14} className="animate-spin" />
                 {t("Carregando dados da conta...")}
               </div>
@@ -1598,98 +1836,255 @@ function ModalUsuario({
               <p className="text-xs text-danger">
                 {t("Não foi possível carregar a conta.")}
               </p>
-            ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
-              <>
-                {/* Senha padrão conhecida: mostra + botão copiar */}
-                <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
-                  <Lock size={14} className="text-muted flex-shrink-0" />
-                  <span className="font-mono text-sm text-primary flex-1 break-all select-all">
-                    {conta.senhaPadraoValor}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard
-                        .writeText(conta.senhaPadraoValor!)
-                        .then(() => {
-                          setCopiouSenhaPadrao(true);
-                          setTimeout(
-                            () => setCopiouSenhaPadrao(false),
-                            2000
-                          );
-                        });
-                    }}
-                    className="btn-ghost p-1.5 rounded"
-                    aria-label={t("Copiar senha")}
-                  >
-                    {copiouSenhaPadrao ? (
-                      <CheckCircle2
-                        size={14}
-                        style={{ color: "var(--success)" }}
-                      />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                  </button>
-                </div>
-                <div
-                  className="text-[0.7rem] inline-flex items-center gap-1"
-                  style={{ color: "var(--warning)" }}
-                >
-                  <AlertTriangle size={11} />
-                  {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
-                </div>
-              </>
-            ) : conta.senhaPadrao ? (
-              <div
-                className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
-                style={{
-                  backgroundColor: "rgba(245,158,11,0.08)",
-                  color: "var(--warning)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                }}
-              >
-                <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-                <span>
-                  {t("Usuário ainda está com a")}{" "}<strong>{t("senha padrão")}</strong>{" "}
-                  {t("gerada pelo sistema, mas o valor não está disponível (usuário criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
-                </span>
-              </div>
             ) : (
-              <div
-                className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
-                style={{
-                  backgroundColor: "rgba(34,197,94,0.08)",
-                  color: "var(--success)",
-                  border: "1px solid rgba(34,197,94,0.2)",
-                }}
-              >
-                <Lock size={13} className="flex-shrink-0" />
-                <span>{t("Senha já foi alterada pelo usuário.")}</span>
+              <div>
+                <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
+                {conta.emailFakeInterno ? (
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                    <Mail size={14} className="text-muted flex-shrink-0" />
+                    <span className="flex-1 text-sm text-muted italic">
+                      {t("Sem e-mail")}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                      <Mail size={14} className="text-muted flex-shrink-0" />
+                      <span className="flex-1 text-sm text-secondary break-all">
+                        {conta.email}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-[0.7rem]">
+                      {conta.emailVerificado ? (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--success)" }}
+                        >
+                          <ShieldCheck size={11} /> {t("Verificado")}
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: "var(--warning)" }}
+                        >
+                          <AlertTriangle size={11} /> {t("Não verificado")}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
-            {onResetarSenha && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    confirm(
-                      t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
-                    )
-                  ) {
-                    void onResetarSenha();
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-1"
-                style={{
-                  borderColor: "var(--brand)",
-                  color: "var(--brand)",
-                }}
-              >
-                <KeyRound size={14} />
-                {t("Gerar nova senha aleatória")}
-              </button>
+            {/* (3) Toggle Acesso ativo */}
+            <LinhaEscopo
+              label={t("Acesso ativo")}
+              descricaoLigado={t("O usuário pode entrar normalmente")}
+              descricaoDesligado={t("O usuário está bloqueado e não consegue entrar")}
+              valor={ativo}
+              onChange={setAtivo}
+            />
+
+            {/* Toggle — pode criar pastas de anotações (T3) */}
+            <LinhaEscopo
+              label={t("Pode criar pastas de anotações")}
+              descricaoLigado={t("Pode criar pastas de anotações na Agenda")}
+              descricaoDesligado={t("Não pode criar pastas de anotações na Agenda")}
+              valor={podeCriarAnotacoes}
+              onChange={setPodeCriarAnotacoes}
+            />
+
+            {/* (4) Senha — mostra a padrão (se houver) + copiar + gerar nova */}
+            <div>
+              <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
+              {carregandoConta ? (
+                <div className="flex items-center gap-2 text-sm text-muted py-1">
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("Carregando dados da conta...")}
+                </div>
+              ) : !conta ? (
+                <p className="text-xs text-danger">
+                  {t("Não foi possível carregar a conta.")}
+                </p>
+              ) : conta.senhaPadrao && conta.senhaPadraoValor ? (
+                <>
+                  {/* Senha padrão conhecida: mostra + botão copiar */}
+                  <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+                    <Lock size={14} className="text-muted flex-shrink-0" />
+                    <span className="font-mono text-sm text-primary flex-1 break-all select-all">
+                      {conta.senhaPadraoValor}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard
+                          .writeText(conta.senhaPadraoValor!)
+                          .then(() => {
+                            setCopiouSenhaPadrao(true);
+                            setTimeout(
+                              () => setCopiouSenhaPadrao(false),
+                              2000
+                            );
+                          });
+                      }}
+                      className="btn-ghost p-1.5 rounded"
+                      aria-label={t("Copiar senha")}
+                    >
+                      {copiouSenhaPadrao ? (
+                        <CheckCircle2
+                          size={14}
+                          style={{ color: "var(--success)" }}
+                        />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </button>
+                  </div>
+                  <div
+                    className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                    style={{ color: "var(--warning)" }}
+                  >
+                    <AlertTriangle size={11} />
+                    {t("Senha padrão gerada pelo sistema — usuário ainda não trocou.")}
+                  </div>
+                </>
+              ) : conta.senhaPadrao ? (
+                <div
+                  className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
+                  style={{
+                    backgroundColor: "rgba(245,158,11,0.08)",
+                    color: "var(--warning)",
+                    border: "1px solid rgba(245,158,11,0.2)",
+                  }}
+                >
+                  <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    {t("Usuário ainda está com a")}{" "}<strong>{t("senha padrão")}</strong>{" "}
+                    {t("gerada pelo sistema, mas o valor não está disponível (usuário criado antes desta versão). Gere uma nova abaixo pra conseguir copiar.")}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
+                  style={{
+                    backgroundColor: "rgba(34,197,94,0.08)",
+                    color: "var(--success)",
+                    border: "1px solid rgba(34,197,94,0.2)",
+                  }}
+                >
+                  <Lock size={13} className="flex-shrink-0" />
+                  <span>{t("Senha já foi alterada pelo usuário.")}</span>
+                </div>
+              )}
+
+              {onResetarSenha && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
+                      )
+                    ) {
+                      void onResetarSenha();
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors hover:bg-elevated mt-2"
+                  style={{
+                    borderColor: "var(--brand)",
+                    color: "var(--brand)",
+                  }}
+                >
+                  <KeyRound size={14} />
+                  {t("Gerar nova senha aleatória")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Permissões por artista (T8) — lista os DJs com quem o membro
+            trabalha; cada linha abre o EditorPermissoesVinculo. */}
+        {modo === "editar" && (
+          <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <Users size={12} style={{ color: "var(--brand)" }} />
+              {t("Permissões por artista")}
+            </div>
+            <p className="text-xs text-muted -mt-1">
+              {t("O que este membro pode fazer com cada artista — vale só para aquele artista.")}
+            </p>
+            {vinculosEdit === null ? (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Loader2 size={14} className="animate-spin" />
+                {t("Carregando…")}
+              </div>
+            ) : vinculosEditErro ? (
+              <div className="text-sm text-danger">
+                {t("Não foi possível carregar. Tente recarregar a página.")}
+              </div>
+            ) : vinculosEdit.length === 0 ? (
+              <div className="text-sm text-muted">
+                {t("Nenhum artista vinculado. Vincule na aba Equipe do artista.")}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {vinculosEdit.map((v) => {
+                  const artista = artistas.find((a) => a.id === v.artistId);
+                  return (
+                    <div
+                      key={v.artistId}
+                      className="flex items-center gap-3 rounded-md border border-border bg-elevated p-2.5"
+                    >
+                      <span
+                        className="h-8 w-8 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: artista?.color ?? "var(--border-strong)" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-primary truncate">
+                          {artista?.name ?? v.artistId}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          {v.perfis.length > 0 ? (
+                            v.perfis.map((pid) => {
+                              const perfil = PERFIS.find((x) => x.id === pid);
+                              return (
+                                <span
+                                  key={pid}
+                                  className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                                  style={{
+                                    backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                    color: perfil?.cor ?? "#3D7BFF",
+                                  }}
+                                >
+                                  {perfil?.nome ?? pid}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-[0.65rem] text-muted">
+                              {t("Personalizado")}
+                            </span>
+                          )}
+                          <span className="text-[0.65rem] text-muted">
+                            {t("{n} permissões", { n: v.permissoes.length })}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditandoVinculoDe(v.artistId)}
+                        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5 rounded flex-shrink-0"
+                        style={{ color: "var(--brand)" }}
+                        title={t("Editar permissões deste artista")}
+                      >
+                        <SlidersHorizontal size={13} />
+                        {t("Editar")}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -1700,15 +2095,87 @@ function ModalUsuario({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-border">
-          <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
-            {t("Cancelar")}
-          </button>
-          <button onClick={salvar} className="btn btn-primary" disabled={salvando}>
-            {salvando ? t("Salvando...") : (<><Check size={14} /> {t("Salvar")}</>)}
-          </button>
-        </div>
+        {/* Footer (Cancelar/Salvar) — só no modo criar. No editar as ações
+            ficam no HEADER (estilo artista). */}
+        {modo === "criar" && (
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            {!modoInline && (
+              <button onClick={onFechar} className="btn btn-secondary" disabled={salvando}>
+                {t("Cancelar")}
+              </button>
+            )}
+            <button
+              onClick={salvar}
+              className={`btn btn-primary ${modoInline ? "flex-1 justify-center" : ""}`}
+              disabled={salvando}
+            >
+              {salvando ? (
+                t("Salvando...")
+              ) : (
+                <>
+                  <Check size={14} />{" "}
+                  {modoInline ? t("Convidar") : t("Salvar")}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Editor de permissões do artista selecionado — modal empilhado
+            (fechar/salvar aqui NÃO fecha o ModalUsuario). Usado na CRIAÇÃO. */}
+        {editandoPermsDe && (() => {
+          const artista = artistas.find((a) => a.id === editandoPermsDe);
+          if (!artista) return null;
+          return (
+            <EditorPermissoesVinculo
+              key={editandoPermsDe}
+              nomeUsuario={nome.trim() || t("Novo usuário")}
+              nomeArtista={artista.name}
+              permissoes={permsPorArtista[editandoPermsDe] ?? []}
+              onSalvar={(chaves) => {
+                setPermsPorArtista((p) => ({ ...p, [editandoPermsDe]: chaves }));
+                setEditandoPermsDe(null);
+              }}
+              onFechar={() => setEditandoPermsDe(null)}
+            />
+          );
+        })()}
+
+        {/* Editor de permissões por vínculo — modo EDITAR (T8). Persiste via
+            o endpoint da equipe do artista e recarrega a lista. */}
+        {modo === "editar" && editandoVinculoDe && (() => {
+          const artista = artistas.find((a) => a.id === editandoVinculoDe);
+          if (!artista) return null;
+          const vinculo = (vinculosEdit ?? []).find((v) => v.artistId === editandoVinculoDe);
+          return (
+            <EditorPermissoesVinculo
+              key={editandoVinculoDe}
+              nomeUsuario={nome.trim() || inicial?.nome || t("Usuário")}
+              nomeArtista={artista.name}
+              permissoes={vinculo?.permissoes ?? []}
+              perfisIniciais={(vinculo?.perfis ?? []) as PerfilId[]}
+              podeSalvar={!salvandoVinculo}
+              onSalvar={(chaves, perfis) =>
+                salvarVinculo(editandoVinculoDe, chaves, perfis)
+              }
+              onFechar={() => setEditandoVinculoDe(null)}
+            />
+          );
+        })()}
       </div>
+  );
+
+  if (modoInline) return conteudo;
+  return (
+    <Modal
+      isOpen
+      onClose={onFechar}
+      // No editar o próprio HEADER (card com barra/avatar/apelido) faz de
+      // título — sem barra de título redundante, igual o editar do artista.
+      title={modo === "criar" ? t("Criar usuário") : ""}
+      maxWidth={modo === "editar" ? 620 : 520}
+    >
+      {conteudo}
     </Modal>
   );
 }

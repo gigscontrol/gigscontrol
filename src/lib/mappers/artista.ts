@@ -1,5 +1,6 @@
-import type { DJ, TaxaAgenciaModo } from "@/types";
+import type { Artista, TaxaAgenciaModo, Cidade } from "@/types";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
+import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
 export type ArtistaRow = {
   id: string;
@@ -9,10 +10,14 @@ export type ArtistaRow = {
   acesso_suspenso: boolean | null;
   deletado_em: string | null;
   criado_em: string | null;
-  // Cadastro completo (migração 21)
+  // Cadastro completo (migração 21) — cidade denormalizada só-BR (legado)
   cidade_ibge_id: string | null;
   cidade_nome: string | null;
   cidade_uf: string | null;
+  // Cidade global canônica (migração 82, FK cidades)
+  cidade_id: string | null;
+  /** Cidade embutida (join por cidade_id) — só nos SELECTs que embedam. */
+  cidade?: CidadeRow | null;
   // Dados do contratado p/ contrato (migração 37) + país (migração 52)
   pais: string | null;
   nome_legal: string | null;
@@ -21,6 +26,8 @@ export type ArtistaRow = {
   razao_social: string | null;
   endereco: string | null;
   telefone: string | null;
+  data_nascimento: string | null;
+  email: string | null;
   taxa_modo: TaxaAgenciaModo | null;
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
@@ -59,7 +66,9 @@ function normalizarRider(raw: unknown): string[] {
  * Normaliza o JSON do banco para o tipo PrivacidadeDj.
  * Merge campo-a-campo sobre PRIVACIDADE_DJ_PADRAO: cada boolean só é
  * aceito se for de fato boolean; o enum `contatos` só aceita
- * 'todos'|'proprios'. Qualquer outro valor cai no default.
+ * 'nenhum'|'proprios'|'todos'. Qualquer outro valor cai no default.
+ * Retrocompat: registros antigos SEM `agendaTotal` viram false (padrão);
+ * `contatos` legado ('todos'/'proprios') continua válido.
  */
 export function privacidadeValida(raw: unknown): PrivacidadeDj {
   if (!raw || typeof raw !== "object") return { ...PRIVACIDADE_DJ_PADRAO };
@@ -75,15 +84,16 @@ export function privacidadeValida(raw: unknown): PrivacidadeDj {
     financeiroInformar: bool("financeiroInformar"),
     contratosVer: bool("contratosVer"),
     contratosCriar: bool("contratosCriar"),
+    agendaTotal: bool("agendaTotal"),
     contatos:
-      r.contatos === "todos" || r.contatos === "proprios"
+      r.contatos === "nenhum" || r.contatos === "proprios" || r.contatos === "todos"
         ? r.contatos
         : PRIVACIDADE_DJ_PADRAO.contatos,
   };
 }
 
-export function rowParaDj(row: ArtistaRow): DJ {
-  const dj: DJ = {
+export function rowParaArtista(row: ArtistaRow): Artista {
+  const artista: Artista = {
     id: row.id,
     name: row.nome,
     color: row.cor ?? "#3b82f6",
@@ -94,23 +104,27 @@ export function rowParaDj(row: ArtistaRow): DJ {
     riderTecnico: normalizarRider(row.rider_tecnico),
     privacidade: privacidadeValida(row.privacidade),
   };
-  if (row.cidade_ibge_id) dj.cidadeIbgeId = row.cidade_ibge_id;
-  if (row.cidade_nome) dj.cidadeNome = row.cidade_nome;
-  if (row.cidade_uf) dj.cidadeUf = row.cidade_uf;
-  if (row.pais) dj.pais = row.pais;
-  if (row.nome_legal) dj.nomeLegal = row.nome_legal;
+  if (row.cidade_ibge_id) artista.cidadeIbgeId = row.cidade_ibge_id;
+  if (row.cidade_nome) artista.cidadeNome = row.cidade_nome;
+  if (row.cidade_uf) artista.cidadeUf = row.cidade_uf;
+  if (row.cidade_id) artista.cidadeId = row.cidade_id;
+  if (row.cidade) artista.cidade = rowParaCidade(row.cidade);
+  if (row.pais) artista.pais = row.pais;
+  if (row.nome_legal) artista.nomeLegal = row.nome_legal;
   if (row.documento_tipo === "cpf" || row.documento_tipo === "cnpj")
-    dj.documentoTipo = row.documento_tipo;
-  if (row.documento) dj.documento = row.documento;
-  if (row.razao_social) dj.razaoSocial = row.razao_social;
-  if (row.endereco) dj.endereco = row.endereco;
-  if (row.telefone) dj.telefone = row.telefone;
+    artista.documentoTipo = row.documento_tipo;
+  if (row.documento) artista.documento = row.documento;
+  if (row.razao_social) artista.razaoSocial = row.razao_social;
+  if (row.endereco) artista.endereco = row.endereco;
+  if (row.telefone) artista.telefone = row.telefone;
+  if (row.data_nascimento) artista.dataNascimento = row.data_nascimento;
+  if (row.email) artista.email = row.email;
   if (row.taxa_valor !== null && row.taxa_valor !== undefined) {
     const n = Number(row.taxa_valor);
-    if (Number.isFinite(n)) dj.taxaValor = n;
+    if (Number.isFinite(n)) artista.taxaValor = n;
   }
-  if (row.username) dj.username = row.username;
-  return dj;
+  if (row.username) artista.username = row.username;
+  return artista;
 }
 
 /**
@@ -120,8 +134,8 @@ export function rowParaDj(row: ArtistaRow): DJ {
  * usuário logado (workspace-context), então não pode vazar CPF/endereço/telefone
  * /razão social nem o fee de todos os artistas.
  */
-export function redigirDj(dj: DJ): DJ {
-  const limpo: DJ = { ...dj, taxaModo: "sem-taxa" };
+export function redigirArtista(artista: Artista): Artista {
+  const limpo: Artista = { ...artista, taxaModo: "sem-taxa" };
   delete limpo.taxaValor;
   delete limpo.nomeLegal;
   delete limpo.documentoTipo;
@@ -129,6 +143,8 @@ export function redigirDj(dj: DJ): DJ {
   delete limpo.razaoSocial;
   delete limpo.endereco;
   delete limpo.telefone;
+  delete limpo.dataNascimento;
+  delete limpo.email;
   return limpo;
 }
 
@@ -140,6 +156,7 @@ export type ArtistaEscrita = {
   cidade_ibge_id?: string | null;
   cidade_nome?: string | null;
   cidade_uf?: string | null;
+  cidade_id?: string | null;
   pais?: string | null;
   nome_legal?: string | null;
   documento_tipo?: string | null;
@@ -147,6 +164,8 @@ export type ArtistaEscrita = {
   razao_social?: string | null;
   endereco?: string | null;
   telefone?: string | null;
+  data_nascimento?: string | null;
+  email?: string | null;
   taxa_modo?: TaxaAgenciaModo;
   taxa_valor?: number | null;
   rider_camarim?: string[];

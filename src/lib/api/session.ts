@@ -229,9 +229,11 @@ export async function autenticarComWorkspace(
 
   // Gate de paywall server-side: rotas de MUTAÇÃO passam { exigirAcesso: true }
   // e são barradas quando a assinatura está bloqueada (vencida/suspensa/
-  // cancelada além da graça). Leitura, onboarding e o fluxo de pagamento NÃO
-  // passam esse gate — o bloqueado ainda enxerga a conta e consegue regularizar.
-  // 'ok' e 'graca' liberam normalmente.
+  // cancelada além da graça, ou trial sem data nunca pago). Vale pra QUALQUER
+  // papel — o estado é do WORKSPACE, não do usuário: se o admin não paga, admin,
+  // artista E equipe são barrados igual (cascata). Leitura, onboarding e o fluxo
+  // de pagamento NÃO passam esse gate — o bloqueado ainda enxerga a conta e
+  // consegue regularizar. 'ok' e 'graca' liberam normalmente.
   if (opts?.exigirAcesso && (await workspaceBloqueado(r.sessao.workspaceId))) {
     return {
       response: NextResponse.json(

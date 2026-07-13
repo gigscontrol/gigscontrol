@@ -167,8 +167,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     cidadeParaEscolhida(cidadeOrc)
   );
 
-  // Show — djId é uuid do artista (workspace.artistas).
-  const [djId, setDjId] = useState<string | null>(orc?.djId ?? null);
+  // Show — artistaId é uuid do artista (workspace.artistas).
+  const [artistaId, setDjId] = useState<string | null>(orc?.artistaId ?? null);
 
   // Line-Up (outros artistas do evento)
   const [lineUp, setLineUp] = useState<string[]>([]);
@@ -282,7 +282,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       if (det?.horarioInicio || orc.horario) set.add("horarioInicio");
       if (det?.horarioFim) set.add("horarioFim");
       if (cidadeOrc) set.add("cidade");
-      if (orc.djId) set.add("djId");
+      if (orc.artistaId) set.add("artistaId");
       set.add("cache");
       set.add("camarim");
       set.add("efeitos");
@@ -333,13 +333,13 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     if (!horarioFim) errs.horarioFim = t("Horário de fim obrigatório");
     if (!cidadeIbge) errs.cidade = t("Cidade obrigatória");
 
-    // djId precisa apontar pra um artista ATIVO. Não basta ser != null
+    // artistaId precisa apontar pra um artista ATIVO. Não basta ser != null
     // porque pode ter herdado de orçamento com id inválido (DJ deletado).
-    const djIdValido =
-      djId !== null && artistas.some((d) => d.id === djId);
-    if (!djIdValido) {
-      errs.dj = orc?.djId
-        ? t("Selecione o DJ atual da agência (o original do orçamento foi removido).")
+    const artistaIdValido =
+      artistaId !== null && artistas.some((d) => d.id === artistaId);
+    if (!artistaIdValido) {
+      errs.artista = orc?.artistaId
+        ? t("Selecione o artista atual da agência (o original do orçamento foi removido).")
         : t("Selecione o artista da agência");
     }
     const cacheNum = parseFloat(cache.replace(",", "."));
@@ -379,7 +379,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   async function handleSubmit() {
     // Guard de reentrada: se já está salvando, ignora cliques extras.
     if (salvando) return;
-    if (!validate() || !cidadeIbge || djId === null) return;
+    if (!validate() || !cidadeIbge || artistaId === null) return;
 
     setSalvando(true);
     try {
@@ -393,7 +393,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   async function submeter() {
     // Re-narrowing pro TS (o guard real está em handleSubmit, mas o
     // type-checker não atravessa a fronteira de função).
-    if (djId === null || !cidadeIbge) return;
+    if (artistaId === null || !cidadeIbge) return;
     const cacheNum = parseFloat(cache.replace(",", "."));
     const telefoneE164 = `${country.ddi}${telDigits.replace(/\D/g, "")}`;
 
@@ -474,7 +474,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       horarioFim,
       cidadeId: cidadeIdResolvido,
       casaId: casaOrc?.id,
-      djId,
+      artistaId,
       lineUp: lineUp.length > 0 ? lineUp : undefined,
       cache: cacheNum,
       duracaoHoras,
@@ -541,32 +541,32 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     setResultadoColagem({ preenchidos: feitos, naoPreenchidos, avisos });
   }
 
-  const djSelecionado = djId !== null ? artistas.find((d) => d.id === djId) : undefined;
+  const artistaSelecionado = artistaId !== null ? artistas.find((d) => d.id === artistaId) : undefined;
 
   // Resolve o DJ a ser usado quando vem de orçamento:
-  //  1. orc.djId bate com um ativo → usa direto (caso comum)
-  //  2. orc.djId está inválido (DJ original foi pra lixeira ou foi
+  //  1. orc.artistaId bate com um ativo → usa direto (caso comum)
+  //  2. orc.artistaId está inválido (DJ original foi pra lixeira ou foi
   //     recriado com outro id) E o workspace tem só 1 DJ ativo →
   //     assume que é ele (auto-fix silencioso). Cobre o caso típico
   //     do plano Individual.
   //  3. Caso contrário → caller mostra grid / erro pra resolver.
-  const djDoOrcamento = orc?.djId
-    ? artistas.find((d) => d.id === orc.djId)
+  const artistaDoOrcamento = orc?.artistaId
+    ? artistas.find((d) => d.id === orc.artistaId)
     : null;
-  const djAutoFallback =
-    !djDoOrcamento && orc?.djId && artistas.length === 1
+  const artistaAutoFallback =
+    !artistaDoOrcamento && orc?.artistaId && artistas.length === 1
       ? artistas[0]
       : null;
-  const djEfetivoOrc = djDoOrcamento ?? djAutoFallback;
+  const artistaEfetivoOrc = artistaDoOrcamento ?? artistaAutoFallback;
 
-  // Sincroniza djId com o djEfetivoOrc quando ele resolve (admin não
+  // Sincroniza artistaId com o artistaEfetivoOrc quando ele resolve (admin não
   // precisa clicar — a venda é gravada com o id certo).
   useEffect(() => {
-    if (djEfetivoOrc && djId !== djEfetivoOrc.id) {
-      setDjId(djEfetivoOrc.id);
+    if (artistaEfetivoOrc && artistaId !== artistaEfetivoOrc.id) {
+      setDjId(artistaEfetivoOrc.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [djEfetivoOrc?.id]);
+  }, [artistaEfetivoOrc?.id]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8 pb-32">
@@ -885,17 +885,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       {/* ============ 🎵 SHOW ============ */}
       <SectionCard icon={<Music size={16} />} title={t("Informações do Show")} accent={accent}>
         {/* Artista da agência:
-            (1) Vem de orçamento E djEfetivoOrc resolveu (bate direto
+            (1) Vem de orçamento E artistaEfetivoOrc resolveu (bate direto
                 OU auto-fix de workspace 1-DJ) → card simples travado.
-            (2) Vem de orçamento, djEfetivoOrc não resolveu (multi-DJ
+            (2) Vem de orçamento, artistaEfetivoOrc não resolveu (multi-DJ
                 + DJ original deletado) → grid + aviso, força escolha.
             (3) Sem orçamento → grid normal. */}
-        {djEfetivoOrc ? (
+        {artistaEfetivoOrc ? (
           <FieldWithAuto
             label="Artista da agência (quem vai se apresentar)"
             required
-            error={errors.dj}
-            showAuto={showAutoBadge("djId")}
+            error={errors.artista}
+            showAuto={showAutoBadge("artistaId")}
           >
             <div
               className="flex items-center gap-3 px-3 py-2.5 rounded-md border bg-elevated mt-1"
@@ -907,14 +907,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
               <span
                 className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{
-                  backgroundColor: djEfetivoOrc.color,
+                  backgroundColor: artistaEfetivoOrc.color,
                   color: "#fff",
                 }}
               >
-                {djEfetivoOrc.name.slice(0, 2).toUpperCase()}
+                {artistaEfetivoOrc.name.slice(0, 2).toUpperCase()}
               </span>
               <span className="text-sm font-semibold text-primary truncate flex-1">
-                {djEfetivoOrc.name}
+                {artistaEfetivoOrc.name}
               </span>
             </div>
           </FieldWithAuto>
@@ -922,30 +922,30 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           <FieldWithAuto
             label="Artista da agência (quem vai se apresentar)"
             required
-            error={errors.dj}
-            showAuto={showAutoBadge("djId")}
+            error={errors.artista}
+            showAuto={showAutoBadge("artistaId")}
           >
-            {orc?.djId &&
-              !djDoOrcamento &&
-              !djAutoFallback &&
-              !(djId && artistas.some((a) => a.id === djId)) && (
+            {orc?.artistaId &&
+              !artistaDoOrcamento &&
+              !artistaAutoFallback &&
+              !(artistaId && artistas.some((a) => a.id === artistaId)) && (
                 <p
                   className="text-xs mt-1 mb-2"
                   style={{ color: "var(--danger)" }}
                 >
-                  {t("O DJ original do orçamento não está mais ativo. Selecione um substituto abaixo.")}
+                  {t("O artista original do orçamento não está mais ativo. Selecione um substituto abaixo.")}
                 </p>
               )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
               {artistas.map((d) => {
-                const isActive = djId === d.id;
+                const isActive = artistaId === d.id;
                 return (
                   <button
                     key={d.id}
                     type="button"
                     onClick={() => {
                       setDjId(d.id);
-                      marcarEditado("djId");
+                      marcarEditado("artistaId");
                     }}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
                     style={{
@@ -1098,11 +1098,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             </span>{" "}
             <span className="text-muted">
               {t("por")} {formatarDuracao(duracaoHoras, duracaoMinutos)}
-              {djSelecionado && (
+              {artistaSelecionado && (
                 <>
                   {" "}{t("para")}{" "}
                   <span className="font-semibold text-primary">
-                    {djSelecionado.name}
+                    {artistaSelecionado.name}
                   </span>
                 </>
               )}
@@ -1396,10 +1396,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           onClick={handleSubmit}
           disabled={
             salvando ||
-            !podeUI(djId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
+            !podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
           }
           title={
-            !podeUI(djId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
+            !podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
               ? "Você não tem permissão para isso."
               : undefined
           }

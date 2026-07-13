@@ -69,13 +69,13 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
     );
   }
 
-  const dj = artistas.find((d) => d.id === venda.djId);
+  const artista = artistas.find((d) => d.id === venda.artistaId);
   const status = statusEfetivoParcela(parcela);
   const st = LABELS_STATUS_PARCELA[status];
   const meta = parcela.meta;
   const cobrancas = meta?.cobrancas ?? [];
-  const podeRegistrar = podeUI(venda.djId || null, "financeiro.registrar_pagamento");
-  const podeCancelar = podeUI(venda.djId || null, "financeiro.cancelar_pagamento");
+  const podeRegistrar = podeUI(venda.artistaId || null, "financeiro.registrar_pagamento");
+  const podeCancelar = podeUI(venda.artistaId || null, "financeiro.cancelar_pagamento");
 
   function reset() {
     setModo("info");
@@ -152,11 +152,11 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
           <Linha icon={<Hash size={13} />} bold>{venda.numero}</Linha>
           {venda.contratanteNome && <Linha icon={<User size={13} />}>{venda.contratanteNome}</Linha>}
           {venda.nomeEvento && <Linha icon={<Building2 size={13} />}>{venda.nomeEvento}</Linha>}
-          {dj && (
+          {artista && (
             <Linha>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dj.color }} />
-                {dj.name}
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: artista.color }} />
+                {artista.name}
               </span>
             </Linha>
           )}

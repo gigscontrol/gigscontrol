@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Eye, EyeOff, ShieldCheck, Lock } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Lock, Mail } from "lucide-react";
 import Toast from "../Toast";
 import { criarClienteBrowser } from "@/lib/db/supabase-browser";
 import { useAuth } from "@/lib/auth-context";
@@ -28,6 +28,64 @@ export default function AbaSeguranca() {
   const [verSenha, setVerSenha] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
+
+  // ---- E-mail de acesso ----
+  // Membros (artista/equipe) nascem com um e-mail interno determinístico
+  // (handle@interno.gigscontrol.app) e logam pelo username. Aqui eles podem
+  // cadastrar um e-mail real: o Supabase manda um link de confirmação e, após
+  // confirmar, o e-mail vira o de acesso (verificado, verde pra agência) e o
+  // login passa a valer pelo username OU pelo e-mail.
+  //
+  // REGRA: um e-mail VERIFICADO (email_confirmed_at) é o login e NÃO pode
+  // ser trocado por aqui — o card fica travado, só de leitura, com selo
+  // Verificado. Sem verificar (ex.: membro com e-mail interno) libera o
+  // cadastro/troca via updateUser.
+  const emailAtual = sessao?.usuario?.email ?? "";
+  const [emailVerificado, setEmailVerificado] = useState(false);
+
+  // Estado real de verificação vem do auth.users (email_confirmed_at). Não dá
+  // pra inferir só pelo domínio: um e-mail real cadastrado mas ainda não
+  // confirmado também precisa continuar editável.
+  useEffect(() => {
+    let ativo = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (ativo) setEmailVerificado(!!data.user?.email_confirmed_at);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [supabase]);
+
+  const [novoEmail, setNovoEmail] = useState("");
+  const [salvandoEmail, setSalvandoEmail] = useState(false);
+  const emailValido =
+    !emailVerificado &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoEmail.trim()) &&
+    novoEmail.trim().toLowerCase() !== emailAtual.toLowerCase();
+
+  async function salvarEmail() {
+    if (!emailValido || salvandoEmail) return;
+    setSalvandoEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: novoEmail.trim() });
+      if (error) {
+        setToast({ msg: error.message, tipo: "erro" });
+        return;
+      }
+      setToast({
+        msg: t(
+          "Enviamos um link de confirmação para {email}. Confirme para ativar o login por e-mail.",
+          { email: novoEmail.trim() }
+        ),
+        tipo: "sucesso",
+      });
+      setNovoEmail("");
+    } catch (e) {
+      setToast({ msg: (e as Error).message, tipo: "erro" });
+    } finally {
+      setSalvandoEmail(false);
+    }
+  }
 
   const novaCurta = nova.length > 0 && nova.length < 8;
   const naoConfere = confirma.length > 0 && nova !== confirma;
@@ -90,6 +148,62 @@ export default function AbaSeguranca() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ---- E-mail de acesso (cadastrar/verificar) ---- */}
+      <section className="card">
+        <div className="flex items-center gap-2 mb-1">
+          <Mail size={16} style={{ color: "var(--brand)" }} />
+          <div className="section-title">
+            {emailVerificado
+              ? t("E-mail de acesso")
+              : t("Cadastrar e-mail de acesso")}
+          </div>
+        </div>
+        <div className="section-subtitle mb-4">
+          {emailVerificado
+            ? t("Este é o seu e-mail de acesso, já verificado. Ele é o seu login e não pode ser alterado.")
+            : t("Cadastre um e-mail seu. Enviamos um link pra confirmar — depois disso você pode entrar tanto pelo seu login de usuário quanto pelo e-mail.")}
+        </div>
+
+        {emailVerificado ? (
+          // Verificado: só leitura + selo. Sem input/botão — não editável.
+          <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+            <Mail size={14} className="text-muted flex-shrink-0" />
+            <span className="flex-1 text-sm text-secondary break-all">{emailAtual}</span>
+            <span
+              className="inline-flex items-center gap-1 text-[0.7rem] flex-shrink-0"
+              style={{ color: "var(--success)" }}
+            >
+              <ShieldCheck size={12} /> {t("Verificado")}
+            </span>
+          </div>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-secondary">
+                {t("Seu e-mail")}
+              </span>
+              <input
+                type="email"
+                value={novoEmail}
+                onChange={(e) => setNovoEmail(e.target.value)}
+                className="campo-input"
+                placeholder="voce@email.com"
+                autoComplete="email"
+              />
+            </label>
+
+            <button
+              onClick={salvarEmail}
+              disabled={!emailValido || salvandoEmail}
+              className="btn btn-primary text-sm w-full justify-center mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {salvandoEmail ? t("Enviando...") : t("Cadastrar e confirmar")}
+            </button>
+          </>
+        )}
+      </section>
+
+      {/* ---- Alterar senha ---- */}
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} style={{ color: "var(--brand)" }} />

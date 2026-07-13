@@ -39,12 +39,12 @@ import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-co
 import Configuracoes from "@/components/configuracoes/Configuracoes";
 import AbaArtistas from "@/components/configuracoes/AbaArtistas";
 import AbaEquipe from "@/components/configuracoes/AbaEquipe";
-import EmConstrucao from "@/components/EmConstrucao";
 import ModelosPage from "@/components/contratos/ModelosPage";
 import NovoContratoPage from "@/components/contratos/NovoContratoPage";
 import HistoricoPage from "@/components/contratos/HistoricoPage";
 import MeusContratosPage from "@/components/contratos/MeusContratosPage";
 import DashboardContratos from "@/components/contratos/DashboardContratos";
+import AgenciaDashboard from "@/components/agencia/AgenciaDashboard";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
 import type { ContratoStatus } from "@/lib/mappers/contrato";
@@ -202,6 +202,23 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   const papel = sessao.usuario.papel;
+
+  // BLOQUEIO DO WORKSPACE (cascata da cobrança): quando o admin não pagou/venceu,
+  // o estado vem "bloqueado" pra TODOS os papéis. Não renderiza o app por baixo —
+  // só o modal, que trava a tela pra qualquer usuário (admin vê o caminho de
+  // pagar; artista/equipe veem o aviso pra falar com o administrador). O gate
+  // server-side (`exigirAcesso`) barra as mutações em paralelo (402).
+  if (acesso?.estado === "bloqueado") {
+    return (
+      <BloqueioModal
+        papel={papel}
+        adminContato={acesso.adminContato}
+        plano={acesso.plano}
+        ciclo={acesso.ciclo}
+      />
+    );
+  }
+
   return (
     <>
       {acesso?.estado === "graca" && (
@@ -213,14 +230,6 @@ function AuthGuard({ children }: { children: ReactNode }) {
         />
       )}
       {children}
-      {acesso?.estado === "bloqueado" && (
-        <BloqueioModal
-          papel={papel}
-          adminContato={acesso.adminContato}
-          plano={acesso.plano}
-          ciclo={acesso.ciclo}
-        />
-      )}
     </>
   );
 }
@@ -367,7 +376,7 @@ function AppRoot() {
   // abaixo sincroniza com a lista real de artistas do workspace assim
   // que ela carrega. (Estado de UI — preservado entre navegações porque
   // este componente vive no layout, que o Next não remonta.)
-  const [selectedDJs, setSelectedDJs] = useState<string[]>([]);
+  const [selectedArtistas, setSelectedArtistas] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Sincronização com a lista real de artistas:
@@ -391,7 +400,7 @@ function AppRoot() {
       // No mount, espera 1 ciclo pra dar tempo do fetch — mas se já
       // tem artistas, inicializa imediatamente.
       if (idsAtuais.size > 0) {
-        setSelectedDJs(Array.from(idsAtuais));
+        setSelectedArtistas(Array.from(idsAtuais));
         artistasIdsPrevRef.current = idsAtuais;
         jaInicializouRef.current = true;
       }
@@ -402,7 +411,7 @@ function AppRoot() {
     const novos = [...idsAtuais].filter((id) => !artistasIdsPrevRef.current.has(id));
     const removidos = [...artistasIdsPrevRef.current].filter((id) => !idsAtuais.has(id));
     if (novos.length > 0 || removidos.length > 0) {
-      setSelectedDJs((prev) => {
+      setSelectedArtistas((prev) => {
         const semRemovidos = prev.filter((id) => !removidos.includes(id));
         return Array.from(new Set([...semRemovidos, ...novos]));
       });
@@ -520,8 +529,8 @@ function AppRoot() {
         setActiveTab={handleTabChange}
         activePage={activePage}
         setActivePage={handlePageChange}
-        selectedDJs={selectedDJs}
-        setSelectedDJs={setSelectedDJs}
+        selectedArtistas={selectedArtistas}
+        setSelectedArtistas={setSelectedArtistas}
         isOpenMobile={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
         configAberta={configAberta}
@@ -557,7 +566,7 @@ function AppRoot() {
           {/* Financeiro */}
           {activeTab === "financeiro" && activePage === "dashboard" && (
             <Dashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirVenda={abrirVenda}
             />
@@ -572,7 +581,7 @@ function AppRoot() {
           {/* Vendas */}
           {activeTab === "vendas" && activePage === "dashboard" && (
             <VendasDashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
@@ -640,14 +649,14 @@ function AppRoot() {
           {/* Agenda */}
           {activeTab === "agenda" && activePage === "dashboard" && (
             <AgendaDashboard
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onNavigate={navegar}
               onAbrirShow={(id) => setShowModalId(id)}
             />
           )}
           {activeTab === "agenda" && activePage === "agenda-completa" && (
             <AgendaEscala
-              selectedDJs={selectedDJs}
+              selectedArtistas={selectedArtistas}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
               onNovaVendaNoDia={novaVendaNoDia}
@@ -662,7 +671,7 @@ function AppRoot() {
             <ContatosDashboard onAbrirCategoria={abrirContatos} />
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
-            <Contatos categoriaInicial={contatoCategoria} selectedDJs={selectedDJs} />
+            <Contatos categoriaInicial={contatoCategoria} selectedArtistas={selectedArtistas} />
           )}
           {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
 
@@ -692,7 +701,7 @@ function AppRoot() {
 
           {/* Agência */}
           {activeTab === "agencia" && activePage === "dashboard" && (
-            <EmConstrucao titulo="Agência" subtitulo="Dashboard" cor={MODULE_THEMES.agencia.color} />
+            <AgenciaDashboard />
           )}
           {activeTab === "agencia" && activePage === "agencia-artistas" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">

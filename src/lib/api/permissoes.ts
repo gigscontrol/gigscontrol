@@ -14,7 +14,7 @@ import {
  *   1. `papel` (admin / artista / vendedor / financeiro / produtor)
  *      — usado como "função primária" para retro-compat (esse é o valor
  *      que policies antigas e código legado lêem).
- *   2. `funcoes` (mapa { vendedor: djIds[], financeiro: djIds[], produtor: djIds[] })
+ *   2. `funcoes` (mapa { vendedor: artistaIds[], financeiro: artistaIds[], produtor: artistaIds[] })
  *      — a fonte da verdade nova: cada função carrega a lista de DJs
  *      que o usuário atende NAQUELA função.
  *
@@ -174,9 +174,9 @@ export function aplicarFiltroShows<Q extends QueryBuilder>(
     return query.eq("artist_id", sessao.artistaId) as Q;
   }
   if (temFuncao(sessao, "produtor")) {
-    const djs = djsDaFuncao(sessao, "produtor");
-    if (djs.length === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
-    return query.in("artist_id", djs) as Q;
+    const artistas = djsDaFuncao(sessao, "produtor");
+    if (artistas.length === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
+    return query.in("artist_id", artistas) as Q;
   }
   return query;
 }
@@ -256,7 +256,7 @@ export function podeExcluirAgenda(
  * Admin/artista(dono)/legado passam por `podeVerAgendaDetalhado` → sem redação.
  */
 export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show {
-  if (podeVerAgendaDetalhado(sessao, show.djId || null)) return show;
+  if (podeVerAgendaDetalhado(sessao, show.artistaId || null)) return show;
   // Nível básico (agenda.ver sem ver_detalhado): esconde cachê/vínculos E os
   // blocos detalhados novos — booking (PII de hospedagem) e a autoria/motivo do
   // cancelamento. Mantém dia/local/horário/status. Espelha stripAgendaItemDetalhado.
@@ -347,10 +347,10 @@ export function aplicarFiltroOrcamentos<Q extends QueryBuilder>(
     return query.eq("artist_id", sessao.artistaId) as Q;
   }
   if (temFuncao(sessao, "vendedor")) {
-    const djs = djsDaFuncao(sessao, "vendedor");
-    let q = djs.length === 0
+    const artistas = djsDaFuncao(sessao, "vendedor");
+    let q = artistas.length === 0
       ? (query.eq("artist_id", ZERO_RESULTS) as Q)
-      : (query.in("artist_id", djs) as Q);
+      : (query.in("artist_id", artistas) as Q);
     if (!sessao.escopo.verTodasVendas) {
       q = q.eq("criado_por", sessao.userId) as Q;
     }
@@ -474,14 +474,14 @@ export function aplicarFiltroVendas<Q extends QueryBuilder>(
     return query.eq("artist_id", sessao.artistaId) as Q;
   }
   // União dos DJs vendedor + financeiro (financeiro também lê vendas).
-  const djs = new Set<string>();
+  const artistas = new Set<string>();
   for (const f of ["vendedor", "financeiro"] as const) {
     if (temFuncao(sessao, f)) {
-      for (const d of djsDaFuncao(sessao, f)) djs.add(d);
+      for (const d of djsDaFuncao(sessao, f)) artistas.add(d);
     }
   }
-  if (djs.size === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
-  let q = query.in("artist_id", Array.from(djs)) as Q;
+  if (artistas.size === 0) return query.eq("artist_id", ZERO_RESULTS) as Q;
+  let q = query.in("artist_id", Array.from(artistas)) as Q;
   // Escopo "ver todas" só aplica pro vendedor; financeiro vê todas as
   // vendas dos DJs dele.
   if (
@@ -663,7 +663,7 @@ export function verificarAdminDoWorkspace(
  * Gate financeiro por artista para PATCH de parcela (informar/desfazer
  * pagamento e ajustes). MODELO NOVO: mapeia a ação → chave do catálogo e
  * exige a permissão naquele artista. LEGADO (sem vínculo): mantém a regra
- * atual (admin OU função financeiro) MAS soma djAtendidoPor para fechar o
+ * atual (admin OU função financeiro) MAS soma artistaAtendidoPor para fechar o
  * furo de escopo por DJ (financeiro do artista A não mexe em venda do B).
  *
  * `artistId`/`criadoPor` vêm da VENDA da parcela (a parcela não tem coluna
@@ -691,7 +691,7 @@ export function podeInformarPagamentoParcela(
   }
   // ---- legado: admin OU financeiro, restrito aos DJs da função ----
   if (sessao.papel === "admin") return null;
-  if (temFuncao(sessao, "financeiro") && djAtendidoPor(sessao, "financeiro", artistId)) {
+  if (temFuncao(sessao, "financeiro") && artistaAtendidoPor(sessao, "financeiro", artistId)) {
     return null;
   }
   return NextResponse.json(
@@ -722,22 +722,22 @@ export function podeVerFinanceiro(
     );
   }
   // legado: admin já retornou; aqui exige função financeiro no DJ da venda.
-  return temFuncao(sessao, "financeiro") && djAtendidoPor(sessao, "financeiro", artistId);
+  return temFuncao(sessao, "financeiro") && artistaAtendidoPor(sessao, "financeiro", artistId);
 }
 
 /**
  * Confere se a venda dada (pelo seu artist_id) está no escopo da função
  * informada. Usado pra autorizar edição granular de parcelas, vendas, etc.
  */
-function djAtendidoPor(
+function artistaAtendidoPor(
   sessao: SessaoAutenticada,
   funcao: "vendedor" | "financeiro" | "produtor",
   artistId: string | null | undefined
 ): boolean {
   if (sessao.papel === "admin") return true;
   if (!artistId) return false;
-  const djs = djsDaFuncao(sessao, funcao);
-  return djs.includes(artistId);
+  const artistas = djsDaFuncao(sessao, funcao);
+  return artistas.includes(artistId);
 }
 
 // ============================================================
