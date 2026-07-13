@@ -31,7 +31,7 @@ import {
   valorMensal,
   valorAnual,
 } from "@/lib/planos";
-import PlanoCard from "@/components/PlanoCard";
+import PlanoCoverflow from "@/components/PlanoCoverflow";
 import SeletorGateway from "@/components/checkout/SeletorGateway";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
@@ -895,9 +895,11 @@ function Etapa2Plano({
   onRecarregar: () => Promise<void>;
 }) {
   const t = useT();
-  const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
-    planoEscolhido ?? "individual"
+  // O plano selecionado é o card CENTRAL do coverflow (índice na escada).
+  const [central, setCentral] = useState(() =>
+    Math.max(0, PLANOS.findIndex((p) => p.id === (planoEscolhido ?? "individual")))
   );
+  const planoSelecionado = PLANOS[central].id;
   const [ciclo, setCiclo] = useState<CicloCobranca>(
     cicloInicial === "anual" ? "anual" : "mensal"
   );
@@ -1036,17 +1038,12 @@ function Etapa2Plano({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-        {PLANOS.map((p) => (
-          <PlanoCard
-            key={p.id}
-            plano={p}
-            ciclo={ciclo}
-            selecionado={planoSelecionado === p.id}
-            recomendado={p.id === "individual"}
-            onSelecionar={() => setPlanoSelecionado(p.id)}
-          />
-        ))}
+      <div className="mb-8">
+        <PlanoCoverflow
+          ciclo={ciclo}
+          centralIndex={central}
+          onCentralChange={setCentral}
+        />
       </div>
 
       {erro && (

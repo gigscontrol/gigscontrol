@@ -4,6 +4,14 @@
  */
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "Admin": "Admin",
+  "Selecionado": "Sélectionné",
+  "Ver mais recursos": "Voir plus de fonctionnalités",
+  "Ver menos recursos": "Voir moins de fonctionnalités",
+  "Plano anterior": "Forfait précédent",
+  "Próximo plano": "Forfait suivant",
+  "{n} modelos de contrato": "{n} modèles de contrat",
+  "{n} contratos por mês": "{n} contrats par mois",
   "Grandes carreiras merecem": "Les grandes carrières méritent",
   "uma gestão profissional": "une gestion professionnelle",
   "Início ": "Accueil",

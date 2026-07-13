@@ -8,6 +8,14 @@
 
 // ---- Booking / Fechamento (auditoria i18n 2026-07-07) ----
 const BOOKING_AUD: Record<string, string> = {
+  "Admin": "Admin",
+  "Selecionado": "Selected",
+  "Ver mais recursos": "See more features",
+  "Ver menos recursos": "See fewer features",
+  "Plano anterior": "Previous plan",
+  "Próximo plano": "Next plan",
+  "{n} modelos de contrato": "{n} contract templates",
+  "{n} contratos por mês": "{n} contracts per month",
   "Booking / Hospedagem": "Booking / Accommodation",
   "Pra organizar a hospedagem, preciso destas informações:": "To arrange the accommodation, I need this information:",
   "Nome e endereço do hotel": "Hotel name and address",
