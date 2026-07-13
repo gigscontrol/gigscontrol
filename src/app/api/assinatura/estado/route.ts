@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { infoSubscription } from "@/lib/services/stripe.service";
 
 /**
  * GET /api/assinatura/estado
  *
- * Estado consolidado da assinatura pra tela de Plano: plano/ciclo atuais,
- * status de cobrança, downgrade agendado (se houver) e a MOEDA REAL da
- * assinatura na Stripe (pra não formatar o preço na moeda do IP). Só admin.
+ * Estado consolidado da assinatura pra tela de Plano no modelo PRÉ-PAGO por
+ * validade. Lê `subscriptions` DIRETO (sem estado recorrente da Stripe):
+ * plano/ciclo atuais, status, VALIDADE (`acesso_ate`), dias restantes derivados
+ * dela, provider do último pagamento e o downgrade pendente (se houver). A
+ * moeda vem do último pagamento registrado (tabela `pagamentos`) — não do IP.
+ * Só admin.
  */
 export async function GET() {
   const r = await autenticarComWorkspace();
@@ -26,53 +28,68 @@ export async function GET() {
     .eq("id", wsId)
     .maybeSingle<{ plano: string | null; ciclo: string | null; status: string | null }>();
 
-  // Subscription: status + downgrade pendente. Defensivo: se as colunas de
-  // downgrade ainda não foram migradas (46), cai no select sem elas.
+  // Subscription (modelo pré-pago): status + validade + provider + downgrade
+  // pendente. Defensivo: se colunas novas (acesso_ate/provider) ou de downgrade
+  // (mig 46) ainda não migraram, cai no select mínimo sem elas.
   let subStatus: string | null = null;
+  let acessoAte: string | null = null;
+  let provider: string | null = null;
   let downgradePara: string | null = null;
   let downgradeEfetivoEm: string | null = null;
-  let mpPreferenceId: string | null = null;
   const sel = await admin
     .from("subscriptions")
-    .select("status, mp_preference_id, downgrade_para, downgrade_efetivo_em")
+    .select("status, acesso_ate, provider, downgrade_para, downgrade_efetivo_em")
     .eq("workspace_id", wsId)
     .maybeSingle<{
       status: string | null;
-      mp_preference_id: string | null;
+      acesso_ate: string | null;
+      provider: string | null;
       downgrade_para: string | null;
       downgrade_efetivo_em: string | null;
     }>();
   if (!sel.error && sel.data) {
     subStatus = sel.data.status;
-    mpPreferenceId = sel.data.mp_preference_id;
+    acessoAte = sel.data.acesso_ate;
+    provider = sel.data.provider;
     downgradePara = sel.data.downgrade_para;
     downgradeEfetivoEm = sel.data.downgrade_efetivo_em;
   } else {
     const fb = await admin
       .from("subscriptions")
-      .select("status, mp_preference_id")
+      .select("status")
       .eq("workspace_id", wsId)
-      .maybeSingle<{ status: string | null; mp_preference_id: string | null }>();
+      .maybeSingle<{ status: string | null }>();
     subStatus = fb.data?.status ?? null;
-    mpPreferenceId = fb.data?.mp_preference_id ?? null;
   }
 
-  // Moeda real da assinatura (best-effort — não quebra a tela se falhar).
-  let moeda: string | null = null;
-  if (mpPreferenceId) {
-    try {
-      const info = await infoSubscription(mpPreferenceId);
-      moeda = info.moeda;
-    } catch {
-      /* mantém null → o client cai na moeda da região */
-    }
+  // Dias restantes derivados da validade (arredonda pra cima; nunca negativo).
+  let diasRestantes = 0;
+  if (acessoAte) {
+    const ms = new Date(acessoAte).getTime() - Date.now();
+    diasRestantes = ms > 0 ? Math.ceil(ms / 86_400_000) : 0;
   }
+
+  // Moeda REAL = a do último pagamento (não a do IP). null se nunca pagou.
+  let moeda: string | null = null;
+  const ultimoPag = await admin
+    .from("pagamentos")
+    .select("moeda")
+    .eq("workspace_id", wsId)
+    .not("moeda", "is", null)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ moeda: string | null }>();
+  if (ultimoPag.data?.moeda) moeda = ultimoPag.data.moeda;
 
   return NextResponse.json({
     plano: ws?.plano ?? null,
     ciclo: ws?.ciclo === "anual" ? "anual" : "mensal",
     status: subStatus ?? ws?.status ?? null,
     moeda,
+    acessoAte,
+    diasRestantes,
+    provider,
+    downgradePendente: !!downgradePara,
     downgradePara,
     downgradeEfetivoEm,
   });

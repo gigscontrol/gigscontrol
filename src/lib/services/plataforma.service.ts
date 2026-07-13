@@ -10,11 +10,13 @@ import {
 import { estadoAcessoDe as estadoAcesso } from "@/lib/acesso";
 // Moeda de cobrança derivada do país do workspace (mesma regra do checkout).
 import { regiaoDe } from "@/lib/regiao";
+import { concederDiasCortesia } from "@/lib/services/pagamentos.service";
 import type {
   Assinatura,
   StatusAssinatura,
   UsuarioPlataforma,
   StatusUsuario,
+  UltimoPagamento,
 } from "@/lib/plataforma";
 
 /**
@@ -59,43 +61,24 @@ function statusUsuarioValido(s: string | null | undefined): StatusUsuario {
 }
 
 /**
- * Calcula a próxima cobrança a partir de `criado_em + ciclo`.
- * Avança em intervalos do ciclo até passar da data atual.
+ * Status interno da subscription (+ validade) → rótulo exibido no painel.
+ *
+ * MODELO PRÉ-PAGO: deriva de `acesso_ate` via `estadoAcessoDe` (mesma fonte
+ * do gate de acesso). 'suspended'/'cancelled' mandam sempre — mesmo com
+ * validade futura restante (ver `estadoAcessoDe`).
  */
-function calcularProximaCobranca(criadoEm: string, ciclo: CicloCobranca): string {
-  const inicio = new Date(criadoEm);
-  const agora = new Date();
-  const passo = ciclo === "anual" ? 12 : 1;
-  const proxima = new Date(inicio);
-  while (proxima <= agora) {
-    proxima.setMonth(proxima.getMonth() + passo);
-  }
-  return proxima.toISOString().slice(0, 10);
-}
-
-/** Status interno da subscription → rótulo exibido no painel. */
-function statusAdmin(
-  subStatus: string,
-  trialTerminaEm: string | null
-): StatusAssinatura {
-  const e = estadoAcesso(subStatus, trialTerminaEm);
-  if (subStatus === "ativa") return "ativa";
-  if (subStatus === "trial") return e === "ok" ? "trial" : "suspensa"; // trial expirado
+function statusAdmin(subStatus: string, acessoAte: string | null): StatusAssinatura {
+  if (subStatus === "suspended") return "suspensa";
   if (subStatus === "cancelled") return "cancelada";
-  return "suspensa"; // graca / suspended / desconhecido
+  const e = estadoAcesso(subStatus, acessoAte);
+  if (e === "bloqueado") return "suspensa"; // validade vencida além da graça
+  return "ativa"; // 'ok' ou 'graca' → acesso liberado
 }
 
-/** Dias restantes até o prazo relevante. Negativo = expirado. */
-function diasRestantes(
-  subStatus: string,
-  trialTerminaEm: string | null,
-  proximaCobranca: string | null
-): number | null {
-  let alvo: string | null = null;
-  if (subStatus === "ativa") alvo = proximaCobranca;
-  else if (subStatus === "trial" || subStatus === "graca") alvo = trialTerminaEm;
-  if (!alvo) return null;
-  return Math.ceil((new Date(alvo).getTime() - Date.now()) / 86_400_000);
+/** Dias restantes até `acesso_ate`. Negativo = expirado (ainda em graça). */
+function diasRestantes(acessoAte: string | null): number | null {
+  if (!acessoAte) return null;
+  return Math.ceil((new Date(acessoAte).getTime() - Date.now()) / 86_400_000);
 }
 
 // ============================================================
@@ -126,21 +109,38 @@ export async function listarAssinaturas(
     .is("deletado_em", null);
   if (errArt) throw errArt;
 
-  // Subscriptions — fonte REAL de status/datas (o app gateia por ela).
+  // Subscriptions — fonte REAL de status/validade (o app gateia por ela).
   const { data: subs } = await admin
     .from("subscriptions")
-    .select("workspace_id, status, ciclo, inicio_em, trial_termina_em, proxima_cobranca");
+    .select("workspace_id, status, ciclo, inicio_em, acesso_ate");
   const subByWs = new Map<
     string,
     {
       status: string;
       ciclo: string | null;
       inicio_em: string | null;
-      trial_termina_em: string | null;
-      proxima_cobranca: string | null;
+      acesso_ate: string | null;
     }
   >();
   for (const s of subs ?? []) subByWs.set(s.workspace_id, s);
+
+  // Último pagamento por workspace (ledger `pagamentos` — migração 84).
+  // Ordena desc e pega o primeiro de cada workspace na varredura.
+  const { data: pagamentos } = await admin
+    .from("pagamentos")
+    .select("workspace_id, provider, metodo, valor, moeda, criado_em")
+    .order("criado_em", { ascending: false });
+  const ultimoPagamentoByWs = new Map<string, UltimoPagamento>();
+  for (const pg of pagamentos ?? []) {
+    if (ultimoPagamentoByWs.has(pg.workspace_id)) continue; // já achou o mais recente
+    ultimoPagamentoByWs.set(pg.workspace_id, {
+      data: pg.criado_em,
+      provider: pg.provider as UltimoPagamento["provider"],
+      metodo: pg.metodo,
+      valor: pg.valor,
+      moeda: pg.moeda as Moeda | null,
+    });
+  }
 
   const profilesByWs = new Map<string, typeof profiles>();
   for (const p of profiles ?? []) {
@@ -164,22 +164,7 @@ export async function listarAssinaturas(
     );
     const sub = subByWs.get(w.id);
     const subStatus = sub?.status ?? null;
-    const trialEm = sub?.trial_termina_em ?? null;
-    // Data exibida como "próximo pagamento":
-    //  - ativa       → data real do Stripe, ou projeção pelo ciclo (conta sem Stripe)
-    //  - trial/graça → o prazo (trial_termina_em)
-    //  - suspensa/cancelada → null ("—")
-    let proxima: string | null = null;
-    if (subStatus === "ativa") {
-      proxima =
-        sub?.proxima_cobranca ??
-        calcularProximaCobranca(
-          sub?.inicio_em ?? w.criado_em,
-          (sub?.ciclo as CicloCobranca) ?? w.ciclo
-        );
-    } else if (subStatus === "trial" || subStatus === "graca") {
-      proxima = sub?.proxima_cobranca ?? (trialEm ? trialEm.slice(0, 10) : null);
-    }
+    const acessoAte = sub?.acesso_ate ?? null;
     return {
       workspaceId: w.id,
       nomeWorkspace: w.nome,
@@ -189,41 +174,142 @@ export async function listarAssinaturas(
       ciclo: (sub?.ciclo as CicloCobranca) ?? w.ciclo,
       moeda: regiaoDe(w.pais_padrao).moeda,
       // Status/dias vêm da subscription real; sem sub, cai no campo do workspace.
-      status: subStatus ? statusAdmin(subStatus, trialEm) : statusAssinaturaValido(w.status),
-      diasRestantes: subStatus ? diasRestantes(subStatus, trialEm, proxima) : null,
+      status: subStatus ? statusAdmin(subStatus, acessoAte) : statusAssinaturaValido(w.status),
+      diasRestantes: subStatus ? diasRestantes(acessoAte) : null,
       artistasEmUso: artistasCount.get(w.id) ?? 0,
       usuariosEmUso: usuariosEquipe.length,
       inicioEm: w.criado_em.slice(0, 10),
-      proximaCobranca: proxima,
+      acessoAte,
+      ultimoPagamento: ultimoPagamentoByWs.get(w.id) ?? null,
     };
   });
 
   return assinaturas;
 }
 
-const STATUS_INTERNO: Record<StatusAssinatura, string> = {
-  ativa: "ativa",
-  trial: "trial",
-  suspensa: "suspended",
-  cancelada: "cancelled",
+// ============================================================
+// Receita realizada (substitui MRR/ARR projetado)
+// ============================================================
+
+export type ReceitaRealizada = {
+  /** Soma de `pagamentos.valor` (centavos) nos últimos 30 dias, por moeda. */
+  ultimos30dBrl: number;
+  ultimos30dUsd: number;
+  /** Soma de `pagamentos.valor` (centavos) nos últimos 12 meses, por moeda. */
+  ultimos12mBrl: number;
+  ultimos12mUsd: number;
+  /** Workspaces com validade futura (acesso_ate > agora). */
+  workspacesComValidadeFutura: number;
 };
 
+/**
+ * Receita REALIZADA (não projetada): soma `pagamentos.valor` de pagamentos
+ * reais (stripe/mercadopago — exclui 'cortesia' e 'cupom', que não são
+ * receita: mês grátis) no período, por moeda. Substitui o antigo MRR/ARR
+ * projetado por ciclo.
+ */
+export async function receitaRealizada(
+  admin: SupabaseClient
+): Promise<ReceitaRealizada> {
+  const agora = Date.now();
+  const desde30d = new Date(agora - 30 * 86_400_000).toISOString();
+  const desde12m = new Date(agora - 365 * 86_400_000).toISOString();
+
+  const { data: pagamentos } = await admin
+    .from("pagamentos")
+    .select("valor, moeda, provider, criado_em")
+    .not("provider", "in", "(cortesia,cupom)")
+    .gte("criado_em", desde12m);
+
+  let ultimos30dBrl = 0;
+  let ultimos30dUsd = 0;
+  let ultimos12mBrl = 0;
+  let ultimos12mUsd = 0;
+  for (const pg of pagamentos ?? []) {
+    const valor = pg.valor ?? 0;
+    const usd = pg.moeda === "usd";
+    if (usd) ultimos12mUsd += valor;
+    else ultimos12mBrl += valor;
+    if (pg.criado_em >= desde30d) {
+      if (usd) ultimos30dUsd += valor;
+      else ultimos30dBrl += valor;
+    }
+  }
+
+  const { count: workspacesComValidadeFutura } = await admin
+    .from("subscriptions")
+    .select("workspace_id", { count: "exact", head: true })
+    .gt("acesso_ate", new Date(agora).toISOString());
+
+  return {
+    ultimos30dBrl,
+    ultimos30dUsd,
+    ultimos12mBrl,
+    ultimos12mUsd,
+    workspacesComValidadeFutura: workspacesComValidadeFutura ?? 0,
+  };
+}
+
+/** Histórico de pagamentos de um workspace (ledger `pagamentos`), mais recentes primeiro. */
+export type HistoricoPagamento = {
+  id: string;
+  data: string;
+  provider: "stripe" | "mercadopago" | "cortesia" | "cupom";
+  metodo: string | null;
+  valor: number | null;
+  moeda: Moeda | null;
+  dias: number;
+  plano: string | null;
+  ciclo: string | null;
+};
+
+export async function historicoPagamentos(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<HistoricoPagamento[]> {
+  const { data, error } = await admin
+    .from("pagamentos")
+    .select("id, criado_em, provider, metodo, valor, moeda, dias_concedidos, plano, ciclo")
+    .eq("workspace_id", workspaceId)
+    .order("criado_em", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    data: p.criado_em,
+    provider: p.provider as HistoricoPagamento["provider"],
+    metodo: p.metodo,
+    valor: p.valor,
+    moeda: p.moeda as Moeda | null,
+    dias: p.dias_concedidos,
+    plano: p.plano,
+    ciclo: p.ciclo,
+  }));
+}
+
+/**
+ * MODELO PRÉ-PAGO: o painel só liga/desliga o acesso manualmente — não seta
+ * mais 'trial'/'ativa' (isso é derivado de `acesso_ate`, ver `statusAdmin`).
+ *
+ *  - 'suspensa'  → status='suspended' na subscription: bloqueia NA HORA,
+ *                  mesmo com validade futura restante (ver `estadoAcessoDe`).
+ *  - 'ativa'     → "reativar": limpa o status pra 'ativa' e deixa o ACESSO
+ *                  REAL voltar a ser ditado por `acesso_ate` (se já venceu,
+ *                  volta bloqueado; se ainda tem validade, volta liberado).
+ *  - 'cancelada' → status='cancelled': bloqueia sempre (chargeback/cancelamento).
+ *  - 'trial'     → não é mais um estado que o painel escreve (deixa de existir
+ *                  como ação; `statusAdmin` nunca devolve 'trial' pra sub real).
+ */
 export async function alterarStatusAssinatura(
   admin: SupabaseClient,
   workspaceId: string,
   status: StatusAssinatura
 ): Promise<void> {
-  const interno = STATUS_INTERNO[status];
-  const patch: Record<string, unknown> = { status: interno };
-  if (status === "ativa") patch.trial_termina_em = null;
-  // "Marcar teste" pelo painel = teste fresco de 7 dias.
-  if (status === "trial") {
-    patch.trial_termina_em = new Date(Date.now() + 7 * 86_400_000).toISOString();
-  }
+  const interno =
+    status === "suspensa" ? "suspended" : status === "cancelada" ? "cancelled" : "ativa";
   // Fonte da verdade = subscriptions (é o que o app olha pra liberar o acesso).
   const { error } = await admin
     .from("subscriptions")
-    .update(patch)
+    .update({ status: interno })
     .eq("workspace_id", workspaceId);
   if (error) throw error;
   // Espelha no workspace (compat com código legado que ainda leia w.status).
@@ -231,30 +317,17 @@ export async function alterarStatusAssinatura(
 }
 
 /**
- * Dá dias grátis: estende o acesso setando a assinatura como `trial` com novo
- * prazo. Soma a partir do maior entre AGORA e o prazo atual (não perde os dias
- * que ainda restam). É um comp LOCAL — não mexe no Stripe.
+ * Dá dias grátis: soma em `acesso_ate` via `concederDiasCortesia` (RPC
+ * idempotente `registrar_pagamento_estender`, migração 84). Fica registrado
+ * no ledger `pagamentos` com provider='cortesia' — auditável no histórico.
+ * Soma a partir do maior entre AGORA e a validade atual (nunca perde dias).
  */
 export async function estenderDiasAssinatura(
   admin: SupabaseClient,
   workspaceId: string,
   dias: number
 ): Promise<void> {
-  const { data: sub } = await admin
-    .from("subscriptions")
-    .select("trial_termina_em")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle<{ trial_termina_em: string | null }>();
-  const agora = Date.now();
-  const atual = sub?.trial_termina_em ? new Date(sub.trial_termina_em).getTime() : 0;
-  const base = Math.max(agora, atual);
-  const novo = new Date(base + dias * 86_400_000).toISOString();
-  const { error } = await admin
-    .from("subscriptions")
-    .update({ status: "trial", trial_termina_em: novo })
-    .eq("workspace_id", workspaceId);
-  if (error) throw error;
-  await admin.from("workspaces").update({ status: "trial" }).eq("id", workspaceId);
+  await concederDiasCortesia(workspaceId, dias, "cortesia_admin");
 }
 
 export async function alterarPlanoAssinatura(

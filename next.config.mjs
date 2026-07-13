@@ -10,16 +10,19 @@ import { withSentryConfig } from "@sentry/nextjs";
 //   - Supabase: REST + realtime (wss) + storage (logos/comprovantes)
 //   - Sentry: ingest (só ativo com DSN setado)
 //   - Stripe: defensivo (checkout hoje é redirect; Payment Element é futuro)
+//   - Mercado Pago: SDK v2 (sdk.mercadopago.com) + Payment Brick (iframes dos
+//     campos de cartão em *.mercadopago.com/*.mercadolibre.com) + API (POST do
+//     device fingerprint / recursos do Brick pra api.mercadopago.com)
 // 'unsafe-inline'/'unsafe-eval'/'wasm-unsafe-eval' seguem liberados (hidratação
 // do Next + wasm do pdfjs); endurecer com nonce fica de follow-up.
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://js.stripe.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://js.stripe.com https://sdk.mercadopago.com https://http2.mlstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://flagcdn.com https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.ingest.sentry.io https://*.sentry.io",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://flagcdn.com https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://*.mlstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.ingest.sentry.io https://*.sentry.io https://api.mercadopago.com https://api.mercadolibre.com https://sdk.mercadopago.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.mercadopago.com https://*.mercadolibre.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

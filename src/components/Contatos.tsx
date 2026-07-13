@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Ban, ShieldCheck } from "lucide-react";
 import PageHeader from "./PageHeader";
 import DateRangeSelector from "./DateRangeSelector";
 import Modal from "./Modal";
@@ -25,6 +25,14 @@ type Selecionado =
   | { tipo: "casa"; item: Casa }
   | { tipo: "cidade"; item: Cidade }
   | null;
+
+/** Abas do Gerenciar. "bloqueados" é a lista de contratantes+casas bloqueados. */
+type Aba = ContatoCategoria | "bloqueados";
+
+/** Item alvo do modal de bloqueio (bloquear/desbloquear contratante ou casa). */
+type AlvoBloqueio =
+  | { tipo: "contratante"; item: Contratante }
+  | { tipo: "casa"; item: Casa };
 
 const TIPO_CASA_LABEL: Record<string, string> = {
   club: "Club",
@@ -78,13 +86,31 @@ export default function Contatos({
 }) {
   const t = useT();
   const accent = MODULE_THEMES.contatos.color;
-  const { contratantes, casas, cidades, removeContratante, removeCasa, removeCidade } = useContatos();
+  const {
+    contratantes,
+    casas,
+    cidades,
+    removeContratante,
+    removeCasa,
+    removeCidade,
+    updateContratante,
+    updateCasa,
+  } = useContatos();
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
   const { vendas } = useVendas();
   const artistasAtivos = useArtistas(); // só retorna DJs não-deletados
+  const { equipe } = useWorkspace();
 
-  const [categoria, setCategoria] = useState<ContatoCategoria>(categoriaInicial);
+  /** userId → nome legível (para exibir "bloqueado por"). Admin não está na
+   *  equipe, então cai no fallback. */
+  const nomePorUsuario = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const u of equipe) m.set(u.id, u.nome);
+    return m;
+  }, [equipe]);
+
+  const [categoria, setCategoria] = useState<Aba>(categoriaInicial);
   const [search, setSearch] = useState("");
   const { workspaceCriadoEm } = useWorkspace();
   const [range, setRange] = useState<AgendaDateRange>("Visão geral");
@@ -104,6 +130,34 @@ export default function Contatos({
     | { type: "edit-cidade"; item: Cidade }
     | null
   >(null);
+  // Modal de bloqueio: pede o motivo ao bloquear um contratante/casa.
+  const [bloquear, setBloquear] = useState<AlvoBloqueio | null>(null);
+  const [motivoBloqueio, setMotivoBloqueio] = useState("");
+  const [salvandoBloqueio, setSalvandoBloqueio] = useState(false);
+
+  const abrirBloqueio = (alvo: AlvoBloqueio) => {
+    setMotivoBloqueio("");
+    setBloquear(alvo);
+  };
+
+  const confirmarBloqueio = async () => {
+    if (!bloquear) return;
+    setSalvandoBloqueio(true);
+    try {
+      const patch = { bloqueado: true, bloqueadoMotivo: motivoBloqueio.trim() || undefined };
+      if (bloquear.tipo === "contratante") await updateContratante(bloquear.item.id, patch);
+      else await updateCasa(bloquear.item.id, patch);
+      setBloquear(null);
+    } finally {
+      setSalvandoBloqueio(false);
+    }
+  };
+
+  const desbloquear = async (alvo: AlvoBloqueio) => {
+    const patch = { bloqueado: false };
+    if (alvo.tipo === "contratante") await updateContratante(alvo.item.id, patch);
+    else await updateCasa(alvo.item.id, patch);
+  };
 
   // ----------------------------------------------------------------
   // Filtro por DJ selecionado (sidebar):
@@ -220,6 +274,30 @@ export default function Contatos({
     );
   }, [cidades, search, filtrosPorDj]);
 
+  // Bloqueados: contratantes + casas bloqueados (respeitando o filtro por DJ e
+  // a busca). Cidades não têm bloqueio.
+  const contratantesBloqueados = useMemo(
+    () =>
+      contratantes.filter(
+        (c) =>
+          c.bloqueado &&
+          passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist) &&
+          (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [contratantes, filtrosPorDj, search]
+  );
+  const casasBloqueadas = useMemo(
+    () =>
+      casas.filter(
+        (c) =>
+          c.bloqueado &&
+          passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist) &&
+          (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [casas, filtrosPorDj, search]
+  );
+  const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
+
   // Tela de detalhe quando algo selecionado
   if (selecionado) {
     return (
@@ -255,23 +333,25 @@ export default function Contatos({
               setSelectedCustomYear={setCustomYear}
               accountCreatedAt={workspaceCriadoEm}
             />
-            <button
-              onClick={() => {
-                if (categoria === "contratantes") setModal({ type: "novo-contratante" });
-                else if (categoria === "casas") setModal({ type: "novo-casa" });
-                else setModal({ type: "novo-cidade" });
-              }}
-              className="btn btn-primary"
-            >
-              <Plus size={16} />
-              {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
-            </button>
+            {categoria !== "bloqueados" && (
+              <button
+                onClick={() => {
+                  if (categoria === "contratantes") setModal({ type: "novo-contratante" });
+                  else if (categoria === "casas") setModal({ type: "novo-casa" });
+                  else setModal({ type: "novo-cidade" });
+                }}
+                className="btn btn-primary"
+              >
+                <Plus size={16} />
+                {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
+              </button>
+            )}
           </div>
         }
       />
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <SummaryTile
           icon={<Users size={16} />}
           label={t("Contratantes")}
@@ -295,6 +375,14 @@ export default function Contatos({
           active={categoria === "cidades"}
           accent={accent}
           onClick={() => setCategoria("cidades")}
+        />
+        <SummaryTile
+          icon={<Ban size={16} />}
+          label={t("Bloqueados")}
+          value={totalBloqueados}
+          active={categoria === "bloqueados"}
+          accent="var(--danger)"
+          onClick={() => setCategoria("bloqueados")}
         />
       </div>
 
@@ -320,22 +408,28 @@ export default function Contatos({
         {categoria === "contratantes" && (
           <TabelaContratantes
             items={contratantesFiltrados}
+            nomePorUsuario={nomePorUsuario}
             onSelect={(item) => setSelecionado({ tipo: "contratante", item })}
             onEdit={(item) => setModal({ type: "edit-contratante", item })}
             onRemove={(id) => {
               if (confirm(t("Remover este contratante?"))) removeContratante(id);
             }}
+            onBloquear={(item) => abrirBloqueio({ tipo: "contratante", item })}
+            onDesbloquear={(item) => desbloquear({ tipo: "contratante", item })}
           />
         )}
 
         {categoria === "casas" && (
           <TabelaCasas
             items={casasFiltradas}
+            nomePorUsuario={nomePorUsuario}
             onSelect={(item) => setSelecionado({ tipo: "casa", item })}
             onEdit={(item) => setModal({ type: "edit-casa", item })}
             onRemove={(id) => {
               if (confirm(t("Remover esta casa?"))) removeCasa(id);
             }}
+            onBloquear={(item) => abrirBloqueio({ tipo: "casa", item })}
+            onDesbloquear={(item) => desbloquear({ tipo: "casa", item })}
           />
         )}
 
@@ -347,6 +441,18 @@ export default function Contatos({
             onRemove={(id) => {
               if (confirm(t("Remover esta cidade?"))) removeCidade(id);
             }}
+          />
+        )}
+
+        {categoria === "bloqueados" && (
+          <TabelaBloqueados
+            contratantes={contratantesBloqueados}
+            casas={casasBloqueadas}
+            nomePorUsuario={nomePorUsuario}
+            onSelectContratante={(item) => setSelecionado({ tipo: "contratante", item })}
+            onSelectCasa={(item) => setSelecionado({ tipo: "casa", item })}
+            onDesbloquearContratante={(item) => desbloquear({ tipo: "contratante", item })}
+            onDesbloquearCasa={(item) => desbloquear({ tipo: "casa", item })}
           />
         )}
       </div>
@@ -397,6 +503,84 @@ export default function Contatos({
           onCancel={() => setModal(null)}
         />
       </Modal>
+
+      {/* Modal de bloqueio — pede o motivo ao bloquear um contratante/casa */}
+      <Modal
+        isOpen={bloquear !== null}
+        onClose={() => setBloquear(null)}
+        title={t("Bloquear contato")}
+        subtitle={bloquear?.item.nome}
+        maxWidth={480}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 rounded-md border border-border bg-elevated p-3">
+            <Ban size={16} className="text-danger flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-secondary">
+              {t(
+                "Bloquear sinaliza que este contato é problemático. Ele continua visível para a equipe, com um selo de bloqueio."
+              )}
+            </p>
+          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="stat-label">{t("Motivo (opcional)")}</span>
+            <textarea
+              value={motivoBloqueio}
+              onChange={(e) => setMotivoBloqueio(e.target.value)}
+              rows={3}
+              placeholder={t("Ex.: calote, comportamento abusivo...")}
+              className="input resize-none"
+            />
+          </label>
+          <div className="flex items-center justify-end gap-2 mt-1">
+            <button onClick={() => setBloquear(null)} className="btn btn-ghost">
+              {t("Cancelar")}
+            </button>
+            <button
+              onClick={confirmarBloqueio}
+              disabled={salvandoBloqueio}
+              className="btn text-white disabled:opacity-60"
+              style={{ backgroundColor: "var(--danger)" }}
+            >
+              <Ban size={14} />
+              {salvandoBloqueio ? t("Bloqueando...") : t("Bloquear")}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** Selo de bloqueio: motivo + quem bloqueou + quando. Reutilizado nas tabelas. */
+function SeloBloqueado({
+  motivo,
+  por,
+  em,
+  nomePorUsuario,
+}: {
+  motivo?: string;
+  por?: string;
+  em?: string;
+  nomePorUsuario: Map<string, string>;
+}) {
+  const t = useT();
+  const quem = por ? nomePorUsuario.get(por) : undefined;
+  const data = em
+    ? new Date(em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : undefined;
+  return (
+    <div className="inline-flex flex-col gap-0.5">
+      <span className="badge badge-danger inline-flex items-center gap-1 w-fit">
+        <Ban size={11} />
+        {t("Bloqueado")}
+      </span>
+      {motivo && <span className="text-xs text-secondary max-w-[240px]">{motivo}</span>}
+      {(quem || data) && (
+        <span className="text-xs text-muted">
+          {quem ? t("por {nome}", { nome: quem }) : t("por um administrador")}
+          {data ? ` · ${data}` : ""}
+        </span>
+      )}
     </div>
   );
 }
@@ -449,14 +633,20 @@ function SummaryTile({
 
 function TabelaContratantes({
   items,
+  nomePorUsuario,
   onSelect,
   onEdit,
   onRemove,
+  onBloquear,
+  onDesbloquear,
 }: {
   items: Contratante[];
+  nomePorUsuario: Map<string, string>;
   onSelect: (c: Contratante) => void;
   onEdit: (c: Contratante) => void;
   onRemove: (id: string) => void;
+  onBloquear: (c: Contratante) => void;
+  onDesbloquear: (c: Contratante) => void;
 }) {
   const t = useT();
   const { cidades } = useContatos();
@@ -486,7 +676,19 @@ function TabelaContratantes({
                 onClick={() => onSelect(c)}
                 className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
               >
-                <Td className="font-medium text-primary">{c.nome}</Td>
+                <Td className="font-medium text-primary">
+                  <div className="flex flex-col gap-1">
+                    <span>{c.nome}</span>
+                    {c.bloqueado && (
+                      <SeloBloqueado
+                        motivo={c.bloqueadoMotivo}
+                        por={c.bloqueadoPor}
+                        em={c.bloqueadoEm}
+                        nomePorUsuario={nomePorUsuario}
+                      />
+                    )}
+                  </div>
+                </Td>
                 <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
                 <Td className="text-secondary">
                   <div className="text-xs">{c.email || <span className="text-muted italic">{t("sem e-mail")}</span>}</div>
@@ -495,7 +697,13 @@ function TabelaContratantes({
                 <Td className="text-right tabular-nums font-semibold">{stats.totalOrcamentos}</Td>
                 <Td className="text-right tabular-nums">{stats.totalShows}</Td>
                 <Td>
-                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
+                  <RowActions
+                    onEdit={() => onEdit(c)}
+                    onRemove={() => onRemove(c.id)}
+                    bloqueado={c.bloqueado}
+                    onBloquear={() => onBloquear(c)}
+                    onDesbloquear={() => onDesbloquear(c)}
+                  />
                 </Td>
               </tr>
             );
@@ -508,14 +716,20 @@ function TabelaContratantes({
 
 function TabelaCasas({
   items,
+  nomePorUsuario,
   onSelect,
   onEdit,
   onRemove,
+  onBloquear,
+  onDesbloquear,
 }: {
   items: Casa[];
+  nomePorUsuario: Map<string, string>;
   onSelect: (c: Casa) => void;
   onEdit: (c: Casa) => void;
   onRemove: (id: string) => void;
+  onBloquear: (c: Casa) => void;
+  onDesbloquear: (c: Casa) => void;
 }) {
   const t = useT();
   const { cidades } = useContatos();
@@ -545,7 +759,19 @@ function TabelaCasas({
                 onClick={() => onSelect(c)}
                 className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
               >
-                <Td className="font-medium text-primary">{c.nome}</Td>
+                <Td className="font-medium text-primary">
+                  <div className="flex flex-col gap-1">
+                    <span>{c.nome}</span>
+                    {c.bloqueado && (
+                      <SeloBloqueado
+                        motivo={c.bloqueadoMotivo}
+                        por={c.bloqueadoPor}
+                        em={c.bloqueadoEm}
+                        nomePorUsuario={nomePorUsuario}
+                      />
+                    )}
+                  </div>
+                </Td>
                 <Td>
                   <span className="badge badge-neutral">{t(TIPO_CASA_LABEL[c.tipo] ?? c.tipo)}</span>
                 </Td>
@@ -558,7 +784,13 @@ function TabelaCasas({
                   {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
                 </Td>
                 <Td>
-                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
+                  <RowActions
+                    onEdit={() => onEdit(c)}
+                    onRemove={() => onRemove(c.id)}
+                    bloqueado={c.bloqueado}
+                    onBloquear={() => onBloquear(c)}
+                    onDesbloquear={() => onDesbloquear(c)}
+                  />
                 </Td>
               </tr>
             );
@@ -639,6 +871,121 @@ function TabelaCidades({
   );
 }
 
+// ---------- Bloqueados (contratantes + casas) ----------
+
+function TabelaBloqueados({
+  contratantes,
+  casas,
+  nomePorUsuario,
+  onSelectContratante,
+  onSelectCasa,
+  onDesbloquearContratante,
+  onDesbloquearCasa,
+}: {
+  contratantes: Contratante[];
+  casas: Casa[];
+  nomePorUsuario: Map<string, string>;
+  onSelectContratante: (c: Contratante) => void;
+  onSelectCasa: (c: Casa) => void;
+  onDesbloquearContratante: (c: Contratante) => void;
+  onDesbloquearCasa: (c: Casa) => void;
+}) {
+  const t = useT();
+  const { cidades } = useContatos();
+  if (contratantes.length === 0 && casas.length === 0)
+    return <EmptyTable label={t("Nenhum contato bloqueado")} />;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-surface-2/40">
+            <Th>{t("Nome")}</Th>
+            <Th>{t("Tipo")}</Th>
+            <Th>{t("Cidade")}</Th>
+            <Th>{t("Bloqueio")}</Th>
+            <Th className="w-[1%]"></Th>
+          </tr>
+        </thead>
+        <tbody>
+          {contratantes.map((c) => (
+            <tr
+              key={`ct-${c.id}`}
+              onClick={() => onSelectContratante(c)}
+              className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+            >
+              <Td className="font-medium text-primary">{c.nome}</Td>
+              <Td>
+                <span className="badge badge-neutral">{t("Contratante")}</span>
+              </Td>
+              <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
+              <Td>
+                <SeloBloqueado
+                  motivo={c.bloqueadoMotivo}
+                  por={c.bloqueadoPor}
+                  em={c.bloqueadoEm}
+                  nomePorUsuario={nomePorUsuario}
+                />
+              </Td>
+              <Td>
+                <div
+                  className="flex items-center justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => onDesbloquearContratante(c)}
+                    className="btn-ghost p-1.5 rounded hover:text-success"
+                    aria-label={t("Desbloquear")}
+                    title={t("Desbloquear")}
+                  >
+                    <ShieldCheck size={14} />
+                  </button>
+                </div>
+              </Td>
+            </tr>
+          ))}
+          {casas.map((c) => (
+            <tr
+              key={`ca-${c.id}`}
+              onClick={() => onSelectCasa(c)}
+              className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+            >
+              <Td className="font-medium text-primary">{c.nome}</Td>
+              <Td>
+                <span className="badge badge-neutral">{t("Casa / Evento")}</span>
+              </Td>
+              <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
+              <Td>
+                <SeloBloqueado
+                  motivo={c.bloqueadoMotivo}
+                  por={c.bloqueadoPor}
+                  em={c.bloqueadoEm}
+                  nomePorUsuario={nomePorUsuario}
+                />
+              </Td>
+              <Td>
+                <div
+                  className="flex items-center justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => onDesbloquearCasa(c)}
+                    className="btn-ghost p-1.5 rounded hover:text-success"
+                    aria-label={t("Desbloquear")}
+                    title={t("Desbloquear")}
+                  >
+                    <ShieldCheck size={14} />
+                  </button>
+                </div>
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ---------- Utilitários de tabela ----------
 
 function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
@@ -655,10 +1002,44 @@ function Td({ children, className = "" }: { children?: React.ReactNode; classNam
   return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
 }
 
-function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
+function RowActions({
+  onEdit,
+  onRemove,
+  bloqueado,
+  onBloquear,
+  onDesbloquear,
+}: {
+  onEdit: () => void;
+  onRemove: () => void;
+  /** Só contratantes/casas passam estas props (cidades não têm bloqueio). */
+  bloqueado?: boolean;
+  onBloquear?: () => void;
+  onDesbloquear?: () => void;
+}) {
   const t = useT();
+  const temBloqueio = onBloquear !== undefined && onDesbloquear !== undefined;
   return (
     <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+      {temBloqueio &&
+        (bloqueado ? (
+          <button
+            onClick={onDesbloquear}
+            className="btn-ghost p-1.5 rounded hover:text-success"
+            aria-label={t("Desbloquear")}
+            title={t("Desbloquear")}
+          >
+            <ShieldCheck size={14} />
+          </button>
+        ) : (
+          <button
+            onClick={onBloquear}
+            className="btn-ghost p-1.5 rounded hover:text-danger"
+            aria-label={t("Bloquear")}
+            title={t("Bloquear")}
+          >
+            <Ban size={14} />
+          </button>
+        ))}
       <button onClick={onEdit} className="btn-ghost p-1.5 rounded" aria-label={t("Editar")}>
         <Pencil size={14} />
       </button>

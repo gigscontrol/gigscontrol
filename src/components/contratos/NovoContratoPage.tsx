@@ -85,10 +85,15 @@ export default function NovoContratoPage() {
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [gerado, setGerado] = useState<Contrato | null>(null);
-  // Modal de contrato EXCEDENTE (limite atingido + opção de pagar por unidade).
+  // Modal de contrato EXCEDENTE (limite atingido + opção de pagar por unidade,
+  // via checkout avulso — MODELO PRÉ-PAGO, sem 1-clique no cartão salvo).
   const [excedente, setExcedente] = useState<
-    { limite: number; plano: string; valor: number; moeda: "brl" | "usd" } | null
+    { valor: number; moeda: "brl" | "usd" } | null
   >(null);
+  // Erro acionável dentro do modal do excedente.
+  const [excedenteErro, setExcedenteErro] = useState<string | null>(null);
+  // true enquanto cria o checkout do excedente (evita duplo clique).
+  const [excedenteIndo, setExcedenteIndo] = useState(false);
 
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -148,22 +153,19 @@ export default function NovoContratoPage() {
     setValores((prev) => ({ ...prev, [token]: valor }));
   }
 
-  async function gerar(opts?: { pagarExcedente?: boolean; idem?: string }) {
+  async function gerar() {
     if (!modelo) return;
     setGerando(true);
     setErro(null);
     try {
       const secoes = preencherSecoes(modelo.secoes, valores);
-      const contrato = await criarContrato(
-        {
-          modeloId: modelo.id,
-          vendaId: vendaId || null,
-          secoes,
-          estilo: modelo.estilo,
-          status: "rascunho",
-        },
-        opts?.pagarExcedente ? { pagarExcedente: true, idem: opts.idem } : undefined
-      );
+      const contrato = await criarContrato({
+        modeloId: modelo.id,
+        vendaId: vendaId || null,
+        secoes,
+        estilo: modelo.estilo,
+        status: "rascunho",
+      });
       // Injeta o número real (CTR-XXXX) no snapshot e na tela.
       const valoresFinais = { ...valores, numero_contrato: contrato.numero };
       const secoesFinais = preencherSecoes(modelo.secoes, valoresFinais);
@@ -174,10 +176,13 @@ export default function NovoContratoPage() {
       setValores(valoresFinais);
       setGerado(atualizado);
       setExcedente(null);
+      setExcedenteErro(null);
     } catch (e) {
       if (e instanceof ExcedenteError) {
-        // Limite atingido → abre o modal pra pagar o contrato extra.
+        // Limite atingido, sem crédito disponível → abre o modal pra pagar o
+        // contrato extra (checkout avulso, "Pagar excedente").
         setExcedente(e.info);
+        setExcedenteErro(null);
       } else {
         setErro((e as Error).message || t("Não foi possível gerar o contrato."));
       }
@@ -186,14 +191,32 @@ export default function NovoContratoPage() {
     }
   }
 
-  async function confirmarExcedente() {
-    let idem: string;
+  // Abre o checkout avulso do contrato excedente (MODELO PRÉ-PAGO: redirect
+  // pro ambiente seguro da Stripe — não é 1-clique no cartão salvo). Ao
+  // aprovar, o webhook registra o crédito 'excedente_disponivel'; o usuário
+  // volta e reenvia — o POST de /api/contratos consome o crédito na hora.
+  async function pagarExcedente() {
+    if (excedenteIndo) return;
+    setExcedenteIndo(true);
+    setExcedenteErro(null);
     try {
-      idem = crypto.randomUUID();
-    } catch {
-      idem = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+      const res = await fetch("/api/contratos/excedente-checkout", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) {
+        throw new Error(
+          (body.erro as string) ?? t("Falha ao iniciar o pagamento do excedente.")
+        );
+      }
+      window.location.href = body.url as string;
+    } catch (e) {
+      setExcedenteErro(
+        (e as Error).message || t("Falha ao iniciar o pagamento do excedente.")
+      );
+      setExcedenteIndo(false);
     }
-    await gerar({ pagarExcedente: true, idem });
   }
 
   async function baixarPdf() {
@@ -283,51 +306,59 @@ export default function NovoContratoPage() {
         </div>
       )}
 
-      {/* Modal do contrato EXCEDENTE (pagar por unidade além do limite) */}
+      {/* Modal do contrato EXCEDENTE (pagar por unidade além do limite, via
+          checkout avulso — MODELO PRÉ-PAGO, sem cobrança em 1 clique). */}
       <Modal
         isOpen={excedente !== null}
-        onClose={() => !gerando && setExcedente(null)}
+        onClose={() => {
+          if (excedenteIndo) return;
+          setExcedente(null);
+          setExcedenteErro(null);
+        }}
         title={t("Limite de contratos atingido")}
-        subtitle={
-          excedente
-            ? t("Plano {plano} — {limite} contratos no ciclo", {
-                plano: excedente.plano,
-                limite: excedente.limite,
-              })
-            : undefined
-        }
         maxWidth={440}
       >
         {excedente && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-secondary">
-              {t("Você atingiu o limite do seu plano neste ciclo. Dá pra gerar um contrato EXTRA agora pagando")}{" "}
+              {t("Você atingiu o limite do seu plano neste ciclo. Dá pra gerar um contrato EXTRA pagando")}{" "}
               <span className="font-bold text-primary">
                 {formatarPreco(excedente.valor / 100, excedente.moeda)}
               </span>{" "}
-              {t("no cartão salvo. O limite reseta na virada do plano.")}
+              {t("no ambiente seguro de pagamento. Depois de aprovado, volte aqui e gere o contrato de novo. O limite reseta na virada do plano.")}
             </p>
+            {excedenteErro && (
+              <div
+                className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5"
+                style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "var(--danger)" }}
+              >
+                <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+                <span>{excedenteErro}</span>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 className="btn btn-secondary text-sm"
-                onClick={() => setExcedente(null)}
-                disabled={gerando}
+                onClick={() => {
+                  setExcedente(null);
+                  setExcedenteErro(null);
+                }}
+                disabled={excedenteIndo}
               >
                 {t("Cancelar")}
               </button>
               <button
                 type="button"
-                className="btn btn-primary text-sm disabled:opacity-50"
+                className="btn btn-primary text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
                 style={{ backgroundColor: ACCENT, color: "#fff" }}
-                onClick={confirmarExcedente}
-                disabled={gerando}
+                onClick={pagarExcedente}
+                disabled={excedenteIndo}
               >
-                {gerando
-                  ? t("Cobrando…")
-                  : t("Pagar {valor} e gerar", {
-                      valor: formatarPreco(excedente.valor / 100, excedente.moeda),
-                    })}
+                {excedenteIndo && <Loader2 size={14} className="animate-spin" />}
+                {excedenteIndo
+                  ? t("Abrindo o pagamento…")
+                  : t("Pagar excedente")}
               </button>
             </div>
           </div>

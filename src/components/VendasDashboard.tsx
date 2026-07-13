@@ -1,20 +1,27 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   FileText,
   CalendarCheck2,
-  DollarSign,
+  Handshake,
+  XCircle,
   TrendingUp,
   ChevronRight,
   Plus,
-  Percent,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
-import Modal from "./Modal";
 import DateRangeSelector from "./DateRangeSelector";
+import {
+  ClickableStat,
+  ResumoModal,
+  ResumoNumero,
+  ResumoLinha,
+  ResumoLista,
+  ResumoFooter,
+} from "./DashboardResumo";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
@@ -31,7 +38,7 @@ type Props = {
 };
 
 /** Qual resumo está aberto no modal (null = fechado). */
-type ResumoTipo = null | "orcamentos" | "vendas" | "faturamento" | "conversao";
+type ResumoTipo = null | "orcamentos" | "vendas" | "negociacao" | "perdidos";
 
 const ATALHOS_MES: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -127,12 +134,16 @@ export default function VendasDashboard({
     };
     let valorTotalOrc = 0;
     let valorEmAberto = 0;
+    let valorNegociacao = 0;
+    let valorPerdidos = 0;
     for (const o of orcamentosVisiveis) {
       porStatus[o.status] = (porStatus[o.status] ?? 0) + 1;
       valorTotalOrc += o.valorCache || 0;
       if (o.status === "pendente" || o.status === "negociacao") {
         valorEmAberto += o.valorCache || 0;
       }
+      if (o.status === "negociacao") valorNegociacao += o.valorCache || 0;
+      if (o.status === "recusado") valorPerdidos += o.valorCache || 0;
     }
     const pendentes = porStatus.pendente + porStatus.negociacao;
 
@@ -173,6 +184,8 @@ export default function VendasDashboard({
       porStatus,
       valorTotalOrc,
       valorEmAberto,
+      valorNegociacao,
+      valorPerdidos,
       pendentes,
       totalVendas,
       faturamento,
@@ -196,16 +209,36 @@ export default function VendasDashboard({
       titulo: t("Resumo de vendas"),
       subtitulo: t("Fechadas em {mes}", { mes: tituloMes }),
     },
-    faturamento: {
-      titulo: t("Resumo de faturamento"),
-      subtitulo: t("Vendas de {mes}", { mes: tituloMes }),
+    negociacao: {
+      titulo: t("Em negociação"),
+      subtitulo: tituloMes,
     },
-    conversao: {
-      titulo: t("Taxa de conversão"),
+    perdidos: {
+      titulo: t("Orçamentos perdidos"),
       subtitulo: tituloMes,
     },
   };
   const meta = resumo ? RESUMO_META[resumo] : { titulo: "", subtitulo: "" };
+
+  // Orçamentos em negociação (recentes)
+  const negociacaoRecentes = useMemo(
+    () =>
+      [...orcamentosVisiveis]
+        .filter((o) => o.status === "negociacao")
+        .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
+        .slice(0, 5),
+    [orcamentosVisiveis]
+  );
+
+  // Orçamentos perdidos (recusados) recentes
+  const perdidosRecentes = useMemo(
+    () =>
+      [...orcamentosVisiveis]
+        .filter((o) => o.status === "recusado")
+        .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
+        .slice(0, 5),
+    [orcamentosVisiveis]
+  );
 
   // Orçamentos recentes
   const orcamentosRecentes = useMemo(
@@ -257,9 +290,9 @@ export default function VendasDashboard({
         }
       />
 
-      {/* Cards clicáveis */}
+      {/* Cards clicáveis — 4 cores fixas (azul/verde/âmbar/vermelho) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => setResumo("orcamentos")}>
+        <ClickableStat onClick={() => setResumo("orcamentos")} ariaLabel={t("Resumo de orçamentos")}>
           <StatCard
             title={t("Orçamentos")}
             value={stats.totalOrcamentos}
@@ -268,31 +301,31 @@ export default function VendasDashboard({
             subtitle={t("{n} aguardando", { n: stats.pendentes })}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => setResumo("vendas")}>
+        <ClickableStat onClick={() => setResumo("vendas")} ariaLabel={t("Resumo de vendas")}>
           <StatCard
-            title={t("Vendas Fechadas")}
+            title={t("Vendas fechadas")}
             value={stats.totalVendas}
             icon={<CalendarCheck2 size={16} />}
             accentColor="var(--success)"
             subtitle={t("Fechadas no mês")}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => setResumo("faturamento")}>
+        <ClickableStat onClick={() => setResumo("negociacao")} ariaLabel={t("Em negociação")}>
           <StatCard
-            title={t("Faturamento")}
-            value={formatBRL(stats.faturamento)}
-            icon={<DollarSign size={16} />}
+            title={t("Em negociação")}
+            value={stats.porStatus.negociacao}
+            icon={<Handshake size={16} />}
             accentColor="var(--warning)"
-            subtitle={t("Vendas do mês")}
+            subtitle={formatBRL(stats.valorNegociacao)}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => setResumo("conversao")}>
+        <ClickableStat onClick={() => setResumo("perdidos")} ariaLabel={t("Orçamentos perdidos")}>
           <StatCard
-            title={t("Taxa de Conversão")}
-            value={`${stats.conversao}%`}
-            icon={<Percent size={16} />}
-            accentColor="var(--roxo)"
-            subtitle={t("Orçamentos → vendas")}
+            title={t("Orçamentos perdidos")}
+            value={stats.porStatus.recusado}
+            icon={<XCircle size={16} />}
+            accentColor="var(--danger)"
+            subtitle={formatBRL(stats.valorPerdidos)}
           />
         </ClickableStat>
       </div>
@@ -419,198 +452,192 @@ export default function VendasDashboard({
       )}
 
       {/* Modal de resumo — aberto pelos cards de cima */}
-      <Modal
+      <ResumoModal
         isOpen={resumo !== null}
         onClose={() => setResumo(null)}
         title={meta.titulo}
         subtitle={meta.subtitulo}
+        accentColor={
+          resumo === "vendas"
+            ? "var(--success)"
+            : resumo === "negociacao"
+            ? "var(--warning)"
+            : resumo === "perdidos"
+            ? "var(--danger)"
+            : accent
+        }
       >
         {resumo === "orcamentos" && (
-          <div className="flex flex-col gap-4">
+          <>
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label={t("Total")} value={String(stats.totalOrcamentos)} />
-              <ResumoNumero label={t("Em aberto")} value={String(stats.pendentes)} color={accent} />
+              <ResumoNumero label={t("Total")} valor={stats.totalOrcamentos} />
+              <ResumoNumero label={t("Em aberto")} valor={stats.pendentes} accentColor={accent} />
             </div>
             <div className="flex flex-col gap-2">
               <div className="stat-label">{t("Por status")}</div>
               {(["pendente", "negociacao", "aceito", "recusado"] as OrcamentoStatus[]).map((s) => (
                 <ResumoLinha
                   key={s}
-                  left={
+                  label={
                     <span className={`badge ${LABELS_STATUS_ORCAMENTO[s].badge}`}>
                       {t(LABELS_STATUS_ORCAMENTO[s].label)}
                     </span>
                   }
-                  right={stats.porStatus[s]}
+                  valor={stats.porStatus[s]}
                 />
               ))}
             </div>
             <div className="flex flex-col gap-2">
               <div className="stat-label">{t("Valores")}</div>
-              <ResumoLinha left={t("Em aberto (pendentes + negociação)")} right={formatBRL(stats.valorEmAberto)} />
-              <ResumoLinha left={t("Valor total")} right={formatBRL(stats.valorTotalOrc)} />
+              <ResumoLinha label={t("Em aberto (pendentes + negociação)")} valor={formatBRL(stats.valorEmAberto)} />
+              <ResumoLinha label={t("Valor total")} valor={formatBRL(stats.valorTotalOrc)} />
+              <ResumoLinha label={t("Taxa de conversão")} valor={`${stats.conversao}%`} destaque />
             </div>
+            {orcamentosRecentes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="stat-label">{t("Recentes")}</div>
+                <ResumoLista
+                  itens={orcamentosRecentes.map((o) => ({
+                    id: o.id,
+                    titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
+                    subtitulo: o.numero,
+                    valor: formatBRL(o.valorCache),
+                  }))}
+                  onItemClick={(id) => {
+                    setResumo(null);
+                    onAbrirOrcamento?.(id);
+                  }}
+                />
+              </div>
+            )}
             <ResumoFooter
+              label={t("Ver histórico de orçamentos")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico");
               }}
-            >
-              {t("Ver histórico de orçamentos")}
-            </ResumoFooter>
-          </div>
+            />
+          </>
         )}
 
         {resumo === "vendas" && (
-          <div className="flex flex-col gap-4">
+          <>
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label={t("Vendas fechadas")} value={String(stats.totalVendas)} />
-              <ResumoNumero label={t("Faturamento")} value={formatBRL(stats.faturamento)} color="var(--success)" />
+              <ResumoNumero label={t("Vendas fechadas")} valor={stats.totalVendas} />
+              <ResumoNumero label={t("Faturamento")} valor={formatBRL(stats.faturamento)} accentColor="var(--success)" />
             </div>
-            <div className="flex flex-col gap-2">
-              <ResumoLinha left={t("Ticket médio")} right={formatBRL(stats.ticketMedio)} />
-              <ResumoLinha left={t("Próximas (a realizar)")} right={stats.proximas} />
-              <ResumoLinha left={t("Já realizadas")} right={stats.realizadas} />
-            </div>
-            <ResumoFooter
-              onClick={() => {
-                setResumo(null);
-                onNavigate?.("vendas", "vendas-historico-vendas");
-              }}
-            >
-              {t("Ver histórico de vendas")}
-            </ResumoFooter>
-          </div>
-        )}
-
-        {resumo === "faturamento" && (
-          <div className="flex flex-col gap-4">
-            <ResumoNumero label={t("Faturamento total")} value={formatBRL(stats.faturamento)} color="var(--success)" />
             <div className="flex flex-col gap-2">
               <div className="stat-label">{t("Pagamentos")}</div>
-              <ResumoLinha left={t("Recebido")} right={formatBRL(stats.recebido)} rightColor="var(--success)" />
-              <ResumoLinha left={t("A receber")} right={formatBRL(stats.aReceber)} rightColor={accent} />
-              <ResumoLinha left={t("Em atraso")} right={formatBRL(stats.atrasado)} rightColor="var(--danger)" />
+              <ResumoLinha label={t("Recebido")} valor={formatBRL(stats.recebido)} destaque />
+              <ResumoLinha label={t("A receber")} valor={formatBRL(stats.aReceber)} />
+              <ResumoLinha label={t("Em atraso")} valor={formatBRL(stats.atrasado)} />
             </div>
-            <ResumoLinha left={t("Ticket médio por venda")} right={formatBRL(stats.ticketMedio)} />
+            <div className="flex flex-col gap-2">
+              <ResumoLinha label={t("Ticket médio")} valor={formatBRL(stats.ticketMedio)} />
+              <ResumoLinha label={t("Próximas (a realizar)")} valor={stats.proximas} />
+              <ResumoLinha label={t("Já realizadas")} valor={stats.realizadas} />
+            </div>
+            {vendasRecentes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="stat-label">{t("Recentes")}</div>
+                <ResumoLista
+                  itens={vendasRecentes.map((v) => ({
+                    id: v.id,
+                    titulo: v.nomeEvento,
+                    subtitulo: `${artistas.find((d) => d.id === v.artistaId)?.name ?? ""} · ${v.contratanteNome}`,
+                    valor: formatBRL(v.cache),
+                  }))}
+                  onItemClick={(id) => {
+                    setResumo(null);
+                    onAbrirVenda?.(id);
+                  }}
+                />
+              </div>
+            )}
             <ResumoFooter
+              label={t("Ver histórico de vendas")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico-vendas");
               }}
-            >
-              {t("Ver histórico de vendas")}
-            </ResumoFooter>
-          </div>
+            />
+          </>
         )}
 
-        {resumo === "conversao" && (
-          <div className="flex flex-col gap-4">
-            <ResumoNumero label={t("Taxa de conversão")} value={`${stats.conversao}%`} color={accent} />
-            <p className="text-sm text-secondary">
-              {stats.totalVendas} {stats.totalVendas === 1 ? t("venda") : t("vendas")} {t("de")}{" "}
-              {stats.totalOrcamentos + stats.totalVendas} {t("oportunidades no mês")}
-              {" "}({t("orçamentos e vendas criados no mês")}).
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="stat-label">{t("Orçamentos")}</div>
-              <ResumoLinha
-                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.aceito.badge}`}>{t("Aceito")}</span>}
-                right={stats.porStatus.aceito}
-              />
-              <ResumoLinha
-                left={<span className={`badge ${LABELS_STATUS_ORCAMENTO.recusado.badge}`}>{t("Recusado")}</span>}
-                right={stats.porStatus.recusado}
-              />
-              <ResumoLinha left={t("Em aberto (pendentes + negociação)")} right={stats.pendentes} />
+        {resumo === "negociacao" && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <ResumoNumero label={t("Em negociação")} valor={stats.porStatus.negociacao} accentColor="var(--warning)" />
+              <ResumoNumero label={t("Valor total")} valor={formatBRL(stats.valorNegociacao)} />
             </div>
+            {negociacaoRecentes.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <div className="stat-label">{t("Recentes")}</div>
+                <ResumoLista
+                  itens={negociacaoRecentes.map((o) => ({
+                    id: o.id,
+                    titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
+                    subtitulo: o.numero,
+                    valor: formatBRL(o.valorCache),
+                  }))}
+                  onItemClick={(id) => {
+                    setResumo(null);
+                    onAbrirOrcamento?.(id);
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="text-sm text-muted text-center py-4">
+                {t("Nenhum orçamento em negociação em {mes}.", { mes: tituloMes })}
+              </div>
+            )}
             <ResumoFooter
+              label={t("Ver histórico de orçamentos")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico");
               }}
-            >
-              {t("Ver histórico de orçamentos")}
-            </ResumoFooter>
-          </div>
+            />
+          </>
         )}
-      </Modal>
+
+        {resumo === "perdidos" && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <ResumoNumero label={t("Orçamentos perdidos")} valor={stats.porStatus.recusado} accentColor="var(--danger)" />
+              <ResumoNumero label={t("Valor total")} valor={formatBRL(stats.valorPerdidos)} />
+            </div>
+            {perdidosRecentes.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <div className="stat-label">{t("Recentes")}</div>
+                <ResumoLista
+                  itens={perdidosRecentes.map((o) => ({
+                    id: o.id,
+                    titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
+                    subtitulo: o.numero,
+                    valor: formatBRL(o.valorCache),
+                  }))}
+                  onItemClick={(id) => {
+                    setResumo(null);
+                    onAbrirOrcamento?.(id);
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="text-sm text-muted text-center py-4">
+                {t("Nenhum orçamento perdido em {mes}.", { mes: tituloMes })}
+              </div>
+            )}
+            <ResumoFooter
+              label={t("Ver histórico de orçamentos")}
+              onClick={() => {
+                setResumo(null);
+                onNavigate?.("vendas", "vendas-historico");
+              }}
+            />
+          </>
+        )}
+      </ResumoModal>
     </div>
-  );
-}
-
-function ClickableStat({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0"
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Bloco de número grande dentro do resumo (label + valor). */
-function ResumoNumero({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: string;
-  color?: string;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-elevated p-3">
-      <div className="stat-label">{label}</div>
-      <div
-        className={`text-2xl font-bold tabular-nums ${color ? "" : "text-primary"}`}
-        style={color ? { color } : undefined}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-/** Linha label → valor dentro do resumo. */
-function ResumoLinha({
-  left,
-  right,
-  rightColor,
-}: {
-  left: ReactNode;
-  right: ReactNode;
-  rightColor?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 p-2.5 rounded-md border border-border bg-elevated">
-      <div className="text-sm text-secondary min-w-0">{left}</div>
-      <div
-        className={`text-sm font-semibold tabular-nums flex-shrink-0 ${rightColor ? "" : "text-primary"}`}
-        style={rightColor ? { color: rightColor } : undefined}
-      >
-        {right}
-      </div>
-    </div>
-  );
-}
-
-/** Botão de rodapé do resumo que leva ao histórico. */
-function ResumoFooter({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full inline-flex items-center justify-center gap-1.5 p-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-sm font-medium text-primary mt-1"
-    >
-      {children}
-      <ChevronRight size={14} />
-    </button>
   );
 }

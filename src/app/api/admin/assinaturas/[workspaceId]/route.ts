@@ -6,11 +6,15 @@ import {
   alterarStatusAssinatura,
   alterarPlanoAssinatura,
   estenderDiasAssinatura,
+  historicoPagamentos,
 } from "@/lib/services/plataforma.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
+// MODELO PRÉ-PAGO: o painel só liga/desliga o acesso manualmente. "ativa" aqui
+// é "reativar" (limpa suspended/cancelled e deixa `acesso_ate` mandar de novo).
+// 'trial' não é mais uma ação do painel (ver plataforma.service#alterarStatusAssinatura).
 const patchSchema = z.object({
-  status: z.enum(["ativa", "trial", "suspensa", "cancelada"]).optional(),
+  status: z.enum(["ativa", "suspensa", "cancelada"]).optional(),
   plano: z
     .enum(["individual", "equipe", "time", "agencia", "agencia-plus", "agencia-max"])
     .optional(),
@@ -18,6 +22,19 @@ const patchSchema = z.object({
 });
 
 type RouteCtx = { params: { workspaceId: string } };
+
+/** Histórico de pagamentos (ledger `pagamentos`) do workspace — mais recentes primeiro. */
+export async function GET(_request: Request, { params }: RouteCtx) {
+  const r = await autenticarSuperAdmin();
+  if ("response" in r) return r.response;
+  try {
+    const admin = criarClienteAdmin();
+    const pagamentos = await historicoPagamentos(admin, params.workspaceId);
+    return NextResponse.json({ pagamentos });
+  } catch (e) {
+    return respostaDeErro(e, "Falha ao carregar histórico de pagamentos.");
+  }
+}
 
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarSuperAdmin();

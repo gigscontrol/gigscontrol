@@ -35,6 +35,35 @@ function entradaParaEscrita(
   return out;
 }
 
+/**
+ * Aplica bloquear/desbloquear numa escrita de contratante, carimbando
+ * quem/quando com o usuário da sessão. Bloquear → grava motivo/por/em.
+ * Desbloquear → limpa os 4 campos. Só age se `input.bloqueado` veio no PATCH.
+ */
+function aplicarBloqueio(
+  escrita: ContratanteEscrita,
+  input: ContratanteUpdateInput,
+  bloqueadoPor?: string
+): ContratanteEscrita {
+  if (input.bloqueado === undefined) return escrita;
+  if (input.bloqueado) {
+    return {
+      ...escrita,
+      bloqueado: true,
+      bloqueado_motivo: input.bloqueado_motivo ?? null,
+      bloqueado_por: bloqueadoPor ?? null,
+      bloqueado_em: new Date().toISOString(),
+    };
+  }
+  return {
+    ...escrita,
+    bloqueado: false,
+    bloqueado_motivo: null,
+    bloqueado_por: null,
+    bloqueado_em: null,
+  };
+}
+
 export async function listarContratantesDoWorkspace(
   supabase: SupabaseClient,
   sessao?: SessaoAutenticada
@@ -86,7 +115,8 @@ export async function criarContratanteNoWorkspace(
 export async function atualizarContratantePorId(
   supabase: SupabaseClient,
   id: string,
-  input: ContratanteUpdateInput
+  input: ContratanteUpdateInput,
+  bloqueadoPor?: string
 ): Promise<Contratante> {
   let escrita = entradaParaEscrita(input);
 
@@ -108,6 +138,9 @@ export async function atualizarContratantePorId(
       escrita = { ...escrita, ...geo };
     }
   }
+
+  // Bloquear/desbloquear carimba quem/quando com o usuário da sessão.
+  escrita = aplicarBloqueio(escrita, input, bloqueadoPor);
 
   const row = await repoAtualizar(supabase, id, escrita);
   return rowParaContratante(row);

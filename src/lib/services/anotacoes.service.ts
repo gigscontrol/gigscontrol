@@ -7,6 +7,7 @@ import {
   type PastaEscrita,
   type NotaEscrita,
   type VisibilidadePasta,
+  type MembroPasta,
 } from "@/lib/mappers/anotacoes";
 import type {
   PastaCreateInput,
@@ -25,10 +26,10 @@ export async function listarPastasDoWorkspace(
     repo.listarPastas(supabase),
     repo.listarMembros(supabase),
   ]);
-  const porPasta = new Map<string, string[]>();
+  const porPasta = new Map<string, MembroPasta[]>();
   for (const m of membros) {
     const arr = porPasta.get(m.pasta_id) ?? [];
-    arr.push(m.usuario_id);
+    arr.push(m.membro);
     porPasta.set(m.pasta_id, arr);
   }
   return rows.map((r) => rowParaPasta(r, porPasta.get(r.id) ?? []));
@@ -39,6 +40,24 @@ export async function listarNotasDoWorkspace(
 ): Promise<Anotacao[]> {
   const rows = await repo.listarNotas(supabase);
   return rows.map(rowParaAnotacao);
+}
+
+// ---- Validação de escopo ----
+
+/**
+ * Garante que todos os `ids` de artista (membros-artista de pasta e/ou a
+ * etiqueta de contexto da nota) são artistas VIVOS do próprio workspace.
+ * Retorna false se algum id não pertencer — a rota converte em 400.
+ */
+export async function artistasSaoDoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  ids: Array<string | null | undefined>
+): Promise<boolean> {
+  const unicos = [...new Set(ids.filter((x): x is string => !!x))];
+  if (unicos.length === 0) return true;
+  const achados = await repo.artistasDoWorkspace(supabase, workspaceId, unicos);
+  return unicos.every((id) => achados.has(id));
 }
 
 // ---- Pastas ----
@@ -76,7 +95,7 @@ export async function atualizarPastaPorId(
 
   // Membros: quando a pasta é "selecionados", reflete a lista enviada (ou lê a
   // atual). Se deixou de ser "selecionados", limpa a lista.
-  let membros: string[] = [];
+  let membros: MembroPasta[] = [];
   const vis = row.visibilidade as VisibilidadePasta;
   if (vis === "selecionados") {
     if (input.membros !== undefined) {
@@ -84,7 +103,7 @@ export async function atualizarPastaPorId(
       membros = input.membros;
     } else {
       const all = await repo.listarMembros(supabase);
-      membros = all.filter((m) => m.pasta_id === id).map((m) => m.usuario_id);
+      membros = all.filter((m) => m.pasta_id === id).map((m) => m.membro);
     }
   } else {
     await repo.setMembros(supabase, id, []);
@@ -111,6 +130,7 @@ export async function criarNotaNoWorkspace(
   const escrita: NotaEscrita = {
     pasta_id: input.pasta_id ?? null,
     show_id: input.show_id ?? null,
+    artist_id: input.artistId ?? null,
     conteudo: input.conteudo ?? "",
     titulo: input.titulo ?? null,
     cor: input.cor ?? null,
@@ -136,6 +156,7 @@ export async function atualizarNotaPorId(
   if (input.conteudo !== undefined) escrita.conteudo = input.conteudo;
   if (input.cor !== undefined) escrita.cor = input.cor ?? null;
   if (input.fixada !== undefined) escrita.fixada = input.fixada;
+  if (input.artistId !== undefined) escrita.artist_id = input.artistId ?? null;
   const row = await repo.atualizarNota(supabase, id, escrita);
   return rowParaAnotacao(row);
 }

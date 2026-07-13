@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   atualizarNotaPorId,
   removerNotaPorId,
+  artistasSaoDoWorkspace,
 } from "@/lib/services/anotacoes.service";
 import { notaUpdateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarNota } from "@/lib/repositories/anotacoes.repo";
@@ -38,6 +39,22 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  // Etiqueta de contexto (se veio) tem que ser um artista do próprio workspace.
+  if (
+    parsed.data.artistId !== undefined &&
+    !(await artistasSaoDoWorkspace(r.sessao.supabase, r.sessao.workspaceId, [parsed.data.artistId]))
+  ) {
+    return NextResponse.json(
+      { erro: "Artista inválido para este workspace." },
+      { status: 400 }
+    );
+  }
+
+  // Nota de PASTA não pode ficar sem título (nota de show pode).
+  if (row.pasta_id && parsed.data.titulo !== undefined && !parsed.data.titulo?.trim()) {
+    return NextResponse.json({ erro: "Dê um título à anotação." }, { status: 400 });
   }
 
   try {

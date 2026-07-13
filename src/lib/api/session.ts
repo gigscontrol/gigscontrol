@@ -3,7 +3,7 @@ import { criarClienteServidor } from "@/lib/db/supabase-server";
 import type { Papel, PrivacidadeDj } from "@/lib/permissoes";
 import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
 import { privacidadeValida } from "@/lib/mappers/artista";
-import { workspaceBloqueado } from "@/lib/acesso";
+import { workspaceBloqueado, workspaceOnboardingIncompleto } from "@/lib/acesso";
 import { listarVinculosDoUsuario, mapaDeVinculos } from "@/lib/repositories/membrosArtista.repo";
 
 /**
@@ -235,15 +235,20 @@ export async function autenticarComWorkspace(
   // de pagamento NÃO passam esse gate — o bloqueado ainda enxerga a conta e
   // consegue regularizar. 'ok' e 'graca' liberam normalmente.
   if (opts?.exigirAcesso && (await workspaceBloqueado(r.sessao.workspaceId))) {
-    return {
-      response: NextResponse.json(
-        {
-          erro: "Acesso bloqueado: regularize a assinatura para continuar.",
-          estadoAcesso: "bloqueado",
-        },
-        { status: 402 }
-      ),
-    };
+    // O onboarding NÃO é barrado pelo paywall: no passo Pagamento o checkout cria
+    // um stub que deixa 'bloqueado', mas o usuário ainda está regularizando e
+    // precisa poder concluir/editar as etapas. Só barra após o onboarding pronto.
+    if (!(await workspaceOnboardingIncompleto(r.sessao.workspaceId))) {
+      return {
+        response: NextResponse.json(
+          {
+            erro: "Acesso bloqueado: regularize a assinatura para continuar.",
+            estadoAcesso: "bloqueado",
+          },
+          { status: 402 }
+        ),
+      };
+    }
   }
 
   return {

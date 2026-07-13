@@ -9,7 +9,12 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { AnotacaoPasta, Anotacao, VisibilidadePasta } from "@/lib/mappers/anotacoes";
+import type {
+  AnotacaoPasta,
+  Anotacao,
+  VisibilidadePasta,
+  MembroPasta,
+} from "@/lib/mappers/anotacoes";
 import { useAuth } from "./auth-context";
 
 /**
@@ -23,7 +28,8 @@ export type PastaInput = {
   cor?: string | null;
   icone?: string | null;
   visibilidade: VisibilidadePasta;
-  membros?: string[];
+  /** Quem pode ver — usuários e/ou artistas (só em "selecionados"). */
+  membros?: MembroPasta[];
 };
 export type PastaUpdateInput = Partial<PastaInput>;
 
@@ -35,12 +41,15 @@ export type NotaInput = {
   conteudo: string;
   cor?: string | null;
   fixada?: boolean;
+  /** Etiqueta de contexto: artista a que a nota se refere (não é dono). */
+  artistId?: string | null;
 };
 export type NotaUpdateInput = {
   titulo?: string | null;
   conteudo?: string;
   cor?: string | null;
   fixada?: boolean;
+  artistId?: string | null;
 };
 
 type AnotacoesContextValue = {

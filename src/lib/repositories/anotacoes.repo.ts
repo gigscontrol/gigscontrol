@@ -1,11 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { softDelete } from "./_softDelete";
-import type { PastaRow, NotaRow, PastaEscrita, NotaEscrita } from "@/lib/mappers/anotacoes";
+import type {
+  PastaRow,
+  NotaRow,
+  PastaEscrita,
+  NotaEscrita,
+  MembroPasta,
+} from "@/lib/mappers/anotacoes";
 
 const COLS_PASTA =
   "id, workspace_id, nome, cor, icone, visibilidade, criado_por, criado_em, atualizado_em";
 const COLS_NOTA =
-  "id, workspace_id, pasta_id, show_id, titulo, conteudo, cor, fixada, criado_por, criado_em, atualizado_em, atualizado_por";
+  "id, workspace_id, pasta_id, show_id, artist_id, titulo, conteudo, cor, fixada, criado_por, criado_em, atualizado_em, atualizado_por";
 
 // ============================================================
 // Pastas
@@ -75,32 +81,76 @@ export async function removerPasta(
 // Membros (visibilidade "selecionados")
 // ============================================================
 
+type MembroRow = {
+  pasta_id: string;
+  usuario_id: string | null;
+  artista_id: string | null;
+};
+
+/** Membros de todas as pastas visíveis, já tipados por {tipo,id}. */
 export async function listarMembros(
   supabase: SupabaseClient
-): Promise<{ pasta_id: string; usuario_id: string }[]> {
+): Promise<Array<{ pasta_id: string; membro: MembroPasta }>> {
   const { data, error } = await supabase
     .from("anotacao_pasta_membros")
-    .select("pasta_id, usuario_id");
+    .select("pasta_id, usuario_id, artista_id");
   if (error) throw error;
-  return (data ?? []) as { pasta_id: string; usuario_id: string }[];
+  const rows = (data ?? []) as MembroRow[];
+  const out: Array<{ pasta_id: string; membro: MembroPasta }> = [];
+  for (const r of rows) {
+    if (r.usuario_id) {
+      out.push({ pasta_id: r.pasta_id, membro: { tipo: "usuario", id: r.usuario_id } });
+    } else if (r.artista_id) {
+      out.push({ pasta_id: r.pasta_id, membro: { tipo: "artista", id: r.artista_id } });
+    }
+  }
+  return out;
 }
 
-/** Substitui a lista de membros de uma pasta (delete-all + insert). */
+/**
+ * Substitui a lista de membros de uma pasta (delete-all + insert). Grava na
+ * coluna certa por tipo — usuario_id para "usuario", artista_id para "artista"
+ * (o CHECK do banco exige exatamente um preenchido por linha).
+ */
 export async function setMembros(
   supabase: SupabaseClient,
   pastaId: string,
-  usuarioIds: string[]
+  membros: MembroPasta[]
 ): Promise<void> {
   const { error: delErr } = await supabase
     .from("anotacao_pasta_membros")
     .delete()
     .eq("pasta_id", pastaId);
   if (delErr) throw delErr;
-  if (usuarioIds.length > 0) {
-    const rows = usuarioIds.map((u) => ({ pasta_id: pastaId, usuario_id: u }));
+  if (membros.length > 0) {
+    const rows = membros.map((m) => ({
+      pasta_id: pastaId,
+      usuario_id: m.tipo === "usuario" ? m.id : null,
+      artista_id: m.tipo === "artista" ? m.id : null,
+    }));
     const { error: insErr } = await supabase.from("anotacao_pasta_membros").insert(rows);
     if (insErr) throw insErr;
   }
+}
+
+/**
+ * Dentre `ids`, quais artistas VIVOS pertencem ao workspace. Usado para validar
+ * membros-artista de pasta e a etiqueta de contexto da nota antes de gravar.
+ */
+export async function artistasDoWorkspace(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  ids: string[]
+): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("artists")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .in("id", ids)
+    .is("deletado_em", null);
+  if (error) throw error;
+  return new Set((data ?? []).map((r) => (r as { id: string }).id));
 }
 
 // ============================================================

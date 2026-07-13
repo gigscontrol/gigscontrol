@@ -9,6 +9,15 @@ import type { PlanoId, CicloCobranca, Moeda } from "./planos";
 
 export type StatusAssinatura = "ativa" | "trial" | "suspensa" | "cancelada";
 
+/** Dados do pagamento mais recente que estendeu a validade (tabela `pagamentos`). */
+export type UltimoPagamento = {
+  data: string; // ISO
+  provider: "stripe" | "mercadopago" | "cortesia" | "cupom";
+  metodo: string | null;
+  valor: number | null; // em centavos, na moeda do pagamento
+  moeda: Moeda | null;
+};
+
 export type Assinatura = {
   workspaceId: string;
   nomeWorkspace: string;
@@ -26,11 +35,16 @@ export type Assinatura = {
   usuariosEmUso: number;
   /** Data de início da assinatura (ISO) */
   inicioEm: string;
-  /** Data da próxima cobrança (ISO), ou null (trial expirado / sem cobrança) */
-  proximaCobranca: string | null;
   /**
-   * Dias restantes do plano (trial/graça → até o prazo; ativa → até a
-   * cobrança). Negativo = expirado. null = não aplicável.
+   * MODELO PRÉ-PAGO: validade do acesso (subscriptions.acesso_ate, ISO), ou
+   * null (nunca pagou / stub de checkout abandonado).
+   */
+  acessoAte: string | null;
+  /** Pagamento mais recente que estendeu a validade (ledger `pagamentos`), ou null. */
+  ultimoPagamento: UltimoPagamento | null;
+  /**
+   * Dias restantes até `acessoAte`. Negativo = expirado (dentro da graça de
+   * 1 dia ainda libera acesso — ver `estadoAcessoDe`). null = sem validade.
    */
   diasRestantes?: number | null;
 };

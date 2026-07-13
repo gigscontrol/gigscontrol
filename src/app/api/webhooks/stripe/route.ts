@@ -4,32 +4,35 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   construirEvento,
   getStripe,
-  parseLookupKey,
   valorCobranca,
 } from "@/lib/services/stripe.service";
-import type { PlanoId, CicloCobranca, Moeda } from "@/lib/planos";
+import { registrarPagamentoEEstenderAcesso } from "@/lib/services/pagamentos.service";
+import { PLANOS, type PlanoId, type CicloCobranca, type Moeda } from "@/lib/planos";
 
 /**
  * POST /api/webhooks/stripe
  *
- * Recebe os eventos da Stripe (assinaturas). Ativa/renova/suspende/cancela
- * a assinatura do workspace correspondente.
+ * Recebe os eventos da Stripe no modelo PRÉ-PAGO por validade. Cada pagamento
+ * ÚNICO aprovado ESTENDE a validade (acesso_ate) do workspace via a RPC central
+ * `registrarPagamentoEEstenderAcesso` (idempotente por provider+payment id).
+ *
+ * Eventos tratados:
+ *  - checkout.session.completed (mode=payment, paid): compra de plano estende a
+ *    validade; compra de EXCEDENTE registra pagamento sem conceder dias.
+ *  - invoice.paid / invoice.payment_succeeded (LEGADO): renovação de assinante
+ *    antigo → estende +30/+365 (transição suave), providerPaymentId = invoice.id.
+ *  - charge.dispute.created / radar.early_fraud_warning.created: suspende NA HORA.
+ *  - invoice.payment_failed (LEGADO): 1 dia de graça pra assinante antigo.
  *
  * Garantias:
- *  - Verificação OBRIGATÓRIA da assinatura `stripe-signature` via
- *    `construirEvento` (constructEvent). Falha → 400.
- *  - Idempotência via tabela `pagamento_eventos` (índice único em
- *    mp_payment_id, onde guardamos o `event.id` da Stripe) — o mesmo
- *    evento nunca é processado 2x.
- *  - Sempre responde 200 pra eventos tratados/ignorados; 500 só em erro
- *    real de processamento (aí a Stripe reenvia).
- *
- * O workspace é encontrado primariamente via `metadata.workspaceId`
- * (setado na subscription no checkout). Quando o evento não carrega a
- * subscription, ela é recuperada (`subscriptions.retrieve`).
+ *  - Verificação OBRIGATÓRIA da assinatura `stripe-signature`. Falha → 400.
+ *  - Idempotência dupla: tabela `pagamento_eventos` (event.id único) barra o
+ *    reprocessamento do MESMO evento; e a RPC (UNIQUE provider+payment id) barra
+ *    a concessão de dias 2× mesmo que o evento chegue por caminhos distintos.
+ *  - Sempre responde 200 pra eventos tratados/ignorados; 500 só em erro real
+ *    (aí a Stripe reenvia; o registro de idempotência é removido no rollback).
  *
  * reaproveitado: mp_* guarda ids do Stripe (sem migration)
- *  - subscriptions.mp_preference_id  → Stripe subscription id
  *  - subscriptions.mp_payment_id     → Stripe customer id
  *  - pagamento_eventos.mp_payment_id → Stripe event id (idempotência)
  */
@@ -38,18 +41,7 @@ import type { PlanoId, CicloCobranca, Moeda } from "@/lib/planos";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SubResumo = {
-  subscriptionId: string;
-  customerId: string | null;
-  workspaceId: string | null;
-  status: string;
-  /** unix seconds do fim do período atual (renovação) ou null. */
-  periodEnd: number | null;
-  /** Plano/ciclo/moeda derivados do preço REAL da assinatura (lookup_key). */
-  plano?: PlanoId | null;
-  ciclo?: CicloCobranca | null;
-  moeda?: Moeda | null;
-};
+type Admin = ReturnType<typeof criarClienteAdmin>;
 
 /** Extrai o id (string) de um campo que pode vir expandido (objeto) ou só id. */
 function idDe(
@@ -59,132 +51,86 @@ function idDe(
   return typeof campo === "string" ? campo : campo.id;
 }
 
-/** current_period_end agora vive nos items da subscription (Stripe v22+). */
-function periodEndDaSub(sub: Stripe.Subscription): number | null {
-  const item = sub.items?.data?.[0];
-  return item?.current_period_end ?? null;
+/** true se o texto é um PlanoId conhecido (não confia em texto livre da Stripe). */
+function planoValido(v: unknown): v is PlanoId {
+  return typeof v === "string" && PLANOS.some((p) => p.id === v);
 }
 
 /**
- * Deriva {plano, ciclo, moeda} do `lookup_key` do preço que a assinatura
- * está REALMENTE cobrando (fonte da verdade da Stripe). null se não bater.
+ * Crédito de upgrade em DIAS vindo do metadata — tratado como ENTRADA NÃO
+ * CONFIÁVEL: aceita só inteiro não-negativo, com teto de 1 ano corrido pra que
+ * um metadata adulterado não conceda validade infinita. (O W6 recalcula a
+ * origem do crédito; aqui a postura é sanear, nunca confiar no valor cru.)
  */
-function planoInfoDaSub(
-  sub: Stripe.Subscription
-): { plano: PlanoId; ciclo: CicloCobranca; moeda: Moeda } | null {
-  const price = sub.items?.data?.[0]?.price;
-  return parseLookupKey(price?.lookup_key ?? null);
+function creditoDiasSeguro(v: unknown): number {
+  const n = typeof v === "string" ? parseInt(v, 10) : typeof v === "number" ? v : NaN;
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(Math.floor(n), 365);
 }
 
-/** Converte unix seconds → 'YYYY-MM-DD' (coluna date). */
-function dataDe(unixSeconds: number | null): string | null {
-  if (!unixSeconds) return null;
-  return new Date(unixSeconds * 1000).toISOString().slice(0, 10);
-}
-
-/** Recupera a subscription e devolve o resumo que usamos pra atualizar o DB. */
-async function resumoDaSubscription(
-  subscriptionId: string
-): Promise<SubResumo> {
-  const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
-    expand: ["items.data.price"],
-  });
-  const info = planoInfoDaSub(sub);
-  return {
-    subscriptionId: sub.id,
-    customerId: idDe(sub.customer),
-    workspaceId: (sub.metadata?.workspaceId as string) ?? null,
-    status: sub.status,
-    periodEnd: periodEndDaSub(sub),
-    plano: info?.plano ?? null,
-    ciclo: info?.ciclo ?? null,
-    moeda: info?.moeda ?? null,
-  };
-}
-
-/** Mapeia o status da Stripe pro nosso enum de subscriptions. */
-function mapStatus(stripeStatus: string): "ativa" | "suspended" | "cancelled" {
-  if (stripeStatus === "active" || stripeStatus === "trialing") return "ativa";
-  if (stripeStatus === "canceled") return "cancelled";
-  // past_due | unpaid | incomplete | incomplete_expired | paused
-  return "suspended";
-}
-
-type Admin = ReturnType<typeof criarClienteAdmin>;
-
-/** Atualiza a subscription do workspace (e opcionalmente o workspace). */
-async function aplicarStatus(
+/**
+ * Estende a validade a partir de um pagamento de PLANO aprovado. Os dias saem
+ * do CICLO (server-side via planos.ts), o valor é recalculado server-side —
+ * nada de confiar no metadata cru além de identificar plano/ciclo. Best-effort
+ * de salvar customer/valor/mirror do plano no workspace (não bloqueia a RPC).
+ */
+async function estenderPorPlano(
   admin: Admin,
-  r: SubResumo,
-  statusInterno: "ativa" | "suspended" | "cancelled",
-  opts: { espelharNoWorkspace?: boolean; preservarGraca?: boolean } = {}
+  params: {
+    workspaceId: string;
+    providerPaymentId: string;
+    plano: PlanoId;
+    ciclo: CicloCobranca;
+    moeda: Moeda;
+    metodo?: string | null;
+    customerId?: string | null;
+    diasExtras?: number;
+  }
 ) {
-  if (!r.workspaceId) return;
-  const proxima = dataDe(r.periodEnd);
-
-  const patch: Record<string, unknown> = {
-    status: statusInterno,
+  const valorReais = valorCobranca(params.plano, params.ciclo, params.moeda);
+  const res = await registrarPagamentoEEstenderAcesso({
+    workspaceId: params.workspaceId,
     provider: "stripe",
-  };
-  // reaproveitado: mp_* guarda ids do Stripe (sem migration)
-  if (r.subscriptionId) patch.mp_preference_id = r.subscriptionId;
-  if (r.customerId) patch.mp_payment_id = r.customerId;
-  if (proxima) patch.proxima_cobranca = proxima;
-  if (statusInterno === "ativa") {
-    patch.trial_termina_em = null;
-    patch.metodo = "credit_card";
-  }
+    providerPaymentId: params.providerPaymentId,
+    plano: params.plano,
+    ciclo: params.ciclo,
+    valor: Math.round(valorReais * 100), // centavos (coluna integer)
+    moeda: params.moeda,
+    metodo: params.metodo ?? "credit_card",
+    diasExtras: params.diasExtras ?? 0,
+  });
 
-  // RECONCILIAÇÃO DE PLANO: alinha plano/ciclo/valor ao preço que a Stripe está
-  // REALMENTE cobrando. Só quando ATIVA (checkout/renovação paga) — nunca em
-  // graça/suspenso, pra não rebaixar antes da cobrança. É o que fecha o furo do
-  // downgrade: ao renovar no preço menor, o plano cai no MESMO instante da
-  // cobrança menor (nem antes — mantém benefícios até o fim do período pago —
-  // nem depois — não dá pra pagar menos e manter o plano top).
-  const reconciliaPlano = statusInterno === "ativa" && !!r.plano && !!r.ciclo;
-  if (reconciliaPlano && r.plano && r.ciclo) {
-    patch.plano = r.plano;
-    patch.ciclo = r.ciclo;
-    patch.valor = valorCobranca(r.plano, r.ciclo, r.moeda ?? "brl");
-  }
+  // Reprocessamento do mesmo pagamento → a RPC já barrou. Não mexe em nada.
+  if (res.jaProcessado) return;
 
-  let q = admin
+  // Best-effort: a RPC não grava customer ref, valor cache nem espelha o
+  // workspaces.plano. Faz aqui (falha silenciosa não impede a extensão).
+  const patchSub: Record<string, unknown> = { valor: valorReais };
+  if (params.customerId) patchSub.mp_payment_id = params.customerId;
+  await admin
     .from("subscriptions")
-    .update(patch)
-    .eq("workspace_id", r.workspaceId);
-  // Dunning (past_due/unpaid/paused via subscription.updated) NÃO atropela a
-  // graça de 1 dia: quem está em 'graca' fica até o prazo expirar (o bloqueio
-  // vem da derivação de estado). Chargeback/fraude NÃO passam preservarGraca,
-  // então cortam na hora.
-  if (statusInterno === "suspended" && opts.preservarGraca) {
-    q = q.neq("status", "graca");
-  }
-  await q;
+    .update(patchSub)
+    .eq("workspace_id", params.workspaceId);
+  await admin
+    .from("workspaces")
+    .update({ plano: params.plano, ciclo: params.ciclo, status: "ativa" })
+    .eq("id", params.workspaceId);
+}
 
-  // Se o plano reconciliado é o MESMO que estava agendado como downgrade, o
-  // downgrade VIROU (renovou no preço menor) → limpa o registro pendente pra o
-  // aviso sumir e liberar novo agendamento. O `.eq("downgrade_para", r.plano)`
-  // garante que só limpa quando o alvo chegou (não ao renovar ainda no plano de
-  // cima). Se a coluna não existir (pré-migration 46), o erro volta silencioso.
-  if (reconciliaPlano && r.plano) {
-    await admin
-      .from("subscriptions")
-      .update({ downgrade_para: null, downgrade_efetivo_em: null })
-      .eq("workspace_id", r.workspaceId)
-      .eq("downgrade_para", r.plano);
-  }
-
-  // workspaces.plano é a fonte da verdade dos limites → tem que refletir o
-  // plano reconciliado (independente de espelhar o status).
-  if (opts.espelharNoWorkspace || reconciliaPlano) {
-    const wsPatch: Record<string, unknown> = {};
-    if (opts.espelharNoWorkspace) wsPatch.status = statusInterno;
-    if (reconciliaPlano && r.plano && r.ciclo) {
-      wsPatch.plano = r.plano;
-      wsPatch.ciclo = r.ciclo;
-    }
-    await admin.from("workspaces").update(wsPatch).eq("id", r.workspaceId);
-  }
+/**
+ * Suspende o acesso do workspace NA HORA (chargeback / alerta de fraude).
+ * Barra sempre via estadoAcessoDe (status suspended → bloqueado mesmo com
+ * validade futura). Espelha no workspace.
+ */
+async function suspenderWorkspace(admin: Admin, workspaceId: string) {
+  await admin
+    .from("subscriptions")
+    .update({ status: "suspended" })
+    .eq("workspace_id", workspaceId);
+  await admin
+    .from("workspaces")
+    .update({ status: "suspended" })
+    .eq("id", workspaceId);
 }
 
 export async function POST(request: Request) {
@@ -208,16 +154,16 @@ export async function POST(request: Request) {
 
   const admin = criarClienteAdmin();
 
-  // Descobre o workspace cedo (quando dá) pra registrar no evento.
-  // Só pra eventos que carregam metadata diretamente; senão fica null e a
-  // gente resolve dentro do handler via retrieve.
+  // Descobre o workspace cedo (quando dá) pra registrar no evento. Aceita tanto
+  // `workspace_id` (novo, snake_case) quanto `workspaceId` (legado) no metadata.
   let workspaceIdEvento: string | null = null;
   const obj = event.data.object as unknown as Record<string, unknown>;
   const md = obj?.metadata as Record<string, unknown> | undefined;
-  if (md?.workspaceId) workspaceIdEvento = String(md.workspaceId);
+  const mdWs = md?.workspace_id ?? md?.workspaceId;
+  if (mdWs) workspaceIdEvento = String(mdWs);
 
-  // Idempotência: registra o evento. event.id é único → se já existe, o
-  // índice único barra e a gente sabe que já processou.
+  // Idempotência do EVENTO: registra antes de processar. event.id é único → se
+  // já existe, o índice único barra e a gente sabe que já processou.
   const { error: errInsert } = await admin.from("pagamento_eventos").insert({
     workspace_id: workspaceIdEvento,
     provider: "stripe",
@@ -243,115 +189,157 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const subscriptionId = idDe(session.subscription);
-        if (!subscriptionId) break; // sessão não-assinatura — ignora
-        const resumo = await resumoDaSubscription(subscriptionId);
-        // Fallbacks: a session também carrega customer + workspaceId.
-        if (!resumo.customerId) resumo.customerId = idDe(session.customer);
-        if (!resumo.workspaceId) {
-          resumo.workspaceId =
-            (session.metadata?.workspaceId as string) ??
-            session.client_reference_id ??
-            null;
+        // Modelo pré-pago: só nos interessa o pagamento ÚNICO aprovado.
+        if (session.mode !== "payment") break; // sessão não-payment — ignora
+        if (session.payment_status !== "paid") break; // ainda não pago
+
+        const meta = (session.metadata ?? {}) as Record<string, string>;
+        const workspaceId =
+          meta.workspace_id ??
+          (meta.workspaceId as string | undefined) ??
+          session.client_reference_id ??
+          null;
+        if (!workspaceId) break;
+
+        const paymentIntentId = idDe(session.payment_intent);
+        // Fallback: o id do PI é a chave de idempotência ideal; sem ele, cai no
+        // id da própria sessão (também estável e único por compra).
+        const providerPaymentId = paymentIntentId ?? session.id;
+        const customerId = idDe(session.customer);
+
+        // EXCEDENTE (contrato avulso): registra o pagamento SEM conceder dias e
+        // sem mexer no plano/status/validade da assinatura. status
+        // 'excedente_disponivel' = crédito de 1 contrato pronto pra consumir.
+        if (meta.excedente === "true") {
+          const moedaExc = (session.currency === "usd" ? "usd" : "brl") as Moeda;
+          const { error } = await admin.from("pagamentos").insert({
+            workspace_id: workspaceId,
+            provider: "stripe",
+            provider_payment_id: providerPaymentId,
+            plano: null,
+            ciclo: null,
+            valor: session.amount_total ?? null, // já em centavos (Stripe)
+            moeda: moedaExc,
+            metodo: "credit_card",
+            dias_concedidos: 0,
+            status: "excedente_disponivel",
+          });
+          // Reentrega do mesmo pagamento → UNIQUE(provider, payment id) barra
+          // (23505). Qualquer outro erro sobe pro catch (500 → Stripe reenvia).
+          if (error && error.code !== "23505") throw error;
+          break;
         }
-        await aplicarStatus(admin, resumo, "ativa", {
-          espelharNoWorkspace: true,
+
+        // COMPRA DE PLANO: plano/ciclo vêm do metadata (validados server-side);
+        // dias derivam do ciclo e valor é recalculado — metadata cru não decide
+        // quanto de acesso é concedido.
+        if (!planoValido(meta.plano)) break;
+        const ciclo: CicloCobranca = meta.ciclo === "anual" ? "anual" : "mensal";
+        const moeda: Moeda = (session.currency === "usd" ? "usd" : "brl") as Moeda;
+        const diasExtras = creditoDiasSeguro(meta.credito_dias);
+
+        await estenderPorPlano(admin, {
+          workspaceId,
+          providerPaymentId,
+          plano: meta.plano,
+          ciclo,
+          moeda,
+          metodo: "credit_card",
+          customerId,
+          diasExtras,
+        });
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        // Checkout próprio (Payment Element): o PaymentIntent avulso foi pago.
+        // Estende a validade pelas MESMAS regras do fluxo hosted/embedded —
+        // plano/ciclo/credito_dias vêm do metadata do PI (validados server-side).
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const meta = (pi.metadata ?? {}) as Record<string, string>;
+        const workspaceId = meta.workspace_id ?? meta.workspaceId ?? null;
+        // IGNORA PIs sem workspace_id (não reage a PaymentIntents alheios).
+        if (!workspaceId) break;
+
+        const providerPaymentId = pi.id;
+        const customerId = idDe(pi.customer);
+        const moeda: Moeda = (pi.currency === "usd" ? "usd" : "brl") as Moeda;
+
+        // EXCEDENTE (contrato avulso): registra o pagamento SEM conceder dias e
+        // sem mexer no plano/status/validade — igual ao caminho da session.
+        if (meta.excedente === "true") {
+          const { error } = await admin.from("pagamentos").insert({
+            workspace_id: workspaceId,
+            provider: "stripe",
+            provider_payment_id: providerPaymentId,
+            plano: null,
+            ciclo: null,
+            valor: pi.amount ?? null, // já em centavos (Stripe)
+            moeda,
+            metodo: "credit_card",
+            dias_concedidos: 0,
+            status: "excedente_disponivel",
+          });
+          // Reentrega → UNIQUE(provider, payment id) barra (23505). Outros sobem.
+          if (error && error.code !== "23505") throw error;
+          break;
+        }
+
+        // COMPRA DE PLANO: plano/ciclo do metadata (validados); dias derivam do
+        // ciclo e valor é recalculado. A idempotência por pi.id garante que, se
+        // este PI também chegar via checkout.session.completed (fluxo hosted), a
+        // RPC não conceda dias em dobro.
+        if (!planoValido(meta.plano)) break;
+        const ciclo: CicloCobranca = meta.ciclo === "anual" ? "anual" : "mensal";
+        const diasExtras = creditoDiasSeguro(meta.credito_dias);
+
+        await estenderPorPlano(admin, {
+          workspaceId,
+          providerPaymentId,
+          plano: meta.plano,
+          ciclo,
+          moeda,
+          metodo: "credit_card",
+          customerId,
+          diasExtras,
         });
         break;
       }
 
       case "invoice.paid":
       case "invoice.payment_succeeded": {
-        // Renovação: pega a subscription a partir do invoice e ativa.
+        // LEGADO (transição suave): renovação de assinante recorrente antigo.
+        // Converte em extensão de validade +30/+365. providerPaymentId =
+        // invoice.id (idempotente); ciclo derivado do preço recorrente.
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = subscriptionIdDoInvoice(invoice);
-        if (!subscriptionId) break; // invoice avulso (sem assinatura)
-        const resumo = await resumoDaSubscription(subscriptionId);
-        if (!resumo.customerId) resumo.customerId = idDe(invoice.customer);
-        // period_end do invoice é um bom fallback pra proxima_cobranca.
-        if (!resumo.periodEnd && typeof invoice.period_end === "number") {
-          resumo.periodEnd = invoice.period_end;
-        }
-        await aplicarStatus(admin, resumo, "ativa", {
-          espelharNoWorkspace: true,
+        if (!invoice.id) break;
+        const info = infoDoInvoiceLegado(invoice);
+        if (!info.workspaceId || !info.plano) break;
+        await estenderPorPlano(admin, {
+          workspaceId: info.workspaceId,
+          providerPaymentId: invoice.id,
+          plano: info.plano,
+          ciclo: info.ciclo,
+          moeda: info.moeda,
+          metodo: "credit_card",
+          customerId: idDe(invoice.customer),
         });
         break;
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = subscriptionIdDoInvoice(invoice);
-        if (!subscriptionId) break;
-        const resumo = await resumoDaSubscription(subscriptionId);
-        if (!resumo.workspaceId) break;
-        // Renovação falhou → 1 dia de GRAÇA (acesso + aviso) antes de bloquear.
-        // Set-once: só transiciona de ATIVA → graça. As retentativas do Stripe
-        // disparam payment_failed de novo, mas aí já está "graca" e o prazo é
-        // preservado. Uma retentativa que der certo → invoice.paid → "ativa".
-        const gracaAte = new Date(Date.now() + 86_400_000).toISOString();
-        console.warn(
-          `[webhook stripe] invoice.payment_failed sub=${subscriptionId} ws=${resumo.workspaceId} — graça até ${gracaAte}.`
-        );
-        await admin
-          .from("subscriptions")
-          .update({ status: "graca", trial_termina_em: gracaAte })
-          .eq("workspace_id", resumo.workspaceId)
-          .eq("status", "ativa");
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const sub = event.data.object as Stripe.Subscription;
-        const info = planoInfoDaSub(sub);
-        const resumo: SubResumo = {
-          subscriptionId: sub.id,
-          customerId: idDe(sub.customer),
-          workspaceId: (sub.metadata?.workspaceId as string) ?? null,
-          status: sub.status,
-          periodEnd: periodEndDaSub(sub),
-          plano: info?.plano ?? null,
-          ciclo: info?.ciclo ?? null,
-          moeda: info?.moeda ?? null,
-        };
-        await aplicarStatus(admin, resumo, "cancelled", {
-          espelharNoWorkspace: true,
-        });
-        break;
-      }
-
-      case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription;
-        if (sub.status === "past_due") {
-          // Stripe em dunning (retentando) → a graça é dona do
-          // invoice.payment_failed. Não atropela o prazo aqui.
-          break;
-        }
-        const info = planoInfoDaSub(sub);
-        const resumo: SubResumo = {
-          subscriptionId: sub.id,
-          customerId: idDe(sub.customer),
-          workspaceId: (sub.metadata?.workspaceId as string) ?? null,
-          status: sub.status,
-          periodEnd: periodEndDaSub(sub),
-          plano: info?.plano ?? null,
-          ciclo: info?.ciclo ?? null,
-          moeda: info?.moeda ?? null,
-        };
-        const interno = mapStatus(sub.status);
-        // Espelha cancelamento no workspace; ativa/suspende ficam só na sub
-        // (mas a reconciliação de plano dentro de aplicarStatus ainda roda p/ ativa).
-        await aplicarStatus(admin, resumo, interno, {
-          espelharNoWorkspace: interno === "cancelled",
-          preservarGraca: true,
-        });
+        // LEGADO: renovação de assinante antigo falhou. Com o modelo pré-pago o
+        // acesso já expira sozinho pela validade — aqui só marcamos suspenso se
+        // já não houver validade em dia (não encurtamos nada à força). Mantido
+        // como no-op seguro: a expiração natural (acesso_ate) faz o corte.
         break;
       }
 
       case "charge.dispute.created":
       case "radar.early_fraud_warning.created": {
         // Chargeback (disputa no cartão) ou alerta de fraude → suspende o
-        // acesso NA HORA, pra cortar uso de má fé. Acha o workspace pelo
-        // customer da cobrança (guardado em subscriptions.mp_payment_id).
+        // acesso NA HORA. Acha o workspace pelo customer da cobrança
+        // (guardado em subscriptions.mp_payment_id).
         const alvo = event.data.object as unknown as {
           charge?: string | { id: string } | null;
         };
@@ -363,28 +351,14 @@ export async function POST(request: Request) {
 
         const { data: row } = await admin
           .from("subscriptions")
-          .select("workspace_id, mp_preference_id")
+          .select("workspace_id")
           .eq("mp_payment_id", customerId)
-          .maybeSingle<{
-            workspace_id: string | null;
-            mp_preference_id: string | null;
-          }>();
+          .maybeSingle<{ workspace_id: string | null }>();
         if (row?.workspace_id) {
           console.warn(
             `[webhook stripe] ${event.type} charge=${chargeId} ws=${row.workspace_id} — suspendendo por disputa/fraude.`
           );
-          await aplicarStatus(
-            admin,
-            {
-              subscriptionId: row.mp_preference_id ?? "",
-              customerId,
-              workspaceId: row.workspace_id,
-              status: "disputed",
-              periodEnd: null,
-            },
-            "suspended",
-            { espelharNoWorkspace: true }
-          );
+          await suspenderWorkspace(admin, row.workspace_id);
         }
         break;
       }
@@ -398,7 +372,7 @@ export async function POST(request: Request) {
   } catch (e) {
     // O processamento falhou DEPOIS do registro de idempotência. Remove o
     // registro pra que o retry da Stripe REPROCESSE — senão o índice único
-    // barraria o reenvio e a ativação (cliente já pagou) se perderia.
+    // barraria o reenvio e a extensão (cliente já pagou) se perderia.
     await admin
       .from("pagamento_eventos")
       .delete()
@@ -413,16 +387,40 @@ export async function POST(request: Request) {
 }
 
 /**
- * Extrai o id da subscription de um invoice. Em versões recentes da API a
- * subscription mora em `invoice.parent.subscription_details.subscription`.
+ * Extrai {workspaceId, plano, ciclo, moeda} de um invoice LEGADO de assinatura
+ * recorrente. workspace/plano saem do metadata (do invoice ou da linha);
+ * moeda do invoice; ciclo derivado do TAMANHO do período faturado da linha
+ * (o SDK v22 não expõe recurring.interval no line item — um período > ~32 dias
+ * é anual). É melhor-esforço de transição: o que importa é estender a validade.
  */
-function subscriptionIdDoInvoice(invoice: Stripe.Invoice): string | null {
-  const det = invoice.parent?.subscription_details;
-  if (det?.subscription) return idDe(det.subscription);
-  // Fallback defensivo p/ payloads/versões que ainda exponham no topo.
-  const legado = (invoice as unknown as { subscription?: string | { id: string } })
-    .subscription;
-  return idDe(legado ?? null);
+function infoDoInvoiceLegado(invoice: Stripe.Invoice): {
+  workspaceId: string | null;
+  plano: PlanoId | null;
+  ciclo: CicloCobranca;
+  moeda: Moeda;
+} {
+  const line = invoice.lines?.data?.[0];
+  const md = (invoice.metadata ?? {}) as Record<string, string>;
+  const lineMd = (line?.metadata ?? {}) as Record<string, string>;
+  const workspaceId =
+    md.workspace_id ?? md.workspaceId ?? lineMd.workspace_id ?? lineMd.workspaceId ?? null;
+
+  const planoRaw = md.plano ?? lineMd.plano ?? null;
+  const plano = planoValido(planoRaw) ? planoRaw : null;
+
+  // Ciclo pelo tamanho do período faturado (start→end). > 32 dias = anual.
+  const inicio = line?.period?.start ?? null;
+  const fim = line?.period?.end ?? null;
+  let ciclo: CicloCobranca = "mensal";
+  if (typeof inicio === "number" && typeof fim === "number" && fim > inicio) {
+    const dias = (fim - inicio) / 86_400;
+    ciclo = dias > 32 ? "anual" : "mensal";
+  } else if (lineMd.ciclo === "anual" || md.ciclo === "anual") {
+    ciclo = "anual";
+  }
+
+  const moeda: Moeda = invoice.currency === "usd" ? "usd" : "brl";
+  return { workspaceId, plano, ciclo, moeda };
 }
 
 // Stripe pode fazer um GET de saúde no endpoint — responde 200.

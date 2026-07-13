@@ -13,6 +13,15 @@ import {
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
+import {
+  ClickableStat,
+  ResumoModal,
+  ResumoNumero,
+  ResumoLinha,
+  ResumoLista,
+  ResumoFooter,
+  type ResumoListaItem,
+} from "./DashboardResumo";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { gradienteSutil } from "@/lib/gradiente";
@@ -59,6 +68,10 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
   return d.getFullYear() === p.ano && d.getMonth() === p.mes;
 }
 
+function fmtData(dataISO: string): string {
+  return new Date(dataISO + "T12:00:00").toLocaleDateString("pt-BR");
+}
+
 type Props = {
   selectedArtistas: string[];
   onNavigate?: (tab: ActiveTab, page: ActivePage) => void;
@@ -77,6 +90,9 @@ type LinhaParcela = {
   contratante: string;
 };
 
+/** Qual card está com o popup de resumo aberto. */
+type ResumoAberto = null | "total" | "recebido" | "areceber" | "atrasado";
+
 export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }: Props) {
   const t = useT();
   const accent = "var(--brand)";
@@ -93,6 +109,18 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     [range, customMonth, customYear]
   );
   const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
+
+  // ---- Popup de resumo por card (padrão dos outros dashboards) ----
+  const [resumo, setResumo] = useState<ResumoAberto>(null);
+  const irParaPagamentos = () => {
+    setResumo(null);
+    onNavigate?.("financeiro", "financeiro-pagamentos");
+  };
+  // O id do item é "vendaId::parcelaId" (único p/ key); ao clicar, abre a venda.
+  const abrirVendaDoItem = (id: string) => {
+    setResumo(null);
+    onAbrirVenda?.(id.split("::")[0]);
+  };
 
   const vendasVisiveis = useMemo(
     () => vendas.filter((v) => selectedArtistas.includes(v.artistaId)),
@@ -156,6 +184,44 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       .slice(0, 6);
   }, [parcelasPeriodo]);
 
+  // ---- Listas dos popups (por status), como ResumoListaItem ----
+  const paraItem = (l: LinhaParcela): ResumoListaItem => ({
+    id: `${l.vendaId}::${l.parcela.id}`,
+    titulo: l.contratante,
+    subtitulo: `${l.vendaNumero} · ${t("parc")} ${l.indice}/${l.total} · ${fmtData(l.parcela.dataVencimento)}`,
+    valor: formatBRL(l.parcela.valor),
+  });
+  const itensRecebidos = useMemo(
+    () =>
+      parcelasPeriodo
+        .filter((l) => statusEfetivoParcela(l.parcela) === "pago")
+        .sort((a, b) => new Date(b.parcela.dataVencimento).getTime() - new Date(a.parcela.dataVencimento).getTime())
+        .map(paraItem),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parcelasPeriodo, t]
+  );
+  const itensAReceber = useMemo(
+    () =>
+      parcelasPeriodo
+        .filter((l) => {
+          const st = statusEfetivoParcela(l.parcela);
+          return st !== "pago" && st !== "atrasado" && st !== "cancelado";
+        })
+        .sort((a, b) => new Date(a.parcela.dataVencimento).getTime() - new Date(b.parcela.dataVencimento).getTime())
+        .map(paraItem),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parcelasPeriodo, t]
+  );
+  const itensAtrasados = useMemo(
+    () =>
+      parcelasPeriodo
+        .filter((l) => statusEfetivoParcela(l.parcela) === "atrasado")
+        .sort((a, b) => new Date(a.parcela.dataVencimento).getTime() - new Date(b.parcela.dataVencimento).getTime())
+        .map(paraItem),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [parcelasPeriodo, t]
+  );
+
   // Faturamento por artista — soma as parcelas do período (exclui canceladas).
   const porArtista = useMemo(() => {
     return artistas.filter((d) => selectedArtistas.includes(d.id))
@@ -171,6 +237,10 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
   const maxArtista = Math.max(1, ...porArtista.map((p) => p.valor));
   const pctRecebido =
     totais.total > 0 ? Math.round((totais.recebido / totais.total) * 100) : 0;
+
+  const vazio = (msg: string) => (
+    <div className="text-sm text-muted text-center py-4">{msg}</div>
+  );
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -201,9 +271,10 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         }
       />
 
-      {/* Cards clicáveis — levam ao controle de pagamentos */}
+      {/* Cards clicáveis — abrem um popup de resumo na própria página; o rodapé do
+          popup leva ao Controle de Pagamentos. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
+        <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total em vendas")}>
           <StatCard
             title={t("Total em Vendas")}
             value={formatBRL(totais.total)}
@@ -212,7 +283,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             subtitle={t("Soma de todas as parcelas")}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
+        <ClickableStat onClick={() => setResumo("recebido")} ariaLabel={t("Resumo do recebido")}>
           <StatCard
             title={t("Recebido")}
             value={formatBRL(totais.recebido)}
@@ -221,7 +292,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             subtitle={t("{pct}% do total", { pct: pctRecebido })}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
+        <ClickableStat onClick={() => setResumo("areceber")} ariaLabel={t("Resumo do a receber")}>
           <StatCard
             title={t("A Receber")}
             value={formatBRL(totais.aReceber)}
@@ -230,7 +301,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             subtitle={t("Parcelas pendentes")}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}>
+        <ClickableStat onClick={() => setResumo("atrasado")} ariaLabel={t("Resumo do atrasado")}>
           <StatCard
             title={t("Atrasado")}
             value={formatBRL(totais.atrasado)}
@@ -301,10 +372,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
                         </span>
                       </div>
                       <div className="text-xs text-muted">
-                        {t("Vence")}{" "}
-                        {new Date(
-                          l.parcela.dataVencimento + "T12:00:00"
-                        ).toLocaleDateString("pt-BR")}
+                        {t("Vence")} {fmtData(l.parcela.dataVencimento)}
                       </div>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
@@ -356,7 +424,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
 
       {totais.atrasado > 0 && (
         <button
-          onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
+          onClick={() => setResumo("atrasado")}
           className="card mt-4 flex items-center gap-3 w-full text-left hover:border-border-strong transition-colors"
           style={{
             borderColor: "var(--danger)",
@@ -374,23 +442,70 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
           <ChevronRight size={16} className="text-muted flex-shrink-0" />
         </button>
       )}
-    </div>
-  );
-}
 
-function ClickableStat({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-left transition-transform hover:-translate-y-0.5 active:translate-y-0"
-    >
-      {children}
-    </button>
+      {/* ── Popups de resumo (padrão card->popup->detalhe) ── */}
+      <ResumoModal
+        isOpen={resumo === "total"}
+        onClose={() => setResumo(null)}
+        title={t("Total em Vendas")}
+        subtitle={tituloPeriodo}
+        accentColor={accent}
+      >
+        <ResumoNumero valor={formatBRL(totais.total)} label={t("Soma de todas as parcelas")} accentColor={accent} />
+        <ResumoLinha label={t("Recebido")} valor={formatBRL(totais.recebido)} />
+        <ResumoLinha label={t("A Receber")} valor={formatBRL(totais.aReceber)} />
+        <ResumoLinha label={t("Atrasado")} valor={formatBRL(totais.atrasado)} />
+        <ResumoLinha label={t("Progresso de recebimento")} valor={`${pctRecebido}%`} destaque />
+        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "recebido"}
+        onClose={() => setResumo(null)}
+        title={t("Recebido")}
+        subtitle={tituloPeriodo}
+        accentColor="var(--success)"
+      >
+        <ResumoNumero valor={formatBRL(totais.recebido)} label={t("{pct}% do total", { pct: pctRecebido })} accentColor="var(--success)" />
+        {itensRecebidos.length > 0 ? (
+          <ResumoLista itens={itensRecebidos} onItemClick={abrirVendaDoItem} />
+        ) : (
+          vazio(t("Nenhuma parcela recebida no período."))
+        )}
+        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "areceber"}
+        onClose={() => setResumo(null)}
+        title={t("A Receber")}
+        subtitle={tituloPeriodo}
+        accentColor="var(--warning)"
+      >
+        <ResumoNumero valor={formatBRL(totais.aReceber)} label={t("Parcelas pendentes")} accentColor="var(--warning)" />
+        {itensAReceber.length > 0 ? (
+          <ResumoLista itens={itensAReceber} onItemClick={abrirVendaDoItem} />
+        ) : (
+          vazio(t("Nada a receber no período."))
+        )}
+        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+      </ResumoModal>
+
+      <ResumoModal
+        isOpen={resumo === "atrasado"}
+        onClose={() => setResumo(null)}
+        title={t("Atrasado")}
+        subtitle={tituloPeriodo}
+        accentColor="var(--danger)"
+      >
+        <ResumoNumero valor={formatBRL(totais.atrasado)} label={t("Vencidas e não pagas")} accentColor="var(--danger)" />
+        {itensAtrasados.length > 0 ? (
+          <ResumoLista itens={itensAtrasados} onItemClick={abrirVendaDoItem} />
+        ) : (
+          vazio(t("Nenhuma parcela atrasada. Tudo em dia!"))
+        )}
+        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+      </ResumoModal>
+    </div>
   );
 }

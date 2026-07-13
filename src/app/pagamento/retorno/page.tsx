@@ -24,19 +24,49 @@ function RetornoInner() {
   const router = useRouter();
   const t = useT();
   const params = useSearchParams();
-  const status = params.get("status") ?? "pending";
+  // Checkout HOSPEDADO volta com ?status=success|cancel. Checkout EMBUTIDO
+  // volta com ?session_id=... (return_url configurado no servidor, sem
+  // status). Tratamos a presença de session_id como sucesso — a ativação
+  // real continua sendo confirmada pelo polling do onboarding.
+  const sessionId = params.get("session_id");
+  const statusParam = params.get("status");
+  const status = statusParam ?? (sessionId ? "success" : "pending");
   // Stripe manda "cancel"; também aceitamos "failure" por compatibilidade.
   const cancelado = status === "cancel" || status === "failure";
 
   const [tentativas, setTentativas] = useState(0);
   const [confirmado, setConfirmado] = useState(false);
   const [demorou, setDemorou] = useState(false);
+  // Onboarding COMPLETO = upgrade/excedente de quem JÁ usa o app → o retorno
+  // volta pro /app; senão (fluxo de onboarding) → /onboarding. Sem isso, todo
+  // pagamento (inclusive upgrade de quem já está logado) caía no wizard.
+  const [logado, setLogado] = useState(false);
+  const destino = logado ? "/app" : "/onboarding";
+  const destinoCancel = logado ? "/app" : "/pagamento";
 
-  // Polling do status quando o retorno é de sucesso.
+  useEffect(() => {
+    let ativo = true;
+    fetch("/api/workspace/onboarding", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (ativo && d) setLogado(!!d.onboardingCompleto);
+      })
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  // Polling do status quando o retorno é de sucesso. Modelo pré-pago: o
+  // critério é `acessoAte` no futuro (não mais subscriptionStatus==='ativa',
+  // que não cobre o crédito de dias do Mercado Pago). Janela mais longa
+  // (~2min, 4s de intervalo) pra cobrir o PIX — que só confirma quando o
+  // pagador escaneia o QR Code, mais lento que o retorno síncrono do cartão.
   useEffect(() => {
     if (status !== "success") return;
     let ativo = true;
     let n = 0;
+    const MAX_TENTATIVAS = 30; // 30 × 4s ≈ 2min
 
     const checar = async () => {
       try {
@@ -44,11 +74,21 @@ function RetornoInner() {
           credentials: "include",
         });
         if (r.ok) {
-          const d = (await r.json()) as { subscriptionStatus: string };
-          if (d.subscriptionStatus === "ativa") {
+          const d = (await r.json()) as {
+            subscriptionStatus: string;
+            acessoAte: string | null;
+            onboardingCompleto?: boolean;
+          };
+          if (ativo) setLogado(!!d.onboardingCompleto);
+          const acessoOk = d.acessoAte
+            ? new Date(d.acessoAte).getTime() > Date.now()
+            : d.subscriptionStatus === "ativa";
+          if (acessoOk) {
             if (ativo) {
               setConfirmado(true);
-              setTimeout(() => router.replace("/onboarding"), 1000);
+              // upgrade/excedente (onboarding completo) volta pro app; onboarding vai pro wizard.
+              const dest = d.onboardingCompleto ? "/app" : "/onboarding";
+              setTimeout(() => router.replace(dest), 1000);
             }
             return true;
           }
@@ -63,11 +103,11 @@ function RetornoInner() {
       n += 1;
       if (ativo) setTentativas(n);
       const ok = await checar();
-      if (ok || n >= 12) {
+      if (ok || n >= MAX_TENTATIVAS) {
         clearInterval(loop);
         if (!ok && ativo) setDemorou(true);
       }
-    }, 2000);
+    }, 4000);
 
     // primeira checagem imediata
     void checar();
@@ -137,7 +177,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/onboarding")}
+              onClick={() => router.replace(destino)}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
@@ -162,7 +202,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/onboarding")}
+              onClick={() => router.replace(destino)}
               className="btn btn-secondary text-sm mt-5"
             >
               {t("Continuar mesmo assim")}
@@ -182,7 +222,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/pagamento")}
+              onClick={() => router.replace(destinoCancel)}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >

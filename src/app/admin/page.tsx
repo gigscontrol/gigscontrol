@@ -7,6 +7,7 @@ import {
   Users,
   Layers,
   CreditCard,
+  Ticket,
   LogOut,
   Menu,
   X,
@@ -17,8 +18,9 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminClientes from "@/components/admin/AdminClientes";
 import AdminPlanos from "@/components/admin/AdminPlanos";
 import AdminAssinaturas from "@/components/admin/AdminAssinaturas";
+import AdminCupons from "@/components/admin/AdminCupons";
 
-type SecaoAdmin = "dashboard" | "clientes" | "planos" | "assinaturas";
+type SecaoAdmin = "dashboard" | "clientes" | "planos" | "assinaturas" | "cupons";
 
 const SECOES: Array<{
   id: SecaoAdmin;
@@ -29,6 +31,7 @@ const SECOES: Array<{
   { id: "assinaturas", label: "Assinaturas", icon: CreditCard },
   { id: "clientes", label: "Clientes", icon: Users },
   { id: "planos", label: "Planos", icon: Layers },
+  { id: "cupons", label: "Cupons", icon: Ticket },
 ];
 
 export default function AdminPage() {
@@ -181,6 +184,7 @@ function AdminShell() {
             {secao === "assinaturas" && <AdminAssinaturas />}
             {secao === "clientes" && <AdminClientes />}
             {secao === "planos" && <AdminPlanos />}
+            {secao === "cupons" && <AdminCupons />}
           </div>
         </main>
       </div>

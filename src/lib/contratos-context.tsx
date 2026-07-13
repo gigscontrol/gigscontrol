@@ -56,12 +56,15 @@ export type AssinanteResumo = {
 };
 
 /**
- * Lançado quando o limite de contratos do ciclo foi atingido e há a opção de
- * pagar por um contrato EXCEDENTE (a UI mostra o modal de confirmação).
+ * Lançado quando o limite de contratos do ciclo foi atingido e não há crédito
+ * de excedente disponível — o backend devolve 402 com `checkoutNecessario`
+ * (MODELO PRÉ-PAGO: paga-se um checkout avulso ANTES de tentar de novo, sem
+ * cobrança off-session no cartão salvo). A UI mostra o modal com o valor e o
+ * botão "Pagar excedente".
  */
 export class ExcedenteError extends Error {
   constructor(
-    public info: { limite: number; plano: string; valor: number; moeda: "brl" | "usd" }
+    public info: { valor: number; moeda: "brl" | "usd" }
   ) {
     super("Limite de contratos atingido.");
     this.name = "ExcedenteError";
@@ -73,10 +76,7 @@ type ContratosContextValue = {
   carregando: boolean;
   erro: string | null;
   recarregar: () => Promise<void>;
-  criarContrato: (
-    input: NovoContratoInput,
-    opts?: { pagarExcedente?: boolean; idem?: string }
-  ) => Promise<Contrato>;
+  criarContrato: (input: NovoContratoInput) => Promise<Contrato>;
   atualizarContrato: (
     id: string,
     patch: PatchContratoInput
@@ -157,10 +157,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
   }, [recarregar]);
 
   const criarContrato = useCallback(
-    async (
-      input: NovoContratoInput,
-      opts?: { pagarExcedente?: boolean; idem?: string }
-    ): Promise<Contrato> => {
+    async (input: NovoContratoInput): Promise<Contrato> => {
       const body: Record<string, unknown> = {
         modelo_id: input.modeloId ?? null,
         venda_id: input.vendaId ?? null,
@@ -175,10 +172,6 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
         body.local_assinatura = input.localAssinatura;
       if (input.dataEmissao !== undefined) body.data_emissao = input.dataEmissao;
       if (input.observacoes !== undefined) body.observacoes = input.observacoes;
-      if (opts?.pagarExcedente) {
-        body.pagarExcedente = true;
-        body.idem = opts.idem;
-      }
 
       const res = await fetch("/api/contratos", {
         method: "POST",
@@ -186,20 +179,17 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      // 402 = limite do ciclo atingido. Com `excedente`, oferece pagar por unidade.
+      // 402 = limite do ciclo atingido e sem crédito de excedente disponível
+      // (MODELO PRÉ-PAGO: paga-se um checkout avulso antes de tentar de novo).
       if (res.status === 402) {
         const b = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (b.excedente) {
           throw new ExcedenteError({
-            limite: Number(b.limite) || 0,
-            plano: String(b.plano ?? ""),
             valor: Number(b.valor) || 0,
             moeda: b.moeda === "usd" ? "usd" : "brl",
           });
         }
-        throw new Error(
-          (b.erro as string) ?? "Falha ao cobrar o excedente. Verifique o cartão."
-        );
+        throw new Error((b.erro as string) ?? "Limite de contratos atingido.");
       }
       const b = await jsonOuErro(res);
       const criado = b.contrato as Contrato;

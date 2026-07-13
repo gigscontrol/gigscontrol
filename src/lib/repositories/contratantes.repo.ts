@@ -3,7 +3,7 @@ import type { ContratanteRow, ContratanteEscrita } from "@/lib/mappers/contatos"
 import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
-  "id, workspace_id, nome, documento, pais, email, telefone, endereco, cidade_id, observacoes, criado_por, criado_em, lat, lng, geo_precision";
+  "id, workspace_id, nome, documento, pais, email, telefone, endereco, cidade_id, observacoes, criado_por, criado_em, lat, lng, geo_precision, bloqueado, bloqueado_motivo, bloqueado_por, bloqueado_em";
 
 export async function listarContratantes(
   supabase: SupabaseClient,

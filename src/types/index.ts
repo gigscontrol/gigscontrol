@@ -244,6 +244,12 @@ export type Contratante = {
   lat?: number;
   lng?: number;
   geoPrecisao?: GeoPrecisao;
+  /** Bloqueio de contato (migração 83) — contato problemático. */
+  bloqueado?: boolean;
+  bloqueadoMotivo?: string;
+  /** userId de quem bloqueou (resolvido p/ nome na UI via equipe). */
+  bloqueadoPor?: string;
+  bloqueadoEm?: string;
 };
 
 export type TipoCasa = "club" | "festival" | "festa-privada" | "bar" | "arena" | "outro";
@@ -264,6 +270,12 @@ export type Casa = {
   lat?: number;
   lng?: number;
   geoPrecisao?: GeoPrecisao;
+  /** Bloqueio de contato (migração 83) — contato problemático. */
+  bloqueado?: boolean;
+  bloqueadoMotivo?: string;
+  /** userId de quem bloqueou (resolvido p/ nome na UI via equipe). */
+  bloqueadoPor?: string;
+  bloqueadoEm?: string;
 };
 
 export type Cidade = {

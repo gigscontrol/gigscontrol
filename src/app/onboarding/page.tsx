@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -18,10 +18,21 @@ import {
   Lock,
   AlertTriangle,
   Check,
+  ShieldCheck,
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
 import { AuthProvider } from "@/lib/auth-context";
-import { PLANOS, formatarPreco, valorMensal, type PlanoId } from "@/lib/planos";
+import {
+  PLANOS,
+  type PlanoId,
+  type CicloCobranca,
+  getPlano,
+  formatarPreco,
+  valorMensal,
+  valorAnual,
+} from "@/lib/planos";
+import PlanoCarrossel from "@/components/PlanoCarrossel";
+import SeletorGateway from "@/components/checkout/SeletorGateway";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import InputDataBR from "@/components/inputs/InputDataBR";
@@ -59,6 +70,9 @@ type Status = {
   onboardingCompleto: boolean;
   subscriptionStatus: string;
   trialTerminaEm: string | null;
+  /** Validade do acesso (modelo pré-pago) — fonte de verdade de "plano ok". */
+  acessoAte: string | null;
+  ciclo?: string;
   planoEscolhido: string;
   checklist: {
     contaCriada: boolean;
@@ -94,28 +108,40 @@ type Status = {
 const ETAPAS: { id: number; label: string; descricao: string }[] = [
   { id: 1, label: "Cadastro", descricao: "Seus dados" },
   { id: 2, label: "Plano", descricao: "Escolha do plano" },
-  { id: 3, label: "Artista", descricao: "1º artista" },
-  { id: 4, label: "Equipe", descricao: "Convidar membro" },
+  { id: 3, label: "Pagamento", descricao: "Assinatura" },
+  { id: 4, label: "Artista", descricao: "1º artista" },
+  { id: 5, label: "Equipe", descricao: "Convidar membro" },
 ];
 
 /**
+ * "Plano ok" (modelo pré-pago) = tem validade de acesso FUTURA
+ * (`acessoAte` > agora) — seja por pagamento real (Stripe/MP) ou trial de
+ * verdade. O stub "trial sem data" que o checkout cria antes do pagamento
+ * NÃO conta, pra não pular o passo sem concluir o pagamento. Cai de volta
+ * pro subscriptionStatus (legado) quando `acessoAte` ainda não veio da API.
+ */
+function planoOkDe(d: Status): boolean {
+  if (d.acessoAte) return new Date(d.acessoAte).getTime() > Date.now();
+  return (
+    d.subscriptionStatus === "ativa" ||
+    (d.subscriptionStatus === "trial" && !!d.trialTerminaEm)
+  );
+}
+
+/**
  * Etapa em que o onboarding deve RETOMAR — a 1ª não concluída. Sem isso o
- * wizard voltava pro passo do plano depois de pagar (loop). "Plano feito"
- * = assinatura ATIVA (pagou) OU trial de verdade (status trial + data de
- * término) — o registro "trial sem data" que o checkout cria antes do
- * pagamento NÃO conta, pra não pular o passo sem concluir o pagamento.
+ * wizard voltava pro passo do plano depois de pagar (loop).
  */
 function etapaInicial(d: Status): number {
   // Etapa 1 agora é o cadastro completo (dados pessoais + agência). Volta
   // pra ela enquanto faltarem os campos obrigatórios de pessoa.
   if (!d.pessoa?.documento || !d.pessoa?.dataNascimento) return 1;
-  const planoOk =
-    d.subscriptionStatus === "ativa" ||
-    (d.subscriptionStatus === "trial" && !!d.trialTerminaEm);
-  if (!planoOk) return 2;
-  if (!d.checklist.temArtista) return 3;
-  if (!d.checklist.temEquipe) return 4;
-  return 4;
+  // Pagamento é a etapa 3. Sem plano escolhido → volta pro Plano (2); escolhido
+  // mas ainda não pago → fica no Pagamento (3).
+  if (!planoOkDe(d)) return d.planoEscolhido ? 3 : 2;
+  if (!d.checklist.temArtista) return 4;
+  if (!d.checklist.temEquipe) return 5;
+  return 5;
 }
 
 export default function OnboardingPage() {
@@ -188,8 +214,9 @@ function OnboardingInner() {
         setErroConclusao(
           b.erro ?? t("Não foi possível finalizar. Verifique as etapas.")
         );
-        if (r.status === 402) setEtapa(2);
-        else if (r.status === 409) setEtapa(3);
+        // 402 = falta pagamento → passo Pagamento (3); 409 = falta artista → passo Artista (4)
+        if (r.status === 402) setEtapa(3);
+        else if (r.status === 409) setEtapa(4);
         setFinalizando(false);
         return;
       }
@@ -201,7 +228,7 @@ function OnboardingInner() {
   }
 
   function avancar() {
-    if (etapa < 4) setEtapa(etapa + 1);
+    if (etapa < 5) setEtapa(etapa + 1);
     else void concluir();
   }
 
@@ -258,7 +285,9 @@ function OnboardingInner() {
           className={
             etapa === 2
               ? "w-full max-w-[1180px]"
-              : "w-full max-w-[680px]"
+              : etapa === 3
+                ? "w-full max-w-[920px]"
+                : "w-full max-w-[680px]"
           }
         >
           {/* Stepper */}
@@ -276,18 +305,28 @@ function OnboardingInner() {
             {etapa === 2 && (
               <Etapa2Plano
                 planoEscolhido={status.planoEscolhido as PlanoId}
+                cicloInicial={status.ciclo}
+                planoOk={planoOkDe(status)}
                 onAvancar={avancar}
+                onContinuarPago={() => setEtapa(etapaInicial(status))}
                 onRecarregar={recarregar}
               />
             )}
             {etapa === 3 && (
-              <Etapa4Artista
+              <Etapa3Pagamento
                 status={status}
                 onAvancar={avancar}
                 onRecarregar={recarregar}
               />
             )}
             {etapa === 4 && (
+              <Etapa4Artista
+                status={status}
+                onAvancar={avancar}
+                onRecarregar={recarregar}
+              />
+            )}
+            {etapa === 5 && (
               <Etapa5Equipe
                 status={status}
                 onAvancar={avancar}
@@ -840,18 +879,29 @@ function Etapa1Cadastro({
 // ============================================================
 function Etapa2Plano({
   planoEscolhido,
+  cicloInicial,
+  planoOk,
   onAvancar,
+  onContinuarPago,
   onRecarregar,
 }: {
   planoEscolhido: PlanoId;
+  cicloInicial?: string;
+  /** Já pagou/ativou: o passo vira read-only ("plano ativo") em vez de cobrar de novo. */
+  planoOk: boolean;
   onAvancar: () => void;
+  /** Segue DIRETO pro 1º passo pendente (Artista/Equipe), pulando o Pagamento. */
+  onContinuarPago: () => void;
   onRecarregar: () => Promise<void>;
 }) {
-  const router = useRouter();
   const t = useT();
-  const moeda = useMoeda();
-  const [planoSelecionado, setPlanoSelecionado] = useState<PlanoId>(
-    planoEscolhido ?? "individual"
+  // O plano selecionado é o card CENTRAL do coverflow (índice na escada).
+  const [central, setCentral] = useState(() =>
+    Math.max(0, PLANOS.findIndex((p) => p.id === (planoEscolhido ?? "individual")))
+  );
+  const planoSelecionado = PLANOS[central].id;
+  const [ciclo, setCiclo] = useState<CicloCobranca>(
+    cicloInicial === "anual" ? "anual" : "mensal"
   );
   const [acao, setAcao] = useState<null | "trial" | "pagar">(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -891,17 +941,54 @@ function Etapa2Plano({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plano: planoSelecionado }),
+        body: JSON.stringify({ plano: planoSelecionado, ciclo }),
       });
       if (!r.ok) {
         const b = await r.json().catch(() => ({}));
         throw new Error((b.erro as string) ?? `HTTP ${r.status}`);
       }
-      router.push("/pagamento");
+      // Avança pro passo Pagamento DENTRO do wizard (não sai mais pra /pagamento).
+      await onRecarregar();
+      onAvancar();
     } catch (e) {
       setErro((e as Error).message);
       setAcao(null);
     }
+  }
+
+  // Já pago/ativo: NÃO deixa "pagar de novo" (o escolher-plano devolveria 409 →
+  // beco sem saída ao voltar pra cá depois de pagar). Mostra o plano ativo e
+  // segue DIRETO pro 1º passo pendente (Artista/Equipe).
+  if (planoOk) {
+    const p = getPlano(planoSelecionado);
+    return (
+      <div className="text-center">
+        <CheckCircle2
+          size={40}
+          className="mx-auto mb-3"
+          style={{ color: "var(--success)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Seu plano está ativo")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Plano")} <strong className="text-primary">{p.nome}</strong>
+          {" · "}
+          {ciclo === "anual" ? t("Anual") : t("Mensal")}
+        </p>
+        <p className="mt-2 text-[0.7rem] text-muted">
+          {t("Para trocar de plano, acesse Configurações › Plano & Assinatura.")}
+        </p>
+        <button
+          onClick={onContinuarPago}
+          className="btn btn-primary text-sm mt-5 justify-center px-6 py-2.5"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {t("Continuar")}
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -919,72 +1006,44 @@ function Etapa2Plano({
             {t("Escolha o plano ideal para a sua agência. Você pode trocar de plano quando quiser.")}
           </p>
         )}
+
+        {/* Toggle Mensal / Anual */}
+        <div className="mt-6 flex items-center justify-center">
+          <div className="inline-flex items-center gap-1 bg-surface border border-border rounded-full p-1">
+            <button
+              type="button"
+              onClick={() => setCiclo("mensal")}
+              className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors ${
+                ciclo === "mensal" ? "bg-elevated text-primary" : "text-muted hover:text-secondary"
+              }`}
+            >
+              {t("Mensal")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCiclo("anual")}
+              className={`text-sm font-medium px-4 py-1.5 rounded-full transition-colors inline-flex items-center gap-2 ${
+                ciclo === "anual" ? "bg-elevated text-primary" : "text-muted hover:text-secondary"
+              }`}
+            >
+              {t("Anual")}
+              <span
+                className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full text-white"
+                style={{ backgroundColor: "var(--brand)" }}
+              >
+                {t("ECONOMIZE")}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
-        {PLANOS.map((p) => {
-          const sel = planoSelecionado === p.id;
-          const popular = p.id === "individual";
-          const temTrial = p.id === "individual";
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPlanoSelecionado(p.id)}
-              className="card text-left transition-all hover:border-border-strong relative flex flex-col"
-              style={{
-                borderColor: sel ? "var(--brand)" : undefined,
-                boxShadow: sel ? "0 0 0 1px var(--brand)" : undefined,
-                paddingTop: (TRIAL_ATIVADO && temTrial) || popular ? 24 : undefined,
-              }}
-            >
-              {/* Badges no topo */}
-              <div className="absolute top-0 left-3 right-3 flex flex-wrap gap-1" style={{ transform: "translateY(-50%)" }}>
-                {popular && (
-                  <span
-                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
-                    style={{ backgroundColor: "var(--brand)" }}
-                  >
-                    {t("Mais popular")}
-                  </span>
-                )}
-                {TRIAL_ATIVADO && temTrial && (
-                  <span
-                    className="text-[0.55rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded text-black"
-                    style={{ backgroundColor: "#fbbf24" }}
-                  >
-                    {t("Teste grátis 7 dias")}
-                  </span>
-                )}
-              </div>
-
-              <div className="text-sm font-bold text-primary">{p.nome}</div>
-              <div className="text-[0.65rem] text-muted mb-2 line-clamp-2">{p.tagline}</div>
-              <div className="mb-2">
-                <span className="text-base font-bold text-primary">
-                  {formatarPreco(valorMensal(p, moeda), moeda)}
-                </span>
-                <span className="text-[0.6rem] text-muted">{t("/mês")}</span>
-              </div>
-              <ul className="flex flex-col gap-1 text-[0.65rem] text-secondary flex-1">
-                {p.recursos.slice(0, 3).map((r) => (
-                  <li key={r} className="flex items-start gap-1">
-                    <Check size={9} className="mt-0.5 flex-shrink-0" style={{ color: "var(--success)" }} />
-                    <span className="line-clamp-2">{r}</span>
-                  </li>
-                ))}
-              </ul>
-              {sel && (
-                <div
-                  className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--brand)" }}
-                >
-                  <Check size={12} className="text-white" />
-                </div>
-              )}
-            </button>
-          );
-        })}
+      <div className="mb-8">
+        <PlanoCarrossel
+          ciclo={ciclo}
+          selecionadoIndex={central}
+          onSelecionar={setCentral}
+        />
       </div>
 
       {erro && (
@@ -1051,6 +1110,168 @@ function Etapa2Plano({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Etapa 3 — Pagamento (checkout embutido no wizard; pula se já pago/trial)
+// ============================================================
+function Etapa3Pagamento({
+  status,
+  onAvancar,
+  onRecarregar,
+}: {
+  status: Status;
+  onAvancar: () => void;
+  onRecarregar: () => Promise<void>;
+}) {
+  const t = useT();
+  const moeda = useMoeda();
+  const [usarHosted, setUsarHosted] = useState(false);
+  const [indo, setIndo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  // Pagamento aprovado no Mercado Pago (cartão ou PIX): a rota já estendeu o
+  // acesso antes de responder — avança o wizard igual ao retorno da Stripe.
+  const [confirmadoMp, setConfirmadoMp] = useState(false);
+  const degradar = useCallback(() => setUsarHosted(true), []);
+
+  const planoOk = planoOkDe(status) || confirmadoMp;
+
+  const plano = status.planoEscolhido
+    ? getPlano(status.planoEscolhido as PlanoId)
+    : null;
+  const ciclo: CicloCobranca = status.ciclo === "anual" ? "anual" : "mensal";
+  const valor = plano
+    ? ciclo === "anual"
+      ? valorAnual(plano, moeda)
+      : valorMensal(plano, moeda)
+    : 0;
+  const precoFmt = plano ? formatarPreco(valor, moeda) : "—";
+
+  async function irParaHosted() {
+    if (indo || !plano) return;
+    setErro(null);
+    setIndo(true);
+    try {
+      const res = await fetch("/api/checkout/stripe", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plano: plano.id, ciclo }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.url) {
+        throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
+      }
+      window.location.href = body.url as string;
+    } catch (e) {
+      setErro((e as Error).message);
+      setIndo(false);
+    }
+  }
+
+  // Já pago (ou trial de verdade): não mostra checkout — confirma e segue.
+  if (planoOk) {
+    return (
+      <div className="text-center">
+        <CheckCircle2
+          size={40}
+          className="mx-auto mb-3"
+          style={{ color: "var(--success)" }}
+        />
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Pagamento confirmado")}
+        </h2>
+        <p className="mt-1 text-sm text-secondary">
+          {t("Sua assinatura está ativa. Vamos continuar o cadastro.")}
+        </p>
+        <button
+          onClick={onAvancar}
+          className="btn btn-primary text-sm mt-5 justify-center px-6 py-2.5"
+          style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        >
+          {t("Continuar")}
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  if (!plano) {
+    return (
+      <div className="text-center text-sm text-danger">
+        {t("Plano não encontrado. Volte ao cadastro pra escolher um.")}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold tracking-tight">
+          {t("Conclua o pagamento")}
+        </h2>
+      </div>
+
+      {!usarHosted ? (
+        <SeletorGateway
+          plano={plano.id}
+          ciclo={ciclo}
+          onFallbackHosted={degradar}
+          onSucessoMercadoPago={() => {
+            setConfirmadoMp(true);
+            void onRecarregar();
+          }}
+          onSucessoCupom={() => {
+            setConfirmadoMp(true);
+            void onRecarregar();
+          }}
+        />
+      ) : (
+        <div className="card max-w-[560px] mx-auto">
+          <div className="section-title mb-3 flex items-center gap-2">
+            <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
+            {t("Pagamento por cartão")}
+          </div>
+          <p className="text-sm text-secondary mb-4">
+            {t(
+              "Você vai pro ambiente seguro de pagamento pra concluir a assinatura."
+            )}
+          </p>
+          {erro && (
+            <div
+              className="flex items-center gap-2 text-xs rounded-md px-3 py-2 mb-4"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.08)",
+                color: "var(--danger)",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}
+            >
+              <AlertTriangle size={12} className="flex-shrink-0" />
+              {erro}
+            </div>
+          )}
+          <button
+            onClick={irParaHosted}
+            disabled={indo}
+            className="btn btn-primary text-sm w-full justify-center py-2.5 disabled:opacity-60"
+            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+          >
+            {indo ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                {t("Abrindo o pagamento seguro...")}
+              </>
+            ) : (
+              <>
+                <Lock size={14} />
+                {t("Assinar por {preco}", { preco: precoFmt })}
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

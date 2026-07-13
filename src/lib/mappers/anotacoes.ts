@@ -5,6 +5,12 @@
 
 export type VisibilidadePasta = "todos" | "proprio" | "selecionados";
 
+/**
+ * Membro de pasta "selecionados": um USUÁRIO (login) ou um ARTISTA (escopo via
+ * membros_artista — quem trabalha com o artista enxerga a pasta).
+ */
+export type MembroPasta = { tipo: "usuario" | "artista"; id: string };
+
 const VISIBILIDADES: VisibilidadePasta[] = ["todos", "proprio", "selecionados"];
 function visibilidadeValida(v: string | null | undefined): VisibilidadePasta {
   return v && (VISIBILIDADES as string[]).includes(v) ? (v as VisibilidadePasta) : "todos";
@@ -32,14 +38,14 @@ export type AnotacaoPasta = {
   cor?: string;
   icone?: string;
   visibilidade: VisibilidadePasta;
-  /** userIds que podem ver (só quando visibilidade === "selecionados"). */
-  membros: string[];
+  /** Quem pode ver — usuários e/ou artistas (só em "selecionados"). */
+  membros: MembroPasta[];
   criadoPor?: string;
   criadoEm: string;
   atualizadoEm: string;
 };
 
-export function rowParaPasta(row: PastaRow, membros: string[] = []): AnotacaoPasta {
+export function rowParaPasta(row: PastaRow, membros: MembroPasta[] = []): AnotacaoPasta {
   const p: AnotacaoPasta = {
     id: row.id,
     nome: row.nome,
@@ -73,6 +79,7 @@ export type NotaRow = {
   workspace_id: string;
   pasta_id: string | null;
   show_id: string | null;
+  artist_id: string | null;
   titulo: string | null;
   conteudo: string | null;
   cor: string | null;
@@ -88,6 +95,8 @@ export type Anotacao = {
   /** Dono da nota: uma pasta OU um show (exatamente um dos dois). */
   pastaId?: string;
   showId?: string;
+  /** Etiqueta de contexto: artista a que a nota se refere (não é dono). */
+  artistId?: string | null;
   titulo?: string;
   conteudo: string;
   cor?: string;
@@ -108,6 +117,7 @@ export function rowParaAnotacao(row: NotaRow): Anotacao {
   };
   if (row.pasta_id) n.pastaId = row.pasta_id;
   if (row.show_id) n.showId = row.show_id;
+  if (row.artist_id) n.artistId = row.artist_id;
   if (row.titulo) n.titulo = row.titulo;
   if (row.cor) n.cor = row.cor;
   if (row.criado_por) n.criadoPor = row.criado_por;
@@ -119,6 +129,7 @@ export type NotaEscrita = {
   workspace_id?: string;
   pasta_id?: string | null;
   show_id?: string | null;
+  artist_id?: string | null;
   titulo?: string | null;
   conteudo?: string;
   cor?: string | null;

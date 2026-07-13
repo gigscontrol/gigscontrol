@@ -29,6 +29,35 @@ function entradaParaEscrita(input: CasaCreateInput | CasaUpdateInput): CasaEscri
   return out;
 }
 
+/**
+ * Aplica bloquear/desbloquear numa escrita de casa, carimbando quem/quando com
+ * o usuário da sessão. Bloquear → grava motivo/por/em. Desbloquear → limpa os
+ * 4 campos. Só age se `input.bloqueado` veio no PATCH.
+ */
+function aplicarBloqueio(
+  escrita: CasaEscrita,
+  input: CasaUpdateInput,
+  bloqueadoPor?: string
+): CasaEscrita {
+  if (input.bloqueado === undefined) return escrita;
+  if (input.bloqueado) {
+    return {
+      ...escrita,
+      bloqueado: true,
+      bloqueado_motivo: input.bloqueado_motivo ?? null,
+      bloqueado_por: bloqueadoPor ?? null,
+      bloqueado_em: new Date().toISOString(),
+    };
+  }
+  return {
+    ...escrita,
+    bloqueado: false,
+    bloqueado_motivo: null,
+    bloqueado_por: null,
+    bloqueado_em: null,
+  };
+}
+
 export async function listarCasasDoWorkspace(
   supabase: SupabaseClient,
   sessao?: SessaoAutenticada
@@ -77,7 +106,8 @@ export async function criarCasaNoWorkspace(
 export async function atualizarCasaPorId(
   supabase: SupabaseClient,
   id: string,
-  input: CasaUpdateInput
+  input: CasaUpdateInput,
+  bloqueadoPor?: string
 ): Promise<Casa> {
   let escrita = entradaParaEscrita(input);
 
@@ -98,6 +128,9 @@ export async function atualizarCasaPorId(
       escrita = { ...escrita, ...geo };
     }
   }
+
+  // Bloquear/desbloquear carimba quem/quando com o usuário da sessão.
+  escrita = aplicarBloqueio(escrita, input, bloqueadoPor);
 
   const row = await repoAtualizar(supabase, id, escrita);
   return rowParaCasa(row);

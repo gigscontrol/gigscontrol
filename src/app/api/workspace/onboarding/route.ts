@@ -9,10 +9,12 @@ import { estadoAcessoDeSub } from "@/lib/acesso";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * "Plano feito" = assinatura ATIVA (pagou) OU trial de verdade (status
- * trial + data de término preenchida). O registro "trial sem data" que o
- * checkout cria ANTES do pagamento NÃO conta — senão dá pra concluir o
- * onboarding sem pagar. Mesma regra do `etapaInicial()` no client.
+ * "Plano feito" (modelo pré-pago) = tem VALIDADE de acesso futura
+ * (`acesso_ate` > agora) — seja por pagamento real (Stripe/MP) ou cortesia
+ * (trial de 7d grava acesso_ate). O stub que o checkout cria ANTES do
+ * pagamento NÃO tem acesso_ate → NÃO conta (senão dá pra concluir o
+ * onboarding sem pagar). O estado 'graça' (venceu há ≤1d) também conta como
+ * "pode finalizar" — o gate normal de acesso cuida do resto.
  */
 async function planoDoWorkspaceOk(
   admin: SupabaseClient,
@@ -20,14 +22,10 @@ async function planoDoWorkspaceOk(
 ): Promise<boolean> {
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("status, trial_termina_em")
+    .select("status, acesso_ate")
     .eq("workspace_id", workspaceId)
-    .maybeSingle<{ status: string; trial_termina_em: string | null }>();
-  const status = sub?.status ?? "trial";
-  return (
-    status === "ativa" ||
-    (status === "trial" && !!sub?.trial_termina_em)
-  );
+    .maybeSingle<{ status: string | null; acesso_ate: string | null }>();
+  return estadoAcessoDeSub(sub ?? null) !== "bloqueado";
 }
 
 /** Conta artistas ativos (não deletados) do workspace. */
@@ -73,9 +71,9 @@ export async function GET() {
     const [{ data: subNA }, { data: adminProfile }] = await Promise.all([
       adminDb
         .from("subscriptions")
-        .select("status, trial_termina_em")
+        .select("status, acesso_ate")
         .eq("workspace_id", wsId)
-        .maybeSingle<{ status: string | null; trial_termina_em: string | null }>(),
+        .maybeSingle<{ status: string | null; acesso_ate: string | null }>(),
       adminDb
         .from("profiles")
         .select("nome")
@@ -91,6 +89,8 @@ export async function GET() {
       subscriptionStatus: subNA?.status ?? null,
       // Estado REAL do workspace (sem hardcode). Ausência de sub = legado → "ok".
       estadoAcesso: estadoAcessoDeSub(subNA ?? null),
+      // Validade (modelo pré-pago); null pra legado/stub — front pode ignorar.
+      acessoAte: subNA?.acesso_ate ?? null,
       adminContato: adminProfile?.nome ?? null,
     });
   }
@@ -128,12 +128,18 @@ export async function GET() {
       );
     }
 
-    // Subscription (status de pagamento + trial)
+    // Subscription (status de pagamento + validade). trial_termina_em fica só
+    // como legado exibível; o gate deriva de acesso_ate (modelo pré-pago).
     const { data: sub } = await admin
       .from("subscriptions")
-      .select("status, ciclo, trial_termina_em")
+      .select("status, ciclo, trial_termina_em, acesso_ate")
       .eq("workspace_id", workspaceId)
-      .maybeSingle<{ status: string | null; ciclo: string | null; trial_termina_em: string | null }>();
+      .maybeSingle<{
+        status: string | null;
+        ciclo: string | null;
+        trial_termina_em: string | null;
+        acesso_ate: string | null;
+      }>();
 
     // Dados pessoais do admin logado — pré-preenchem a Etapa 1 (cadastro
     // completo) e o `nome` serve de exemplo no campo de slug.
@@ -194,6 +200,8 @@ export async function GET() {
       // Estado REAL do workspace: ausência de sub = legado → "ok"; trial sem
       // data → "bloqueado". Nunca hardcodar o status.
       estadoAcesso: estadoAcessoDeSub(sub ?? null),
+      // Validade do acesso (modelo pré-pago). Mantemos trialTerminaEm (legado).
+      acessoAte: sub?.acesso_ate ?? null,
       adminContato: meuProfile?.nome ?? null,
       ciclo: sub?.ciclo ?? ws?.ciclo ?? "mensal",
       trialTerminaEm: sub?.trial_termina_em ?? null,

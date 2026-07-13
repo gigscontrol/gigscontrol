@@ -1,6 +1,5 @@
 import Stripe from "stripe";
 import {
-  PLANOS,
   getPlano,
   valorMensal,
   valorAnual,
@@ -11,20 +10,19 @@ import {
 } from "@/lib/planos";
 
 /**
- * Integração com a Stripe — Assinaturas recorrentes (Subscriptions).
+ * Integração com a Stripe — modelo PRÉ-PAGO por validade (pagamento ÚNICO).
  *
- * Fluxo:
- *  1. `criarCheckoutAssinatura` cria uma Checkout Session em modo
- *     `subscription` e devolve a URL hospedada da Stripe pra onde o
- *     cliente é redirecionado (cartão).
- *  2. Cliente paga lá. A Stripe chama nosso webhook
- *     (`/api/webhooks/stripe`) com `checkout.session.completed`.
- *  3. O webhook ativa a assinatura e, nas renovações, recebe
- *     `invoice.paid` / `customer.subscription.updated` / `.deleted`.
+ * NÃO usamos mais Subscriptions recorrentes. Cada compra é uma Checkout
+ * Session em modo `payment` (pagamento único) que, ao ser paga, dispara o
+ * webhook `checkout.session.completed` → a função central
+ * `registrarPagamentoEEstenderAcesso` ESTENDE a validade (subscriptions.acesso_ate)
+ * do workspace por N dias corridos (mensal=30, anual=365). Stripe e Mercado
+ * Pago se conversam através dessa mesma RPC idempotente — só ESTENDEM a mesma
+ * validade.
  *
- * Preços são resolvidos por `lookup_key` = `${plano}_${ciclo}`
- * (ex.: `equipe_mensal`, `agencia-plus_anual`) — configurados no painel
- * da Stripe. A chave secreta é lida do ambiente (server-only).
+ * Preços são montados ad-hoc via `price_data` a partir de `planos.ts` (não
+ * precisa Prices cadastrados no painel). Valores em R$/US$ × 100 (centavos).
+ * A chave secreta é lida do ambiente (server-only).
  *
  * O cliente Stripe é inicializado de forma preguiçosa (lazy) dentro de
  * `getStripe()` pra que o build não quebre quando STRIPE_SECRET_KEY não
@@ -52,22 +50,9 @@ function appUrl(): string {
 }
 
 /**
- * lookup_key do preço na Stripe pra um plano + ciclo + moeda.
- * BRL: `${plano}_${ciclo}` (ex. `time_mensal`); USD: + sufixo `_usd`
- * (ex. `time_mensal_usd`).
- */
-export function lookupKey(
-  plano: PlanoId,
-  ciclo: CicloCobranca,
-  moeda: Moeda = "brl"
-): string {
-  return `${plano}_${ciclo}${moeda === "usd" ? "_usd" : ""}`;
-}
-
-/**
- * Valor TOTAL da cobrança pra um plano + ciclo, em R$ (espelha planos.ts):
+ * Valor TOTAL da cobrança pra um plano + ciclo, em R$/US$ (espelha planos.ts):
  *  - mensal: o preço mensal cheio.
- *  - anual: o preço-por-mês do anual × 12.
+ *  - anual: o preço TOTAL do ano (cobrado 1× — 30/365 dias de acesso).
  */
 export function valorCobranca(
   planoId: PlanoId,
@@ -76,28 +61,6 @@ export function valorCobranca(
 ): number {
   const plano = getPlano(planoId);
   return ciclo === "anual" ? valorAnual(plano, moeda) : valorMensal(plano, moeda);
-}
-
-/**
- * Resolve o Price id da Stripe via lookup_key. Lança erro claro se o
- * preço não estiver configurado/ativo no painel.
- */
-export async function resolverPriceId(
-  plano: PlanoId,
-  ciclo: CicloCobranca,
-  moeda: Moeda = "brl"
-): Promise<string> {
-  const key = lookupKey(plano, ciclo, moeda);
-  const lista = await getStripe().prices.list({
-    lookup_keys: [key],
-    active: true,
-    limit: 1,
-  });
-  const price = lista.data[0];
-  if (!price) {
-    throw new Error(`Preço não configurado na Stripe (lookup_key: ${key}).`);
-  }
-  return price.id;
 }
 
 /**
@@ -118,274 +81,184 @@ export async function obterOuCriarCustomer(params: {
   return customer.id;
 }
 
+/** Nome legível do produto ad-hoc na fatura/checkout (ex.: "Individual — mensal"). */
+function nomeProduto(plano: PlanoId, ciclo: CicloCobranca): string {
+  return `${getPlano(plano).nome} — ${ciclo === "anual" ? "anual" : "mensal"}`;
+}
+
 /**
- * Cria a Checkout Session em modo `subscription` e devolve a session
- * (a URL hospedada vem em `session.url`). O `workspaceId` viaja no
- * metadata da session E da subscription — é assim que o webhook sabe
- * qual conta ativar.
+ * Cria a Checkout Session em modo `payment` (PAGAMENTO ÚNICO) e devolve a
+ * session. NÃO usa Prices do painel: monta `line_items` ad-hoc via `price_data`
+ * (unit_amount = valorCobranca × 100). O `workspace_id`/`plano`/`ciclo` viajam
+ * no metadata da SESSION E do payment_intent — é assim que o webhook
+ * `checkout.session.completed` (mode=payment, paid) sabe qual workspace estender
+ * e por quantos dias.
+ *
+ * `embedded` controla a apresentação (mesma session, só o modo muda):
+ *  - `false` (DEFAULT, hosted): checkout hospedado da Stripe. A URL vem em
+ *    `session.url`; sucesso/cancelamento voltam pra `/pagamento/retorno`.
+ *  - `true` (embedded): Embedded Checkout (iframe na nossa página). Retorna
+ *    `session.client_secret`; ao concluir, o Stripe redireciona pra `return_url`
+ *    (/pagamento/retorno com o session_id na query).
+ *
+ * `creditoDias` (opcional) = crédito de upgrade em DIAS, somado aos dias do
+ * ciclo pelo webhook (recalculado server-side — o metadata cru NUNCA é confiado).
  */
-export async function criarCheckoutAssinatura(params: {
+export async function criarCheckoutPagamento(params: {
   workspaceId: string;
   plano: PlanoId;
   ciclo: CicloCobranca;
   customerId: string;
   moeda?: Moeda;
+  email?: string | null;
   baseUrl?: string;
+  embedded?: boolean;
+  creditoDias?: number;
 }): Promise<Stripe.Checkout.Session> {
-  const { workspaceId, plano, ciclo, customerId, moeda = "brl" } = params;
+  const {
+    workspaceId,
+    plano,
+    ciclo,
+    customerId,
+    moeda = "brl",
+    embedded = false,
+    creditoDias,
+  } = params;
   const baseUrl = params.baseUrl ?? appUrl();
-  const priceId = await resolverPriceId(plano, ciclo, moeda);
+  const valor = valorCobranca(plano, ciclo, moeda);
 
-  return getStripe().checkout.sessions.create({
-    mode: "subscription",
+  const meta: Record<string, string> = { workspace_id: workspaceId, plano, ciclo };
+  if (typeof creditoDias === "number" && creditoDias > 0) {
+    meta.credito_dias = String(Math.round(creditoDias));
+  }
+
+  const comum = {
+    mode: "payment" as const,
     customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/pagamento/retorno?status=success`,
-    cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
-    client_reference_id: workspaceId,
-    subscription_data: {
-      metadata: { workspaceId, plano, ciclo, moeda },
-    },
-    metadata: { workspaceId, plano, ciclo, moeda },
-  });
-}
-
-/** 'month' | 'year' (Stripe) → nosso ciclo. */
-export function cicloDoInterval(interval: string | undefined | null): CicloCobranca {
-  return interval === "year" ? "anual" : "mensal";
-}
-
-/**
- * Extrai {plano, ciclo, moeda} do `lookup_key` de um preço da Stripe
- * (`${plano}_${ciclo}[_usd]`). É o inverso do `lookupKey()`. null se não bater
- * com nenhum plano conhecido. Usado pelo webhook pra reconciliar o plano a
- * partir do que a Stripe realmente está cobrando.
- */
-export function parseLookupKey(
-  lookupKey: string | null | undefined
-): { plano: PlanoId; ciclo: CicloCobranca; moeda: Moeda } | null {
-  if (!lookupKey) return null;
-  let s = lookupKey;
-  let moeda: Moeda = "brl";
-  if (s.endsWith("_usd")) {
-    moeda = "usd";
-    s = s.slice(0, -4);
-  }
-  let ciclo: CicloCobranca;
-  if (s.endsWith("_mensal")) {
-    ciclo = "mensal";
-    s = s.slice(0, -"_mensal".length);
-  } else if (s.endsWith("_anual")) {
-    ciclo = "anual";
-    s = s.slice(0, -"_anual".length);
-  } else {
-    return null;
-  }
-  const plano = PLANOS.find((p) => p.id === s)?.id;
-  if (!plano) return null;
-  return { plano, ciclo, moeda };
-}
-
-/**
- * Moeda + ciclo (do Stripe, não do banco) + dias restantes do ciclo atual.
- * Ciclo derivado de `price.recurring.interval` pra bater com a cobrança real.
- */
-export async function infoSubscription(subscriptionId: string): Promise<{
-  moeda: Moeda;
-  ciclo: CicloCobranca;
-  diasRestantes: number;
-  /** unix seconds do fim do período atual (quando o downgrade viraria). */
-  periodEnd: number | null;
-  /** unix seconds do início do período atual (pra medir o ciclo real). */
-  periodStart: number | null;
-}> {
-  const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
-    expand: ["items.data.price"],
-  });
-  const item = sub.items.data[0];
-  const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
-  const ciclo = cicloDoInterval(item?.price?.recurring?.interval);
-  const periodEnd = item?.current_period_end ?? null;
-  const periodStart = item?.current_period_start ?? null;
-  const diasRestantes = periodEnd
-    ? Math.max(0, Math.ceil((periodEnd * 1000 - Date.now()) / 86_400_000))
-    : 0;
-  return { moeda, ciclo, diasRestantes, periodEnd, periodStart };
-}
-
-/**
- * Aplica upgrade da assinatura: troca o item de preço com RATEIO e cobra a
- * diferença NA HORA (`proration_behavior: 'always_invoice'` cria e cobra a
- * fatura de rateio imediatamente). Falha se o cartão recusar
- * (`error_if_incomplete`). Devolve a subscription atualizada + a moeda.
- */
-export async function aplicarUpgrade(params: {
-  subscriptionId: string;
-  plano: PlanoId;
-}): Promise<{ subscription: Stripe.Subscription; moeda: Moeda; ciclo: CicloCobranca }> {
-  const stripe = getStripe();
-  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
-    expand: ["items.data.price"],
-  });
-  const item = sub.items.data[0];
-  if (!item) throw new Error("Assinatura sem item de preço.");
-  // Moeda E ciclo saem do estado REAL da assinatura no Stripe (não do banco),
-  // pra o novo preço bater com a cobrança atual (evita trocar mensal↔anual).
-  const moeda: Moeda = item.price?.currency === "usd" ? "usd" : "brl";
-  const ciclo = cicloDoInterval(item.price?.recurring?.interval);
-  const novoPriceId = await resolverPriceId(params.plano, ciclo, moeda);
-  const subscription = await stripe.subscriptions.update(
-    params.subscriptionId,
-    {
-      items: [{ id: item.id, price: novoPriceId }],
-      proration_behavior: "always_invoice",
-      payment_behavior: "error_if_incomplete",
-      // Mantém o metadata coerente com o preço novo (o webhook pode confiar nele).
-      metadata: { ...(sub.metadata ?? {}), plano: params.plano, ciclo, moeda },
-    },
-    // Idempotência: duplo clique / retry não cobra o rateio 2×.
-    { idempotencyKey: `upgrade_${params.subscriptionId}_${novoPriceId}` }
-  );
-  return { subscription, moeda, ciclo };
-}
-
-/** id (string) de um campo Stripe que pode vir expandido (objeto) ou só id. */
-function idDeStripe(campo: string | { id: string } | null | undefined): string | null {
-  if (!campo) return null;
-  return typeof campo === "string" ? campo : campo.id;
-}
-
-/**
- * Agenda um DOWNGRADE pro fim do período atual, via Subscription Schedule:
- *  - Fase 1: preço ATUAL até o fim do período (cliente mantém os benefícios
- *    do plano de cima até acabarem os dias já pagos).
- *  - Fase 2: preço do plano-destino, SEM proration (não devolve dinheiro).
- * Quando a fase 2 começa, a Stripe fatura o preço menor → `invoice.paid` →
- * o webhook reconcilia o plano no MESMO instante (rebaixa acesso na virada).
- *
- * `end_behavior: 'release'` = depois da fase 2 a subscription segue sozinha
- * no preço novo (o schedule se solta). Devolve quando vira + o valor novo.
- */
-export async function agendarDowngrade(params: {
-  subscriptionId: string;
-  plano: PlanoId;
-}): Promise<{
-  efetivoEm: number | null;
-  ciclo: CicloCobranca;
-  moeda: Moeda;
-  valorNovo: number;
-}> {
-  const stripe = getStripe();
-  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
-    expand: ["items.data.price"],
-  });
-  const item = sub.items.data[0];
-  if (!item) throw new Error("Assinatura sem item de preço.");
-  const moeda: Moeda = item.price?.currency === "usd" ? "usd" : "brl";
-  const ciclo = cicloDoInterval(item.price?.recurring?.interval);
-  const periodEnd = item.current_period_end ?? null;
-  const precoAtualId = idDeStripe(item.price);
-  const novoPriceId = await resolverPriceId(params.plano, ciclo, moeda);
-  const workspaceId = (sub.metadata?.workspaceId as string) ?? "";
-
-  // Cria o schedule adotando a subscription atual (phases[0] = fase vigente).
-  const schedule = await stripe.subscriptionSchedules.create({
-    from_subscription: params.subscriptionId,
-  });
-  const fase0 = schedule.phases[0];
-  const qtd = fase0?.items?.[0]?.quantity ?? 1;
-
-  await stripe.subscriptionSchedules.update(schedule.id, {
-    end_behavior: "release",
-    phases: [
+    line_items: [
       {
-        // Preserva a fase atual até o fim do período já pago.
-        items: [{ price: precoAtualId ?? novoPriceId, quantity: qtd }],
-        start_date: fase0?.start_date,
-        end_date: fase0?.end_date,
-      },
-      {
-        // Fase nova: plano-destino, sem rateio (nada é devolvido).
-        items: [{ price: novoPriceId, quantity: 1 }],
-        proration_behavior: "none",
-        metadata: { workspaceId, plano: params.plano, ciclo, moeda },
+        quantity: 1,
+        price_data: {
+          currency: moeda === "usd" ? "usd" : "brl",
+          unit_amount: Math.round(valor * 100),
+          product_data: { name: nomeProduto(plano, ciclo) },
+        },
       },
     ],
-    metadata: { workspaceId, downgrade_para: params.plano },
-  });
-
-  return {
-    efetivoEm: periodEnd,
-    ciclo,
-    moeda,
-    valorNovo: valorCobranca(params.plano, ciclo, moeda),
+    client_reference_id: workspaceId,
+    // Metadata na SESSION e no PaymentIntent — o webhook lê de qualquer um.
+    metadata: meta,
+    payment_intent_data: { metadata: meta },
   };
-}
 
-/**
- * Cancela um downgrade agendado: solta (release) o Subscription Schedule, o
- * que mantém a subscription no plano ATUAL (fase 1), renovando normalmente.
- * Devolve true se havia um schedule pra soltar.
- */
-export async function cancelarDowngrade(params: {
-  subscriptionId: string;
-}): Promise<boolean> {
-  const stripe = getStripe();
-  const sub = await stripe.subscriptions.retrieve(params.subscriptionId);
-  const scheduleId = idDeStripe(sub.schedule);
-  if (!scheduleId) return false;
-  await stripe.subscriptionSchedules.release(scheduleId);
-  return true;
-}
+  if (embedded) {
+    return getStripe().checkout.sessions.create({
+      ...comum,
+      // DESVIO DO SPEC: o spec pede ui_mode:'embedded', mas o SDK pinado
+      // (stripe@22.3.0) tipa o valor como 'embedded_page'. No fio da API isso
+      // serializa pro embedded correto; usamos o literal que o typegen exige.
+      ui_mode: "embedded_page",
+      // O Stripe substitui {CHECKOUT_SESSION_ID} pelo id real da sessão.
+      return_url: `${baseUrl}/pagamento/retorno?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  }
 
-/**
- * Cobra UMA unidade excedente (ex.: contrato além do limite do ciclo) no cartão
- * salvo da assinatura, NA HORA (off-session). Valor = PRECO_EXCEDENTE na moeda
- * REAL da assinatura (R$ 9,99 / US$ 5). Idempotente pelo `idempotencyKey` (o
- * mesmo clique/retry não cobra 2×). Lança se não houver cartão ou o pagamento
- * não for aprovado.
- */
-export async function cobrarExcedente(params: {
-  subscriptionId: string;
-  descricao: string;
-  idempotencyKey: string;
-}): Promise<{ moeda: Moeda; valor: number; paymentIntentId: string }> {
-  const stripe = getStripe();
-  const sub = await stripe.subscriptions.retrieve(params.subscriptionId, {
-    expand: ["items.data.price", "default_payment_method"],
+  return getStripe().checkout.sessions.create({
+    ...comum,
+    success_url: `${baseUrl}/pagamento/retorno?status=success`,
+    cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
   });
-  const item = sub.items.data[0];
-  const moeda: Moeda = item?.price?.currency === "usd" ? "usd" : "brl";
-  const customerId = idDeStripe(sub.customer);
-  if (!customerId) throw new Error("Assinatura sem cliente na Stripe.");
+}
 
-  // Cartão: o default da assinatura, ou o default do cliente.
-  let pmId = idDeStripe(sub.default_payment_method as string | { id: string } | null);
-  if (!pmId) {
-    const cust = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
-    pmId = idDeStripe(
-      (cust.invoice_settings?.default_payment_method as string | { id: string } | null) ?? null
-    );
-  }
-  if (!pmId) throw new Error("Nenhum cartão salvo para cobrar o excedente.");
+/**
+ * Cria um PaymentIntent avulso pro Stripe Payment Element (Deferred Intent).
+ *
+ * Substitui o Embedded Checkout na aba Stripe do checkout próprio: em vez de uma
+ * Checkout Session, criamos direto o PaymentIntent e devolvemos o `client_secret`
+ * (prefixo `pi_..._secret_`) pro front montar o Payment Element via
+ * @stripe/stripe-js. NÃO usa `setup_future_usage` (não salvamos cartão) e SÓ
+ * aceita cartão (`payment_method_types: ['card']`) — PIX é exclusivo do MP.
+ *
+ * O metadata é IDÊNTICO ao de `criarCheckoutPagamento` (`{ workspace_id, plano,
+ * ciclo, credito_dias? }`), então o webhook `payment_intent.succeeded` estende a
+ * validade pelas MESMAS regras do fluxo hosted/embedded. O amount é recalculado
+ * server-side (`valorCobranca × 100`) — o client nunca decide o valor.
+ *
+ * `creditoDias` (opcional) = crédito de upgrade em DIAS, somado aos dias do
+ * ciclo pelo webhook (recalculado server-side — o metadata cru NUNCA é confiado).
+ */
+export async function criarPaymentIntentPagamento(params: {
+  workspaceId: string;
+  plano: PlanoId;
+  ciclo: CicloCobranca;
+  customerId: string;
+  moeda?: Moeda;
+  creditoDias?: number;
+}): Promise<Stripe.PaymentIntent> {
+  const { workspaceId, plano, ciclo, customerId, moeda = "brl", creditoDias } = params;
+  const valor = valorCobranca(plano, ciclo, moeda);
 
-  const valor = PRECO_EXCEDENTE[moeda];
-  const pi = await stripe.paymentIntents.create(
-    {
-      amount: valor,
-      currency: moeda,
-      customer: customerId,
-      payment_method: pmId,
-      off_session: true,
-      confirm: true,
-      description: params.descricao,
-    },
-    { idempotencyKey: params.idempotencyKey }
-  );
-  if (pi.status !== "succeeded") {
-    throw new Error("Pagamento do excedente não foi aprovado.");
+  const meta: Record<string, string> = { workspace_id: workspaceId, plano, ciclo };
+  if (typeof creditoDias === "number" && creditoDias > 0) {
+    meta.credito_dias = String(Math.round(creditoDias));
   }
-  return { moeda, valor, paymentIntentId: pi.id };
+
+  return getStripe().paymentIntents.create({
+    amount: Math.round(valor * 100),
+    currency: moeda === "usd" ? "usd" : "brl",
+    customer: customerId,
+    // SÓ cartão (D1) — sem setup_future_usage (não salvamos cartão).
+    payment_method_types: ["card"],
+    metadata: meta,
+  });
+}
+
+/**
+ * Cria uma Checkout Session avulsa (mode `payment`) pra cobrar UMA unidade
+ * EXCEDENTE (ex.: contrato além do limite do ciclo). Valor = PRECO_EXCEDENTE na
+ * moeda. Metadata `{ workspace_id, excedente: 'true' }` — o webhook reconhece o
+ * excedente e registra o pagamento SEM conceder dias (status
+ * 'excedente_disponivel'). Devolve a session (URL hospedada em `session.url`).
+ */
+export async function criarCheckoutExcedente(params: {
+  workspaceId: string;
+  customerId: string;
+  moeda?: Moeda;
+  descricao?: string;
+  baseUrl?: string;
+}): Promise<Stripe.Checkout.Session> {
+  const { workspaceId, customerId, moeda = "brl" } = params;
+  const baseUrl = params.baseUrl ?? appUrl();
+  const meta: Record<string, string> = {
+    workspace_id: workspaceId,
+    excedente: "true",
+  };
+  return getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer: customerId,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: moeda === "usd" ? "usd" : "brl",
+          unit_amount: PRECO_EXCEDENTE[moeda],
+          product_data: {
+            name: params.descricao ?? "Contrato excedente",
+          },
+        },
+      },
+    ],
+    client_reference_id: workspaceId,
+    metadata: meta,
+    payment_intent_data: { metadata: meta },
+    success_url: `${baseUrl}/pagamento/retorno?status=success`,
+    cancel_url: `${baseUrl}/pagamento/retorno?status=cancel`,
+  });
+}
+
+/** 'month' | 'year' (Stripe) → nosso ciclo. Usado no legado invoice.paid. */
+export function cicloDoInterval(interval: string | undefined | null): CicloCobranca {
+  return interval === "year" ? "anual" : "mensal";
 }
 
 /**

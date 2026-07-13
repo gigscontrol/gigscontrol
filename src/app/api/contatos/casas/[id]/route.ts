@@ -54,7 +54,12 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   }
 
   try {
-    const casa = await atualizarCasaPorId(r.sessao.supabase, params.id, parsed.data);
+    const casa = await atualizarCasaPorId(
+      r.sessao.supabase,
+      params.id,
+      parsed.data,
+      r.sessao.userId
+    );
     return NextResponse.json({ casa });
   } catch (e) {
     return respostaDeErro(e, "Falha ao atualizar casa.");

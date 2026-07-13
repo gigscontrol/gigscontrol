@@ -3,6 +3,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import {
   atualizarPastaPorId,
   removerPastaPorId,
+  artistasSaoDoWorkspace,
 } from "@/lib/services/anotacoes.service";
 import { pastaUpdateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarPasta } from "@/lib/repositories/anotacoes.repo";
@@ -39,6 +40,20 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  // Se a lista de membros veio no update, os membros-artista têm que ser
+  // artistas do próprio workspace.
+  if (parsed.data.membros !== undefined) {
+    const artistasMembros = parsed.data.membros
+      .filter((m) => m.tipo === "artista")
+      .map((m) => m.id);
+    if (!(await artistasSaoDoWorkspace(r.sessao.supabase, r.sessao.workspaceId, artistasMembros))) {
+      return NextResponse.json(
+        { erro: "Artista inválido para este workspace." },
+        { status: 400 }
+      );
+    }
   }
 
   try {
