@@ -37,6 +37,25 @@ function RetornoInner() {
   const [tentativas, setTentativas] = useState(0);
   const [confirmado, setConfirmado] = useState(false);
   const [demorou, setDemorou] = useState(false);
+  // Onboarding COMPLETO = upgrade/excedente de quem JÁ usa o app → o retorno
+  // volta pro /app; senão (fluxo de onboarding) → /onboarding. Sem isso, todo
+  // pagamento (inclusive upgrade de quem já está logado) caía no wizard.
+  const [logado, setLogado] = useState(false);
+  const destino = logado ? "/app" : "/onboarding";
+  const destinoCancel = logado ? "/app" : "/pagamento";
+
+  useEffect(() => {
+    let ativo = true;
+    fetch("/api/workspace/onboarding", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (ativo && d) setLogado(!!d.onboardingCompleto);
+      })
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Polling do status quando o retorno é de sucesso. Modelo pré-pago: o
   // critério é `acessoAte` no futuro (não mais subscriptionStatus==='ativa',
@@ -58,14 +77,18 @@ function RetornoInner() {
           const d = (await r.json()) as {
             subscriptionStatus: string;
             acessoAte: string | null;
+            onboardingCompleto?: boolean;
           };
+          if (ativo) setLogado(!!d.onboardingCompleto);
           const acessoOk = d.acessoAte
             ? new Date(d.acessoAte).getTime() > Date.now()
             : d.subscriptionStatus === "ativa";
           if (acessoOk) {
             if (ativo) {
               setConfirmado(true);
-              setTimeout(() => router.replace("/onboarding"), 1000);
+              // upgrade/excedente (onboarding completo) volta pro app; onboarding vai pro wizard.
+              const dest = d.onboardingCompleto ? "/app" : "/onboarding";
+              setTimeout(() => router.replace(dest), 1000);
             }
             return true;
           }
@@ -154,7 +177,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/onboarding")}
+              onClick={() => router.replace(destino)}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >
@@ -179,7 +202,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/onboarding")}
+              onClick={() => router.replace(destino)}
               className="btn btn-secondary text-sm mt-5"
             >
               {t("Continuar mesmo assim")}
@@ -199,7 +222,7 @@ function RetornoInner() {
               )}
             </p>
             <button
-              onClick={() => router.replace("/pagamento")}
+              onClick={() => router.replace(destinoCancel)}
               className="btn btn-primary text-sm mt-5"
               style={{ backgroundColor: "var(--brand)", color: "#fff" }}
             >

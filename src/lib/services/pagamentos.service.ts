@@ -57,6 +57,12 @@ export async function registrarPagamentoEEstenderAcesso(params: {
   } = params;
 
   const dias = diasDoCiclo(ciclo) + (diasExtras || 0);
+  // UPGRADE (diasExtras > 0): reinicia a validade em AGORA (mig 86). O
+  // creditoDias já é o valor JUSTO dos dias restantes convertido pro plano novo;
+  // se o GREATEST também preservasse esses dias, eles entrariam duas vezes
+  // (200 restantes -> 200 + ciclo + 26 credito). Renovacao/onboarding/cortesia/
+  // cupom (diasExtras = 0): mantém o GREATEST (nunca encurta).
+  const reiniciarValidade = (diasExtras || 0) > 0;
 
   const admin = criarClienteAdmin();
   const { data, error } = await admin.rpc("registrar_pagamento_estender", {
@@ -69,6 +75,7 @@ export async function registrarPagamentoEEstenderAcesso(params: {
     p_moeda: moeda,
     p_metodo: metodo,
     p_dias: dias,
+    p_reiniciar_validade: reiniciarValidade,
   });
   if (error) throw error;
 
@@ -101,6 +108,7 @@ export async function concederDiasCortesia(
     p_moeda: null,
     p_metodo: null,
     p_dias: dias,
+    p_reiniciar_validade: false,
   });
   if (error) throw error;
 

@@ -169,21 +169,18 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3) Salva o plano escolhido no workspace + referência do customer na
-    //    subscription (upsert). Acesso NÃO é concedido aqui (só no webhook).
-    await admin
-      .from("workspaces")
-      .update({ plano, ciclo })
-      .eq("id", workspaceId);
-
+    // 3) Guarda SÓ a referência do customer da Stripe na subscription (reusada
+    //    na retentativa). NÃO grava o plano no workspace nem na subscription
+    //    ainda — quem faz isso é o WEBHOOK ao APROVAR o pagamento. Assim um
+    //    upgrade ABANDONADO (checkout fechado sem pagar) não deixa o workspace
+    //    com os limites do plano novo sem ter pago. No onboarding, o plano já
+    //    foi salvo em workspaces por /escolher-plano (e o usuário fica bloqueado
+    //    até o webhook estender a validade, então não há o que abusar).
     if (subExistente) {
       await admin
         .from("subscriptions")
         .update({
-          plano,
-          ciclo,
           provider: "stripe",
-          valor,
           // reaproveitado: mp_* guarda ids do Stripe (sem migration)
           mp_payment_id: customerId,
         })
