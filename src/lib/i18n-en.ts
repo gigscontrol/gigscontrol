@@ -8,6 +8,12 @@
 
 // ---- Booking / Fechamento (auditoria i18n 2026-07-07) ----
 const BOOKING_AUD: Record<string, string> = {
+  "{n} dias": "{n} days",
+  "contratos": "contracts",
+  "Dias restantes do seu plano": "Days left on your plan",
+  "Contratos que você ainda pode gerar neste mês": "Contracts you can still create this month",
+  "Dias restantes": "Days left",
+  "Contratos no mês": "Contracts this month",
   "Selecionar": "Select",
   "{n} usuários no total": "{n} users total",
   "cobrado por mês": "billed monthly",

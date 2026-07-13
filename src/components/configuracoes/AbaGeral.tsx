@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
-  Upload,
-  Trash2,
   Check,
-  Image as ImageIcon,
   Mail,
   AtSign,
   AlertTriangle,
@@ -47,9 +44,6 @@ import AbaSeguranca from "./AbaSeguranca";
  *    em todos os usuários do workspace.
  */
 
-const ALTURA_LOGO = 96;
-const LARGURA_MAX_LOGO = 420;
-
 // Pega o primeiro nome do admin e normaliza pro mesmo formato dos logins
 // (lowercase, sem acentos, só [a-z0-9]) — usado só nos textos de exemplo
 // do bloco "Username da agência".
@@ -77,64 +71,18 @@ type CheckResultado = {
 
 export default function AbaGeral() {
   const t = useT();
-  const { aparencia, atualizarNomeAgencia, uploadLogo, removerLogo } = useWorkspace();
+  const { aparencia, atualizarNomeAgencia } = useWorkspace();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
   const [nome, setNome] = useState(aparencia.nomeAgencia);
   const [erro, setErro] = useState<string | null>(null);
   const [salvandoNome, setSalvandoNome] = useState(false);
-  const [enviandoLogo, setEnviandoLogo] = useState(false);
-  const [removendoLogo, setRemovendoLogo] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
-  const inputFile = useRef<HTMLInputElement>(null);
 
   // Sincroniza o nome local quando o context recarrega
   useEffect(() => {
     setNome(aparencia.nomeAgencia);
   }, [aparencia.nomeAgencia]);
-
-  function escolherArquivo() {
-    inputFile.current?.click();
-  }
-
-  async function aoSelecionarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
-    setErro(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setErro(t("Selecione um arquivo de imagem (PNG de preferência)."));
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      setErro(t("Imagem muito grande. Use um arquivo de até 4 MB."));
-      return;
-    }
-
-    setEnviandoLogo(true);
-    try {
-      const blob = await redimensionarParaBlob(file);
-      await uploadLogo(blob);
-      setToast({ msg: t("Logo atualizada."), tipo: "sucesso" });
-    } catch (err) {
-      setToast({ msg: (err as Error).message ?? t("Falha ao enviar a logo."), tipo: "erro" });
-    } finally {
-      setEnviandoLogo(false);
-      if (inputFile.current) inputFile.current.value = "";
-    }
-  }
-
-  async function aoRemoverLogo() {
-    setRemovendoLogo(true);
-    try {
-      await removerLogo();
-      setToast({ msg: t("Logo removida."), tipo: "sucesso" });
-    } catch (err) {
-      setToast({ msg: (err as Error).message, tipo: "erro" });
-    } finally {
-      setRemovendoLogo(false);
-    }
-  }
 
   async function salvarNome() {
     const limpo = nome.trim();
@@ -165,81 +113,6 @@ export default function AbaGeral() {
           (artista, vendedor etc) vê só os próprios dados + Segurança. */}
       {isAdmin && (
         <>
-      {/* ---- Logo ---- */}
-      <section className="card">
-        <div className="section-title mb-1">{t("Logo da dashboard")}</div>
-        <div className="section-subtitle mb-4">
-          {t("Envie um PNG (de preferência com fundo transparente). A imagem é ajustada automaticamente para caber bem no topo da dashboard.")}
-        </div>
-
-        <div className="mb-4">
-          <div className="text-xs font-medium text-secondary mb-2">
-            {t("Pré-visualização")}
-          </div>
-          <div
-            className="rounded-md border border-border bg-elevated flex items-center px-4"
-            style={{ height: 80 }}
-          >
-            {aparencia.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={aparencia.logoUrl}
-                alt={t("Logo da agência")}
-                style={{ height: 46, width: "auto" }}
-              />
-            ) : (
-              <span className="font-bold text-lg text-primary">
-                {aparencia.nomeAgencia}
-                <span className="text-muted text-xs ml-2 font-normal">
-                  {t("(sem logo — exibindo o nome)")}
-                </span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        <input
-          ref={inputFile}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={aoSelecionarArquivo}
-          className="hidden"
-        />
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={escolherArquivo}
-            disabled={enviandoLogo}
-            className="btn btn-secondary text-sm disabled:opacity-50"
-          >
-            <Upload size={14} />
-            {enviandoLogo
-              ? t("Enviando...")
-              : aparencia.logoUrl
-              ? t("Trocar logo")
-              : t("Enviar logo")}
-          </button>
-          {aparencia.logoUrl && (
-            <button
-              onClick={aoRemoverLogo}
-              disabled={removendoLogo}
-              className="btn-ghost text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
-              style={{ color: "var(--danger)" }}
-            >
-              <Trash2 size={14} />
-              {removendoLogo ? t("Removendo...") : t("Remover logo")}
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-start gap-2 mt-4 text-xs text-muted">
-          <ImageIcon size={14} className="flex-shrink-0 mt-0.5" />
-          <span>
-            {t("Formatos aceitos: PNG, JPG ou WEBP, até 4 MB.")}
-          </span>
-        </div>
-      </section>
-
       {/* ---- Nome da agência ---- */}
       <section className="card">
         <div className="section-title mb-1">{t("Nome exibido")}</div>
@@ -1024,45 +897,4 @@ function SlugSection({
   );
 }
 
-// ============================================================
-// Helper de redimensionamento (mesmo de antes)
-// ============================================================
-
-function redimensionarParaBlob(file: File): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const escala = ALTURA_LOGO / img.height;
-        let largura = img.width * escala;
-        let altura = ALTURA_LOGO;
-        if (largura > LARGURA_MAX_LOGO) {
-          const escala2 = LARGURA_MAX_LOGO / largura;
-          largura = LARGURA_MAX_LOGO;
-          altura = altura * escala2;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = largura * 2;
-        canvas.height = altura * 2;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("canvas indisponível"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) reject(new Error("canvas.toBlob falhou"));
-            else resolve(blob);
-          },
-          "image/png"
-        );
-      };
-      img.onerror = () => reject(new Error("imagem inválida"));
-      img.src = reader.result as string;
-    };
-    reader.onerror = () => reject(new Error("falha na leitura"));
-    reader.readAsDataURL(file);
-  });
-}
+// (o upload de logo da dashboard foi removido — a dashboard exibe o nome)

@@ -4,6 +4,12 @@
  */
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "{n} dias": "{n} días",
+  "contratos": "contratos",
+  "Dias restantes do seu plano": "Días restantes de tu plan",
+  "Contratos que você ainda pode gerar neste mês": "Contratos que aún puedes crear este mes",
+  "Dias restantes": "Días restantes",
+  "Contratos no mês": "Contratos del mes",
   "Selecionar": "Seleccionar",
   "{n} usuários no total": "{n} usuarios en total",
   "cobrado por mês": "cobrado por mes",
