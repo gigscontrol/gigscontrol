@@ -5,7 +5,10 @@ import {
   criarCidadeNoWorkspace,
 } from "@/lib/services/cidades.service";
 import { cidadeCreateSchema } from "@/lib/validators/contatos.schema";
-import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoContatos,
+  verificarMutacaoContato,
+} from "@/lib/api/permissoes";
 import { escopoContatosDoArtista } from "@/lib/permissoes/resolver";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -35,7 +38,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
+  // D2: criar cidade exige `contatos.criar` em algum vínculo. (Cidade é
+  // catálogo sem PII e sem `criado_por`: a LISTA fica aberta a quem tem acesso
+  // ao módulo, mas a MUTAÇÃO é travada pela chave — decisão pragmática.)
+  const bloqueio = verificarMutacaoContato(r.sessao, "criar");
   if (bloqueio) return bloqueio;
 
   let raw: unknown;

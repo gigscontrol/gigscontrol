@@ -14,17 +14,7 @@ import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
 import { setPreferencias as setPreferenciasGlobais } from "./preferencias";
-import {
-  ESCOPO_PADRAO,
-  type EscopoUsuario,
-  type Funcoes,
-  type UsuarioEquipe as UsuarioEquipeBase,
-} from "./mappers/usuario";
-
-// Reexportados para quem importava esses tipos/valores daqui — a fonte
-// única agora é o mapper (src/lib/mappers/usuario.ts).
-export { ESCOPO_PADRAO };
-export type { EscopoUsuario, Funcoes };
+import { type UsuarioEquipe as UsuarioEquipeBase } from "./mappers/usuario";
 
 /**
  * Configurações do workspace (a agência) — módulo de Configurações do admin.
@@ -103,15 +93,13 @@ export type PapelEquipe = Extract<Papel, "produtor" | "vendedor" | "financeiro">
 /**
  * Usuário da equipe (visão do cliente).
  *
- * Mesmo shape do mapper (fonte única: `UsuarioEquipeBase`, incluindo
- * `EscopoUsuario`/`Funcoes`), só estreitando `papel` para os 3 papéis
- * operacionais que a aba Equipe do cliente lida com (o admin nunca
- * aparece nesta lista).
+ * Mesmo shape do mapper (fonte única: `UsuarioEquipeBase`), só estreitando
+ * `papel` para os 3 papéis operacionais que a aba Equipe do cliente lida
+ * com (o admin nunca aparece nesta lista).
  *
- * Cada usuário operacional pode acumular múltiplas FUNÇÕES (vendedor /
- * financeiro / produtor) e cada uma carrega sua própria lista de DJs
- * atendidos. O campo `papel` continua existindo como "função primária"
- * pra compatibilidade com policies e código legado.
+ * O acesso operacional real vem 100% dos vínculos por artista
+ * (`membros_artista.permissoes`), não deste `papel` — que segue existindo
+ * só como "função primária" de exibição/compatibilidade.
  */
 export type UsuarioEquipe = Omit<UsuarioEquipeBase, "papel"> & { papel: PapelEquipe };
 
@@ -246,8 +234,6 @@ type WorkspaceContextValue = {
     patch: Partial<{
       nome: string;
       papel: PapelEquipe;
-      escopo: EscopoUsuario;
-      funcoes: Funcoes;
       ativo: boolean;
       pode_criar_anotacoes: boolean;
       // Dados pessoais (opcionais) — country-aware, servem para contrato.
@@ -698,8 +684,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       patch: Partial<{
         nome: string;
         papel: PapelEquipe;
-        escopo: EscopoUsuario;
-        funcoes: Funcoes;
         ativo: boolean;
         pode_criar_anotacoes: boolean;
         // Dados pessoais (opcionais) — country-aware, servem para contrato.

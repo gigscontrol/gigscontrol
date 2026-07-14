@@ -12,6 +12,7 @@ import {
   podeEditarOrcamento,
   podeExcluirOrcamento,
   verificarCriarOrcamento,
+  redigirOrcamentoParaSessao,
 } from "@/lib/api/permissoes";
 import { buscarOrcamento as repoBuscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { respostaDeErro } from "@/lib/api/erros";
@@ -31,7 +32,8 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // Escopo por artista: 404 se está fora do que a sessão vê (não vaza por id).
     if (!(await orcamentoVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Orçamento não encontrado." }, { status: 404 });
-    return NextResponse.json({ orcamento });
+    // Redige a TAXA/líquido (D6) se a sessão não pode ver a taxa deste artista.
+    return NextResponse.json({ orcamento: redigirOrcamentoParaSessao(r.sessao, orcamento) });
   } catch (e) {
     return respostaDeErro(e, "Falha ao buscar orçamento.");
   }
@@ -92,7 +94,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       entidadeNome: orcamento.numero,
       descricao: `Editou orçamento ${orcamento.numero}`,
     });
-    return NextResponse.json({ orcamento });
+    return NextResponse.json({ orcamento: redigirOrcamentoParaSessao(r.sessao, orcamento) });
   } catch (e) {
     return respostaDeErro(e, "Falha ao atualizar orçamento.");
   }

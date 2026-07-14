@@ -52,10 +52,10 @@ import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data
 import Modal from "../Modal";
 import {
   useWorkspace,
-  LABELS_PAPEL_EQUIPE,
   type NovoArtistaInput,
 } from "@/lib/workspace-context";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
+import { PERFIS } from "@/lib/permissoes/perfis";
 import { formatEndereco } from "@/lib/endereco";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
@@ -151,7 +151,6 @@ export default function AbaArtistas() {
     lixeiraArtistas,
     recarregarLixeira,
     restaurarDaLixeira,
-    equipe,
   } = useWorkspace();
   const { sessao } = useAuth();
 
@@ -229,6 +228,11 @@ export default function AbaArtistas() {
   const [artistaSelecionadoId, setArtistaSelecionadoId] = useState<string | null>(null);
   const [conta, setConta] = useState<DadosConta | null>(null);
   const [carregandoConta, setCarregandoConta] = useState(false);
+  // Membros da equipe vinculados ao artista selecionado (modelo NOVO:
+  // membros_artista). Substitui o legado profiles.funcoes, que morreu.
+  const [membrosDoArtista, setMembrosDoArtista] = useState<
+    { userId: string; nome: string; perfis: string[]; permissoes: string[] }[]
+  >([]);
   const [modoReordenar, setModoReordenar] = useState(false);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "ativos" | "suspensos">("todos");
@@ -314,6 +318,35 @@ export default function AbaArtistas() {
       ativo = false;
     };
   }, [artistaSelecionadoId]);
+
+  // Carrega os VÍNCULOS (membros_artista) do DJ selecionado para o card
+  // "Membros da equipe". No modelo novo quem atende o artista sai daqui, não
+  // mais de profiles.funcoes. Recarrega ao editar a equipe pelo modal.
+  useEffect(() => {
+    if (!artistaSelecionadoId) {
+      setMembrosDoArtista([]);
+      return;
+    }
+    let ativo = true;
+    setMembrosDoArtista([]);
+    fetch(`/api/artistas/${artistaSelecionadoId}/equipe`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return (await res.json()) as {
+          membros?: { userId: string; nome: string; perfis: string[]; permissoes: string[] }[];
+        };
+      })
+      .then((d) => {
+        if (ativo) setMembrosDoArtista(d.membros ?? []);
+      })
+      .catch(() => {
+        if (ativo) setMembrosDoArtista([]);
+      });
+    return () => {
+      ativo = false;
+    };
+    // equipeDe entra na dep pra recarregar quando o modal de equipe fecha.
+  }, [artistaSelecionadoId, equipeDe]);
 
   const artistaSelecionado = useMemo(
     () => artistas.find((a) => a.id === artistaSelecionadoId) ?? null,
@@ -960,10 +993,8 @@ export default function AbaArtistas() {
                     : ver
                     ? { label: t("Somente leitura"), cls: "badge-info", forte: true }
                     : { label: t("Sem acesso"), cls: "badge-neutral", forte: false };
-                const vendas = nivelBadge(
-                  priv.vendasVer || priv.orcamentosVer,
-                  priv.vendasCriar || priv.orcamentosCriar
-                );
+                const orcamentos = nivelBadge(priv.orcamentosVer, priv.orcamentosCriar);
+                const vendas = nivelBadge(priv.vendasVer, priv.vendasCriar);
                 const grupos: { label: string; badge: NivelBadge }[] = [
                   {
                     label: t("Agenda"),
@@ -971,6 +1002,7 @@ export default function AbaArtistas() {
                       ? { label: t("Acesso total"), cls: "badge-success", forte: true }
                       : { label: t("Somente leitura"), cls: "badge-info", forte: true },
                   },
+                  { label: t("Orçamentos"), badge: orcamentos },
                   { label: t("Vendas"), badge: vendas },
                   { label: t("Financeiro"), badge: nivelBadge(priv.financeiroVer, priv.financeiroInformar) },
                   { label: t("Contratos"), badge: nivelBadge(priv.contratosVer, priv.contratosCriar) },
@@ -988,6 +1020,17 @@ export default function AbaArtistas() {
                         </span>
                       </div>
                     ))}
+                    {priv.financeiroVer && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-secondary">{t("Vê taxa de agência e líquido")}</span>
+                        <span
+                          className={`badge ${priv.financeiroVerTaxa ? "badge-success" : "badge-neutral"}`}
+                          style={priv.financeiroVerTaxa ? undefined : { opacity: 0.55 }}
+                        >
+                          {priv.financeiroVerTaxa ? t("Sim") : t("Não")}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-secondary">{t("Contatos")}</span>
                       <span
@@ -1019,14 +1062,9 @@ export default function AbaArtistas() {
                 {t("Membros da equipe")}
               </div>
               {(() => {
-                const membros = equipe.filter(
-                  (m) =>
-                    m.ativo &&
-                    ((m.funcoes.vendedor ?? []).includes(artistaSelecionado.id) ||
-                      (m.funcoes.financeiro ?? []).includes(artistaSelecionado.id) ||
-                      (m.funcoes.produtor ?? []).includes(artistaSelecionado.id))
-                );
-                if (membros.length === 0)
+                // Modelo NOVO: quem atende o artista vem dos VÍNCULOS
+                // (membros_artista), carregados em membrosDoArtista.
+                if (membrosDoArtista.length === 0)
                   return (
                     <div className="text-sm text-muted">
                       {t("Nenhum membro da equipe atende este artista ainda.")}
@@ -1034,12 +1072,12 @@ export default function AbaArtistas() {
                   );
                 return (
                   <div className="flex flex-col gap-2">
-                    {membros.map((m) => {
-                      const papeis = (
-                        ["vendedor", "financeiro", "produtor"] as const
-                      ).filter((p) => (m.funcoes[p] ?? []).includes(artistaSelecionado.id));
+                    {membrosDoArtista.map((m) => {
+                      const perfis = m.perfis
+                        .map((id) => PERFIS.find((p) => p.id === id))
+                        .filter((p): p is (typeof PERFIS)[number] => !!p);
                       return (
-                        <div key={m.id} className="flex items-center gap-2">
+                        <div key={m.userId} className="flex items-center gap-2">
                           <span
                             className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold text-white flex-shrink-0"
                             style={{ background: "var(--border-strong)" }}
@@ -1049,18 +1087,24 @@ export default function AbaArtistas() {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-primary truncate">{m.nome}</div>
                             <div className="flex flex-wrap gap-1 mt-0.5">
-                              {papeis.map((p) => (
-                                <span
-                                  key={p}
-                                  className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
-                                  style={{
-                                    backgroundColor: `${LABELS_PAPEL_EQUIPE[p].cor}22`,
-                                    color: LABELS_PAPEL_EQUIPE[p].cor,
-                                  }}
-                                >
-                                  {t(LABELS_PAPEL_EQUIPE[p].nome)}
+                              {perfis.length > 0 ? (
+                                perfis.map((p) => (
+                                  <span
+                                    key={p.id}
+                                    className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
+                                    style={{
+                                      backgroundColor: `${p.cor}22`,
+                                      color: p.cor,
+                                    }}
+                                  >
+                                    {t(p.nome)}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[0.6rem] text-muted">
+                                  {t("Personalizado")}
                                 </span>
-                              ))}
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2780,14 +2824,48 @@ function SegmentedChoice<T extends string>({
 }
 
 /**
- * Bloco COMPLETO de privacidade do DJ — 5 seletores segmentados (pills).
+ * Switch simples (pill) pra um flag booleano isolado — usado pra
+ * "Vê a taxa de agência e o líquido", que é um refinamento dentro do
+ * módulo Financeiro (não um módulo próprio com 3 estados).
+ */
+function SwitchPill({
+  titulo,
+  valor,
+  onChange,
+}: {
+  titulo: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 pl-3 pr-1.5 py-1.5 rounded-md border border-border cursor-pointer">
+      <span className="text-xs text-secondary">{titulo}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={valor}
+        onClick={() => onChange(!valor)}
+        className="relative flex-shrink-0 h-5 w-9 rounded-full transition-colors"
+        style={{ backgroundColor: valor ? "var(--brand)" : "var(--border-color)" }}
+      >
+        <span
+          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform"
+          style={{ transform: valor ? "translateX(18px)" : "translateX(2px)" }}
+        />
+      </button>
+    </label>
+  );
+}
+
+/**
+ * Bloco COMPLETO de privacidade do DJ — seletores segmentados (pills).
  *
  * Encapsula o mapeamento seletor <-> objeto `PrivacidadeDj` (ida e volta),
  * pra que criar (ModalNovoArtista) e editar (ModalEditarArtista) usem
  * EXATAMENTE a mesma UI e a mesma conversão. O componente recebe o objeto
  * inteiro e um onChange que devolve o objeto atualizado.
  *
- * Linhas: Agenda · Vendas · Financeiro · Contratos · Contatos.
+ * Linhas: Agenda · Orçamentos · Vendas · Financeiro (+ taxa) · Contratos · Contatos.
  */
 function PrivacidadePills({
   valor,
@@ -2799,12 +2877,10 @@ function PrivacidadePills({
   const t = useT();
 
   // Deriva o nível do seletor a partir dos dois booleanos (ver/agir).
-  // Vendas usa o par (vendasVer|orcamentosVer, vendasCriar|orcamentosCriar).
-  const nivelVendas: NivelAcessoTipo = valor.vendasVer || valor.orcamentosVer
-    ? valor.vendasCriar || valor.orcamentosCriar
-      ? "agir"
-      : "ver"
-    : "nenhum";
+  // Orçamentos e Vendas agora são independentes.
+  const nivelOrcamentos = nivelDe(valor.orcamentosVer, valor.orcamentosCriar);
+  const nivelVendas = nivelDe(valor.vendasVer, valor.vendasCriar);
+  const nivelFinanceiro = nivelDe(valor.financeiroVer, valor.financeiroInformar);
 
   return (
     <div className="flex flex-col gap-4">
@@ -2819,7 +2895,25 @@ function PrivacidadePills({
         onChange={(v) => onChange({ ...valor, agendaTotal: v === "total" })}
       />
 
-      {/* Vendas — 3 estados; controla orçamentos E vendas juntos */}
+      {/* Orçamentos — 3 estados, independente de Vendas */}
+      <SegmentedChoice
+        titulo={t("Orçamentos")}
+        valor={nivelOrcamentos}
+        opcoes={[
+          { val: "nenhum", label: t("Sem acesso") },
+          { val: "ver", label: t("Somente leitura") },
+          { val: "agir", label: t("Acesso total") },
+        ]}
+        onChange={(n) =>
+          onChange({
+            ...valor,
+            orcamentosVer: n !== "nenhum",
+            orcamentosCriar: n === "agir",
+          })
+        }
+      />
+
+      {/* Vendas — 3 estados, independente de Orçamentos */}
       <SegmentedChoice
         titulo={t("Vendas")}
         valor={nivelVendas}
@@ -2832,9 +2926,7 @@ function PrivacidadePills({
           onChange({
             ...valor,
             vendasVer: n !== "nenhum",
-            orcamentosVer: n !== "nenhum",
             vendasCriar: n === "agir",
-            orcamentosCriar: n === "agir",
           })
         }
       />
@@ -2842,7 +2934,7 @@ function PrivacidadePills({
       {/* Financeiro — 3 estados */}
       <SegmentedChoice
         titulo={t("Financeiro")}
-        valor={nivelDe(valor.financeiroVer, valor.financeiroInformar)}
+        valor={nivelFinanceiro}
         opcoes={[
           { val: "nenhum", label: t("Sem acesso") },
           { val: "ver", label: t("Somente leitura") },
@@ -2853,9 +2945,18 @@ function PrivacidadePills({
             ...valor,
             financeiroVer: n !== "nenhum",
             financeiroInformar: n === "agir",
+            // Sem acesso ao financeiro não faz sentido ver a taxa.
+            financeiroVerTaxa: n === "nenhum" ? false : valor.financeiroVerTaxa,
           })
         }
       />
+      {nivelFinanceiro !== "nenhum" && (
+        <SwitchPill
+          titulo={t("Vê a taxa de agência e o líquido")}
+          valor={valor.financeiroVerTaxa}
+          onChange={(v) => onChange({ ...valor, financeiroVerTaxa: v })}
+        />
+      )}
 
       {/* Contratos — 3 estados */}
       <SegmentedChoice
@@ -2864,7 +2965,7 @@ function PrivacidadePills({
         opcoes={[
           { val: "nenhum", label: t("Sem acesso") },
           { val: "ver", label: t("Somente leitura") },
-          { val: "agir", label: t("Acesso total") },
+          { val: "agir", label: t("Acesso total"), sub: t("criar, editar e cancelar") },
         ]}
         onChange={(n) =>
           onChange({
@@ -2888,7 +2989,7 @@ function PrivacidadePills({
       />
 
       <p className="text-xs text-muted leading-relaxed">
-        {t("Nenhum artista vê os dados de outro (agenda, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima.")}
+        {t("Nenhum artista vê os dados de outro (agenda, orçamentos, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima. Excluir contrato é uma ação exclusiva do admin — não é liberável aqui.")}
       </p>
     </div>
   );

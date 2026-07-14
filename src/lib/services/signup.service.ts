@@ -115,7 +115,10 @@ export async function setupWorkspaceParaNovoUsuario(
     throw new Error(`Falha ao criar workspace: ${errWs?.message ?? "?"}`);
   }
 
-  // 3. Cria profile vinculado, papel = admin (dono da conta)
+  // 3. Cria profile vinculado, papel = admin (dono da conta). NÃO grava
+  // escopo/funcoes (legado morto) — as colunas são NOT NULL default '{}' no
+  // banco, então o default cobre. Admin passa em tudo pelo motor de qualquer
+  // forma.
   const { data: profile, error: errProf } = await admin
     .from("profiles")
     .insert({
@@ -126,12 +129,6 @@ export async function setupWorkspaceParaNovoUsuario(
       papel: "admin",
       is_super_admin: false,
       status: "ativo",
-      escopo: {
-        verTodosContatos: true,
-        verTodasVendas: true,
-        editarTodosEventos: true,
-      },
-      funcoes: {},
     })
     .select("id")
     .single();

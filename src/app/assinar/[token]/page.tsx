@@ -53,6 +53,8 @@ export default function AssinarPage({
   const [dados, setDados] = useState<Dados | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
+  // Contrato cancelado pela agência (D4): tela dedicada, não "link inválido".
+  const [cancelado, setCancelado] = useState(false);
 
   const [documento, setDocumento] = useState("");
   const [assinatura, setAssinatura] = useState<string | null>(null);
@@ -74,6 +76,11 @@ export default function AssinarPage({
     try {
       const res = await fetch(`/api/assinar/${params.token}`);
       const body = await res.json().catch(() => ({}));
+      // Contrato cancelado pela agência → tela dedicada (não "link inválido").
+      if ((body as { cancelado?: boolean }).cancelado) {
+        setCancelado(true);
+        return;
+      }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
       setDados(body as Dados);
       if ((body as Dados).signatario.documento)
@@ -186,6 +193,12 @@ export default function AssinarPage({
         }),
       });
       const body = await res.json().catch(() => ({}));
+      // Cancelado no meio do caminho (a agência cancelou enquanto a pessoa
+      // preenchia) → tela dedicada, sem tratar como erro genérico.
+      if ((body as { cancelado?: boolean }).cancelado) {
+        setCancelado(true);
+        return;
+      }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
       await carregar(); // recarrega no estado "assinado"
     } catch (e) {
@@ -217,6 +230,18 @@ export default function AssinarPage({
       <div className="min-h-screen flex items-center justify-center text-muted">
         <Loader2 size={20} className="animate-spin mr-2" />
         Abrindo o documento…
+      </div>
+    );
+  }
+  if (cancelado) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <AlertCircle size={28} style={{ color: "var(--danger)" }} />
+        <div className="section-title">Contrato cancelado</div>
+        <p className="text-sm text-muted max-w-sm">
+          Este contrato foi cancelado pela agência e não está mais disponível
+          para assinatura. Em caso de dúvida, fale com quem te enviou o link.
+        </p>
       </div>
     );
   }

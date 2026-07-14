@@ -51,6 +51,8 @@ export type VendaRow = {
   atualizado_em: string | null;
   taxa_agencia_valor: number | string | null;
   taxa_modo_aplicado: TaxaAgenciaModo | null;
+  /** Estado da venda (migração 88). Ausente em linhas antigas → tratado como 'ativa'. */
+  status?: "ativa" | "cancelada" | null;
   /** JOIN com profiles (criado_por) — nome do vendedor. */
   criador?: { nome: string | null } | null;
 };
@@ -115,6 +117,8 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
         ? paraNumero(row.taxa_agencia_valor)
         : undefined,
     taxaModoAplicado: row.taxa_modo_aplicado ?? undefined,
+    // Estado da venda (migração 88): linha antiga sem a coluna = 'ativa'.
+    status: row.status ?? "ativa",
     observacoes: row.observacoes ?? undefined,
     infoExtra: row.info_extra ?? undefined,
     criadoPor: row.criado_por ?? undefined,
@@ -138,6 +142,16 @@ export function redigirVendaFinanceiro(v: Venda): Venda {
     taxaAgenciaValor: undefined,
     parcelas: v.parcelas.map((p) => ({ ...p, meta: undefined })),
   };
+}
+
+/**
+ * Redige SÓ a TAXA de agência / o líquido (D6): para quem VÊ o financeiro
+ * (cachês/pagamentos) mas NÃO tem `financeiro.ver_taxa` — tipicamente o artista
+ * com `financeiroVerTaxa=false`. Some `taxaAgenciaValor` (o líquido é derivado
+ * dele no cliente → também some). MANTÉM parcelas/meta e o resto do financeiro.
+ */
+export function redigirTaxaVenda(v: Venda): Venda {
+  return { ...v, taxaAgenciaValor: undefined };
 }
 
 export type VendaEscrita = {

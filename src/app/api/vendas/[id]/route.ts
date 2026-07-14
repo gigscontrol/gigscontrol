@@ -12,9 +12,8 @@ import {
   podeEditarVenda,
   podeExcluirVenda,
   verificarCriarVenda,
-  podeVerFinanceiro,
+  redigirVendaParaSessao,
 } from "@/lib/api/permissoes";
-import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 import { buscarVenda as repoBuscarVenda } from "@/lib/repositories/vendas.repo";
 import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -33,9 +32,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // Escopo por artista: 404 (não vaza) se a venda está fora do que a sessão vê.
     if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Venda não encontrada." }, { status: 404 });
-    const saida = podeVerFinanceiro(r.sessao, venda.artistaId || null)
-      ? venda
-      : redigirVendaFinanceiro(venda);
+    const saida = redigirVendaParaSessao(r.sessao, venda);
     return NextResponse.json({ venda: saida });
   } catch (e) {
     return respostaDeErro(e, "Falha ao buscar venda.");
@@ -93,7 +90,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       entidadeNome: venda.numero,
       descricao: `Editou venda ${venda.numero}`,
     });
-    return NextResponse.json({ venda });
+    return NextResponse.json({ venda: redigirVendaParaSessao(r.sessao, venda) });
   } catch (e) {
     return respostaDeErro(e, "Falha ao atualizar venda.");
   }

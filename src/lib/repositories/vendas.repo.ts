@@ -11,7 +11,7 @@ const COLS = `
   line_up, cache, duracao_horas, duracao_minutos,
   camarim, efeitos, hotel, logistica,
   observacoes, info_extra,
-  taxa_agencia_valor, taxa_modo_aplicado,
+  taxa_agencia_valor, taxa_modo_aplicado, status,
   criado_por, criado_em, atualizado_em,
   criador:profiles!vendas_criado_por_fkey ( nome )
 `;

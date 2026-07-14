@@ -2360,10 +2360,7 @@ const SWEEP7: Record<string, string> = {
   "Casa bloqueada": "Venue blocked",
   "Cadastre o primeiro usuário da sua equipe pra começar.": "Register your team's first user to get started.",
   "Editar eventos": "Edit events",
-  "Nenhuma função atribuída.": "No role assigned.",
   "Permissões": "Permissions",
-  "Só os próprios": "Own only",
-  "Vendas e orçamentos": "Sales and quotes",
 };
 
 // ---- Equipe: criação por login/handle (espelha o fluxo de artistas) ----
@@ -3072,9 +3069,7 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.": "Select the artists. You'll set each one's role (and permissions) later, in the artist's Team tab.",
   "Meus dados": "My details",
   "Não foi possível carregar seus dados.": "Couldn't load your details.",
-  "Não pode criar pastas de anotações na Agenda": "Can't create note folders in the Calendar",
   "Nenhum artista cadastrado ainda. Cadastre na aba Artistas.": "No artists registered yet. Add one in the Artists tab.",
-  "Nenhum artista vê os dados de outro (agenda, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima.": "No artist sees another artist's data (calendar, sales, finance, contracts). The only exception is contact sharing, if you enable it above.",
   "Nenhum artista vinculado. Vincule na aba Equipe do artista.": "No artist linked. Link one in the artist's Team tab.",
   "Nenhuma ação recente ainda.": "No recent activity yet.",
   "Novo usuário": "New user",
@@ -3083,8 +3078,6 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "O que este membro pode fazer com cada artista — vale só para aquele artista.": "What this member can do with each artist — applies only to that artist.",
   "País e cidade onde reside": "Country and city of residence",
   "Permissões — o que ele pode ver/fazer": "Permissions — what they can see/do",
-  "Pode criar pastas de anotações": "Can create note folders",
-  "Pode criar pastas de anotações na Agenda": "Can create note folders in the Calendar",
   "Salvar meus dados": "Save my details",
   "Sem acesso": "No access",
   "Sessão expirada. Faça login de novo.": "Session expired. Please log in again.",
@@ -3301,6 +3294,29 @@ const CADASTRO_JUL11_EN: Record<string, string> = {
   "Últimos orçamentos": "Latest quotes",
 };
 
+// ---- Permissões rework: cancelar venda/contrato, taxa de agência, painel de equipe novo (2026-07-13) ----
+const PERMISSOES_REWORK_JUL13: Record<string, string> = {
+  "Venda cancelada.": "Sale canceled.",
+  "Cancelada": "Canceled",
+  "Cancelar venda": "Cancel sale",
+  "A venda continua no histórico, marcada como cancelada.": "The sale stays in the history, marked as canceled.",
+  "A venda sai dos dashboards e do \"a receber\". As parcelas não pagas são canceladas; as já pagas permanecem. A venda continua visível no histórico com o selo Cancelada.": "The sale leaves the dashboards and \"to receive\". Unpaid installments are canceled; paid ones remain. The sale stays visible in the history with the Canceled badge.",
+  "Ex.: contratante desistiu, evento cancelado…": "E.g.: client backed out, event canceled…",
+  "Cancelando...": "Canceling...",
+  "Vê taxa de agência e líquido": "Sees agency fee and net",
+  "Vê a taxa de agência e o líquido": "Sees the agency fee and the net",
+  "criar, editar e cancelar": "create, edit, and cancel",
+  "Nenhum artista vê os dados de outro (agenda, orçamentos, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima. Excluir contrato é uma ação exclusiva do admin — não é liberável aqui.": "No artist sees another artist's data (calendar, quotes, sales, finance, contracts). The only exception is contact sharing, if you enable it above. Deleting a contract is an admin-only action — it can't be delegated here.",
+  "Nenhuma permissão definida.": "No permissions set.",
+  "Sem permissões": "No permissions",
+  "Anotações: pode criar pastas": "Notes: can create folders",
+  "Permissões da agência": "Agency permissions",
+  "Permissões administrativas — valem no workspace inteiro, não por artista.": "Administrative permissions — apply to the entire workspace, not per artist.",
+  "Cancelar o contrato {numero}? Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.": "Cancel contract {numero}? It will be marked as canceled and the signature link stops working for anyone who hasn't signed yet. The contract stays visible in the history.",
+  "Não foi possível cancelar o contrato.": "Could not cancel the contract.",
+  "Cancelar contrato": "Cancel contract",
+};
+
 export const EN: Record<string, string> = {
   "Limite de contratos atingido": "Contract limit reached",
   "Plano {plano} — {limite} contratos no ciclo": "{plano} plan — {limite} contracts per cycle",
@@ -3406,6 +3422,7 @@ export const EN: Record<string, string> = {
   ...LANDING13_REDESIGN,
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_EN,
+  ...PERMISSOES_REWORK_JUL13,
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "Awaiting signature",
   "Bloqueando...": "Blocking...",

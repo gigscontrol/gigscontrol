@@ -36,11 +36,11 @@ export const PERFIS: Perfil[] = [
     cor: "#6366f1",
     permissoes: [
       "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar", "agenda.editar_todos",
-      "vendas.ver", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
-      "vendas.criar_venda", "vendas.editar_venda", "vendas.editar_todos",
-      "financeiro.ver", "financeiro.ver_caches", "financeiro.ver_pagamentos",
+      "vendas.ver", "vendas.ver_orcamentos", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
+      "vendas.criar_venda", "vendas.editar_venda", "vendas.editar_todos", "vendas.cancelar_venda",
+      "financeiro.ver",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento",
-      "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos",
+      "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos", "contratos.cancelar",
     ],
   },
   {
@@ -49,8 +49,8 @@ export const PERFIS: Perfil[] = [
     descricao: "Acompanha pagamentos e recebimentos do artista.",
     cor: "#3b82f6",
     permissoes: [
-      "vendas.ver",
-      "financeiro.ver", "financeiro.ver_caches", "financeiro.ver_pagamentos",
+      "vendas.ver", "vendas.ver_orcamentos",
+      "financeiro.ver",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento", "financeiro.cancelar_pagamento",
     ],
   },
@@ -60,8 +60,8 @@ export const PERFIS: Perfil[] = [
     descricao: "Cria e gerencia os contratos do artista.",
     cor: "#14b8a6",
     permissoes: [
-      "vendas.ver",
-      "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos",
+      "vendas.ver", "vendas.ver_orcamentos",
+      "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos", "contratos.cancelar",
     ],
   },
   {
@@ -71,8 +71,8 @@ export const PERFIS: Perfil[] = [
     cor: "#22c55e",
     permissoes: [
       "agenda.ver",
-      "vendas.ver", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
-      "vendas.criar_venda", "vendas.editar_venda",
+      "vendas.ver", "vendas.ver_orcamentos", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
+      "vendas.criar_venda", "vendas.editar_venda", "vendas.cancelar_venda",
     ],
   },
   {
@@ -82,7 +82,7 @@ export const PERFIS: Perfil[] = [
     cor: "#f59e0b",
     permissoes: [
       "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar",
-      "vendas.ver",
+      "vendas.ver", "vendas.ver_orcamentos",
     ],
   },
   {
@@ -91,7 +91,7 @@ export const PERFIS: Perfil[] = [
     descricao: "O próprio artista — vê os dados dele.",
     cor: "#a855f7",
     permissoes: [
-      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "financeiro.ver", "contratos.ver",
+      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "vendas.ver_orcamentos", "financeiro.ver", "contratos.ver",
     ],
   },
 ];

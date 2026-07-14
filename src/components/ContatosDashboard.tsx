@@ -97,7 +97,8 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
     [shows, periodo]
   );
   const vendasPeriodo = useMemo(
-    () => vendas.filter((v) => dataNoMes(v.criadoEm, periodo)),
+    // Vendas canceladas (D5) não entram no ranking de faturamento.
+    () => vendas.filter((v) => v.status !== "cancelada" && dataNoMes(v.criadoEm, periodo)),
     [vendas, periodo]
   );
 

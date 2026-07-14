@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText } from "lucide-react";
+import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText, Ban } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -11,6 +11,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { useAuth } from "@/lib/auth-context";
 import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES } from "@/types";
 
@@ -22,10 +23,11 @@ type Props = {
 export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
-  const { vendas, removeVenda } = useVendas();
+  const { vendas, removeVenda, recarregar } = useVendas();
   const { orcamentos } = useOrcamentos();
   const { cidades } = useContatos();
   const artistas = useArtistas();
+  const { podeUI } = useAuth();
 
   const [search, setSearch] = useState("");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -61,9 +63,12 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
       });
   }, [vendas, search, filtroDJ, cidades, orcamentos, artistas]);
 
+  // Métricas do topo contam só as ATIVAS — as canceladas continuam listadas
+  // (com badge) mas não entram no faturamento nem na contagem de concretizadas.
+  const ativas = useMemo(() => vendas.filter((v) => v.status !== "cancelada"), [vendas]);
   const totalCache = useMemo(
-    () => vendas.reduce((acc, v) => acc + (v.cache ?? 0), 0),
-    [vendas]
+    () => ativas.reduce((acc, v) => acc + (v.cache ?? 0), 0),
+    [ativas]
   );
 
   function handleRemover(id: string) {
@@ -76,11 +81,40 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
   const [removendo, setRemovendo] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ msg: string; tipo: "sucesso" | "erro" } | null>(null);
 
+  // Cancelar venda (D5) — modal com motivo opcional.
+  const [cancelAlvo, setCancelAlvo] = useState<string | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState("");
+  const [cancelando, setCancelando] = useState(false);
+
+  async function confirmarCancelamento() {
+    if (!cancelAlvo) return;
+    setCancelando(true);
+    try {
+      const res = await fetch(`/api/vendas/${cancelAlvo}/cancelar`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo: cancelMotivo.trim() || undefined }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { erro?: string };
+      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      await recarregar();
+      setCancelAlvo(null);
+      setCancelMotivo("");
+      setToastMsg({ msg: t("Venda cancelada."), tipo: "sucesso" });
+    } catch (e) {
+      setToastMsg({ msg: (e as Error).message, tipo: "erro" });
+      setCancelAlvo(null);
+    } finally {
+      setCancelando(false);
+    }
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Histórico de Vendas"
-        subtitle={`${vendas.length} ${vendas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${formatBRL(totalCache)}`}
+        subtitle={`${ativas.length} ${ativas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${formatBRL(totalCache)}`}
         accentColor={accent}
         actions={
           <button
@@ -175,14 +209,23 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                   const orc = v.orcamentoId
                     ? orcamentos.find((o) => o.id === v.orcamentoId)
                     : null;
+                  const cancelada = v.status === "cancelada";
+                  const podeCancelar =
+                    !cancelada && podeUI(v.artistaId || null, "vendas.cancelar_venda");
                   return (
                     <tr
                       key={v.id}
-                      className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
+                      className={`border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer ${cancelada ? "opacity-60" : ""}`}
                       onClick={() => onAbrir(v.id)}
                     >
                       <Td className="font-mono text-xs" style={{ color: accent }}>
-                        {v.numero}
+                        <span className={cancelada ? "line-through" : ""}>{v.numero}</span>
+                        {cancelada && (
+                          <span className="badge badge-neutral inline-flex items-center gap-1 ml-2 no-underline">
+                            <Ban size={10} />
+                            {t("Cancelada")}
+                          </span>
+                        )}
                       </Td>
                       <Td className="font-medium text-primary truncate max-w-[200px]">
                         {v.contratanteNome}
@@ -227,6 +270,18 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           >
                             <Eye size={14} />
                           </button>
+                          {podeCancelar && (
+                            <button
+                              onClick={() => {
+                                setCancelMotivo("");
+                                setCancelAlvo(v.id);
+                              }}
+                              className="btn-ghost p-1.5 rounded"
+                              title={t("Cancelar venda")}
+                            >
+                              <Ban size={14} />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRemover(v.id)}
                             className="btn-ghost p-1.5 rounded"
@@ -286,6 +341,48 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
               disabled={removendo}
             >
               {removendo ? t("Removendo...") : t("Remover")}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirmação de cancelar venda (D5) */}
+      <Modal
+        isOpen={!!cancelAlvo}
+        onClose={() => setCancelAlvo(null)}
+        title={t("Cancelar venda")}
+        subtitle={t("A venda continua no histórico, marcada como cancelada.")}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-secondary">
+            {t("A venda sai dos dashboards e do \"a receber\". As parcelas não pagas são canceladas; as já pagas permanecem. A venda continua visível no histórico com o selo Cancelada.")}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            <label className="stat-label">{t("Motivo (opcional)")}</label>
+            <textarea
+              value={cancelMotivo}
+              onChange={(e) => setCancelMotivo(e.target.value)}
+              placeholder={t("Ex.: contratante desistiu, evento cancelado…")}
+              rows={2}
+              maxLength={1000}
+              className="input resize-none bg-surface border border-border rounded-md px-3 py-2 focus:border-border-strong transition-colors"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <button
+              onClick={() => setCancelAlvo(null)}
+              className="btn btn-secondary"
+              disabled={cancelando}
+            >
+              {t("Voltar")}
+            </button>
+            <button
+              onClick={confirmarCancelamento}
+              className="btn btn-primary"
+              style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+              disabled={cancelando}
+            >
+              {cancelando ? t("Cancelando...") : t("Confirmar cancelamento")}
             </button>
           </div>
         </div>

@@ -53,12 +53,13 @@ export const CAPACIDADES: Capacidade[] = [
 
   // -------- VENDAS --------
   {
-    id: "vendas.ver", modulo: "vendas", label: "Ver vendas e orçamentos", existe: true,
+    id: "vendas.ver", modulo: "vendas", label: "Ver vendas", existe: true,
     variantes: [
       { chave: "vendas.ver", label: "Todas" },
       { chave: "vendas.ver_proprios", label: "Só as que ele criou" },
     ],
   },
+  { id: "vendas.ver_orcamentos", modulo: "vendas", label: "Ver orçamentos", existe: true, chave: "vendas.ver_orcamentos" },
   { id: "vendas.criar_orcamento", modulo: "vendas", label: "Criar orçamento", existe: true, chave: "vendas.criar_orcamento" },
   { id: "vendas.editar_orcamento", modulo: "vendas", label: "Editar orçamento", existe: true, chave: "vendas.editar_orcamento" },
   { id: "vendas.excluir_orcamento", modulo: "vendas", label: "Excluir orçamento", existe: true, chave: "vendas.excluir_orcamento" },
@@ -71,13 +72,12 @@ export const CAPACIDADES: Capacidade[] = [
       { chave: "vendas.editar_todos", label: "Todas as vendas" },
     ],
   },
-  { id: "vendas.cancelar_venda", modulo: "vendas", label: "Cancelar venda", existe: false, chave: "vendas.cancelar_venda" },
+  { id: "vendas.cancelar_venda", modulo: "vendas", label: "Cancelar venda", existe: true, chave: "vendas.cancelar_venda" },
   { id: "vendas.excluir_venda", modulo: "vendas", label: "Excluir venda", existe: true, chave: "vendas.excluir_venda" },
 
   // -------- FINANCEIRO --------
-  { id: "financeiro.ver", modulo: "financeiro", label: "Ver o financeiro", existe: true, chave: "financeiro.ver" },
-  { id: "financeiro.ver_caches", modulo: "financeiro", label: "Ver os cachês", existe: true, chave: "financeiro.ver_caches" },
-  { id: "financeiro.ver_pagamentos", modulo: "financeiro", label: "Ver os pagamentos", existe: true, chave: "financeiro.ver_pagamentos" },
+  { id: "financeiro.ver", modulo: "financeiro", label: "Ver o financeiro (caches e pagamentos)", existe: true, chave: "financeiro.ver" },
+  { id: "financeiro.ver_taxa", modulo: "financeiro", label: "Ver a taxa de agência e o líquido", existe: true, chave: "financeiro.ver_taxa" },
   { id: "financeiro.ver_saldo", modulo: "financeiro", label: "Ver o saldo", existe: false, chave: "financeiro.ver_saldo" },
   { id: "financeiro.ver_despesas", modulo: "financeiro", label: "Ver as despesas", existe: false, chave: "financeiro.ver_despesas" },
   { id: "financeiro.ver_comissoes", modulo: "financeiro", label: "Ver as comissões", existe: false, chave: "financeiro.ver_comissoes" },
@@ -100,16 +100,26 @@ export const CAPACIDADES: Capacidade[] = [
       { chave: "contratos.editar_todos", label: "Todos os contratos" },
     ],
   },
-  { id: "contratos.cancelar", modulo: "contratos", label: "Cancelar contrato", existe: false, chave: "contratos.cancelar" },
-  { id: "contratos.excluir", modulo: "contratos", label: "Excluir contrato", existe: true, chave: "contratos.excluir" },
+  { id: "contratos.cancelar", modulo: "contratos", label: "Cancelar contrato", existe: true, chave: "contratos.cancelar" },
+  // contratos.excluir REMOVIDO: excluir contrato é admin-only (não delegável),
+  // logo não tem capacidade no editor por-artista.
 
   // -------- CONTATOS --------
-  // Contatos NÃO entra no editor por artista de propósito: um contato é do
-  // workspace, não de um artista. A visibilidade dos CONTRATANTES é derivada
-  // (quem criou + quem fez orçamento/venda pra ele + os artistas desses
-  // orçamentos/vendas) — ver src/lib/services/contatosAcesso.ts. As chaves
-  // contatos.* continuam no catálogo só por retrocompat (vínculos antigos),
-  // mas são inertes. Por isso este módulo fica sem capacidades (some do editor).
+  // Agora REAIS (enforcement por UNIÃO dos vínculos): ter contatos.ver em
+  // ALGUM vínculo = vê todos os contatos do workspace; só contatos.ver_proprios
+  // = vê apenas os que ele criou; criar/editar/excluir exigem a chave
+  // respectiva em algum vínculo. As chaves ainda são gravadas por-artista no
+  // vínculo — a união é computada no serviço de contatos (outro WI).
+  {
+    id: "contatos.ver", modulo: "contatos", label: "Ver contatos", existe: true,
+    variantes: [
+      { chave: "contatos.ver", label: "Todos" },
+      { chave: "contatos.ver_proprios", label: "Só os que ele criou" },
+    ],
+  },
+  { id: "contatos.criar", modulo: "contatos", label: "Criar contato", existe: true, chave: "contatos.criar" },
+  { id: "contatos.editar", modulo: "contatos", label: "Editar contato", existe: true, chave: "contatos.editar" },
+  { id: "contatos.excluir", modulo: "contatos", label: "Excluir contato", existe: true, chave: "contatos.excluir" },
 ];
 
 export function capacidadesDoModulo(modulo: ModuloPermissao): Capacidade[] {

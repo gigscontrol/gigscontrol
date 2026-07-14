@@ -192,9 +192,7 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.": "Wählen Sie die Künstler aus. Die Rolle (und Berechtigungen) jedes Einzelnen legen Sie später im Tab „Team des Künstlers“ fest.",
   "Meus dados": "Meine Daten",
   "Não foi possível carregar seus dados.": "Ihre Daten konnten nicht geladen werden.",
-  "Não pode criar pastas de anotações na Agenda": "Kann keine Notizordner im Kalender erstellen",
   "Nenhum artista cadastrado ainda. Cadastre na aba Artistas.": "Noch keine Künstler registriert. Fügen Sie einen im Tab „Künstler“ hinzu.",
-  "Nenhum artista vê os dados de outro (agenda, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima.": "Kein Künstler sieht die Daten eines anderen (Kalender, Verkäufe, Finanzen, Verträge). Die einzige Ausnahme ist die Kontaktfreigabe, sofern Sie diese oben aktivieren.",
   "Nenhum artista vinculado. Vincule na aba Equipe do artista.": "Kein Künstler verknüpft. Verknüpfen Sie einen im Tab „Team des Künstlers“.",
   "Nenhuma ação recente ainda.": "Noch keine aktuellen Aktivitäten.",
   "Novo usuário": "Neuer Benutzer",
@@ -203,8 +201,6 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "O que este membro pode fazer com cada artista — vale só para aquele artista.": "Was dieses Mitglied bei jedem Künstler tun darf — gilt nur für diesen Künstler.",
   "País e cidade onde reside": "Land und Wohnort",
   "Permissões — o que ele pode ver/fazer": "Berechtigungen — was er/sie sehen/tun darf",
-  "Pode criar pastas de anotações": "Kann Notizordner erstellen",
-  "Pode criar pastas de anotações na Agenda": "Kann Notizordner im Kalender erstellen",
   "Salvar meus dados": "Meine Daten speichern",
   "Sem acesso": "Kein Zugriff",
   "Sessão expirada. Faça login de novo.": "Sitzung abgelaufen. Bitte melden Sie sich erneut an.",
@@ -419,6 +415,29 @@ const CADASTRO_JUL11_DE: Record<string, string> = {
   "{n} {show}": "{n} {show}",
   "Ícone": "Symbol",
   "Últimos orçamentos": "Letzte Angebote",
+};
+
+// ---- Permissões rework: cancelar venda/contrato, taxa de agência, painel de equipe novo (2026-07-13) ----
+const PERMISSOES_REWORK_JUL13: Record<string, string> = {
+  "Venda cancelada.": "Verkauf storniert.",
+  "Cancelada": "Storniert",
+  "Cancelar venda": "Verkauf stornieren",
+  "A venda continua no histórico, marcada como cancelada.": "Der Verkauf bleibt im Verlauf, als storniert markiert.",
+  "A venda sai dos dashboards e do \"a receber\". As parcelas não pagas são canceladas; as já pagas permanecem. A venda continua visível no histórico com o selo Cancelada.": "Der Verkauf verschwindet aus den Dashboards und aus \"noch zu erhalten\". Unbezahlte Raten werden storniert; bereits bezahlte bleiben bestehen. Der Verkauf bleibt im Verlauf mit dem Label Storniert sichtbar.",
+  "Ex.: contratante desistiu, evento cancelado…": "Z. B.: Kunde ist abgesprungen, Termin abgesagt…",
+  "Cancelando...": "Wird storniert...",
+  "Vê taxa de agência e líquido": "Sieht Agenturgebühr und Netto",
+  "Vê a taxa de agência e o líquido": "Sieht die Agenturgebühr und das Netto",
+  "criar, editar e cancelar": "erstellen, bearbeiten und stornieren",
+  "Nenhum artista vê os dados de outro (agenda, orçamentos, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima. Excluir contrato é uma ação exclusiva do admin — não é liberável aqui.": "Kein Künstler sieht die Daten eines anderen (Kalender, Angebote, Verkäufe, Finanzen, Verträge). Die einzige Ausnahme ist die Kontaktfreigabe, sofern Sie diese oben aktivieren. Das Löschen eines Vertrags ist ausschließlich dem Admin vorbehalten — hier nicht delegierbar.",
+  "Nenhuma permissão definida.": "Keine Berechtigung festgelegt.",
+  "Sem permissões": "Keine Berechtigungen",
+  "Anotações: pode criar pastas": "Notizen: kann Ordner erstellen",
+  "Permissões da agência": "Berechtigungen der Agentur",
+  "Permissões administrativas — valem no workspace inteiro, não por artista.": "Administrative Berechtigungen — gelten für den gesamten Workspace, nicht pro Künstler.",
+  "Cancelar o contrato {numero}? Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.": "Vertrag {numero} stornieren? Er wird als storniert markiert, und der Unterschrift-Link funktioniert nicht mehr für alle, die noch nicht unterschrieben haben. Der Vertrag bleibt im Verlauf sichtbar.",
+  "Não foi possível cancelar o contrato.": "Vertrag konnte nicht storniert werden.",
+  "Cancelar contrato": "Vertrag stornieren",
 };
 
 export const DE: Record<string, string> = {
@@ -1947,10 +1966,7 @@ export const DE: Record<string, string> = {
   "Casa bloqueada": "Veranstaltungsort gesperrt",
   "Cadastre o primeiro usuário da sua equipe pra começar.": "Registrieren Sie den ersten Benutzer Ihres Teams, um zu beginnen.",
   "Editar eventos": "Auftritte bearbeiten",
-  "Nenhuma função atribuída.": "Keine Rolle zugewiesen.",
   "Permissões": "Berechtigungen",
-  "Só os próprios": "Nur eigene",
-  "Vendas e orçamentos": "Verkäufe und Angebote",
   "Copiar login completo": "Vollständigen Login kopieren",
   "Preencha um login válido pra copiar": "Geben Sie einen gültigen Login ein, um zu kopieren",
   "Use 3+ caracteres (letras, números, hífen)": "Verwenden Sie 3+ Zeichen (Buchstaben, Zahlen, Bindestrich)",
@@ -2400,6 +2416,7 @@ export const DE: Record<string, string> = {
   ...LANDING13_REDESIGN,
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_DE,
+  ...PERMISSOES_REWORK_JUL13,
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "Wartet auf Unterschrift",
   "Bloqueando...": "Wird gesperrt...",

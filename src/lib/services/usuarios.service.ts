@@ -24,7 +24,7 @@ import type {
 import { gerarSenhaAleatoria } from "@/lib/senha-aleatoria";
 import { getPlano, type PlanoId } from "@/lib/planos";
 import { planoEfetivoParaLimites } from "@/lib/services/limites";
-import { ESCOPO_PADRAO } from "@/lib/mappers/usuario";
+import { permissoesDosPerfis, type PerfilId } from "@/lib/permissoes/perfis";
 import { upsertVinculo } from "@/lib/repositories/membrosArtista.repo";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
 
@@ -120,10 +120,9 @@ export async function criarUsuarioDaEquipe(
       email: emailFake,
       username: usernameCompleto,
       // Papel neutro: a função real de cada artista vem do vínculo (definida
-      // depois na aba Equipe). funcoes vazio (legado). escopo default.
+      // depois na aba Equipe). NÃO grava escopo/funcoes (legado morto) — as
+      // colunas são NOT NULL default '{}' no banco, então o default cobre.
       papel: "produtor",
-      escopo: ESCOPO_PADRAO,
-      funcoes: {},
       status: "ativo",
       // Membro da equipe nasce com a senha aleatória gerada acima.
       senha_padrao: true,
@@ -141,18 +140,26 @@ export async function criarUsuarioDaEquipe(
       cidade_id: input.cidade_id ?? null,
     });
 
-    // Modelo NOVO — cria um VÍNCULO VAZIO por artista com quem trabalha.
-    // O link aparece na aba Equipe do artista, onde o admin define a função
-    // (perfil) e as permissões. É a fonte da verdade do acesso.
+    // Modelo NOVO — cria o VÍNCULO por artista com quem trabalha. O link
+    // aparece na aba Equipe do artista, onde o admin ajusta perfil/permissões.
+    // É a fonte da verdade do acesso.
     for (const artistId of input.artistIds) {
+      // FIX do bug: persiste os PERFIS (presets) escolhidos no modal de criação
+      // — antes eram descartados (perfis: [] fixo), então o editor não refletia
+      // o preset aplicado.
+      const perfis = input.perfis_por_artista?.[artistId] ?? [];
+      // Permissões: explícitas do modal quando vierem; senão semeia a partir
+      // dos perfis escolhidos (o preset PASSA A TER EFEITO, não só metadado);
+      // sem nenhum dos dois, o vínculo nasce vazio (definido depois na Equipe).
+      const permissoes =
+        input.permissoes_por_artista?.[artistId] ??
+        permissoesDosPerfis(perfis as PerfilId[]);
       await upsertVinculo(admin, {
         workspaceId,
         userId: created.user.id,
         artistId,
-        perfis: [],
-        // Permissões já definidas no modal de criação (se houver); caso
-        // contrário o vínculo nasce vazio (definido depois na aba Equipe).
-        permissoes: input.permissoes_por_artista?.[artistId] ?? [],
+        perfis,
+        permissoes,
       });
     }
 
@@ -174,11 +181,12 @@ export async function atualizarUsuarioDaEquipe(
   input: UsuarioUpdateInput
 ): Promise<UsuarioEquipe> {
   // GUARDA PARCIAL: quando o alvo é admin ou artista, esta rota de EQUIPE não
-  // pode mexer nos campos SENSÍVEIS de acesso (papel, funções, escopo,
-  // ativo/status) — só a conta-mãe governa cargo/privacidade desses papéis.
-  // Mas os DADOS PESSOAIS (nome, documento, telefone, endereço, etc.) seguem
-  // editáveis. (removerUsuarioDaEquipe/resetarSenhaDoUsuario bloqueiam TOTAL
-  // esses papéis; aqui a proteção é só dos campos perigosos.)
+  // pode mexer nos campos SENSÍVEIS de acesso (papel, ativo/status) — só a
+  // conta-mãe governa cargo/privacidade desses papéis. Mas os DADOS PESSOAIS
+  // (nome, documento, telefone, endereço, etc.) seguem editáveis.
+  // (removerUsuarioDaEquipe/resetarSenhaDoUsuario bloqueiam TOTAL esses papéis;
+  // aqui a proteção é só dos campos perigosos.) escopo/funcoes MORRERAM — o
+  // acesso operacional vem 100% dos vínculos por artista (aba Equipe).
   const alvo = await buscarProfile(admin, id);
   const protegido = alvo?.papel === "admin" || alvo?.papel === "artista";
 
@@ -186,8 +194,6 @@ export async function atualizarUsuarioDaEquipe(
   if (input.nome !== undefined) patch.nome = input.nome;
   if (!protegido) {
     if (input.papel !== undefined) patch.papel = input.papel;
-    if (input.escopo !== undefined) patch.escopo = input.escopo;
-    if (input.funcoes !== undefined) patch.funcoes = input.funcoes;
     if (input.ativo !== undefined) patch.status = input.ativo ? "ativo" : "bloqueado";
   }
   if (input.pode_criar_anotacoes !== undefined)

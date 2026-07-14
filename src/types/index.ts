@@ -238,7 +238,7 @@ export type Contratante = {
   cidadeId: string;
   observacoes?: string;
   criadoEm: string;
-  /** userId de quem cadastrou — usado no escopo "próprios" (verTodosContatos). */
+  /** userId de quem cadastrou — usado no escopo "próprios" (contatos.ver_proprios, por união dos vínculos). */
   criadoPor?: string;
   /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
   lat?: number;
@@ -572,6 +572,12 @@ export type Venda = {
   criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
+  /**
+   * Estado da venda (migração 88). "cancelada" = saiu dos dashboards e do
+   * "a receber", mas continua no histórico (badge). Ausente/undefined em
+   * dados antigos = "ativa".
+   */
+  status?: "ativa" | "cancelada";
 };
 
 // ----------- Tema -----------

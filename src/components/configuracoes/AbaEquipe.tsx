@@ -37,6 +37,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
 import { PERFIS, type PerfilId } from "@/lib/permissoes/perfis";
+import { MODULOS, CATALOGO } from "@/lib/permissoes/catalogo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
@@ -46,6 +47,29 @@ import type { DocumentoTipo } from "@/types";
 
 /** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
 type VinculoResumo = { artistId: string; perfis: string[]; permissoes: string[] };
+
+/** Rótulo (do catálogo) da permissão de criar pastas de anotações. */
+const ROTULO_ANOTACOES =
+  CATALOGO.find((p) => p.chave === "agencia.criar_pastas_anotacoes")?.label ??
+  "Criar pastas de anotações";
+
+/**
+ * Agrupa as chaves de um vínculo por MÓDULO, com contagem de chaves, na ordem
+ * do catálogo. Cada chave tem a forma "modulo.acao" — o prefixo é o módulo.
+ * Fonte da verdade nova (deriva dos vínculos), sem nenhum dado legado.
+ */
+function resumoPorModulo(permissoes: string[]): { modulo: string; label: string; n: number }[] {
+  const contagem = new Map<string, number>();
+  for (const chave of permissoes) {
+    const mod = chave.split(".")[0];
+    contagem.set(mod, (contagem.get(mod) ?? 0) + 1);
+  }
+  return MODULOS.filter((m) => contagem.has(m.id)).map((m) => ({
+    modulo: m.id,
+    label: m.label,
+    n: contagem.get(m.id) ?? 0,
+  }));
+}
 
 /**
  * Normaliza um texto pra virar username (mesma regra de AbaArtistas):
@@ -234,6 +258,8 @@ export default function AbaEquipe() {
     username_raiz: string;
     artistIds: string[];
     permissoes_por_artista?: Record<string, string[]>;
+    /** Presets (perfis) por artista escolhidos já na criação — persistem no vínculo. */
+    perfis_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -862,35 +888,71 @@ export default function AbaEquipe() {
               )}
             </div>
 
-            {/* Permissões (read-only; edita no modal) */}
+            {/* Permissões — resumo REAL derivado dos vínculos: por artista, os
+                módulos que o vínculo concede (com contagem de chaves) + a
+                permissão de agência (anotações) quando ligada. Sem dado legado. */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
                 {t("Permissões")}
               </div>
-              {(() => {
-                const esc = selecionado.escopo;
-                const linhas = [
-                  { label: t("Contatos"), todos: esc.verTodosContatos },
-                  { label: t("Vendas e orçamentos"), todos: esc.verTodasVendas },
-                  { label: t("Editar eventos"), todos: esc.editarTodosEventos },
-                ];
-                return (
-                  <div className="flex flex-col gap-2">
-                    {linhas.map((l) => (
-                      <div key={l.label} className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-secondary">{l.label}</span>
-                        <span
-                          className={`badge ${l.todos ? "badge-info" : "badge-neutral"}`}
-                          style={l.todos ? undefined : { opacity: 0.55 }}
-                        >
-                          {l.todos ? t("Todos") : t("Só os próprios")}
-                        </span>
+              {vinculos === null ? (
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <Loader2 size={14} className="animate-spin" />
+                  {t("Carregando…")}
+                </div>
+              ) : vinculosErro ? (
+                <div className="text-sm" style={{ color: "var(--danger)" }}>
+                  {t("Não foi possível carregar. Tente recarregar a página.")}
+                </div>
+              ) : vinculos.length === 0 && !selecionado.podeCriarAnotacoes ? (
+                <div className="text-sm text-muted">
+                  {t("Nenhuma permissão definida.")}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {vinculos.map((v) => {
+                    const artista = artistas.find((a) => a.id === v.artistId);
+                    const mods = resumoPorModulo(v.permissoes);
+                    return (
+                      <div key={v.artistId} className="flex flex-col gap-1.5">
+                        <div className="inline-flex items-center gap-1.5">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: artista?.color ?? "var(--border-strong)" }}
+                          />
+                          <span className="text-sm font-medium text-primary">
+                            {artista?.name ?? v.artistId}
+                          </span>
+                        </div>
+                        {mods.length === 0 ? (
+                          <span className="text-[0.65rem] text-muted">
+                            {t("Sem permissões")}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {mods.map((m) => (
+                              <span
+                                key={m.modulo}
+                                className="inline-flex items-center gap-1 text-[0.65rem] font-medium px-1.5 py-0.5 rounded bg-elevated text-secondary"
+                              >
+                                {m.label}
+                                <span className="text-muted tabular-nums">{m.n}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                );
-              })()}
+                    );
+                  })}
+                  {selecionado.podeCriarAnotacoes && (
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-border text-xs text-secondary">
+                      <Check size={12} style={{ color: "var(--brand)" }} />
+                      {t("Anotações: pode criar pastas")}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -1226,6 +1288,8 @@ export function ModalUsuario({
     username_raiz: string;
     artistIds: string[];
     permissoes_por_artista?: Record<string, string[]>;
+    /** Presets (perfis) por artista escolhidos já na criação — persistem no vínculo. */
+    perfis_por_artista?: Record<string, string[]>;
     cor?: string;
     pais?: string;
     nome_legal?: string;
@@ -1255,6 +1319,11 @@ export function ModalUsuario({
   // Permissões já definidas por artista no próprio modal de criação
   // (mapa artistId → chaves). Vazio = vínculo nasce sem permissão.
   const [permsPorArtista, setPermsPorArtista] = useState<Record<string, string[]>>({});
+  // Presets (perfis) escolhidos por artista no modal de criação (mapa
+  // artistId → ids de perfil). ANTES eram descartados — agora persistem no
+  // vínculo via `perfis_por_artista`, então o vínculo nasce rotulado (ex.:
+  // "Manager"), não como "Personalizado".
+  const [perfisPorArtista, setPerfisPorArtista] = useState<Record<string, PerfilId[]>>({});
   // Artista cujo editor de permissões está aberto (modal empilhado). null = fechado.
   const [editandoPermsDe, setEditandoPermsDe] = useState<string | null>(null);
   // Dados pessoais (opcionais) — country-aware, servem para contrato.
@@ -1397,8 +1466,14 @@ export function ModalUsuario({
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-        // Desmarcar o artista limpa as permissões que tinham sido definidas.
+        // Desmarcar o artista limpa as permissões E os perfis definidos.
         setPermsPorArtista((p) => {
+          if (!(id in p)) return p;
+          const resto = { ...p };
+          delete resto[id];
+          return resto;
+        });
+        setPerfisPorArtista((p) => {
           if (!(id in p)) return p;
           const resto = { ...p };
           delete resto[id];
@@ -1442,11 +1517,19 @@ export function ModalUsuario({
           const chaves = permsPorArtista[aid];
           if (chaves && chaves.length > 0) permsPayload[aid] = chaves;
         }
+        // Presets escolhidos por artista — persistem no vínculo (fix do bug:
+        // antes o perfil escolhido na criação era descartado).
+        const perfisPayload: Record<string, string[]> = {};
+        for (const aid of artistIds) {
+          const perfis = perfisPorArtista[aid];
+          if (perfis && perfis.length > 0) perfisPayload[aid] = perfis;
+        }
         await onCriar({
           nome: nome.trim(),
           username_raiz: usernameRaiz.trim().toLowerCase(),
           artistIds,
           permissoes_por_artista: Object.keys(permsPayload).length > 0 ? permsPayload : undefined,
+          perfis_por_artista: Object.keys(perfisPayload).length > 0 ? perfisPayload : undefined,
           cor,
           pais: paisPessoal.code,
           nome_legal: nomeLegal.trim() || undefined,
@@ -1885,15 +1968,6 @@ export function ModalUsuario({
               onChange={setAtivo}
             />
 
-            {/* Toggle — pode criar pastas de anotações (T3) */}
-            <LinhaEscopo
-              label={t("Pode criar pastas de anotações")}
-              descricaoLigado={t("Pode criar pastas de anotações na Agenda")}
-              descricaoDesligado={t("Não pode criar pastas de anotações na Agenda")}
-              valor={podeCriarAnotacoes}
-              onChange={setPodeCriarAnotacoes}
-            />
-
             {/* (4) Senha — mostra a padrão (se houver) + copiar + gerar nova */}
             <div>
               <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
@@ -1999,6 +2073,42 @@ export function ModalUsuario({
                   {t("Gerar nova senha aleatória")}
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Permissões da agência (D7) — permissões workspace-level, ADMIN
+            delega aqui. Anotações (criar pastas) integrada ao modelo: usa o
+            MESMO visual do editor de permissões (checkbox + label do catálogo)
+            e continua gravando profiles.pode_criar_anotacoes (payload idêntico). */}
+        {modo === "editar" && (
+          <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
+              {t("Permissões da agência")}
+            </div>
+            <p className="text-xs text-muted -mt-1">
+              {t("Permissões administrativas — valem no workspace inteiro, não por artista.")}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPodeCriarAnotacoes((v) => !v)}
+                className="flex items-center gap-2 text-left text-sm py-1 w-full rounded hover:bg-elevated transition-colors"
+              >
+                <span
+                  className="h-4 w-4 rounded-[3px] flex items-center justify-center flex-shrink-0 border"
+                  style={{
+                    backgroundColor: podeCriarAnotacoes ? "var(--brand)" : "transparent",
+                    borderColor: podeCriarAnotacoes ? "var(--brand)" : "var(--border-strong)",
+                  }}
+                >
+                  {podeCriarAnotacoes && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  )}
+                </span>
+                <span className="text-secondary">{ROTULO_ANOTACOES}</span>
+              </button>
             </div>
           </div>
         )}
@@ -2132,8 +2242,11 @@ export function ModalUsuario({
               nomeUsuario={nome.trim() || t("Novo usuário")}
               nomeArtista={artista.name}
               permissoes={permsPorArtista[editandoPermsDe] ?? []}
-              onSalvar={(chaves) => {
+              perfisIniciais={perfisPorArtista[editandoPermsDe] ?? []}
+              onSalvar={(chaves, perfis) => {
                 setPermsPorArtista((p) => ({ ...p, [editandoPermsDe]: chaves }));
+                // Persiste os perfis (presets) escolhidos — antes eram descartados.
+                setPerfisPorArtista((p) => ({ ...p, [editandoPermsDe]: perfis }));
                 setEditandoPermsDe(null);
               }}
               onFechar={() => setEditandoPermsDe(null)}

@@ -55,13 +55,6 @@ export type Sessao = {
    */
   privacidade?: PrivacidadeDj;
   /**
-   * Operacional LEGADO genuíno = sem vínculos MAS com `profiles.funcoes`
-   * preenchido (usuário anterior ao rework). Distingue, no grey-out, "legado
-   * (mostra tudo)" de "modelo novo sem permissão (cinza tudo)" — espelhando a
-   * semântica do session.ts no servidor.
-   */
-  temFuncoesLegado?: boolean;
-  /**
    * Quando true, o super-admin está visualizando a dashboard de um cliente
    * em modo somente-leitura — nenhuma ação de escrita é permitida.
    */
@@ -93,10 +86,10 @@ type AuthContextValue = {
   pode: (artistaId: string | null, chave: string) => boolean;
   /**
    * Versão do `pode` pra GREY-OUT de botões (UX; o servidor é a autoridade).
-   * Só restringe no MODELO NOVO: operacional LEGADO (sem vínculos) e admin/
-   * artista veem tudo habilitado (o cliente não carrega funcoes/escopo, então
-   * cinza só pra quem já tem vínculo). Use isto — não o `pode` cru — pra
-   * desabilitar botões, senão você cinza indevidamente quem é legado.
+   * No MODELO NOVO (legado morto) espelha exatamente o servidor: admin/artista/
+   * super passam pelo papel; equipe depende 100% dos vínculos por artista —
+   * operacional sem vínculo fica cinza (o servidor nega). Use isto pra
+   * desabilitar botões.
    */
   podeUI: (artistaId: string | null, chave: string) => boolean;
 };
@@ -115,7 +108,6 @@ type ProfileRow = {
   is_super_admin: boolean;
   artista_id: string | null;
   escopo_vendedor: Usuario["escopoVendedor"] | null;
-  funcoes: Record<string, unknown> | null;
   status: string;
   deletado_em: string | null;
 };
@@ -217,13 +209,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Legado genuíno = tem funcoes preenchido (usado no grey-out pra não
-      // cinza-ar quem é legado nem liberar quem é modelo-novo-trancado).
-      const temFuncoesLegado =
-        !!profile.funcoes &&
-        typeof profile.funcoes === "object" &&
-        Object.keys(profile.funcoes).length > 0;
-
       // Privacidade do artista (config do admin em artists.privacidade). Só o
       // papel artista precisa — governa o motor no próprio espaço; sem isso o
       // grey-out do cliente usava sempre o padrão e divergia do servidor.
@@ -237,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         privacidade = privacidadeValida(art?.privacidade ?? null);
       }
 
-      return { tipo, usuario, workspace, vinculos, privacidade, temFuncoesLegado };
+      return { tipo, usuario, workspace, vinculos, privacidade };
     },
     [supabase]
   );
@@ -441,19 +426,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       podeUI: (artistaId, chave) => {
         if (!sessao) return false;
-        const papel = sessao.usuario.papel;
-        const temVinculos =
-          !!sessao.vinculos && Object.keys(sessao.vinculos).length > 0;
-        // Operacional sem vínculo: espelha o servidor (session.ts). LEGADO
-        // genuíno (tem funcoes) → mostra tudo (o cliente não reproduz o legado
-        // fino); MODELO NOVO trancado (sem funcoes) → cinza tudo (o servidor
-        // nega). Antes retornava sempre `true` e mentia pro usuário novo.
-        if (papel !== "admin" && papel !== "artista" && !temVinculos) {
-          return sessao.temFuncoesLegado ?? false;
-        }
+        // Modelo NOVO (legado morto): o grey-out espelha o servidor
+        // (session.ts). Não há mais atalho de "legado mostra tudo" — admin/
+        // artista/super passam pelo papel; operacional sem vínculo é negado
+        // pelo próprio motor (vinculos vazio → cinza).
         const ctx: CtxPermissao = {
           isSuperAdmin: sessao.tipo === "super-admin",
-          papel,
+          papel: sessao.usuario.papel,
           artistaId:
             (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
           privacidade: sessao.privacidade,

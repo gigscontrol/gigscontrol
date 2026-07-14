@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 import type { Papel, PrivacidadeDj } from "@/lib/permissoes";
-import { funcoesValido, type Funcoes } from "@/lib/mappers/usuario";
+import type { Funcoes } from "@/lib/mappers/usuario";
 import { privacidadeValida } from "@/lib/mappers/artista";
 import { workspaceBloqueado, workspaceOnboardingIncompleto } from "@/lib/acesso";
 import { listarVinculosDoUsuario, mapaDeVinculos } from "@/lib/repositories/membrosArtista.repo";
@@ -10,8 +10,9 @@ import { listarVinculosDoUsuario, mapaDeVinculos } from "@/lib/repositories/memb
  * Helper compartilhado pelos Route Handlers para autenticar uma requisição
  * e devolver o cliente Supabase do servidor + o profile do usuário.
  *
- * Inclui o `papel`, `escopo` e `artistaId` para que os services apliquem
- * filtros de permissão (Etapa 10).
+ * Inclui o `papel` e o `artistaId` para que os services apliquem filtros de
+ * permissão. O acesso operacional vem 100% dos `vinculos` (membros_artista);
+ * o sistema legado (profiles.funcoes/escopo) MORREU.
  */
 export type EscopoSessao = {
   verTodosContatos: boolean;
@@ -34,19 +35,30 @@ export type SessaoAutenticada = {
   isSuperAdmin: boolean;
   papel: Papel;
   artistaId: string | null;
+  /**
+   * LEGADO MORTO — não mais lido de `profiles.escopo`; sempre NEUTRO (padrão).
+   * Campo preservado só por compatibilidade de shape (a camada
+   * `src/lib/api/permissoes.ts` está sendo reescrita em paralelo pra largar
+   * essa leitura). Fonte de acesso operacional = `vinculos`. Remover quando
+   * nada mais referenciar `sessao.escopo`.
+   */
   escopo: EscopoSessao;
   /** Permissão dedicada de criar pastas de anotações (admin sempre pode). */
   podeCriarAnotacoes: boolean;
   /**
-   * Funções operacionais e DJs atendidos. Vazio quando o papel é admin
-   * ou artista, ou quando o operacional ainda não foi configurado.
+   * LEGADO MORTO — não mais lido de `profiles.funcoes`; sempre VAZIO (`{}`).
+   * Campo preservado só por compatibilidade de shape (a camada
+   * `src/lib/api/permissoes.ts` está sendo reescrita em paralelo pra largar
+   * essa leitura). Fonte de acesso operacional = `vinculos`. Remover quando
+   * nada mais referenciar `sessao.funcoes`.
    */
   funcoes: Funcoes;
   /**
-   * Modelo NOVO (Fase 4): mapa artist_id → chaves de permissão do vínculo
-   * (membros_artista). `undefined` quando o usuário não tem NENHUM vínculo →
-   * o motor cai no fallback legado (funcoes/escopo). Carregado só para papéis
-   * operacionais (admin/artista/super são resolvidos sem consultar vínculo).
+   * Modelo NOVO: mapa artist_id → chaves de permissão do vínculo
+   * (membros_artista). Fonte ÚNICA de acesso do operacional. Fica SEMPRE
+   * definido para papéis operacionais ({} quando não há nenhuma linha →
+   * negado, sem fallback legado). Carregado só para papéis operacionais
+   * (admin/artista/super são resolvidos sem consultar vínculo).
    */
   vinculos?: Record<string, string[]>;
   /**
@@ -55,25 +67,6 @@ export type SessaoAutenticada = {
    */
   privacidade?: PrivacidadeDj;
 };
-
-function normalizarEscopo(raw: unknown): EscopoSessao {
-  if (!raw || typeof raw !== "object") return { ...ESCOPO_PADRAO };
-  const r = raw as Record<string, unknown>;
-  return {
-    verTodosContatos:
-      typeof r.verTodosContatos === "boolean"
-        ? r.verTodosContatos
-        : ESCOPO_PADRAO.verTodosContatos,
-    verTodasVendas:
-      typeof r.verTodasVendas === "boolean"
-        ? r.verTodasVendas
-        : ESCOPO_PADRAO.verTodasVendas,
-    editarTodosEventos:
-      typeof r.editarTodosEventos === "boolean"
-        ? r.editarTodosEventos
-        : ESCOPO_PADRAO.editarTodosEventos,
-  };
-}
 
 export async function autenticar(): Promise<
   { sessao: SessaoAutenticada } | { response: NextResponse }
@@ -92,7 +85,7 @@ export async function autenticar(): Promise<
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, nome, email, workspace_id, is_super_admin, papel, artista_id, escopo, funcoes, status, deletado_em, pode_criar_anotacoes"
+      "id, nome, email, workspace_id, is_super_admin, papel, artista_id, status, deletado_em, pode_criar_anotacoes"
     )
     .eq("id", user.id)
     .single<{
@@ -103,8 +96,6 @@ export async function autenticar(): Promise<
       is_super_admin: boolean;
       papel: Papel;
       artista_id: string | null;
-      escopo: unknown;
-      funcoes: unknown;
       status: string;
       deletado_em: string | null;
       pode_criar_anotacoes: boolean;
@@ -137,19 +128,12 @@ export async function autenticar(): Promise<
     };
   }
 
-  const funcoes = funcoesValido(
-    (profile.funcoes ?? null) as Record<string, unknown> | null
-  );
-
-  // Modelo novo (Fase 4) — semântica que FECHA o fail-open (revogar tudo TRANCA):
-  //  - TEM vínculo(s) em membros_artista → SEMPRE modelo novo, inclusive com
-  //    permissões vazias (= trancado). Não recai no legado permissivo.
-  //  - SEM nenhum vínculo → distingue:
-  //      • legado GENUÍNO (usuário anterior ao rework, com profiles.funcoes) →
-  //        `undefined` mantém o comportamento antigo na transição;
-  //      • usuário do MODELO NOVO ainda sem artista (funcoes vazio) → `{}`
-  //        (definido e vazio) → o motor NEGA tudo até o admin conceder.
-  // admin/artista/super são resolvidos pelo motor sem consultar vínculo.
+  // Modelo NOVO — equipe = 100% vínculos por artista (membros_artista). O
+  // sistema legado (profiles.funcoes/escopo + fallback) MORREU: operacional sem
+  // vínculo é NEGADO. `vinculos` fica SEMPRE definido para papéis operacionais
+  // ({} quando não há nenhuma linha → o motor nega tudo até o admin conceder),
+  // nunca `undefined`. admin/artista/super são resolvidos pelo motor sem
+  // consultar vínculo.
   let vinculos: Record<string, string[]> | undefined;
   if (
     !profile.is_super_admin &&
@@ -158,13 +142,9 @@ export async function autenticar(): Promise<
   ) {
     try {
       const rows = await listarVinculosDoUsuario(supabase, profile.id);
-      if (rows.length > 0) {
-        vinculos = mapaDeVinculos(rows);
-      } else {
-        vinculos = Object.keys(funcoes).length > 0 ? undefined : {};
-      }
+      vinculos = mapaDeVinculos(rows); // {} quando não há linhas
     } catch {
-      vinculos = undefined; // erro de carga → não tranca ninguém (legado seguro)
+      vinculos = {}; // erro de carga → sem vínculo = negado (fail-closed)
     }
   }
 
@@ -195,9 +175,11 @@ export async function autenticar(): Promise<
       isSuperAdmin: profile.is_super_admin,
       papel: profile.papel,
       artistaId: profile.artista_id,
-      escopo: normalizarEscopo(profile.escopo),
+      // LEGADO MORTO — neutro (não mais lido de profiles.escopo/funcoes). Só
+      // existe porque a camada legada api/permissoes.ts ainda referencia.
+      escopo: { ...ESCOPO_PADRAO },
       podeCriarAnotacoes: profile.pode_criar_anotacoes ?? false,
-      funcoes,
+      funcoes: {},
       vinculos,
       privacidade,
     },

@@ -118,7 +118,11 @@ export default function VendasDashboard({
   const vendasVisiveis = useMemo(
     () =>
       vendas.filter(
-        (v) => selectedArtistas.includes(v.artistaId) && (tudo || mesAnoBate(v.criadoEm, ano, mes))
+        (v) =>
+          // Vendas canceladas (D5) saem dos dashboards e do "a receber".
+          v.status !== "cancelada" &&
+          selectedArtistas.includes(v.artistaId) &&
+          (tudo || mesAnoBate(v.criadoEm, ano, mes))
       ),
     [vendas, selectedArtistas, ano, mes, tudo]
   );

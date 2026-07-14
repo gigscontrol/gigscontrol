@@ -10,9 +10,8 @@ import {
   verificarAcessoVendas,
   verificarCriarVenda,
   podeConverterOrcamento,
-  podeVerFinanceiro,
+  redigirVendaParaSessao,
 } from "@/lib/api/permissoes";
-import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 import { buscarOrcamento } from "@/lib/repositories/orcamentos.repo";
 import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -26,10 +25,9 @@ export async function GET() {
     const vendas = await listarVendasDoWorkspace(r.sessao.supabase, r.sessao);
     // Rastreamento financeiro (comprovante/quem pagou/cobranças) só pra quem tem
     // autorização de ver o financeiro daquele artista; os demais recebem a venda
-    // redigida (cachê/valores permanecem — o vendedor precisa do negócio).
-    const saida = vendas.map((v) =>
-      podeVerFinanceiro(r.sessao, v.artistaId || null) ? v : redigirVendaFinanceiro(v)
-    );
+    // redigida (cachê/valores permanecem — o vendedor precisa do negócio). A
+    // TAXA/líquido (D6) some também pra quem vê o financeiro mas não a taxa.
+    const saida = vendas.map((v) => redigirVendaParaSessao(r.sessao, v));
     return NextResponse.json({ vendas: saida });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar vendas.");
@@ -96,7 +94,10 @@ export async function POST(request: Request) {
       entidadeNome: venda.numero,
       descricao: `Criou venda ${venda.numero}`,
     });
-    return NextResponse.json({ venda }, { status: 201 });
+    return NextResponse.json(
+      { venda: redigirVendaParaSessao(r.sessao, venda) },
+      { status: 201 }
+    );
   } catch (e) {
     if (e instanceof VendaDuplicadaError) {
       return NextResponse.json({ erro: e.message }, { status: 409 });

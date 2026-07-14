@@ -52,7 +52,10 @@ export const CATALOGO: Permissao[] = [
   { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer evento", existe: true },
 
   // ---------------- VENDAS (por artista) ----------------
-  { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas e orçamentos", existe: true },
+  { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas", existe: true },
+  // Granularidade: ver a lista de ORÇAMENTOS separada da de vendas (no artista,
+  // lê privacidade.orcamentosVer; na equipe, chave própria por vínculo).
+  { chave: "vendas.ver_orcamentos", modulo: "vendas", nivel: "artista", label: "Ver orçamentos", existe: true },
   { chave: "vendas.ver_proprios", modulo: "vendas", nivel: "artista", label: "Ver só as vendas que ele criou", existe: true },
   { chave: "vendas.criar_orcamento", modulo: "vendas", nivel: "artista", label: "Criar orçamento", existe: true },
   { chave: "vendas.editar_orcamento", modulo: "vendas", nivel: "artista", label: "Editar orçamento", existe: true },
@@ -60,16 +63,19 @@ export const CATALOGO: Permissao[] = [
   { chave: "vendas.converter", modulo: "vendas", nivel: "artista", label: "Converter orçamento em venda", existe: true },
   { chave: "vendas.criar_venda", modulo: "vendas", nivel: "artista", label: "Criar venda", existe: true },
   { chave: "vendas.editar_venda", modulo: "vendas", nivel: "artista", label: "Editar venda", existe: true },
-  { chave: "vendas.cancelar_venda", modulo: "vendas", nivel: "artista", label: "Cancelar venda", existe: false },
+  { chave: "vendas.cancelar_venda", modulo: "vendas", nivel: "artista", label: "Cancelar venda", existe: true },
   { chave: "vendas.excluir_venda", modulo: "vendas", nivel: "artista", label: "Excluir venda", existe: true },
   { chave: "vendas.editar_todos", modulo: "vendas", nivel: "artista", label: "Editar todas as vendas (não só as que ele criou)", existe: true },
 
   // ---------------- FINANCEIRO (por artista) ----------------
   // Hoje o app controla parcelas/pagamentos das vendas. Receita/despesa/
   // comissão/aprovação ainda não existem como operação → slots (existe:false).
-  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro", existe: true },
-  { chave: "financeiro.ver_caches", modulo: "financeiro", nivel: "artista", label: "Ver os cachês", existe: true },
-  { chave: "financeiro.ver_pagamentos", modulo: "financeiro", nivel: "artista", label: "Ver os pagamentos", existe: true },
+  // ver_caches e ver_pagamentos FUNDIDAS aqui (chave única): ver o financeiro
+  // = ver cachês e pagamentos. As duas chaves antigas foram removidas do catálogo.
+  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro (caches e pagamentos)", existe: true },
+  // Ver a taxa de agência / o líquido (governada por privacidade.financeiroVerTaxa
+  // no artista; delegável por vínculo para a equipe).
+  { chave: "financeiro.ver_taxa", modulo: "financeiro", nivel: "artista", label: "Ver a taxa de agência e o líquido", existe: true },
   { chave: "financeiro.ver_saldo", modulo: "financeiro", nivel: "artista", label: "Ver o saldo", existe: false },
   { chave: "financeiro.ver_despesas", modulo: "financeiro", nivel: "artista", label: "Ver as despesas", existe: false },
   { chave: "financeiro.ver_comissoes", modulo: "financeiro", nivel: "artista", label: "Ver as comissões", existe: false },
@@ -91,8 +97,10 @@ export const CATALOGO: Permissao[] = [
   { chave: "contratos.ver", modulo: "contratos", nivel: "artista", label: "Ver contratos", existe: true },
   { chave: "contratos.criar", modulo: "contratos", nivel: "artista", label: "Criar contrato", existe: true },
   { chave: "contratos.editar", modulo: "contratos", nivel: "artista", label: "Editar contrato", existe: true },
-  { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato", existe: false },
-  { chave: "contratos.excluir", modulo: "contratos", nivel: "artista", label: "Excluir contrato", existe: true },
+  { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato", existe: true },
+  // contratos.excluir REMOVIDO do catálogo: excluir contrato = admin-only
+  // assumido, não delegável (some do editor e do pacote do artista). O
+  // enforcement de exclusão trata admin direto, sem passar por chave.
   { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos (não só os das vendas que criou)", existe: true },
 
   // ---------------- CONTATOS (por artista) ----------------
@@ -107,32 +115,29 @@ export const CATALOGO: Permissao[] = [
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },
 
   // ---------------- AGÊNCIA (workspace — administrativo, NÃO por-artista) ----------------
-  // Não aparece no editor por-artista (é gestão global/perigosa da agência).
-  { chave: "agencia.criar_artista", modulo: "agencia", nivel: "workspace", label: "Criar artista", existe: true },
-  { chave: "agencia.editar_artista", modulo: "agencia", nivel: "workspace", label: "Editar artista", existe: true },
-  { chave: "agencia.excluir_artista", modulo: "agencia", nivel: "workspace", label: "Excluir artista", existe: true },
-  { chave: "agencia.criar_usuario", modulo: "agencia", nivel: "workspace", label: "Criar usuários", existe: true },
-  { chave: "agencia.editar_usuario", modulo: "agencia", nivel: "workspace", label: "Editar usuários", existe: true },
-  { chave: "agencia.excluir_usuario", modulo: "agencia", nivel: "workspace", label: "Excluir usuários", existe: true },
-  { chave: "agencia.alterar_permissoes", modulo: "agencia", nivel: "workspace", label: "Alterar permissões", existe: true },
-  { chave: "agencia.criar_perfil", modulo: "agencia", nivel: "workspace", label: "Criar perfis", existe: false },
-  { chave: "agencia.editar_perfil", modulo: "agencia", nivel: "workspace", label: "Editar perfis", existe: false },
-  { chave: "agencia.config_agencia", modulo: "agencia", nivel: "workspace", label: "Configurações da agência", existe: true },
+  // Gestão da agência é ADMIN-ONLY ASSUMIDO — não delegável. Todas marcadas
+  // existe:false de propósito: não há enforcement por CHAVE do catálogo (o
+  // admin/super-admin passa direto no motor) e elas NÃO aparecem no editor de
+  // permissões por-artista. Ficam listadas só para documentar o universo.
+  { chave: "agencia.criar_artista", modulo: "agencia", nivel: "workspace", label: "Criar artista", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.editar_artista", modulo: "agencia", nivel: "workspace", label: "Editar artista", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.excluir_artista", modulo: "agencia", nivel: "workspace", label: "Excluir artista", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.criar_usuario", modulo: "agencia", nivel: "workspace", label: "Criar usuários", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.editar_usuario", modulo: "agencia", nivel: "workspace", label: "Editar usuários", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.excluir_usuario", modulo: "agencia", nivel: "workspace", label: "Excluir usuários", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.alterar_permissoes", modulo: "agencia", nivel: "workspace", label: "Alterar permissões", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.criar_perfil", modulo: "agencia", nivel: "workspace", label: "Criar perfis", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.editar_perfil", modulo: "agencia", nivel: "workspace", label: "Editar perfis", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.config_agencia", modulo: "agencia", nivel: "workspace", label: "Configurações da agência", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.ver_lixeira", modulo: "agencia", nivel: "workspace", label: "Ver e restaurar itens da lixeira", existe: false }, // admin-only assumido — não delegável
+  { chave: "agencia.ver_historico", modulo: "agencia", nivel: "workspace", label: "Ver o histórico/auditoria do workspace", existe: false }, // admin-only assumido — não delegável
 
-  // ---------------- AGÊNCIA — slots futuros (workspace) ----------------
-  // Anotações HOJE não passa pelo catálogo: é um flag dedicado e binário
-  // (profiles.pode_criar_anotacoes / sessao.podeCriarAnotacoes, ligado na
-  // AbaEquipe — ver src/lib/api/permissoes.ts:podeCriarPastaAnotacao). Marcado
-  // existe:false de propósito: não há enforcement por CHAVE do catálogo, então
-  // "existe:true" aqui seria uma promessa falsa. Se um dia migrar pro modelo de
-  // vínculo, esta chave assume o papel do flag.
-  { chave: "agencia.criar_pastas_anotacoes", modulo: "agencia", nivel: "workspace", label: "Criar pastas de anotações (hoje é o toggle \"Liberar anotações\" da Equipe)", existe: false },
-  // Lixeira e Histórico/auditoria HOJE são admin-only hard-coded (papel ===
-  // "admin"/isSuperAdmin), sem checagem de chave — ver src/app/api/lixeira/route.ts
-  // (verificarAdminDoWorkspace) e src/app/api/historico/route.ts. Não há
-  // enforcement por catálogo pra delegar a outro papel → slots futuros.
-  { chave: "agencia.ver_lixeira", modulo: "agencia", nivel: "workspace", label: "Ver e restaurar itens da lixeira", existe: false },
-  { chave: "agencia.ver_historico", modulo: "agencia", nivel: "workspace", label: "Ver o histórico/auditoria do workspace", existe: false },
+  // ---------------- AGÊNCIA — anotações (workspace, permissão formal) ----------------
+  // INTEGRADA ao modelo (D7): permissão workspace-level real, editável no modal
+  // do usuário. O enforcement lê profiles.pode_criar_anotacoes
+  // (sessao.podeCriarAnotacoes) — zero migration. existe:true porque há operação
+  // real que ela protege (criar pastas de anotações).
+  { chave: "agencia.criar_pastas_anotacoes", modulo: "agencia", nivel: "workspace", label: "Criar pastas de anotações", existe: true },
 ];
 
 /** Set de todas as chaves válidas (validação rápida). */
