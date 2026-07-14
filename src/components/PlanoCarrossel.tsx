@@ -267,37 +267,62 @@ export default function PlanoCarrossel({
   modo?: "selecao" | "landing";
 }) {
   const t = useT();
-  // Páginas de 3 (essenciais / agências). Cada página ocupa 100% do viewport;
-  // o track translada -pagina*100% (viewport-relativo — não track-relativo).
-  const paginas: Plano[][] = [];
-  for (let i = 0; i < PLANOS.length; i += 3) paginas.push(PLANOS.slice(i, i + 3));
-  const numPaginas = paginas.length;
-  const [pagina, setPagina] = useState(Math.floor(selecionadoIndex / 3));
-
-  // Selecionar um plano de outra página traz a página dele.
+  // Cards visíveis por vez: 1 no mobile (<640px), 3 no desktop. Antes era fixo
+  // em grid-cols-3 → no celular os 3 cards ficavam espremidos e sobrepostos.
+  // Agora o track lista TODOS os planos e desliza por uma janela de N cards.
+  const [porTela, setPorTela] = useState(3);
   useEffect(() => {
-    setPagina(Math.floor(selecionadoIndex / 3));
-  }, [selecionadoIndex]);
+    const calc = () => {
+      const w = window.innerWidth;
+      setPorTela(w < 640 ? 1 : w < 1024 ? 2 : 3);
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+
+  const maxInicio = Math.max(0, PLANOS.length - porTela);
+  const [inicio, setInicio] = useState(0);
+
+  // Mantém o card selecionado dentro da janela visível (e reclampa quando o
+  // breakpoint muda). Selecionar um plano de fora da janela rola até ele.
+  useEffect(() => {
+    setInicio((s) => {
+      const clamp = Math.min(Math.max(0, s), maxInicio);
+      if (selecionadoIndex < clamp) return selecionadoIndex;
+      if (selecionadoIndex > clamp + porTela - 1)
+        return Math.min(selecionadoIndex - porTela + 1, maxInicio);
+      return clamp;
+    });
+  }, [selecionadoIndex, porTela, maxInicio]);
+
+  // Setas paginam por 'porTela'; no mobile (1 por tela) a seta também seleciona
+  // o card que entra, pra o destaque acompanhar.
+  const mover = (dir: number) => {
+    const ns = Math.min(Math.max(0, inicio + dir * porTela), maxInicio);
+    setInicio(ns);
+    if (porTela === 1) onSelecionar(ns);
+  };
 
   return (
     <div className="relative mx-auto max-w-[1044px] px-1 sm:px-2">
       {/* setas */}
       <button
         type="button"
-        onClick={() => setPagina((p) => Math.max(0, p - 1))}
-        disabled={pagina === 0}
+        onClick={() => mover(-1)}
+        disabled={inicio === 0}
         aria-label={t("Plano anterior")}
-        className="absolute -left-3 top-1/2 z-40 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35]"
+        className="absolute -left-1 top-1/2 z-40 flex h-[42px] w-[42px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35] sm:-left-3 sm:h-[46px] sm:w-[46px]"
         style={{ border: "1px solid var(--border-hover)", background: "var(--surface)", boxShadow: "var(--shadow-color) 0px 10px 24px -8px" }}
       >
         <ChevronLeft size={18} className="text-secondary" />
       </button>
       <button
         type="button"
-        onClick={() => setPagina((p) => Math.min(numPaginas - 1, p + 1))}
-        disabled={pagina === numPaginas - 1}
+        onClick={() => mover(1)}
+        disabled={inicio >= maxInicio}
         aria-label={t("Próximo plano")}
-        className="absolute -right-3 top-1/2 z-40 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35]"
+        className="absolute -right-1 top-1/2 z-40 flex h-[42px] w-[42px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35] sm:-right-3 sm:h-[46px] sm:w-[46px]"
         style={{ border: "1px solid var(--border-hover)", background: "var(--surface)", boxShadow: "var(--shadow-color) 0px 10px 24px -8px" }}
       >
         <ChevronRight size={18} className="text-secondary" />
@@ -306,40 +331,37 @@ export default function PlanoCarrossel({
       {/* viewport */}
       <div className="overflow-hidden px-1 pb-2 pt-5">
         <div
-          className="flex motion-safe:transition-transform motion-safe:duration-[350ms]"
-          style={{ transform: `translateX(-${pagina * 100}%)` }}
+          className="flex items-start motion-safe:transition-transform motion-safe:duration-[350ms]"
+          style={{ transform: `translateX(-${inicio * (100 / porTela)}%)` }}
         >
-          {paginas.map((cards, pi) => (
-            <div
-              key={pi}
-              className="grid grid-cols-3 items-start gap-4"
-              style={{ flex: "0 0 100%" }}
-            >
-              {cards.map((plano) => {
-                const gi = PLANOS.indexOf(plano);
-                const sel = gi === selecionadoIndex;
-                return (
-                  <div
-                    key={plano.id}
-                    className="motion-safe:transition-[transform,opacity] motion-safe:duration-300"
-                    style={{
-                      transform: sel ? "scale(1)" : "scale(0.93)",
-                      opacity: sel ? 1 : 0.55,
-                      zIndex: sel ? 2 : 1,
-                    }}
-                  >
-                    <CardPlano
-                      plano={plano}
-                      ciclo={ciclo}
-                      selecionado={sel}
-                      onSelecionar={() => onSelecionar(gi)}
-                      modo={modo}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+          {PLANOS.map((plano, gi) => {
+            const sel = gi === selecionadoIndex;
+            return (
+              <div
+                key={plano.id}
+                className="box-border px-1.5 sm:px-2"
+                style={{ flex: `0 0 ${100 / porTela}%` }}
+              >
+                <div
+                  className="motion-safe:transition-[transform,opacity] motion-safe:duration-300"
+                  style={{
+                    transform: sel ? "scale(1)" : "scale(0.93)",
+                    // no mobile só 1 card aparece — nunca apaga o visível
+                    opacity: sel || porTela === 1 ? 1 : 0.55,
+                    zIndex: sel ? 2 : 1,
+                  }}
+                >
+                  <CardPlano
+                    plano={plano}
+                    ciclo={ciclo}
+                    selecionado={sel}
+                    onSelecionar={() => onSelecionar(gi)}
+                    modo={modo}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
