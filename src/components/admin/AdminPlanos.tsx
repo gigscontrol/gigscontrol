@@ -139,12 +139,12 @@ function ModalEditarPlano({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--overlay-scrim)" }}
       onClick={onClose}
     >
       <div
         className="bg-surface border border-border rounded-lg w-full max-w-[500px] overflow-hidden"
-        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        style={{ boxShadow: "0 24px 60px var(--shadow-color)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">

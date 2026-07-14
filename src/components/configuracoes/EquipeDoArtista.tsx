@@ -185,7 +185,7 @@ export function EditorPermissoesVinculo({
                                 }`}
                                 style={
                                   sel
-                                    ? { backgroundColor: "var(--brand)", color: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.35)" }
+                                    ? { backgroundColor: "var(--brand)", color: "#fff", boxShadow: "0 1px 2px var(--shadow-color)" }
                                     : undefined
                                 }
                               >

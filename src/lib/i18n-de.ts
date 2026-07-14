@@ -440,6 +440,38 @@ const PERMISSOES_REWORK_JUL13: Record<string, string> = {
   "Cancelar contrato": "Vertrag stornieren",
 };
 
+// Página /recursos — vitrine dos 6 módulos (copy verbatim do dono, 2026-07).
+const RECURSOS_PAGE: Record<string, string> = {
+  "Recursos · Tudo num só lugar": "Funktionen · Alles an einem Ort",
+  "Todos os recursos.": "Alle Funktionen.",
+  "Num só painel.": "In einem Dashboard.",
+  "Tudo o que sua agência precisa para vender, organizar e gerenciar shows em uma única plataforma.": "Alles, was Ihre Agentur braucht, um Auftritte auf einer einzigen Plattform zu verkaufen, zu organisieren und zu verwalten.",
+  "Centralize toda a operação dos seus shows em um único lugar. Tenha acesso rápido aos horários, contatos do contratante, localização, passagens aéreas, reservas de hotel, riders técnico, de camarim e efeitos especiais, além das datas e formas de pagamento. Tudo organizado para que nenhum detalhe passe despercebido.": "Zentralisieren Sie den gesamten Ablauf Ihrer Shows an einem Ort. Greifen Sie schnell auf Zeitpläne, Kontakte des Auftraggebers, Standort, Flugtickets, Hotelreservierungen, technische Rider, Backstage- und Spezialeffekt-Rider sowie Termine und Zahlungsarten zu. Alles organisiert, damit kein Detail übersehen wird.",
+  "Crie orçamentos profissionais em poucos segundos e acompanhe todo o histórico de negociações. Quando uma proposta for aprovada, transforme o orçamento em uma venda completa com apenas um clique, enviando automaticamente todas as informações para a agenda do artista.": "Erstellen Sie professionelle Angebote in Sekundenschnelle und verfolgen Sie den gesamten Verhandlungsverlauf. Sobald ein Angebot genehmigt wird, verwandeln Sie es mit nur einem Klick in einen vollständigen Verkauf und senden alle Informationen automatisch an den Kalender des Künstlers.",
+  "Tenha controle total sobre os recebimentos do seu casting. Acompanhe valores, formas de pagamento, vencimentos, parcelas e pagamentos pendentes em um único painel, evitando atrasos e garantindo uma gestão financeira muito mais organizada.": "Behalten Sie die volle Kontrolle über die Zahlungseingänge Ihres Künstlerportfolios. Verfolgen Sie Beträge, Zahlungsarten, Fälligkeiten, Raten und ausstehende Zahlungen in einem einzigen Dashboard, um Verzögerungen zu vermeiden und ein deutlich organisierteres Finanzmanagement zu gewährleisten.",
+  "Automatize a criação de contratos utilizando modelos personalizados. Vincule um contrato diretamente à venda, gere documentos completos em poucos segundos e envie para assinatura digital, reduzindo burocracia e agilizando o fechamento dos seus eventos.": "Automatisieren Sie die Vertragserstellung mit individuellen Vorlagen. Verknüpfen Sie einen Vertrag direkt mit dem Verkauf, erstellen Sie vollständige Dokumente in Sekundenschnelle und senden Sie sie zur digitalen Unterschrift, wodurch Bürokratie reduziert und der Abschluss Ihrer Veranstaltungen beschleunigt wird.",
+  "Construa um banco de dados inteligente com todos os contratantes, produtores, casas de shows e clientes interessados. Encontre qualquer contato em segundos utilizando filtros por região, cidade ou histórico de negociações, facilitando novas vendas e o relacionamento com seus clientes.": "Bauen Sie eine intelligente Datenbank mit allen Auftraggebern, Produzenten, Veranstaltungsorten und interessierten Kunden auf. Finden Sie jeden Kontakt in Sekunden mithilfe von Filtern nach Region, Stadt oder Verhandlungsverlauf und erleichtern Sie so neue Verkäufe und die Kundenbeziehung.",
+  "Gerencie toda a sua equipe com total controle de permissões. Defina exatamente o que cada usuário pode visualizar ou editar, organize artistas e colaboradores e mantenha sua operação segura, profissional e totalmente centralizada.": "Verwalten Sie Ihr gesamtes Team mit voller Berechtigungskontrolle. Legen Sie genau fest, was jeder Benutzer einsehen oder bearbeiten darf, organisieren Sie Künstler und Mitarbeiter und halten Sie Ihren Betrieb sicher, professionell und vollständig zentralisiert.",
+  // bullets das seções /recursos (§4)
+  "horários, contatos do contratante, localização": "Zeitpläne, Kontakte des Auftraggebers, Standort",
+  "passagens aéreas, reservas de hotel": "Flugtickets, Hotelreservierungen",
+  "riders técnico, de camarim e efeitos especiais": "technische, Backstage- und Spezialeffekt-Rider",
+  "orçamentos profissionais em poucos segundos": "professionelle Angebote in Sekundenschnelle",
+  "histórico de negociações": "Verhandlungsverlauf",
+  "transforme o orçamento em uma venda completa com apenas um clique": "verwandeln Sie ein Angebot mit nur einem Klick in einen vollständigen Verkauf",
+  "valores, formas de pagamento": "Beträge, Zahlungsarten",
+  "vencimentos, parcelas": "Fälligkeiten, Raten",
+  "pagamentos pendentes": "ausstehende Zahlungen",
+  "modelos personalizados": "individuelle Vorlagen",
+  "vincule um contrato diretamente à venda": "verknüpfen Sie einen Vertrag direkt mit dem Verkauf",
+  "assinatura digital": "digitale Unterschrift",
+  "contratantes, produtores, casas de shows": "Auftraggeber, Produzenten, Veranstaltungsorte",
+  "filtros por região, cidade": "Filter nach Region, Stadt",
+  "total controle de permissões": "volle Berechtigungskontrolle",
+  "o que cada usuário pode visualizar ou editar": "was jeder Benutzer einsehen oder bearbeiten darf",
+  "organize artistas e colaboradores": "organisieren Sie Künstler und Mitarbeiter",
+};
+
 export const DE: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Unterkunft",
   "Pra organizar a hospedagem, preciso destas informações:": "Um die Unterkunft zu organisieren, brauche ich diese Angaben:",
@@ -2417,6 +2449,10 @@ export const DE: Record<string, string> = {
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_DE,
   ...PERMISSOES_REWORK_JUL13,
+  ...RECURSOS_PAGE,
+  // Toggle de tema claro/escuro (BotaoTema)
+  "Mudar para tema claro": "Zum hellen Design wechseln",
+  "Mudar para tema escuro": "Zum dunklen Design wechseln",
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "Wartet auf Unterschrift",
   "Bloqueando...": "Wird gesperrt...",

@@ -3317,6 +3317,38 @@ const PERMISSOES_REWORK_JUL13: Record<string, string> = {
   "Cancelar contrato": "Cancel contract",
 };
 
+// Página /recursos — vitrine dos 6 módulos (copy verbatim do dono, 2026-07).
+const RECURSOS_PAGE: Record<string, string> = {
+  "Recursos · Tudo num só lugar": "Features · Everything in one place",
+  "Todos os recursos.": "All the features.",
+  "Num só painel.": "In one dashboard.",
+  "Tudo o que sua agência precisa para vender, organizar e gerenciar shows em uma única plataforma.": "Everything your agency needs to sell, organize, and manage shows on a single platform.",
+  "Centralize toda a operação dos seus shows em um único lugar. Tenha acesso rápido aos horários, contatos do contratante, localização, passagens aéreas, reservas de hotel, riders técnico, de camarim e efeitos especiais, além das datas e formas de pagamento. Tudo organizado para que nenhum detalhe passe despercebido.": "Centralize your entire show operation in one place. Get quick access to schedules, client contacts, location, flight tickets, hotel bookings, technical, dressing room, and special effects riders, plus dates and payment terms. Everything organized so no detail goes unnoticed.",
+  "Crie orçamentos profissionais em poucos segundos e acompanhe todo o histórico de negociações. Quando uma proposta for aprovada, transforme o orçamento em uma venda completa com apenas um clique, enviando automaticamente todas as informações para a agenda do artista.": "Create professional quotes in seconds and track the full history of negotiations. When a proposal is approved, turn the quote into a complete sale with just one click, automatically sending all the information to the artist's schedule.",
+  "Tenha controle total sobre os recebimentos do seu casting. Acompanhe valores, formas de pagamento, vencimentos, parcelas e pagamentos pendentes em um único painel, evitando atrasos e garantindo uma gestão financeira muito mais organizada.": "Have full control over your roster's payments. Track amounts, payment methods, due dates, installments, and pending payments in a single dashboard, avoiding delays and ensuring a much more organized financial management.",
+  "Automatize a criação de contratos utilizando modelos personalizados. Vincule um contrato diretamente à venda, gere documentos completos em poucos segundos e envie para assinatura digital, reduzindo burocracia e agilizando o fechamento dos seus eventos.": "Automate contract creation using custom templates. Link a contract directly to the sale, generate complete documents in seconds, and send them for digital signature, cutting red tape and speeding up the closing of your events.",
+  "Construa um banco de dados inteligente com todos os contratantes, produtores, casas de shows e clientes interessados. Encontre qualquer contato em segundos utilizando filtros por região, cidade ou histórico de negociações, facilitando novas vendas e o relacionamento com seus clientes.": "Build a smart database with all your clients, producers, venues, and interested leads. Find any contact in seconds using filters by region, city, or negotiation history, making new sales and relationship management easier.",
+  "Gerencie toda a sua equipe com total controle de permissões. Defina exatamente o que cada usuário pode visualizar ou editar, organize artistas e colaboradores e mantenha sua operação segura, profissional e totalmente centralizada.": "Manage your entire team with full permission control. Define exactly what each user can view or edit, organize artists and collaborators, and keep your operation secure, professional, and fully centralized.",
+  // bullets das seções /recursos (§4)
+  "horários, contatos do contratante, localização": "schedules, client contacts, location",
+  "passagens aéreas, reservas de hotel": "flight tickets, hotel bookings",
+  "riders técnico, de camarim e efeitos especiais": "technical, dressing room, and special effects riders",
+  "orçamentos profissionais em poucos segundos": "professional quotes in seconds",
+  "histórico de negociações": "negotiation history",
+  "transforme o orçamento em uma venda completa com apenas um clique": "turn a quote into a complete sale with a single click",
+  "valores, formas de pagamento": "amounts, payment methods",
+  "vencimentos, parcelas": "due dates, installments",
+  "pagamentos pendentes": "pending payments",
+  "modelos personalizados": "custom templates",
+  "vincule um contrato diretamente à venda": "link a contract directly to the sale",
+  "assinatura digital": "digital signature",
+  "contratantes, produtores, casas de shows": "clients, producers, venues",
+  "filtros por região, cidade": "filters by region, city",
+  "total controle de permissões": "full permission control",
+  "o que cada usuário pode visualizar ou editar": "what each user can view or edit",
+  "organize artistas e colaboradores": "organize artists and collaborators",
+};
+
 export const EN: Record<string, string> = {
   "Limite de contratos atingido": "Contract limit reached",
   "Plano {plano} — {limite} contratos no ciclo": "{plano} plan — {limite} contracts per cycle",
@@ -3423,6 +3455,10 @@ export const EN: Record<string, string> = {
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_EN,
   ...PERMISSOES_REWORK_JUL13,
+  ...RECURSOS_PAGE,
+  // Toggle de tema claro/escuro (BotaoTema)
+  "Mudar para tema claro": "Switch to light theme",
+  "Mudar para tema escuro": "Switch to dark theme",
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "Awaiting signature",
   "Bloqueando...": "Blocking...",

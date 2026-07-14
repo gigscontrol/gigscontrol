@@ -63,8 +63,17 @@ export default function RootLayout({
       : langPadrao;
 
   return (
-    <html lang={initialLang}>
+    <html lang={initialLang} suppressHydrationWarning>
       <body>
+        {/* No-flash do tema: roda ANTES do primeiro paint (primeiro filho do
+            body, inline síncrono). Padrão é escuro (atributo ausente); só quem
+            escolheu claro ganha data-theme="light" antes de qualquer pintura. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{if(localStorage.getItem("gc-theme")==="light")document.documentElement.setAttribute("data-theme","light")}catch(e){}})()',
+          }}
+        />
         <LanguageProvider initialLang={initialLang} initialMoeda={moeda}>
           {children}
         </LanguageProvider>

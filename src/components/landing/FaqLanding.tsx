@@ -34,7 +34,7 @@ const PERGUNTAS = [
 export default function FaqLanding() {
   const t = useT();
   return (
-    <section className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12">
+    <section className="border-t border-[var(--hairline)] px-6 pb-[60px] pt-14 sm:px-12">
       <h2 className="gcrv mb-[30px] text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Perguntas frequentes")}
       </h2>
@@ -43,22 +43,22 @@ export default function FaqLanding() {
         {PERGUNTAS.map((item, i) => (
           <details
             key={item.q}
-            className="gcfaq gcrv rounded-xl border border-[rgba(255,255,255,.08)] bg-[#0E121A]"
+            className="gcfaq gcrv rounded-xl border border-[var(--border-color)] bg-[var(--mock-window)]"
             open={i === 0}
             style={{ transitionDelay: `${i * 60}ms` }}
           >
             <summary className="flex items-center gap-3.5 px-5 py-[17px]">
-              <span className="flex-none font-mono text-[11px] font-bold text-[#5B93FF]">
+              <span className="flex-none font-mono text-[11px] font-bold text-[var(--brand-2)]">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="flex-1 text-[14.5px] font-bold text-primary">
                 {t(item.q)}
               </span>
-              <span className="gcplus flex h-[26px] w-[26px] flex-none items-center justify-center rounded-lg border border-[rgba(255,255,255,.12)] bg-surface">
+              <span className="gcplus flex h-[26px] w-[26px] flex-none items-center justify-center rounded-lg border border-[var(--border-strong)] bg-surface">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#7DB0FF"
+                  stroke="var(--brand-ink)"
                   strokeWidth="2.4"
                   style={{ width: 13, height: 13 }}
                   aria-hidden
@@ -83,7 +83,7 @@ export default function FaqLanding() {
         </div>
         <a
           href="mailto:contato@gigscontrol.com.br"
-          className="inline-flex rounded-[10px] border border-[rgba(255,255,255,.14)] bg-surface px-6 py-3 text-[13.5px] font-bold text-primary"
+          className="inline-flex rounded-[10px] border border-[var(--border-hover)] bg-surface px-6 py-3 text-[13.5px] font-bold text-primary"
         >
           {t("Fale com a gente")}
         </a>

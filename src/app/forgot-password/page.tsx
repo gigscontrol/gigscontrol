@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
         className="fixed inset-0 opacity-40 pointer-events-none"
         style={{
           background:
-            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
+            "radial-gradient(500px circle at 50% 0%, var(--glow-hero), var(--glow-fade) 60%)",
         }}
       />
 

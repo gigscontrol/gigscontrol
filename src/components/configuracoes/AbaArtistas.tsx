@@ -1621,7 +1621,7 @@ export function ModalNovoArtista({
           ? "bg-surface border border-border rounded w-full"
           : "bg-surface border border-border rounded w-full max-w-[560px] max-h-[92vh] overflow-y-auto"
       }
-      style={modoInline ? undefined : { boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+      style={modoInline ? undefined : { boxShadow: "0 24px 60px var(--shadow-color)" }}
       onClick={modoInline ? undefined : (e) => e.stopPropagation()}
     >
       {!modoInline && (
@@ -1977,7 +1977,7 @@ export function ModalNovoArtista({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--overlay-scrim)" }}
       onClick={onCancelar}
     >
       {conteudo}
@@ -3030,11 +3030,11 @@ export function ModalCredenciais({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--overlay-scrim)" }}
     >
       <div
         className="bg-surface border border-border rounded w-full max-w-[420px]"
-        style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        style={{ boxShadow: "0 24px 60px var(--shadow-color)" }}
       >
         <div className="p-5 border-b border-border flex flex-col items-center text-center">
           <div
@@ -3180,7 +3180,7 @@ export function SeletorDeCor({
                 background: gradienteSutil(c),
                 boxShadow: sel
                   ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${c}`
-                  : "0 1px 2px rgba(0,0,0,0.3)",
+                  : "0 1px 2px var(--shadow-color)",
                 transform: sel ? "scale(1.1)" : "scale(1)",
               }}
             >
@@ -3212,7 +3212,7 @@ export function SeletorDeCor({
               : "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #14b8a6, #3b82f6, #a855f7, #ec4899, #ef4444)",
             boxShadow: ePersonalizada
               ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${cor}`
-              : "0 1px 2px rgba(0,0,0,0.3)",
+              : "0 1px 2px var(--shadow-color)",
             transform: ePersonalizada ? "scale(1.1)" : "scale(1)",
           }}
         >
@@ -3227,7 +3227,7 @@ export function SeletorDeCor({
               size={14}
               className="text-white drop-shadow"
               strokeWidth={2.5}
-              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" }}
+              style={{ filter: "drop-shadow(0 1px 2px var(--shadow-color))" }}
             />
           )}
         </button>

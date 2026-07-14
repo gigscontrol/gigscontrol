@@ -34,8 +34,8 @@ export default function StatCard({
         <div
           className="h-[30px] w-[30px] rounded-chip flex items-center justify-center flex-shrink-0"
           style={{
-            backgroundColor: accentColor ?? "rgba(255,255,255,0.07)",
-            color: accentColor ? "rgba(255,255,255,0.92)" : "var(--text-secondary)",
+            backgroundColor: accentColor ?? "color-mix(in srgb, var(--text-primary) 7%, transparent)",
+            color: accentColor ? "var(--text-primary)" : "var(--text-secondary)",
           }}
         >
           {icon}

@@ -1176,7 +1176,7 @@ function PreviewSecoes({
           padding: "22mm 20mm",
           background: estilo.corFundo,
           color: estilo.corTexto,
-          boxShadow: "0 6px 28px rgba(0,0,0,0.45)",
+          boxShadow: "0 6px 28px var(--shadow-color)",
           fontFamily: "'Times New Roman', Georgia, serif",
           fontSize: "11pt",
           lineHeight: 1.6,

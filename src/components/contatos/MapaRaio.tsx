@@ -35,8 +35,19 @@ export type PontoMapa = {
   foraDoRaio?: boolean;
 };
 
-const TILES =
-  "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
+/** Tile CARTO sem rótulos — escuro ou claro conforme o tema ativo no mount
+ *  (`data-theme` no <html>). Mesmo contrato de URL nos dois; troca só a string.
+ *  Limitação aceita: o tile não retematiza ao vivo se o usuário alternar o
+ *  tema com o mapa já montado (mínimo aceitável do spec de tema). */
+function tilesDoTema(): string {
+  const tema =
+    typeof document !== "undefined"
+      ? document.documentElement.getAttribute("data-theme")
+      : null;
+  return tema === "light"
+    ? "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
+}
 const ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
@@ -138,7 +149,7 @@ export default function MapaRaio({
       ],
       maxBoundsViscosity: 1.0,
     });
-    L.tileLayer(TILES, {
+    L.tileLayer(tilesDoTema(), {
       attribution: ATTR,
       subdomains: "abcd",
       maxZoom: 19,
@@ -280,31 +291,33 @@ export default function MapaRaio({
       }}
     >
       <style>{`
-        .gc-mapa .leaflet-container { background:#0B0D12; font-family:inherit; cursor:default; }
-        /* Água/vias em tons de azul discretos sobre o CARTO dark (tela 10). */
+        .gc-mapa .leaflet-container { background:var(--bg-main); font-family:inherit; cursor:default; }
+        /* Água/vias em tons de azul discretos sobre o CARTO dark (tela 10). Calibrado
+           pro tile escuro — no claro o tile já vem claro, então some. */
         .gc-mapa .leaflet-tile-pane { filter: sepia(0.4) hue-rotate(175deg) saturate(1.7) brightness(0.82) contrast(1.05); }
+        html[data-theme="light"] .gc-mapa .leaflet-tile-pane { filter: none; }
         .gc-mk-wrap { background:transparent; border:none; }
-        .gc-mk-contratante { display:block; width:14px; height:14px; border-radius:50%; background:${BRAND}; border:2px solid rgba(255,255,255,.85); box-shadow:0 0 10px rgba(61,123,255,.9), 0 0 22px rgba(61,123,255,.45); }
-        .gc-mk-casa { display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:#12151D; border:1.5px solid ${BRAND}; color:#5B93FF; box-shadow:0 2px 10px rgba(0,0,0,.55); }
-        .gc-mk-cidade { display:block; width:12px; height:12px; border-radius:50%; background:rgba(11,13,18,.4); border:2px solid #6E7794; }
-        .gc-mk-contratante.gc-fora { background:#4A5265; border-color:rgba(255,255,255,.35); box-shadow:none; opacity:.55; }
-        .gc-mk-casa.gc-fora { border-color:#4A5265; color:#6E7794; opacity:.55; box-shadow:none; }
+        .gc-mk-contratante { display:block; width:14px; height:14px; border-radius:50%; background:${BRAND}; border:2px solid color-mix(in srgb, var(--text-primary) 85%, transparent); box-shadow:0 0 10px color-mix(in srgb, var(--brand) 90%, transparent), 0 0 22px color-mix(in srgb, var(--brand) 45%, transparent); }
+        .gc-mk-casa { display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:var(--bg-surface); border:1.5px solid ${BRAND}; color:var(--brand-2); box-shadow:0 2px 10px var(--shadow-color); }
+        .gc-mk-cidade { display:block; width:12px; height:12px; border-radius:50%; background:color-mix(in srgb, var(--bg-main) 40%, transparent); border:2px solid var(--text-muted); }
+        .gc-mk-contratante.gc-fora { background:#4A5265; border-color:color-mix(in srgb, var(--text-primary) 35%, transparent); box-shadow:none; opacity:.55; }
+        .gc-mk-casa.gc-fora { border-color:#4A5265; color:var(--text-muted); opacity:.55; box-shadow:none; }
         .gc-mk-cidade.gc-fora { border-color:#4A5265; opacity:.5; }
         .gc-mk-ref { position:relative; display:block; width:16px; height:16px; }
-        .gc-mk-ref-nucleo { position:absolute; inset:0; border-radius:50%; background:${BRAND}; border:2px solid #fff; box-shadow:0 0 16px rgba(61,123,255,.95); }
-        .gc-mk-ref-pulso { position:absolute; inset:-9px; border-radius:50%; border:2px solid rgba(61,123,255,.55); animation:gc-pulso 2.2s ease-out infinite; }
+        .gc-mk-ref-nucleo { position:absolute; inset:0; border-radius:50%; background:${BRAND}; border:2px solid #fff; box-shadow:0 0 16px color-mix(in srgb, var(--brand) 95%, transparent); }
+        .gc-mk-ref-pulso { position:absolute; inset:-9px; border-radius:50%; border:2px solid color-mix(in srgb, var(--brand) 55%, transparent); animation:gc-pulso 2.2s ease-out infinite; }
         @keyframes gc-pulso { from { transform:scale(.45); opacity:.95; } to { transform:scale(1.7); opacity:0; } }
-        .gc-mk-ref-rotulo { position:absolute; top:24px; left:50%; transform:translateX(-50%); background:rgba(11,13,18,.85); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.1); color:#F1F3F7; font-size:11px; font-weight:600; padding:3px 9px; border-radius:8px; white-space:nowrap; }
-        .gc-mapa .leaflet-popup-content-wrapper { background:#12151D; color:#F1F3F7; border:1px solid rgba(255,255,255,.1); border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,.55); }
-        .gc-mapa .leaflet-popup-tip { background:#12151D; }
+        .gc-mk-ref-rotulo { position:absolute; top:24px; left:50%; transform:translateX(-50%); background:color-mix(in srgb, var(--bg-main) 85%, transparent); backdrop-filter:blur(6px); border:1px solid color-mix(in srgb, var(--text-primary) 10%, transparent); color:var(--text-primary); font-size:11px; font-weight:600; padding:3px 9px; border-radius:8px; white-space:nowrap; }
+        .gc-mapa .leaflet-popup-content-wrapper { background:var(--bg-surface); color:var(--text-primary); border:1px solid color-mix(in srgb, var(--text-primary) 10%, transparent); border-radius:10px; box-shadow:0 12px 32px var(--shadow-color); }
+        .gc-mapa .leaflet-popup-tip { background:var(--bg-surface); }
         .gc-mapa .leaflet-popup-content { margin:10px 12px; }
         .gc-pop { display:flex; flex-direction:column; gap:2px; font-size:12px; }
-        .gc-pop-titulo { font-weight:700; color:#F1F3F7; }
-        .gc-pop-sub { color:#9AA2B4; font-size:11px; }
-        .gc-pop-km { color:#5B93FF; font-family:var(--font-mono, monospace); font-size:11px; }
-        .gc-pop-aprox { color:#6E7794; font-size:10px; }
-        .gc-mapa .leaflet-control-attribution { background:rgba(11,13,18,.75); color:#5E6470; font-size:9px; }
-        .gc-mapa .leaflet-control-attribution a { color:#6E7794; }
+        .gc-pop-titulo { font-weight:700; color:var(--text-primary); }
+        .gc-pop-sub { color:var(--text-secondary); font-size:11px; }
+        .gc-pop-km { color:var(--brand-2); font-family:var(--font-mono, monospace); font-size:11px; }
+        .gc-pop-aprox { color:var(--text-muted); font-size:10px; }
+        .gc-mapa .leaflet-control-attribution { background:color-mix(in srgb, var(--bg-main) 75%, transparent); color:var(--text-disabled); font-size:9px; }
+        .gc-mapa .leaflet-control-attribution a { color:var(--text-muted); }
       `}</style>
 
       {/* Mapa */}
@@ -316,7 +329,7 @@ export default function MapaRaio({
         <div
           className="pointer-events-auto absolute left-3 top-3 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-primary"
           style={{
-            backgroundColor: "rgba(11,13,18,0.8)",
+            backgroundColor: "color-mix(in srgb, var(--bg-main) 80%, transparent)",
             backdropFilter: "blur(8px)",
             borderColor: "var(--border-strong)",
           }}
@@ -329,7 +342,7 @@ export default function MapaRaio({
         <div
           className="pointer-events-auto absolute right-3 top-3 flex flex-col rounded-lg border overflow-hidden"
           style={{
-            backgroundColor: "rgba(11,13,18,0.8)",
+            backgroundColor: "color-mix(in srgb, var(--bg-main) 80%, transparent)",
             backdropFilter: "blur(8px)",
             borderColor: "var(--border-strong)",
           }}
@@ -357,7 +370,7 @@ export default function MapaRaio({
         <div
           className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-3 rounded-lg border px-2.5 py-1.5 text-[0.65rem] text-secondary"
           style={{
-            backgroundColor: "rgba(11,13,18,0.8)",
+            backgroundColor: "color-mix(in srgb, var(--bg-main) 80%, transparent)",
             backdropFilter: "blur(8px)",
             borderColor: "var(--border-strong)",
           }}
@@ -365,21 +378,21 @@ export default function MapaRaio({
           <span className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: BRAND, boxShadow: "0 0 6px rgba(61,123,255,.8)" }}
+              style={{ backgroundColor: BRAND, boxShadow: "0 0 6px color-mix(in srgb, var(--brand) 80%, transparent)" }}
             />
             {t("Contratante")}
           </span>
           <span className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-[3px]"
-              style={{ backgroundColor: "#12151D", border: `1px solid ${BRAND}` }}
+              style={{ backgroundColor: "var(--bg-surface)", border: `1px solid ${BRAND}` }}
             />
             {t("Casa")}
           </span>
           <span className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full"
-              style={{ border: "1.5px solid #6E7794" }}
+              style={{ border: "1.5px solid var(--text-muted)" }}
             />
             {t("Cidade")}
           </span>
@@ -391,7 +404,7 @@ export default function MapaRaio({
             <div
               className="rounded-lg border px-4 py-2.5 text-sm text-secondary"
               style={{
-                backgroundColor: "rgba(11,13,18,0.85)",
+                backgroundColor: "color-mix(in srgb, var(--bg-main) 85%, transparent)",
                 backdropFilter: "blur(8px)",
                 borderColor: "var(--border-strong)",
               }}

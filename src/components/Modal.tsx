@@ -53,13 +53,13 @@ export default function Modal({
       <button
         aria-label={t("Fechar")}
         onClick={onClose}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
       />
       <div
         role="dialog"
         aria-modal="true"
         className="relative w-full bg-surface border border-border rounded-lg overflow-hidden animate-modal"
-        style={{ maxWidth, boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        style={{ maxWidth, boxShadow: "0 24px 60px var(--shadow-color)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {title ? (

@@ -88,7 +88,7 @@ export default function SolucoesGrid() {
   return (
     <section
       id="solucoes"
-      className="flex scroll-mt-[72px] flex-col justify-center border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12 lg:min-h-dvh lg:py-10"
+      className="flex scroll-mt-[72px] flex-col justify-center border-t border-[var(--hairline)] px-6 pb-[60px] pt-14 sm:px-12 lg:min-h-[calc(100dvh-72px)] lg:py-10"
     >
       <h2 className="gcrv mb-9 text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Soluções")}
@@ -98,7 +98,7 @@ export default function SolucoesGrid() {
         {SOLUCOES.map((s, i) => (
           <div
             key={s.nome}
-            className="gcsolc relative overflow-hidden rounded-2xl border border-[rgba(255,255,255,.08)] bg-[#0E121A] px-6 py-[26px]"
+            className="gcsolc relative overflow-hidden rounded-2xl border border-[var(--border-color)] bg-[var(--mock-window)] px-6 py-[26px]"
             style={{ transitionDelay: `${i * 70}ms` }}
           >
             {/* fio de luz no topo */}
@@ -106,23 +106,23 @@ export default function SolucoesGrid() {
               className="absolute left-0 top-0 h-0.5 w-[46%]"
               style={{
                 background:
-                  "linear-gradient(90deg, #3D7BFF, rgba(61,123,255,0))",
+                  "linear-gradient(90deg, var(--brand), rgba(61,123,255,0))",
               }}
             />
             {/* número gigante sutil */}
-            <span className="absolute right-5 top-4 font-display text-[34px] font-extrabold leading-none text-[rgba(61,123,255,.12)]">
+            <span className="absolute right-5 top-4 font-display text-[34px] font-extrabold leading-none text-[color-mix(in_srgb,var(--brand)_12%,transparent)]">
               {String(i + 1).padStart(2, "0")}
             </span>
 
             <div className="mb-3.5 flex items-center gap-3">
               <span
-                className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-[rgba(61,123,255,.3)] bg-[rgba(61,123,255,.13)]"
-                style={{ boxShadow: "0 0 18px -8px rgba(61,123,255,.7)" }}
+                className="flex h-11 w-11 flex-none items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--brand)_30%,transparent)] bg-[color-mix(in_srgb,var(--brand)_13%,transparent)]"
+                style={{ boxShadow: "0 0 18px -8px color-mix(in srgb, var(--brand) 70%, transparent)" }}
               >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#7DB0FF"
+                  stroke="var(--brand-ink)"
                   strokeWidth="1.8"
                   style={{ width: 20, height: 20, flex: "none" }}
                   aria-hidden
@@ -134,10 +134,10 @@ export default function SolucoesGrid() {
                 {t(s.nome)}
               </span>
             </div>
-            <div className="mb-2 text-sm font-semibold leading-[1.45] text-[#C6CCD8]">
+            <div className="mb-2 text-sm font-semibold leading-[1.45] text-[var(--text-soft)]">
               {t(s.chamada)}
             </div>
-            <div className="text-[13px] leading-[1.6] text-[#8B93A5]">
+            <div className="text-[13px] leading-[1.6] text-[var(--text-body)]">
               {t(s.texto)}
             </div>
           </div>
@@ -145,11 +145,11 @@ export default function SolucoesGrid() {
 
         {/* 6º card: CTA */}
         <div
-          className="gcsolc relative flex flex-col justify-center gap-3.5 overflow-hidden rounded-2xl border border-[rgba(61,123,255,.35)] px-6 py-[26px]"
+          className="gcsolc relative flex flex-col justify-center gap-3.5 overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--brand)_35%,transparent)] px-6 py-[26px]"
           style={{
             transitionDelay: "350ms",
             background:
-              "radial-gradient(120% 120% at 20% 0%, rgba(61,123,255,.22), rgba(14,18,26,.9) 60%), #0E121A",
+              "radial-gradient(120% 120% at 20% 0%, color-mix(in srgb, var(--brand) 22%, transparent), color-mix(in srgb, var(--mock-window) 90%, transparent) 60%), var(--mock-window)",
           }}
         >
           <div className="font-display text-[22px] font-extrabold leading-[1.15] tracking-[-0.02em] text-primary">
@@ -161,7 +161,7 @@ export default function SolucoesGrid() {
             )}
           </div>
           <Link
-            href="/planos"
+            href="/signup"
             className="inline-flex items-center gap-2 self-start rounded-[10px] px-5 py-3 text-sm font-bold text-white"
             style={{ backgroundColor: "var(--brand)" }}
           >

@@ -9,6 +9,7 @@ import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
 import PainelVivoLogin from "@/components/auth/PainelVivoLogin";
 import LandingNav from "@/components/landing/LandingNav";
+import FooterLanding from "@/components/landing/FooterLanding";
 import CampoSenha from "@/components/CampoSenha";
 import { useT } from "@/lib/i18n";
 
@@ -163,6 +164,7 @@ function LoginInner() {
             </div>
           </form>
       </AuthShell>
+      <FooterLanding />
     </>
   );
 }

@@ -440,6 +440,38 @@ const PERMISSOES_REWORK_JUL13: Record<string, string> = {
   "Cancelar contrato": "Annulla contratto",
 };
 
+// Página /recursos — vitrine dos 6 módulos (copy verbatim do dono, 2026-07).
+const RECURSOS_PAGE: Record<string, string> = {
+  "Recursos · Tudo num só lugar": "Risorse · Tutto in un unico posto",
+  "Todos os recursos.": "Tutte le risorse.",
+  "Num só painel.": "In un unico pannello.",
+  "Tudo o que sua agência precisa para vender, organizar e gerenciar shows em uma única plataforma.": "Tutto ciò di cui la tua agenzia ha bisogno per vendere, organizzare e gestire spettacoli su un'unica piattaforma.",
+  "Centralize toda a operação dos seus shows em um único lugar. Tenha acesso rápido aos horários, contatos do contratante, localização, passagens aéreas, reservas de hotel, riders técnico, de camarim e efeitos especiais, além das datas e formas de pagamento. Tudo organizado para que nenhum detalhe passe despercebido.": "Centralizza tutta l'operazione dei tuoi spettacoli in un unico posto. Accedi rapidamente agli orari, ai contatti del committente, alla localizzazione, ai biglietti aerei, alle prenotazioni d'albergo, ai rider tecnico, di camerino e di effetti speciali, oltre alle date e alle forme di pagamento. Tutto organizzato affinché nessun dettaglio passi inosservato.",
+  "Crie orçamentos profissionais em poucos segundos e acompanhe todo o histórico de negociações. Quando uma proposta for aprovada, transforme o orçamento em uma venda completa com apenas um clique, enviando automaticamente todas as informações para a agenda do artista.": "Crea preventivi professionali in pochi secondi e monitora tutta la cronologia delle trattative. Quando una proposta viene approvata, trasforma il preventivo in una vendita completa con un solo clic, inviando automaticamente tutte le informazioni all'agenda dell'artista.",
+  "Tenha controle total sobre os recebimentos do seu casting. Acompanhe valores, formas de pagamento, vencimentos, parcelas e pagamentos pendentes em um único painel, evitando atrasos e garantindo uma gestão financeira muito mais organizada.": "Abbi il controllo totale sugli incassi del tuo roster. Monitora importi, forme di pagamento, scadenze, rate e pagamenti in sospeso in un unico pannello, evitando ritardi e garantendo una gestione finanziaria molto più organizzata.",
+  "Automatize a criação de contratos utilizando modelos personalizados. Vincule um contrato diretamente à venda, gere documentos completos em poucos segundos e envie para assinatura digital, reduzindo burocracia e agilizando o fechamento dos seus eventos.": "Automatizza la creazione dei contratti utilizzando modelli personalizzati. Collega un contratto direttamente alla vendita, genera documenti completi in pochi secondi e inviali per la firma digitale, riducendo la burocrazia e velocizzando la chiusura dei tuoi eventi.",
+  "Construa um banco de dados inteligente com todos os contratantes, produtores, casas de shows e clientes interessados. Encontre qualquer contato em segundos utilizando filtros por região, cidade ou histórico de negociações, facilitando novas vendas e o relacionamento com seus clientes.": "Costruisci un database intelligente con tutti i committenti, i produttori, i locali per spettacoli e i clienti interessati. Trova qualsiasi contatto in pochi secondi utilizzando filtri per regione, città o cronologia delle trattative, facilitando nuove vendite e la relazione con i tuoi clienti.",
+  "Gerencie toda a sua equipe com total controle de permissões. Defina exatamente o que cada usuário pode visualizar ou editar, organize artistas e colaboradores e mantenha sua operação segura, profissional e totalmente centralizada.": "Gestisci tutto il tuo team con pieno controllo dei permessi. Definisci esattamente cosa ciascun utente può visualizzare o modificare, organizza artisti e collaboratori e mantieni la tua operazione sicura, professionale e completamente centralizzata.",
+  // bullets das seções /recursos (§4)
+  "horários, contatos do contratante, localização": "orari, contatti del committente, localizzazione",
+  "passagens aéreas, reservas de hotel": "biglietti aerei, prenotazioni d'albergo",
+  "riders técnico, de camarim e efeitos especiais": "rider tecnico, di camerino e di effetti speciali",
+  "orçamentos profissionais em poucos segundos": "preventivi professionali in pochi secondi",
+  "histórico de negociações": "cronologia delle trattative",
+  "transforme o orçamento em uma venda completa com apenas um clique": "trasforma il preventivo in una vendita completa con un solo clic",
+  "valores, formas de pagamento": "importi, forme di pagamento",
+  "vencimentos, parcelas": "scadenze, rate",
+  "pagamentos pendentes": "pagamenti in sospeso",
+  "modelos personalizados": "modelli personalizzati",
+  "vincule um contrato diretamente à venda": "collega un contratto direttamente alla vendita",
+  "assinatura digital": "firma digitale",
+  "contratantes, produtores, casas de shows": "committenti, produttori, locali per spettacoli",
+  "filtros por região, cidade": "filtri per regione, città",
+  "total controle de permissões": "pieno controllo dei permessi",
+  "o que cada usuário pode visualizar ou editar": "cosa ciascun utente può visualizzare o modificare",
+  "organize artistas e colaboradores": "organizza artisti e collaboratori",
+};
+
 export const IT: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Alloggio",
   "Pra organizar a hospedagem, preciso destas informações:": "Per organizzare l'alloggio, mi servono queste informazioni:",
@@ -2417,6 +2449,10 @@ export const IT: Record<string, string> = {
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_IT,
   ...PERMISSOES_REWORK_JUL13,
+  ...RECURSOS_PAGE,
+  // Toggle de tema claro/escuro (BotaoTema)
+  "Mudar para tema claro": "Passa al tema chiaro",
+  "Mudar para tema escuro": "Passa al tema scuro",
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "In attesa di firma",
   "Bloqueando...": "Blocco in corso...",

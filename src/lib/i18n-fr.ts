@@ -440,6 +440,38 @@ const PERMISSOES_REWORK_JUL13: Record<string, string> = {
   "Cancelar contrato": "Annuler le contrat",
 };
 
+// Página /recursos — vitrine dos 6 módulos (copy verbatim do dono, 2026-07).
+const RECURSOS_PAGE: Record<string, string> = {
+  "Recursos · Tudo num só lugar": "Fonctionnalités · Tout en un seul endroit",
+  "Todos os recursos.": "Toutes les fonctionnalités.",
+  "Num só painel.": "En un seul tableau de bord.",
+  "Tudo o que sua agência precisa para vender, organizar e gerenciar shows em uma única plataforma.": "Tout ce dont votre agence a besoin pour vendre, organiser et gérer des concerts sur une seule plateforme.",
+  "Centralize toda a operação dos seus shows em um único lugar. Tenha acesso rápido aos horários, contatos do contratante, localização, passagens aéreas, reservas de hotel, riders técnico, de camarim e efeitos especiais, além das datas e formas de pagamento. Tudo organizado para que nenhum detalhe passe despercebido.": "Centralisez toute l'organisation de vos concerts en un seul endroit. Accédez rapidement aux horaires, aux contacts du client, à la localisation, aux billets d'avion, aux réservations d'hôtel, aux riders technique, de loge et d'effets spéciaux, ainsi qu'aux dates et modes de paiement. Tout est organisé pour qu'aucun détail ne passe inaperçu.",
+  "Crie orçamentos profissionais em poucos segundos e acompanhe todo o histórico de negociações. Quando uma proposta for aprovada, transforme o orçamento em uma venda completa com apenas um clique, enviando automaticamente todas as informações para a agenda do artista.": "Créez des devis professionnels en quelques secondes et suivez tout l'historique des négociations. Lorsqu'une proposition est approuvée, transformez le devis en vente complète en un seul clic, en envoyant automatiquement toutes les informations à l'agenda de l'artiste.",
+  "Tenha controle total sobre os recebimentos do seu casting. Acompanhe valores, formas de pagamento, vencimentos, parcelas e pagamentos pendentes em um único painel, evitando atrasos e garantindo uma gestão financeira muito mais organizada.": "Gardez un contrôle total sur les encaissements de votre catalogue d'artistes. Suivez les montants, les modes de paiement, les échéances, les versements et les paiements en attente dans un seul tableau de bord, évitant les retards et garantissant une gestion financière bien plus organisée.",
+  "Automatize a criação de contratos utilizando modelos personalizados. Vincule um contrato diretamente à venda, gere documentos completos em poucos segundos e envie para assinatura digital, reduzindo burocracia e agilizando o fechamento dos seus eventos.": "Automatisez la création de contrats à l'aide de modèles personnalisés. Liez un contrat directement à la vente, générez des documents complets en quelques secondes et envoyez-les pour signature électronique, réduisant les démarches administratives et accélérant la conclusion de vos événements.",
+  "Construa um banco de dados inteligente com todos os contratantes, produtores, casas de shows e clientes interessados. Encontre qualquer contato em segundos utilizando filtros por região, cidade ou histórico de negociações, facilitando novas vendas e o relacionamento com seus clientes.": "Constituez une base de données intelligente avec tous vos clients, producteurs, salles de concert et prospects intéressés. Trouvez n'importe quel contact en quelques secondes grâce à des filtres par région, ville ou historique de négociations, facilitant les nouvelles ventes et la relation avec vos clients.",
+  "Gerencie toda a sua equipe com total controle de permissões. Defina exatamente o que cada usuário pode visualizar ou editar, organize artistas e colaboradores e mantenha sua operação segura, profissional e totalmente centralizada.": "Gérez toute votre équipe avec un contrôle total des permissions. Définissez exactement ce que chaque utilisateur peut consulter ou modifier, organisez artistes et collaborateurs et gardez votre opération sécurisée, professionnelle et totalement centralisée.",
+  // bullets das seções /recursos (§4)
+  "horários, contatos do contratante, localização": "horaires, contacts du client, localisation",
+  "passagens aéreas, reservas de hotel": "billets d'avion, réservations d'hôtel",
+  "riders técnico, de camarim e efeitos especiais": "riders technique, de loge et d'effets spéciaux",
+  "orçamentos profissionais em poucos segundos": "devis professionnels en quelques secondes",
+  "histórico de negociações": "historique des négociations",
+  "transforme o orçamento em uma venda completa com apenas um clique": "transformez le devis en vente complète en un seul clic",
+  "valores, formas de pagamento": "montants, modes de paiement",
+  "vencimentos, parcelas": "échéances, versements",
+  "pagamentos pendentes": "paiements en attente",
+  "modelos personalizados": "modèles personnalisés",
+  "vincule um contrato diretamente à venda": "liez un contrat directement à la vente",
+  "assinatura digital": "signature électronique",
+  "contratantes, produtores, casas de shows": "clients, producteurs, salles de concert",
+  "filtros por região, cidade": "filtres par région, ville",
+  "total controle de permissões": "contrôle total des permissions",
+  "o que cada usuário pode visualizar ou editar": "ce que chaque utilisateur peut consulter ou modifier",
+  "organize artistas e colaboradores": "organisez artistes et collaborateurs",
+};
+
 export const FR: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Hébergement",
   "Pra organizar a hospedagem, preciso destas informações:": "Pour organiser l'hébergement, j'ai besoin de ces informations :",
@@ -2417,6 +2449,10 @@ export const FR: Record<string, string> = {
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_FR,
   ...PERMISSOES_REWORK_JUL13,
+  ...RECURSOS_PAGE,
+  // Toggle de tema claro/escuro (BotaoTema)
+  "Mudar para tema claro": "Passer au thème clair",
+  "Mudar para tema escuro": "Passer au thème sombre",
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "En attente de signature",
   "Bloqueando...": "Blocage...",

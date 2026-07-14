@@ -157,8 +157,14 @@ export default function Sidebar({
   const t = useT();
 
   // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
-  // um drawer full-width — o "recolhido" só vale no lg+ (classes lg:*).
+  // um drawer de 260px (w-[260px]) — o "recolhido" só vale no lg+ (classes lg:*).
   const [collapsed, setCollapsed] = useState(false);
+  // Mobile (D3): módulo tocado expande o submenu inline SEM navegar.
+  // Guarda qual módulo (além do ativo) está expandido no drawer.
+  const [mobileExpandedTab, setMobileExpandedTab] = useState<ActiveTab | null>(null);
+  useEffect(() => {
+    if (!isOpenMobile) setMobileExpandedTab(null);
+  }, [isOpenMobile]);
   useEffect(() => {
     if (localStorage.getItem("gc-sidebar-collapsed") === "1") setCollapsed(true);
   }, []);
@@ -255,7 +261,7 @@ export default function Sidebar({
         {/* Fechar (mobile) */}
         <button
           onClick={onCloseMobile}
-          className="lg:hidden btn-ghost p-1.5 rounded absolute right-3 top-1/2 -translate-y-1/2"
+          className="lg:hidden btn-ghost p-2.5 rounded absolute right-3 top-1/2 -translate-y-1/2"
           aria-label={t("Fechar menu")}
         >
           <X size={18} />
@@ -281,6 +287,20 @@ export default function Sidebar({
                       // Recolhida: clicar num módulo expande de volta pra
                       // mostrar o submenu (pra escolher a subpágina).
                       if (collapsed) setColapsado(false);
+                      const mobile = window.matchMedia("(max-width: 1023px)").matches;
+                      if (mobile && mod.subPages.length > 0) {
+                        // D3: no mobile, tocar no módulo só abre/fecha o submenu —
+                        // não navega e não fecha o drawer.
+                        // Ativo de verdade (submenu já visível): nada a fazer.
+                        // NÃO usar `mod.tab === activeTab` aqui: com as
+                        // Configurações abertas o activeTab fica "agenda" mas
+                        // nenhum submenu renderiza — o toque precisa expandir.
+                        if (isActive) return;
+                        setMobileExpandedTab((prev) => (prev === mod.tab ? null : mod.tab));
+                        return;
+                      }
+                      // Desktop — ou módulo (hipotético) sem submenu no mobile: navega
+                      // pro dashboard e (no mobile) fecha o drawer, como hoje.
                       setActiveTab(mod.tab);
                     }}
                     title={t(mod.label)}
@@ -312,8 +332,9 @@ export default function Sidebar({
                     )}
                   </button>
 
-                  {/* Submenu inline: aparece só quando o módulo está ativo */}
-                  {isActive && mod.subPages.length > 0 && (
+                  {/* Submenu inline: aparece quando o módulo está ativo (desktop
+                      e mobile) ou apenas expandido no drawer mobile (D3). */}
+                  {(isActive || mobileExpandedTab === mod.tab) && mod.subPages.length > 0 && (
                     <div
                       className={`ml-3 mt-1 mb-2 pl-3 flex flex-col gap-0.5 border-l ${collapsed ? "lg:hidden" : ""}`}
                       style={{ borderColor: `${color}40` }}
@@ -321,12 +342,17 @@ export default function Sidebar({
                       {mod.subPages.map((sp) => {
                         const SubIcon = sp.icon;
                         const isPageActive =
-                          activePage === sp.page ||
-                          (sp.alsoActiveOn?.includes(activePage) ?? false);
+                          isActive &&
+                          (activePage === sp.page ||
+                            (sp.alsoActiveOn?.includes(activePage) ?? false));
                         return (
                           <button
                             key={sp.page}
-                            onClick={() => setActivePage(sp.page)}
+                            onClick={() =>
+                              sp.page === "dashboard"
+                                ? setActiveTab(mod.tab)
+                                : setActivePage(sp.page)
+                            }
                             className={`
                               flex items-center gap-2.5 px-3 py-2 rounded-md text-sm
                               transition-colors duration-150

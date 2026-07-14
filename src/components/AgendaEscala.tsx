@@ -920,7 +920,7 @@ function SeletorArtistas({
         {aberto && (
           <div
             className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-md"
-            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+            style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {filtrados.length === 0 ? (
               <div className="px-3 py-2 text-xs text-muted">{t("Nenhum artista")}</div>

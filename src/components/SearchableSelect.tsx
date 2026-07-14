@@ -117,7 +117,7 @@ export default function SearchableSelect({
       {open && (
         <div
           className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-border bg-surface"
-          style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+          style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
         >
           <div className="max-h-[280px] overflow-y-auto py-1">
             {visiveis.length === 0 ? (

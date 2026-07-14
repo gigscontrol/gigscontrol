@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { useT, useMoeda } from "@/lib/i18n";
 import {
@@ -79,11 +80,17 @@ function CardPlano({
   ciclo,
   selecionado,
   onSelecionar,
+  modo = "selecao",
 }: {
   plano: Plano;
   ciclo: CicloCobranca;
   selecionado: boolean;
   onSelecionar: () => void;
+  /**
+   * "selecao" (onboarding): o CTA seleciona o plano (Selecionar/Selecionado).
+   * "landing" (vitrine): o CTA é "Assinar" e leva pro /signup com o plano.
+   */
+  modo?: "selecao" | "landing";
 }) {
   const t = useT();
   const moeda = useMoeda();
@@ -104,13 +111,13 @@ function CardPlano({
       style={{
         padding: "26px 24px",
         background: selecionado
-          ? "linear-gradient(180deg, rgba(61,123,255,.12), #0E121A 44%)"
-          : "#0E121A",
+          ? "linear-gradient(180deg, color-mix(in srgb, var(--brand) 12%, transparent), var(--mock-window) 44%)"
+          : "var(--mock-window)",
         border: selecionado
-          ? "1px solid rgba(61,123,255,.6)"
-          : "1px solid rgba(255,255,255,.08)",
+          ? "1px solid color-mix(in srgb, var(--brand) 60%, transparent)"
+          : "1px solid var(--border-color)",
         boxShadow: selecionado
-          ? "rgba(61,123,255,.55) 0px 18px 50px -20px"
+          ? "color-mix(in srgb, var(--brand) 55%, transparent) 0px 18px 50px -20px"
           : "none",
       }}
     >
@@ -150,23 +157,38 @@ function CardPlano({
         </div>
       </div>
 
-      {/* CTA selecionar */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelecionar();
-        }}
-        className="inline-flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-bold transition-colors"
-        style={
-          selecionado
-            ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
-            : { backgroundColor: "transparent", border: "1px solid rgba(255,255,255,.14)", color: "var(--text-primary)" }
-        }
-      >
-        {selecionado && <Check size={14} strokeWidth={3} />}
-        {selecionado ? t("Selecionado") : t("Selecionar")}
-      </button>
+      {/* CTA — na onboarding seleciona o plano; na landing leva pro signup */}
+      {modo === "landing" ? (
+        <Link
+          href={`/signup?plano=${plano.id}&ciclo=${ciclo}`}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-bold transition-colors"
+          style={
+            selecionado
+              ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
+              : { backgroundColor: "transparent", border: "1px solid var(--border-hover)", color: "var(--text-primary)" }
+          }
+        >
+          {t("Assinar")}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelecionar();
+          }}
+          className="inline-flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-bold transition-colors"
+          style={
+            selecionado
+              ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
+              : { backgroundColor: "transparent", border: "1px solid var(--border-hover)", color: "var(--text-primary)" }
+          }
+        >
+          {selecionado && <Check size={14} strokeWidth={3} />}
+          {selecionado ? t("Selecionado") : t("Selecionar")}
+        </button>
+      )}
 
       {/* Admin / Artistas / Equipe */}
       <div className="grid grid-cols-3 gap-2">
@@ -174,7 +196,10 @@ function CardPlano({
           <div
             key={i}
             className="rounded-[9px] px-2 py-2.5 text-center"
-            style={{ background: "#0B0D12", border: "1px solid rgba(255,255,255,.07)" }}
+            style={{
+              background: "var(--bg-main)",
+              border: "1px solid color-mix(in srgb, var(--text-primary) 7%, transparent)",
+            }}
           >
             <div className="font-display text-[20px] font-extrabold leading-none text-primary tabular-nums">
               {b.n}
@@ -189,7 +214,7 @@ function CardPlano({
         {t("{n} usuários no total", { n: totalUsuarios(plano) })}
       </div>
 
-      <div className="h-px" style={{ background: "rgba(255,255,255,.06)" }} />
+      <div className="h-px" style={{ background: "var(--hairline)" }} />
 
       {/* recursos visíveis */}
       <div className="flex flex-col gap-2.5">
@@ -199,7 +224,7 @@ function CardPlano({
       </div>
 
       {/* Ver mais recursos (acordeão) */}
-      <div className="border-t pt-3" style={{ borderColor: "rgba(255,255,255,.06)" }}>
+      <div className="border-t pt-3" style={{ borderColor: "var(--hairline)" }}>
         <button
           type="button"
           onClick={(e) => {
@@ -233,10 +258,13 @@ export default function PlanoCarrossel({
   ciclo,
   selecionadoIndex,
   onSelecionar,
+  modo = "selecao",
 }: {
   ciclo: CicloCobranca;
   selecionadoIndex: number;
   onSelecionar: (i: number) => void;
+  /** "selecao" (onboarding) ou "landing" (vitrine, CTA "Assinar" → signup). */
+  modo?: "selecao" | "landing";
 }) {
   const t = useT();
   // Páginas de 3 (essenciais / agências). Cada página ocupa 100% do viewport;
@@ -260,7 +288,7 @@ export default function PlanoCarrossel({
         disabled={pagina === 0}
         aria-label={t("Plano anterior")}
         className="absolute -left-3 top-1/2 z-40 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35]"
-        style={{ border: "1px solid rgba(255,255,255,.14)", background: "var(--surface)", boxShadow: "rgba(0,0,0,.6) 0px 10px 24px -8px" }}
+        style={{ border: "1px solid var(--border-hover)", background: "var(--surface)", boxShadow: "var(--shadow-color) 0px 10px 24px -8px" }}
       >
         <ChevronLeft size={18} className="text-secondary" />
       </button>
@@ -270,7 +298,7 @@ export default function PlanoCarrossel({
         disabled={pagina === numPaginas - 1}
         aria-label={t("Próximo plano")}
         className="absolute -right-3 top-1/2 z-40 flex h-[46px] w-[46px] -translate-y-1/2 items-center justify-center rounded-full disabled:opacity-[.35]"
-        style={{ border: "1px solid rgba(255,255,255,.14)", background: "var(--surface)", boxShadow: "rgba(0,0,0,.6) 0px 10px 24px -8px" }}
+        style={{ border: "1px solid var(--border-hover)", background: "var(--surface)", boxShadow: "var(--shadow-color) 0px 10px 24px -8px" }}
       >
         <ChevronRight size={18} className="text-secondary" />
       </button>
@@ -305,6 +333,7 @@ export default function PlanoCarrossel({
                       ciclo={ciclo}
                       selecionado={sel}
                       onSelecionar={() => onSelecionar(gi)}
+                      modo={modo}
                     />
                   </div>
                 );
@@ -325,7 +354,10 @@ export default function PlanoCarrossel({
             className="h-1.5 rounded-full motion-safe:transition-all"
             style={{
               width: i === selecionadoIndex ? 22 : 8,
-              background: i === selecionadoIndex ? "var(--brand)" : "rgba(255,255,255,.18)",
+              background:
+                i === selecionadoIndex
+                  ? "var(--brand)"
+                  : "color-mix(in srgb, var(--text-primary) 18%, transparent)",
             }}
           />
         ))}

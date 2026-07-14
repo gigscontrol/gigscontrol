@@ -18,6 +18,7 @@ import { getPlano } from "@/lib/planos";
 import { useContratos } from "@/lib/contratos-context";
 import SinoNotificacoes from "./SinoNotificacoes";
 import LanguageSwitcher from "./LanguageSwitcher";
+import BotaoTema from "./BotaoTema";
 import { useT } from "@/lib/i18n";
 
 type Props = {
@@ -105,15 +106,15 @@ export default function Topbar({
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={onOpenSidebar}
-          className="lg:hidden btn-ghost p-2 rounded"
+          className="lg:hidden btn-ghost p-3 -ml-1 rounded"
           aria-label={t("Abrir menu")}
         >
           <Menu size={18} />
         </button>
 
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.color }} />
-          <span className="text-sm font-medium text-secondary">{t(theme.label)}</span>
+          <span className="truncate text-sm font-medium text-secondary">{t(theme.label)}</span>
         </div>
 
         {/* Status do plano (só admin): dias restantes + contratos do mês */}
@@ -152,6 +153,7 @@ export default function Topbar({
       <div className="flex items-center gap-2 flex-shrink-0">
         <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
         <LanguageSwitcher />
+        <BotaoTema />
 
         {/* Menu de perfil */}
         <div ref={menuRef} className="relative">
@@ -181,7 +183,7 @@ export default function Topbar({
           {menuOpen && usuario && (
             <div
               className="absolute right-0 top-full mt-2 w-64 bg-surface border border-border rounded-lg overflow-hidden z-50"
-              style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.6)" }}
+              style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
             >
               {/* Cabeçalho */}
               <div className="p-4 border-b border-border">

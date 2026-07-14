@@ -64,7 +64,7 @@ export default function PlanoCard({
         boxShadow: selecionado
           ? "0 0 0 2px var(--brand)"
           : destacado
-            ? "0 0 0 1px rgba(255,255,255,0.14)"
+            ? "0 0 0 1px var(--border-hover)"
             : undefined,
       }}
     >

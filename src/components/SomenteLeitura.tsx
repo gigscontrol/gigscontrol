@@ -126,7 +126,7 @@ function avisar(msg: string) {
       "border-radius:8px",
       "font-size:13px",
       "font-weight:600",
-      "box-shadow:0 8px 24px rgba(0,0,0,0.4)",
+      "box-shadow:0 8px 24px var(--shadow-color)",
       "pointer-events:none",
       "transition:opacity .2s ease",
     ].join(";");
