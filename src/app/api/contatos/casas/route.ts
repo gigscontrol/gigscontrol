@@ -5,7 +5,10 @@ import {
   criarCasaNoWorkspace,
 } from "@/lib/services/casas.service";
 import { casaCreateSchema } from "@/lib/validators/contatos.schema";
-import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoContatos,
+  verificarMutacaoContato,
+} from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
@@ -29,7 +32,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
+  // D2: criar casa exige `contatos.criar` em algum vínculo.
+  const bloqueio = verificarMutacaoContato(r.sessao, "criar");
   if (bloqueio) return bloqueio;
 
   let raw: unknown;

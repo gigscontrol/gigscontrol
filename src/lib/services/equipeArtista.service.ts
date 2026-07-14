@@ -5,7 +5,7 @@ import {
   removerVinculo,
   type VinculoRow,
 } from "@/lib/repositories/membrosArtista.repo";
-import { CHAVES_VALIDAS } from "@/lib/permissoes/catalogo";
+import { CHAVES_ARTISTA_VALIDAS } from "@/lib/permissoes/catalogo";
 import { PERFIL_POR_ID } from "@/lib/permissoes/perfis";
 
 /**
@@ -51,7 +51,9 @@ export async function listarEquipeDoArtista(
 
 /**
  * Salva (cria/atualiza) o vínculo — valida perfis e permissões contra o
- * catálogo (ignora chaves inválidas, evita lixo no banco).
+ * catálogo (ignora chaves inválidas, evita lixo no banco). SÓ chaves de nível
+ * "artista" entram: chaves administrativas de workspace (agencia.*) são
+ * REJEITADAS aqui, pois um vínculo por-artista não pode conceder poder global.
  */
 export async function salvarVinculoDoArtista(
   admin: SupabaseClient,
@@ -62,7 +64,7 @@ export async function salvarVinculoDoArtista(
   permissoes: string[]
 ): Promise<VinculoRow> {
   const perfisLimpos = perfis.filter((p) => p in PERFIL_POR_ID);
-  const permsLimpas = [...new Set(permissoes.filter((c) => CHAVES_VALIDAS.has(c)))];
+  const permsLimpas = [...new Set(permissoes.filter((c) => CHAVES_ARTISTA_VALIDAS.has(c)))];
   return upsertVinculo(admin, {
     workspaceId,
     userId,

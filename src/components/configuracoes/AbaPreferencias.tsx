@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Languages, Globe, CalendarDays, Clock } from "lucide-react";
 import { useT, useLang, type Lang } from "@/lib/i18n";
 import { useWorkspace } from "@/lib/workspace-context";
 import SeletorPais from "../SeletorPais";
@@ -67,7 +67,10 @@ export default function AbaPreferencias() {
       {/* Idioma padrão */}
       <section className="card flex flex-col gap-3">
         <div>
-          <div className="section-title">{t("Idioma padrão")}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Languages size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">{t("Idioma padrão")}</div>
+          </div>
           <p className="text-xs text-muted">
             {t("Idioma que aparece ao entrar e com que novos usuários começam.")}
           </p>
@@ -106,7 +109,10 @@ export default function AbaPreferencias() {
       {/* País padrão */}
       <section className="card flex flex-col gap-3">
         <div>
-          <div className="section-title">{t("País padrão")}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Globe size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">{t("País padrão")}</div>
+          </div>
           <p className="text-xs text-muted">
             {t("Default de país nos contatos, no telefone e nas cidades. Dá pra trocar campo a campo na hora de preencher.")}
           </p>
@@ -117,7 +123,10 @@ export default function AbaPreferencias() {
       {/* Formato de data */}
       <section className="card flex flex-col gap-3">
         <div>
-          <div className="section-title">{t("Formato de data")}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <CalendarDays size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">{t("Formato de data")}</div>
+          </div>
           <p className="text-xs text-muted">
             {t("Como as datas aparecem e são digitadas no sistema.")}
           </p>
@@ -156,7 +165,10 @@ export default function AbaPreferencias() {
       {/* Fuso horário padrão */}
       <section className="card flex flex-col gap-3">
         <div>
-          <div className="section-title">{t("Fuso horário padrão")}</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Clock size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">{t("Fuso horário padrão")}</div>
+          </div>
           <p className="text-xs text-muted">
             {t("Fuso que já vem selecionado ao criar shows e nos horários de apresentação. É só exibição — não muda nada no backend nem os horários já salvos.")}
           </p>

@@ -200,16 +200,16 @@ function SidebarViva() {
   const t = useT();
   return (
     <div
-      className="gcanim flex flex-none flex-col overflow-hidden rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[#0C101A]"
+      className="gcanim flex flex-none flex-col overflow-hidden rounded-[14px] border border-[var(--border-color)] bg-[var(--mock-window)]"
       style={{
         width: 240,
         height: 430,
-        boxShadow: "0 24px 50px -18px rgba(0,0,0,.75)",
+        boxShadow: "0 24px 50px -18px var(--shadow-color-strong)",
         animation: "gcSbW 24s linear infinite",
       }}
     >
       {/* topo: logo + wordmark */}
-      <div className="flex flex-none items-center gap-[9px] border-b border-[rgba(255,255,255,.06)] p-3.5">
+      <div className="flex flex-none items-center gap-[9px] border-b border-[var(--hairline)] p-3.5">
         <LogoGC size={18} variant="gradient" />
         <span
           className="gcanim whitespace-nowrap font-display text-[13.5px] font-bold text-primary"
@@ -218,7 +218,7 @@ function SidebarViva() {
           gigs control
         </span>
         <span
-          className="gcanim ml-auto text-xs text-[#5E6470]"
+          className="gcanim ml-auto text-xs text-[var(--text-disabled)]"
           style={ANIM_LABEL}
         >
           «
@@ -234,21 +234,21 @@ function SidebarViva() {
               className="gcanim flex items-center gap-2.5 rounded-lg px-2.5 py-[9px]"
               style={{ animation: `gcMa${i + 1} 24s linear infinite` }}
             >
-              <Ic nome={mod.icone} size={15} stroke="#98A0B0" />
+              <Ic nome={mod.icone} size={15} stroke="var(--text-secondary)" />
               <span
-                className="gcanim whitespace-nowrap text-[12.5px] font-semibold text-[#D6DAE2]"
+                className="gcanim whitespace-nowrap text-[12.5px] font-semibold text-[var(--text-primary)]"
                 style={ANIM_LABEL}
               >
                 {t(mod.nome)}
               </span>
               <span
-                className="gcanim ml-auto h-1.5 w-1.5 overflow-hidden rounded-full bg-[#5B8CFF]"
+                className="gcanim ml-auto h-1.5 w-1.5 overflow-hidden rounded-full bg-[var(--brand-2)]"
                 style={{ animation: `gcSm${i + 1} 24s linear infinite` }}
               />
             </div>
             {/* submenu — expande na vez do módulo */}
             <div
-              className="gcanim ml-[17px] overflow-hidden border-l border-[rgba(61,123,255,.25)] pl-2"
+              className="gcanim ml-[17px] overflow-hidden border-l border-[color-mix(in_srgb,var(--brand)_25%,transparent)] pl-2"
               style={{
                 maxHeight: 0,
                 animation: `gcSm${i + 1} 24s linear infinite`,
@@ -258,17 +258,17 @@ function SidebarViva() {
                 <div
                   key={item.label}
                   className={`flex items-center gap-2 whitespace-nowrap rounded-[7px] px-[9px] py-1.5 ${
-                    j === 0 ? "bg-[#141A26]" : ""
+                    j === 0 ? "bg-[var(--mock-active)]" : ""
                   }`}
                 >
                   <Ic
                     nome={item.icone}
                     size={12}
-                    stroke={j === 0 ? "#C6CCD8" : "#5E6674"}
+                    stroke={j === 0 ? "var(--text-soft)" : "var(--text-label)"}
                   />
                   <span
                     className={`whitespace-nowrap text-[11px] ${
-                      j === 0 ? "text-[#E6EAF2]" : "text-[#7A8296]"
+                      j === 0 ? "text-[var(--text-primary)]" : "text-[var(--text-dim)]"
                     }`}
                   >
                     {t(item.label)}
@@ -288,17 +288,16 @@ export default function HeroSidebarViva() {
   return (
     <section
       id="inicio"
-      className="grid items-center gap-6 px-6 pb-[58px] pt-[54px] sm:px-12 lg:min-h-[calc(100dvh-72px)] lg:grid-cols-[1fr_1.05fr] lg:py-6"
+      className="grid scroll-mt-[72px] items-center gap-6 px-6 pb-[58px] pt-[54px] sm:px-12 lg:min-h-[calc(100dvh-72px)] lg:grid-cols-[1fr_1.05fr] lg:py-6"
       style={{
         background:
-          "radial-gradient(70% 90% at 22% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",
+          "radial-gradient(70% 90% at 22% 30%, var(--glow-hero), var(--glow-fade) 60%)",
       }}
     >
-      {/* sidebar viva (esquerda no desktop, embaixo no mobile) — +10% e
+      {/* sidebar viva (esquerda no desktop, EM CIMA no mobile) — +10% e
           entrando da esquerda no load */}
       <div
-        id="demo"
-        className="gcrv-l relative order-2 flex min-h-[490px] items-center justify-center lg:order-1"
+        className="gcrv-l relative order-1 flex min-h-[490px] items-center justify-center lg:order-1"
       >
         <div className="xl:scale-110">
           <SidebarViva />
@@ -306,7 +305,7 @@ export default function HeroSidebarViva() {
       </div>
 
       {/* copy — entrada em cascata (badge → título → texto → CTAs → checks) */}
-      <div className="order-1 flex flex-col justify-center gap-[22px] lg:order-2">
+      <div className="order-2 flex flex-col justify-center gap-[22px] lg:order-2">
         <div className="gcrv self-start">
           <BadgeSecao>{t("01 · Tudo num só painel")}</BadgeSecao>
         </div>

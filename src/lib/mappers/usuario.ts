@@ -3,15 +3,11 @@ import type { Cidade } from "@/types";
 import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
 /**
- * Mapa de funções operacionais → lista de DJs (artists.id) atendidos.
- *
- * Estrutura armazenada em `profiles.funcoes` (jsonb). Apenas usuários
- * com papel operacional (vendedor / financeiro / produtor) usam isso;
- * admin e artista mantêm `funcoes = {}`.
- *
- * Convenção: a chave só aparece quando a função está ativa. Lista vazia
- * significa "função marcada mas nenhum DJ ainda" — equivale a SEM
- * acesso àquela função (precisa de pelo menos 1 DJ pra ter efeito).
+ * LEGADO MORTO (mantido só como tipo, sem mais uso real de acesso). Mapa de
+ * funções operacionais → lista de DJs atendidos, que morava em
+ * `profiles.funcoes`. O acesso operacional agora vem 100% dos vínculos por
+ * artista (membros_artista). Tipo preservado porque `session.ts` (campo
+ * neutro) e `workspace-context.tsx` ainda o referenciam.
  */
 export type Funcoes = {
   vendedor?: string[];
@@ -34,15 +30,13 @@ export type ProfileRow = {
   papel: Papel;
   is_super_admin: boolean;
   artista_id: string | null;
-  escopo: Record<string, unknown> | null;
-  funcoes: Record<string, unknown> | null;
   status: string | null;
   deletado_em: string | null;
   pode_criar_anotacoes: boolean | null;
   /**
    * true = a senha do usuário ainda é a aleatória gerada pelo sistema
-   * (criação ou último reset). false = o próprio usuário já trocou no
-   * AbaSeguranca. Default false (existentes não são alarmados).
+   * (criação ou último reset). false = o próprio usuário já trocou na
+   * aba Perfil (card Acesso). Default false (existentes não são alarmados).
    */
   senha_padrao: boolean;
   /**
@@ -93,8 +87,8 @@ export type UsuarioEquipe = {
   /** Handle de login "raiz-slug". `null` em membros antigos (login por e-mail). */
   username: string | null;
   papel: Papel;
-  escopo: EscopoUsuario;
-  funcoes: Funcoes;
+  // escopo/funcoes REMOVIDOS: o acesso operacional vem 100% dos vínculos por
+  // artista (membros_artista), não mais do profile.
   ativo: boolean;
   /** Permissão dedicada (workspace-level): criar pastas de anotações. */
   podeCriarAnotacoes?: boolean;
@@ -114,36 +108,6 @@ export type UsuarioEquipe = {
   cidade?: Cidade;
 };
 
-function escopoValido(raw: Record<string, unknown> | null | undefined): EscopoUsuario {
-  if (!raw || typeof raw !== "object") return { ...ESCOPO_PADRAO };
-  return {
-    verTodosContatos:
-      typeof raw.verTodosContatos === "boolean" ? raw.verTodosContatos : ESCOPO_PADRAO.verTodosContatos,
-    verTodasVendas:
-      typeof raw.verTodasVendas === "boolean" ? raw.verTodasVendas : ESCOPO_PADRAO.verTodasVendas,
-    editarTodosEventos:
-      typeof raw.editarTodosEventos === "boolean"
-        ? raw.editarTodosEventos
-        : ESCOPO_PADRAO.editarTodosEventos,
-  };
-}
-
-/**
- * Normaliza o JSON do banco para o tipo Funcoes da UI.
- * Aceita listas de strings; qualquer outro tipo é ignorado.
- */
-export function funcoesValido(raw: Record<string, unknown> | null | undefined): Funcoes {
-  if (!raw || typeof raw !== "object") return {};
-  const out: Funcoes = {};
-  for (const k of ["vendedor", "financeiro", "produtor"] as const) {
-    const v = (raw as Record<string, unknown>)[k];
-    if (Array.isArray(v) && v.every((x) => typeof x === "string")) {
-      out[k] = v as string[];
-    }
-  }
-  return out;
-}
-
 export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
   const u: UsuarioEquipe = {
     id: row.id,
@@ -151,8 +115,6 @@ export function rowParaUsuario(row: ProfileRow): UsuarioEquipe {
     email: row.email,
     username: row.username ?? null,
     papel: row.papel,
-    escopo: escopoValido(row.escopo),
-    funcoes: funcoesValido(row.funcoes),
     ativo: row.status === "ativo",
   };
   if (row.cor) u.cor = row.cor;
@@ -184,8 +146,6 @@ export function redigirUsuario(u: UsuarioEquipe): UsuarioEquipe {
     email: "",
     username: null,
     papel: u.papel,
-    escopo: u.escopo,
-    funcoes: {},
     ativo: u.ativo,
     ...(u.cor ? { cor: u.cor } : {}),
   };
@@ -198,8 +158,6 @@ export type UsuarioEscrita = {
   /** Handle de login "raiz-slug", gravado na criação de membros novos. */
   username?: string;
   papel?: Papel;
-  escopo?: EscopoUsuario;
-  funcoes?: Funcoes;
   status?: "ativo" | "bloqueado" | "desativado";
   pode_criar_anotacoes?: boolean;
   /** Marca true ao criar ou resetar; false quando o usuário troca pelo painel. */

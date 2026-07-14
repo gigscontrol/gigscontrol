@@ -55,7 +55,7 @@ export default function PlanosPage() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(600px circle at 50% -10%, rgba(61,123,255,0.16), transparent 60%)",
+              "radial-gradient(600px circle at 50% -10%, var(--glow-hero), var(--glow-fade) 60%)",
           }}
         />
         <div className="relative">

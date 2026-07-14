@@ -76,6 +76,12 @@ export type PrivacidadeDj = {
   vendasCriar: boolean;
   /** Vê o financeiro dele. */
   financeiroVer: boolean;
+  /**
+   * Vê a taxa de agência e o líquido. Retrocompat: quando AUSENTE no jsonb
+   * salvo, o mapper deriva = financeiroVer (artista antigo não muda de
+   * comportamento). Artista NOVO nasce com a taxa oculta (false).
+   */
+  financeiroVerTaxa: boolean;
   /** Pode informar pagamento. */
   financeiroInformar: boolean;
   /** Vê os contratos dele. */
@@ -94,6 +100,7 @@ export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
   vendasVer: true,
   vendasCriar: false,
   financeiroVer: true,
+  financeiroVerTaxa: false,
   financeiroInformar: false,
   contratosVer: true,
   contratosCriar: false,

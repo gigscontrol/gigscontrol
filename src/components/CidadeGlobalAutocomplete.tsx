@@ -232,7 +232,7 @@ export default function CidadeGlobalAutocomplete({
             className={`absolute top-full mt-1 z-50 bg-surface border border-border rounded-md flex flex-col ${
               horizontal ? "left-0 w-64 max-w-[80vw]" : "left-0 right-0"
             }`}
-            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.6)", maxHeight: 320 }}
+            style={{ boxShadow: "0 12px 30px var(--shadow-color)", maxHeight: 320 }}
           >
             <div className="p-2 border-b border-border flex-shrink-0">
               <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-2.5 py-1.5">
@@ -310,7 +310,7 @@ export default function CidadeGlobalAutocomplete({
         {open && sugestoes.length > 0 && (
           <div
             className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md z-40 max-h-[280px] overflow-y-auto"
-            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+            style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {sugestoes.map((c, idx) => (
               <button
@@ -336,7 +336,7 @@ export default function CidadeGlobalAutocomplete({
         {open && !buscando && input.trim().length >= 2 && sugestoes.length === 0 && (
           <div
             className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md z-40 px-3 py-3 text-xs text-muted"
-            style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}
+            style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {indisponivel
               ? t("Autocomplete mundial indisponível (config. GeoNames).")

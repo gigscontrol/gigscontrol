@@ -143,7 +143,7 @@ export default function DateRangeSelector<T extends string>({
       {value === customLabel && isCustomMenuOpen && (
         <div
           className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-32px)] bg-surface border border-border rounded-lg p-4 animate-in"
-          style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}
+          style={{ boxShadow: "0 12px 40px var(--shadow-color)" }}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="stat-label">{t("Selecione o ano")}</span>

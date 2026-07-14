@@ -17,6 +17,9 @@ import type { PlanoId, CicloCobranca } from "@/lib/planos";
 import { PLANOS, getPlano } from "@/lib/planos";
 import BotoesOAuth from "@/components/BotoesOAuth";
 import AuthShell from "@/components/auth/AuthShell";
+import PainelVivoLogin from "@/components/auth/PainelVivoLogin";
+import LandingNav from "@/components/landing/LandingNav";
+import FooterLanding from "@/components/landing/FooterLanding";
 import CampoSenha from "@/components/CampoSenha";
 import { avaliarSenha } from "@/lib/senha-forca";
 import { useT } from "@/lib/i18n";
@@ -180,10 +183,15 @@ function SignupInner() {
   }
 
   return (
-    <AuthShell
-      titulo={t("Criar conta")}
-      subtitulo={t(TRIAL_ATIVADO ? "7 dias grátis. Sem cartão de crédito." : "Crie sua conta e comece a organizar sua agência.")}
-    >
+    <>
+      {/* Mesmo menu de topo da landing (igual ao /login) */}
+      <LandingNav />
+      <AuthShell
+        titulo={t("Criar conta")}
+        subtitulo={t(TRIAL_ATIVADO ? "7 dias grátis. Sem cartão de crédito." : "Crie sua conta e comece a organizar sua agência.")}
+        painelEsquerdo={<PainelVivoLogin comNavExterna />}
+        comNavExterna
+      >
       {temPlanoNaUrl && (
         <div className="card mb-3 flex items-center justify-between gap-2 py-2.5">
           <span className="text-xs text-secondary">
@@ -219,7 +227,9 @@ function SignupInner() {
         enviando={enviando}
         onSubmit={handleSubmit}
       />
-    </AuthShell>
+      </AuthShell>
+      <FooterLanding />
+    </>
   );
 }
 

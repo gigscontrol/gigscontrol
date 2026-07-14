@@ -14,8 +14,6 @@ import { useT } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import LogoGC from "@/components/LogoGC";
 
-const BRAND = "#3D7BFF";
-
 const PONTOS = [
   "Agenda de shows de todos os artistas",
   "Orçamento e proposta direto no WhatsApp",
@@ -74,7 +72,7 @@ export default function AuthShell({
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(600px circle at 25% 15%, rgba(61,123,255,0.20), transparent 60%), radial-gradient(520px circle at 80% 70%, rgba(74,196,255,0.12), transparent 60%)",
+              "radial-gradient(600px circle at 25% 15%, var(--glow-hero), var(--glow-fade) 60%), radial-gradient(520px circle at 80% 70%, var(--glow-accent), var(--glow-fade) 60%)",
           }}
         />
         <Link href="/" className="relative w-fit">
@@ -94,7 +92,7 @@ export default function AuthShell({
               <li key={p} className="flex items-center gap-3">
                 <span
                   className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${BRAND}22`, color: BRAND }}
+                  style={{ backgroundColor: "var(--brand-weak)", color: "var(--brand)" }}
                 >
                   <Check size={12} strokeWidth={3} />
                 </span>
@@ -137,7 +135,7 @@ function LadoFormulario({
         className="absolute inset-0 opacity-50 pointer-events-none lg:hidden"
         style={{
           background:
-            "radial-gradient(500px circle at 50% 0%, rgba(61,123,255,0.15), transparent 60%)",
+            "radial-gradient(500px circle at 50% 0%, var(--glow-hero), var(--glow-fade) 60%)",
         }}
       />
 

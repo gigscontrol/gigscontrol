@@ -135,7 +135,7 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
       {aberto && (
         <div
           className="absolute right-0 top-full mt-2 w-[380px] max-w-[calc(100vw-32px)] bg-surface border border-border rounded-lg overflow-hidden z-50 animate-in"
-          style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.6)" }}
+          style={{ boxShadow: "0 12px 40px var(--shadow-color)" }}
         >
           {/* Cabeçalho */}
           <div className="flex items-center justify-between p-3 border-b border-border">

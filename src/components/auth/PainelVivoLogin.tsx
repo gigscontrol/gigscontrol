@@ -36,9 +36,9 @@ function Notificacao({
 }) {
   return (
     <div
-      className="gcanim absolute z-[2] flex items-center gap-[9px] rounded-[11px] border border-[rgba(255,255,255,.12)] bg-surface px-3 py-[9px]"
+      className="gcanim absolute z-[2] flex items-center gap-[9px] rounded-[11px] border border-[var(--border-strong)] bg-surface px-3 py-[9px]"
       style={{
-        boxShadow: "0 16px 34px -12px rgba(0,0,0,.8)",
+        boxShadow: "0 16px 34px -12px var(--shadow-color-strong)",
         animation: anim,
         ...estilo,
       }}
@@ -85,37 +85,37 @@ function MiniDashboard() {
 
   return (
     <div
-      className="overflow-hidden rounded-[14px] border border-[rgba(255,255,255,.09)] bg-[#0E121A]"
-      style={{ boxShadow: "0 24px 55px -22px rgba(0,0,0,.8)" }}
+      className="overflow-hidden rounded-[14px] border border-[color-mix(in_srgb,var(--text-primary)_9%,transparent)] bg-[var(--mock-window)]"
+      style={{ boxShadow: "0 24px 55px -22px var(--shadow-color-strong)" }}
     >
       {/* barra da janela */}
-      <div className="flex h-[26px] items-center gap-[5px] border-b border-[rgba(255,255,255,.06)] bg-[#0B0F16] px-3">
-        <span className="h-2 w-2 rounded-full bg-[#F5455C]" />
-        <span className="h-2 w-2 rounded-full bg-[#F5A623]" />
-        <span className="h-2 w-2 rounded-full bg-[#1F9E5A]" />
+      <div className="flex h-[26px] items-center gap-[5px] border-b border-[var(--hairline)] bg-[var(--mock-chrome)] px-3">
+        <span className="h-2 w-2 rounded-full bg-[var(--danger)]" />
+        <span className="h-2 w-2 rounded-full bg-[var(--warning)]" />
+        <span className="h-2 w-2 rounded-full bg-[var(--success)]" />
       </div>
 
       <div className="flex">
         {/* sidebar mini */}
-        <div className="flex w-[104px] flex-none flex-col gap-[3px] border-r border-[rgba(255,255,255,.06)] px-2 py-2.5">
+        <div className="flex w-[104px] flex-none flex-col gap-[3px] border-r border-[var(--hairline)] px-2 py-2.5">
           {menu.map((item, i) => (
             <div
               key={item}
               className={`flex items-center gap-[7px] rounded-md px-[9px] py-1.5 ${
-                i === 0 ? "bg-[#141A26]" : ""
+                i === 0 ? "bg-[var(--mock-active)]" : ""
               }`}
             >
               <span
                 className={`rounded-full ${
-                  i === 0 ? "h-[5px] w-[5px] bg-[#3D7BFF]" : "h-1 w-1 bg-[#3A4254]"
+                  i === 0 ? "h-[5px] w-[5px] bg-[var(--brand)]" : "h-1 w-1 bg-[var(--mock-dot)]"
                 }`}
-                style={i === 0 ? { boxShadow: "0 0 6px #3D7BFF" } : undefined}
+                style={i === 0 ? { boxShadow: "0 0 6px var(--brand)" } : undefined}
               />
               <span
                 className={
                   i === 0
                     ? "text-[10px] font-semibold text-primary"
-                    : "text-[10px] text-[#7A8296]"
+                    : "text-[10px] text-[var(--text-dim)]"
                 }
               >
                 {t(item)}
@@ -135,7 +135,7 @@ function MiniDashboard() {
                 {t("Resumo da operação")}
               </div>
             </div>
-            <span className="whitespace-nowrap rounded-md bg-[#3D7BFF] px-2.5 py-[5px] text-[9px] font-bold text-white">
+            <span className="whitespace-nowrap rounded-md bg-[var(--brand)] px-2.5 py-[5px] text-[9px] font-bold text-white">
               {t("+ Novo")}
             </span>
           </div>
@@ -145,12 +145,12 @@ function MiniDashboard() {
             {metricas.map((m) => (
               <div
                 key={m.rotulo}
-                className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,.07)] bg-main px-2 py-2"
+                className="min-w-0 flex-1 rounded-lg border border-[color-mix(in_srgb,var(--text-primary)_7%,transparent)] bg-main px-2 py-2"
               >
-                <div className="whitespace-nowrap font-mono text-[6.5px] font-semibold tracking-[.1em] text-[#5E6674]">
+                <div className="whitespace-nowrap font-mono text-[6.5px] font-semibold tracking-[.1em] text-[var(--text-label)]">
                   {t(m.rotulo)}
                 </div>
-                <div className="mt-1 font-display text-[15px] font-extrabold text-[#7DB0FF]">
+                <div className="mt-1 font-display text-[15px] font-extrabold text-[var(--brand-ink)]">
                   {m.valor}
                 </div>
               </div>
@@ -158,8 +158,8 @@ function MiniDashboard() {
           </div>
 
           {/* faturamento por mês */}
-          <div className="mb-2 rounded-lg border border-[rgba(255,255,255,.06)] bg-main px-2.5 pb-2 pt-[9px]">
-            <div className="mb-2 font-mono text-[6.5px] font-semibold tracking-[.1em] text-[#5E6674]">
+          <div className="mb-2 rounded-lg border border-[var(--hairline)] bg-main px-2.5 pb-2 pt-[9px]">
+            <div className="mb-2 font-mono text-[6.5px] font-semibold tracking-[.1em] text-[var(--text-label)]">
               {t("FATURAMENTO POR MÊS")}
             </div>
             <div className="flex h-[34px] items-end gap-[5px]">
@@ -171,8 +171,8 @@ function MiniDashboard() {
                     height: h,
                     borderRadius: "4px 4px 2px 2px",
                     background: BARRAS_CHEIAS.has(i)
-                      ? "#3D7BFF"
-                      : "rgba(61,123,255,.45)",
+                      ? "var(--brand)"
+                      : "color-mix(in srgb, var(--brand) 45%, transparent)",
                   }}
                 />
               ))}
@@ -185,10 +185,10 @@ function MiniDashboard() {
               (linha) => (
                 <div
                   key={linha}
-                  className="flex items-center gap-2 rounded-[7px] border border-[rgba(255,255,255,.06)] bg-main px-2.5 py-[7px]"
+                  className="flex items-center gap-2 rounded-[7px] border border-[var(--hairline)] bg-main px-2.5 py-[7px]"
                 >
-                  <span className="h-2 w-2 flex-none rounded-full bg-[#3D7BFF]" />
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[9.5px] text-[#C6CCD8]">
+                  <span className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[9.5px] text-[var(--text-soft)]">
                     {linha}
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export default function PainelVivoLogin({
       className="relative flex h-full flex-col px-12 xl:px-[52px]"
       style={{
         background:
-          "radial-gradient(130% 90% at 10% 0%, rgba(61,123,255,.12), rgba(11,13,18,0) 55%)",
+          "radial-gradient(130% 90% at 10% 0%, var(--glow-hero), var(--glow-fade) 55%)",
       }}
     >
       {/* barra do logo — espelha a topbar (h-16) do lado do form pra alinhar
@@ -264,7 +264,7 @@ export default function PainelVivoLogin({
           <Notificacao
             estilo={{ top: -14, left: -8 }}
             anim="gcFloat 6s ease-in-out infinite"
-            corIcone="#1F9E5A"
+            corIcone="var(--success)"
             icone={
               <>
                 <path d="M7 3h7l4 4v14H7z" />
@@ -277,7 +277,7 @@ export default function PainelVivoLogin({
           <Notificacao
             estilo={{ top: "26%", right: -10 }}
             anim="gcFloat 7s ease-in-out -2.5s infinite"
-            corIcone="#3D7BFF"
+            corIcone="var(--brand)"
             icone={
               <>
                 <path d="M22 2L11 13" />
@@ -290,7 +290,7 @@ export default function PainelVivoLogin({
           <Notificacao
             estilo={{ bottom: "16%", left: -10 }}
             anim="gcFloat 7.5s ease-in-out -1.2s infinite"
-            corIcone="#1F9E5A"
+            corIcone="var(--success)"
             icone={<path d="M5 12l5 5L20 6" />}
             titulo={t("Parcela recebida")}
             detalhe={t("cachê em dia")}
@@ -298,7 +298,7 @@ export default function PainelVivoLogin({
           <Notificacao
             estilo={{ bottom: -14, right: -6 }}
             anim="gcFloat 8s ease-in-out -4s infinite"
-            corIcone="#3D7BFF"
+            corIcone="var(--brand)"
             icone={
               <>
                 <rect x="4" y="6" width="16" height="14" rx="2" />
@@ -314,7 +314,7 @@ export default function PainelVivoLogin({
       </div>
 
       {/* rodapé fixo no canto inferior (fora do fluxo central) */}
-      <div className="absolute bottom-8 left-12 font-mono text-[10px] text-[#4E545E] xl:left-[52px]">
+      <div className="absolute bottom-8 left-12 font-mono text-[10px] text-[var(--text-disabled)] xl:left-[52px]">
         © {new Date().getFullYear()} GIGS CONTROL — {t("GESTÃO PARA A MÚSICA")}
       </div>
     </div>

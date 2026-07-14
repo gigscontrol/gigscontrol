@@ -4,6 +4,12 @@
  */
 // ---- Landing + Login redesign (telas 13/07 do guia, 2026-07-09) ----
 const LANDING13_REDESIGN: Record<string, string> = {
+  "{n} dias": "{n} giorni",
+  "contratos": "contratti",
+  "Dias restantes do seu plano": "Giorni rimanenti del tuo piano",
+  "Contratos que você ainda pode gerar neste mês": "Contratti che puoi ancora creare questo mese",
+  "Dias restantes": "Giorni rimanenti",
+  "Contratos no mês": "Contratti del mese",
   "Selecionar": "Seleziona",
   "{n} usuários no total": "{n} utenti in totale",
   "cobrado por mês": "addebitato mensilmente",
@@ -186,9 +192,7 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.": "Seleziona gli artisti. Il ruolo di ciascuno (e i permessi) li definirai dopo, nella scheda Team dell'artista.",
   "Meus dados": "I miei dati",
   "Não foi possível carregar seus dados.": "Impossibile caricare i tuoi dati.",
-  "Não pode criar pastas de anotações na Agenda": "Non può creare cartelle di note nell'Agenda",
   "Nenhum artista cadastrado ainda. Cadastre na aba Artistas.": "Nessun artista ancora registrato. Aggiungine uno nella scheda Artisti.",
-  "Nenhum artista vê os dados de outro (agenda, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima.": "Nessun artista vede i dati di un altro (agenda, vendite, finanze, contratti). L'unica eccezione è la condivisione dei contatti, se la abiliti sopra.",
   "Nenhum artista vinculado. Vincule na aba Equipe do artista.": "Nessun artista collegato. Collegane uno nella scheda Team dell'artista.",
   "Nenhuma ação recente ainda.": "Nessuna attività recente.",
   "Novo usuário": "Nuovo utente",
@@ -197,8 +201,6 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "O que este membro pode fazer com cada artista — vale só para aquele artista.": "Cosa può fare questo membro con ogni artista — vale solo per quell'artista.",
   "País e cidade onde reside": "Paese e città di residenza",
   "Permissões — o que ele pode ver/fazer": "Permessi — cosa può vedere/fare",
-  "Pode criar pastas de anotações": "Può creare cartelle di note",
-  "Pode criar pastas de anotações na Agenda": "Può creare cartelle di note nell'Agenda",
   "Salvar meus dados": "Salva i miei dati",
   "Sem acesso": "Nessun accesso",
   "Sessão expirada. Faça login de novo.": "Sessione scaduta. Accedi di nuovo.",
@@ -413,6 +415,61 @@ const CADASTRO_JUL11_IT: Record<string, string> = {
   "{n} {show}": "{n} {show}",
   "Ícone": "Icona",
   "Últimos orçamentos": "Ultimi preventivi",
+};
+
+// ---- Permissões rework: cancelar venda/contrato, taxa de agência, painel de equipe novo (2026-07-13) ----
+const PERMISSOES_REWORK_JUL13: Record<string, string> = {
+  "Venda cancelada.": "Vendita annullata.",
+  "Cancelada": "Annullata",
+  "Cancelar venda": "Annulla vendita",
+  "A venda continua no histórico, marcada como cancelada.": "La vendita resta nello storico, contrassegnata come annullata.",
+  "A venda sai dos dashboards e do \"a receber\". As parcelas não pagas são canceladas; as já pagas permanecem. A venda continua visível no histórico com o selo Cancelada.": "La vendita esce dalle dashboard e da \"da ricevere\". Le rate non pagate vengono annullate; quelle già pagate restano. La vendita resta visibile nello storico con il badge Annullata.",
+  "Ex.: contratante desistiu, evento cancelado…": "Es.: il cliente ha rinunciato, evento annullato…",
+  "Cancelando...": "Annullamento...",
+  "Vê taxa de agência e líquido": "Vede la commissione di agenzia e il netto",
+  "Vê a taxa de agência e o líquido": "Vede la commissione di agenzia e il netto",
+  "criar, editar e cancelar": "creare, modificare e annullare",
+  "Nenhum artista vê os dados de outro (agenda, orçamentos, vendas, financeiro, contratos). A única exceção é o compartilhamento de contatos, se você liberar acima. Excluir contrato é uma ação exclusiva do admin — não é liberável aqui.": "Nessun artista vede i dati di un altro (agenda, preventivi, vendite, finanze, contratti). L'unica eccezione è la condivisione dei contatti, se la abiliti sopra. Eliminare un contratto è un'azione esclusiva dell'admin — non è delegabile qui.",
+  "Nenhuma permissão definida.": "Nessuna autorizzazione definita.",
+  "Sem permissões": "Nessuna autorizzazione",
+  "Anotações: pode criar pastas": "Note: può creare cartelle",
+  "Permissões da agência": "Autorizzazioni dell'agenzia",
+  "Permissões administrativas — valem no workspace inteiro, não por artista.": "Autorizzazioni amministrative — valgono per l'intero workspace, non per singolo artista.",
+  "Cancelar o contrato {numero}? Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.": "Annullare il contratto {numero}? Verrà contrassegnato come annullato e il link di firma smetterà di funzionare per chi non ha ancora firmato. Il contratto resta visibile nello storico.",
+  "Não foi possível cancelar o contrato.": "Impossibile annullare il contratto.",
+  "Cancelar contrato": "Annulla contratto",
+};
+
+// Página /recursos — vitrine dos 6 módulos (copy verbatim do dono, 2026-07).
+const RECURSOS_PAGE: Record<string, string> = {
+  "Recursos · Tudo num só lugar": "Risorse · Tutto in un unico posto",
+  "Todos os recursos.": "Tutte le risorse.",
+  "Num só painel.": "In un unico pannello.",
+  "Tudo o que sua agência precisa para vender, organizar e gerenciar shows em uma única plataforma.": "Tutto ciò di cui la tua agenzia ha bisogno per vendere, organizzare e gestire spettacoli su un'unica piattaforma.",
+  "Centralize toda a operação dos seus shows em um único lugar. Tenha acesso rápido aos horários, contatos do contratante, localização, passagens aéreas, reservas de hotel, riders técnico, de camarim e efeitos especiais, além das datas e formas de pagamento. Tudo organizado para que nenhum detalhe passe despercebido.": "Centralizza tutta l'operazione dei tuoi spettacoli in un unico posto. Accedi rapidamente agli orari, ai contatti del committente, alla localizzazione, ai biglietti aerei, alle prenotazioni d'albergo, ai rider tecnico, di camerino e di effetti speciali, oltre alle date e alle forme di pagamento. Tutto organizzato affinché nessun dettaglio passi inosservato.",
+  "Crie orçamentos profissionais em poucos segundos e acompanhe todo o histórico de negociações. Quando uma proposta for aprovada, transforme o orçamento em uma venda completa com apenas um clique, enviando automaticamente todas as informações para a agenda do artista.": "Crea preventivi professionali in pochi secondi e monitora tutta la cronologia delle trattative. Quando una proposta viene approvata, trasforma il preventivo in una vendita completa con un solo clic, inviando automaticamente tutte le informazioni all'agenda dell'artista.",
+  "Tenha controle total sobre os recebimentos do seu casting. Acompanhe valores, formas de pagamento, vencimentos, parcelas e pagamentos pendentes em um único painel, evitando atrasos e garantindo uma gestão financeira muito mais organizada.": "Abbi il controllo totale sugli incassi del tuo roster. Monitora importi, forme di pagamento, scadenze, rate e pagamenti in sospeso in un unico pannello, evitando ritardi e garantendo una gestione finanziaria molto più organizzata.",
+  "Automatize a criação de contratos utilizando modelos personalizados. Vincule um contrato diretamente à venda, gere documentos completos em poucos segundos e envie para assinatura digital, reduzindo burocracia e agilizando o fechamento dos seus eventos.": "Automatizza la creazione dei contratti utilizzando modelli personalizzati. Collega un contratto direttamente alla vendita, genera documenti completi in pochi secondi e inviali per la firma digitale, riducendo la burocrazia e velocizzando la chiusura dei tuoi eventi.",
+  "Construa um banco de dados inteligente com todos os contratantes, produtores, casas de shows e clientes interessados. Encontre qualquer contato em segundos utilizando filtros por região, cidade ou histórico de negociações, facilitando novas vendas e o relacionamento com seus clientes.": "Costruisci un database intelligente con tutti i committenti, i produttori, i locali per spettacoli e i clienti interessati. Trova qualsiasi contatto in pochi secondi utilizzando filtri per regione, città o cronologia delle trattative, facilitando nuove vendite e la relazione con i tuoi clienti.",
+  "Gerencie toda a sua equipe com total controle de permissões. Defina exatamente o que cada usuário pode visualizar ou editar, organize artistas e colaboradores e mantenha sua operação segura, profissional e totalmente centralizada.": "Gestisci tutto il tuo team con pieno controllo dei permessi. Definisci esattamente cosa ciascun utente può visualizzare o modificare, organizza artisti e collaboratori e mantieni la tua operazione sicura, professionale e completamente centralizzata.",
+  // bullets das seções /recursos (§4)
+  "horários, contatos do contratante, localização": "orari, contatti del committente, localizzazione",
+  "passagens aéreas, reservas de hotel": "biglietti aerei, prenotazioni d'albergo",
+  "riders técnico, de camarim e efeitos especiais": "rider tecnico, di camerino e di effetti speciali",
+  "orçamentos profissionais em poucos segundos": "preventivi professionali in pochi secondi",
+  "histórico de negociações": "cronologia delle trattative",
+  "transforme o orçamento em uma venda completa com apenas um clique": "trasforma il preventivo in una vendita completa con un solo clic",
+  "valores, formas de pagamento": "importi, forme di pagamento",
+  "vencimentos, parcelas": "scadenze, rate",
+  "pagamentos pendentes": "pagamenti in sospeso",
+  "modelos personalizados": "modelli personalizzati",
+  "vincule um contrato diretamente à venda": "collega un contratto direttamente alla vendita",
+  "assinatura digital": "firma digitale",
+  "contratantes, produtores, casas de shows": "committenti, produttori, locali per spettacoli",
+  "filtros por região, cidade": "filtri per regione, città",
+  "total controle de permissões": "pieno controllo dei permessi",
+  "o que cada usuário pode visualizar ou editar": "cosa ciascun utente può visualizzare o modificare",
+  "organize artistas e colaboradores": "organizza artisti e collaboratori",
 };
 
 export const IT: Record<string, string> = {
@@ -1941,10 +1998,7 @@ export const IT: Record<string, string> = {
   "Casa bloqueada": "Locale bloccato",
   "Cadastre o primeiro usuário da sua equipe pra começar.": "Registra il primo utente del tuo team per iniziare.",
   "Editar eventos": "Modifica eventi",
-  "Nenhuma função atribuída.": "Nessun ruolo assegnato.",
   "Permissões": "Autorizzazioni",
-  "Só os próprios": "Solo i propri",
-  "Vendas e orçamentos": "Vendite e preventivi",
   "Copiar login completo": "Copia login completo",
   "Preencha um login válido pra copiar": "Inserisci un login valido per copiare",
   "Use 3+ caracteres (letras, números, hífen)": "Usa 3+ caratteri (lettere, numeri, trattino)",
@@ -2394,6 +2448,11 @@ export const IT: Record<string, string> = {
   ...LANDING13_REDESIGN,
   ...CONFIG_EQUIPE_JUL11,
   ...CADASTRO_JUL11_IT,
+  ...PERMISSOES_REWORK_JUL13,
+  ...RECURSOS_PAGE,
+  // Toggle de tema claro/escuro (BotaoTema)
+  "Mudar para tema claro": "Passa al tema chiaro",
+  "Mudar para tema escuro": "Passa al tema scuro",
   // Chaves novas dos dashboards/bloqueio/anotações/checkout (validação 2026-07-12).
   "Aguardando assinatura": "In attesa di firma",
   "Bloqueando...": "Blocco in corso...",
@@ -2512,4 +2571,16 @@ export const IT: Record<string, string> = {
   "Pague com cartão de crédito de forma segura.": "Paga in modo sicuro con carta di credito.",
   "Verifique os dados do cartão.": "Verifica i dati della carta.",
   "Pagar com PIX": "Paga con PIX",
+  // ---- Config: aba Perfil + Agência (rework WI-3/WI-4, 2026-07-13) ----
+  "Perfil": "Profilo",
+  "Cor do meu avatar": "Colore del mio avatar",
+  "Cor do avatar atualizada.": "Colore dell'avatar aggiornato.",
+  "Falha ao salvar a cor.": "Impossibile salvare il colore.",
+  "Se você emitir nota fiscal por CNPJ": "Se fatturi tramite CNPJ",
+  "Rua, número, bairro, cidade": "Via, numero, quartiere, città",
+  "Aparece nos contratos gerados pelo sistema.": "Appare nei contratti generati dal sistema.",
+  "Seu e-mail de login e a senha de acesso à sua dashboard.": "La tua email di accesso e la password per accedere alla tua dashboard.",
+  "mínimo de 8 caracteres": "minimo 8 caratteri",
+  "Razão social": "Ragione sociale",
+  "Plano & Assinatura": "Piano e Abbonamento",
 };

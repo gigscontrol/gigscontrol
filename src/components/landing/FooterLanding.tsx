@@ -18,7 +18,7 @@ function IconeSocial({ children, rotulo }: { children: React.ReactNode; rotulo: 
       target="_blank"
       rel="noreferrer"
       aria-label={rotulo}
-      className="gcflink flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-[rgba(255,255,255,.1)] bg-surface"
+      className="gcflink flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface"
     >
       {children}
     </a>
@@ -35,10 +35,10 @@ export default function FooterLanding() {
     {
       titulo: "PRODUTO",
       links: [
-        { rotulo: "Recursos", href: "#recursos" },
+        { rotulo: "Recursos", href: "/recursos" },
         { rotulo: "Planos", href: "#planos" },
         { rotulo: "Entrar", href: "/login" },
-        { rotulo: "Começar", href: "/planos" },
+        { rotulo: "Começar", href: "/signup" },
       ],
     },
     {
@@ -60,7 +60,7 @@ export default function FooterLanding() {
   ];
 
   return (
-    <footer className="border-t border-[rgba(255,255,255,.08)] bg-[#080A0F] px-6 pt-[52px] sm:px-12">
+    <footer className="border-t border-[var(--border-color)] bg-[var(--footer-bg)] px-6 pt-[52px] sm:px-12">
       <div className="mx-auto max-w-[1044px]">
         <div className="gcrv grid grid-cols-1 gap-8 pb-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           {/* marca */}
@@ -68,7 +68,7 @@ export default function FooterLanding() {
             <Link href="/" className="w-fit">
               <LogoGC size={20} variant="gradient" withWordmark />
             </Link>
-            <div className="max-w-[280px] text-[13px] leading-[1.6] text-[#8B93A5]">
+            <div className="max-w-[280px] text-[13px] leading-[1.6] text-[var(--text-body)]">
               {t(
                 "Gestão completa para agências e artistas da música — do primeiro contato ao cachê na conta."
               )}
@@ -78,34 +78,34 @@ export default function FooterLanding() {
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#9AA2B4"
+                  stroke="var(--text-secondary)"
                   strokeWidth="1.8"
                   style={{ width: 16, height: 16 }}
                   aria-hidden
                 >
                   <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
                   <circle cx="12" cy="12" r="3.8" />
-                  <circle cx="17.2" cy="6.8" r="1.2" fill="#9AA2B4" stroke="none" />
+                  <circle cx="17.2" cy="6.8" r="1.2" fill="var(--text-secondary)" stroke="none" />
                 </svg>
               </IconeSocial>
               <IconeSocial rotulo="YouTube">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#9AA2B4"
+                  stroke="var(--text-secondary)"
                   strokeWidth="1.8"
                   style={{ width: 16, height: 16 }}
                   aria-hidden
                 >
                   <rect x="2.5" y="6" width="19" height="12.5" rx="3" />
-                  <path d="M10.2 9.4l5 2.85-5 2.85z" fill="#9AA2B4" stroke="none" />
+                  <path d="M10.2 9.4l5 2.85-5 2.85z" fill="var(--text-secondary)" stroke="none" />
                 </svg>
               </IconeSocial>
               <IconeSocial rotulo="X">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#9AA2B4"
+                  stroke="var(--text-secondary)"
                   strokeWidth="1.8"
                   style={{ width: 16, height: 16 }}
                   aria-hidden
@@ -119,7 +119,7 @@ export default function FooterLanding() {
           {/* colunas de links */}
           {colunas.map((col) => (
             <div key={col.titulo} className="flex flex-col gap-[11px]">
-              <div className="mb-1 font-mono text-[9.5px] font-semibold tracking-[.2em] text-[#5E6674]">
+              <div className="mb-1 font-mono text-[9.5px] font-semibold tracking-[.2em] text-[var(--text-label)]">
                 {t(col.titulo)}
               </div>
               {col.links.map((l) =>
@@ -146,8 +146,8 @@ export default function FooterLanding() {
         </div>
 
         {/* barra final */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[rgba(255,255,255,.06)] pb-[22px] pt-[18px]">
-          <span className="font-mono text-[11px] text-[#5E6674]">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--hairline)] pb-[22px] pt-[18px]">
+          <span className="font-mono text-[11px] text-[var(--text-label)]">
             © {new Date().getFullYear()} GIGS CONTROL — {t("Gestão para a música.")}
           </span>
           <SeletorIdioma nomeCompleto />

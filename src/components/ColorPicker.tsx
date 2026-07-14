@@ -184,7 +184,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
         backgroundColor: "var(--bg-surface)",
         border: "1px solid var(--border-color)",
         boxShadow:
-          "0 16px 40px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35)",
+          "0 16px 40px var(--shadow-color), 0 4px 12px var(--shadow-color)",
         width: 280,
       }}
       onClick={(e) => e.stopPropagation()}
@@ -232,7 +232,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
             width: 14,
             height: 14,
             border: "2px solid #fff",
-            boxShadow: "0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5)",
+            boxShadow: "0 0 0 1px var(--shadow-color), 0 1px 2px var(--shadow-color)",
             backgroundColor: hexAtual,
           }}
         />
@@ -262,7 +262,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
             width: 16,
             height: 16,
             border: "2px solid #fff",
-            boxShadow: "0 0 0 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.5)",
+            boxShadow: "0 0 0 1px var(--shadow-color), 0 1px 2px var(--shadow-color)",
             backgroundColor: hsvPuro(hsv.h),
           }}
         />
@@ -277,7 +277,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
             height: 34,
             backgroundColor: hexAtual,
             border: "1px solid var(--border-color)",
-            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.05)",
+            boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 5%, transparent)",
           }}
         />
         <div className="flex items-center bg-elevated border border-border rounded-md px-2 py-1.5 flex-1 focus-within:border-border-strong transition-colors">

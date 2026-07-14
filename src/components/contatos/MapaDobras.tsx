@@ -401,7 +401,7 @@ function SwatchTipo({ tipo }: { tipo: PontoMapa["tipo"] }) {
     return (
       <span
         className="block h-3 w-3 rounded-[3px]"
-        style={{ backgroundColor: "#12151D", border: "1.5px solid #3D7BFF" }}
+        style={{ backgroundColor: "var(--bg-surface)", border: "1.5px solid var(--brand)" }}
       />
     );
   }
@@ -409,7 +409,7 @@ function SwatchTipo({ tipo }: { tipo: PontoMapa["tipo"] }) {
     return (
       <span
         className="block h-3 w-3 rounded-full"
-        style={{ border: "2px solid #6E7794" }}
+        style={{ border: "2px solid var(--text-muted)" }}
       />
     );
   }
@@ -417,8 +417,8 @@ function SwatchTipo({ tipo }: { tipo: PontoMapa["tipo"] }) {
     <span
       className="block h-3 w-3 rounded-full"
       style={{
-        backgroundColor: "#3D7BFF",
-        boxShadow: "0 0 8px rgba(61,123,255,.8)",
+        backgroundColor: "var(--brand)",
+        boxShadow: "0 0 8px color-mix(in srgb, var(--brand) 80%, transparent)",
       }}
     />
   );

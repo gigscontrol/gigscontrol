@@ -8,6 +8,7 @@ import { orcamentoCreateSchema } from "@/lib/validators/orcamentos.schema";
 import {
   verificarAcessoOrcamentos,
   verificarCriarOrcamento,
+  redigirOrcamentoParaSessao,
 } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -22,7 +23,9 @@ export async function GET() {
       r.sessao.supabase,
       r.sessao
     );
-    return NextResponse.json({ orcamentos });
+    // Redige a TAXA/líquido (D6) de quem não pode ver a taxa daquele artista.
+    const saida = orcamentos.map((o) => redigirOrcamentoParaSessao(r.sessao, o));
+    return NextResponse.json({ orcamentos: saida });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar orçamentos.");
   }
@@ -64,7 +67,10 @@ export async function POST(request: Request) {
       entidadeNome: orcamento.numero,
       descricao: `Criou orçamento ${orcamento.numero}`,
     });
-    return NextResponse.json({ orcamento }, { status: 201 });
+    return NextResponse.json(
+      { orcamento: redigirOrcamentoParaSessao(r.sessao, orcamento) },
+      { status: 201 }
+    );
   } catch (e) {
     // Colisão de número (23505) etc. viram status amigável em vez de 500 cru.
     return respostaDeErro(e, "Falha ao criar orçamento.");

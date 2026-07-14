@@ -104,14 +104,22 @@ type MpSecureCtor = new (
 // aqui só lemos o construtor do window com um cast pro nosso shape (o SDK é o
 // mesmo, só usamos métodos diferentes — Secure Fields em vez de bricks()).
 
-// ── Estilo injetado NOS iframes (só tipografia/cor do texto; a moldura é nossa).
-const ESTILO_CAMPO: Record<string, string> = {
-  color: "#F1F3F7", // var(--text-primary) — iframe não enxerga nossas CSS vars
-  "font-size": "14px",
-  "font-family":
-    "'Hanken Grotesk', system-ui, -apple-system, sans-serif",
-  placeholderColor: "#5E6470", // var(--text-disabled)
-};
+// ── Estilo injetado NOS iframes (só tipografia/cor do texto; a moldura é
+// nossa). Lido em runtime (o iframe do MP não enxerga nossas CSS vars) —
+// acompanha o tema ativo (claro/escuro) no momento da montagem. Limitação
+// aceita: alternar o tema com os campos já montados não retematiza o iframe.
+function estiloCampo(): Record<string, string> {
+  const estiloRaiz = getComputedStyle(document.documentElement);
+  const corVar = (nome: string, fallback: string) =>
+    estiloRaiz.getPropertyValue(nome).trim() || fallback;
+  return {
+    color: corVar("--text-primary", "#F1F3F7"),
+    "font-size": "14px",
+    "font-family":
+      "'Hanken Grotesk', system-ui, -apple-system, sans-serif",
+    placeholderColor: corVar("--text-disabled", "#5E6470"),
+  };
+}
 
 /** Wrapper NOSSO de um secure field: label + moldura reativa (foco/erro). */
 function CampoSeguro({
@@ -310,6 +318,7 @@ export default function MercadoPagoSecureFields({
       try {
         const mp = new Ctor(PUBLIC_KEY, { locale: "pt-BR" });
         mpRef.current = mp;
+        const estiloCampoAtual = estiloCampo();
 
         // Tipos de documento (popula o select de documento).
         try {
@@ -326,7 +335,7 @@ export default function MercadoPagoSecureFields({
         const fNum = mp.fields
           .create("cardNumber", {
             placeholder: "0000 0000 0000 0000",
-            style: ESTILO_CAMPO,
+            style: estiloCampoAtual,
           })
           .mount(idNumero);
         fNum
@@ -352,7 +361,7 @@ export default function MercadoPagoSecureFields({
         const fExp = mp.fields
           .create("expirationDate", {
             placeholder: "MM/AA",
-            style: ESTILO_CAMPO,
+            style: estiloCampoAtual,
           })
           .mount(idValidade);
         fExp
@@ -375,7 +384,7 @@ export default function MercadoPagoSecureFields({
         const fCvv = mp.fields
           .create("securityCode", {
             placeholder: "CVV",
-            style: ESTILO_CAMPO,
+            style: estiloCampoAtual,
           })
           .mount(idCvv);
         fCvv

@@ -6,12 +6,20 @@ import {
   LimiteModelosError,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloCreateSchema } from "@/lib/validators/contratoModelos.schema";
+import { podeLerModelos, exigirAdminModelos } from "@/lib/api/permissoes";
 import type { PlanoId } from "@/lib/planos";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  // LER modelos (D3): fecha pra quem tem acesso a contratos (admin, ou equipe
+  // com alguma chave contratos.* em algum vínculo, ou artista com contratosVer).
+  if (!podeLerModelos(r.sessao))
+    return NextResponse.json(
+      { erro: "Você não tem acesso aos modelos de contrato." },
+      { status: 403 }
+    );
   try {
     const modelos = await listarModelosDoWorkspace(r.sessao.supabase);
     return NextResponse.json({ modelos });
@@ -24,12 +32,9 @@ export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  if (r.sessao.papel !== "admin") {
-    return NextResponse.json(
-      { erro: "Apenas administradores podem criar modelos." },
-      { status: 403 }
-    );
-  }
+  // Gerenciar modelos (D3) = ADMIN-ONLY explícito (super-admin passa).
+  const gate = exigirAdminModelos(r.sessao);
+  if (gate) return gate;
 
   let raw: unknown;
   try {

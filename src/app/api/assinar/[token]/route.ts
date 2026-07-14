@@ -32,6 +32,15 @@ export async function GET(
       return NextResponse.json({ erro: "Link inválido." }, { status: 404 });
     }
     const { signatario, contrato } = r;
+    // Contrato CANCELADO pela agência (D4): quem ainda NÃO assinou é barrado —
+    // nem exibe o documento. Quem já assinou continua podendo visualizar o que
+    // assinou (a assinatura dele permanece válida).
+    if (contrato.status === "cancelado" && signatario.status !== "assinado") {
+      return NextResponse.json(
+        { erro: "Este contrato foi cancelado pela agência.", cancelado: true },
+        { status: 409 }
+      );
+    }
     // Conta a abertura do link (visualização) — só se ainda não assinou.
     // Fire-and-forget pra não atrasar a resposta.
     void registrarAbertura(admin, signatario).catch(() => {});
@@ -75,6 +84,22 @@ export async function POST(
 
   try {
     const admin = criarClienteAdmin();
+    // Contrato CANCELADO não pode ser assinado (D4) — barra antes de qualquer
+    // escrita/upload. (Race entre abrir e assinar: a agência pode ter cancelado
+    // nesse meio-tempo.) Quem já assinou cai no null de registrarAssinatura.
+    const alvo = await buscarParaAssinar(admin, params.token);
+    if (!alvo) {
+      return NextResponse.json({ erro: "Link inválido." }, { status: 404 });
+    }
+    if (
+      alvo.contrato.status === "cancelado" &&
+      alvo.signatario.status !== "assinado"
+    ) {
+      return NextResponse.json(
+        { erro: "Este contrato foi cancelado pela agência.", cancelado: true },
+        { status: 409 }
+      );
+    }
     const sig = await registrarAssinatura(admin, params.token, {
       assinatura: parsed.data.assinatura,
       documento: parsed.data.documento || null,

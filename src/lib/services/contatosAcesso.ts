@@ -1,36 +1,30 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { escopoContatosDoArtista } from "@/lib/permissoes/resolver";
+import { escopoContatosEquipe } from "@/lib/api/permissoes";
 
 /**
- * Visibilidade de CONTRATANTES — modelo NOVO, derivada (sem "dono fixo" e sem
- * migration). Um contratante é visível para o usuário se:
- *   - ele CRIOU o contratante (contratantes.criado_por), OU
- *   - existe orçamento/venda desse contratante que ELE criou, OU
- *   - existe orçamento/venda desse contratante para um ARTISTA que ele atende
- *     (tem vínculo em membros_artista).
- * A visibilidade ACUMULA: cada novo orçamento/venda pode passar a exibir o
- * contato para mais gente.
+ * Visibilidade de CONTATOS (contratantes/casas) — enforcement por UNIÃO dos
+ * vínculos (D2). Modelo NOVO, sem "dono fixo" e sem migration.
  *
- * Admin/super e usuário LEGADO (sem vínculos) veem TODOS ("todos"), pra não
- * trancar ninguém na transição — mesmo padrão dos outros módulos.
+ * EQUIPE (operacional) — derivada de `escopoContatosEquipe` (ver permissoes.ts):
+ *   - "todos"    → vê todos os contatos do workspace;
+ *   - "proprios" → só os que ELE criou (contratantes.criado_por);
+ *   - "nenhum"   → não vê contato algum.
+ * Admin/super → "todos". Legado (sem vínculo) → "nenhum" (o legado morreu; sem
+ * chave de contatos em vínculo, não vê nada).
  *
- * ARTISTA (papel === "artista"): governado por `privacidade.contatos`
+ * ARTISTA (papel === "artista") — INALTERADO: governado por `privacidade.contatos`
  * ("nenhum" | "proprios" | "todos"). "proprios" deriva os contatos ligados aos
- * SHOWS/vendas/orçamentos do PRÓPRIO artista (via artist_id). Ver
- * `escopoContatosArtista` / `idsPorArtistaEmFontes` abaixo. CASAS também passam
- * a ser filtradas para o artista (só as dos eventos dele) — para os demais
- * papéis casas seguem catálogo do workspace ("todos").
+ * SHOWS/vendas/orçamentos do PRÓPRIO artista (via artist_id).
+ *
+ * NOTA sobre CASAS: a tabela `casas` NÃO tem coluna `criado_por` (é catálogo
+ * compartilhado de locais). Por isso, para a equipe, casas não têm escopo
+ * "proprios" real: qualquer permissão de leitura de contatos (ver OU
+ * ver_proprios) mostra o catálogo inteiro; só "nenhum" esconde tudo. Para o
+ * artista, casas seguem privacidade.contatos com "proprios" derivado dos
+ * eventos dele.
  */
-
-/** Vê todos os contratantes? (admin/super/legado). NÃO decide artista. */
-function veTodos(sessao: SessaoAutenticada): boolean {
-  return (
-    sessao.isSuperAdmin ||
-    sessao.papel === "admin" ||
-    sessao.vinculos === undefined
-  );
-}
 
 /**
  * Escopo de contatos do artista (só faz sentido quando papel === "artista").
@@ -72,27 +66,20 @@ async function idsPorArtistaEmFontes(
   return set;
 }
 
-/** contratante_ids referenciados por orçamentos/vendas que o usuário alcança. */
-async function idsPorOrcVenda(
+/** contratante_ids que o usuário CRIOU (escopo "proprios" da equipe). */
+async function contratantesCriadosPor(
   supabase: SupabaseClient,
-  tabela: "orcamentos" | "vendas",
-  userId: string,
-  artistas: string[]
-): Promise<string[]> {
-  let q = supabase
-    .from(tabela)
-    .select("contratante_id")
-    .not("contratante_id", "is", null)
+  userId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("contratantes")
+    .select("id")
+    .eq("criado_por", userId)
     .is("deletado_em", null);
-  q =
-    artistas.length > 0
-      ? q.or(`criado_por.eq.${userId},artist_id.in.(${artistas.join(",")})`)
-      : q.eq("criado_por", userId);
-  const { data, error } = await q;
   if (error) throw error;
-  return (data ?? [])
-    .map((r) => (r as { contratante_id: string | null }).contratante_id)
-    .filter((x): x is string => !!x);
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { id: string }[]) set.add(r.id);
+  return set;
 }
 
 /** Conjunto de contratante_ids visíveis, ou "todos". Usado pela LISTA. */
@@ -107,25 +94,12 @@ export async function contratanteIdsVisiveis(
     if (escopo === "nenhum" || !sessao.artistaId) return new Set<string>();
     return idsPorArtistaEmFontes(supabase, "contratante_id", sessao.artistaId);
   }
-  if (veTodos(sessao)) return "todos";
-  const artistas = Object.keys(sessao.vinculos ?? {});
-  const set = new Set<string>();
-  // (a) contratantes que ele mesmo criou + (b) via orçamentos/vendas (dele ou
-  // dos artistas que atende) — as 3 queries são independentes, roda em paralelo.
-  const [criadosRes, idsOrc, idsVenda] = await Promise.all([
-    supabase
-      .from("contratantes")
-      .select("id")
-      .eq("criado_por", sessao.userId)
-      .is("deletado_em", null),
-    idsPorOrcVenda(supabase, "orcamentos", sessao.userId, artistas),
-    idsPorOrcVenda(supabase, "vendas", sessao.userId, artistas),
-  ]);
-  if (criadosRes.error) throw criadosRes.error;
-  for (const r of (criadosRes.data ?? []) as { id: string }[]) set.add(r.id);
-  for (const id of idsOrc) set.add(id);
-  for (const id of idsVenda) set.add(id);
-  return set;
+  // Equipe/admin: união dos vínculos (contatos.ver → todos; ver_proprios → os
+  // que ele criou; nenhum → vazio).
+  const escopo = escopoContatosEquipe(sessao);
+  if (escopo === "todos") return "todos";
+  if (escopo === "nenhum") return new Set<string>();
+  return contratantesCriadosPor(supabase, sessao.userId);
 }
 
 /** Um contratante específico é visível? Usado nas rotas [id]. */
@@ -154,30 +128,18 @@ export async function contratanteVisivelParaSessao(
     }
     return false;
   }
-  if (veTodos(sessao)) return true;
-  if (criadoPor && criadoPor === sessao.userId) return true;
-  const artistas = Object.keys(sessao.vinculos ?? {});
-  for (const t of ["orcamentos", "vendas"] as const) {
-    let q = supabase
-      .from(t)
-      .select("id", { count: "exact", head: true })
-      .eq("contratante_id", contratanteId)
-      .is("deletado_em", null);
-    q =
-      artistas.length > 0
-        ? q.or(`criado_por.eq.${sessao.userId},artist_id.in.(${artistas.join(",")})`)
-        : q.eq("criado_por", sessao.userId);
-    const { count, error } = await q;
-    if (error) throw error;
-    if ((count ?? 0) > 0) return true;
-  }
-  return false;
+  // Equipe/admin: "todos" → sim; "nenhum" → não; "proprios" → só se ELE criou.
+  const escopo = escopoContatosEquipe(sessao);
+  if (escopo === "todos") return true;
+  if (escopo === "nenhum") return false;
+  return !!criadoPor && criadoPor === sessao.userId;
 }
 
 // ============================================================
-// CASAS — catálogo do workspace para admin/equipe ("todos", igual hoje). Só o
-// ARTISTA é filtrado por privacidade.contatos (nenhum/proprios/todos), com
-// "proprios" derivado das casas dos SHOWS/vendas/orçamentos do próprio artista.
+// CASAS — catálogo compartilhado do workspace (SEM coluna criado_por). O
+// ARTISTA é filtrado por privacidade.contatos ("proprios" = casas dos eventos
+// dele). Para a EQUIPE, como não há dono, "ver" e "ver_proprios" mostram o
+// catálogo inteiro; só "nenhum" (sem permissão de contatos) esconde tudo.
 // ============================================================
 
 /** Conjunto de casa_ids visíveis, ou "todos". Usado pela LISTA de casas. */
@@ -185,11 +147,15 @@ export async function casaIdsVisiveis(
   supabase: SupabaseClient,
   sessao: SessaoAutenticada
 ): Promise<Set<string> | "todos"> {
-  if (sessao.papel !== "artista") return "todos"; // admin/equipe/legado: catálogo
-  const escopo = escopoContatosArtista(sessao);
-  if (escopo === "todos") return "todos";
-  if (escopo === "nenhum" || !sessao.artistaId) return new Set<string>();
-  return idsPorArtistaEmFontes(supabase, "casa_id", sessao.artistaId);
+  if (sessao.papel === "artista") {
+    const escopo = escopoContatosArtista(sessao);
+    if (escopo === "todos") return "todos";
+    if (escopo === "nenhum" || !sessao.artistaId) return new Set<string>();
+    return idsPorArtistaEmFontes(supabase, "casa_id", sessao.artistaId);
+  }
+  // Equipe/admin: catálogo. Sem coluna criado_por → sem escopo "proprios" real:
+  // qualquer leitura de contatos mostra tudo; só "nenhum" esconde.
+  return escopoContatosEquipe(sessao) === "nenhum" ? new Set<string>() : "todos";
 }
 
 /** Uma casa específica é visível? Usado nas rotas [id] de casas. */
@@ -198,19 +164,22 @@ export async function casaVisivelParaSessao(
   sessao: SessaoAutenticada,
   casaId: string
 ): Promise<boolean> {
-  if (sessao.papel !== "artista") return true; // admin/equipe/legado: catálogo
-  const escopo = escopoContatosArtista(sessao);
-  if (escopo === "todos") return true;
-  if (escopo === "nenhum" || !sessao.artistaId) return false;
-  for (const t of ["shows", "orcamentos", "vendas"] as const) {
-    const { count, error } = await supabase
-      .from(t)
-      .select("id", { count: "exact", head: true })
-      .eq("casa_id", casaId)
-      .eq("artist_id", sessao.artistaId)
-      .is("deletado_em", null);
-    if (error) throw error;
-    if ((count ?? 0) > 0) return true;
+  if (sessao.papel === "artista") {
+    const escopo = escopoContatosArtista(sessao);
+    if (escopo === "todos") return true;
+    if (escopo === "nenhum" || !sessao.artistaId) return false;
+    for (const t of ["shows", "orcamentos", "vendas"] as const) {
+      const { count, error } = await supabase
+        .from(t)
+        .select("id", { count: "exact", head: true })
+        .eq("casa_id", casaId)
+        .eq("artist_id", sessao.artistaId)
+        .is("deletado_em", null);
+      if (error) throw error;
+      if ((count ?? 0) > 0) return true;
+    }
+    return false;
   }
-  return false;
+  // Equipe/admin: catálogo — visível a menos que sem permissão de contatos.
+  return escopoContatosEquipe(sessao) !== "nenhum";
 }

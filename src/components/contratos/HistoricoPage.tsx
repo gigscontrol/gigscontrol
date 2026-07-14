@@ -5,6 +5,7 @@ import {
   FileText,
   Download,
   Trash2,
+  Ban,
   Loader2,
   ArrowLeft,
   AlertCircle,
@@ -104,17 +105,24 @@ export default function HistoricoPage({
   const { modelos } = useModelos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
-  const { podeUI } = useAuth();
+  const { podeUI, isSuperAdmin, sessao } = useAuth();
 
   // artistId de um contrato vem da venda vinculada (contrato.vendaId → venda.artistaId).
   const artistaDoContrato = (c: Contrato): string | null => {
     const v = vendas.find((venda) => venda.id === c.vendaId);
     return v?.artistaId || null;
   };
-  const podeExcluir = (c: Contrato) => podeUI(artistaDoContrato(c), "contratos.excluir");
+  // Excluir contrato é ADMIN-ONLY (D4): saiu do catálogo delegável e do pacote
+  // do artista — checa o papel direto (não uma chave).
+  const ehAdmin = isSuperAdmin || sessao?.usuario.papel === "admin";
+  const podeExcluir = (_c: Contrato) => ehAdmin;
   const podeEditar = (c: Contrato) =>
     podeUI(artistaDoContrato(c), "contratos.editar") ||
     podeUI(artistaDoContrato(c), "contratos.editar_todos");
+  // Cancelar contrato é permissão PRÓPRIA (D4): delegável à equipe
+  // (contratos.cancelar) e liberada ao artista dentro de contratosCriar.
+  const podeCancelar = (c: Contrato) =>
+    podeUI(artistaDoContrato(c), "contratos.cancelar");
 
   const [selecionadoId, setSelecionadoId] = useState<string | null>(abrirId);
   const [filtro, setFiltro] = useState<ContratoStatus | "todos">(
@@ -201,6 +209,12 @@ export default function HistoricoPage({
 
   async function mudarStatus(contrato: Contrato, status: ContratoStatus) {
     if (status === contrato.status || salvandoStatus) return;
+    // Cancelar tem confirmação própria + gate de contratos.cancelar: o pill
+    // "Cancelado" reusa o mesmo fluxo do botão "Cancelar contrato".
+    if (status === "cancelado") {
+      await cancelar(contrato);
+      return;
+    }
     setSalvandoStatus(true);
     try {
       await atualizarContrato(contrato.id, { status });
@@ -225,6 +239,30 @@ export default function HistoricoPage({
       setSelecionadoId((atual) => (atual === contrato.id ? null : atual));
     } catch (e) {
       window.alert((e as Error).message || t("Não foi possível excluir o contrato."));
+    }
+  }
+
+  async function cancelar(contrato: Contrato) {
+    if (contrato.status === "cancelado" || salvandoStatus) return;
+    if (
+      !window.confirm(
+        t(
+          "Cancelar o contrato {numero}? Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.",
+          { numero: contrato.numero }
+        )
+      )
+    ) {
+      return;
+    }
+    setSalvandoStatus(true);
+    try {
+      await atualizarContrato(contrato.id, { status: "cancelado" });
+    } catch (e) {
+      window.alert(
+        (e as Error).message || t("Não foi possível cancelar o contrato.")
+      );
+    } finally {
+      setSalvandoStatus(false);
     }
   }
 
@@ -272,10 +310,12 @@ export default function HistoricoPage({
           salvandoStatus={salvandoStatus}
           podeEditar={podeEditar(selecionado)}
           podeExcluir={podeExcluir(selecionado)}
+          podeCancelar={podeCancelar(selecionado)}
           onVoltar={() => setSelecionadoId(null)}
           onBaixarPdf={() => baixarPdf(selecionado)}
           onMudarStatus={(s) => mudarStatus(selecionado, s)}
           onExcluir={() => excluir(selecionado)}
+          onCancelar={() => cancelar(selecionado)}
         />
       ) : ordenados.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-12 text-center">
@@ -437,23 +477,21 @@ function ListaContratos({
                   {c.conteudo.secoes.length}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onExcluir(c);
-                    }}
-                    disabled={!podeExcluir(c)}
-                    title={
-                      !podeExcluir(c)
-                        ? t("Você não tem permissão para isso.")
-                        : t("Excluir contrato")
-                    }
-                    aria-label={t("Excluir contrato")}
-                    className="btn-ghost p-2 rounded hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {/* Excluir é ADMIN-ONLY (D4): escondido pra não-admin. */}
+                  {podeExcluir(c) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExcluir(c);
+                      }}
+                      title={t("Excluir contrato")}
+                      aria-label={t("Excluir contrato")}
+                      className="btn-ghost p-2 rounded hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </td>
               </tr>
               );
@@ -475,10 +513,12 @@ function DetalheContrato({
   salvandoStatus,
   podeEditar,
   podeExcluir,
+  podeCancelar,
   onVoltar,
   onBaixarPdf,
   onMudarStatus,
   onExcluir,
+  onCancelar,
 }: {
   contrato: Contrato;
   folhaRef: React.Ref<HTMLDivElement>;
@@ -487,12 +527,15 @@ function DetalheContrato({
   salvandoStatus: boolean;
   podeEditar: boolean;
   podeExcluir: boolean;
+  podeCancelar: boolean;
   onVoltar: () => void;
   onBaixarPdf: () => void;
   onMudarStatus: (status: ContratoStatus) => void;
   onExcluir: () => void;
+  onCancelar: () => void;
 }) {
   const t = useT();
+  const jaCancelado = contrato.status === "cancelado";
   return (
     <div className="flex flex-col gap-5">
       {/* Barra de ações do detalhe */}
@@ -527,16 +570,29 @@ function DetalheContrato({
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={onExcluir}
-            disabled={!podeExcluir}
-            title={!podeExcluir ? t("Você não tem permissão para isso.") : undefined}
-            className="btn btn-secondary hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={15} />
-            {t("Excluir")}
-          </button>
+          {podeCancelar && !jaCancelado && (
+            <button
+              type="button"
+              onClick={onCancelar}
+              disabled={salvandoStatus}
+              className="btn btn-secondary hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Ban size={15} />
+              {t("Cancelar contrato")}
+            </button>
+          )}
+
+          {/* Excluir é ADMIN-ONLY (D4): escondido pra não-admin. */}
+          {podeExcluir && (
+            <button
+              type="button"
+              onClick={onExcluir}
+              className="btn btn-secondary hover:text-danger"
+            >
+              <Trash2 size={15} />
+              {t("Excluir")}
+            </button>
+          )}
         </div>
       </div>
 
@@ -563,13 +619,17 @@ function DetalheContrato({
           >
             {STATUS_ORDEM.map((s) => {
               const ativo = s === contrato.status;
+              // A transição → "cancelado" usa contratos.cancelar (permissão
+              // própria, D4); as demais mudanças de status usam contratos.editar.
+              const virarCancelado = s === "cancelado" && !jaCancelado;
+              const permitido = virarCancelado ? podeCancelar : podeEditar;
               return (
                 <button
                   key={s}
                   type="button"
                   onClick={() => onMudarStatus(s)}
-                  disabled={salvandoStatus || !podeEditar}
-                  title={!podeEditar ? t("Você não tem permissão para isso.") : undefined}
+                  disabled={salvandoStatus || !permitido}
+                  title={!permitido ? t("Você não tem permissão para isso.") : undefined}
                   className={`badge ${
                     ativo ? STATUS_BADGE[s] : "text-muted"
                   } transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}

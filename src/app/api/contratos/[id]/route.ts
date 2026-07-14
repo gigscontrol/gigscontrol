@@ -9,6 +9,7 @@ import {
 import {
   podeVerContrato,
   podeEditarContrato,
+  podeCancelarContrato,
   podeExcluirContrato,
   verificarCriarContrato,
 } from "@/lib/api/permissoes";
@@ -71,7 +72,46 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     // do CONTRATO (contratos.criado_por), não o vendedor da venda vinculada.
     // 404 (não 403) fora de escopo — mesmo padrão do GET e de contatos/[id],
     // pra não virar oráculo de existência de contrato por id.
-    if (!podeEditarContrato(r.sessao, artistId, existente.criadoPor))
+
+    // CANCELAR é permissão PRÓPRIA (D4): a transição → "cancelado" passa por
+    // contratos.cancelar (não por editar). Um usuário só-cancelar NÃO edita e
+    // um usuário só-editar NÃO cancela por esta via. Cancelar contrato já
+    // assinado é permitido (o dono quer cancelar mesmo) — o efeito de barrar a
+    // assinatura só vale pra quem ainda não assinou, no /assinar/[token].
+    const querCancelar =
+      parsed.data.status === "cancelado" && existente.status !== "cancelado";
+    // Campos que caracterizam uma EDIÇÃO de verdade (fora o próprio status). Se
+    // o PATCH mexe em qualquer um, exige contratos.editar — mesmo junto do cancelar.
+    const CAMPOS_EDICAO = [
+      "modelo_id",
+      "venda_id",
+      "corpo_preenchido",
+      "local_assinatura",
+      "data_emissao",
+      "data_assinatura",
+      "observacoes",
+      "pasta_id",
+    ] as const;
+    const editaConteudo = CAMPOS_EDICAO.some(
+      (k) => (parsed.data as Record<string, unknown>)[k] !== undefined
+    );
+    // "Só cancelar" = flip do status pra cancelado e nada mais. Aí basta a chave
+    // de cancelar; qualquer outra coisa (edição de conteúdo, reativar, marcar
+    // enviado/assinado, PATCH vazio) exige contratos.editar como antes.
+    const soCancelar = querCancelar && !editaConteudo;
+
+    if (
+      querCancelar &&
+      !podeCancelarContrato(r.sessao, artistId, existente.criadoPor)
+    )
+      return NextResponse.json(
+        { erro: "Contrato não encontrado." },
+        { status: 404 }
+      );
+    if (
+      !soCancelar &&
+      !podeEditarContrato(r.sessao, artistId, existente.criadoPor)
+    )
       return NextResponse.json(
         { erro: "Contrato não encontrado." },
         { status: 404 }
@@ -112,8 +152,10 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
         { erro: "Contrato não encontrado." },
         { status: 404 }
       );
-    const { artistId } = await resolverEscopoContrato(r.sessao.supabase, existente.vendaId);
-    if (!podeExcluirContrato(r.sessao, artistId))
+    // Excluir contrato é ADMIN-ONLY (D4): não passa por chave nem por artista —
+    // some do catálogo delegável e do pacote do artista. Não-admin → 404 (não
+    // vira oráculo de existência de contrato por id).
+    if (!podeExcluirContrato(r.sessao))
       return NextResponse.json(
         { erro: "Contrato não encontrado." },
         { status: 404 }

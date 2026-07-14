@@ -6,6 +6,7 @@ import {
   removerModeloPorId,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloUpdateSchema } from "@/lib/validators/contratoModelos.schema";
+import { podeLerModelos, exigirAdminModelos } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
@@ -13,6 +14,12 @@ type RouteCtx = { params: { id: string } };
 export async function GET(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
+  // LER modelo (D3): fecha pra quem tem acesso a contratos.
+  if (!podeLerModelos(r.sessao))
+    return NextResponse.json(
+      { erro: "Você não tem acesso aos modelos de contrato." },
+      { status: 403 }
+    );
   try {
     const modelo = await buscarModeloPorId(r.sessao.supabase, params.id);
     if (!modelo)
@@ -27,12 +34,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  if (r.sessao.papel !== "admin") {
-    return NextResponse.json(
-      { erro: "Apenas administradores podem editar modelos." },
-      { status: 403 }
-    );
-  }
+  // Gerenciar modelos (D3) = ADMIN-ONLY explícito (super-admin passa).
+  const gate = exigirAdminModelos(r.sessao);
+  if (gate) return gate;
 
   let raw: unknown;
   try {
@@ -68,12 +72,9 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  if (r.sessao.papel !== "admin") {
-    return NextResponse.json(
-      { erro: "Apenas administradores podem remover modelos." },
-      { status: 403 }
-    );
-  }
+  // Gerenciar modelos (D3) = ADMIN-ONLY explícito (super-admin passa).
+  const gate = exigirAdminModelos(r.sessao);
+  if (gate) return gate;
 
   try {
     const existente = await buscarModeloPorId(r.sessao.supabase, params.id);

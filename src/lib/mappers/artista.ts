@@ -68,19 +68,26 @@ function normalizarRider(raw: unknown): string[] {
  * aceito se for de fato boolean; o enum `contatos` só aceita
  * 'nenhum'|'proprios'|'todos'. Qualquer outro valor cai no default.
  * Retrocompat: registros antigos SEM `agendaTotal` viram false (padrão);
- * `contatos` legado ('todos'/'proprios') continua válido.
+ * `contatos` legado ('todos'/'proprios') continua válido. Registros SEM
+ * `financeiroVerTaxa` herdam o valor de `financeiroVer` (artista que via o
+ * financeiro continua vendo a taxa); só um `false` explícito oculta a taxa.
  */
 export function privacidadeValida(raw: unknown): PrivacidadeDj {
   if (!raw || typeof raw !== "object") return { ...PRIVACIDADE_DJ_PADRAO };
   const r = raw as Record<string, unknown>;
   const bool = (k: keyof PrivacidadeDj): boolean =>
     typeof r[k] === "boolean" ? (r[k] as boolean) : (PRIVACIDADE_DJ_PADRAO[k] as boolean);
+  const financeiroVer = bool("financeiroVer");
   return {
     orcamentosVer: bool("orcamentosVer"),
     orcamentosCriar: bool("orcamentosCriar"),
     vendasVer: bool("vendasVer"),
     vendasCriar: bool("vendasCriar"),
-    financeiroVer: bool("financeiroVer"),
+    financeiroVer,
+    // Ausente no jsonb salvo → herda financeiroVer (retrocompat). Presente →
+    // respeita o boolean salvo (inclusive false para ocultar a taxa).
+    financeiroVerTaxa:
+      typeof r.financeiroVerTaxa === "boolean" ? r.financeiroVerTaxa : financeiroVer,
     financeiroInformar: bool("financeiroInformar"),
     contratosVer: bool("contratosVer"),
     contratosCriar: bool("contratosCriar"),

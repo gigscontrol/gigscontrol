@@ -49,7 +49,7 @@ const config: Config = {
         pill: "var(--r-pill)",
       },
       backgroundImage: {
-        "grad-signal": "linear-gradient(120deg,#4AC4FF,#3D7BFF 50%,#2847D7)",
+        "grad-signal": "var(--grad-signal)",
       },
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.16, 1, 0.3, 1)",

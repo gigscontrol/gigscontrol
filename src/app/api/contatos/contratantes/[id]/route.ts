@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
-import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoContatos,
+  verificarMutacaoContato,
+} from "@/lib/api/permissoes";
 import { contratanteVisivelParaSessao } from "@/lib/services/contatosAcesso";
 import {
   buscarContratantePorId,
@@ -44,7 +47,9 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
+  // D2: editar contato exige `contatos.editar` em algum vínculo (+ o alvo
+  // precisa estar no escopo do usuário — checado abaixo por visibilidade).
+  const g = verificarMutacaoContato(r.sessao, "editar");
   if (g) return g;
 
   let raw: unknown;
@@ -90,7 +95,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
+  // D2: excluir contato exige `contatos.excluir` em algum vínculo (+ o alvo
+  // precisa estar no escopo do usuário — checado abaixo por visibilidade).
+  const g = verificarMutacaoContato(r.sessao, "excluir");
   if (g) return g;
   try {
     const atual = await buscarContratantePorId(r.sessao.supabase, params.id);

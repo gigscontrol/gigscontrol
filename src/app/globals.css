@@ -85,6 +85,122 @@
 
     /* Easing */
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* ---- Tema claro/escuro (WI-A) ----
+       Tokens NOVOS: valor DARK aqui (padrão). O bloco
+       html[data-theme="light"] logo abaixo redefine para o claro.
+       -ink = versão brilhante/legível como TEXTO. */
+    --brand-ink: #7DB0FF;
+    --warning-ink: #F5A623;
+    --text-label: #5E6674;
+    --text-soft: #C6CCD8;
+    --text-body: #8B93A5;
+    --text-dim: #7A8296;
+    --mock-window: #0E121A;
+    --mock-chrome: #0B0F16;
+    --mock-active: #141A26;
+    --mock-dot: #3A4254;
+    --footer-bg: #080A0F;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --nav-blur-bg: rgba(11, 13, 18, 0.85);
+    --overlay-scrim: rgba(0, 0, 0, 0.7);
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --shadow-color-strong: rgba(0, 0, 0, 0.75);
+    --selection-bg: rgba(61, 123, 255, 0.30);
+
+    /* Glow de fundo — sistema padrão (landing, /recursos, /planos, auth).
+       hero = spotlight das seções grandes; section = wash sutil;
+       accent = 2º blob ciano; fade = fim do gradiente (rgba azul 0 evita
+       interpolar para cinza). */
+    --glow-hero: rgba(61, 123, 255, 0.14);
+    --glow-section: rgba(61, 123, 255, 0.08);
+    --glow-accent: rgba(74, 196, 255, 0.10);
+    --glow-fade: rgba(61, 123, 255, 0);
+  }
+
+  /* Esquema de cores nativo (scrollbars/inputs). */
+  :root { color-scheme: dark; }
+
+  /* ================= TEMA CLARO =================
+     Ativado por html[data-theme="light"] (setado antes da hidratação pelo
+     script no-flash do layout). Redefine SÓ os tokens que MUDAM — os
+     idênticos (--brand, --module-*, --success/--warning/--info fills,
+     --grad-signal) herdam do :root. Escuro = ausência do atributo: nada
+     muda, byte a byte. */
+  html[data-theme="light"] {
+    color-scheme: light;
+
+    /* Superfícies */
+    --bg-main: #F5F6F9;
+    --bg-surface: #FFFFFF;
+    --bg-surface-2: #F1F3F8;
+    --bg-elevated: #FFFFFF;
+    --bg: #F5F6F9;
+    --surface: #FFFFFF;
+    --surface-2: #F1F3F8;
+    --surface-3: #FFFFFF;
+
+    /* Borders */
+    --border-color: rgba(15, 23, 42, 0.08);
+    --border-hover: rgba(15, 23, 42, 0.16);
+    --border-strong: rgba(15, 23, 42, 0.12);
+    --border: rgba(15, 23, 42, 0.08);
+
+    /* Text */
+    --text-primary: #111726;
+    --text-secondary: #4B5468;
+    --text-muted: #667085;
+    --text-disabled: #98A1B3;
+    --text: #111726;
+    --text-2: #4B5468;
+    --text-3: #667085;
+    --text-4: #98A1B3;
+
+    /* Marca — --brand idêntico; variantes ESCURECEM no claro */
+    --brand-2: #2E63E0;
+    --brand-weak: rgba(61, 123, 255, 0.10);
+    --brand-soft: rgba(61, 123, 255, 0.14);
+
+    /* Semânticas */
+    --accent-color: #111726;
+    --success-ink: #157347;
+    --success-weak: rgba(31, 158, 90, 0.12);
+    --warning-weak: rgba(245, 166, 35, 0.15);
+    --danger: #D93A50;
+    --danger-ink: #C22B40;
+    --danger-weak: rgba(245, 69, 92, 0.12);
+    --info-weak: rgba(61, 123, 255, 0.10);
+    --roxo: #6D5AE6;
+    --roxo-weak: rgba(109, 90, 230, 0.12);
+
+    /* Elevação */
+    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
+
+    /* Tokens novos — valores claros */
+    --brand-ink: #2557D6;
+    --warning-ink: #9A6200;
+    --text-label: #626C80;
+    --text-soft: #3E4757;
+    --text-body: #525C70;
+    --text-dim: #5C6678;
+    --mock-window: #FFFFFF;
+    --mock-chrome: #F1F3F8;
+    --mock-active: #ECF2FF;
+    --mock-dot: #C3CAD8;
+    --footer-bg: #EAEDF3;
+    --hairline: rgba(15, 23, 42, 0.06);
+    --nav-blur-bg: rgba(245, 246, 249, 0.85);
+    --overlay-scrim: rgba(15, 23, 42, 0.45);
+    --shadow-color: rgba(15, 23, 42, 0.14);
+    --shadow-color-strong: rgba(15, 23, 42, 0.20);
+    --selection-bg: rgba(61, 123, 255, 0.22);
+
+    /* Glow no claro: azul bem transparente (vira tint ~#E7EDFC sobre
+       #F5F6F9) — nunca mancha acinzentada */
+    --glow-hero: rgba(61, 123, 255, 0.10);
+    --glow-section: rgba(61, 123, 255, 0.06);
+    --glow-accent: rgba(74, 196, 255, 0.08);
+    --glow-fade: rgba(61, 123, 255, 0);
   }
 
   * {
@@ -95,6 +211,11 @@
 
   html, body {
     height: 100%;
+    /* Trava scroll lateral no site inteiro. `clip` (e NÃO `hidden`) de
+       propósito: hidden faria o body virar scroll container (overflow-y
+       computa auto), o que mexe com position:sticky da LandingNav e com
+       100dvh no iOS. clip só corta a pintura, sem criar scroll container. */
+    overflow-x: clip;
   }
 
   body {
@@ -136,7 +257,7 @@
   ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
-  ::selection { background: rgba(61, 123, 255, 0.30); }
+  ::selection { background: var(--selection-bg); }
 
   /* Foco visível consistente em todo o app (acessibilidade). */
   :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
@@ -170,7 +291,7 @@
   .card-interactive:hover {
     border-color: var(--border-strong);
     transform: translateY(-2px);
-    box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 12px 28px -10px var(--shadow-color);
   }
 
   /* Badges — mono CAIXA ALTA, cor semântica sobre o *-weak */
@@ -191,7 +312,7 @@
   .badge-danger { color: var(--danger-ink); background-color: var(--danger-weak); }
   .badge-warning { color: var(--warning); background-color: var(--warning-weak); }
   .badge-info { color: var(--brand-2); background-color: var(--info-weak); }
-  .badge-neutral { color: var(--text-secondary); background-color: rgba(255, 255, 255, 0.06); }
+  .badge-neutral { color: var(--text-secondary); background-color: color-mix(in srgb, var(--text-primary) 6%, transparent); }
 
   /* Buttons */
   .btn {

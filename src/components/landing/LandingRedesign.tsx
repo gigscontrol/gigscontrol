@@ -14,6 +14,7 @@
 import { useEffect } from "react";
 import "./redesign.css";
 
+import FundoParticulas from "./FundoParticulas";
 import LandingNav from "./LandingNav";
 import HeroSidebarViva from "./HeroSidebarViva";
 import CalendarioVivo from "./CalendarioVivo";
@@ -55,16 +56,22 @@ export default function LandingRedesign({
   }, []);
 
   return (
-    <div className="min-h-screen bg-main text-primary">
-      <LandingNav />
-      <HeroSidebarViva />
-      <CalendarioVivo ano={agora.getFullYear()} mes={agora.getMonth()} />
-      <RadarMapa pais={pais} />
-      <SolucoesGrid />
-      <ParaQuemTimeline />
-      <PlanosCarrossel />
-      <FaqLanding />
-      <FooterLanding />
+    <div className="relative min-h-screen bg-main text-primary">
+      {/* fundo de partículas — canvas fixed z-0; o wrapper z-[1] põe todo o
+          conteúdo por cima (glows semitransparentes deixam as bolinhas
+          aparecerem atrás; o footer opaco as cobre). */}
+      <FundoParticulas />
+      <div className="relative z-[1]">
+        <LandingNav />
+        <HeroSidebarViva />
+        <CalendarioVivo ano={agora.getFullYear()} mes={agora.getMonth()} />
+        <RadarMapa pais={pais} />
+        <SolucoesGrid />
+        <ParaQuemTimeline />
+        <PlanosCarrossel />
+        <FaqLanding />
+        <FooterLanding />
+      </div>
     </div>
   );
 }

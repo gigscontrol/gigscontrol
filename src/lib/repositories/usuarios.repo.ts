@@ -3,7 +3,7 @@ import type { ProfileRow, UsuarioEscrita } from "@/lib/mappers/usuario";
 import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
-  "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, escopo, funcoes, status, deletado_em, pode_criar_anotacoes, senha_padrao, senha_padrao_valor, cor, pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, data_nascimento, cidade_id";
+  "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, status, deletado_em, pode_criar_anotacoes, senha_padrao, senha_padrao_valor, cor, pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, data_nascimento, cidade_id";
 
 // COLS + a cidade embutida (join em cidades por cidade_id). Usado só no roster
 // da equipe, pra o editar já abrir com o seletor de cidade pré-preenchido

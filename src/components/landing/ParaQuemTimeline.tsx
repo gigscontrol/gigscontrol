@@ -39,10 +39,10 @@ const PERFIS = [
 function Dot({ delay }: { delay: number }) {
   return (
     <span
-      className="gcrv-s h-[15px] w-[15px] flex-none rounded-full border-[3px] border-main bg-[#3D7BFF]"
+      className="gcrv-s h-[15px] w-[15px] flex-none rounded-full border-[3px] border-main bg-[var(--brand)]"
       style={{
         boxShadow:
-          "0 0 0 2px rgba(61,123,255,.35), 0 0 14px rgba(61,123,255,.6)",
+          "0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent), 0 0 14px color-mix(in srgb, var(--brand) 60%, transparent)",
         transitionDelay: `${delay}ms`,
       }}
     />
@@ -52,10 +52,10 @@ function Dot({ delay }: { delay: number }) {
 function CardPerfil({ perfil }: { perfil: (typeof PERFIS)[number] }) {
   const t = useT();
   return (
-    <div className="flex-1 rounded-[14px] border border-[rgba(255,255,255,.08)] bg-[#0E121A] px-5 py-[18px]">
+    <div className="flex-1 rounded-[14px] border border-[var(--border-color)] bg-[var(--mock-window)] px-5 py-[18px]">
       <div className="mb-[9px] flex items-center gap-[11px]">
         <span
-          className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] border border-[rgba(61,123,255,.28)] bg-[rgba(61,123,255,.12)] text-lg"
+          className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] border border-[color-mix(in_srgb,var(--brand)_28%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-lg"
           aria-hidden
         >
           {perfil.emoji}
@@ -64,7 +64,7 @@ function CardPerfil({ perfil }: { perfil: (typeof PERFIS)[number] }) {
           {t(perfil.titulo)}
         </span>
       </div>
-      <div className="text-[13px] leading-[1.6] text-[#8B93A5]">
+      <div className="text-[13px] leading-[1.6] text-[var(--text-body)]">
         {t(perfil.texto)}
       </div>
     </div>
@@ -74,7 +74,7 @@ function CardPerfil({ perfil }: { perfil: (typeof PERFIS)[number] }) {
 export default function ParaQuemTimeline() {
   const t = useT();
   return (
-    <section className="border-t border-[rgba(255,255,255,.06)] px-6 pb-[60px] pt-14 sm:px-12">
+    <section className="border-t border-[var(--hairline)] px-6 pb-[60px] pt-14 sm:px-12">
       <h2 className="gcrv mb-2 text-center font-display text-[30px] font-extrabold tracking-[-0.02em] text-primary md:text-[34px]">
         {t("Para quem é a Gigs Control?")}
       </h2>
@@ -91,7 +91,7 @@ export default function ParaQuemTimeline() {
           className="absolute left-[7px] top-2 w-0.5 md:left-1/2 md:-translate-x-1/2"
           style={{
             bottom: 96,
-            background: "linear-gradient(#3D7BFF, rgba(61,123,255,.12))",
+            background: "linear-gradient(var(--brand), color-mix(in srgb, var(--brand) 12%, transparent))",
           }}
         />
 
@@ -114,7 +114,7 @@ export default function ParaQuemTimeline() {
                       className="h-0.5 w-[26px] flex-none"
                       style={{
                         background:
-                          "linear-gradient(270deg, rgba(61,123,255,.6), rgba(61,123,255,.1))",
+                          "linear-gradient(270deg, color-mix(in srgb, var(--brand) 60%, transparent), color-mix(in srgb, var(--brand) 10%, transparent))",
                       }}
                     />
                   </div>
@@ -146,7 +146,7 @@ export default function ParaQuemTimeline() {
                         className="h-0.5 w-[26px] flex-none"
                         style={{
                           background:
-                            "linear-gradient(90deg, rgba(61,123,255,.6), rgba(61,123,255,.1))",
+                            "linear-gradient(90deg, color-mix(in srgb, var(--brand) 60%, transparent), color-mix(in srgb, var(--brand) 10%, transparent))",
                         }}
                       />
                       <CardPerfil perfil={perfil} />
@@ -169,7 +169,7 @@ export default function ParaQuemTimeline() {
           <div className="mb-2.5 font-display text-xl font-extrabold tracking-[-0.02em] text-primary">
             {t("Feita para quem vive de fechar shows.")}
           </div>
-          <div className="text-[13.5px] leading-[1.65] text-[#8B93A5]">
+          <div className="text-[13.5px] leading-[1.65] text-[var(--text-body)]">
             {t(
               "Se você agencia artistas, vende apresentações e precisa organizar toda a operação em um único sistema, a Gigs Control foi criada para você. Ela acompanha o crescimento da sua carreira, do artista independente às maiores agências do mercado."
             )}

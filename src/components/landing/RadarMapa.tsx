@@ -84,7 +84,7 @@ function IconeContato() {
     <svg
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#7DB0FF"
+      stroke="var(--brand-ink)"
       strokeWidth="2"
       style={{ width: 12, height: 12 }}
       aria-hidden
@@ -104,15 +104,15 @@ export default function RadarMapa({ pais }: { pais: string }) {
 
   return (
     <section
-      className="grid scroll-mt-[72px] items-center gap-6 border-t border-[rgba(255,255,255,.06)] px-6 pb-[54px] pt-12 sm:px-12 lg:min-h-dvh lg:grid-cols-[1fr_1.05fr] lg:py-6"
+      className="grid scroll-mt-[72px] items-center gap-6 border-t border-[var(--hairline)] px-6 pb-[54px] pt-12 sm:px-12 lg:min-h-dvh lg:grid-cols-[1fr_1.05fr] lg:py-6"
       style={{
         background:
-          "radial-gradient(60% 80% at 22% 40%, rgba(61,123,255,.08), rgba(11,13,18,0) 60%)",
+          "radial-gradient(70% 90% at 22% 30%, var(--glow-hero), var(--glow-fade) 60%)",
       }}
     >
       {/* radar — desliza da esquerda ao entrar no viewport */}
       <div
-        className="gcrv-l relative order-2 min-h-[420px] lg:order-1"
+        className="gcrv-l relative order-1 min-h-[420px] max-md:min-h-[340px] overflow-hidden lg:order-1"
         style={{ transitionDelay: "120ms" }}
       >
         <div className="gcvis-scale absolute inset-0">
@@ -121,12 +121,12 @@ export default function RadarMapa({ pais }: { pais: string }) {
             style={{ margin: "-160px 0 0 -160px" }}
           >
             {/* mira */}
-            <div className="absolute left-0 top-[159px] h-px w-[320px] bg-[rgba(61,123,255,.1)]" />
-            <div className="absolute left-[159px] top-0 h-[320px] w-px bg-[rgba(61,123,255,.1)]" />
+            <div className="absolute left-0 top-[159px] h-px w-[320px] bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]" />
+            <div className="absolute left-[159px] top-0 h-[320px] w-px bg-[color-mix(in_srgb,var(--brand)_10%,transparent)]" />
             {/* anéis */}
-            <div className="absolute left-[10px] top-[10px] h-[300px] w-[300px] rounded-full border border-[rgba(61,123,255,.25)]" />
-            <div className="absolute left-[57px] top-[57px] h-[206px] w-[206px] rounded-full border border-dashed border-[rgba(61,123,255,.22)]" />
-            <div className="absolute left-[104px] top-[104px] h-[112px] w-[112px] rounded-full border border-dashed border-[rgba(61,123,255,.18)]" />
+            <div className="absolute left-[10px] top-[10px] h-[300px] w-[300px] rounded-full border border-[color-mix(in_srgb,var(--brand)_25%,transparent)]" />
+            <div className="absolute left-[57px] top-[57px] h-[206px] w-[206px] rounded-full border border-dashed border-[color-mix(in_srgb,var(--brand)_22%,transparent)]" />
+            <div className="absolute left-[104px] top-[104px] h-[112px] w-[112px] rounded-full border border-dashed border-[color-mix(in_srgb,var(--brand)_18%,transparent)]" />
             {/* escala de km */}
             {[
               { km: "50", left: 88 },
@@ -135,7 +135,7 @@ export default function RadarMapa({ pais }: { pais: string }) {
             ].map(({ km, left }) => (
               <span
                 key={km}
-                className="absolute bg-main px-[3px] py-px font-mono text-[7px] font-semibold text-[#4E5A75]"
+                className="absolute bg-main px-[3px] py-px font-mono text-[7px] font-semibold text-[var(--text-disabled)]"
                 style={{ left, top: 153 }}
               >
                 {km}
@@ -143,18 +143,16 @@ export default function RadarMapa({ pais }: { pais: string }) {
             ))}
             {/* varredura */}
             <div
-              className="gcanim absolute left-[10px] top-[10px] h-[300px] w-[300px] rounded-full"
+              className="gcanim gc-sweep-radar absolute left-[10px] top-[10px] h-[300px] w-[300px] rounded-full"
               style={{
-                background:
-                  "conic-gradient(rgba(61,123,255,0) 0deg, rgba(61,123,255,.05) 20deg, rgba(61,123,255,.22) 46deg, rgba(120,170,255,.45) 50deg, rgba(61,123,255,0) 52deg)",
                 animation: "gcSweep 16s linear infinite",
               }}
             />
             {/* centro */}
-            <div className="absolute left-[154px] top-[154px] h-3 w-3 rounded-full bg-[rgba(61,123,255,.25)]" />
+            <div className="absolute left-[154px] top-[154px] h-3 w-3 rounded-full bg-[color-mix(in_srgb,var(--brand)_25%,transparent)]" />
             <div
-              className="absolute left-[157px] top-[157px] h-1.5 w-1.5 rounded-full bg-[#3D7BFF]"
-              style={{ boxShadow: "0 0 12px #3D7BFF" }}
+              className="absolute left-[157px] top-[157px] h-1.5 w-1.5 rounded-full bg-[var(--brand)]"
+              style={{ boxShadow: "0 0 12px var(--brand)" }}
             />
 
             {/* pontos que pulsam quando o feixe passa */}
@@ -162,11 +160,11 @@ export default function RadarMapa({ pais }: { pais: string }) {
               p.tipo === "show" ? (
                 <i
                   key={i}
-                  className="gcanim absolute h-2 w-2 rounded-full bg-[#3D7BFF]"
+                  className="gcanim absolute h-2 w-2 rounded-full bg-[var(--brand)]"
                   style={{
                     left: p.x,
                     top: p.y,
-                    boxShadow: "0 0 5px rgba(61,123,255,.5)",
+                    boxShadow: "0 0 5px color-mix(in srgb, var(--brand) 50%, transparent)",
                     animation: `gcPingB 16s linear ${p.delay}s infinite`,
                   }}
                 />
@@ -179,15 +177,15 @@ export default function RadarMapa({ pais }: { pais: string }) {
                     top: p.y,
                     boxShadow:
                       p.tipo === "casa"
-                        ? "0 0 4px rgba(198,204,216,.35)"
-                        : "0 0 4px rgba(125,176,255,.35)",
+                        ? "0 0 4px var(--gc-ping-w-base)"
+                        : "0 0 4px var(--gc-ping-l-base)",
                     animation: `${
                       p.tipo === "casa" ? "gcPingW" : "gcPingL"
                     } 16s linear ${p.delay}s infinite`,
                   }}
                 >
                   {p.tipo === "casa" ? (
-                    <IconeCasa stroke="#C6CCD8" />
+                    <IconeCasa stroke="var(--text-soft)" />
                   ) : (
                     <IconeContato />
                   )}
@@ -195,7 +193,7 @@ export default function RadarMapa({ pais }: { pais: string }) {
                     <i
                       className="absolute -right-[7px] -top-1.5 h-[11px] w-[11px] rounded-full text-center font-mono text-[7px] font-bold not-italic leading-[11px] text-main"
                       style={{
-                        background: p.tipo === "casa" ? "#C6CCD8" : "#7DB0FF",
+                        background: p.tipo === "casa" ? "var(--text-soft)" : "var(--brand-ink)",
                       }}
                     >
                       {p.cluster}
@@ -209,16 +207,16 @@ export default function RadarMapa({ pais }: { pais: string }) {
             {CHIPS_SHOW.map((c, i) => (
               <div
                 key={i}
-                className="gcanim absolute flex items-start gap-2 rounded-[10px] border border-[rgba(61,123,255,.4)] bg-surface px-3 py-2"
+                className="gcanim absolute flex items-start gap-2 rounded-[10px] border border-[color-mix(in_srgb,var(--brand)_40%,transparent)] bg-surface px-3 py-2"
                 style={{
                   left: c.x,
                   top: c.y,
                   opacity: 0,
-                  boxShadow: "0 14px 30px -12px rgba(0,0,0,.7)",
+                  boxShadow: "0 14px 30px -12px var(--shadow-color-strong)",
                   animation: `gcRev3 16s linear ${c.delay}s infinite`,
                 }}
               >
-                <span className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-md bg-[#3D7BFF]">
+                <span className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-md bg-[var(--brand)]">
                   <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -239,7 +237,7 @@ export default function RadarMapa({ pais }: { pais: string }) {
                   <span className="whitespace-nowrap text-[11.5px] font-semibold text-primary">
                     {c.casa}
                   </span>
-                  <span className="whitespace-nowrap font-mono text-[9.5px] font-semibold text-[#7DB0FF]">
+                  <span className="whitespace-nowrap font-mono text-[9.5px] font-semibold text-[var(--brand-ink)]">
                     {c.horario}
                   </span>
                 </span>
@@ -250,17 +248,17 @@ export default function RadarMapa({ pais }: { pais: string }) {
             {CHIPS_MINI.map((c, i) => (
               <div
                 key={i}
-                className="gcanim absolute flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[rgba(255,255,255,.14)] bg-surface px-[9px] py-1.5 font-mono text-[8.5px] font-semibold tracking-[.06em] text-[#C6CCD8]"
+                className="gcanim max-sm:hidden absolute flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--border-hover)] bg-surface px-[9px] py-1.5 font-mono text-[8.5px] font-semibold tracking-[.06em] text-[var(--text-soft)]"
                 style={{
                   left: c.x,
                   top: c.y,
                   opacity: 0,
-                  boxShadow: "0 10px 24px -10px rgba(0,0,0,.7)",
+                  boxShadow: "0 10px 24px -10px var(--shadow-color-strong)",
                   animation: `gcRev3 16s linear ${c.delay}s infinite`,
                 }}
               >
                 {c.tipo === "casa" ? (
-                  <IconeCasa stroke="#C6CCD8" />
+                  <IconeCasa stroke="var(--text-soft)" />
                 ) : (
                   <IconeContato />
                 )}
@@ -270,14 +268,14 @@ export default function RadarMapa({ pais }: { pais: string }) {
           </div>
 
           {/* rótulo da cidade-base */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[rgba(255,255,255,.1)] bg-surface px-2.5 py-[7px] font-mono text-[9px] font-semibold tracking-[.12em] text-muted">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-2.5 py-[7px] font-mono text-[9px] font-semibold tracking-[.12em] text-muted">
             {rotuloCidade}
           </div>
         </div>
       </div>
 
       {/* copy — desliza da direita ao entrar no viewport */}
-      <div className="gcrv-r order-1 flex flex-col justify-center gap-[22px] lg:order-2">
+      <div className="gcrv-r order-2 flex flex-col justify-center gap-[22px] lg:order-2">
         <BadgeSecao>{t("03 · Colhe o resultado")}</BadgeSecao>
         <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
           {t("Visualize oportunidades")}

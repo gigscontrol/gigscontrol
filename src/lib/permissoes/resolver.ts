@@ -8,18 +8,16 @@
  *
  * Regras:
  *   - super-admin / admin  → tudo.
- *   - artista (papel)      → só o próprio artista.
- *   - demais               → o que o VÍNCULO (usuário × artista) concede.
+ *   - artista (papel)      → só o próprio artista, governado pela privacidade.
+ *   - demais (operacional) → o que o VÍNCULO (usuário × artista) concede.
  *   - sem vínculo          → sem acesso (exceto admin).
  *
- * FALLBACK: enquanto os vínculos ainda não são carregados na sessão (Fase 1/2),
- * `vinculos` vem `undefined` e o motor cai no comportamento LEGADO (papel +
- * funcoes + escopo) — assim o app se comporta EXATAMENTE como hoje até a virada.
+ * O sistema LEGADO (profiles.funcoes/escopo + fallback) foi REMOVIDO: equipe =
+ * 100% vínculos por artista (membros_artista.permissoes). Operacional sem
+ * vínculo no artista → negado.
  */
 
 import { PRIVACIDADE_DJ_PADRAO, type Papel, type PrivacidadeDj } from "@/lib/permissoes";
-import type { Funcoes } from "@/lib/mappers/usuario";
-import type { EscopoSessao } from "@/lib/api/session";
 
 export type CtxPermissao = {
   isSuperAdmin: boolean;
@@ -33,49 +31,12 @@ export type CtxPermissao = {
    */
   privacidade?: PrivacidadeDj;
   /**
-   * Vínculos por artista → chaves de permissão concedidas.
-   * `undefined` = ainda não carregado → usa o fallback legado.
+   * Vínculos por artista → chaves de permissão concedidas. Fonte única de
+   * acesso do operacional. Pode vir vazio ({}) ou ausente → operacional é
+   * negado em qualquer artista (sem fallback legado).
    */
   vinculos?: Record<string, string[]>;
-  // ---- Legado (só usado no fallback) ----
-  funcoes?: Funcoes;
-  escopo?: EscopoSessao;
 };
-
-type FuncaoLegada = "vendedor" | "financeiro" | "produtor";
-
-function artistaLegado(ctx: CtxPermissao, funcao: FuncaoLegada, artistaId: string): boolean {
-  const arr = ctx.funcoes?.[funcao] ?? [];
-  return arr.includes(artistaId);
-}
-
-/**
- * Comportamento LEGADO (papel/funcoes) — espelha o que o app faz HOJE, pra que
- * ligar o motor antes da migração 100% não mude nada. Só é chamado quando não
- * há vínculos carregados.
- */
-function fallbackLegado(ctx: CtxPermissao, artistaId: string, chave: string): boolean {
-  const modulo = chave.split(".")[0];
-  switch (modulo) {
-    case "agenda":
-      // Hoje a agenda não tem trava por função — toda a equipe opera.
-      return true;
-    case "vendas":
-      return artistaLegado(ctx, "vendedor", artistaId) || artistaLegado(ctx, "financeiro", artistaId);
-    case "financeiro":
-      return artistaLegado(ctx, "financeiro", artistaId);
-    case "contratos":
-      // Hoje contratos é admin-only (admin já retornou true antes daqui).
-      return false;
-    case "contatos":
-      // Hoje qualquer não-artista acessa contatos.
-      return ctx.papel !== "artista";
-    case "agencia":
-      return false; // administrativo = admin-only
-    default:
-      return false;
-  }
-}
 
 /**
  * O que o ARTISTA pode fazer no PRÓPRIO espaço, governado pela privacidade que
@@ -92,16 +53,34 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
       // Vê a própria agenda (e detalhes/cachê) sempre. Cria/edita/exclui os
       // próprios eventos só com agendaTotal ligado; senão fica read-only.
       return ehLeitura || priv.agendaTotal;
-    case "vendas":
-      if (ehLeitura) return priv.vendasVer || priv.orcamentosVer;
-      if (acao.includes("orcamento")) return priv.orcamentosCriar;
-      return priv.vendasCriar; // criar/editar/excluir_venda + converter
+    case "vendas": {
+      // Orçamentos e vendas são governados por FLAGS INDEPENDENTES.
+      const ehOrcamento = acao.includes("orcamento");
+      if (ehLeitura) {
+        // Leitura ESPECÍFICA de orçamentos (vendas.ver_orcamentos) → orcamentosVer.
+        // A chave genérica vendas.ver (sem contexto de qual lista) mantém o
+        // comportamento de hoje: libera se pode ver vendas OU orçamentos — a
+        // lista combinada é filtrada no servidor.
+        if (ehOrcamento) return priv.orcamentosVer;
+        return priv.vendasVer || priv.orcamentosVer;
+      }
+      // Mutação: "orcamento" → orcamentosCriar; as demais (criar_venda,
+      // editar_venda, converter, cancelar_venda, excluir_venda, editar_todos)
+      // → vendasCriar.
+      return ehOrcamento ? priv.orcamentosCriar : priv.vendasCriar;
+    }
     case "financeiro":
+      // Ver a taxa/líquido é um flag PRÓPRIO (financeiroVerTaxa); o restante da
+      // leitura financeira é financeiroVer; mutações = financeiroInformar.
+      if (acao === "ver_taxa") return priv.financeiroVerTaxa;
       if (ehLeitura) return priv.financeiroVer;
       return priv.financeiroInformar; // registrar/cancelar/editar_pagamento
     case "contratos":
+      // Excluir contrato é ADMIN-ONLY: o artista NUNCA exclui (nem dentro de
+      // contratosCriar). criar/editar/editar_todos/cancelar = contratosCriar.
+      if (acao === "excluir") return false;
       if (ehLeitura) return priv.contratosVer;
-      return priv.contratosCriar; // criar/editar/excluir
+      return priv.contratosCriar;
     case "contatos":
       // Leitura governada por priv.contatos: "nenhum" nega, "proprios"/"todos"
       // liberam VER (a lista é filtrada no servidor por escopoContatosDoArtista).
@@ -141,13 +120,9 @@ export function pode(ctx: CtxPermissao, artistaId: string | null, chave: string)
     return podeArtista(ctx.privacidade ?? PRIVACIDADE_DJ_PADRAO, chave);
   }
 
+  // Operacional: só o que o VÍNCULO no artista concede. Sem vínculo = negado.
   if (!artistaId) return false;
-
-  if (ctx.vinculos) {
-    return (ctx.vinculos[artistaId] ?? []).includes(chave);
-  }
-
-  return fallbackLegado(ctx, artistaId, chave);
+  return (ctx.vinculos?.[artistaId] ?? []).includes(chave);
 }
 
 /**
@@ -170,18 +145,11 @@ export function artistasVisiveis(
     return [ctx.artistaId];
   }
 
-  if (ctx.vinculos) {
-    return Object.keys(ctx.vinculos).filter(
-      (a) => !chave || (ctx.vinculos![a] ?? []).includes(chave)
-    );
-  }
-
-  // Fallback legado: união dos DJs das funções.
-  const set = new Set<string>();
-  for (const f of ["vendedor", "financeiro", "produtor"] as const) {
-    for (const artista of ctx.funcoes?.[f] ?? []) set.add(artista);
-  }
-  return [...set];
+  // Operacional: os artistas com vínculo (que concedam a chave, se exigida).
+  const vinculos = ctx.vinculos ?? {};
+  return Object.keys(vinculos).filter(
+    (a) => !chave || (vinculos[a] ?? []).includes(chave)
+  );
 }
 
 /** Açúcar: monta o ctx a partir de uma sessão do servidor. */
@@ -189,8 +157,6 @@ export function ctxDaSessao(sessao: {
   isSuperAdmin: boolean;
   papel: Papel;
   artistaId: string | null;
-  funcoes: Funcoes;
-  escopo: EscopoSessao;
   vinculos?: Record<string, string[]>;
   privacidade?: PrivacidadeDj;
 }): CtxPermissao {
@@ -200,7 +166,5 @@ export function ctxDaSessao(sessao: {
     artistaId: sessao.artistaId,
     privacidade: sessao.privacidade,
     vinculos: sessao.vinculos,
-    funcoes: sessao.funcoes,
-    escopo: sessao.escopo,
   };
 }

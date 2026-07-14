@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
-import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import {
+  verificarAcessoContatos,
+  verificarMutacaoContato,
+} from "@/lib/api/permissoes";
 import { casaVisivelParaSessao } from "@/lib/services/contatosAcesso";
 import {
   buscarCasaPorId,
@@ -35,7 +38,10 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
+  // D2: editar casa exige `contatos.editar` em algum vínculo (checagem que hoje
+  // NÃO existia neste [id]). O escopo de casa é catálogo — a visibilidade é
+  // confirmada abaixo (casaVisivelParaSessao).
+  const g = verificarMutacaoContato(r.sessao, "editar");
   if (g) return g;
 
   let raw: unknown;
@@ -54,6 +60,10 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   }
 
   try {
+    // Confirma escopo antes de mutar — 404 (não 403) fora do escopo.
+    const atual = await buscarCasaPorId(r.sessao.supabase, params.id);
+    if (!atual || !(await casaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
+      return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
     const casa = await atualizarCasaPorId(
       r.sessao.supabase,
       params.id,
@@ -69,9 +79,15 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
+  // D2: excluir casa exige `contatos.excluir` em algum vínculo (checagem que
+  // hoje NÃO existia neste [id]).
+  const g = verificarMutacaoContato(r.sessao, "excluir");
   if (g) return g;
   try {
+    // Confirma escopo antes de mutar — 404 (não 403) fora do escopo.
+    const atual = await buscarCasaPorId(r.sessao.supabase, params.id);
+    if (!atual || !(await casaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
+      return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
     await removerCasaPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {

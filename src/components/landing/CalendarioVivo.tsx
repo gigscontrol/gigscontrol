@@ -34,9 +34,9 @@ const MESES = [
 ];
 const DIAS_SEMANA = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
 
-const AZUL = "rgba(61,123,255,.5)";
-const AMBAR = "rgba(245,166,35,.55)";
-const VERDE = "rgba(31,158,90,.55)";
+const AZUL = "color-mix(in srgb, var(--brand) 50%, transparent)";
+const AMBAR = "color-mix(in srgb, var(--warning) 55%, transparent)";
+const VERDE = "color-mix(in srgb, var(--success) 55%, transparent)";
 
 type TipoEvento = "orcamento" | "show" | "alta" | "cache" | "venda" | "contrato";
 
@@ -101,11 +101,11 @@ function IconeEvento({ tipo }: { tipo: TipoEvento }) {
         <span
           className={caixa}
           style={{
-            background: "rgba(61,123,255,.14)",
-            border: "1px solid rgba(61,123,255,.3)",
+            background: "var(--brand-weak)",
+            border: "1px solid color-mix(in srgb, var(--brand) 30%, transparent)",
           }}
         >
-          {svg("#5B93FF", 2, (
+          {svg("var(--brand-2)", 2, (
             <>
               <path d="M7 3h7l4 4v14H7z" />
               <path d="M10 12h5M10 16h5" />
@@ -115,7 +115,7 @@ function IconeEvento({ tipo }: { tipo: TipoEvento }) {
       );
     case "show":
       return (
-        <span className={caixa} style={{ background: "#3D7BFF" }}>
+        <span className={caixa} style={{ background: "var(--brand)" }}>
           {svg("#fff", 2, (
             <>
               <path d="M9 18V6l10-2v12" />
@@ -130,24 +130,24 @@ function IconeEvento({ tipo }: { tipo: TipoEvento }) {
         <span
           className={caixa}
           style={{
-            background: "rgba(245,166,35,.14)",
-            border: "1px solid rgba(245,166,35,.3)",
+            background: "var(--warning-weak)",
+            border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)",
           }}
         >
-          {svg("#F5A623", 2, (
+          {svg("var(--warning)", 2, (
             <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
           ))}
         </span>
       );
     case "cache":
       return (
-        <span className={caixa} style={{ background: "#1F9E5A" }}>
+        <span className={caixa} style={{ background: "var(--success)" }}>
           {svg("#fff", 2.6, <path d="M5 12l5 5L20 6" />)}
         </span>
       );
     case "venda":
       return (
-        <span className={caixa} style={{ background: "#3D7BFF" }}>
+        <span className={caixa} style={{ background: "var(--brand)" }}>
           {svg("#fff", 2, (
             <>
               <path d="M20.6 13.4L11 3.8H4v7l9.6 9.6a2 2 0 0 0 2.8 0l4.2-4.2a2 2 0 0 0 0-2.8z" />
@@ -158,7 +158,7 @@ function IconeEvento({ tipo }: { tipo: TipoEvento }) {
       );
     case "contrato":
       return (
-        <span className={caixa} style={{ background: "#3D7BFF" }}>
+        <span className={caixa} style={{ background: "var(--brand)" }}>
           {svg("#fff", 2, (
             <>
               <path d="M7 3h7l4 4v14H7z" />
@@ -216,16 +216,16 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
   return (
     <section
       id="recursos"
-      className="grid scroll-mt-[72px] items-center gap-6 border-t border-[rgba(255,255,255,.06)] px-6 pb-[54px] pt-12 sm:px-12 lg:min-h-dvh lg:grid-cols-[1.05fr_1fr] lg:py-6"
+      className="grid scroll-mt-[72px] items-center gap-6 border-t border-[var(--hairline)] px-6 pb-[54px] pt-12 sm:px-12 lg:min-h-dvh lg:grid-cols-[1.05fr_1fr] lg:py-6"
       style={{
         background:
-          "radial-gradient(70% 90% at 78% 30%, rgba(61,123,255,.12), rgba(11,13,18,0) 60%)",
+          "radial-gradient(70% 90% at 78% 30%, var(--glow-hero), var(--glow-fade) 60%)",
       }}
     >
       {/* copy — desliza da esquerda ao entrar no viewport. Como aqui a copy
           é a coluna ESQUERDA, o bloco encosta no CENTRO (ml-auto), espelhando
           o recuo do 01/03 — e não fica grudado na borda da página. */}
-      <div className="gcrv-l flex flex-col justify-center">
+      <div className="gcrv-l order-2 flex flex-col justify-center lg:order-1">
         <div className="flex flex-col gap-[22px] lg:ml-auto lg:w-fit">
           <BadgeSecao>{t("02 · Se organiza pra vender")}</BadgeSecao>
           <h2 className="font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]">
@@ -251,16 +251,16 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
 
       {/* calendário + popups — desliza da direita ao entrar no viewport */}
       <div
-        className="gcrv-r relative min-h-[480px] overflow-hidden"
+        className="gcrv-r relative order-1 min-h-[480px] max-md:min-h-[380px] overflow-hidden lg:order-2"
         style={{ transitionDelay: "120ms" }}
       >
         <div className="gcvis-scale absolute inset-0">
           {/* cartão do calendário, centrado */}
           <div
-            className="absolute left-1/2 top-1/2 w-[292px] rounded-[14px] border border-[rgba(255,255,255,.1)] bg-surface px-[18px] pb-3.5 pt-[18px]"
+            className="absolute left-1/2 top-1/2 w-[292px] rounded-[14px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-[18px] pb-3.5 pt-[18px]"
             style={{
               margin: "-112px 0 0 -146px",
-              boxShadow: "0 24px 50px -18px rgba(0,0,0,.75)",
+              boxShadow: "0 24px 50px -18px var(--shadow-color-strong)",
             }}
           >
             <div className="mb-2.5 flex items-baseline justify-between">
@@ -275,7 +275,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
               {DIAS_SEMANA.map((d, i) => (
                 <span
                   key={i}
-                  className="text-center font-mono text-[8px] font-semibold text-[#5E6470]"
+                  className="text-center font-mono text-[8px] font-semibold text-[var(--text-disabled)]"
                 >
                   {t(d).charAt(0)}
                 </span>
@@ -296,7 +296,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
                       ev
                         ? {
                             border: `1px solid ${corDoTipo(ev.tipo)}`,
-                            color: "#fff",
+                            color: "var(--text-primary)",
                             animation: `gcD${ev.seq} 30s linear infinite`,
                           }
                         : undefined
@@ -321,10 +321,10 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
                   ? { right: "50%", marginRight: ev.margem }
                   : { left: "50%", marginLeft: ev.margem }),
                 border: `1px solid ${corDoTipo(ev.tipo).replace(
-                  /\.\d+\)$/,
-                  ".35)"
+                  / \d+%,/,
+                  " 35%,"
                 )}`,
-                boxShadow: "0 14px 30px -12px rgba(0,0,0,.7)",
+                boxShadow: "0 14px 30px -12px var(--shadow-color-strong)",
                 opacity: 0,
                 animation: `gcE${ev.seq} 30s linear infinite`,
               }}
@@ -335,7 +335,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
                   {ev.rotulo}
                 </span>
                 {ev.tipo === "alta" ? (
-                  <span className="whitespace-nowrap font-mono text-[9px] font-semibold tracking-[.05em] text-[#F5A623]">
+                  <span className="whitespace-nowrap font-mono text-[9px] font-semibold tracking-[.05em] text-[var(--warning-ink)]">
                     {t(TITULOS.alta)}
                   </span>
                 ) : (
@@ -346,7 +346,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
                     {ev.extra?.map((linha) => (
                       <span
                         key={linha}
-                        className="whitespace-nowrap font-mono text-[9px] font-semibold text-[#7DB0FF]"
+                        className="whitespace-nowrap font-mono text-[9px] font-semibold text-[var(--brand-ink)]"
                       >
                         {linha}
                       </span>
@@ -355,7 +355,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
                       <span
                         className="whitespace-nowrap font-mono text-[9px] font-bold"
                         style={{
-                          color: ev.tipo === "cache" ? "#3CE08C" : "#7DB0FF",
+                          color: ev.tipo === "cache" ? "var(--success-ink)" : "var(--brand-ink)",
                         }}
                       >
                         {fmtValor(ev.valor)}

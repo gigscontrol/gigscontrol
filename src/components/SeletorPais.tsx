@@ -60,7 +60,7 @@ export default function SeletorPais({ value, onChange, mostrarDdi = true }: Prop
       {open && (
         <div
           className="absolute top-full left-0 right-0 mt-1 z-50 bg-surface border border-border rounded-md flex flex-col"
-          style={{ boxShadow: "0 12px 30px rgba(0,0,0,0.6)", maxHeight: 320 }}
+          style={{ boxShadow: "0 12px 30px var(--shadow-color)", maxHeight: 320 }}
         >
           <div className="p-2 border-b border-border flex-shrink-0">
             <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-2.5 py-1.5">

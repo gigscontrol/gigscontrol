@@ -1,9 +1,10 @@
 /**
  * Ponte entre a SESSÃO do servidor e o MOTOR de permissões (resolver).
  *
- * As rotas/services chamam estes helpers para decidir acesso no modelo novo
- * (vínculos por artista), com fallback automático pro legado quando o usuário
- * ainda não tem vínculo. É a única forma de perguntar "pode?" no servidor.
+ * As rotas/services chamam estes helpers para decidir acesso no modelo ÚNICO
+ * (vínculos por artista — o legado morreu). É a única forma de perguntar
+ * "pode?" no servidor. Admin/artista/super são resolvidos pelo motor; a equipe
+ * só pode o que algum VÍNCULO concede.
  */
 
 import type { SessaoAutenticada } from "./session";

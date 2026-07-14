@@ -118,6 +118,15 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
 }
 
 /**
+ * Redige SÓ a TAXA de agência / o líquido (D6) de um orçamento: para quem NÃO
+ * tem `financeiro.ver_taxa` (artista com `financeiroVerTaxa=false`). Some
+ * `taxaAgenciaValor` (o líquido é derivado dele no cliente → também some).
+ */
+export function redigirTaxaOrcamento(o: Orcamento): Orcamento {
+  return { ...o, taxaAgenciaValor: undefined };
+}
+
+/**
  * Payload aceito no INSERT/UPDATE. `numero` é gerado pelo service para
  * o caso de criação; pode vir no update se for renumeração.
  */

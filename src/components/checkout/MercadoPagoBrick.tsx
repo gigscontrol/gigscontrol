@@ -122,6 +122,15 @@ export default function MercadoPagoBrick({
       }
       try {
         const mp = new Ctor(PUBLIC_KEY, { locale: "pt-BR" });
+        // Lê os tokens computados no momento de montar o Brick (o iframe do MP
+        // não enxerga nossas CSS vars) — acompanha o tema ativo (claro/escuro).
+        // Limitação aceita: alternar o tema com o Brick já montado não retematiza
+        // o iframe em tempo real.
+        const raiz = document.documentElement;
+        const temaClaro = raiz.getAttribute("data-theme") === "light";
+        const estiloRaiz = getComputedStyle(raiz);
+        const corVar = (nome: string, fallback: string) =>
+          estiloRaiz.getPropertyValue(nome).trim() || fallback;
         controller = await mp.bricks().create("payment", containerId, {
           initialization: {
             amount: valor,
@@ -133,16 +142,16 @@ export default function MercadoPagoBrick({
               bankTransfer: "all",
               maxInstallments: 12,
             },
-            // Tema escuro alinhado aos tokens do design system.
+            // Tema alinhado aos tokens do design system (claro/escuro).
             visual: {
               style: {
-                theme: "dark",
+                theme: temaClaro ? "default" : "dark",
                 customVariables: {
-                  baseColor: "#3D7BFF",
-                  formBackgroundColor: "#12151D",
-                  inputBackgroundColor: "#161A24",
-                  textPrimaryColor: "#F4F6FB",
-                  textSecondaryColor: "#9AA4B2",
+                  baseColor: corVar("--brand", "#3D7BFF"),
+                  formBackgroundColor: corVar("--bg-surface", "#12151D"),
+                  inputBackgroundColor: corVar("--bg-surface-2", "#161A24"),
+                  textPrimaryColor: corVar("--text-primary", "#F4F6FB"),
+                  textSecondaryColor: corVar("--text-secondary", "#9AA4B2"),
                   borderRadiusMedium: "10px",
                 },
               },
