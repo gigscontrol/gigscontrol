@@ -61,20 +61,31 @@ export default function LandingNav() {
 
   return (
     <nav className="sticky top-0 z-30 h-[72px] border-b border-[color:var(--hairline)] bg-[color:var(--nav-blur-bg)] backdrop-blur-xl">
-      <div className="grid h-full items-center gap-4 px-6 sm:px-6 lg:grid-cols-[1fr_auto_1fr]">
-        {/* logo — na landing volta pro topo; fora dela vai pra home */}
+      <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:justify-normal lg:gap-4">
+        {/* logo — mark só no mobile (cabe na barra); com wordmark no ≥sm.
+            na landing volta pro topo; fora dela vai pra home */}
         {naLanding ? (
           <a
             href="#inicio"
-            className="w-fit"
+            className="w-fit shrink-0"
             onClick={() => setAtivo("inicio")}
             aria-label="Gigs Control — início"
           >
-            <LogoGC size={30} variant="gradient" withWordmark />
+            <span className="sm:hidden">
+              <LogoGC size={28} variant="gradient" />
+            </span>
+            <span className="hidden sm:block">
+              <LogoGC size={30} variant="gradient" withWordmark />
+            </span>
           </a>
         ) : (
-          <Link href="/" className="w-fit" aria-label="Gigs Control — página inicial">
-            <LogoGC size={30} variant="gradient" withWordmark />
+          <Link href="/" className="w-fit shrink-0" aria-label="Gigs Control — página inicial">
+            <span className="sm:hidden">
+              <LogoGC size={28} variant="gradient" />
+            </span>
+            <span className="hidden sm:block">
+              <LogoGC size={30} variant="gradient" withWordmark />
+            </span>
           </Link>
         )}
 
@@ -112,19 +123,21 @@ export default function LandingNav() {
           )}
         </div>
 
-        {/* ações à direita */}
-        <div className="flex items-center justify-end gap-2">
+        {/* ações à direita — compactas no mobile (idioma some, botões menores) */}
+        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           <BotaoTema variante="landing" />
-          <SeletorIdioma />
+          <span className="hidden sm:flex">
+            <SeletorIdioma />
+          </span>
           <Link
             href="/login"
-            className="whitespace-nowrap rounded-[9px] border border-[color:var(--border-strong)] bg-surface px-[18px] py-[9px] text-[13px] font-semibold text-primary"
+            className="whitespace-nowrap rounded-[9px] border border-[color:var(--border-strong)] bg-surface px-3 py-2 text-[12px] font-semibold text-primary sm:px-[18px] sm:py-[9px] sm:text-[13px]"
           >
             {t("Entrar")}
           </Link>
           <Link
             href="/signup"
-            className="whitespace-nowrap rounded-[9px] border border-[var(--brand)] px-[18px] py-[9px] text-[13px] font-bold text-white"
+            className="whitespace-nowrap rounded-[9px] border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
             style={{ backgroundColor: "var(--brand)" }}
           >
             {t("Começar")}
