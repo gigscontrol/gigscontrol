@@ -686,6 +686,7 @@ export const DE: Record<string, string> = {
   "Nova Venda Direta": "Neuer Direktverkauf",
   "Histórico Vendas": "Verkaufshistorie",
   "Controle de Pagamentos": "Zahlungskontrolle",
+  "Controle": "Kontrolle",
   "Novo Contrato": "Neuer Vertrag",
   "Modelos": "Vorlagen",
   "Histórico de Contratos": "Vertragshistorie",

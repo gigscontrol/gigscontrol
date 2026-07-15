@@ -164,6 +164,7 @@ const CHROME: Record<string, string> = {
   "Nova Venda Direta": "New Direct Sale",
   "Histórico Vendas": "Sales History",
   "Controle de Pagamentos": "Payment Control",
+  "Controle": "Control",
   "Novo Contrato": "New Contract",
   "Modelos": "Templates",
   "Histórico de Contratos": "Contract History",
