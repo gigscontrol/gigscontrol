@@ -664,7 +664,8 @@ export default function AbaArtistas() {
                     <span className="badge badge-warning">{t("Acesso suspenso")}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 flex-wrap text-xs text-muted mt-1.5">
+                {/* Identidade — login · cidade · cor */}
+                <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-muted mt-2">
                   {artistaSelecionado.username && (
                     <button
                       type="button"
@@ -699,43 +700,47 @@ export default function AbaArtistas() {
                     <span className="font-mono uppercase">{artistaSelecionado.color}</span>
                   </span>
                 </div>
-                {/* Dados para contrato — logo abaixo do nome */}
+
+                {/* Dados para contrato — chips organizados: pessoa · empresa ·
+                    documento · endereço · telefone */}
                 {(artistaSelecionado.nomeLegal ||
                   artistaSelecionado.razaoSocial ||
                   artistaSelecionado.documento ||
                   artistaSelecionado.endereco ||
                   artistaSelecionado.telefone) && (
-                  <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-muted mt-1.5">
+                  <div className="flex items-center gap-2 flex-wrap mt-2.5">
                     {artistaSelecionado.nomeLegal && (
-                      <span className="inline-flex items-center gap-1">
-                        <User size={11} />
+                      <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-secondary">
+                        <User size={11} className="text-muted flex-shrink-0" />
                         {artistaSelecionado.nomeLegal}
                       </span>
                     )}
                     {artistaSelecionado.documentoTipo === "cnpj" &&
                       artistaSelecionado.razaoSocial && (
-                        <span className="inline-flex items-center gap-1">
-                          <Building2 size={11} />
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-secondary">
+                          <Building2 size={11} className="text-muted flex-shrink-0" />
                           {artistaSelecionado.razaoSocial}
                         </span>
                       )}
                     {artistaSelecionado.documento && (
-                      <span className="inline-flex items-center gap-1">
-                        <FileText size={11} />
-                        {artistaSelecionado.documentoTipo === "cnpj" ? "CNPJ" : "CPF"}{" "}
-                        {artistaSelecionado.documento}
+                      <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-secondary">
+                        <FileText size={11} className="text-muted flex-shrink-0" />
+                        <span className="text-muted">
+                          {artistaSelecionado.documentoTipo === "cnpj" ? "CNPJ" : "CPF"}
+                        </span>
+                        <span className="font-mono">{artistaSelecionado.documento}</span>
                       </span>
                     )}
                     {artistaSelecionado.endereco && (
-                      <span className="inline-flex items-center gap-1">
-                        <Home size={11} />
+                      <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-secondary">
+                        <Home size={11} className="text-muted flex-shrink-0" />
                         {formatEndereco(artistaSelecionado.endereco)}
                       </span>
                     )}
                     {artistaSelecionado.telefone && (
-                      <span className="inline-flex items-center gap-1">
-                        <Phone size={11} />
-                        {artistaSelecionado.telefone}
+                      <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-elevated px-2 py-1 text-xs text-secondary">
+                        <Phone size={11} className="text-muted flex-shrink-0" />
+                        <span className="font-mono">+{artistaSelecionado.telefone}</span>
                       </span>
                     )}
                   </div>
@@ -1024,17 +1029,6 @@ export default function AbaArtistas() {
                         </span>
                       </div>
                     ))}
-                    {priv.financeiroVer && (
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-secondary">{t("Vê taxa de agência e líquido")}</span>
-                        <span
-                          className={`badge ${priv.financeiroVerTaxa ? "badge-success" : "badge-neutral"}`}
-                          style={priv.financeiroVerTaxa ? undefined : { opacity: 0.55 }}
-                        >
-                          {priv.financeiroVerTaxa ? t("Sim") : t("Não")}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-secondary">{t("Contatos")}</span>
                       <span
@@ -2900,40 +2894,6 @@ function SegmentedChoice<T extends string>({
 }
 
 /**
- * Switch simples (pill) pra um flag booleano isolado — usado pra
- * "Vê a taxa de agência e o líquido", que é um refinamento dentro do
- * módulo Financeiro (não um módulo próprio com 3 estados).
- */
-function SwitchPill({
-  titulo,
-  valor,
-  onChange,
-}: {
-  titulo: string;
-  valor: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 pl-3 pr-1.5 py-1.5 rounded-md border border-border cursor-pointer">
-      <span className="text-xs text-secondary">{titulo}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={valor}
-        onClick={() => onChange(!valor)}
-        className="relative flex-shrink-0 h-5 w-9 rounded-full transition-colors"
-        style={{ backgroundColor: valor ? "var(--brand)" : "var(--border-color)" }}
-      >
-        <span
-          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform"
-          style={{ transform: valor ? "translateX(18px)" : "translateX(2px)" }}
-        />
-      </button>
-    </label>
-  );
-}
-
-/**
  * Bloco COMPLETO de privacidade do DJ — seletores segmentados (pills).
  *
  * Encapsula o mapeamento seletor <-> objeto `PrivacidadeDj` (ida e volta),
@@ -2941,7 +2901,7 @@ function SwitchPill({
  * EXATAMENTE a mesma UI e a mesma conversão. O componente recebe o objeto
  * inteiro e um onChange que devolve o objeto atualizado.
  *
- * Linhas: Agenda · Orçamentos · Vendas · Financeiro (+ taxa) · Contratos · Contatos.
+ * Linhas: Agenda · Orçamentos · Vendas · Financeiro · Contratos · Contatos.
  */
 function PrivacidadePills({
   valor,
@@ -3030,18 +2990,9 @@ function PrivacidadePills({
             ...valor,
             financeiroVer: n !== "nenhum",
             financeiroInformar: n === "agir",
-            // Sem acesso ao financeiro não faz sentido ver a taxa.
-            financeiroVerTaxa: n === "nenhum" ? false : valor.financeiroVerTaxa,
           })
         }
       />
-      {nivelFinanceiro !== "nenhum" && (
-        <SwitchPill
-          titulo={t("Vê a taxa de agência e o líquido")}
-          valor={valor.financeiroVerTaxa}
-          onChange={(v) => onChange({ ...valor, financeiroVerTaxa: v })}
-        />
-      )}
 
       {/* Contratos — 3 estados */}
       <SegmentedChoice

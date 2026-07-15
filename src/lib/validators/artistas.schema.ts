@@ -103,7 +103,6 @@ export const artistaCreateSchema = z.object({
       vendasVer: z.boolean().optional(),
       vendasCriar: z.boolean().optional(),
       financeiroVer: z.boolean().optional(),
-      financeiroVerTaxa: z.boolean().optional(),
       financeiroInformar: z.boolean().optional(),
       contratosVer: z.boolean().optional(),
       contratosCriar: z.boolean().optional(),

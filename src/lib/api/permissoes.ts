@@ -6,8 +6,7 @@ import {
   artistasVisiveisNaSessao,
   podeMutar,
 } from "./permissao";
-import { redigirVendaFinanceiro, redigirTaxaVenda } from "@/lib/mappers/venda";
-import { redigirTaxaOrcamento } from "@/lib/mappers/orcamento";
+import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
 
 /**
  * Camada de permissões server-side.
@@ -664,31 +663,10 @@ export function podeVerFinanceiro(
 }
 
 /**
- * Pode ver a TAXA de agência / o líquido do artista (D6)? Gate NOVO, separado do
- * `podeVerFinanceiro`:
- *   - admin/super → sim;
- *   - ARTISTA     → `financeiro.ver_taxa` (mapeado no motor para
- *                   privacidade.financeiroVerTaxa; retrocompat = financeiroVer);
- *   - EQUIPE      → acompanha o acesso ao financeiro (comportamento atual — sem
- *                   regressão; a taxa aparece pra quem já via o financeiro).
- * Usado para redigir SÓ a taxa quando o resto do financeiro é visível.
- */
-export function podeVerTaxaAgencia(
-  sessao: SessaoAutenticada,
-  artistId: string | null
-): boolean {
-  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
-  if (sessao.papel === "artista") {
-    return podeNaSessao(sessao, artistId, "financeiro.ver_taxa");
-  }
-  return podeVerFinanceiro(sessao, artistId);
-}
-
-/**
  * Redige uma VENDA conforme o que a sessão pode ver do financeiro do artista:
- *   - sem `financeiro.ver`            → redigirVendaFinanceiro (tira meta + taxa);
- *   - vê financeiro mas sem taxa (D6) → tira SÓ a taxa/líquido;
- *   - vê tudo                         → a venda intacta.
+ *   - sem `financeiro.ver` → redigirVendaFinanceiro (tira meta + taxa/líquido);
+ *   - vê o financeiro      → a venda intacta. A taxa/líquido acompanha o acesso
+ *                            aos valores; não é mais um gate separado.
  */
 export function redigirVendaParaSessao(
   sessao: SessaoAutenticada,
@@ -696,22 +674,18 @@ export function redigirVendaParaSessao(
 ): Venda {
   const artistId = v.artistaId || null;
   if (!podeVerFinanceiro(sessao, artistId)) return redigirVendaFinanceiro(v);
-  if (!podeVerTaxaAgencia(sessao, artistId)) return redigirTaxaVenda(v);
   return v;
 }
 
 /**
- * Redige um ORÇAMENTO conforme o gate da taxa (D6). Orçamento não tem rastro de
- * pagamento (parcelas/meta), então só a taxa/líquido é sensível: some quando a
- * sessão não pode ver a taxa daquele artista.
+ * Orçamento não tem rastro de pagamento (parcelas/meta) e a taxa/líquido
+ * acompanha o acesso aos valores — quem vê o orçamento vê a taxa. Passthrough
+ * mantido pra não mexer nos call-sites das rotas.
  */
 export function redigirOrcamentoParaSessao(
-  sessao: SessaoAutenticada,
+  _sessao: SessaoAutenticada,
   o: Orcamento
 ): Orcamento {
-  if (!podeVerTaxaAgencia(sessao, o.artistaId || null)) {
-    return redigirTaxaOrcamento(o);
-  }
   return o;
 }
 

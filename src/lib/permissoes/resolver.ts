@@ -72,9 +72,8 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
       return ehOrcamento ? priv.orcamentosCriar : priv.vendasCriar;
     }
     case "financeiro":
-      // Ver a taxa/líquido é um flag PRÓPRIO (financeiroVerTaxa); o restante da
-      // leitura financeira é financeiroVer; mutações = financeiroInformar.
-      if (acao === "ver_taxa") return priv.financeiroVerTaxa;
+      // Leitura financeira (cachês, pagamentos e taxa/líquido) = financeiroVer;
+      // mutações (registrar/cancelar/editar_pagamento) = financeiroInformar.
       if (ehLeitura) return priv.financeiroVer;
       return priv.financeiroInformar; // registrar/cancelar/editar_pagamento
     case "contratos":
