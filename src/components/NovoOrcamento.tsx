@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
@@ -148,16 +148,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);
   const [modalAddDj, setModalAddDj] = useState(false);
 
-  // Quando a lista de artistas carregar, preenche o artistaId do bloco
-  // inicial (era estático via fallback estático antes; agora vem do hook).
-  useEffect(() => {
-    if (artistas.length === 0) return;
-    setBlocos((prev) =>
-      prev.length === 1 && !prev[0].artistaId
-        ? [{ ...prev[0], artistaId: artistas[0].id }]
-        : prev
-    );
-  }, [artistas]);
+  // O bloco inicial nasce com artistaId "" (vazio) DE PROPÓSITO: o usuário
+  // escolhe qual artista orçar. NÃO pré-selecionar o primeiro da lista.
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1156,6 +1148,7 @@ function BlocoOrcamentoDj({
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <Field label="Artista" required error={errors[`artista-${indice}`]}>
             <Select value={bloco.artistaId} onChange={(e) => onChange({ artistaId: e.target.value })}>
+              <option value="">{t("Selecione um artista")}</option>
               {artistas.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}

@@ -46,6 +46,8 @@ type Props = {
   orientacao?: "vertical" | "horizontal";
   /** Avisado quando o usuário troca o PAÍS (a cidade é limpa junto). */
   onPaisChange?: (pais: Country) => void;
+  /** Pinta a borda do campo de cidade de vermelho (validação obrigatória). */
+  erro?: boolean;
 };
 
 function paisInicial(value: CidadeEscolhida | null): Country {
@@ -62,6 +64,7 @@ export default function CidadeGlobalAutocomplete({
   placeholder,
   orientacao = "vertical",
   onPaisChange,
+  erro,
 }: Props) {
   const t = useT();
   const horizontal = orientacao === "horizontal";
@@ -276,7 +279,10 @@ export default function CidadeGlobalAutocomplete({
 
       {/* Cidade */}
       <div ref={wrapRef} className={`relative ${horizontal ? "flex-1 min-w-0" : ""}`}>
-        <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
+        <div
+          className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+          style={erro ? { borderColor: "var(--danger)" } : undefined}
+        >
           <MapPin size={14} className="text-muted flex-shrink-0" />
           <input
             ref={inputRef}

@@ -157,6 +157,9 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
     out.razao_social = input.razao_social ?? null;
   if (input.endereco !== undefined) out.endereco = input.endereco ?? null;
   if (input.telefone !== undefined) out.telefone = input.telefone ?? null;
+  if (input.data_nascimento !== undefined) out.data_nascimento = input.data_nascimento ?? null;
+  if (input.email !== undefined) out.email = input.email ?? null;
+  if (input.pix !== undefined) out.pix = input.pix ?? null;
   if (input.taxa_modo !== undefined) out.taxa_modo = input.taxa_modo;
   if (input.taxa_valor !== undefined) out.taxa_valor = input.taxa_valor ?? null;
   if (input.rider_camarim !== undefined) out.rider_camarim = input.rider_camarim;
@@ -270,6 +273,9 @@ export async function criarArtistaCompleto(
     if (input.razao_social) escrita.razao_social = input.razao_social;
     if (input.endereco) escrita.endereco = input.endereco;
     if (input.telefone) escrita.telefone = input.telefone;
+    if (input.data_nascimento) escrita.data_nascimento = input.data_nascimento;
+    if (input.email) escrita.email = input.email;
+    if (input.pix) escrita.pix = input.pix;
     if (input.taxa_valor !== undefined) escrita.taxa_valor = input.taxa_valor;
     if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
     if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;

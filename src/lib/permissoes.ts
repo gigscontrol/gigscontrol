@@ -90,6 +90,12 @@ export type PrivacidadeDj = {
   contratosCriar: boolean;
   /** Acesso total à própria agenda — cria/edita/exclui os próprios eventos; false = só leitura. */
   agendaTotal: boolean;
+  /**
+   * Vê a agenda DETALHADA (cachê, contato do contratante, hotel/booking,
+   * voucher, riders). false = nível "Básico" (só dia, local e horário).
+   * Ausente no jsonb (artista antigo) ⇒ mapper deriva true (retrocompat).
+   */
+  agendaVerDetalhado: boolean;
   /** nenhum = não vê contatos; proprios = só dos shows dele; todos = agência inteira. */
   contatos: "nenhum" | "proprios" | "todos";
 };
@@ -105,6 +111,7 @@ export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
   contratosVer: true,
   contratosCriar: false,
   agendaTotal: false,
+  agendaVerDetalhado: true,
   contatos: "proprios",
 };
 

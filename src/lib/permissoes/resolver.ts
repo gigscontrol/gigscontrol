@@ -50,8 +50,10 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
   const ehLeitura = acao.startsWith("ver");
   switch (modulo) {
     case "agenda":
-      // Vê a própria agenda (e detalhes/cachê) sempre. Cria/edita/exclui os
-      // próprios eventos só com agendaTotal ligado; senão fica read-only.
+      // "Básico" vê dia/local/horário (agenda.ver = sempre true). O DETALHADO
+      // (cachê, contato, hotel, voucher) é governado por agendaVerDetalhado.
+      // Criar/editar/excluir os próprios eventos só com agendaTotal.
+      if (acao === "ver_detalhado") return priv.agendaVerDetalhado;
       return ehLeitura || priv.agendaTotal;
     case "vendas": {
       // Orçamentos e vendas são governados por FLAGS INDEPENDENTES.

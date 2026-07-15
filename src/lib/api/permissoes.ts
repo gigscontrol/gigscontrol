@@ -228,6 +228,9 @@ export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show 
   return {
     ...show,
     valor: undefined,
+    // Básico não vê o CONTATO do contratante (o nome vem por join que ele não
+    // alcança, mas escondemos o id explicitamente pra não vazar o vínculo).
+    contratanteId: undefined,
     orcamentoId: undefined,
     vendaId: undefined,
     booking: undefined,

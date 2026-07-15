@@ -73,6 +73,8 @@ export type Artista = {
   dataNascimento?: string;
   /** E-mail de contato. */
   email?: string;
+  /** Chave PIX (só artista brasileiro) — tel/e-mail/CPF/CNPJ/aleatória. Dado sensível. */
+  pix?: string;
   /** Modo de taxa de agência. Default 'sem-taxa'. */
   taxaModo?: TaxaAgenciaModo;
   /** Em modos perc-*: percentual (ex 15 = 15%). Em modos valor-*: R$. */

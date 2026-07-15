@@ -2583,4 +2583,9 @@ export const DE: Record<string, string> = {
   "mínimo de 8 caracteres": "mindestens 8 Zeichen",
   "Razão social": "Firmenname",
   "Plano & Assinatura": "Tarif & Abo",
+  "{n} informações faltando": "{n} Pflichtfelder fehlen",
+  "Login obrigatório": "Login erforderlich",
+  "Nome completo obrigatório": "Vollständiger Name erforderlich",
+  "Razão social obrigatória": "Firmenname erforderlich",
+  "Valor da taxa obrigatório": "Gebührenwert erforderlich",
 };

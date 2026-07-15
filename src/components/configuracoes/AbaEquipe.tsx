@@ -1360,8 +1360,33 @@ export function ModalUsuario({
   const [podeCriarAnotacoes, setPodeCriarAnotacoes] = useState<boolean>(
     inicial?.podeCriarAnotacoes ?? false
   );
+  // Validação: `erros` = Set das CHAVES obrigatórias faltando ("nome"/"username")
+  // pra borda vermelha + contador. `erro` = mensagem geral (rede/servidor).
+  const [erros, setErros] = useState<Set<string>>(new Set());
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  // Remove uma chave do Set de erros (onChange dos campos obrigatórios — a
+  // borda vermelha some assim que o usuário mexe no campo).
+  function limparErro(chave: string) {
+    setErros((prev) => {
+      if (!prev.has(chave)) return prev;
+      const n = new Set(prev);
+      n.delete(chave);
+      return n;
+    });
+  }
+
+  // Mensagem derivada do Set (live): específica com 1 campo, "N informações
+  // faltando" com vários.
+  const msgErros =
+    erros.size === 0
+      ? null
+      : erros.size === 1
+      ? erros.has("nome")
+        ? t("Nome obrigatório")
+        : t("Login obrigatório")
+      : t("{n} informações faltando", { n: erros.size });
 
   // Handle completo + validação (mesma regra de AbaArtistas).
   const usernameCompleto = usernameRaiz.trim()
@@ -1487,16 +1512,19 @@ export function ModalUsuario({
   }
 
   async function salvar() {
-    if (!nome.trim()) {
-      setErro(t("Informe o nome do usuário."));
+    // Coleta TODOS os obrigatórios faltando de uma vez (não para no 1º). O
+    // login só é exigido na criação; o editar exige apenas o apelido.
+    const faltando = new Set<string>();
+    if (!nome.trim()) faltando.add("nome");
+    if (modo === "criar" && !usernameValido) faltando.add("username");
+    if (faltando.size > 0) {
+      setErros(faltando);
+      setErro(null);
       return;
     }
+    setErros(new Set());
 
     if (modo === "criar") {
-      if (!usernameValido) {
-        setErro(t("Informe um login válido (3+ caracteres, letras, números e hífen)."));
-        return;
-      }
       const artistIds = [...artistIdsSel];
       setSalvando(true);
       setErro(null);
@@ -1593,12 +1621,15 @@ export function ModalUsuario({
         {modo === "criar" ? (
           <>
             <Secao titulo={t("Dados básicos")}>
-              <Campo label={t("Apelido")}>
+              <Campo label={t("Apelido")} erro={erros.has("nome")}>
                 <input
                   value={nome}
-                  onChange={(e) => setNome(e.target.value)}
+                  onChange={(e) => {
+                    setNome(e.target.value);
+                    if (e.target.value.trim()) limparErro("nome");
+                  }}
                   placeholder={t("Como essa pessoa é chamada")}
-                  className="campo-input"
+                  className={`campo-input${erros.has("nome") ? " erro" : ""}`}
                   autoFocus
                 />
                 <span className="text-[0.7rem] text-muted mt-1 block">
@@ -1649,8 +1680,11 @@ export function ModalUsuario({
             </div>
 
             <Secao titulo={t("Acesso ao sistema")}>
-              <Campo label={t("Login (username)")}>
-                <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+              <Campo label={t("Login (username)")} erro={erros.has("username")}>
+                <div
+                  className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong"
+                  style={erros.has("username") ? { borderColor: "var(--danger)" } : undefined}
+                >
                   <input
                     value={usernameRaiz}
                     onChange={(e) => {
@@ -1658,6 +1692,7 @@ export function ModalUsuario({
                       setUsernameRaiz(
                         e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
                       );
+                      limparErro("username");
                     }}
                     placeholder="marinasouza"
                     style={{
@@ -1801,9 +1836,12 @@ export function ModalUsuario({
                   <div className="flex-1 min-w-0">
                     <input
                       value={nome}
-                      onChange={(e) => setNome(e.target.value)}
+                      onChange={(e) => {
+                        setNome(e.target.value);
+                        if (e.target.value.trim()) limparErro("nome");
+                      }}
                       placeholder={t("Apelido")}
-                      className="campo-input text-xl font-bold"
+                      className={`campo-input text-xl font-bold${erros.has("nome") ? " erro" : ""}`}
                       autoFocus
                     />
                     <span className="text-[0.7rem] text-muted mt-1 block">
@@ -2199,9 +2237,9 @@ export function ModalUsuario({
           </div>
         )}
 
-        {erro && (
+        {(erro || msgErros) && (
           <div className="text-xs" style={{ color: "var(--danger)" }}>
-            {erro}
+            {erro ?? msgErros}
           </div>
         )}
 
