@@ -58,7 +58,7 @@ export default function AbaPerfil() {
   const onToast = (msg: string, tipo: "sucesso" | "erro") => setToast({ msg, tipo });
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 w-full">
       <MeusDados onToast={onToast} />
       <AcessoCard onToast={onToast} />
 

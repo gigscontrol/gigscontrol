@@ -89,7 +89,7 @@ export default function AbaHistorico() {
   }, [modulo, periodo]);
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-5 w-full">
       {/* Cabeçalho */}
       <div>
         <div className="flex items-center gap-2 mb-1">

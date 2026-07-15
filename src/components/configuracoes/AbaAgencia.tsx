@@ -85,7 +85,7 @@ export default function AbaAgencia() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 w-full">
       {/* ---- Nome da agência ---- */}
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
