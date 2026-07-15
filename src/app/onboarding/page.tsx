@@ -21,7 +21,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useWorkspace, WorkspaceProvider } from "@/lib/workspace-context";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import {
   PLANOS,
   type PlanoId,
@@ -49,7 +49,9 @@ import {
   SeletorDeCor,
 } from "@/components/configuracoes/AbaArtistas";
 import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import LogoGC from "@/components/LogoGC";
+import BotaoTema from "@/components/BotaoTema";
+import { SeletorIdioma } from "@/components/landing/SeletorIdioma";
 import { useT, useMoeda } from "@/lib/i18n";
 import { TRIAL_ATIVADO } from "@/lib/flags";
 
@@ -157,6 +159,7 @@ export default function OnboardingPage() {
 function OnboardingInner() {
   const router = useRouter();
   const t = useT();
+  const { logout } = useAuth();
   const [status, setStatus] = useState<Status | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [etapa, setEtapa] = useState(1);
@@ -236,6 +239,11 @@ function OnboardingInner() {
     if (etapa > 1) setEtapa(etapa - 1);
   }
 
+  async function sair() {
+    await logout();
+    router.replace("/login");
+  }
+
   if (carregando) {
     return (
       <div className="min-h-screen bg-main flex items-center justify-center">
@@ -259,21 +267,31 @@ function OnboardingInner() {
         }}
       />
 
-      <nav className="relative border-b border-border">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-6 h-16">
-          <div className="flex items-center gap-2">
-            <div
-              className="rounded-md flex items-center justify-center font-bold text-white h-7 w-7 text-sm"
+      <nav className="sticky top-0 z-30 h-[72px] border-b border-[color:var(--hairline)] bg-[color:var(--nav-blur-bg)] backdrop-blur-xl">
+        <div className="flex h-full items-center justify-between gap-3 px-4 sm:px-6">
+          {/* logo — mark no mobile, wordmark no ≥sm (igual à landing) */}
+          <span className="w-fit shrink-0" aria-label="Gigs Control">
+            <span className="sm:hidden">
+              <LogoGC size={28} variant="gradient" />
+            </span>
+            <span className="hidden sm:block">
+              <LogoGC size={30} variant="gradient" withWordmark />
+            </span>
+          </span>
+
+          {/* ações à direita — utilitários do site + Sair (estilo "Começar") */}
+          <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
+            <BotaoTema variante="landing" />
+            <span className="hidden sm:flex">
+              <SeletorIdioma />
+            </span>
+            <button
+              onClick={sair}
+              className="whitespace-nowrap rounded-[9px] border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
               style={{ backgroundColor: "var(--brand)" }}
             >
-              G
-            </div>
-            <span className="font-bold tracking-tight text-base">
-              GIGS<span className="text-muted"> CONTROL</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
+              {t("Sair")}
+            </button>
           </div>
         </div>
       </nav>

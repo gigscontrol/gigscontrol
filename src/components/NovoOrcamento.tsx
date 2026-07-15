@@ -148,8 +148,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);
   const [modalAddDj, setModalAddDj] = useState(false);
 
-  // O bloco inicial nasce com artistaId "" (vazio) DE PROPÓSITO: o usuário
-  // escolhe qual artista orçar. NÃO pré-selecionar o primeiro da lista.
+  // O bloco inicial nasce com artistaId "" (vazio) DE PROPÓSITO: ao entrar na
+  // etapa 2, o usuário escolhe o 1º artista no MESMO popup de seleção (em vez
+  // de um dropdown pré-selecionado). NÃO pré-selecionar o primeiro da lista.
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -194,7 +195,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   function handleNext() {
-    if (validateStep1()) setStep(2);
+    if (!validateStep1()) return;
+    setStep(2);
+    // Antes de iniciar de fato a etapa 2, escolhe o 1º artista no mesmo popup
+    // de seleção (mesmo design de "Adicionar artista ao orçamento").
+    if (blocos.length === 1 && !blocos[0].artistaId && artistas.length > 0) {
+      setModalAddDj(true);
+    }
   }
   function handleBack() {
     setStep(1);
@@ -202,7 +209,14 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   function adicionarDj(artistaId: string) {
-    setBlocos((prev) => [...prev, novoBlocoDj(artistaId)]);
+    setBlocos((prev) => {
+      // 1ª seleção: preenche o bloco inicial ainda vazio em vez de criar outro.
+      const idxVazio = prev.findIndex((b) => !b.artistaId);
+      if (idxVazio !== -1) {
+        return prev.map((b, i) => (i === idxVazio ? { ...b, artistaId } : b));
+      }
+      return [...prev, novoBlocoDj(artistaId)];
+    });
     setModalAddDj(false);
   }
 
