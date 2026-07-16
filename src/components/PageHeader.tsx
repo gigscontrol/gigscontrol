@@ -37,7 +37,9 @@ export default function PageHeader({ title, subtitle, actions, accentColor }: Pr
           )}
         </div>
       </div>
-      {actions && <div className="relative flex-shrink-0">{actions}</div>}
+      {actions && (
+        <div className="relative min-w-0 w-full sm:w-auto sm:flex-shrink-0">{actions}</div>
+      )}
     </div>
   );
 }

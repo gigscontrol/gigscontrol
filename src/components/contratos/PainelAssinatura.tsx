@@ -33,6 +33,8 @@ import {
   buscarSignatarios,
   definirSignatarios,
   linkAssinatura,
+  paraAssinaturaInfo,
+  urlPdfAssinado,
   type EntradaSignatarioUI,
 } from "@/lib/contratos/signatarios-api";
 import {
@@ -41,7 +43,7 @@ import {
   type Signatario,
   type ExigenciasSignatario,
 } from "@/lib/mappers/contratoSignatario";
-import type { Contrato } from "@/lib/mappers/contrato";
+import { temPdfLayout, type Contrato } from "@/lib/mappers/contrato";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
@@ -81,26 +83,6 @@ function dataBr(iso: string | null): string {
   const d = iso.slice(0, 10).split("-");
   if (d.length !== 3) return iso;
   return `${d[2]}/${d[1]}/${d[0]}`;
-}
-
-/** Signatário assinado → AssinaturaInfo (para a folha/relatório). */
-function paraAssinaturaInfo(s: Signatario): AssinaturaInfo {
-  return {
-    nome: s.nome,
-    papel: s.papel,
-    documento: s.documento,
-    ip: s.ip,
-    geolocalizacao: s.geolocalizacao,
-    dispositivo: s.dispositivo,
-    assinadoEm: s.assinadoEm,
-    assinatura: s.assinatura,
-    fotoCpfUrl: s.arquivosUrls?.fotoCpf,
-    fotoDocumentoUrl: s.arquivosUrls?.fotoDocumento,
-    fotoDocumentoVersoUrl: s.arquivosUrls?.fotoDocumentoVerso,
-    selfieUrl: s.arquivosUrls?.selfie,
-    facialSimilaridade: s.arquivos.facialSimilaridade,
-    facialMatch: s.arquivos.facialMatch,
-  };
 }
 
 export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
@@ -257,6 +239,12 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   }
 
   async function baixarPdf() {
+    // Contrato POR UPLOAD (sem seções): a folha A4 sairia vazia — o PDF
+    // assinado vem da rota que carimba as assinaturas e anexa o relatório.
+    if (temPdfLayout(contrato.conteudo)) {
+      window.open(urlPdfAssinado(contrato.id), "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!conteudoRef.current) return;
     setGerandoPdf(true);
     try {
@@ -324,6 +312,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           folhaRef={folhaRef}
           conteudoRef={conteudoRef}
           assinaturas={assinaturasFolha}
+          numeroContrato={contrato.numero}
         />
       </div>
     </div>

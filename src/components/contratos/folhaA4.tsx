@@ -9,6 +9,7 @@
 import { type CSSProperties, type Ref } from "react";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
+import { resumirDispositivo } from "@/lib/contratos/dispositivo";
 import { useT } from "@/lib/i18n";
 
 function temConteudo(secoes: SecaoModelo[]): boolean {
@@ -84,6 +85,10 @@ export async function gerarPdfFolha(
   novaPagina();
 
   for (const el of Array.from(conteudoEl.children) as HTMLElement[]) {
+    // Quebra de página FORÇADA: um filho marcado (o relatório de assinaturas)
+    // começa sempre numa folha nova. Não existe @media print/page-break no
+    // fluxo (paginamos por imagem), então a quebra vive aqui no loop.
+    if (el.dataset.novaPagina === "1" && y > MTOP) novaPagina();
     const canvas = await html2canvas(el, {
       scale: 2,
       backgroundColor: estilo.corFundo,
@@ -166,6 +171,7 @@ export type AssinaturaInfo = {
   nome: string;
   papel: string | null;
   documento: string | null;
+  email?: string | null;
   ip: string | null;
   geolocalizacao: string | null;
   dispositivo: string | null;
@@ -205,64 +211,196 @@ function dataHoraRel(iso: string | null): string {
   return `${d[2]}/${d[1]}/${d[0]}${h ? ` ${h}` : ""}`;
 }
 
-/** Página "Relatório de Assinaturas" (estilo ZapSign), anexada ao final. */
-function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo, tr: (s: string) => string) {
+/** Data de hoje (DD/MM/AAAA) — usada no cabeçalho do relatório. */
+function dataHojeBr(): string {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+/** Linha "rótulo: valor" da grade do relatório; some se o valor for vazio. */
+function LinhaInfo({ rotulo, valor }: { rotulo: string; valor: string }) {
+  if (!valor) return null;
+  return (
+    <div style={{ display: "flex", gap: "6pt", fontSize: "8.5pt", lineHeight: 1.5 }}>
+      <span style={{ minWidth: "27mm", opacity: 0.55, flexShrink: 0 }}>{rotulo}</span>
+      <span style={{ wordBreak: "break-word" }}>{valor}</span>
+    </div>
+  );
+}
+
+/**
+ * Relatório de assinaturas (padrão ZapSign): cabeçalho + um bloco por
+ * signatário (moldura clean, miniatura da assinatura + grade rótulo:valor).
+ * Cores fixas do papel (corFundo/corTexto/corTitulo) — vai pro PDF via
+ * html2canvas, então tokens do tema (var(--x)) não valem aqui; bordas suaves
+ * saem de um rgba derivado de corTexto (nada de concatenar hex).
+ * As miniaturas de foto/selfie (KYC) só aparecem quando há URL — a rota
+ * pública não as envia, então nunca vazam pra quem abre o link.
+ */
+function renderRelatorio(
+  assinaturas: AssinaturaInfo[],
+  estilo: EstiloModelo,
+  tr: (s: string) => string,
+  numeroContrato?: string
+) {
+  const [r, g, b] = hexParaRgb(estilo.corTexto);
+  const borda = `rgba(${r}, ${g}, ${b}, 0.14)`;
+  const bordaForte = `rgba(${r}, ${g}, ${b}, 0.3)`;
+
   return (
     <div
-      style={{ borderTop: `2px solid ${estilo.corTitulo}`, paddingTop: "10pt" }}
+      style={{
+        border: `1px solid ${borda}`,
+        borderRadius: "6pt",
+        padding: "14pt 16pt 16pt",
+        background: estilo.corFundo,
+      }}
     >
-      <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Relatório de Assinaturas")}</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: "14pt" }}>
-        {assinaturas.map((a, i) => (
-          <div
-            key={i}
-            style={{ display: "flex", gap: "8mm", alignItems: "flex-start" }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700 }}>
-                {a.nome}
-                {a.assinadoEm ? ` — ${tr("Assinou")}` : ` — ${tr("Pendente")}`}
-              </div>
-              {a.papel && (
-                <div
-                  style={{
-                    fontSize: "8.5pt",
-                    opacity: 0.7,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.03em",
-                  }}
-                >
-                  {a.papel}
-                </div>
-              )}
+      {/* Cabeçalho */}
+      <div
+        style={{
+          borderBottom: `1px solid ${borda}`,
+          paddingBottom: "8pt",
+          marginBottom: "12pt",
+        }}
+      >
+        <div
+          style={{
+            color: estilo.corTitulo,
+            fontSize: "12.5pt",
+            fontWeight: 700,
+            letterSpacing: "0.02em",
+          }}
+        >
+          {tr("Relatório de assinaturas")}
+        </div>
+        <div style={{ fontSize: "8.5pt", opacity: 0.6, marginTop: "2pt" }}>
+          {[
+            numeroContrato ? `${tr("Contrato")} ${numeroContrato}` : "",
+            `${tr("Emitido em")} ${dataHojeBr()}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </div>
+
+      {/* Um bloco por signatário */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10pt" }}>
+        {assinaturas.map((a, i) => {
+          const assinou = !!a.assinadoEm || !!a.assinatura;
+          return (
+            <div
+              key={i}
+              style={{
+                border: `1px solid ${borda}`,
+                borderRadius: "5pt",
+                padding: "10pt 12pt",
+              }}
+            >
+              {/* Nome / papel + status */}
               <div
                 style={{
-                  fontSize: "8.5pt",
-                  opacity: 0.85,
-                  marginTop: "3pt",
-                  lineHeight: 1.55,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "6mm",
                 }}
               >
-                {a.documento && <div>{tr("Documento:")} {a.documento}</div>}
-                {a.assinadoEm && (
-                  <div>{tr("Data/hora:")} {dataHoraRel(a.assinadoEm)}</div>
-                )}
-                {a.ip && <div>IP: {a.ip}</div>}
-                {a.geolocalizacao && (
-                  <div>{tr("Geolocalização:")} {a.geolocalizacao}</div>
-                )}
-                {a.dispositivo && (
-                  <div style={{ wordBreak: "break-word" }}>
-                    {tr("Dispositivo:")} {a.dispositivo}
-                  </div>
-                )}
-                {typeof a.facialSimilaridade === "number" && (
-                  <div>
-                    {tr("Reconhecimento facial:")} {a.facialSimilaridade}%{" "}
-                    {a.facialMatch ? `(${tr("compatível")})` : `(${tr("divergente")})`}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: "10.5pt" }}>{a.nome}</div>
+                  {a.papel && (
+                    <div
+                      style={{
+                        fontSize: "8pt",
+                        opacity: 0.6,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        marginTop: "1pt",
+                      }}
+                    >
+                      {a.papel}
+                    </div>
+                  )}
+                </div>
+                <span
+                  style={{
+                    fontSize: "7.5pt",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    padding: "2pt 8pt",
+                    borderRadius: "999px",
+                    whiteSpace: "nowrap",
+                    border: `1px solid ${bordaForte}`,
+                    opacity: assinou ? 1 : 0.55,
+                  }}
+                >
+                  {assinou ? tr("Assinado") : tr("Pendente")}
+                </span>
+              </div>
+
+              {/* Grade rótulo:valor + miniatura da assinatura */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8mm",
+                  alignItems: "flex-start",
+                  marginTop: "8pt",
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2pt",
+                  }}
+                >
+                  <LinhaInfo rotulo={tr("Documento")} valor={a.documento ?? ""} />
+                  <LinhaInfo rotulo={tr("E-mail")} valor={a.email ?? ""} />
+                  <LinhaInfo rotulo={tr("Assinado em")} valor={dataHoraRel(a.assinadoEm)} />
+                  <LinhaInfo rotulo="IP" valor={a.ip ?? ""} />
+                  <LinhaInfo
+                    rotulo={tr("Dispositivo")}
+                    valor={resumirDispositivo(a.dispositivo)}
+                  />
+                  <LinhaInfo rotulo={tr("Geolocalização")} valor={a.geolocalizacao ?? ""} />
+                  {typeof a.facialSimilaridade === "number" && (
+                    <LinhaInfo
+                      rotulo={tr("Reconhecimento facial")}
+                      valor={`${a.facialSimilaridade}% ${
+                        a.facialMatch ? `(${tr("compatível")})` : `(${tr("divergente")})`
+                      }`}
+                    />
+                  )}
+                </div>
+                {a.assinatura && (
+                  <div style={{ width: "48mm", flexShrink: 0, textAlign: "center" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={a.assinatura}
+                      alt=""
+                      style={{ width: "100%", maxHeight: "16mm", objectFit: "contain" }}
+                    />
+                    <div
+                      style={{
+                        borderTop: `1px solid ${bordaForte}`,
+                        marginTop: "2pt",
+                        paddingTop: "2pt",
+                        fontSize: "7pt",
+                        opacity: 0.55,
+                      }}
+                    >
+                      {tr("Assinatura")}
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* KYC — só interno (a rota pública não manda URL de foto/selfie) */}
               {(a.fotoCpfUrl ||
                 a.fotoDocumentoUrl ||
                 a.fotoDocumentoVersoUrl ||
@@ -271,7 +409,7 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo, tr
                   style={{
                     display: "flex",
                     gap: "4mm",
-                    marginTop: "5pt",
+                    marginTop: "8pt",
                     flexWrap: "wrap",
                   }}
                 >
@@ -288,13 +426,9 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo, tr
                         <img
                           src={f.url as string}
                           alt=""
-                          style={{
-                            height: "22mm",
-                            borderRadius: "2pt",
-                            objectFit: "cover",
-                          }}
+                          style={{ height: "20mm", borderRadius: "2pt", objectFit: "cover" }}
                         />
-                        <div style={{ fontSize: "7pt", opacity: 0.7 }}>
+                        <div style={{ fontSize: "6.5pt", opacity: 0.6, marginTop: "1pt" }}>
                           {f.leg}
                         </div>
                       </div>
@@ -302,32 +436,8 @@ function renderRelatorio(assinaturas: AssinaturaInfo[], estilo: EstiloModelo, tr
                 </div>
               )}
             </div>
-            {a.assinatura && (
-              <div style={{ width: "52mm", textAlign: "center", flexShrink: 0 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={a.assinatura}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    maxHeight: "20mm",
-                    objectFit: "contain",
-                  }}
-                />
-                <div
-                  style={{
-                    borderTop: `1px solid ${estilo.corTexto}`,
-                    fontSize: "7.5pt",
-                    opacity: 0.7,
-                    paddingTop: "2pt",
-                  }}
-                >
-                  {a.nome}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -503,6 +613,7 @@ export function FolhaA4({
   conteudoRef,
   transformarTexto,
   assinaturas,
+  numeroContrato,
 }: {
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
@@ -510,6 +621,8 @@ export function FolhaA4({
   conteudoRef: Ref<HTMLDivElement>;
   transformarTexto?: (s: string) => string;
   assinaturas?: AssinaturaInfo[];
+  /** Nº do contrato, mostrado no cabeçalho do relatório de assinaturas. */
+  numeroContrato?: string;
 }) {
   const tr = useT();
   const num = calcularNumeracao(secoes);
@@ -554,7 +667,12 @@ export function FolhaA4({
             ))}
             {assinaturas &&
               assinaturas.some((a) => a.assinatura || a.assinadoEm) && (
-                <div>{renderRelatorio(assinaturas, estilo, tr)}</div>
+                // data-nova-pagina: gerarPdfFolha força uma folha nova aqui.
+                // marginTop (margem, não captada pelo html2canvas) só afasta o
+                // relatório na TELA — parece uma folha separada, não colado.
+                <div data-nova-pagina="1" style={{ marginTop: "40pt" }}>
+                  {renderRelatorio(assinaturas, estilo, tr, numeroContrato)}
+                </div>
               )}
           </div>
         )}

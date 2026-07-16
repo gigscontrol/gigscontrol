@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FileText,
   Download,
@@ -12,14 +12,19 @@ import {
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import DateRangeSelector from "../DateRangeSelector";
-import { FolhaA4, gerarPdfFolha } from "./folhaA4";
+import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
+import {
+  buscarSignatarios,
+  paraAssinaturaInfo,
+  urlPdfAssinado,
+} from "@/lib/contratos/signatarios-api";
 import { useContratos } from "@/lib/contratos-context";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import type { Contrato, ContratoStatus } from "@/lib/mappers/contrato";
+import { temPdfLayout, type Contrato, type ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
 import { MODULE_THEMES } from "@/types";
@@ -192,6 +197,12 @@ export default function HistoricoPage({
   // ---- Ações ----
 
   async function baixarPdf(contrato: Contrato) {
+    // Contrato POR UPLOAD (sem seções): a folha A4 sairia vazia — o PDF vem da
+    // rota que carimba as assinaturas e anexa o relatório sobre o PDF-fonte.
+    if (temPdfLayout(contrato.conteudo)) {
+      window.open(urlPdfAssinado(contrato.id), "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!conteudoRef.current) return;
     setGerandoPdf(true);
     try {
@@ -536,6 +547,27 @@ function DetalheContrato({
 }) {
   const t = useT();
   const jaCancelado = contrato.status === "cancelado";
+
+  // Assinaturas do contrato → o preview e o "Baixar PDF" mostram o relatório
+  // (mesmos dados/mapa que o PainelAssinatura, pra gerar o MESMO PDF).
+  const [assinaturas, setAssinaturas] = useState<AssinaturaInfo[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    buscarSignatarios(contrato.id)
+      .then((lista) => {
+        if (!vivo) return;
+        setAssinaturas(
+          lista.filter((s) => s.status === "assinado").map(paraAssinaturaInfo)
+        );
+      })
+      .catch(() => {
+        /* silencioso — sem relatório é o comportamento antigo */
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [contrato.id]);
+
   return (
     <div className="flex flex-col gap-5">
       {/* Barra de ações do detalhe */}
@@ -650,12 +682,14 @@ function DetalheContrato({
       {/* Painel de assinatura — signatários, links/WhatsApp, PDF assinado */}
       <PainelAssinatura contrato={contrato} />
 
-      {/* Preview da folha A4 */}
+      {/* Preview da folha A4 (com o relatório de assinaturas quando houver) */}
       <FolhaA4
         secoes={contrato.conteudo.secoes}
         estilo={contrato.conteudo.estilo}
         folhaRef={folhaRef}
         conteudoRef={conteudoRef}
+        assinaturas={assinaturas}
+        numeroContrato={contrato.numero}
       />
     </div>
   );

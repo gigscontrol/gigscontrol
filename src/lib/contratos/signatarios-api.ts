@@ -7,6 +7,7 @@ import type {
   Signatario,
   ExigenciasSignatario,
 } from "@/lib/mappers/contratoSignatario";
+import type { AssinaturaInfo } from "@/components/contratos/folhaA4";
 
 export type EntradaSignatarioUI = {
   nome: string;
@@ -14,6 +15,38 @@ export type EntradaSignatarioUI = {
   papel: string;
   exige: ExigenciasSignatario;
 };
+
+/**
+ * Signatário → AssinaturaInfo (dados do relatório da folha A4). Inclui as URLs
+ * assinadas de foto/selfie (KYC) — só chegam quando é a agência que lista
+ * (a rota pública não as devolve), então a folha interna mostra o KYC e a
+ * pública não. Usado pelos dois botões de "PDF assinado" (Painel e Histórico)
+ * para que produzam o MESMO PDF.
+ */
+export function paraAssinaturaInfo(s: Signatario): AssinaturaInfo {
+  return {
+    nome: s.nome,
+    papel: s.papel,
+    documento: s.documento,
+    email: s.email,
+    ip: s.ip,
+    geolocalizacao: s.geolocalizacao,
+    dispositivo: s.dispositivo,
+    assinadoEm: s.assinadoEm,
+    assinatura: s.assinatura,
+    fotoCpfUrl: s.arquivosUrls?.fotoCpf,
+    fotoDocumentoUrl: s.arquivosUrls?.fotoDocumento,
+    fotoDocumentoVersoUrl: s.arquivosUrls?.fotoDocumentoVerso,
+    selfieUrl: s.arquivosUrls?.selfie,
+    facialSimilaridade: s.arquivos.facialSimilaridade,
+    facialMatch: s.arquivos.facialMatch,
+  };
+}
+
+/** URL da rota que carimba + anexa o relatório num contrato POR UPLOAD (PDF). */
+export function urlPdfAssinado(contratoId: string): string {
+  return `/api/contratos/${contratoId}/pdf-assinado`;
+}
 
 async function jsonOuErro(res: Response): Promise<Record<string, unknown>> {
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;

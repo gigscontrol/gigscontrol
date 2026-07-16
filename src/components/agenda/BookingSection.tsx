@@ -8,7 +8,6 @@ import {
   CalendarDays,
   BedDouble,
   Users,
-  Copy,
   Check,
   Upload,
   Download,
@@ -16,6 +15,7 @@ import {
   Pencil,
   Send,
   StickyNote,
+  ChevronDown,
 } from "lucide-react";
 import { useT, type Traduzir } from "@/lib/i18n";
 import type { BookingShow } from "@/types";
@@ -49,6 +49,7 @@ const INPUT =
 export default function BookingSection({ showId, booking, podeEditar, onSave }: Props) {
   const t = useT();
   const [editando, setEditando] = useState(false);
+  const [aberto, setAberto] = useState(false);
   const [form, setForm] = useState<BookingShow>(booking ?? VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [copiado, setCopiado] = useState(false);
@@ -133,10 +134,21 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
     }
   }
 
-  // ---------- VISÃO (não editando) ----------
+  // ---------- VISÃO (não editando) — linha-resumo colapsada ----------
   if (!editando) {
-    const temDados = !!booking && booking.status === "informado";
+    const b = booking;
+    const informado = b?.status === "informado";
+    const solicitado = b?.status === "solicitado";
 
+    // Texto principal da linha-resumo (uma linha só).
+    const principal = informado
+      ? b?.hotelNome || t("Hospedagem registrada")
+      : solicitado
+      ? t("Solicitado ao contratante")
+      : t("Hospedagem não organizada");
+
+    // Ações — só pra quem pode editar. Reusadas na linha-resumo (vazio) e no
+    // rodapé (expandido).
     const acoes = podeEditar && (
       <div className="flex items-center gap-2 flex-wrap">
         <button
@@ -157,144 +169,160 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
           className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
         >
           <Pencil size={13} />
-          {temDados ? t("Editar") : t("Registrar hospedagem")}
+          {informado ? t("Editar") : t("Registrar hospedagem")}
         </button>
       </div>
     );
 
-    // Estado vazio (sem hospedagem informada) — bloco pontilhado enxuto.
-    if (!booking || booking.status !== "informado") {
-      return (
-        <div className="flex flex-col items-center text-center gap-3 py-5 px-3 rounded-lg border border-dashed border-border bg-elevated">
-          <div
-            className="h-11 w-11 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: "var(--surface)" }}
-          >
-            <Hotel size={20} className="text-muted" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-primary">
-              {booking ? t("Booking solicitado ao contratante") : t("Nenhuma hospedagem registrada")}
-            </div>
-            <div className="text-xs text-muted mt-0.5">
-              {t("Solicite os dados ao contratante ou registre você mesmo.")}
-            </div>
-          </div>
-          {acoes}
-          {erro && <div className="text-xs text-danger">{erro}</div>}
-        </div>
-      );
-    }
-
-    // Estado com dados — cartão do hotel + grade de infos.
-    const b = booking;
-    const celulas = [
-      { icon: <CalendarDays size={12} />, label: t("Check-in"), value: fmtData(b.checkin) },
-      { icon: <CalendarDays size={12} />, label: t("Check-out"), value: fmtData(b.checkout) },
-      {
-        icon: <BedDouble size={12} />,
-        label: t("Quartos"),
-        value: [b.quartos ? `${b.quartos}` : "", b.quarto ? `nº ${b.quarto}` : ""]
-          .filter(Boolean)
-          .join(" · "),
-      },
-      { icon: <Users size={12} />, label: t("Ocupação"), value: b.ocupacao ?? "" },
-      { icon: <Phone size={12} />, label: t("Telefone"), value: b.telefone ?? "" },
-    ].filter((c) => c.value);
-    const temMapa = !!b.localizacao && /^https?:\/\//i.test(b.localizacao);
+    // Grade de infos — só quando há dados informados e o accordion está aberto.
+    const celulas = informado
+      ? [
+          { icon: <CalendarDays size={12} />, label: t("Check-in"), value: fmtData(b?.checkin) },
+          { icon: <CalendarDays size={12} />, label: t("Check-out"), value: fmtData(b?.checkout) },
+          {
+            icon: <BedDouble size={12} />,
+            label: t("Quartos"),
+            value: [b?.quartos ? `${b.quartos}` : "", b?.quarto ? `nº ${b.quarto}` : ""]
+              .filter(Boolean)
+              .join(" · "),
+          },
+          { icon: <Users size={12} />, label: t("Ocupação"), value: b?.ocupacao ?? "" },
+          { icon: <Phone size={12} />, label: t("Telefone"), value: b?.telefone ?? "" },
+        ].filter((c) => c.value)
+      : [];
+    const temMapa = !!b?.localizacao && /^https?:\/\//i.test(b.localizacao);
 
     return (
       <div className="flex flex-col gap-3">
-        {/* Cartão do hotel */}
-        <div className="rounded-lg border border-border bg-elevated overflow-hidden">
-          <div
-            className="p-3 flex items-start justify-between gap-3"
-            style={{ borderLeft: "3px solid var(--brand)" }}
-          >
-            <div className="flex items-start gap-2.5 min-w-0">
-              <div
-                className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: "var(--surface)", color: "var(--brand)" }}
-              >
-                <Hotel size={17} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-primary truncate">
-                  {b.hotelNome || t("Hotel")}
-                </div>
-                {b.endereco && (
-                  <div className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                    <MapPin size={11} className="flex-shrink-0" />
-                    <span className="truncate">{b.endereco}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <span className={`badge flex-shrink-0 ${b.pago ? "badge-success" : "badge-warning"}`}>
-              {b.pago ? t("Hotel pago") : t("Hotel não pago")}
+        {/* Linha-resumo compacta */}
+        <div className="flex items-start justify-between gap-2 flex-wrap py-2 px-3 rounded-md bg-elevated border border-border">
+          <div className="flex items-center gap-x-2 gap-y-1 min-w-0 flex-wrap">
+            <span style={{ color: "var(--brand)" }} className="flex-shrink-0">
+              <Hotel size={15} />
             </span>
+            <span className="text-sm font-medium text-primary truncate min-w-0">{principal}</span>
+            {informado && <span className="badge badge-success flex-shrink-0">{t("Informado")}</span>}
+            {solicitado && <span className="badge badge-warning flex-shrink-0">{t("Solicitado")}</span>}
+            {b?.voucherPath && (
+              <span className="badge badge-neutral inline-flex items-center gap-1 flex-shrink-0">
+                <FileText size={10} /> {t("Voucher anexado")}
+              </span>
+            )}
+            {b?.pago && <span className="badge badge-success flex-shrink-0">{t("Pago")}</span>}
           </div>
-
-          {celulas.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-border border-t border-border">
-              {celulas.map((c) => (
-                <div key={c.label} className="bg-elevated p-2.5 min-w-0">
-                  <div className="text-[0.6rem] uppercase tracking-wide text-muted inline-flex items-center gap-1">
-                    {c.icon}
-                    {c.label}
-                  </div>
-                  <div className="text-sm text-primary mt-0.5 truncate">{c.value}</div>
-                </div>
-              ))}
-            </div>
+          {informado ? (
+            <button
+              type="button"
+              onClick={() => setAberto((v) => !v)}
+              className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+            >
+              {t("Ver detalhes")}
+              <ChevronDown
+                size={13}
+                className={`transition-transform ${aberto ? "rotate-180" : ""}`}
+              />
+            </button>
+          ) : (
+            acoes
           )}
         </div>
 
-        {/* Ações rápidas: mapa + voucher */}
-        {(temMapa || b.voucherPath) && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {temMapa && (
-              <a
-                href={b.localizacao}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+        {/* Detalhes expandidos — só quando há dados informados e o accordion abriu. */}
+        {informado && aberto && b && (
+          <>
+            {/* Cartão do hotel */}
+            <div className="rounded-lg border border-border bg-elevated overflow-hidden">
+              <div
+                className="p-3 flex items-start justify-between gap-3"
+                style={{ borderLeft: "3px solid var(--brand)" }}
               >
-                <MapPin size={13} /> {t("Ver no mapa")}
-              </a>
-            )}
-            {b.voucherPath && (
-              <button
-                type="button"
-                onClick={() => baixarVoucher(b.voucherPath as string)}
-                className="btn-ghost text-xs inline-flex items-center gap-1.5"
-              >
-                <Download size={13} /> {t("Baixar voucher")}
-              </button>
-            )}
-          </div>
-        )}
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div
+                    className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "var(--surface)", color: "var(--brand)" }}
+                  >
+                    <Hotel size={17} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-primary truncate">
+                      {b.hotelNome || t("Hotel")}
+                    </div>
+                    {b.endereco && (
+                      <div className="text-xs text-muted flex items-center gap-1 mt-0.5">
+                        <MapPin size={11} className="flex-shrink-0" />
+                        <span className="truncate">{b.endereco}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className={`badge flex-shrink-0 ${b.pago ? "badge-success" : "badge-warning"}`}>
+                  {b.pago ? t("Hotel pago") : t("Hotel não pago")}
+                </span>
+              </div>
 
-        {b.observacoes && (
-          <div className="text-xs text-secondary bg-elevated border border-border rounded-md p-2.5 flex items-start gap-2">
-            <StickyNote size={13} className="text-muted flex-shrink-0 mt-0.5" />
-            <span className="whitespace-pre-wrap min-w-0">{b.observacoes}</span>
-          </div>
-        )}
+              {celulas.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-border border-t border-border">
+                  {celulas.map((c) => (
+                    <div key={c.label} className="bg-elevated p-2.5 min-w-0">
+                      <div className="text-[0.6rem] uppercase tracking-wide text-muted inline-flex items-center gap-1">
+                        {c.icon}
+                        {c.label}
+                      </div>
+                      <div className="text-sm text-primary mt-0.5 truncate">{c.value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-        {/* Rodapé: status + autoria + ações */}
-        <div className="flex items-center justify-between gap-2 flex-wrap border-t border-border pt-2.5">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
-            <span className="badge badge-success">{t("Hospedagem informada")}</span>
-            {b.atualizadoPor && (
-              <span className="text-[0.65rem] text-muted truncate">
-                {t("Atualizado por")} {b.atualizadoPor}
-                {b.atualizadoEm ? ` · ${fmtDataHora(b.atualizadoEm)}` : ""}
-              </span>
+            {/* Ações rápidas: mapa + voucher */}
+            {(temMapa || b.voucherPath) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {temMapa && (
+                  <a
+                    href={b.localizacao}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                  >
+                    <MapPin size={13} /> {t("Ver no mapa")}
+                  </a>
+                )}
+                {b.voucherPath && (
+                  <button
+                    type="button"
+                    onClick={() => baixarVoucher(b.voucherPath as string)}
+                    className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                  >
+                    <Download size={13} /> {t("Baixar voucher")}
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-          {acoes}
-        </div>
+
+            {b.observacoes && (
+              <div className="text-xs text-secondary bg-elevated border border-border rounded-md p-2.5 flex items-start gap-2">
+                <StickyNote size={13} className="text-muted flex-shrink-0 mt-0.5" />
+                <span className="whitespace-pre-wrap min-w-0">{b.observacoes}</span>
+              </div>
+            )}
+
+            {/* Rodapé: autoria + ações */}
+            {(b.atualizadoPor || acoes) && (
+              <div className="flex items-center justify-between gap-2 flex-wrap border-t border-border pt-2.5">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  {b.atualizadoPor && (
+                    <span className="text-[0.65rem] text-muted truncate">
+                      {t("Atualizado por")} {b.atualizadoPor}
+                      {b.atualizadoEm ? ` · ${fmtDataHora(b.atualizadoEm)}` : ""}
+                    </span>
+                  )}
+                </div>
+                {acoes}
+              </div>
+            )}
+          </>
+        )}
         {erro && <div className="text-xs text-danger">{erro}</div>}
       </div>
     );

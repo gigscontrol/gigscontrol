@@ -4,6 +4,7 @@ import {
   buscarParaAssinar,
   registrarAssinatura,
   registrarAbertura,
+  assinantesPublicosDoContrato,
   ExigenciaNaoAtendidaError,
 } from "@/lib/services/contratoSignatarios.service";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
@@ -44,6 +45,9 @@ export async function GET(
     // Conta a abertura do link (visualização) — só se ainda não assinou.
     // Fire-and-forget pra não atrasar a resposta.
     void registrarAbertura(admin, signatario).catch(() => {});
+    // Quem já assinou (do MESMO contrato) → relatório de assinaturas visível
+    // no link, padrão ZapSign. Sem KYC (foto/selfie/facial) — só o relatório.
+    const assinaturas = await assinantesPublicosDoContrato(admin, contrato.id);
     return NextResponse.json({
       signatario: {
         nome: signatario.nome,
@@ -56,6 +60,7 @@ export async function GET(
         assinadoEm: signatario.assinadoEm,
       },
       contrato: { numero: contrato.numero, conteudo: contrato.conteudo },
+      assinaturas,
       jaAssinou: signatario.status === "assinado",
     });
   } catch (e) {
