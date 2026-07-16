@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, type ReactNode, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { MapPin, Clock, Music, Calendar, Plus, Plane, Car, Trash2, Search, FileUp, Pencil, X, Check, Download, ArrowLeft, FileSignature } from "lucide-react";
 import DateRangeSelector from "./DateRangeSelector";
 import PageHeader from "./PageHeader";
@@ -41,6 +42,38 @@ type DayCell = {
 /** "YYYY-MM-DD" a partir de ano, mês (1-12) e dia. */
 function isoDia(ano: number, mes1a12: number, dia: number): string {
   return `${ano}-${String(mes1a12).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+/** ISO "YYYY-MM-DD" de hoje (fuso local do browser). */
+function isoHoje(): string {
+  const now = new Date();
+  return isoDia(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+/**
+ * DayCell SINTÉTICO a partir de um ISO escolhido — reusa os mesmos helpers
+ * do grid (DAY_NAMES/ALL_MONTHS) pro fluxo do "+" mobile poder criar item em
+ * QUALQUER dia. `isQuente` fica false (cosmético; feriados só carregam pro
+ * período em visualização). Retorna null se o ISO for inválido.
+ */
+function cellDeISO(iso: string): DayCell | null {
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  if (!ano || !mes || !dia) return null;
+  const date = new Date(ano, mes - 1, dia);
+  const now = new Date();
+  return {
+    uniqueKey: `fab-${iso}`,
+    id: dia,
+    name: DAY_NAMES[date.getDay()],
+    date: `${dia} ${ALL_MONTHS[mes - 1]}`,
+    dataISO: iso,
+    isQuente: false,
+    isOtherMonth: false,
+    isToday:
+      dia === now.getDate() &&
+      mes - 1 === now.getMonth() &&
+      ano === now.getFullYear(),
+  };
 }
 
 /**
@@ -323,6 +356,9 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   const [transporteFormDia, setTransporteFormDia] = useState<DayCell | null>(null);
   const [itemDetalhe, setItemDetalhe] = useState<AgendaItem | null>(null);
   const [editandoItem, setEditandoItem] = useState<AgendaItem | null>(null);
+  // FAB mobile: seletor "Para qual data?" antes de cair no NovoItemModal.
+  const [fabDataAberto, setFabDataAberto] = useState(false);
+  const [fabDataISO, setFabDataISO] = useState("");
 
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
@@ -428,6 +464,56 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
           <EmptyState />
         )}
       </div>
+
+      {/* FAB mobile: cria item em QUALQUER data (a lista mobile só mostra dias
+          com conteúdo + hoje, então sem isto só dava pra criar em hoje). */}
+      <FabNovoDia
+        podeCriar={podeCriarAlgum}
+        onClick={() => {
+          setFabDataISO(isoHoje());
+          setFabDataAberto(true);
+        }}
+      />
+
+      {/* Passo "Para qual data?" — vira DayCell sintético e cai no NovoItemModal */}
+      {fabDataAberto && (
+        <Modal
+          isOpen
+          onClose={() => setFabDataAberto(false)}
+          title={t("Novo item na agenda")}
+          subtitle={t("Para qual data?")}
+          maxWidth={360}
+        >
+          <div className="flex flex-col gap-4">
+            <CampoForm label={t("Data")}>
+              <InputDataBR
+                value={fabDataISO}
+                onChange={setFabDataISO}
+                className="w-full"
+                autoFocus
+              />
+            </CampoForm>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setFabDataAberto(false)} className="btn btn-secondary">
+                {t("Cancelar")}
+              </button>
+              <button
+                onClick={() => {
+                  const cell = cellDeISO(fabDataISO);
+                  if (!cell) return;
+                  setFabDataAberto(false);
+                  setNovoItemDia(cell);
+                }}
+                disabled={!/^\d{4}-\d{2}-\d{2}$/.test(fabDataISO)}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+              >
+                {t("Continuar")}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal de detalhes ao clicar em um show */}
       <ShowDetalheModal
@@ -679,6 +765,36 @@ function NovoItemSlot({ onClick, podeCriar = true }: { onClick: () => void; pode
     >
       <Plus size={15} />
     </button>
+  );
+}
+
+/**
+ * Botão flutuante "+" (só mobile). A lista mobile só renderiza cards de dias
+ * com conteúdo + hoje, então o "+" de cada card não alcança dias vazios — o
+ * FAB abre o seletor de data e destrava a criação em qualquer dia.
+ *
+ * Portaled pro <body> porque o <main> mantém `transform: translateY(0)`
+ * (animate-in, fill-mode both) e ancoraria o `fixed` nele em vez da viewport.
+ */
+function FabNovoDia({ onClick, podeCriar }: { onClick: () => void; podeCriar: boolean }) {
+  const t = useT();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || !podeCriar) return null;
+  return createPortal(
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t("Novo item na agenda")}
+      className="md:hidden fixed bottom-5 right-5 z-30 h-14 w-14 rounded-full flex items-center justify-center text-white transition-transform active:scale-95"
+      style={{
+        backgroundColor: "var(--brand)",
+        boxShadow: "0 10px 30px var(--shadow-color)",
+      }}
+    >
+      <Plus size={24} />
+    </button>,
+    document.body
   );
 }
 
@@ -1146,12 +1262,12 @@ function EventoFormModal({
 }) {
   const t = useT();
   const editando = !!itemEditar;
-  const dataISO = itemEditar?.data ?? day?.dataISO ?? "";
   const subtitulo = itemEditar
     ? formatarDataBR(itemEditar.data)
     : day
       ? `${t(day.name)} · ${day.date}`
       : "";
+  const [dataEvento, setDataEvento] = useState(itemEditar?.data ?? day?.dataISO ?? "");
   const [titulo, setTitulo] = useState(itemEditar?.titulo ?? "");
   const [artistIds, setArtistIds] = useState<string[]>(itemEditar?.artistIds ?? defaultArtistIds);
   const [diaInteiro, setDiaInteiro] = useState(itemEditar ? itemEditar.diaInteiro : true);
@@ -1168,13 +1284,17 @@ function EventoFormModal({
       setErro(t("Informe um título."));
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dataEvento)) {
+      setErro(t("Informe a data."));
+      return;
+    }
     setSalvando(true);
     setErro(null);
     try {
       await onCriar({
         tipo: "evento",
         titulo: titulo.trim(),
-        data: dataISO,
+        data: dataEvento,
         diaInteiro,
         horaInicio: diaInteiro ? undefined : horaInicio || undefined,
         horaFim: diaInteiro ? undefined : horaFim || undefined,
@@ -1214,6 +1334,14 @@ function EventoFormModal({
             onChange={(e) => setTitulo(e.target.value)}
             placeholder={t("Studio, Day Off, Férias…")}
             className="campo-input"
+          />
+        </CampoForm>
+
+        <CampoForm label={t("Data")}>
+          <InputDataBR
+            value={dataEvento}
+            onChange={setDataEvento}
+            className="w-full"
           />
         </CampoForm>
 

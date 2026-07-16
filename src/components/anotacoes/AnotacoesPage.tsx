@@ -183,37 +183,36 @@ export default function AnotacoesPage() {
               <ArrowLeft size={15} />
               {t("Pastas")}
             </button>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
-                <Search size={15} className="text-muted flex-shrink-0" />
-                <input
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder={t("Buscar anotações...")}
-                  className="input"
-                />
-                {busca && (
-                  <button onClick={() => setBusca("")} className="text-muted hover:text-primary text-xs">
-                    {t("Limpar")}
-                  </button>
-                )}
-              </div>
-              {podeCriarPasta && (
-                <button
-                  onClick={() => setModalPasta({ modo: "nova" })}
-                  disabled={atingiuTeto}
-                  title={atingiuTeto ? t("Limite de {n} pastas atingido.", { n: MAX_PASTAS }) : undefined}
-                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus size={15} />
-                  {t("Nova pasta")}
-                </button>
-              )}
-            </div>
-          )
+          ) : podeCriarPasta ? (
+            <button
+              onClick={() => setModalPasta({ modo: "nova" })}
+              disabled={atingiuTeto}
+              title={atingiuTeto ? t("Limite de {n} pastas atingido.", { n: MAX_PASTAS }) : undefined}
+              className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={15} />
+              {t("Nova pasta")}
+            </button>
+          ) : undefined
         }
       />
+
+      {!pastaAberta && (
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+          <Search size={15} className="text-muted flex-shrink-0" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder={t("Buscar anotações...")}
+            className="input"
+          />
+          {busca && (
+            <button onClick={() => setBusca("")} className="text-muted hover:text-primary text-xs">
+              {t("Limpar")}
+            </button>
+          )}
+        </div>
+      )}
 
       {pastaAberta ? (
         editor ? (

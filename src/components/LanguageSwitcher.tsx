@@ -10,7 +10,7 @@ import Flag from "./Flag";
  * localStorage (gc-lang) e traduz o site inteiro via useT. Os NOMES dos
  * idiomas ficam no próprio idioma (autônimos) — não se traduzem.
  */
-const IDIOMAS: { code: Lang; nome: string; pais: string }[] = [
+export const IDIOMAS: { code: Lang; nome: string; pais: string }[] = [
   { code: "pt", nome: "Português", pais: "BR" },
   { code: "en", nome: "English", pais: "US" },
   { code: "es", nome: "Español", pais: "ES" },

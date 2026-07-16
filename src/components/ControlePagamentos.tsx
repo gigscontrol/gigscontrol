@@ -240,7 +240,7 @@ export default function ControlePagamentos({
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard title={t("Total em vendas")} value={formatBRL(totais.total)} icon={<DollarSign size={18} />} accentColor={accent} />
         <StatCard title={t("Recebido")} value={formatBRL(totais.recebido)} icon={<CheckCircle2 size={18} />} accentColor="var(--success)" />
         <StatCard title={t("A receber")} value={formatBRL(totais.aReceber)} icon={<CalendarClock size={18} />} accentColor="var(--warning)" />

@@ -3088,6 +3088,7 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Ex: São Paulo, Rio de Janeiro...": "E.g.: New York, Los Angeles...",
   "Falha ao salvar seus dados.": "Failed to save your details.",
   "Informe a data de nascimento.": "Enter your date of birth.",
+  "Informe a data.": "Enter the date.",
   "Informe o documento.": "Enter the ID document.",
   "Informe seu apelido.": "Enter your nickname.",
   "Informe seu nome completo.": "Enter your full name.",
@@ -3644,4 +3645,9 @@ export const EN: Record<string, string> = {
   "Mostrar menos": "Show less",
   "Mostrar todos ({n})": "Show all ({n})",
   "Visão geral dos seus artistas, equipe e atividade recente.": "Overview of your artists, team, and recent activity.",
+  // Chaves novas do fix/mobile-6-ajustes (FAB da Agenda, tema no menu mobile, filtro de artista em Orçamentos).
+  "Tema": "Theme",
+  "Novo item na agenda": "New schedule item",
+  "Para qual data?": "For which date?",
+  "Filtrar por artista": "Filter by artist",
 };

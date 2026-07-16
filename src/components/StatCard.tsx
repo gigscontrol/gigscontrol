@@ -28,7 +28,7 @@ export default function StatCard({
   subtitle,
 }: Props) {
   return (
-    <div className="card flex flex-col gap-4 min-h-[140px]">
+    <div className="card flex flex-col gap-2 sm:gap-4 min-h-0 sm:min-h-[140px] p-3 sm:p-5">
       <div className="flex items-start justify-between">
         <span className="stat-label">{title}</span>
         <div
@@ -43,7 +43,7 @@ export default function StatCard({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="stat-value">{value}</div>
+        <div className="stat-value max-sm:text-2xl max-sm:truncate">{value}</div>
         {(trend || subtitle) && (
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {trend && <TrendBadge value={trend.value} />}

@@ -15,8 +15,12 @@ import {
   Eye,
   FileText,
   CalendarCheck2,
+  Users,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import Modal from "./Modal";
 import MiniLixeira from "./MiniLixeira";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
@@ -53,6 +57,9 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
   const [search, setSearch] = useState("");
+  const [modalArtista, setModalArtista] = useState(false);
+
+  const artistaSelecionado = artistas.find((d) => d.id === filtroDJ);
 
   const lista = useMemo(() => {
     return [...orcamentos]
@@ -195,7 +202,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
           />
         </div>
 
-        <div className="pill-group">
+        <div className="pill-group flex-wrap">
           {STATUS_FILTROS.map((s) => (
             <button
               key={s.value}
@@ -208,26 +215,72 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
           ))}
         </div>
 
-        <div className="pill-group">
+        <button
+          type="button"
+          onClick={() => setModalArtista(true)}
+          className="btn btn-secondary"
+        >
+          <Users size={14} />
+          {filtroDJ === "todos" ? t("Todos artistas") : (artistaSelecionado?.name ?? t("Todos artistas"))}
+          <ChevronDown size={14} />
+        </button>
+      </div>
+
+      <Modal
+        isOpen={modalArtista}
+        onClose={() => setModalArtista(false)}
+        title={t("Filtrar por artista")}
+        maxWidth={440}
+      >
+        <div className="flex flex-col gap-2">
           <button
             type="button"
-            className={`pill ${filtroDJ === "todos" ? "active" : ""}`}
-            onClick={() => setFiltroDJ("todos")}
+            onClick={() => {
+              setFiltroDJ("todos");
+              setModalArtista(false);
+            }}
+            className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
           >
-            {t("Todos artistas")}
+            <span className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 bg-surface border border-border text-muted">
+              <Users size={16} />
+            </span>
+            <span className="flex-1 text-sm font-semibold text-primary">
+              {t("Todos artistas")}
+            </span>
+            {filtroDJ === "todos" && (
+              <Check size={16} style={{ color: "var(--brand)" }} />
+            )}
           </button>
           {artistas.map((d) => (
             <button
               key={d.id}
               type="button"
-              className={`pill ${filtroDJ === d.id ? "active" : ""}`}
-              onClick={() => setFiltroDJ(d.id)}
+              onClick={() => {
+                setFiltroDJ(d.id);
+                setModalArtista(false);
+              }}
+              className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
             >
-              {d.name}
+              <span
+                className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                style={{
+                  backgroundColor: d.color,
+                  color: "#fff",
+                  boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
+                }}
+              >
+                {d.name.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="flex-1 text-sm font-semibold text-primary">
+                {d.name}
+              </span>
+              {filtroDJ === d.id && (
+                <Check size={16} style={{ color: "var(--brand)" }} />
+              )}
             </button>
           ))}
         </div>
-      </div>
+      </Modal>
 
       {/* Tabela */}
       <div className="card p-0 overflow-hidden">

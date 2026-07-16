@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
 type Props<T extends string> = {
@@ -59,8 +60,10 @@ export default function DateRangeSelector<T extends string>({
   accountCreatedAt,
 }: Props<T>) {
   const t = useT();
-  const [isCustomMenuOpen, setIsCustomMenuOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  // Visão do popover: "list" = menu de opções · "custom" = seletor de ano/mês
+  const [view, setView] = useState<"list" | "custom">("list");
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // Piso (ano/mês mínimos permitidos)
   const piso = useMemo(() => resolverPiso(accountCreatedAt), [accountCreatedAt]);
@@ -91,17 +94,27 @@ export default function DateRangeSelector<T extends string>({
     }
   }, [selectedCustomYear, yearsOcultos]);
 
-  // Fecha popover ao clicar fora
+  // Fecha popover ao clicar fora (o ref envolve trigger + popover)
   useEffect(() => {
-    if (!isCustomMenuOpen) return;
+    if (!isOpen) return;
     const handler = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setIsCustomMenuOpen(false);
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [isCustomMenuOpen]);
+  }, [isOpen]);
+
+  // Fecha popover com Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen]);
 
   // Mês mínimo permitido pro ano selecionado
   const minMesIdx = useMemo(() => {
@@ -121,102 +134,163 @@ export default function DateRangeSelector<T extends string>({
 
   const yearsVisiveis = showMoreYears ? [...yearsDestaque, ...yearsOcultos] : yearsDestaque;
 
-  return (
-    <div className="relative" ref={popoverRef}>
-      <div className="pill-group flex-wrap">
-        {options.map((range) => (
-          <button
-            key={range}
-            type="button"
-            className={`pill ${value === range ? "active" : ""}`}
-            onClick={() => {
-              onChange(range);
-              if (range === customLabel) setIsCustomMenuOpen((v) => !v);
-              else setIsCustomMenuOpen(false);
-            }}
-          >
-            {t(range)}
-          </button>
-        ))}
-      </div>
+  // Abre o popover já na visão coerente com o valor atual
+  function toggleOpen() {
+    if (isOpen) {
+      setIsOpen(false);
+    } else {
+      setView(value === customLabel ? "custom" : "list");
+      setIsOpen(true);
+    }
+  }
 
-      {value === customLabel && isCustomMenuOpen && (
+  // Rótulo do trigger: no Personalizado com mês+ano definidos, mostra "Mai · 2026"
+  const triggerLabel =
+    value === customLabel && selectedCustomMonth && selectedCustomYear !== null
+      ? `${selectedCustomMonth} · ${selectedCustomYear}`
+      : t(value);
+
+  return (
+    <div className="relative inline-block" ref={rootRef}>
+      <button
+        type="button"
+        onClick={toggleOpen}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        className="inline-flex items-center gap-2 h-[38px] px-3 rounded-md bg-surface border border-border text-sm text-primary hover:border-border-strong transition-colors whitespace-nowrap"
+      >
+        <CalendarDays size={14} className="shrink-0 text-secondary" />
+        <span>{triggerLabel}</span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-secondary transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
         <div
-          className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-32px)] bg-surface border border-border rounded-lg p-4 animate-in"
+          role="menu"
+          className={`absolute top-full left-0 sm:left-auto sm:right-0 mt-2 z-50 max-w-[calc(100vw-32px)] bg-surface border border-border rounded-lg animate-in ${
+            view === "custom" ? "w-[360px] p-4" : "w-[240px] p-1.5"
+          }`}
           style={{ boxShadow: "0 12px 40px var(--shadow-color)" }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="stat-label">{t("Selecione o ano")}</span>
-            {yearsOcultos.length > 0 && (
+          {view === "list" ? (
+            <div className="flex flex-col">
+              {options.map((opcao) => {
+                const isActive = value === opcao;
+                return (
+                  <button
+                    key={opcao}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      if (opcao === customLabel) {
+                        onChange(customLabel);
+                        setView("custom");
+                      } else {
+                        onChange(opcao);
+                        setIsOpen(false);
+                      }
+                    }}
+                    className={`flex items-center justify-between w-full text-left px-3 py-2 rounded-md text-sm hover:bg-elevated transition-colors ${
+                      isActive ? "font-semibold text-primary" : "text-secondary"
+                    }`}
+                  >
+                    <span>{t(opcao)}</span>
+                    {isActive && <Check size={14} className="shrink-0 text-brand" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  aria-label={t("Voltar")}
+                  className="inline-flex items-center justify-center h-7 w-7 -ml-1 rounded-md text-secondary hover:text-primary hover:bg-elevated transition-colors"
+                >
+                  <ArrowLeft size={14} />
+                </button>
+                <span className="stat-label">{t(customLabel)}</span>
+              </div>
+
+              <div className="flex items-center justify-between mb-2">
+                <span className="stat-label">{t("Selecione o ano")}</span>
+                {yearsOcultos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreYears((v) => !v)}
+                    className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                  >
+                    {showMoreYears ? t("Recolher") : t("+ Mostrar mais")}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 mb-4">
+                {yearsVisiveis.map((year) => {
+                  const isSel = selectedCustomYear === year;
+                  const isExtra = yearsOcultos.includes(year);
+                  return (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => setSelectedCustomYear(year)}
+                      className={`
+                        py-2 rounded-md text-xs font-semibold transition-all
+                        ${isSel
+                          ? "bg-primary text-main border border-primary"
+                          : isExtra
+                          ? "bg-elevated text-muted border border-border hover:border-border-strong hover:text-primary opacity-75"
+                          : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
+                        }
+                      `}
+                    >
+                      {year}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="stat-label mb-2">{t("Selecione o mês")}</div>
+              <div className="grid grid-cols-6 gap-1.5 mb-4">
+                {ALL_MONTHS.map((month, idx) => {
+                  const isSel = selectedCustomMonth === month;
+                  const isDisabled = idx < minMesIdx;
+                  return (
+                    <button
+                      key={month}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => setSelectedCustomMonth(month)}
+                      className={`
+                        py-2 rounded-md text-xs font-semibold transition-all
+                        ${isDisabled
+                          ? "bg-elevated text-disabled border border-border cursor-not-allowed opacity-40"
+                          : isSel
+                          ? "bg-primary text-main border border-primary"
+                          : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
+                        }
+                      `}
+                      title={isDisabled ? t("Mês anterior à criação da conta") : undefined}
+                    >
+                      {month}
+                    </button>
+                  );
+                })}
+              </div>
+
               <button
-                type="button"
-                onClick={() => setShowMoreYears((v) => !v)}
-                className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+                className="btn btn-primary w-full"
+                disabled={selectedCustomMonth === null || selectedCustomYear === null}
               >
-                {showMoreYears ? t("Recolher") : t("+ Mostrar mais")}
+                {t("Confirmar período")}
               </button>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 mb-4">
-            {yearsVisiveis.map((year) => {
-              const isSel = selectedCustomYear === year;
-              const isExtra = yearsOcultos.includes(year);
-              return (
-                <button
-                  key={year}
-                  type="button"
-                  onClick={() => setSelectedCustomYear(year)}
-                  className={`
-                    py-2 rounded-md text-xs font-semibold transition-all
-                    ${isSel
-                      ? "bg-primary text-main border border-primary"
-                      : isExtra
-                      ? "bg-elevated text-muted border border-border hover:border-border-strong hover:text-primary opacity-75"
-                      : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
-                    }
-                  `}
-                >
-                  {year}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="stat-label mb-2">{t("Selecione o mês")}</div>
-          <div className="grid grid-cols-6 gap-1.5 mb-4">
-            {ALL_MONTHS.map((month, idx) => {
-              const isSel = selectedCustomMonth === month;
-              const isDisabled = idx < minMesIdx;
-              return (
-                <button
-                  key={month}
-                  type="button"
-                  disabled={isDisabled}
-                  onClick={() => setSelectedCustomMonth(month)}
-                  className={`
-                    py-2 rounded-md text-xs font-semibold transition-all
-                    ${isDisabled
-                      ? "bg-elevated text-disabled border border-border cursor-not-allowed opacity-40"
-                      : isSel
-                      ? "bg-primary text-main border border-primary"
-                      : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
-                    }
-                  `}
-                  title={isDisabled ? t("Mês anterior à criação da conta") : undefined}
-                >
-                  {month}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => setIsCustomMenuOpen(false)}
-            className="btn btn-primary w-full"
-            disabled={selectedCustomMonth === null || selectedCustomYear === null}
-          >
-            {t("Confirmar período")}
-          </button>
+            </div>
+          )}
         </div>
       )}
     </div>

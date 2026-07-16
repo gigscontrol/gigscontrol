@@ -186,6 +186,7 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Ex: São Paulo, Rio de Janeiro...": "Es.: Roma, Milano...",
   "Falha ao salvar seus dados.": "Impossibile salvare i tuoi dati.",
   "Informe a data de nascimento.": "Inserisci la data di nascita.",
+  "Informe a data.": "Inserisci la data.",
   "Informe o documento.": "Inserisci il documento.",
   "Informe seu apelido.": "Inserisci il tuo soprannome.",
   "Informe seu nome completo.": "Inserisci il tuo nome completo.",
@@ -2638,4 +2639,9 @@ export const IT: Record<string, string> = {
   "Mostrar menos": "Mostra meno",
   "Mostrar todos ({n})": "Mostra tutti ({n})",
   "Visão geral dos seus artistas, equipe e atividade recente.": "Panoramica dei tuoi artisti, del team e dell'attività recente.",
+  // Chaves novas do fix/mobile-6-ajustes (FAB dell'Agenda, tema nel menu mobile, filtro artista nei Preventivi).
+  "Tema": "Tema",
+  "Novo item na agenda": "Nuovo elemento in agenda",
+  "Para qual data?": "Per quale data?",
+  "Filtrar por artista": "Filtra per artista",
 };
