@@ -97,6 +97,27 @@ function novoBlocoDj(artistaId: string): DjBlock {
   };
 }
 
+/**
+ * Itens de seção a partir do RIDER salvo no artista (só nomes; qtd nasce 0 e
+ * é definida por orçamento). Artista sem rider cai no catálogo padrão.
+ */
+function itensDoRider(
+  nomes: string[] | undefined,
+  catalogo: readonly string[]
+): ItemQuantidade[] {
+  const base = nomes && nomes.length > 0 ? nomes : catalogo;
+  return base.map((n) => ({ nome: n, qtd: 0 }));
+}
+
+/** Patch de bloco ao escolher um artista: id + Camarim/Efeitos do rider DELE. */
+function patchDoArtista(artista: Artista | undefined, artistaId: string): Partial<DjBlock> {
+  return {
+    artistaId,
+    camarim: itensDoRider(artista?.riderCamarim, CATALOGO_CAMARIM),
+    efeitos: itensDoRider(artista?.riderEfeitos, CATALOGO_EFEITOS),
+  };
+}
+
 /** Data ISO (YYYY-MM-DD) + offset de dias → "DD/MM/YYYY" (vazio se inválida). */
 function formatarDataOffset(iso: string, offsetDias: number): string {
   if (!iso) return "";
@@ -209,13 +230,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   function adicionarDj(artistaId: string) {
+    // Escolher o artista puxa o RIDER dele (camarim/efeitos) pro bloco.
+    const patch = patchDoArtista(artistas.find((d) => d.id === artistaId), artistaId);
     setBlocos((prev) => {
       // 1ª seleção: preenche o bloco inicial ainda vazio em vez de criar outro.
       const idxVazio = prev.findIndex((b) => !b.artistaId);
       if (idxVazio !== -1) {
-        return prev.map((b, i) => (i === idxVazio ? { ...b, artistaId } : b));
+        return prev.map((b, i) => (i === idxVazio ? { ...b, ...patch } : b));
       }
-      return [...prev, novoBlocoDj(artistaId)];
+      return [...prev, { ...novoBlocoDj(""), ...patch }];
     });
     setModalAddDj(false);
   }
@@ -1161,7 +1184,15 @@ function BlocoOrcamentoDj({
         {/* Artista + Valor + Duração */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <Field label="Artista" required error={errors[`artista-${indice}`]}>
-            <Select value={bloco.artistaId} onChange={(e) => onChange({ artistaId: e.target.value })}>
+            <Select
+              value={bloco.artistaId}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id === bloco.artistaId) return;
+                // Trocar o artista re-puxa o rider DELE (camarim/efeitos zerados).
+                onChange(patchDoArtista(artistas.find((d) => d.id === id), id));
+              }}
+            >
               <option value="">{t("Selecione um artista")}</option>
               {artistas.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
