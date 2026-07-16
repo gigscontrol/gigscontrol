@@ -21,6 +21,7 @@ import CidadeGlobalAutocomplete, {
   type CidadeEscolhida,
 } from "@/components/CidadeGlobalAutocomplete";
 import { resolverCidade } from "@/lib/cidade-helpers";
+import { ehEmailInterno } from "@/lib/email-interno";
 import InputDataBR from "@/components/inputs/InputDataBR";
 import PhoneInput, {
   DEFAULT_COUNTRY,
@@ -506,8 +507,15 @@ function AcessoCard({
   // Verificado. Sem verificar (ex.: membro com e-mail interno) libera o
   // cadastro/troca via updateUser.
   const emailAtual = sessao?.usuario?.email ?? "";
+  // O e-mail sintético (@interno.gigscontrol.app) existe SÓ pra backar o login
+  // por username no Supabase — não é um e-mail real e NUNCA deve aparecer. Mesmo
+  // "confirmado" no auth, tratamos como "sem e-mail cadastrado": libera o campo
+  // em branco pro membro cadastrar/verificar um e-mail próprio.
+  const ehInterno = ehEmailInterno(emailAtual);
   const [emailVerificado, setEmailVerificado] = useState(false);
   const [carregandoEmail, setCarregandoEmail] = useState(true);
+  // "Travado" (só-leitura, verde) só quando há um e-mail REAL verificado.
+  const emailTravado = emailVerificado && !ehInterno;
 
   useEffect(() => {
     let ativo = true;
@@ -524,7 +532,7 @@ function AcessoCard({
   const [novoEmail, setNovoEmail] = useState("");
   const [salvandoEmail, setSalvandoEmail] = useState(false);
   const emailValido =
-    !emailVerificado &&
+    !emailTravado &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoEmail.trim()) &&
     novoEmail.trim().toLowerCase() !== emailAtual.toLowerCase();
 
@@ -628,7 +636,7 @@ function AcessoCard({
         <div className="text-sm text-muted flex items-center gap-2">
           <Loader2 size={14} className="animate-spin" /> {t("Carregando...")}
         </div>
-      ) : emailVerificado ? (
+      ) : emailTravado ? (
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-secondary">{t("E-mail")}</span>
           <div
