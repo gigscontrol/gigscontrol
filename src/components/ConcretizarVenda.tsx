@@ -1243,7 +1243,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </div>
 
         {/* Cachê + Duração */}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-4 items-end mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-end mt-5">
           <FieldWithAuto
             label="Cachê"
             required
@@ -1262,40 +1262,44 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             />
           </FieldWithAuto>
 
-          <Field label="Duração do show">
-            <div className="flex items-center gap-1">
-              <TextInput
-                type="number"
-                min={0}
-                max={12}
-                value={duracaoHoras}
-                onChange={(e) => {
-                  setDuracaoHorasManual(Math.max(0, Math.min(12, Number(e.target.value) || 0)));
-                  setDuracaoOverride(true);
-                }}
-                className="w-14 text-right tabular-nums"
-              />
-              <span className="text-xs text-muted">h</span>
-            </div>
-          </Field>
+          {/* Horas + minutos numa célula só → sempre na mesma linha,
+              inclusive no mobile (o grid da linha é 1 coluna lá). */}
+          <div className="flex items-end gap-3">
+            <Field label="Duração do show">
+              <div className="flex items-center gap-1">
+                <TextInput
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={duracaoHoras}
+                  onChange={(e) => {
+                    setDuracaoHorasManual(Math.max(0, Math.min(12, Number(e.target.value) || 0)));
+                    setDuracaoOverride(true);
+                  }}
+                  className="w-14 text-right tabular-nums"
+                />
+                <span className="text-xs text-muted">h</span>
+              </div>
+            </Field>
 
-          <Field label="&nbsp;">
-            <div className="flex items-center gap-1">
-              <TextInput
-                type="number"
-                min={0}
-                max={59}
-                step={5}
-                value={duracaoMinutos}
-                onChange={(e) => {
-                  setDuracaoMinutosManual(Math.max(0, Math.min(59, Number(e.target.value) || 0)));
-                  setDuracaoOverride(true);
-                }}
-                className="w-14 text-right tabular-nums"
-              />
-              <span className="text-xs text-muted">min</span>
-            </div>
-          </Field>
+            <Field label="&nbsp;">
+              <div className="flex items-center gap-1">
+                <TextInput
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={5}
+                  value={duracaoMinutos}
+                  onChange={(e) => {
+                    setDuracaoMinutosManual(Math.max(0, Math.min(59, Number(e.target.value) || 0)));
+                    setDuracaoOverride(true);
+                  }}
+                  className="w-14 text-right tabular-nums"
+                />
+                <span className="text-xs text-muted">min</span>
+              </div>
+            </Field>
+          </div>
         </div>
 
         {cache && (
