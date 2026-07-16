@@ -184,6 +184,8 @@ function SignupInner() {
 
   return (
     <>
+      {/* h1 semântico p/ SEO (invisível) — o título visível vem do AuthShell */}
+      <h1 className="sr-only">{t("Criar conta no Gigs Control")}</h1>
       {/* Mesmo menu de topo da landing (igual ao /login) */}
       <LandingNav />
       <AuthShell

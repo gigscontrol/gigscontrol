@@ -5,38 +5,50 @@ import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";
-// Título da aba do navegador — só a marca, limpo. (A descrição rica abaixo
-// segue cobrindo SEO/social.)
-const TITULO = "Gigs Control";
+// Título "de vitrine": marca + categoria-mestre. O `template` acrescenta
+// " · Gigs Control" às páginas internas que definem só o próprio título.
+const TITULO_PADRAO =
+  "Gigs Control — Sistema de gestão para agências de artistas e DJs";
 const DESCRICAO =
-  "CRM e gestão completa para DJs, cantores, MCs e agências musicais. Agenda, orçamentos, vendas e financeiro em um só lugar.";
+  "Agenda de shows, orçamentos, contratos com assinatura digital, financeiro e CRM de contratantes num só painel. Para artistas, agências e produtoras.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: TITULO,
+  title: {
+    default: TITULO_PADRAO,
+    template: "%s · Gigs Control",
+  },
   description: DESCRICAO,
-  applicationName: "GIGS CONTROL",
+  applicationName: "Gigs Control",
   keywords: [
-    "CRM para DJ",
-    "gestão de agência de música",
+    "Gigs Control",
+    "sistema de gestão para agência de artistas",
+    "CRM para agência de shows",
+    "software de agenciamento de artistas",
+    "sistema para produtora de shows",
     "agenda de shows",
+    "gerador de contrato de show",
+    "contrato com assinatura digital",
     "orçamento de show",
-    "contrato de show",
-    "cachê",
-    "booking",
-    "DJ management",
+    "controle de cachês",
+    "gestão de contratantes",
+    "booking agency software",
+    "artist management software",
   ],
+  alternates: { canonical: "/" },
+  // og:image e twitter:image saem automaticamente das convenções de arquivo
+  // opengraph-image.tsx / twitter-image.tsx — não repetir aqui.
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: "GIGS CONTROL",
-    title: TITULO,
+    siteName: "Gigs Control",
+    title: TITULO_PADRAO,
     description: DESCRICAO,
     locale: "pt_BR",
   },
   twitter: {
     card: "summary_large_image",
-    title: TITULO,
+    title: TITULO_PADRAO,
     description: DESCRICAO,
   },
 };

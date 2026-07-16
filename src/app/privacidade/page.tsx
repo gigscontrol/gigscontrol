@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Política de privacidade",
+  description:
+    "Política de privacidade do Gigs Control — como tratamos seus dados, direitos LGPD e retenção.",
+  alternates: { canonical: "/privacidade" },
+};
 
 /**
  * Placeholder de Política de Privacidade.

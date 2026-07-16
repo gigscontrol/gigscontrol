@@ -163,7 +163,10 @@ function LadoFormulario({
       <div className="relative flex-1 flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-[400px]">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
+            {/* h2: o h1 (SEO, keyword-rich) é injetado pela página que usa o
+                AuthShell — hoje /login e /signup, ambas com <h1 sr-only>. Manter
+                como h2 garante exatamente um h1 por página. */}
+            <h2 className="text-2xl font-bold tracking-tight">{titulo}</h2>
             {subtitulo && (
               <p className="mt-1.5 text-sm text-secondary">{subtitulo}</p>
             )}

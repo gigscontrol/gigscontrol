@@ -37,6 +37,7 @@ export default function FooterLanding() {
       links: [
         { rotulo: "Recursos", href: "/recursos" },
         { rotulo: "Planos", href: "#planos" },
+        { rotulo: "Planos e preços", href: "/planos" },
         { rotulo: "Entrar", href: "/login" },
         { rotulo: "Começar", href: "/signup" },
       ],

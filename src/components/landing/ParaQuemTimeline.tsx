@@ -171,7 +171,7 @@ export default function ParaQuemTimeline() {
           </div>
           <div className="text-[13.5px] leading-[1.65] text-[var(--text-body)]">
             {t(
-              "Se você agencia artistas, vende apresentações e precisa organizar toda a operação em um único sistema, a Gigs Control foi criada para você. Ela acompanha o crescimento da sua carreira, do artista independente às maiores agências do mercado."
+              "Se você faz agenciamento de artistas, vende shows e precisa organizar todo o booking em um único sistema, a Gigs Control foi criada para você. Ela acompanha o crescimento da operação, do artista independente às produtoras e maiores agências do mercado."
             )}
           </div>
         </div>
