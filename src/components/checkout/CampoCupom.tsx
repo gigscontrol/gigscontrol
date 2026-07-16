@@ -159,7 +159,7 @@ export default function CampoCupom({
           type="button"
           onClick={validar}
           disabled={validando || !codigo.trim()}
-          className="btn-secondary inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-md disabled:opacity-60"
+          className="btn-secondary inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-control disabled:opacity-60"
         >
           {validando ? <Loader2 size={14} className="animate-spin" /> : null}
           {t("Aplicar")}

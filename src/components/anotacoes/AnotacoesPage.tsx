@@ -306,7 +306,7 @@ export default function AnotacoesPage() {
                       className="card flex items-center gap-3 text-left transition-colors hover:border-border-strong"
                     >
                       <div
-                        className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        className="h-10 w-10 rounded-chip flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
                       >
                         <Music size={17} />
@@ -352,7 +352,7 @@ export default function AnotacoesPage() {
               </div>
               <div className="card flex items-center gap-3 py-6 text-left">
                 <div
-                  className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="h-10 w-10 rounded-chip flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
                 >
                   <Music size={17} />
@@ -429,7 +429,7 @@ function PastasGrid({
     return (
       <div className="card flex flex-col items-center justify-center py-16 text-center">
         <div
-          className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4"
+          className="h-14 w-14 rounded-chip flex items-center justify-center mb-4"
           style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
         >
           <NotebookPen size={26} />
@@ -462,7 +462,7 @@ function PastasGrid({
           >
             <div className="flex items-start justify-between gap-2">
               <div
-                className="h-11 w-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                className="h-11 w-11 rounded-chip flex items-center justify-center text-xl flex-shrink-0"
                 style={{ backgroundColor: `${cor}20` }}
               >
                 {p.icone || "📁"}
@@ -558,7 +558,7 @@ function PastaView({
       >
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="h-11 w-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+            className="h-11 w-11 rounded-chip flex items-center justify-center text-xl flex-shrink-0"
             style={{ backgroundColor: `${pasta.cor || ACCENT}20` }}
           >
             {pasta.icone || "📁"}
@@ -652,7 +652,7 @@ function PastaView({
       {visiveis.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <div
-            className="h-14 w-14 rounded-2xl flex items-center justify-center mb-4"
+            className="h-14 w-14 rounded-chip flex items-center justify-center mb-4"
             style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
           >
             <FileText size={26} />

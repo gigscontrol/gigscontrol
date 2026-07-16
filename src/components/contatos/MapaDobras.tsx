@@ -19,7 +19,7 @@ const MapaRaio = dynamic(() => import("@/components/contatos/MapaRaio"), {
       className="flex items-center justify-center text-sm text-muted"
       style={{
         height: 440,
-        borderRadius: 14,
+        borderRadius: "var(--r-card)",
         border: "1px solid var(--border)",
         backgroundColor: "var(--bg)",
       }}
@@ -295,7 +295,7 @@ export default function MapaDobras({
           className="flex flex-col overflow-hidden"
           style={{
             height: 440,
-            borderRadius: 14,
+            borderRadius: "var(--r-card)",
             border: "1px solid var(--border)",
             backgroundColor: "var(--bg)",
           }}
@@ -374,7 +374,7 @@ function GrupoNoRaio({
         {pontos.map((p) => (
           <li
             key={p.id}
-            className="flex items-center gap-2.5 bg-surface-2 border border-border rounded-[10px] px-3 py-2"
+            className="flex items-center gap-2.5 bg-surface-2 border border-border rounded px-3 py-2"
           >
             <span className="flex-shrink-0">{swatch}</span>
             <div className="min-w-0 flex-1">

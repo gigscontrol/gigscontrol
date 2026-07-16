@@ -315,7 +315,7 @@ export default function CidadeGlobalAutocomplete({
 
         {open && sugestoes.length > 0 && (
           <div
-            className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md z-40 max-h-[280px] overflow-y-auto"
+            className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg z-40 max-h-[280px] overflow-y-auto"
             style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {sugestoes.map((c, idx) => (
@@ -341,7 +341,7 @@ export default function CidadeGlobalAutocomplete({
 
         {open && !buscando && input.trim().length >= 2 && sugestoes.length === 0 && (
           <div
-            className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-md z-40 px-3 py-3 text-xs text-muted"
+            className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg z-40 px-3 py-3 text-xs text-muted"
             style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {indisponivel

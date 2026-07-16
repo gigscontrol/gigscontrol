@@ -46,7 +46,7 @@ export function SeletorIdioma({ nomeCompleto = false }: { nomeCompleto?: boolean
         aria-haspopup="listbox"
         aria-expanded={aberto}
         aria-label="Idioma"
-        className="inline-flex items-center gap-1.5 rounded-[9px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-3 py-[9px] text-xs font-semibold text-secondary transition-colors hover:text-primary"
+        className="inline-flex items-center gap-1.5 rounded-control border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-3 py-[9px] text-xs font-semibold text-secondary transition-colors hover:text-primary"
       >
         <Globe size={13} strokeWidth={1.8} />
         {nomeCompleto ? atual.nome : atual.code.toUpperCase()}
@@ -56,7 +56,7 @@ export function SeletorIdioma({ nomeCompleto = false }: { nomeCompleto?: boolean
       {aberto && (
         <div
           role="listbox"
-          className="absolute right-0 z-40 mt-1.5 w-44 overflow-hidden rounded-[10px] border border-[var(--border-strong)] bg-elevated py-1 shadow-xl"
+          className="absolute right-0 z-40 mt-1.5 w-44 overflow-hidden rounded border border-[var(--border-strong)] bg-elevated py-1 shadow-xl"
           style={{ bottom: nomeCompleto ? "calc(100% + 6px)" : undefined, top: nomeCompleto ? "auto" : undefined }}
         >
           {IDIOMAS.map((idioma) => (

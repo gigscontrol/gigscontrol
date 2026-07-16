@@ -280,7 +280,7 @@ export default function MapaRaio({
     <div
       className="gc-mapa relative overflow-hidden"
       style={{
-        borderRadius: 14,
+        borderRadius: "var(--r-card)",
         border: "1px solid var(--border)",
         height: 440,
         backgroundColor: "var(--bg)",

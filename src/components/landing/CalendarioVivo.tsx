@@ -257,7 +257,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
         <div className="gcvis-scale absolute inset-0">
           {/* cartão do calendário, centrado */}
           <div
-            className="absolute left-1/2 top-1/2 w-[292px] rounded-[14px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-[18px] pb-3.5 pt-[18px]"
+            className="absolute left-1/2 top-1/2 w-[292px] rounded-lg border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface px-[18px] pb-3.5 pt-[18px]"
             style={{
               margin: "-112px 0 0 -146px",
               boxShadow: "0 24px 50px -18px var(--shadow-color-strong)",
@@ -313,7 +313,7 @@ export default function CalendarioVivo({ ano, mes }: { ano: number; mes: number 
           {eventos.map((ev) => (
             <div
               key={ev.seq}
-              className="gcanim absolute flex items-start gap-2 rounded-[10px] bg-surface px-[11px] py-2"
+              className="gcanim absolute flex items-start gap-2 rounded bg-surface px-[11px] py-2"
               style={{
                 top: "50%",
                 marginTop: ev.top,

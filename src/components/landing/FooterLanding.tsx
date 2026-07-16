@@ -18,7 +18,7 @@ function IconeSocial({ children, rotulo }: { children: React.ReactNode; rotulo: 
       target="_blank"
       rel="noreferrer"
       aria-label={rotulo}
-      className="gcflink flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface"
+      className="gcflink flex h-[34px] w-[34px] items-center justify-center rounded-control border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface"
     >
       {children}
     </a>

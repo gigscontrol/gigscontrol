@@ -9,7 +9,7 @@
 export function Janela({ w, children }: { w: number; children: React.ReactNode }) {
   return (
     <div
-      className="overflow-hidden rounded-[14px] border border-[color-mix(in_srgb,var(--text-primary)_9%,transparent)] bg-[var(--mock-window)]"
+      className="overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--text-primary)_9%,transparent)] bg-[var(--mock-window)]"
       style={{ width: w, boxShadow: "0 24px 55px -22px var(--shadow-color-strong)" }}
     >
       {/* barra da janela — 3 bolinhas macOS */}
@@ -115,11 +115,11 @@ export function ChipFlutuante({
 }) {
   return (
     <div
-      className="absolute z-[2] flex items-center gap-[9px] rounded-[11px] border border-[var(--border-strong)] bg-surface px-3 py-[9px]"
+      className="absolute z-[2] flex items-center gap-[9px] rounded border border-[var(--border-strong)] bg-surface px-3 py-[9px]"
       style={{ boxShadow: "0 16px 34px -12px var(--shadow-color-strong)", ...estilo }}
     >
       <span
-        className="flex h-6 w-6 flex-none items-center justify-center rounded-[7px]"
+        className="flex h-6 w-6 flex-none items-center justify-center rounded-chip"
         style={{ backgroundColor: corIcone }}
       >
         <svg
@@ -179,7 +179,7 @@ export function BadgeMono({
 /** Linha de lista (padrão "atividade" PainelVivoLogin:183-197 + conteúdo livre). */
 export function LinhaLista({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 rounded-[7px] border border-[var(--hairline)] bg-main px-2.5 py-[7px]">
+    <div className="flex items-center gap-2 rounded-chip border border-[var(--hairline)] bg-main px-2.5 py-[7px]">
       {children}
     </div>
   );

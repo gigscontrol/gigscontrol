@@ -49,7 +49,7 @@ export default function ResumoPedido({
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border)",
-        borderRadius: 14,
+        borderRadius: "var(--r-card)",
       }}
     >
       <div

@@ -25,7 +25,7 @@ export default function BotaoTema({
 
   const classe =
     variante === "landing"
-      ? "inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-border bg-surface text-secondary transition-colors hover:text-primary"
+      ? "inline-flex h-9 w-9 items-center justify-center rounded-control border border-border bg-surface text-secondary transition-colors hover:text-primary"
       : "inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-secondary transition-colors hover:text-primary hover:border-border-strong";
 
   return (

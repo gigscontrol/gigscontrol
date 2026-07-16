@@ -213,7 +213,7 @@ export default function SeletorGateway({
             style={{
               background: "var(--bg-surface)",
               border: "1px solid var(--border)",
-              borderRadius: 14,
+              borderRadius: "var(--r-card)",
             }}
           >
             <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>
@@ -236,7 +236,7 @@ export default function SeletorGateway({
               type="button"
               onClick={resgatarCupom}
               disabled={resgatando}
-              className="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-md disabled:opacity-60"
+              className="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-control disabled:opacity-60"
             >
               {resgatando ? (
                 <Loader2 size={14} className="animate-spin" />

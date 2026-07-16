@@ -114,7 +114,7 @@ export default function TimezoneSelect({ value, onChange, disabled }: Props) {
       </button>
 
       {aberto && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-elevated shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-elevated shadow-lg overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <Search size={13} className="text-muted flex-shrink-0" />
             <input
