@@ -152,9 +152,18 @@ export default function Sidebar({
   configAberta = false,
 }: Props) {
   const { aparencia } = useWorkspace();
-  const { sessao } = useAuth();
+  const { sessao, isSuperAdmin } = useAuth();
   const ARTISTAS = useArtistas();
   const t = useT();
+
+  // Módulo "Agência" (roster de Artistas/Equipe, com o login de cada um) é
+  // administrativo: só admin (e super-admin em modo visitante) enxerga. Para
+  // artista/equipe ele nem aparece no menu. O servidor barra as mutações em
+  // paralelo (403) e o layout redireciona a URL direta (defesa em profundidade).
+  const podeAgencia = isSuperAdmin || sessao?.usuario?.papel === "admin";
+  const modulosVisiveis = podeAgencia
+    ? MODULES
+    : MODULES.filter((mod) => mod.tab !== "agencia");
 
   // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
   // um drawer de 260px (w-[260px]) — o "recolhido" só vale no lg+ (classes lg:*).
@@ -273,7 +282,7 @@ export default function Sidebar({
         <div>
           <div className={`px-2 mb-2 stat-label ${collapsed ? "lg:invisible" : ""}`}>{t("Módulos")}</div>
           <div className="flex flex-col gap-1">
-            {MODULES.map((mod) => {
+            {modulosVisiveis.map((mod) => {
               // Com as Configurações abertas, nenhum módulo fica ativo
               // (logo, nenhum submenu aparece).
               const isActive = !configAberta && activeTab === mod.tab;

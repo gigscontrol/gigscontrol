@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import Toast from "../Toast";
 import PageHeader from "../PageHeader";
+import ConfirmarSaidaModal from "../ConfirmarSaidaModal";
+import { useNavegacaoOpcional } from "../NavOverlay";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import ColorPicker from "../ColorPicker";
 import CardGoogleCalendar from "./CardGoogleCalendar";
@@ -2259,12 +2261,12 @@ function ModalEditarArtista({
     return null;
   }
 
-  async function salvar() {
+  async function salvar(): Promise<boolean> {
     setErro(null);
     const v = validar();
     if (v) {
       setErro(v);
-      return;
+      return false;
     }
     setEnviando(true);
     try {
@@ -2314,12 +2316,94 @@ function ModalEditarArtista({
       }
       await atualizarArtista(artista.id, patch);
       onSalvo();
+      return true;
     } catch (e) {
       setErro((e as Error).message);
+      return false;
     } finally {
       setEnviando(false);
     }
   }
+
+  // ---- Guarda de "alterações não salvas" ----
+  // Assinatura de TODOS os campos editáveis. A baseline é capturada no 1º
+  // render (form recém-aberto = pristine), então um form intocado dá
+  // sujo=false. Muda qualquer campo → sujo=true.
+  const assinatura = useMemo(
+    () =>
+      JSON.stringify({
+        nome,
+        cor,
+        cidade: cidade
+          ? `${cidade.pais}|${cidade.uf}|${cidade.nome}|${cidade.ibgeId ?? cidade.geonameId ?? ""}`
+          : "",
+        usernameRaiz: usernameRaiz.trim().toLowerCase(),
+        taxaModo,
+        taxaValor,
+        riderCamarim,
+        riderEfeitos,
+        riderTecnico,
+        privacidade,
+        acessoAtivo,
+        pais: pais.code,
+        nomeLegal,
+        documentoTipo,
+        documento,
+        razaoSocial,
+        endereco,
+        telefone,
+        dataNascimento,
+        pix,
+      }),
+    [
+      nome,
+      cor,
+      cidade,
+      usernameRaiz,
+      taxaModo,
+      taxaValor,
+      riderCamarim,
+      riderEfeitos,
+      riderTecnico,
+      privacidade,
+      acessoAtivo,
+      pais,
+      nomeLegal,
+      documentoTipo,
+      documento,
+      razaoSocial,
+      endereco,
+      telefone,
+      dataNascimento,
+      pix,
+    ]
+  );
+  const baselineRef = useRef<string | null>(null);
+  if (baselineRef.current === null) baselineRef.current = assinatura;
+  const sujo = assinatura !== baselineRef.current;
+
+  // Popup de confirmação da saída LOCAL (botão Cancelar).
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const cancelar = () => {
+    if (sujo) setConfirmarSaida(true);
+    else onCancelar();
+  };
+
+  // Registra a guarda GLOBAL (interceptar navegação pra outra tela). Reflete
+  // sempre o `sujo`/`salvar` mais recente via refs, sem re-registrar a cada
+  // render. Fora da dashboard (sem provider) simplesmente não faz nada.
+  const nav = useNavegacaoOpcional();
+  const registrarGuarda = nav?.registrarGuarda;
+  const limparGuarda = nav?.limparGuarda;
+  const sujoRef = useRef(sujo);
+  sujoRef.current = sujo;
+  const salvarRef = useRef(salvar);
+  salvarRef.current = salvar;
+  useEffect(() => {
+    if (!registrarGuarda || !limparGuarda) return;
+    registrarGuarda(() => ({ sujo: sujoRef.current, salvar: salvarRef.current }));
+    return () => limparGuarda();
+  }, [registrarGuarda, limparGuarda]);
 
   // ---- Perfil editável ----
   // Mesma cara do perfil read-only do AbaArtistas (header com banda de cor
@@ -2376,7 +2460,7 @@ function ModalEditarArtista({
             {/* Ações: Salvar / Cancelar */}
             <div className="ml-auto flex items-center gap-2 flex-wrap">
               <button
-                onClick={onCancelar}
+                onClick={cancelar}
                 className="btn btn-secondary text-sm"
               >
                 {t("Cancelar")}
@@ -2823,6 +2907,44 @@ function ModalEditarArtista({
           <AlertCircle size={13} className="flex-shrink-0" />
           {erro}
         </div>
+      )}
+
+      {/* Ações no FIM do form — mesmos handlers do topo (evita rolar até o
+          cabeçalho pra salvar). */}
+      <div className="flex items-center justify-end gap-2 flex-wrap pt-1">
+        <button onClick={cancelar} className="btn btn-secondary text-sm">
+          {t("Cancelar")}
+        </button>
+        <button
+          onClick={salvar}
+          disabled={enviando || temColisao}
+          className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
+          title={
+            temColisao
+              ? t("Resolva os avisos de nome/login antes de salvar")
+              : undefined
+          }
+        >
+          <Check size={14} />
+          {enviando ? t("Salvando...") : t("Salvar alterações")}
+        </button>
+      </div>
+
+      {confirmarSaida && (
+        <ConfirmarSaidaModal
+          salvando={enviando}
+          onCancelar={() => setConfirmarSaida(false)}
+          onDescartar={() => {
+            setConfirmarSaida(false);
+            onCancelar();
+          }}
+          onSalvarESair={async () => {
+            // salvar() já chama onSalvo() (fecha) no sucesso; no erro fica na
+            // tela e o popup fecha pra mostrar a mensagem.
+            await salvar();
+            setConfirmarSaida(false);
+          }}
+        />
       )}
     </>
   );

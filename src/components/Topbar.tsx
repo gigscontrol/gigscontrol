@@ -21,6 +21,7 @@ import LanguageSwitcher, { IDIOMAS } from "./LanguageSwitcher";
 import BotaoTema from "./BotaoTema";
 import Flag from "./Flag";
 import { useT, useLang } from "@/lib/i18n";
+import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -207,7 +208,13 @@ export default function Topbar({
                     <div className="text-sm font-semibold text-primary truncate">
                       {usuario.nome}
                     </div>
-                    <div className="text-xs text-muted truncate">{usuario.email}</div>
+                    <div className="text-xs text-muted truncate">
+                      {ehEmailInterno(usuario.email)
+                        ? t("Login: {handle}", {
+                            handle: handleDoEmailInterno(usuario.email),
+                          })
+                        : usuario.email}
+                    </div>
                   </div>
                 </div>
               </div>

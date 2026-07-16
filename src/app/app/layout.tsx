@@ -366,11 +366,23 @@ function AppRoot() {
   const t = useT();
   const pathname = usePathname();
   const { navegar: irPara } = useNavegacao();
+  const { sessao, isSuperAdmin } = useAuth();
   // Aba/tela/ids derivados da URL — fonte única da navegação.
   const { activeTab, activePage, configAberta, orcamentoId, vendaId } = useMemo(
     () => resolverRota(segmentosDoPath(pathname)),
     [pathname]
   );
+
+  // Módulo "Agência" (roster de Artistas/Equipe) é admin-only. Defesa em
+  // profundidade contra a URL direta (/app/agencia/…): quem não é admin nem
+  // super-admin não monta as telas e é mandado de volta pra Agenda. O menu já
+  // esconde o módulo (Sidebar) e o servidor barra as mutações (403).
+  const podeAgencia = isSuperAdmin || sessao?.usuario?.papel === "admin";
+  useEffect(() => {
+    if (!configAberta && activeTab === "agencia" && sessao && !podeAgencia) {
+      irPara(urlDaTela("agenda", "dashboard"));
+    }
+  }, [activeTab, configAberta, sessao, podeAgencia, irPara]);
 
   // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
   // abaixo sincroniza com a lista real de artistas do workspace assim
@@ -699,16 +711,17 @@ function AppRoot() {
             <MeusContratosPage onAbrirContrato={abrirContrato} onNavigate={navegar} />
           )}
 
-          {/* Agência */}
-          {activeTab === "agencia" && activePage === "dashboard" && (
+          {/* Agência — admin-only (podeAgencia); URL direta de não-admin é
+              redirecionada pelo useEffect acima e nunca monta estas telas. */}
+          {podeAgencia && activeTab === "agencia" && activePage === "dashboard" && (
             <AgenciaDashboard />
           )}
-          {activeTab === "agencia" && activePage === "agencia-artistas" && (
+          {podeAgencia && activeTab === "agencia" && activePage === "agencia-artistas" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
               <AbaArtistas />
             </div>
           )}
-          {activeTab === "agencia" && activePage === "agencia-equipe" && (
+          {podeAgencia && activeTab === "agencia" && activePage === "agencia-equipe" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
               <AbaEquipe />
             </div>

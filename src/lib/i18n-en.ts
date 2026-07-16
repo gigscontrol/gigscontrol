@@ -3655,4 +3655,10 @@ export const EN: Record<string, string> = {
   "Novo item na agenda": "New schedule item",
   "Para qual data?": "For which date?",
   "Filtrar por artista": "Filter by artist",
+  // Chaves novas do fix/varios-ajustes (guarda de alterações não salvas, e-mail interno na Topbar/Lixeira).
+  "Login: {handle}": "Login: {handle}",
+  "Você tem alterações não salvas": "You have unsaved changes",
+  "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "If you leave now, your changes will be lost. What would you like to do?",
+  "Descartar": "Discard",
+  "Salvar e sair": "Save and leave",
 };

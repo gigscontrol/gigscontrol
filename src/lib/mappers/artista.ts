@@ -136,10 +136,12 @@ export function rowParaArtista(row: ArtistaRow): Artista {
 
 /**
  * Redige a PII pessoal/legal e a taxa (fee da agência) de um artista para
- * quem NÃO é admin. Mantém o operacional (nome, cor, cidade, riders, username,
+ * quem NÃO é admin. Mantém o operacional (nome, cor, cidade, riders,
  * privacidade). Usado no GET /api/artistas — a lista é carregada por QUALQUER
  * usuário logado (workspace-context), então não pode vazar CPF/endereço/telefone
- * /razão social nem o fee de todos os artistas.
+ * /razão social nem o fee de todos os artistas. O `username` (login do artista)
+ * também é redigido: o app não precisa do login de OUTROS artistas — o próprio
+ * artista recebe o cadastro completo (não passa por aqui; ver GET /api/artistas).
  */
 export function redigirArtista(artista: Artista): Artista {
   const limpo: Artista = { ...artista, taxaModo: "sem-taxa" };
@@ -153,6 +155,7 @@ export function redigirArtista(artista: Artista): Artista {
   delete limpo.dataNascimento;
   delete limpo.email;
   delete limpo.pix;
+  delete limpo.username;
   return limpo;
 }
 
