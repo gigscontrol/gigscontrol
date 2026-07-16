@@ -995,7 +995,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
           {/* Horário da apresentação — segmentado no MESMO padrão do
               "Data da apresentação" logo acima. "A definir" esconde os
-              campos de hora e salva sem horário (pendência no show). */}
+              campos de hora e salva sem horário (pendência no show).
+              No desktop, seletor + Início + Término dividem UMA linha. */}
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-secondary">
               {t("Horário da apresentação")}
@@ -1069,6 +1071,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
               </Field>
             </>
           )}
+          </div>
 
           {duracaoAuto && (
             <p className="text-xs text-muted sm:col-span-2 -mt-1">
@@ -1315,6 +1318,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </div>
         )}
 
+        {/* Camarim/Efeitos/Hotel/Logística só aparecem com o artista
+            escolhido — os itens vêm do rider DELE (venda direta) ou do
+            orçamento (conversão). */}
+        {artistaId === null ? (
+          <p className="text-xs text-muted mt-4">
+            {t("Selecione o artista para ver camarim, efeitos, hotel e logística.")}
+          </p>
+        ) : (
         <div className="flex flex-col gap-4 mt-4">
           <SubSection
             title={t("Camarim / Consumação")}
@@ -1354,6 +1365,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             showAuto={showAutoBadge("logistica")}
           />
         </div>
+        )}
       </SectionCard>
 
       {/* ============ 💳 FORMA DE PAGAMENTO ============ */}
