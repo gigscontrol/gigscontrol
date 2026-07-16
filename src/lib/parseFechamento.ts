@@ -21,6 +21,9 @@ export type CamposFechamento = {
   capacidadePublico?: string;
   enderecoLocal?: string;
   dataShow?: string; // YYYY-MM-DD (só quando veio com ano)
+  /** "DD/MM" — a data veio SEM ano ("17/07", "17-07", "17.07"): o form
+   *  pré-preenche dia/mês e o vendedor completa o ano na mão. */
+  dataShowParcial?: string;
   horario?: string; // HH:mm (início)
   horarioFim?: string; // HH:mm (término, quando veio intervalo)
   lineUp?: string[];
@@ -51,6 +54,7 @@ const NOME_AMIGAVEL: Record<ChaveCampo, string> = {
   capacidadePublico: "Capacidade",
   enderecoLocal: "Endereço do evento",
   dataShow: "Data",
+  dataShowParcial: "Data (sem ano)",
   horario: "Horário",
   horarioFim: "Horário",
   lineUp: "Line-Up",
@@ -278,7 +282,12 @@ function aplicar(campos: CamposFechamento, key: ChaveCampo, valorBruto: string):
     case "dataShow": {
       const p = parseData(v);
       if (!p) return false;
-      if (!p.ano) return false; // sem ano → não preenche (vendedor completa)
+      if (!p.ano) {
+        // Sem ano ("17/07"): entendemos dia/mês e o form pré-preenche o campo
+        // pro vendedor completar só o ano.
+        campos.dataShowParcial = `${p.dia}/${p.mes}`;
+        return true;
+      }
       campos.dataShow = `${p.ano}-${p.mes}-${p.dia}`;
       return true;
     }

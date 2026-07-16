@@ -154,6 +154,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     det?.enderecoLocal ?? casaOrc?.endereco ?? ""
   );
   const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? dataInicial ?? "");
+  // "DD/MM" vindo da colagem SEM ano — pré-preenche o campo Data pro vendedor
+  // completar só o ano.
+  const [dataParcialColada, setDataParcialColada] = useState("");
 
   // Horário início e fim
   const [horarioInicio, setHorarioInicio] = useState(
@@ -563,6 +566,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     set(campos.capacidadePublico, setCapacidadePublico, "Capacidade");
     set(campos.enderecoLocal, setEnderecoLocal, "Endereço do evento");
     set(campos.dataShow, setDataShow, "Data");
+    // Data sem ano ("17/07"): pré-preenche dia/mês no campo e avisa que falta
+    // o ano. Colagem posterior COM ano completo substitui normalmente.
+    if (campos.dataShow) {
+      setDataParcialColada("");
+    } else if (campos.dataShowParcial) {
+      setDataParcialColada(campos.dataShowParcial);
+      feitos.push("Data (sem ano)");
+      avisos.push(
+        `A data veio sem o ano (${campos.dataShowParcial}) — complete o ano no campo "Data do evento".`
+      );
+    }
     set(campos.horario, setHorarioInicio, "Horário");
     if (campos.horarioFim) setHorarioFim(campos.horarioFim);
     if (campos.lineUp && campos.lineUp.length) {
@@ -931,6 +945,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           >
             <InputDataBR
               value={dataShow}
+              sugestaoParcial={dataParcialColada}
               onChange={(iso) => {
                 setDataShow(iso);
                 marcarEditado("dataShow");
