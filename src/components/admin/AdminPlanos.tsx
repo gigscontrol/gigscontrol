@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, X, Check, Plus, Trash2, Star } from "lucide-react";
 import { usePlataforma } from "@/lib/plataforma-context";
 import { formatarPreco, type Plano } from "@/lib/planos";
+import { parseValorBR } from "@/lib/valor";
 
 export default function AdminPlanos() {
   const { planos, assinaturas, atualizarPlano } = usePlataforma();
@@ -126,9 +127,8 @@ function ModalEditarPlano({
     onSalvar({
       nome: nome.trim() || plano.nome,
       tagline: tagline.trim(),
-      precoMensal: parseFloat(precoMensal.replace(",", ".")) || plano.precoMensal,
-      precoAnual:
-        parseFloat(precoAnual.replace(",", ".")) || plano.precoAnual,
+      precoMensal: parseValorBR(precoMensal) || plano.precoMensal,
+      precoAnual: parseValorBR(precoAnual) || plano.precoAnual,
       maxArtistas: parseInt(maxArtistas) || plano.maxArtistas,
       maxUsuariosAdicionais: parseInt(maxUsuarios) || plano.maxUsuariosAdicionais,
       destaque,

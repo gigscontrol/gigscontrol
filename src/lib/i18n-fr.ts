@@ -187,6 +187,8 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Falha ao salvar seus dados.": "Échec de l'enregistrement de vos données.",
   "Informe a data de nascimento.": "Indiquez la date de naissance.",
   "Informe a data.": "Indiquez la date.",
+  "Horário a definir": "Horaire à définir",
+  "A definir": "À définir",
   "Informe o documento.": "Indiquez le document d'identité.",
   "Informe seu apelido.": "Indiquez votre surnom.",
   "Informe seu nome completo.": "Indiquez votre nom complet.",

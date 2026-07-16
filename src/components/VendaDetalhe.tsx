@@ -215,9 +215,11 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
             <InfoLine
               label={t("Horário")}
               value={
-                (venda.horarioFim
-                  ? `${venda.horario} — ${venda.horarioFim}`
-                  : venda.horario) +
+                (venda.horario
+                  ? venda.horarioFim
+                    ? `${venda.horario} — ${venda.horarioFim}`
+                    : venda.horario
+                  : t("A definir")) +
                 (venda.fusoHorario ? ` · ${nomeCidadeFuso(venda.fusoHorario)}` : "")
               }
               bold

@@ -264,6 +264,12 @@ export default function ShowDetalheModal({
           {tipoEvento && (
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[tipoEvento])}</span>
           )}
+          {!cancelado && !horarioInicio && (
+            <span className="badge badge-warning inline-flex items-center gap-1">
+              <Clock size={11} />
+              {t("Horário a definir")}
+            </span>
+          )}
           {show.vendaId && (
             <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
               <FileSignature size={11} />
@@ -426,16 +432,22 @@ export default function ShowDetalheModal({
 
         {/* ===== SHOW: horário, duração, cachê ===== */}
         <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
-          {horarioInicio && (
+          {horarioInicio ? (
             <Linha icon={<Clock size={13} />} bold>
               {horarioFim ? `${horarioInicio} — ${horarioFim}` : horarioInicio}
               {duracao && (
                 <span className="ml-2 text-xs text-muted font-normal">({duracao})</span>
               )}
             </Linha>
-          )}
-          {!horarioInicio && duracao && (
-            <Linha icon={<Clock size={13} />}>{t("Duração:")} {duracao}</Linha>
+          ) : (
+            <Linha icon={<Clock size={13} />}>
+              <span className="text-warning font-medium">{t("A definir")}</span>
+              {duracao && (
+                <span className="ml-2 text-xs text-muted font-normal">
+                  · {t("Duração:")} {duracao}
+                </span>
+              )}
+            </Linha>
           )}
           {cache !== undefined && cache > 0 && (
             <Linha icon={<DollarSign size={13} />} bold>

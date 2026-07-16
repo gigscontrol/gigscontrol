@@ -34,6 +34,8 @@ import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAu
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { resolverCidade } from "@/lib/cidade-helpers";
+import { itensDoRider } from "@/lib/rider";
+import { parseValorBR } from "@/lib/valor";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
@@ -95,18 +97,6 @@ function novoBlocoDj(artistaId: string): DjBlock {
     logistica: { ...LOGISTICA_VAZIA },
     infoExtra: "",
   };
-}
-
-/**
- * Itens de seção a partir do RIDER salvo no artista (só nomes; qtd nasce 0 e
- * é definida por orçamento). Artista sem rider cai no catálogo padrão.
- */
-function itensDoRider(
-  nomes: string[] | undefined,
-  catalogo: readonly string[]
-): ItemQuantidade[] {
-  const base = nomes && nomes.length > 0 ? nomes : catalogo;
-  return base.map((n) => ({ nome: n, qtd: 0 }));
 }
 
 /** Patch de bloco ao escolher um artista: id + Camarim/Efeitos do rider DELE. */
@@ -207,7 +197,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     const errs: Record<string, string> = {};
     blocos.forEach((b, i) => {
       if (!b.artistaId) errs[`artista-${i}`] = t("Selecione um artista");
-      const valor = parseFloat(b.valorCache.replace(",", "."));
+      const valor = parseValorBR(b.valorCache);
       if (!b.valorCache || isNaN(valor) || valor <= 0) errs[`valor-${i}`] = t("Valor obrigatório");
       if (b.duracaoHoras < 1 && b.duracaoMinutos < 15) errs[`dur-${i}`] = t("Duração mínima 15 min");
     });
@@ -396,7 +386,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // antes de criar os próximos, e cada criação é async (API).
     for (let idx = 0; idx < blocos.length; idx++) {
       const b = blocos[idx];
-      const valor = parseFloat(b.valorCache.replace(",", "."));
+      const valor = parseValorBR(b.valorCache);
 
       const cInput: ContratanteInput =
         idx === 0
@@ -1137,7 +1127,7 @@ function BlocoOrcamentoDj({
 }) {
   const t = useT();
   const artista = artistas.find((d) => d.id === bloco.artistaId);
-  const valor = parseFloat(bloco.valorCache.replace(",", "."));
+  const valor = parseValorBR(bloco.valorCache);
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-border bg-surface overflow-hidden">

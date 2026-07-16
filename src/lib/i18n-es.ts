@@ -187,6 +187,8 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Falha ao salvar seus dados.": "Error al guardar tus datos.",
   "Informe a data de nascimento.": "Indica la fecha de nacimiento.",
   "Informe a data.": "Indica la fecha.",
+  "Horário a definir": "Horario por definir",
+  "A definir": "Por definir",
   "Informe o documento.": "Indica el documento.",
   "Informe seu apelido.": "Indica tu apodo.",
   "Informe seu nome completo.": "Indica tu nombre completo.",

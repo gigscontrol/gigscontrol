@@ -154,7 +154,11 @@ function EventCard({ show, artista, onClick }: { show: Show; artista?: Artista; 
         </div>
         <div className="flex items-center gap-1.5 text-[0.7rem] text-muted">
           <Clock size={11} className="flex-shrink-0" />
-          <span className="font-semibold text-primary tabular-nums">{show.time}</span>
+          {show.time ? (
+            <span className="font-semibold text-primary tabular-nums">{show.time}</span>
+          ) : (
+            <span className="font-medium text-warning">{t("A definir")}</span>
+          )}
         </div>
       </div>
 
