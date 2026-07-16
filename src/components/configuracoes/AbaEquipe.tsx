@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   Plus,
@@ -28,6 +28,8 @@ import {
 import Modal from "../Modal";
 import PageHeader from "../PageHeader";
 import Toast from "../Toast";
+import ConfirmarSaidaModal from "../ConfirmarSaidaModal";
+import { useNavegacaoOpcional } from "../NavOverlay";
 import {
   useWorkspace,
   useArtistas,
@@ -286,30 +288,29 @@ export default function AbaEquipe() {
   }
 
   async function aoEditar(id: string, dados: PatchEditarUsuario) {
-    try {
-      // Repassa apelido + dados de pessoa (snake_case, já no formato que o
-      // backend espera) + bloqueio. `cidade_id`/`razao_social` só vão quando
-      // preenchidos (o `salvar` já os deixa undefined quando não se aplicam).
-      await atualizarUsuario(id, {
-        nome: dados.nome,
-        ativo: dados.ativo,
-        pode_criar_anotacoes: dados.pode_criar_anotacoes,
-        cor: dados.cor,
-        pais: dados.pais,
-        nome_legal: dados.nome_legal,
-        documento_tipo: dados.documento_tipo,
-        documento: dados.documento,
-        razao_social: dados.razao_social,
-        endereco: dados.endereco,
-        telefone: dados.telefone,
-        data_nascimento: dados.data_nascimento,
-        cidade_id: dados.cidade_id,
-      });
-      setEditando(null);
-      setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
-    } catch (e) {
-      setToast({ msg: (e as Error).message, tipo: "erro" });
-    }
+    // NÃO engole o erro: se atualizarUsuario falhar, deixa o rejeito subir pro
+    // salvar() do form — ele mostra o aviso no banner e devolve `false`, pra
+    // guarda de saída NÃO navegar por cima de um save que falhou.
+    // Repassa apelido + dados de pessoa (snake_case, já no formato que o
+    // backend espera) + bloqueio. `cidade_id`/`razao_social` só vão quando
+    // preenchidos (o `salvar` já os deixa undefined quando não se aplicam).
+    await atualizarUsuario(id, {
+      nome: dados.nome,
+      ativo: dados.ativo,
+      pode_criar_anotacoes: dados.pode_criar_anotacoes,
+      cor: dados.cor,
+      pais: dados.pais,
+      nome_legal: dados.nome_legal,
+      documento_tipo: dados.documento_tipo,
+      documento: dados.documento,
+      razao_social: dados.razao_social,
+      endereco: dados.endereco,
+      telefone: dados.telefone,
+      data_nascimento: dados.data_nascimento,
+      cidade_id: dados.cidade_id,
+    });
+    setEditando(null);
+    setToast({ msg: t("Usuário atualizado."), tipo: "sucesso" });
   }
 
   async function aoRemover() {
@@ -386,6 +387,9 @@ export default function AbaEquipe() {
           <div className="flex-1 flex items-center gap-2 overflow-x-auto py-1">
             {filaChips.map((u) => {
               const info = LABELS_PAPEL_EQUIPE[u.papel];
+              // Avatar = cor de IDENTIDADE do membro (profiles.cor); cai na cor
+              // do papel só se ele nunca escolheu uma. Igual à topbar dele.
+              const corMembro = u.cor ?? info?.cor;
               const ativoChip = u.id === selecionadoId;
               const bloqueado = !u.ativo;
               return (
@@ -408,9 +412,9 @@ export default function AbaEquipe() {
                       style={{
                         background: bloqueado
                           ? "var(--border-strong)"
-                          : `linear-gradient(135deg, ${info?.cor ?? "var(--border-strong)"}, ${info?.cor ?? "var(--border-strong)"}99)`,
+                          : `linear-gradient(135deg, ${corMembro ?? "var(--border-strong)"}, ${corMembro ?? "var(--border-strong)"}99)`,
                         boxShadow: ativoChip
-                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${info?.cor ?? "var(--border-strong)"}`
+                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${corMembro ?? "var(--border-strong)"}`
                           : undefined,
                       }}
                     >
@@ -535,7 +539,7 @@ export default function AbaEquipe() {
                 style={{
                   background: !selecionado.ativo
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
+                    : `linear-gradient(135deg, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
                 }}
               >
                 {selecionado.nome.charAt(0).toUpperCase()}
@@ -1511,16 +1515,17 @@ export function ModalUsuario({
     });
   }
 
-  async function salvar() {
+  async function salvar(): Promise<boolean> {
     // Coleta TODOS os obrigatórios faltando de uma vez (não para no 1º). O
     // login só é exigido na criação; o editar exige apenas o apelido.
+    // Devolve true no sucesso — a guarda de saída usa isso pra decidir se sai.
     const faltando = new Set<string>();
     if (!nome.trim()) faltando.add("nome");
     if (modo === "criar" && !usernameValido) faltando.add("username");
     if (faltando.size > 0) {
       setErros(faltando);
       setErro(null);
-      return;
+      return false;
     }
     setErros(new Set());
 
@@ -1569,18 +1574,19 @@ export function ModalUsuario({
           data_nascimento: dataNascimento || undefined,
           cidade_id: cidadeId,
         });
+        return true;
       } catch (e) {
         setErro((e as Error).message);
+        return false;
       } finally {
         setSalvando(false);
       }
-      return;
     }
 
     // Editar: apelido + dados de pessoa + bloqueio. O acesso (perfis/permissões
     // por artista) continua gerenciado na aba Equipe do artista. E-mail fica
     // bloqueado (o membro cadastra depois).
-    if (!inicial) return;
+    if (!inicial) return false;
     setSalvando(true);
     setErro(null);
     try {
@@ -1609,12 +1615,78 @@ export function ModalUsuario({
         data_nascimento: dataNascimento || undefined,
         cidade_id: cidadeId,
       });
+      return true;
     } catch (e) {
       setErro((e as Error).message);
+      return false;
     } finally {
       setSalvando(false);
     }
   }
+
+  // ---- Guarda de "alterações não salvas" (só no modo editar) ----
+  // Assinatura dos campos editáveis do editar. A baseline é capturada no 1º
+  // render (form recém-aberto = pristine) → sujo=false ao abrir.
+  const assinatura = useMemo(
+    () =>
+      JSON.stringify({
+        nome,
+        cor,
+        cidade: cidadeSel
+          ? `${cidadeSel.pais}|${cidadeSel.uf}|${cidadeSel.nome}|${cidadeSel.ibgeId ?? cidadeSel.geonameId ?? ""}`
+          : "",
+        pais: paisPessoal.code,
+        nomeLegal,
+        documentoTipo,
+        documento,
+        razaoSocial,
+        endereco,
+        telefone,
+        dataNascimento,
+        ativo,
+        podeCriarAnotacoes,
+      }),
+    [
+      nome,
+      cor,
+      cidadeSel,
+      paisPessoal,
+      nomeLegal,
+      documentoTipo,
+      documento,
+      razaoSocial,
+      endereco,
+      telefone,
+      dataNascimento,
+      ativo,
+      podeCriarAnotacoes,
+    ]
+  );
+  const baselineRef = useRef<string | null>(null);
+  if (baselineRef.current === null) baselineRef.current = assinatura;
+  const sujo = modo === "editar" && assinatura !== baselineRef.current;
+
+  // Popup de confirmação da saída LOCAL (botão Cancelar do editar).
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const cancelar = () => {
+    if (modo === "editar" && sujo) setConfirmarSaida(true);
+    else onFechar();
+  };
+
+  // Guarda GLOBAL (interceptar navegação pra outra tela) — só no editar e só
+  // quando há provider (o form também roda no onboarding, sem NavProvider).
+  const nav = useNavegacaoOpcional();
+  const registrarGuarda = nav?.registrarGuarda;
+  const limparGuarda = nav?.limparGuarda;
+  const sujoRef = useRef(sujo);
+  sujoRef.current = sujo;
+  const salvarRef = useRef(salvar);
+  salvarRef.current = salvar;
+  useEffect(() => {
+    if (modo !== "editar" || !registrarGuarda || !limparGuarda) return;
+    registrarGuarda(() => ({ sujo: sujoRef.current, salvar: salvarRef.current }));
+    return () => limparGuarda();
+  }, [modo, registrarGuarda, limparGuarda]);
 
   const conteudo = (
       <div className="flex flex-col gap-4">
@@ -1851,7 +1923,7 @@ export function ModalUsuario({
 
                   {/* Ações: Cancelar / Salvar alterações */}
                   <div className="ml-auto flex items-center gap-2 flex-wrap">
-                    <button onClick={onFechar} className="btn btn-secondary text-sm" disabled={salvando}>
+                    <button onClick={cancelar} className="btn btn-secondary text-sm" disabled={salvando}>
                       {t("Cancelar")}
                     </button>
                     <button
@@ -2269,6 +2341,24 @@ export function ModalUsuario({
           </div>
         )}
 
+        {/* Footer do EDITAR — 2º botão Salvar no fim (evita rolar até o topo).
+            Mesmos handlers do cabeçalho (cancelar/salvar). */}
+        {modo === "editar" && (
+          <div className="flex items-center justify-end gap-2 flex-wrap pt-2 border-t border-border">
+            <button onClick={cancelar} className="btn btn-secondary text-sm" disabled={salvando}>
+              {t("Cancelar")}
+            </button>
+            <button
+              onClick={salvar}
+              disabled={salvando}
+              className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1"
+            >
+              <Check size={14} />
+              {salvando ? t("Salvando...") : t("Salvar alterações")}
+            </button>
+          </div>
+        )}
+
         {/* Editor de permissões do artista selecionado — modal empilhado
             (fechar/salvar aqui NÃO fecha o ModalUsuario). Usado na CRIAÇÃO. */}
         {editandoPermsDe && (() => {
@@ -2313,6 +2403,23 @@ export function ModalUsuario({
             />
           );
         })()}
+
+        {confirmarSaida && (
+          <ConfirmarSaidaModal
+            salvando={salvando}
+            onCancelar={() => setConfirmarSaida(false)}
+            onDescartar={() => {
+              setConfirmarSaida(false);
+              onFechar();
+            }}
+            onSalvarESair={async () => {
+              // salvar() sucesso → o pai fecha o editor (setEditando null); no
+              // erro/validação fica na tela e o popup fecha pra mostrar o aviso.
+              await salvar();
+              setConfirmarSaida(false);
+            }}
+          />
+        )}
       </div>
   );
 

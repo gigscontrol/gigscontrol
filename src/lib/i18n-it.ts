@@ -2649,4 +2649,10 @@ export const IT: Record<string, string> = {
   "Novo item na agenda": "Nuovo elemento in agenda",
   "Para qual data?": "Per quale data?",
   "Filtrar por artista": "Filtra per artista",
+  // Chaves novas do fix/varios-ajustes (guarda de alterações não salvas, e-mail interno na Topbar/Lixeira).
+  "Login: {handle}": "Login: {handle}",
+  "Você tem alterações não salvas": "Hai modifiche non salvate",
+  "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "Se esci ora, le modifiche andranno perse. Cosa vuoi fare?",
+  "Descartar": "Scarta",
+  "Salvar e sair": "Salva ed esci",
 };

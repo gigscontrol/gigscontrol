@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Toast from "../Toast";
 import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
+import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
 
 /**
  * Aba "Lixeira".
@@ -170,7 +171,9 @@ export default function AbaLixeira() {
         "usuario",
         i.usuario.id,
         i.usuario.nome,
-        i.usuario.email,
+        ehEmailInterno(i.usuario.email)
+          ? t("Login: {handle}", { handle: handleDoEmailInterno(i.usuario.email) })
+          : i.usuario.email,
         i.diasRestantes,
         "var(--brand)",
         i.usuario.nome.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()

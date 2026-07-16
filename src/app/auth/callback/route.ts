@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { setupWorkspaceParaNovoUsuario } from "@/lib/services/signup.service";
+import { ehEmailInterno } from "@/lib/email-interno";
 
 /**
  * GET /auth/callback?code=...
@@ -53,10 +54,34 @@ export async function GET(request: Request) {
   const admin = criarClienteAdmin();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id")
+    .select("id, email")
     .eq("id", user.id)
-    .maybeSingle();
+    .maybeSingle<{ id: string; email: string | null }>();
   if (profile) {
+    // Auto-sync do e-mail de acesso: quando o próprio membro confirma o
+    // e-mail real que cadastrou (updateUser → link de confirmação → aqui),
+    // o auth.users.email vira o real, mas o profiles.email pode continuar
+    // com o fake interno. Sem alinhar, a sessão segue mostrando o fake
+    // "verificado" (AbaPerfil / AcessoCard). Fonte da verdade = auth.users.
+    // Best-effort: nunca bloqueia o login.
+    const emailReal = user.email ?? "";
+    if (
+      emailReal &&
+      emailReal !== profile.email &&
+      !ehEmailInterno(emailReal)
+    ) {
+      try {
+        await admin
+          .from("profiles")
+          .update({ email: emailReal })
+          .eq("id", user.id);
+      } catch (e) {
+        console.error(
+          "[auth/callback] sync profiles.email falhou:",
+          (e as Error).message
+        );
+      }
+    }
     const dest = next.startsWith("/") ? next : "/app";
     return NextResponse.redirect(new URL(dest, url.origin));
   }

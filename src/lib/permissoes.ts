@@ -119,6 +119,12 @@ export type Usuario = {
   ativo: boolean;
   /** Para papel "artista": o id (uuid) do artista que este usuário representa */
   artistaId?: string;
+  /**
+   * Cor de IDENTIDADE (hex) do avatar/iniciais — a mesma mostrada no resto do
+   * app. Artista: artists.cor. Equipe/admin: profiles.cor. Ausente → cai na
+   * cor do papel.
+   */
+  cor?: string | null;
   /** Para papel "vendedor": configuração de escopo */
   escopoVendedor?: EscopoVendedor;
   criadoEm: string;
