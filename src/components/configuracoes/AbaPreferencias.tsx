@@ -61,7 +61,7 @@ export default function AbaPreferencias() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 w-full">
       {erro && <div className="text-xs text-danger">{erro}</div>}
 
       {/* Idioma padrão */}

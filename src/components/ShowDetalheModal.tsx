@@ -475,10 +475,23 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
-        {/* ===== HOTEL ===== */}
-        {hotelItens.length > 0 && (
+        {/* ===== HOTEL — rider (chips) + hospedagem/booking, bloco único.
+            Só aparece se o rider pede hotel OU já existe booking; a EDIÇÃO
+            continua gated por podeGerenciarShow (visão básica não chega aqui:
+            venda/orçamento/booking vêm redigidos → hotelItens=[] e sem booking). ===== */}
+        {(hotelItens.length > 0 || show.booking) && (
           <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
-            <ItensGrid items={hotelItens} />
+            {hotelItens.length > 0 && <ItensGrid items={hotelItens} />}
+            <div className={hotelItens.length > 0 ? "mt-2" : undefined}>
+              <BookingSection
+                showId={show.id}
+                booking={show.booking}
+                podeEditar={podeGerenciarShow}
+                onSave={async (booking) => {
+                  await updateShow(show.id, { booking });
+                }}
+              />
+            </div>
           </Bloco>
         )}
 
@@ -596,20 +609,6 @@ export default function ShowDetalheModal({
         {observacoes && (
           <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
             <p className="text-sm text-secondary whitespace-pre-wrap">{observacoes}</p>
-          </Bloco>
-        )}
-
-        {/* ===== HOSPEDAGEM / BOOKING ===== */}
-        {(show.booking || podeGerenciarShow) && (
-          <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
-            <BookingSection
-              showId={show.id}
-              booking={show.booking}
-              podeEditar={podeGerenciarShow}
-              onSave={async (booking) => {
-                await updateShow(show.id, { booking });
-              }}
-            />
           </Bloco>
         )}
 

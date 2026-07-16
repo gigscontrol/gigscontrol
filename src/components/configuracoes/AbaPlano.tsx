@@ -237,7 +237,7 @@ export default function AbaPlano() {
   const pendente = !!downgradePara;
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
+    <div className="flex flex-col gap-5 w-full">
       {/* Plano atual — modelo pré-pago: validade em vez de próxima cobrança */}
       <section className="card flex flex-col gap-1">
         <div className="stat-label">{t("Plano atual")}</div>

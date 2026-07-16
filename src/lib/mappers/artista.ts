@@ -28,6 +28,8 @@ export type ArtistaRow = {
   telefone: string | null;
   data_nascimento: string | null;
   email: string | null;
+  // Chave PIX (migração 89) — só artista brasileiro; texto livre (tel/email/CPF/CNPJ/aleatória).
+  pix: string | null;
   taxa_modo: TaxaAgenciaModo | null;
   taxa_valor: number | string | null; // numeric vem como string do PG às vezes
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
@@ -68,9 +70,7 @@ function normalizarRider(raw: unknown): string[] {
  * aceito se for de fato boolean; o enum `contatos` só aceita
  * 'nenhum'|'proprios'|'todos'. Qualquer outro valor cai no default.
  * Retrocompat: registros antigos SEM `agendaTotal` viram false (padrão);
- * `contatos` legado ('todos'/'proprios') continua válido. Registros SEM
- * `financeiroVerTaxa` herdam o valor de `financeiroVer` (artista que via o
- * financeiro continua vendo a taxa); só um `false` explícito oculta a taxa.
+ * `contatos` legado ('todos'/'proprios') continua válido.
  */
 export function privacidadeValida(raw: unknown): PrivacidadeDj {
   if (!raw || typeof raw !== "object") return { ...PRIVACIDADE_DJ_PADRAO };
@@ -84,14 +84,13 @@ export function privacidadeValida(raw: unknown): PrivacidadeDj {
     vendasVer: bool("vendasVer"),
     vendasCriar: bool("vendasCriar"),
     financeiroVer,
-    // Ausente no jsonb salvo → herda financeiroVer (retrocompat). Presente →
-    // respeita o boolean salvo (inclusive false para ocultar a taxa).
-    financeiroVerTaxa:
-      typeof r.financeiroVerTaxa === "boolean" ? r.financeiroVerTaxa : financeiroVer,
     financeiroInformar: bool("financeiroInformar"),
     contratosVer: bool("contratosVer"),
     contratosCriar: bool("contratosCriar"),
     agendaTotal: bool("agendaTotal"),
+    // Ausente no jsonb (artista antigo) → true (vê detalhado, como hoje).
+    // false explícito = nível "Básico" (esconde cachê/contato/hotel/voucher).
+    agendaVerDetalhado: bool("agendaVerDetalhado"),
     contatos:
       r.contatos === "nenhum" || r.contatos === "proprios" || r.contatos === "todos"
         ? r.contatos
@@ -126,6 +125,7 @@ export function rowParaArtista(row: ArtistaRow): Artista {
   if (row.telefone) artista.telefone = row.telefone;
   if (row.data_nascimento) artista.dataNascimento = row.data_nascimento;
   if (row.email) artista.email = row.email;
+  if (row.pix) artista.pix = row.pix;
   if (row.taxa_valor !== null && row.taxa_valor !== undefined) {
     const n = Number(row.taxa_valor);
     if (Number.isFinite(n)) artista.taxaValor = n;
@@ -152,6 +152,7 @@ export function redigirArtista(artista: Artista): Artista {
   delete limpo.telefone;
   delete limpo.dataNascimento;
   delete limpo.email;
+  delete limpo.pix;
   return limpo;
 }
 
@@ -173,6 +174,7 @@ export type ArtistaEscrita = {
   telefone?: string | null;
   data_nascimento?: string | null;
   email?: string | null;
+  pix?: string | null;
   taxa_modo?: TaxaAgenciaModo;
   taxa_valor?: number | null;
   rider_camarim?: string[];

@@ -59,6 +59,8 @@ export const artistaCreateSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
   email: z.string().max(120).optional(),
+  // Chave PIX (só faz sentido pro artista brasileiro) — texto livre.
+  pix: z.string().max(140).optional(),
   // Acesso ao sistema (criado junto)
   username_raiz: usernameRaizSchema,
   // Cidade onde reside (referência IBGE)
@@ -105,6 +107,7 @@ export const artistaCreateSchema = z.object({
       contratosVer: z.boolean().optional(),
       contratosCriar: z.boolean().optional(),
       agendaTotal: z.boolean().optional(),
+      agendaVerDetalhado: z.boolean().optional(),
       contatos: z.enum(["nenhum", "proprios", "todos"]).optional(),
     })
     .optional(),

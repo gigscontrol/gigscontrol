@@ -66,6 +66,8 @@ export type NovoArtistaInput = {
   dataNascimento?: string;
   /** E-mail de contato do artista. */
   email?: string;
+  /** Chave PIX (só artista brasileiro) — texto livre. */
+  pix?: string;
   /** Taxa de agência. */
   taxaModo?: TaxaAgenciaModo;
   taxaValor?: number;
@@ -473,6 +475,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (input.telefone) payload.telefone = input.telefone;
       if (input.dataNascimento) payload.data_nascimento = input.dataNascimento;
       if (input.email) payload.email = input.email;
+      if (input.pix) payload.pix = input.pix;
       if (input.taxaModo) payload.taxa_modo = input.taxaModo;
       if (input.taxaValor !== undefined) payload.taxa_valor = input.taxaValor;
       if (input.riderCamarim) payload.rider_camarim = input.riderCamarim;
@@ -521,6 +524,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.dataNascimento !== undefined)
         payload.data_nascimento = patch.dataNascimento;
       if (patch.email !== undefined) payload.email = patch.email;
+      if (patch.pix !== undefined) payload.pix = patch.pix;
       if (patch.taxaModo !== undefined) payload.taxa_modo = patch.taxaModo;
       if (patch.taxaValor !== undefined) payload.taxa_valor = patch.taxaValor;
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;

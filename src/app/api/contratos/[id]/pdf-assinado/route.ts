@@ -52,7 +52,16 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         ordem: s.ordem,
         status: s.status,
         assinatura: s.assinatura,
-      }))
+        nome: s.nome,
+        papel: s.papel,
+        documento: s.documento,
+        email: s.email,
+        ip: s.ip,
+        dispositivo: s.dispositivo,
+        geolocalizacao: s.geolocalizacao,
+        assinadoEm: s.assinadoEm,
+      })),
+      { numero: contrato.numero }
     );
     // Cópia num ArrayBuffer "puro" (o Uint8Array do pdf-lib é ArrayBufferLike,
     // que o tipo de BodyInit recusa).

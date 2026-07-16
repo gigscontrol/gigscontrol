@@ -423,6 +423,11 @@
   }
   .campo-input:focus { border-color: var(--brand); }
   .campo-input::placeholder { color: var(--text-disabled); }
+  /* Borda de erro reusável — campo obrigatório não preenchido (some ao
+     preencher). `.campo-input.erro` cobre os inputs padrão; `.input-erro`
+     (com !important) cobre inputs de base própria como o de documento. */
+  .campo-input.erro { border-color: var(--danger); }
+  .input-erro { border-color: var(--danger) !important; }
 
   /* Tab pills (period selector etc.) */
   .pill-group {

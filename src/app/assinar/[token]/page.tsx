@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   ScanFace,
 } from "lucide-react";
-import { FolhaA4, gerarPdfFolha } from "@/components/contratos/folhaA4";
+import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
@@ -34,6 +34,8 @@ type Dados = {
     numero: string;
     conteudo: { secoes: SecaoModelo[]; estilo: EstiloModelo };
   };
+  /** Signatários do mesmo contrato que já assinaram (relatório, sem KYC). */
+  assinaturas: AssinaturaInfo[];
   jaAssinou: boolean;
 };
 
@@ -312,12 +314,14 @@ export default function AssinarPage({
           </div>
         )}
 
-        {/* O contrato */}
+        {/* O contrato + relatório de assinaturas (de quem já assinou) */}
         <FolhaA4
           secoes={contrato.conteudo.secoes}
           estilo={contrato.conteudo.estilo}
           folhaRef={folhaRef}
           conteudoRef={conteudoRef}
+          assinaturas={dados.assinaturas}
+          numeroContrato={contrato.numero}
         />
 
         {/* Form de assinatura (só se ainda não assinou) */}

@@ -21,6 +21,7 @@ import {
   buscarPorToken,
   registrarAssinaturaPorToken,
   listarPorContratoAdmin,
+  listarAssinadosDoContrato,
   resumoDoWorkspace,
   incrementarAberturas,
 } from "@/lib/repositories/contratoSignatarios.repo";
@@ -106,6 +107,45 @@ export async function buscarParaAssinar(
     signatario: rowParaSignatario(sigRow),
     contrato: rowParaContrato(contratoRow),
   };
+}
+
+/**
+ * Forma PÚBLICA de uma assinatura para o relatório no link /assinar/{token}:
+ * só os campos visíveis do relatório, SEM foto/selfie/arquivos KYC nem facial
+ * (evidência sensível que nunca sai pela rota pública).
+ */
+export type AssinaturaPublica = {
+  nome: string;
+  papel: string | null;
+  documento: string | null;
+  email: string | null;
+  ip: string | null;
+  geolocalizacao: string | null;
+  dispositivo: string | null;
+  assinadoEm: string | null;
+  assinatura: string | null;
+};
+
+/**
+ * Signatários do MESMO contrato que já assinaram — pro relatório visível no
+ * link público. Só campos do relatório; nada de KYC.
+ */
+export async function assinantesPublicosDoContrato(
+  admin: SupabaseClient,
+  contratoId: string
+): Promise<AssinaturaPublica[]> {
+  const rows = await listarAssinadosDoContrato(admin, contratoId);
+  return rows.map(rowParaSignatario).map((s) => ({
+    nome: s.nome,
+    papel: s.papel,
+    documento: s.documento,
+    email: s.email,
+    ip: s.ip,
+    geolocalizacao: s.geolocalizacao,
+    dispositivo: s.dispositivo,
+    assinadoEm: s.assinadoEm,
+    assinatura: s.assinatura,
+  }));
 }
 
 /**

@@ -552,14 +552,14 @@ function AppRoot() {
         />
 
         {configAberta ? (
-          <main className="relative flex-1 overflow-y-auto animate-in">
+          <main className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in">
             <NavOverlay />
             <Configuracoes onSair={() => irPara(`${BASE}/agenda`)} />
           </main>
         ) : (
         <main
           key={pathname}
-          className="relative flex-1 overflow-y-auto animate-in"
+          className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in"
         >
           <NavOverlay />
           <SomenteLeitura>

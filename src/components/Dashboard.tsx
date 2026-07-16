@@ -262,7 +262,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             />
             <button
               onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
-              className="btn btn-primary"
+              className="btn btn-primary whitespace-nowrap"
             >
               <Wallet size={14} />
               {t("Controle de Pagamentos")}

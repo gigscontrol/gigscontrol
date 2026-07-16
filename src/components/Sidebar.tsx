@@ -102,7 +102,7 @@ const MODULES: ModuleDef[] = [
     icon: Banknote,
     subPages: [
       { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "financeiro-pagamentos", label: "Controle de Pagamentos", icon: Wallet },
+      { page: "financeiro-pagamentos", label: "Controle", icon: Wallet },
       { page: "financeiro-cobrancas", label: "Fixados", icon: Pin },
     ],
   },

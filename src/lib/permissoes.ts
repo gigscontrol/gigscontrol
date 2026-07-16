@@ -74,14 +74,8 @@ export type PrivacidadeDj = {
   vendasVer: boolean;
   /** Pode fechar/criar venda. */
   vendasCriar: boolean;
-  /** Vê o financeiro dele. */
+  /** Vê o financeiro dele (cachês, pagamentos e a taxa/líquido). */
   financeiroVer: boolean;
-  /**
-   * Vê a taxa de agência e o líquido. Retrocompat: quando AUSENTE no jsonb
-   * salvo, o mapper deriva = financeiroVer (artista antigo não muda de
-   * comportamento). Artista NOVO nasce com a taxa oculta (false).
-   */
-  financeiroVerTaxa: boolean;
   /** Pode informar pagamento. */
   financeiroInformar: boolean;
   /** Vê os contratos dele. */
@@ -90,6 +84,12 @@ export type PrivacidadeDj = {
   contratosCriar: boolean;
   /** Acesso total à própria agenda — cria/edita/exclui os próprios eventos; false = só leitura. */
   agendaTotal: boolean;
+  /**
+   * Vê a agenda DETALHADA (cachê, contato do contratante, hotel/booking,
+   * voucher, riders). false = nível "Básico" (só dia, local e horário).
+   * Ausente no jsonb (artista antigo) ⇒ mapper deriva true (retrocompat).
+   */
+  agendaVerDetalhado: boolean;
   /** nenhum = não vê contatos; proprios = só dos shows dele; todos = agência inteira. */
   contatos: "nenhum" | "proprios" | "todos";
 };
@@ -100,11 +100,11 @@ export const PRIVACIDADE_DJ_PADRAO: PrivacidadeDj = {
   vendasVer: true,
   vendasCriar: false,
   financeiroVer: true,
-  financeiroVerTaxa: false,
   financeiroInformar: false,
   contratosVer: true,
   contratosCriar: false,
   agendaTotal: false,
+  agendaVerDetalhado: true,
   contatos: "proprios",
 };
 

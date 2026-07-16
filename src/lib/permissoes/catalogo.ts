@@ -72,10 +72,7 @@ export const CATALOGO: Permissao[] = [
   // comissão/aprovação ainda não existem como operação → slots (existe:false).
   // ver_caches e ver_pagamentos FUNDIDAS aqui (chave única): ver o financeiro
   // = ver cachês e pagamentos. As duas chaves antigas foram removidas do catálogo.
-  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro (caches e pagamentos)", existe: true },
-  // Ver a taxa de agência / o líquido (governada por privacidade.financeiroVerTaxa
-  // no artista; delegável por vínculo para a equipe).
-  { chave: "financeiro.ver_taxa", modulo: "financeiro", nivel: "artista", label: "Ver a taxa de agência e o líquido", existe: true },
+  { chave: "financeiro.ver", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro (caches, pagamentos e taxa/líquido)", existe: true },
   { chave: "financeiro.ver_saldo", modulo: "financeiro", nivel: "artista", label: "Ver o saldo", existe: false },
   { chave: "financeiro.ver_despesas", modulo: "financeiro", nivel: "artista", label: "Ver as despesas", existe: false },
   { chave: "financeiro.ver_comissoes", modulo: "financeiro", nivel: "artista", label: "Ver as comissões", existe: false },

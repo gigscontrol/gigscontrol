@@ -165,3 +165,23 @@ export async function listarPorContratoAdmin(
   if (error) throw error;
   return (data ?? []) as unknown as SignatarioRow[];
 }
+
+/**
+ * Signatários que JÁ ASSINARAM de um contrato (COLS completas, via admin).
+ * Alimenta o relatório de assinaturas no link público — por isso ordena e traz
+ * tudo, mas o service filtra os campos KYC antes de expor.
+ */
+export async function listarAssinadosDoContrato(
+  admin: SupabaseClient,
+  contratoId: string
+): Promise<SignatarioRow[]> {
+  const { data, error } = await admin
+    .from("contrato_signatarios")
+    .select(COLS)
+    .eq("contrato_id", contratoId)
+    .eq("status", "assinado")
+    .order("ordem", { ascending: true })
+    .order("criado_em", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as SignatarioRow[];
+}

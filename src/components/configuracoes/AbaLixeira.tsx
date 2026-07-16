@@ -254,7 +254,7 @@ export default function AbaLixeira() {
     subAba === "todos" ? subabasComItens : ([subAba] as TipoLixeira[]);
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-5 w-full">
       <div className="card">
         <div className="flex items-center gap-2 mb-1">
           <Trash2 size={16} style={{ color: "var(--brand)" }} />
