@@ -203,7 +203,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         subtitle="Contratantes, casas e cidades da agência"
         accentColor={ACCENT}
         actions={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <DateRangeSelector
               options={ATALHOS}
               value={range}
@@ -216,7 +216,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             />
             <button
               onClick={() => onAbrirCategoria?.("contratantes")}
-              className="btn btn-primary"
+              className="btn btn-primary w-full sm:w-auto justify-center"
             >
               <UserPlus size={14} />
               {t("Gerenciar Contatos")}

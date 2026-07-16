@@ -447,7 +447,7 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
 
       {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
           geral" contam a agenda inteira; senão, só o mês selecionado. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <ClickableStat
           onClick={() =>
             setLista({ titulo: t("Todos os shows"), subtitulo: tituloMes, shows: resumo })

@@ -273,7 +273,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
 
       {/* Cards clicáveis — abrem um popup de resumo na própria página; o rodapé do
           popup leva ao Controle de Pagamentos. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total em vendas")}>
           <StatCard
             title={t("Total em Vendas")}

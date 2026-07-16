@@ -295,7 +295,7 @@ export default function VendasDashboard({
       />
 
       {/* Cards clicáveis — 4 cores fixas (azul/verde/âmbar/vermelho) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <ClickableStat onClick={() => setResumo("orcamentos")} ariaLabel={t("Resumo de orçamentos")}>
           <StatCard
             title={t("Orçamentos")}

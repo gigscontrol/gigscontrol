@@ -17,9 +17,10 @@ import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
 import { useContratos } from "@/lib/contratos-context";
 import SinoNotificacoes from "./SinoNotificacoes";
-import LanguageSwitcher from "./LanguageSwitcher";
+import LanguageSwitcher, { IDIOMAS } from "./LanguageSwitcher";
 import BotaoTema from "./BotaoTema";
-import { useT } from "@/lib/i18n";
+import Flag from "./Flag";
+import { useT, useLang } from "@/lib/i18n";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -35,6 +36,7 @@ export default function Topbar({
   const theme = MODULE_THEMES[activeTab];
   const { sessao, logout } = useAuth();
   const t = useT();
+  const { lang, setLang } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -152,8 +154,11 @@ export default function Topbar({
 
       <div className="flex items-center gap-2 flex-shrink-0">
         <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
-        <LanguageSwitcher />
-        <BotaoTema />
+        {/* No mobile, idioma e tema migram pro dropdown do usuário (abaixo). */}
+        <div className="hidden md:flex items-center gap-2">
+          <LanguageSwitcher />
+          <BotaoTema />
+        </div>
 
         {/* Menu de perfil */}
         <div ref={menuRef} className="relative">
@@ -259,6 +264,39 @@ export default function Topbar({
                     </span>
                   </div>
                 )}
+              </div>
+
+              {/* Idioma + Tema — só no mobile; no desktop ficam na topbar. */}
+              <div className="md:hidden p-3 border-b border-border flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted">{t("Idioma")}</span>
+                  <div className="flex items-center justify-between">
+                    {IDIOMAS.map((i) => {
+                      const ativo = i.code === lang;
+                      return (
+                        <button
+                          key={i.code}
+                          type="button"
+                          onClick={() => setLang(i.code)}
+                          aria-label={i.nome}
+                          aria-pressed={ativo}
+                          title={i.nome}
+                          className="flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
+                          style={{
+                            borderColor: ativo ? "var(--brand)" : "var(--border-color)",
+                            boxShadow: ativo ? "0 0 0 1px var(--brand)" : undefined,
+                          }}
+                        >
+                          <Flag code={i.pais} size={20} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted">{t("Tema")}</span>
+                  <BotaoTema />
+                </div>
               </div>
 
               {/* Configurações — admin vê tudo; demais só "Minha conta" (Segurança). */}

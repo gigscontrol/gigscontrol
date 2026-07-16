@@ -322,7 +322,7 @@ export default function Contatos({
         subtitle="Contratantes, casas/eventos e cidades — sua base de relacionamento"
         accentColor={accent}
         actions={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <DateRangeSelector
               options={ATALHOS_CONTATOS}
               value={range}
@@ -340,7 +340,7 @@ export default function Contatos({
                   else if (categoria === "casas") setModal({ type: "novo-casa" });
                   else setModal({ type: "novo-cidade" });
                 }}
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto justify-center"
               >
                 <Plus size={16} />
                 {categoria === "contratantes" ? t("Novo contratante") : categoria === "casas" ? t("Nova casa") : t("Nova cidade")}
