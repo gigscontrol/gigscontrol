@@ -116,7 +116,7 @@ export default function FaqLanding() {
         </div>
         <a
           href="mailto:contato@gigscontrol.com.br"
-          className="inline-flex rounded-[10px] border border-[var(--border-hover)] bg-surface px-6 py-3 text-[13.5px] font-bold text-primary"
+          className="inline-flex rounded border border-[var(--border-hover)] bg-surface px-6 py-3 text-[13.5px] font-bold text-primary"
         >
           {t("Fale com a gente")}
         </a>

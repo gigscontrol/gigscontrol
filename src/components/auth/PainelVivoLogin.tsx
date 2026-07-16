@@ -36,7 +36,7 @@ function Notificacao({
 }) {
   return (
     <div
-      className="gcanim absolute z-[2] flex items-center gap-[9px] rounded-[11px] border border-[var(--border-strong)] bg-surface px-3 py-[9px]"
+      className="gcanim absolute z-[2] flex items-center gap-[9px] rounded border border-[var(--border-strong)] bg-surface px-3 py-[9px]"
       style={{
         boxShadow: "0 16px 34px -12px var(--shadow-color-strong)",
         animation: anim,
@@ -44,7 +44,7 @@ function Notificacao({
       }}
     >
       <span
-        className="flex h-6 w-6 flex-none items-center justify-center rounded-[7px]"
+        className="flex h-6 w-6 flex-none items-center justify-center rounded-chip"
         style={{ backgroundColor: corIcone }}
       >
         <svg
@@ -85,7 +85,7 @@ function MiniDashboard() {
 
   return (
     <div
-      className="overflow-hidden rounded-[14px] border border-[color-mix(in_srgb,var(--text-primary)_9%,transparent)] bg-[var(--mock-window)]"
+      className="overflow-hidden rounded-lg border border-[color-mix(in_srgb,var(--text-primary)_9%,transparent)] bg-[var(--mock-window)]"
       style={{ boxShadow: "0 24px 55px -22px var(--shadow-color-strong)" }}
     >
       {/* barra da janela */}
@@ -185,7 +185,7 @@ function MiniDashboard() {
               (linha) => (
                 <div
                   key={linha}
-                  className="flex items-center gap-2 rounded-[7px] border border-[var(--hairline)] bg-main px-2.5 py-[7px]"
+                  className="flex items-center gap-2 rounded-chip border border-[var(--hairline)] bg-main px-2.5 py-[7px]"
                 >
                   <span className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />
                   <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[9.5px] text-[var(--text-soft)]">

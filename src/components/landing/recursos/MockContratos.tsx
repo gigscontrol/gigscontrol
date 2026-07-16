@@ -95,7 +95,7 @@ export default function MockContratos() {
 
       {/* card de assinantes — colado à direita do documento */}
       <div
-        className="absolute w-[150px] rounded-[10px] border border-[color-mix(in_srgb,var(--brand)_40%,transparent)] bg-surface px-3 py-2.5"
+        className="absolute w-[150px] rounded border border-[color-mix(in_srgb,var(--brand)_40%,transparent)] bg-surface px-3 py-2.5"
         style={{ left: 238, top: 64, boxShadow: "0 14px 30px -12px var(--shadow-color-strong)" }}
       >
         <div className="mb-2 font-mono text-[7.5px] tracking-[.1em] text-[var(--text-label)]">

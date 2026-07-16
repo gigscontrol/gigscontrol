@@ -60,7 +60,7 @@ export default function Toast({
 
   const content = (
     <div
-      className="fixed bottom-6 right-6 max-w-sm bg-surface border border-border rounded-md shadow-xl flex items-center gap-3 px-4 py-3 animate-in"
+      className="fixed bottom-6 right-6 max-w-sm bg-surface border border-border rounded-lg shadow-xl flex items-center gap-3 px-4 py-3 animate-in"
       style={{ zIndex: 10000, boxShadow: "0 12px 30px var(--shadow-color)" }}
       role="status"
       aria-live="polite"

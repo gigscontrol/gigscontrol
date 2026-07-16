@@ -200,7 +200,7 @@ function SidebarViva() {
   const t = useT();
   return (
     <div
-      className="gcanim flex flex-none flex-col overflow-hidden rounded-[14px] border border-[var(--border-color)] bg-[var(--mock-window)]"
+      className="gcanim flex flex-none flex-col overflow-hidden rounded-lg border border-[var(--border-color)] bg-[var(--mock-window)]"
       style={{
         width: 240,
         height: 430,
@@ -257,7 +257,7 @@ function SidebarViva() {
               {mod.submenu.map((item, j) => (
                 <div
                   key={item.label}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-[7px] px-[9px] py-1.5 ${
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-chip px-[9px] py-1.5 ${
                     j === 0 ? "bg-[var(--mock-active)]" : ""
                   }`}
                 >

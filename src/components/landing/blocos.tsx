@@ -39,7 +39,7 @@ export function CtasSecao() {
     <div className="flex flex-wrap items-center gap-3">
       <a
         href="#planos"
-        className="inline-flex items-center gap-2 whitespace-nowrap rounded-[10px] px-6 py-[13px] text-sm font-bold text-white"
+        className="inline-flex items-center gap-2 whitespace-nowrap rounded px-6 py-[13px] text-sm font-bold text-white"
         style={{ backgroundColor: "var(--brand)" }}
       >
         {t("Ver planos")}
@@ -47,7 +47,7 @@ export function CtasSecao() {
       </a>
       <Link
         href="/login"
-        className="whitespace-nowrap rounded-[10px] border border-[var(--border-strong)] bg-surface px-6 py-[13px] text-sm font-semibold text-primary"
+        className="whitespace-nowrap rounded border border-[var(--border-strong)] bg-surface px-6 py-[13px] text-sm font-semibold text-primary"
       >
         {t("Já tenho conta")}
       </Link>

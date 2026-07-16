@@ -125,7 +125,7 @@ export default function PixPendente({ dados, onAprovado, onGerarNovo }: Props) {
         <button
           type="button"
           onClick={onGerarNovo}
-          className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md"
+          className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm rounded-control"
         >
           <RefreshCw size={14} />
           {t("Gerar novo código")}
@@ -161,7 +161,7 @@ export default function PixPendente({ dados, onAprovado, onGerarNovo }: Props) {
         <button
           type="button"
           onClick={copiar}
-          className="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm rounded-md"
+          className="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm rounded-control"
         >
           {copiado ? <Check size={14} /> : <Copy size={14} />}
           {copiado ? t("Copiado!") : t("Copiar código copia-e-cola")}

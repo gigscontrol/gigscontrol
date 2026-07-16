@@ -287,7 +287,7 @@ function OnboardingInner() {
             </span>
             <button
               onClick={sair}
-              className="whitespace-nowrap rounded-[9px] border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
+              className="whitespace-nowrap rounded-control border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
               style={{ backgroundColor: "var(--brand)" }}
             >
               {t("Sair")}

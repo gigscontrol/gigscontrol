@@ -162,7 +162,7 @@ function CardPlano({
         <Link
           href={`/signup?plano=${plano.id}&ciclo=${ciclo}`}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-bold transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 rounded py-2.5 text-[13px] font-bold transition-colors"
           style={
             selecionado
               ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
@@ -178,7 +178,7 @@ function CardPlano({
             e.stopPropagation();
             onSelecionar();
           }}
-          className="inline-flex items-center justify-center gap-1.5 rounded-[10px] py-2.5 text-[13px] font-bold transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 rounded py-2.5 text-[13px] font-bold transition-colors"
           style={
             selecionado
               ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
@@ -195,7 +195,7 @@ function CardPlano({
         {stats.map((b, i) => (
           <div
             key={i}
-            className="rounded-[9px] px-2 py-2.5 text-center"
+            className="rounded-control px-2 py-2.5 text-center"
             style={{
               background: "var(--bg-main)",
               border: "1px solid color-mix(in srgb, var(--text-primary) 7%, transparent)",

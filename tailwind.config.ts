@@ -42,6 +42,10 @@ const config: Config = {
       borderRadius: {
         DEFAULT: "var(--radius)",
         sm: "var(--radius-sm)",
+        // `md` é o default nativo do Tailwind (6px). Remapeado pro raio de
+        // controle (9px) pra alinhar os ~351 usos de rounded-md com .btn/.input
+        // e evitar que o utilitário sobreponha .btn-primary com 6px.
+        md: "var(--r-control)",
         lg: "var(--radius-lg)",
         control: "var(--r-control)",
         chip: "var(--r-chip)",

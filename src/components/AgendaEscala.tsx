@@ -1039,7 +1039,7 @@ function SeletorArtistas({
         />
         {aberto && (
           <div
-            className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-md"
+            className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-lg"
             style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
           >
             {filtrados.length === 0 ? (

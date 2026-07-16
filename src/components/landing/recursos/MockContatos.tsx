@@ -178,7 +178,7 @@ export default function MockContatos() {
       {CHIPS_SHOW.map((c, i) => (
         <div
           key={i}
-          className="gcanim absolute flex items-start gap-2 rounded-[10px] border border-[color-mix(in_srgb,var(--brand)_40%,transparent)] bg-surface px-3 py-2"
+          className="gcanim absolute flex items-start gap-2 rounded border border-[color-mix(in_srgb,var(--brand)_40%,transparent)] bg-surface px-3 py-2"
           style={{
             left: c.x,
             top: c.y,

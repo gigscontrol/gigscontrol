@@ -191,7 +191,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-control px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
           <input
             type="text"
@@ -434,7 +434,7 @@ function StatusCard({
         <div className="text-2xl font-bold tabular-nums mt-0.5">{value}</div>
       </div>
       <div
-        className="h-8 w-8 rounded-md flex items-center justify-center flex-shrink-0"
+        className="h-8 w-8 rounded-chip flex items-center justify-center flex-shrink-0"
         style={{
           backgroundColor: active ? `${color}20` : "var(--bg-elevated)",
           color,

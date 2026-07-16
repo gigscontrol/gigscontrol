@@ -131,13 +131,13 @@ export default function LandingNav() {
           </span>
           <Link
             href="/login"
-            className="whitespace-nowrap rounded-[9px] border border-[color:var(--border-strong)] bg-surface px-3 py-2 text-[12px] font-semibold text-primary sm:px-[18px] sm:py-[9px] sm:text-[13px]"
+            className="whitespace-nowrap rounded-control border border-[color:var(--border-strong)] bg-surface px-3 py-2 text-[12px] font-semibold text-primary sm:px-[18px] sm:py-[9px] sm:text-[13px]"
           >
             {t("Entrar")}
           </Link>
           <Link
             href="/signup"
-            className="whitespace-nowrap rounded-[9px] border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
+            className="whitespace-nowrap rounded-control border border-[var(--brand)] px-3 py-2 text-[12px] font-bold text-white sm:px-[18px] sm:py-[9px] sm:text-[13px]"
             style={{ backgroundColor: "var(--brand)" }}
           >
             {t("Começar")}

@@ -38,11 +38,11 @@ export default function PlanosCarrossel() {
 
       {/* toggle mensal/anual */}
       <div className="mb-[22px] flex flex-col items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-[10px] border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface p-1">
+        <div className="inline-flex items-center gap-1 rounded border border-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] bg-surface p-1">
           <button
             type="button"
             onClick={() => setCiclo("mensal")}
-            className="rounded-[7px] px-[18px] py-2 text-[12.5px] font-semibold transition-colors"
+            className="rounded-control px-[18px] py-2 text-[12.5px] font-semibold transition-colors"
             style={
               ciclo === "mensal"
                 ? { backgroundColor: "var(--brand)", color: "#fff" }
@@ -54,7 +54,7 @@ export default function PlanosCarrossel() {
           <button
             type="button"
             onClick={() => setCiclo("anual")}
-            className="inline-flex items-center gap-[7px] rounded-[7px] px-[18px] py-2 text-[12.5px] font-bold transition-colors"
+            className="inline-flex items-center gap-[7px] rounded-control px-[18px] py-2 text-[12.5px] font-bold transition-colors"
             style={
               ciclo === "anual"
                 ? { backgroundColor: "var(--brand)", color: "#fff" }
@@ -94,7 +94,7 @@ export default function PlanosCarrossel() {
 
       {/* faixa 50+ artistas */}
       <div
-        className="gcrv mx-auto mt-[26px] flex max-w-[1044px] flex-wrap items-center gap-5 rounded-[14px] border border-[color-mix(in_srgb,var(--brand)_28%,transparent)] px-[26px] py-[22px]"
+        className="gcrv mx-auto mt-[26px] flex max-w-[1044px] flex-wrap items-center gap-5 rounded-lg border border-[color-mix(in_srgb,var(--brand)_28%,transparent)] px-[26px] py-[22px]"
         style={{
           background:
             "linear-gradient(120deg, color-mix(in srgb, var(--brand) 10%, transparent), color-mix(in srgb, var(--mock-window) 35%, transparent))",
@@ -112,7 +112,7 @@ export default function PlanosCarrossel() {
         </div>
         <a
           href="mailto:contato@gigscontrol.com.br"
-          className="whitespace-nowrap rounded-[10px] px-[22px] py-3 text-[13.5px] font-bold text-white"
+          className="whitespace-nowrap rounded px-[22px] py-3 text-[13.5px] font-bold text-white"
           style={{ backgroundColor: "var(--brand)" }}
         >
           {t("Fale com a gente")}

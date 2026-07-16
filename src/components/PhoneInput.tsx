@@ -96,7 +96,7 @@ export default function PhoneInput({
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-1 z-[100] bg-surface border border-border rounded-md shadow-xl w-full sm:w-[380px] flex flex-col"
+          className="absolute top-full left-0 mt-1 z-[100] bg-surface border border-border rounded-lg shadow-xl w-full sm:w-[380px] flex flex-col"
           style={{ boxShadow: "0 12px 30px var(--shadow-color)", maxHeight: 380 }}
         >
           <div className="p-2 border-b border-border flex-shrink-0">

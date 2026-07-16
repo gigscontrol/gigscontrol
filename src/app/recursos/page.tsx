@@ -281,7 +281,7 @@ export default function RecursosPage() {
           </div>
           <Link
             href="/signup"
-            className="mt-1 inline-flex items-center gap-2 rounded-[10px] px-5 py-3 text-sm font-bold text-white"
+            className="mt-1 inline-flex items-center gap-2 rounded px-5 py-3 text-sm font-bold text-white"
             style={{ backgroundColor: "var(--brand)" }}
           >
             {t("Começar agora")}

@@ -964,7 +964,7 @@ export default function EditorModelo({
                 {menuAberto && (
                   <div
                     role="menu"
-                    className="absolute left-0 top-full mt-1 z-10 min-w-[200px] rounded-md border p-1 shadow-lg"
+                    className="absolute left-0 top-full mt-1 z-10 min-w-[200px] rounded-lg border p-1 shadow-lg"
                     style={{
                       backgroundColor: "var(--bg-surface)",
                       borderColor: "var(--border-color)",

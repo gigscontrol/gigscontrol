@@ -116,7 +116,7 @@ function BotaoPagar({
     <button
       type="submit"
       disabled={desabilitado}
-      className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-md w-full mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="btn-primary inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-control w-full mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {processando ? (
         <Loader2 size={14} className="animate-spin" />

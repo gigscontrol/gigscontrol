@@ -52,10 +52,10 @@ function Dot({ delay }: { delay: number }) {
 function CardPerfil({ perfil }: { perfil: (typeof PERFIS)[number] }) {
   const t = useT();
   return (
-    <div className="flex-1 rounded-[14px] border border-[var(--border-color)] bg-[var(--mock-window)] px-5 py-[18px]">
+    <div className="flex-1 rounded-lg border border-[var(--border-color)] bg-[var(--mock-window)] px-5 py-[18px]">
       <div className="mb-[9px] flex items-center gap-[11px]">
         <span
-          className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] border border-[color-mix(in_srgb,var(--brand)_28%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-lg"
+          className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded border border-[color-mix(in_srgb,var(--brand)_28%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-lg"
           aria-hidden
         >
           {perfil.emoji}
