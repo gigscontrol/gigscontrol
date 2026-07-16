@@ -2,8 +2,8 @@
 
 // Página /recursos — vitrine dos 6 módulos (tela 13 do guia).
 // Copy verbatim do dono; cards espelham o SolucoesGrid da landing.
-// Sem hero próprio: a página abre direto na seção 01 (Agenda), cujo título é o
-// h1 da página; ritmo/margem espelham as seções do /inicio.
+// Hero mínimo no topo (h1 + resumo de categoria p/ SEO); cada módulo é h2.
+// Ritmo/margem espelham as seções do /inicio.
 
 import { useEffect } from "react";
 import Link from "next/link";
@@ -138,8 +138,8 @@ function SecaoModulo({
 }) {
   const t = useT();
   const par = indice % 2 === 0;
-  // 1ª seção vira o h1 da página (sem hero); demais ficam h2.
-  const Titulo = (indice === 0 ? "h1" : "h2") as "h1" | "h2";
+  // Todos os módulos são h2 — o h1 da página fica no hero (ver RecursosPage).
+  const Titulo = "h2" as const;
   return (
     <section
       className={`grid items-center gap-6 px-6 py-[64px] sm:px-12 lg:py-[88px] ${
@@ -237,8 +237,25 @@ export default function RecursosPage() {
     <div className="min-h-screen bg-main text-primary">
       <LandingNav />
 
-      {/* SEIS MÓDULOS — seções zigue-zague (copy + mockup estático). Sem hero:
-          a seção 01 abre a página e seu título é o h1 (ver SecaoModulo). */}
+      {/* HERO — h1 da página + resumo com termos de categoria (SEO). */}
+      <section className="px-6 pt-[56px] pb-[24px] text-center sm:px-12 lg:pt-[80px]">
+        <div className="mx-auto flex max-w-[760px] flex-col items-center gap-4">
+          <BadgeSecao>{t("Recursos")}</BadgeSecao>
+          <h1 className="gcrv font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[42px] xl:text-[46px]">
+            {t("Recursos: tudo que sua agência precisa num só painel")}
+          </h1>
+          <p
+            className="gcrv max-w-[620px] text-[15px] leading-[1.6] text-secondary xl:text-base"
+            style={{ transitionDelay: "80ms" }}
+          >
+            {t(
+              "Do primeiro contato ao cachê na conta: o Gigs Control reúne agenda de shows, orçamentos, contratos com assinatura digital, financeiro e CRM de contratantes no mesmo sistema de gestão para agências de artistas e DJs."
+            )}
+          </p>
+        </div>
+      </section>
+
+      {/* SEIS MÓDULOS — seções zigue-zague (copy + mockup estático). */}
       <div id="modulos" className="scroll-mt-[72px]">
         {SECOES.map((s, i) => (
           <SecaoModulo key={s.nome} indice={i} {...s} />
@@ -259,7 +276,7 @@ export default function RecursosPage() {
           </div>
           <div className="max-w-[440px] text-[13px] leading-[1.55] text-secondary">
             {t(
-              "Seis módulos que conversam entre si, do primeiro contato ao cachê na conta."
+              "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar."
             )}
           </div>
           <Link

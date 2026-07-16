@@ -67,7 +67,7 @@ export default function PlanosPage() {
           {t("Voltar")}
         </Link>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          {t("Um plano para cada operação")}
+          {t("Planos e preços do Gigs Control")}
         </h1>
         <p className="mt-3 text-secondary text-sm max-w-lg mx-auto">
           {t("Do artista que gere a própria carreira à agência com 50 nomes. Todos os planos incluem agenda, vendas, financeiro e contatos.")}

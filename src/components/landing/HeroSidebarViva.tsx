@@ -313,16 +313,16 @@ export default function HeroSidebarViva() {
           className="gcrv font-display text-4xl font-extrabold leading-[1.06] tracking-[-0.03em] md:text-[40px] xl:text-[46px]"
           style={{ transitionDelay: "80ms" }}
         >
-          {t("Grandes carreiras merecem")}
+          {t("Gestão profissional para")}
           <br />
-          <Grad>{t("uma gestão profissional")}</Grad>.
+          <Grad>{t("agências de artistas e DJs")}</Grad>.
         </h1>
         <p
           className="gcrv max-w-[470px] text-[15px] leading-[1.6] text-secondary xl:text-base"
           style={{ transitionDelay: "160ms" }}
         >
           {t(
-            "Centralize agenda, orçamentos, vendas, contratos, clientes, artistas e equipe em uma única plataforma. Tenha controle total da operação e tome decisões com muito mais segurança."
+            "O sistema de gestão completo para agências de artistas e DJs: centralize agenda, orçamentos, vendas, contratos, clientes, artistas e equipe num só CRM e tenha controle total da operação, com decisões muito mais seguras."
           )}
         </p>
         <div className="gcrv" style={{ transitionDelay: "240ms" }}>

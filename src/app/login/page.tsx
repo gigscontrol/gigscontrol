@@ -67,6 +67,8 @@ function LoginInner() {
 
   return (
     <>
+      {/* h1 semântico p/ SEO (invisível) — o título visível vem do AuthShell */}
+      <h1 className="sr-only">{t("Entrar no Gigs Control")}</h1>
       {/* Mesmo menu de topo da landing (links viram /#seção; logo → home) */}
       <LandingNav />
       <AuthShell

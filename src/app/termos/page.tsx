@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Termos de uso",
+  description:
+    "Termos de uso do Gigs Control — sistema de gestão para agências de artistas e DJs.",
+  alternates: { canonical: "/termos" },
+};
 
 /**
  * Placeholder de Termos de Uso.
