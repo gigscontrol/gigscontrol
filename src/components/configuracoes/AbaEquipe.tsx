@@ -387,6 +387,9 @@ export default function AbaEquipe() {
           <div className="flex-1 flex items-center gap-2 overflow-x-auto py-1">
             {filaChips.map((u) => {
               const info = LABELS_PAPEL_EQUIPE[u.papel];
+              // Avatar = cor de IDENTIDADE do membro (profiles.cor); cai na cor
+              // do papel só se ele nunca escolheu uma. Igual à topbar dele.
+              const corMembro = u.cor ?? info?.cor;
               const ativoChip = u.id === selecionadoId;
               const bloqueado = !u.ativo;
               return (
@@ -409,9 +412,9 @@ export default function AbaEquipe() {
                       style={{
                         background: bloqueado
                           ? "var(--border-strong)"
-                          : `linear-gradient(135deg, ${info?.cor ?? "var(--border-strong)"}, ${info?.cor ?? "var(--border-strong)"}99)`,
+                          : `linear-gradient(135deg, ${corMembro ?? "var(--border-strong)"}, ${corMembro ?? "var(--border-strong)"}99)`,
                         boxShadow: ativoChip
-                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${info?.cor ?? "var(--border-strong)"}`
+                          ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${corMembro ?? "var(--border-strong)"}`
                           : undefined,
                       }}
                     >
@@ -536,7 +539,7 @@ export default function AbaEquipe() {
                 style={{
                   background: !selecionado.ativo
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
+                    : `linear-gradient(135deg, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
                 }}
               >
                 {selecionado.nome.charAt(0).toUpperCase()}

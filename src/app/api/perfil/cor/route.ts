@@ -43,10 +43,22 @@ export async function PATCH(request: Request) {
   }
 
   const admin = criarClienteAdmin();
-  const { error } = await admin
-    .from("profiles")
-    .update({ cor: parsed.data.cor })
-    .eq("id", r.sessao.userId);
+
+  // Cor de IDENTIDADE. Pro ARTISTA grava em `artists.cor` (a mesma cor da
+  // Agenda/roster/avatar — muda em TODO lugar, igual quando o admin edita em
+  // AbaArtistas). Pra equipe/admin fica em `profiles.cor`. Anti-IDOR: sempre a
+  // PRÓPRIA linha (artistaId/userId da sessão), nunca de outro.
+  const ehArtista = r.sessao.papel === "artista" && r.sessao.artistaId;
+  const { error } = ehArtista
+    ? await admin
+        .from("artists")
+        .update({ cor: parsed.data.cor })
+        .eq("id", r.sessao.artistaId as string)
+        .eq("workspace_id", r.sessao.workspaceId)
+    : await admin
+        .from("profiles")
+        .update({ cor: parsed.data.cor })
+        .eq("id", r.sessao.userId);
   if (error) {
     return NextResponse.json({ erro: error.message }, { status: 500 });
   }

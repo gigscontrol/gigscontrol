@@ -55,6 +55,12 @@ export default function Topbar({
   const usuario = sessao?.usuario;
   const workspace = sessao?.workspace;
   const papel = usuario ? LABELS_PAPEL[usuario.papel] : null;
+  // Cor do AVATAR (iniciais) = cor de IDENTIDADE do usuário: pro artista é a
+  // cor do artista (artists.cor); pra equipe/admin é a cor pessoal do perfil
+  // (profiles.cor). Cai na cor do papel só se ninguém definiu uma. É a mesma
+  // cor mostrada no resto do app (Agenda, roster) — muda em todo lugar quando
+  // o admin OU o próprio usuário troca.
+  const corIdentidade = usuario?.cor ?? papel?.cor ?? null;
   const plano = workspace ? getPlano(workspace.plano) : null;
   const isAdmin = usuario?.papel === "admin";
 
@@ -173,8 +179,8 @@ export default function Topbar({
             <span
               className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-primary"
               style={{
-                background: papel
-                  ? `linear-gradient(135deg, ${papel.cor}, ${papel.cor}99)`
+                background: corIdentidade
+                  ? `linear-gradient(135deg, ${corIdentidade}, ${corIdentidade}99)`
                   : "var(--bg-elevated)",
               }}
             >
@@ -197,8 +203,8 @@ export default function Topbar({
                   <span
                     className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-primary flex-shrink-0"
                     style={{
-                      background: papel
-                        ? `linear-gradient(135deg, ${papel.cor}, ${papel.cor}99)`
+                      background: corIdentidade
+                        ? `linear-gradient(135deg, ${corIdentidade}, ${corIdentidade}99)`
                         : "var(--bg-elevated)",
                     }}
                   >

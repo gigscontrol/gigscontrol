@@ -129,28 +129,22 @@ export async function GET() {
   if (r.sessao.papel === "artista" && r.sessao.artistaId) {
     // Anti-IDOR: escopa por workspace_id. O artista lê só o PRÓPRIO row, e só
     // se ele pertence ao seu tenant (o service_role ignora o RLS).
-    const [{ data: art, error }, { data: prof }] = await Promise.all([
-      admin
-        .from("artists")
-        .select(
-          `nome_legal, pais, documento_tipo, documento, telefone, data_nascimento, cidade_id, razao_social, endereco, ${CIDADE_EMBED}`
-        )
-        .eq("id", r.sessao.artistaId)
-        .eq("workspace_id", r.sessao.workspaceId)
-        .maybeSingle<LinhaPerfil>(),
-      // Cor do avatar mora em profiles mesmo pro artista.
-      admin
-        .from("profiles")
-        .select("cor")
-        .eq("id", r.sessao.userId)
-        .maybeSingle<{ cor: string | null }>(),
-    ]);
+    // Cor de identidade do artista mora em `artists.cor` (a mesma da Agenda/
+    // roster) — o seletor "Cor do meu avatar" mostra e edita ESSA cor.
+    const { data: art, error } = await admin
+      .from("artists")
+      .select(
+        `nome_legal, pais, documento_tipo, documento, telefone, data_nascimento, cidade_id, razao_social, endereco, cor, ${CIDADE_EMBED}`
+      )
+      .eq("id", r.sessao.artistaId)
+      .eq("workspace_id", r.sessao.workspaceId)
+      .maybeSingle<LinhaPerfil & { cor: string | null }>();
     if (error) {
       return NextResponse.json({ erro: error.message }, { status: 500 });
     }
     // O apelido mora no profile (não em artists).
     return NextResponse.json({
-      perfil: montarPerfil(r.sessao.userNome ?? "", art, prof?.cor ?? null),
+      perfil: montarPerfil(r.sessao.userNome ?? "", art, art?.cor ?? null),
     });
   }
 

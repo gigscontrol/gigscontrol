@@ -107,6 +107,8 @@ type ProfileRow = {
   papel: Papel;
   is_super_admin: boolean;
   artista_id: string | null;
+  /** Cor pessoal do avatar (equipe/admin). Pro artista a identidade é artists.cor. */
+  cor: string | null;
   escopo_vendedor: Usuario["escopoVendedor"] | null;
   status: string;
   deletado_em: string | null;
@@ -160,6 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         artistaId: profile.artista_id
           ? (profile.artista_id as unknown as Usuario["artistaId"])
           : undefined,
+        // Cor de identidade: profiles.cor por padrão (equipe/admin). Pro artista
+        // é sobrescrita pela cor do artista (artists.cor) logo abaixo.
+        cor: profile.cor ?? null,
         escopoVendedor: profile.escopo_vendedor ?? undefined,
         criadoEm: "",
       };
@@ -216,10 +221,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile.papel === "artista" && profile.artista_id) {
         const { data: art } = await supabase
           .from("artists")
-          .select("privacidade")
+          .select("privacidade, cor")
           .eq("id", profile.artista_id)
-          .maybeSingle<{ privacidade: unknown }>();
+          .maybeSingle<{ privacidade: unknown; cor: string | null }>();
         privacidade = privacidadeValida(art?.privacidade ?? null);
+        // A identidade do ARTISTA é a cor do artista (artists.cor) — a mesma da
+        // Agenda/roster. Sobrescreve a cor do perfil pro avatar bater com tudo.
+        if (art?.cor) usuario.cor = art.cor;
       }
 
       return { tipo, usuario, workspace, vinculos, privacidade };
