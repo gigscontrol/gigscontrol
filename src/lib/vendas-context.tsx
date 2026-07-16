@@ -58,8 +58,9 @@ export type NovaVendaInput = {
   capacidadePublico?: number;
   enderecoLocal: string;
   dataShow: string;
-  horario: string;
-  horarioFim?: string;
+  /** "HH:mm" 24h, ou null quando o horário fica "a definir". */
+  horario: string | null;
+  horarioFim?: string | null;
   cidadeId: string;
   casaId?: string;
 
@@ -264,8 +265,10 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         capacidade_publico: input.capacidadePublico ?? null,
         endereco_local: input.enderecoLocal,
         data_show: input.dataShow,
-        horario: input.horario,
-        horario_fim: input.horarioFim ?? null,
+        // "" (horário a definir) e null viram null — a schema aceita null,
+        // mas rejeita string vazia (regex HH:mm).
+        horario: input.horario || null,
+        horario_fim: input.horarioFim || null,
         cidade_id: input.cidadeId,
         casa_id: input.casaId ?? null,
         artist_id: input.artistaId || null,

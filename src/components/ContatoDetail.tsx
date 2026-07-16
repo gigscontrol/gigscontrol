@@ -164,7 +164,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                           <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
-                          {show.venue} · {show.location} · {t("Dia {n}", { n: show.dayId })} · {show.time}
+                          {show.venue} · {show.location} · {t("Dia {n}", { n: show.dayId })} · {show.time || t("A definir")}
                         </div>
                       </div>
                       {show.valor && (
@@ -270,7 +270,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                           <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
                         </div>
                         <div className="text-xs text-muted truncate">
-                          {t("Dia {n}", { n: show.dayId })} · {show.time}
+                          {t("Dia {n}", { n: show.dayId })} · {show.time || t("A definir")}
                         </div>
                       </div>
                       {show.valor && (

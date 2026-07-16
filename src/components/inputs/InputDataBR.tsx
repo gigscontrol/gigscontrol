@@ -23,6 +23,12 @@ type Props = Omit<
    * completa/válida. Útil pra binding direto no estado do form.
    */
   onChange: (iso: string) => void;
+  /**
+   * "DD/MM" — pré-preenche o display com dia/mês pra completar SÓ o ano
+   * (colagem de lista do WhatsApp que veio sem ano). Só aplica enquanto
+   * não há data completa (`value` vazio).
+   */
+  sugestaoParcial?: string;
 };
 
 /**
@@ -35,7 +41,7 @@ type Props = Omit<
  *   completa e é válida; enquanto digita parcial, chama onChange("")).
  */
 const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
-  { value, onChange, className = "", placeholder, ...rest },
+  { value, onChange, className = "", placeholder, sugestaoParcial, ...rest },
   ref
 ) {
   // Display string interno — segue sendo digitado letra a letra,
@@ -54,6 +60,15 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
       return ext;
     });
   }, [value]);
+
+  // Sugestão parcial ("DD/MM" da colagem sem ano): mostra "DD/MM/" pro
+  // usuário digitar só o ano. Não mexe se já existe data completa.
+  useEffect(() => {
+    if (!sugestaoParcial || value) return;
+    setDisplayed(mascararDataBR(`${sugestaoParcial}/`));
+    // `value` fora das deps de propósito: só reage à CHEGADA da sugestão.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sugestaoParcial]);
 
   return (
     <input

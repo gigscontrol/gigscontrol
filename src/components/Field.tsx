@@ -57,7 +57,7 @@ export function TextArea({
     <textarea
       {...rest}
       placeholder={placeholder ? t(placeholder) : placeholder}
-      className={`${INPUT_BASE} resize-none min-h-[72px] ${className}`}
+      className={`${INPUT_BASE} w-full resize-none min-h-[72px] ${className}`}
     />
   );
 }

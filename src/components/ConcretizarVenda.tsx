@@ -44,6 +44,8 @@ import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import { parseFechamento } from "@/lib/parseFechamento";
+import { parseValorBR } from "@/lib/valor";
+import { itensDoRider } from "@/lib/rider";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
@@ -152,6 +154,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     det?.enderecoLocal ?? casaOrc?.endereco ?? ""
   );
   const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? dataInicial ?? "");
+  // "DD/MM" vindo da colagem SEM ano — pré-preenche o campo Data pro vendedor
+  // completar só o ano.
+  const [dataParcialColada, setDataParcialColada] = useState("");
 
   // Horário início e fim
   const [horarioInicio, setHorarioInicio] = useState(
@@ -161,6 +166,22 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const [terminoDiaSeguinte, setTerminoDiaSeguinte] = useState(
     det?.terminoDiaSeguinte ?? false
   );
+  // "Horário a definir" — nasce desmarcado (venda de orçamento com horário
+  // continua com horário). Marcado: limpa/desabilita os dois inputs, pula a
+  // validação de obrigatoriedade e envia horário null no payload.
+  const [horarioADefinir, setHorarioADefinir] = useState(false);
+  function toggleHorarioADefinir() {
+    setHorarioADefinir((prev) => {
+      const novo = !prev;
+      if (novo) {
+        setHorarioInicio("");
+        setHorarioFim("");
+        setDuracaoOverride(false);
+        setErrors((e) => ({ ...e, horarioInicio: "", horarioFim: "" }));
+      }
+      return novo;
+    });
+  }
 
   // Cidade — pré-popula a partir do orçamento se ele tiver ibge_id
   const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(
@@ -218,7 +239,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const [salvando, setSalvando] = useState(false);
 
   // ------- Pagamento / Parcelas -------
-  const cacheNumAtual = parseFloat(cache.replace(",", ".")) || 0;
+  const cacheNumAtual = parseValorBR(cache) || 0;
   // Modo de pagamento: "padrao" = 1 parcela 100% na data do show | "detalhado" = parcelas customizadas
   const [modoPagamento, setModoPagamento] = useState<"padrao" | "detalhado">("padrao");
   const [modoParcela, setModoParcela] = useState<ModoParcela>("percentual");
@@ -298,6 +319,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const showAutoBadge = (campo: string): boolean =>
     autoFilled.has(campo) && !editado.has(campo);
 
+  // Venda DIRETA (sem orçamento): escolher/trocar o artista re-monta
+  // Camarim/Efeitos a partir do rider DELE (sem rider → catálogo padrão).
+  // Hotel fica no catálogo fixo. No fluxo vindo de orçamento os itens do
+  // orçamento mandam, então não sobrescrevemos.
+  function aplicarRiderVendaDireta(novoArtistaId: string) {
+    if (orc) return;
+    const a = artistas.find((d) => d.id === novoArtistaId);
+    setCamarim(itensDoRider(a?.riderCamarim, CATALOGO_CAMARIM));
+    setEfeitos(itensDoRider(a?.riderEfeitos, CATALOGO_EFEITOS));
+  }
+
   // ------- Line-Up handlers -------
   function adicionarLineUp() {
     const t = novoLineUp.trim();
@@ -329,8 +361,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     if (!nomeLocal.trim()) errs.nomeLocal = t("Nome do local obrigatório");
     if (!enderecoLocal.trim()) errs.enderecoLocal = t("Endereço do local obrigatório");
     if (!dataShow) errs.dataShow = t("Data obrigatória");
-    if (!horarioInicio) errs.horarioInicio = t("Horário de início obrigatório");
-    if (!horarioFim) errs.horarioFim = t("Horário de fim obrigatório");
+    if (!horarioADefinir) {
+      if (!horarioInicio) errs.horarioInicio = t("Horário de início obrigatório");
+      if (!horarioFim) errs.horarioFim = t("Horário de fim obrigatório");
+    }
     if (!cidadeIbge) errs.cidade = t("Cidade obrigatória");
 
     // artistaId precisa apontar pra um artista ATIVO. Não basta ser != null
@@ -342,7 +376,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         ? t("Selecione o artista atual da agência (o original do orçamento foi removido).")
         : t("Selecione o artista da agência");
     }
-    const cacheNum = parseFloat(cache.replace(",", "."));
+    const cacheNum = parseValorBR(cache);
     if (!cache || isNaN(cacheNum) || cacheNum <= 0) errs.cache = t("Cachê obrigatório");
 
     // Parcelas — só valida no modo detalhado.
@@ -394,7 +428,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     // Re-narrowing pro TS (o guard real está em handleSubmit, mas o
     // type-checker não atravessa a fronteira de função).
     if (artistaId === null || !cidadeIbge) return;
-    const cacheNum = parseFloat(cache.replace(",", "."));
+    const cacheNum = parseValorBR(cache);
     const telefoneE164 = `${country.ddi}${telDigits.replace(/\D/g, "")}`;
 
     // Resolve a cidade IBGE → UUID local (cria se ainda não existe)
@@ -470,8 +504,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       capacidadePublico: capacidadePublico ? Number(capacidadePublico) : undefined,
       enderecoLocal,
       dataShow,
-      horario: horarioInicio,
-      horarioFim,
+      horario: horarioADefinir ? null : horarioInicio,
+      horarioFim: horarioADefinir ? null : horarioFim,
       cidadeId: cidadeIdResolvido,
       casaId: casaOrc?.id,
       artistaId,
@@ -532,6 +566,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     set(campos.capacidadePublico, setCapacidadePublico, "Capacidade");
     set(campos.enderecoLocal, setEnderecoLocal, "Endereço do evento");
     set(campos.dataShow, setDataShow, "Data");
+    // Data sem ano ("17/07"): pré-preenche dia/mês no campo e avisa que falta
+    // o ano. Colagem posterior COM ano completo substitui normalmente.
+    if (campos.dataShow) {
+      setDataParcialColada("");
+    } else if (campos.dataShowParcial) {
+      setDataParcialColada(campos.dataShowParcial);
+      feitos.push("Data (sem ano)");
+      avisos.push(
+        `A data veio sem o ano (${campos.dataShowParcial}) — complete o ano no campo "Data do evento".`
+      );
+    }
     set(campos.horario, setHorarioInicio, "Horário");
     if (campos.horarioFim) setHorarioFim(campos.horarioFim);
     if (campos.lineUp && campos.lineUp.length) {
@@ -601,6 +646,115 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </div>
         </div>
       )}
+
+      {/* Lista de fechamento pro contratante — no TOPO: cola a resposta dele
+          e o formulário se auto-preenche. Reflete o formulário atual. */}
+      {(() => {
+        const dadosFechamento = {
+          contratanteNome,
+          contratanteEmail,
+          contratanteTelefone: telDigits.replace(/\D/g, "")
+            ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
+            : "",
+          contratanteDocumento,
+          contratanteEndereco,
+          nomeEvento,
+          eventoInstagram,
+          nomeLocal,
+          capacidadePublico: capacidadePublico ? Number(capacidadePublico) : undefined,
+          enderecoLocal,
+          dataShow,
+          horario: horarioInicio,
+          horarioFim,
+          cache: cache ? parseValorBR(cache) : undefined,
+          lineUp,
+          efeitos,
+          camarim,
+          hotel,
+          logistica,
+        };
+        const texto = textoFechamentoVenda(dadosFechamento);
+        return (
+          <div
+            className="card mb-4 flex items-start gap-3"
+            style={{ borderColor: "var(--success)", backgroundColor: "var(--success-weak)" }}
+          >
+            <MessageCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-secondary">
+                {t("Lista de fechamento pro contratante — copie e mande no WhatsApp pra ele completar só o que falta (e-mail, CPF, endereço…).")}
+              </div>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(texto);
+                      setCopiadoWA(true);
+                      setTimeout(() => setCopiadoWA(false), 2500);
+                    } catch {
+                      /* clipboard indisponível */
+                    }
+                  }}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                >
+                  {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewWA((v) => !v)}
+                  className="btn-ghost text-xs"
+                >
+                  {previewWA ? t("Ocultar prévia") : t("Ver prévia")}
+                </button>
+                <button
+                  type="button"
+                  onClick={aplicarColagem}
+                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                >
+                  <ClipboardPaste size={14} />
+                  {t("Colar resposta e preencher")}
+                </button>
+              </div>
+              {previewWA && (
+                <textarea
+                  readOnly
+                  value={texto}
+                  rows={14}
+                  className="w-full mt-2 bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
+                />
+              )}
+
+              {resultadoColagem && (
+                <div className="mt-2 flex flex-col gap-1 text-xs">
+                  {resultadoColagem.erro ? (
+                    <div style={{ color: "var(--danger)" }}>{resultadoColagem.erro}</div>
+                  ) : (
+                    <>
+                      {resultadoColagem.preenchidos.length > 0 ? (
+                        <div style={{ color: "var(--success)" }}>
+                          ✓ {t("Preenchi:")} {resultadoColagem.preenchidos.join(", ")}.
+                        </div>
+                      ) : (
+                        <div className="text-muted">
+                          {t("Não encontrei campos reconhecíveis no que estava copiado.")}
+                        </div>
+                      )}
+                      {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].length > 0 && (
+                        <div style={{ color: "var(--warning)" }}>
+                          ⚠ {t("Não preenchi (confira/preencha manual):")}{" "}
+                          {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].join(", ")}.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ============ 🖋️ INFORMAÇÕES DO CONTRATANTE ============ */}
       <SectionCard icon={<User size={16} />} title={t("Informações do Contratante")} accent={accent}>
@@ -791,6 +945,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           >
             <InputDataBR
               value={dataShow}
+              sugestaoParcial={dataParcialColada}
               onChange={(iso) => {
                 setDataShow(iso);
                 marcarEditado("dataShow");
@@ -838,33 +993,85 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             </span>
           </div>
 
-          <FieldWithAuto
-            label="Início da apresentação"
-            required
-            error={errors.horarioInicio}
-            showAuto={showAutoBadge("horarioInicio")}
-          >
-            <InputHora
-              value={horarioInicio}
-              accent={accent}
-              onChange={(v) => {
-                setHorarioInicio(v);
-                marcarEditado("horarioInicio");
-                setDuracaoOverride(false);
-              }}
-            />
-          </FieldWithAuto>
+          {/* Horário da apresentação — segmentado no MESMO padrão do
+              "Data da apresentação" logo acima. "A definir" esconde os
+              campos de hora e salva sem horário (pendência no show).
+              No desktop, seletor + Início + Término dividem UMA linha. */}
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">
+              {t("Horário da apresentação")}
+            </span>
+            <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+              {[
+                { v: false, label: "Definir horário" },
+                { v: true, label: "A definir" },
+              ].map((opt, i) => {
+                const ativo = horarioADefinir === opt.v;
+                return (
+                  <button
+                    key={String(opt.v)}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => {
+                      if (horarioADefinir !== opt.v) toggleHorarioADefinir();
+                    }}
+                    className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                      i === 1 ? "border-l border-border" : ""
+                    }`}
+                    style={
+                      ativo
+                        ? {
+                            color: accent,
+                            background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                          }
+                        : { color: "var(--text-muted)" }
+                    }
+                  >
+                    {t(opt.label)}
+                  </button>
+                );
+              })}
+            </div>
+            {horarioADefinir && (
+              <span className="text-xs text-muted">
+                {t("Você define depois — o show fica com a pendência de horário.")}
+              </span>
+            )}
+          </div>
 
-          <Field label="Término da apresentação" required error={errors.horarioFim}>
-            <InputHora
-              value={horarioFim}
-              accent={accent}
-              onChange={(v) => {
-                setHorarioFim(v);
-                setDuracaoOverride(false);
-              }}
-            />
-          </Field>
+          {!horarioADefinir && (
+            <>
+              <FieldWithAuto
+                label="Início da apresentação"
+                required
+                error={errors.horarioInicio}
+                showAuto={showAutoBadge("horarioInicio")}
+              >
+                <InputHora
+                  value={horarioInicio}
+                  accent={accent}
+                  onChange={(v) => {
+                    setHorarioInicio(v);
+                    marcarEditado("horarioInicio");
+                    setDuracaoOverride(false);
+                  }}
+                />
+              </FieldWithAuto>
+
+              <Field label="Término da apresentação" required error={errors.horarioFim}>
+                <InputHora
+                  value={horarioFim}
+                  accent={accent}
+                  onChange={(v) => {
+                    setHorarioFim(v);
+                    setDuracaoOverride(false);
+                  }}
+                />
+              </Field>
+            </>
+          )}
+          </div>
 
           {duracaoAuto && (
             <p className="text-xs text-muted sm:col-span-2 -mt-1">
@@ -946,6 +1153,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
                     onClick={() => {
                       setDjId(d.id);
                       marcarEditado("artistaId");
+                      aplicarRiderVendaDireta(d.id);
                     }}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
                     style={{
@@ -1035,7 +1243,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </div>
 
         {/* Cachê + Duração */}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-4 items-end mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-end mt-5">
           <FieldWithAuto
             label="Cachê"
             required
@@ -1054,47 +1262,51 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             />
           </FieldWithAuto>
 
-          <Field label="Duração do show">
-            <div className="flex items-center gap-1">
-              <TextInput
-                type="number"
-                min={0}
-                max={12}
-                value={duracaoHoras}
-                onChange={(e) => {
-                  setDuracaoHorasManual(Math.max(0, Math.min(12, Number(e.target.value) || 0)));
-                  setDuracaoOverride(true);
-                }}
-                className="w-14 text-right tabular-nums"
-              />
-              <span className="text-xs text-muted">h</span>
-            </div>
-          </Field>
+          {/* Horas + minutos numa célula só → sempre na mesma linha,
+              inclusive no mobile (o grid da linha é 1 coluna lá). */}
+          <div className="flex items-end gap-3">
+            <Field label="Duração do show">
+              <div className="flex items-center gap-1">
+                <TextInput
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={duracaoHoras}
+                  onChange={(e) => {
+                    setDuracaoHorasManual(Math.max(0, Math.min(12, Number(e.target.value) || 0)));
+                    setDuracaoOverride(true);
+                  }}
+                  className="w-14 text-right tabular-nums"
+                />
+                <span className="text-xs text-muted">h</span>
+              </div>
+            </Field>
 
-          <Field label="&nbsp;">
-            <div className="flex items-center gap-1">
-              <TextInput
-                type="number"
-                min={0}
-                max={59}
-                step={5}
-                value={duracaoMinutos}
-                onChange={(e) => {
-                  setDuracaoMinutosManual(Math.max(0, Math.min(59, Number(e.target.value) || 0)));
-                  setDuracaoOverride(true);
-                }}
-                className="w-14 text-right tabular-nums"
-              />
-              <span className="text-xs text-muted">min</span>
-            </div>
-          </Field>
+            <Field label="&nbsp;">
+              <div className="flex items-center gap-1">
+                <TextInput
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={5}
+                  value={duracaoMinutos}
+                  onChange={(e) => {
+                    setDuracaoMinutosManual(Math.max(0, Math.min(59, Number(e.target.value) || 0)));
+                    setDuracaoOverride(true);
+                  }}
+                  className="w-14 text-right tabular-nums"
+                />
+                <span className="text-xs text-muted">min</span>
+              </div>
+            </Field>
+          </div>
         </div>
 
         {cache && (
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm mt-4 mb-4">
             <span className="text-muted">{t("Cachê:")}</span>{" "}
             <span className="font-bold text-primary tabular-nums">
-              {formatBRL(parseFloat(cache.replace(",", ".")) || 0)}
+              {formatBRL(parseValorBR(cache) || 0)}
             </span>{" "}
             <span className="text-muted">
               {t("por")} {formatarDuracao(duracaoHoras, duracaoMinutos)}
@@ -1110,6 +1322,14 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           </div>
         )}
 
+        {/* Camarim/Efeitos/Hotel/Logística só aparecem com o artista
+            escolhido — os itens vêm do rider DELE (venda direta) ou do
+            orçamento (conversão). */}
+        {artistaId === null ? (
+          <p className="text-xs text-muted mt-4">
+            {t("Selecione o artista para ver camarim, efeitos, hotel e logística.")}
+          </p>
+        ) : (
         <div className="flex flex-col gap-4 mt-4">
           <SubSection
             title={t("Camarim / Consumação")}
@@ -1149,6 +1369,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             showAuto={showAutoBadge("logistica")}
           />
         </div>
+        )}
       </SectionCard>
 
       {/* ============ 💳 FORMA DE PAGAMENTO ============ */}
@@ -1272,119 +1493,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         <TextArea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
+          rows={6}
           placeholder="Notas internas sobre a venda (não aparecem em documentos públicos)"
         />
       </SectionCard>
-
-      {/* Passo 3 — lista de fechamento pro WhatsApp, ACIMA dos botões. Serve pra
-          COLETAR o que falta do contratante (e-mail, CPF, endereço…) antes de
-          concretizar. Reflete o formulário atual. */}
-      {(() => {
-        const dadosFechamento = {
-          contratanteNome,
-          contratanteEmail,
-          contratanteTelefone: telDigits.replace(/\D/g, "")
-            ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
-            : "",
-          contratanteDocumento,
-          contratanteEndereco,
-          nomeEvento,
-          eventoInstagram,
-          nomeLocal,
-          capacidadePublico: capacidadePublico ? Number(capacidadePublico) : undefined,
-          enderecoLocal,
-          dataShow,
-          horario: horarioInicio,
-          horarioFim,
-          cache: cache ? parseFloat(cache.replace(",", ".")) : undefined,
-          lineUp,
-          efeitos,
-          camarim,
-          hotel,
-          logistica,
-        };
-        const texto = textoFechamentoVenda(dadosFechamento);
-        return (
-          <div
-            className="card mb-4 flex items-start gap-3"
-            style={{ borderColor: "var(--success)", backgroundColor: "var(--success-weak)" }}
-          >
-            <MessageCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-secondary">
-                {t("Lista de fechamento pro contratante — copie e mande no WhatsApp pra ele completar só o que falta (e-mail, CPF, endereço…).")}
-              </div>
-              <div className="flex items-center gap-3 mt-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(texto);
-                      setCopiadoWA(true);
-                      setTimeout(() => setCopiadoWA(false), 2500);
-                    } catch {
-                      /* clipboard indisponível */
-                    }
-                  }}
-                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
-                >
-                  {copiadoWA ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                  {copiadoWA ? t("Copiado!") : t("Copiar para WhatsApp")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewWA((v) => !v)}
-                  className="btn-ghost text-xs"
-                >
-                  {previewWA ? t("Ocultar prévia") : t("Ver prévia")}
-                </button>
-                <button
-                  type="button"
-                  onClick={aplicarColagem}
-                  className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
-                >
-                  <ClipboardPaste size={14} />
-                  {t("Colar resposta e preencher")}
-                </button>
-              </div>
-              {previewWA && (
-                <textarea
-                  readOnly
-                  value={texto}
-                  rows={14}
-                  className="w-full mt-2 bg-elevated border border-border rounded-md px-3 py-2 text-xs text-secondary font-sans whitespace-pre-wrap resize-none leading-relaxed"
-                />
-              )}
-
-              {resultadoColagem && (
-                <div className="mt-2 flex flex-col gap-1 text-xs">
-                  {resultadoColagem.erro ? (
-                    <div style={{ color: "var(--danger)" }}>{resultadoColagem.erro}</div>
-                  ) : (
-                    <>
-                      {resultadoColagem.preenchidos.length > 0 ? (
-                        <div style={{ color: "var(--success)" }}>
-                          ✓ {t("Preenchi:")} {resultadoColagem.preenchidos.join(", ")}.
-                        </div>
-                      ) : (
-                        <div className="text-muted">
-                          {t("Não encontrei campos reconhecíveis no que estava copiado.")}
-                        </div>
-                      )}
-                      {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].length > 0 && (
-                        <div style={{ color: "var(--warning)" }}>
-                          ⚠ {t("Não preenchi (confira/preencha manual):")}{" "}
-                          {[...resultadoColagem.naoPreenchidos, ...resultadoColagem.avisos].join(", ")}.
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Ações sticky */}
       <div className="sticky bottom-4 mt-6 flex justify-between items-center gap-2 bg-surface border border-border rounded-lg px-4 py-3 shadow-lg">

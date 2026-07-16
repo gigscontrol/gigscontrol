@@ -21,6 +21,9 @@ export type CamposFechamento = {
   capacidadePublico?: string;
   enderecoLocal?: string;
   dataShow?: string; // YYYY-MM-DD (só quando veio com ano)
+  /** "DD/MM" — a data veio SEM ano ("17/07", "17-07", "17.07"): o form
+   *  pré-preenche dia/mês e o vendedor completa o ano na mão. */
+  dataShowParcial?: string;
   horario?: string; // HH:mm (início)
   horarioFim?: string; // HH:mm (término, quando veio intervalo)
   lineUp?: string[];
@@ -51,6 +54,7 @@ const NOME_AMIGAVEL: Record<ChaveCampo, string> = {
   capacidadePublico: "Capacidade",
   enderecoLocal: "Endereço do evento",
   dataShow: "Data",
+  dataShowParcial: "Data (sem ano)",
   horario: "Horário",
   horarioFim: "Horário",
   lineUp: "Line-Up",
@@ -109,6 +113,26 @@ function classificar(linha: string): Rotulo {
   const setor = SETORES.find((s) => s.nomes.includes(rotuloN));
   if (setor) return { tipo: "setor", nome: setor.nome, catalogo: setor.catalogo, inline };
   return null;
+}
+
+// Linhas do PRÓPRIO template (cabeçalhos de seção + rodapé boilerplate) que
+// NUNCA são valor de campo. Sem isso, um campo deixado em branco "puxa" a
+// linha seguinte como valor — ex.: Endereço vazio pegando "📌 Informações do
+// evento", ou o último campo pegando "OBS: Sua data só será reservada…".
+const FRASES_ESTRUTURAIS = [
+  "informacoes do contratante",
+  "informacoes do evento",
+  "apos o preenchimento",
+  "sua data so sera reservada",
+];
+function ehEstrutural(linha: string): boolean {
+  const l = linha.trim();
+  if (!l) return true;
+  // Cabeçalho de seção começa com emoji/pictograma (🖋️, 📌, …) — nenhum valor
+  // real de campo (nome, endereço, e-mail…) começa assim.
+  if (/^\p{Extended_Pictographic}/u.test(l)) return true;
+  const n = norm(l);
+  return FRASES_ESTRUTURAIS.some((f) => n.includes(f));
 }
 
 /** Dia/mês/ano a partir de vários formatos. `ano` ausente = veio sem ano. */
@@ -191,12 +215,15 @@ export function parseFechamento(texto: string): ResultadoParse {
     if (!naoPreenchidos.includes(nome)) naoPreenchidos.push(nome);
   };
 
-  // Valor de um campo: inline, ou (se vazio) na próxima linha não-rótulo.
+  // Valor de um campo: inline, ou (se vazio) na próxima linha não-rótulo —
+  // desde que ela NÃO seja uma linha estrutural do template (cabeçalho/rodapé).
   const valorDe = (i: number, inline: string): { valor: string; ate: number } => {
     if (inline) return { valor: inline, ate: i };
     let j = i + 1;
     while (j < linhas.length && !linhas[j]) j++;
-    if (j < linhas.length && !classificar(linhas[j])) return { valor: linhas[j], ate: j };
+    if (j < linhas.length && !classificar(linhas[j]) && !ehEstrutural(linhas[j])) {
+      return { valor: linhas[j], ate: j };
+    }
     return { valor: "", ate: i };
   };
 
@@ -213,7 +240,7 @@ export function parseFechamento(texto: string): ResultadoParse {
       for (; j < linhas.length; j++) {
         const l = linhas[j];
         if (!l) continue;
-        if (classificar(l)) break;
+        if (classificar(l) || ehEstrutural(l)) break; // não engole cabeçalho/rodapé
         itens.push(l);
       }
       i = j - 1;
@@ -278,7 +305,12 @@ function aplicar(campos: CamposFechamento, key: ChaveCampo, valorBruto: string):
     case "dataShow": {
       const p = parseData(v);
       if (!p) return false;
-      if (!p.ano) return false; // sem ano → não preenche (vendedor completa)
+      if (!p.ano) {
+        // Sem ano ("17/07"): entendemos dia/mês e o form pré-preenche o campo
+        // pro vendedor completar só o ano.
+        campos.dataShowParcial = `${p.dia}/${p.mes}`;
+        return true;
+      }
       campos.dataShow = `${p.ano}-${p.mes}-${p.dia}`;
       return true;
     }

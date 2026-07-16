@@ -34,6 +34,8 @@ import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAu
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { resolverCidade } from "@/lib/cidade-helpers";
+import { itensDoRider } from "@/lib/rider";
+import { parseValorBR } from "@/lib/valor";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
@@ -94,6 +96,15 @@ function novoBlocoDj(artistaId: string): DjBlock {
     hotel: CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 })),
     logistica: { ...LOGISTICA_VAZIA },
     infoExtra: "",
+  };
+}
+
+/** Patch de bloco ao escolher um artista: id + Camarim/Efeitos do rider DELE. */
+function patchDoArtista(artista: Artista | undefined, artistaId: string): Partial<DjBlock> {
+  return {
+    artistaId,
+    camarim: itensDoRider(artista?.riderCamarim, CATALOGO_CAMARIM),
+    efeitos: itensDoRider(artista?.riderEfeitos, CATALOGO_EFEITOS),
   };
 }
 
@@ -186,7 +197,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     const errs: Record<string, string> = {};
     blocos.forEach((b, i) => {
       if (!b.artistaId) errs[`artista-${i}`] = t("Selecione um artista");
-      const valor = parseFloat(b.valorCache.replace(",", "."));
+      const valor = parseValorBR(b.valorCache);
       if (!b.valorCache || isNaN(valor) || valor <= 0) errs[`valor-${i}`] = t("Valor obrigatório");
       if (b.duracaoHoras < 1 && b.duracaoMinutos < 15) errs[`dur-${i}`] = t("Duração mínima 15 min");
     });
@@ -209,13 +220,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   function adicionarDj(artistaId: string) {
+    // Escolher o artista puxa o RIDER dele (camarim/efeitos) pro bloco.
+    const patch = patchDoArtista(artistas.find((d) => d.id === artistaId), artistaId);
     setBlocos((prev) => {
       // 1ª seleção: preenche o bloco inicial ainda vazio em vez de criar outro.
       const idxVazio = prev.findIndex((b) => !b.artistaId);
       if (idxVazio !== -1) {
-        return prev.map((b, i) => (i === idxVazio ? { ...b, artistaId } : b));
+        return prev.map((b, i) => (i === idxVazio ? { ...b, ...patch } : b));
       }
-      return [...prev, novoBlocoDj(artistaId)];
+      return [...prev, { ...novoBlocoDj(""), ...patch }];
     });
     setModalAddDj(false);
   }
@@ -373,7 +386,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // antes de criar os próximos, e cada criação é async (API).
     for (let idx = 0; idx < blocos.length; idx++) {
       const b = blocos[idx];
-      const valor = parseFloat(b.valorCache.replace(",", "."));
+      const valor = parseValorBR(b.valorCache);
 
       const cInput: ContratanteInput =
         idx === 0
@@ -1114,7 +1127,7 @@ function BlocoOrcamentoDj({
 }) {
   const t = useT();
   const artista = artistas.find((d) => d.id === bloco.artistaId);
-  const valor = parseFloat(bloco.valorCache.replace(",", "."));
+  const valor = parseValorBR(bloco.valorCache);
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-border bg-surface overflow-hidden">
@@ -1161,7 +1174,15 @@ function BlocoOrcamentoDj({
         {/* Artista + Valor + Duração */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
           <Field label="Artista" required error={errors[`artista-${indice}`]}>
-            <Select value={bloco.artistaId} onChange={(e) => onChange({ artistaId: e.target.value })}>
+            <Select
+              value={bloco.artistaId}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id === bloco.artistaId) return;
+                // Trocar o artista re-puxa o rider DELE (camarim/efeitos zerados).
+                onChange(patchDoArtista(artistas.find((d) => d.id === id), id));
+              }}
+            >
               <option value="">{t("Selecione um artista")}</option>
               {artistas.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
