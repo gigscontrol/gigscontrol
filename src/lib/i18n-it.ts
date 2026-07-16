@@ -187,6 +187,8 @@ const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Falha ao salvar seus dados.": "Impossibile salvare i tuoi dati.",
   "Informe a data de nascimento.": "Inserisci la data di nascita.",
   "Informe a data.": "Inserisci la data.",
+  "Horário da apresentação": "Orario dello show",
+  "Você define depois — o show fica com a pendência de horário.": "Lo definisci dopo — lo show resta con l'orario in sospeso.",
   "Horário a definir": "Orario da definire",
   "A definir": "Da definire",
   "Informe o documento.": "Inserisci il documento.",

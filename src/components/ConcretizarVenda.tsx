@@ -993,49 +993,82 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             </span>
           </div>
 
-          <div className="sm:col-span-2 -mb-1">
-            <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-secondary">
-              <input
-                type="checkbox"
-                checked={horarioADefinir}
-                onChange={toggleHorarioADefinir}
-                style={{ accentColor: accent }}
-              />
-              {t("Horário a definir")}
-            </label>
+          {/* Horário da apresentação — segmentado no MESMO padrão do
+              "Data da apresentação" logo acima. "A definir" esconde os
+              campos de hora e salva sem horário (pendência no show). */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-secondary">
+              {t("Horário da apresentação")}
+            </span>
+            <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+              {[
+                { v: false, label: "Definir horário" },
+                { v: true, label: "A definir" },
+              ].map((opt, i) => {
+                const ativo = horarioADefinir === opt.v;
+                return (
+                  <button
+                    key={String(opt.v)}
+                    type="button"
+                    aria-pressed={ativo}
+                    onClick={() => {
+                      if (horarioADefinir !== opt.v) toggleHorarioADefinir();
+                    }}
+                    className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                      i === 1 ? "border-l border-border" : ""
+                    }`}
+                    style={
+                      ativo
+                        ? {
+                            color: accent,
+                            background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                          }
+                        : { color: "var(--text-muted)" }
+                    }
+                  >
+                    {t(opt.label)}
+                  </button>
+                );
+              })}
+            </div>
+            {horarioADefinir && (
+              <span className="text-xs text-muted">
+                {t("Você define depois — o show fica com a pendência de horário.")}
+              </span>
+            )}
           </div>
 
-          <FieldWithAuto
-            label="Início da apresentação"
-            required={!horarioADefinir}
-            error={errors.horarioInicio}
-            showAuto={showAutoBadge("horarioInicio")}
-          >
-            <InputHora
-              key={horarioADefinir ? "inicio-def" : "inicio"}
-              value={horarioInicio}
-              accent={accent}
-              disabled={horarioADefinir}
-              onChange={(v) => {
-                setHorarioInicio(v);
-                marcarEditado("horarioInicio");
-                setDuracaoOverride(false);
-              }}
-            />
-          </FieldWithAuto>
+          {!horarioADefinir && (
+            <>
+              <FieldWithAuto
+                label="Início da apresentação"
+                required
+                error={errors.horarioInicio}
+                showAuto={showAutoBadge("horarioInicio")}
+              >
+                <InputHora
+                  value={horarioInicio}
+                  accent={accent}
+                  onChange={(v) => {
+                    setHorarioInicio(v);
+                    marcarEditado("horarioInicio");
+                    setDuracaoOverride(false);
+                  }}
+                />
+              </FieldWithAuto>
 
-          <Field label="Término da apresentação" required={!horarioADefinir} error={errors.horarioFim}>
-            <InputHora
-              key={horarioADefinir ? "fim-def" : "fim"}
-              value={horarioFim}
-              accent={accent}
-              disabled={horarioADefinir}
-              onChange={(v) => {
-                setHorarioFim(v);
-                setDuracaoOverride(false);
-              }}
-            />
-          </Field>
+              <Field label="Término da apresentação" required error={errors.horarioFim}>
+                <InputHora
+                  value={horarioFim}
+                  accent={accent}
+                  onChange={(v) => {
+                    setHorarioFim(v);
+                    setDuracaoOverride(false);
+                  }}
+                />
+              </Field>
+            </>
+          )}
 
           {duracaoAuto && (
             <p className="text-xs text-muted sm:col-span-2 -mt-1">
