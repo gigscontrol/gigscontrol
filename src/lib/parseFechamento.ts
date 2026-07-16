@@ -115,6 +115,26 @@ function classificar(linha: string): Rotulo {
   return null;
 }
 
+// Linhas do PRÓPRIO template (cabeçalhos de seção + rodapé boilerplate) que
+// NUNCA são valor de campo. Sem isso, um campo deixado em branco "puxa" a
+// linha seguinte como valor — ex.: Endereço vazio pegando "📌 Informações do
+// evento", ou o último campo pegando "OBS: Sua data só será reservada…".
+const FRASES_ESTRUTURAIS = [
+  "informacoes do contratante",
+  "informacoes do evento",
+  "apos o preenchimento",
+  "sua data so sera reservada",
+];
+function ehEstrutural(linha: string): boolean {
+  const l = linha.trim();
+  if (!l) return true;
+  // Cabeçalho de seção começa com emoji/pictograma (🖋️, 📌, …) — nenhum valor
+  // real de campo (nome, endereço, e-mail…) começa assim.
+  if (/^\p{Extended_Pictographic}/u.test(l)) return true;
+  const n = norm(l);
+  return FRASES_ESTRUTURAIS.some((f) => n.includes(f));
+}
+
 /** Dia/mês/ano a partir de vários formatos. `ano` ausente = veio sem ano. */
 function parseData(v: string): { dia: string; mes: string; ano?: string } | null {
   const t = norm(v);
@@ -195,12 +215,15 @@ export function parseFechamento(texto: string): ResultadoParse {
     if (!naoPreenchidos.includes(nome)) naoPreenchidos.push(nome);
   };
 
-  // Valor de um campo: inline, ou (se vazio) na próxima linha não-rótulo.
+  // Valor de um campo: inline, ou (se vazio) na próxima linha não-rótulo —
+  // desde que ela NÃO seja uma linha estrutural do template (cabeçalho/rodapé).
   const valorDe = (i: number, inline: string): { valor: string; ate: number } => {
     if (inline) return { valor: inline, ate: i };
     let j = i + 1;
     while (j < linhas.length && !linhas[j]) j++;
-    if (j < linhas.length && !classificar(linhas[j])) return { valor: linhas[j], ate: j };
+    if (j < linhas.length && !classificar(linhas[j]) && !ehEstrutural(linhas[j])) {
+      return { valor: linhas[j], ate: j };
+    }
     return { valor: "", ate: i };
   };
 
@@ -217,7 +240,7 @@ export function parseFechamento(texto: string): ResultadoParse {
       for (; j < linhas.length; j++) {
         const l = linhas[j];
         if (!l) continue;
-        if (classificar(l)) break;
+        if (classificar(l) || ehEstrutural(l)) break; // não engole cabeçalho/rodapé
         itens.push(l);
       }
       i = j - 1;
