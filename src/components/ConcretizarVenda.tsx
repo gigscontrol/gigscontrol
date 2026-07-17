@@ -34,7 +34,8 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
-import { useAviso } from "./ConfirmarModal";
+import { useConfirmar } from "./ConfirmarModal";
+import { algumaParcelaTemHistorico } from "@/lib/parcelaHistorico";
 import CasaParecidaModal, {
   type CasaCandidata,
   type EscolhaCasaParecida,
@@ -53,16 +54,21 @@ import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import { parseFechamento } from "@/lib/parseFechamento";
 import { parseValorBR } from "@/lib/valor";
 import { itensDoRider } from "@/lib/rider";
+import { TIPOS_EVENTO } from "./NovoOrcamento";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
   CATALOGO_HOTEL,
+  LABELS_TIPO_EVENTO,
   LOGISTICA_VAZIA,
   MODULE_THEMES,
+  TIPO_CASA_POR_EVENTO,
+  TIPO_EVENTO_POR_CASA,
   type Contratante,
   type ItemQuantidade,
   type LogisticaSelecao,
   type Parcela,
+  type TipoEvento,
   type Venda,
 } from "@/types";
 
@@ -103,7 +109,11 @@ type Props = {
    * via PATCH). Sem isso, é criação normal.
    */
   vendaParaEditar?: Venda;
-  onSaved: (vendaId: string) => void;
+  /**
+   * `resultado` carrega o que precisa sobreviver à navegação que o próprio
+   * onSaved dispara (o form desmonta) — hoje só o aviso das parcelas (D5).
+   */
+  onSaved: (vendaId: string, resultado?: { parcelasPreservadas?: boolean }) => void;
   onCancel: () => void;
 };
 
@@ -207,16 +217,18 @@ export default function ConcretizarVenda({
   const { contratantes, casas, cidades, addCasa, updateCasa } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda, atualizarVendaCompleta } = useVendas();
-  const { avisar, avisador } = useAviso();
+  const { confirmar, confirmador } = useConfirmar();
 
   // ---- Modo edição (D2) ----
   const v = vendaParaEditar;
   const emEdicao = !!v;
   /**
-   * Parcela paga trava o recálculo (D5): regenerar destruiria comprovante e
-   * "quem/quando pagou". Preserva e avisa — na dúvida, o dado fica.
+   * Parcela com histórico financeiro trava o recálculo (D5): regenerar destruiria
+   * comprovante, "quem/quando pagou", o motivo do cancelamento, o log de
+   * cobranças e o 📌. Preserva e avisa — na dúvida, o dado fica. Mesmo predicado
+   * do servidor (`algumaParcelaTemHistorico`) pra não divergir do que ele faz.
    */
-  const temParcelaPaga = v?.parcelas.some((p) => p.statusBase === "pago") ?? false;
+  const temParcelaComHistorico = v ? algumaParcelaTemHistorico(v.parcelas) : false;
   const [copiadoWA, setCopiadoWA] = useState(false);
   const [previewWA, setPreviewWA] = useState(false);
   const [resultadoColagem, setResultadoColagem] = useState<{
@@ -286,6 +298,16 @@ export default function ConcretizarVenda({
   );
 
   // Evento — detalhes do orçamento detalhado (det) primeiro; senão casa/base.
+  /**
+   * Categoria do evento (D1) → vira o tipo da casa. Seed em 3 camadas:
+   * edição → volta pela casa da venda (bar/arena/outro não têm categoria: fica
+   * null e o campo é opcional, D6/O6); conversão de orçamento → HERDA o que já
+   * foi escolhido lá (D2, o vendedor não redigita); venda direta pura → vazio.
+   */
+  const [tipoEvento, setTipoEvento] = useState<TipoEvento | null>(() => {
+    if (emEdicao) return casaDaVenda?.tipo ? TIPO_EVENTO_POR_CASA[casaDaVenda.tipo] ?? null : null;
+    return orc?.tipoEvento ?? null;
+  });
   const [nomeEvento, setNomeEvento] = useState(v?.nomeEvento ?? det?.nomeEvento ?? "");
   const [eventoInstagram, setEventoInstagram] = useState(
     v ? v.eventoInstagram ?? "" : det?.instagram ?? ""
@@ -492,8 +514,9 @@ export default function ConcretizarVenda({
 
   // Recalcula os valores das parcelas quando o cachê muda
   useEffect(() => {
-    // D5 — parcela paga não é recalculada: o valor dela é registro de pagamento.
-    if (temParcelaPaga) return;
+    // D5 — parcela com histórico não é recalculada: o valor dela é registro
+    // financeiro (pagamento, isenção acordada…).
+    if (temParcelaComHistorico) return;
     setParcelas((prev) =>
       prev.map((p) => ({
         ...p,
@@ -605,6 +628,9 @@ export default function ConcretizarVenda({
     if (!contratanteDocumento.trim()) errs.contratanteDocumento = t("CPF/CNPJ obrigatório");
     if (!contratanteEndereco.trim()) errs.contratanteEndereco = t("Endereço obrigatório");
 
+    // Só na criação: venda antiga cuja casa é bar/arena/outro reidrata sem
+    // categoria, e exigi-la travaria uma edição que nada tem a ver com isso.
+    if (!tipoEvento && !emEdicao) errs.tipoEvento = t("Selecione o tipo de evento");
     if (!nomeEvento.trim()) errs.nomeEvento = t("Nome do evento obrigatório");
     if (!nomeLocal.trim()) errs.nomeLocal = t("Nome do local obrigatório");
     if (!enderecoLocal.trim()) errs.enderecoLocal = t("Endereço do local obrigatório");
@@ -629,10 +655,11 @@ export default function ConcretizarVenda({
 
     // Parcelas — só valida no modo detalhado.
     // No modo padrão, a parcela é gerada automaticamente (100% na data do show).
-    // Com parcela paga (D5) elas nem são enviadas e a seção é só-leitura: exigir
-    // que somem o cachê aqui TRAVARIA justamente a correção de cachê que a
-    // pessoa veio fazer — o aviso na seção já explica que revisar é no Financeiro.
-    if (modoPagamento === "detalhado" && !temParcelaPaga) {
+    // Com parcela com histórico (D5) elas nem são enviadas e a seção é
+    // só-leitura: exigir que somem o cachê aqui TRAVARIA justamente a correção
+    // de cachê que a pessoa veio fazer — o aviso na seção já explica que
+    // revisar é no Financeiro.
+    if (modoPagamento === "detalhado" && !temParcelaComHistorico) {
       if (parcelas.length === 0) {
         errs.parcelas = t("Defina ao menos uma parcela");
       } else {
@@ -810,10 +837,12 @@ export default function ConcretizarVenda({
         }
       }
 
-      // Venda direta não tem tipo de evento → "outro". Casa NÃO tem telefone.
+      // A casa nasce com a categoria escolhida no form (D1). O "outro" só é
+      // alcançável na edição de venda antiga sem categoria (O6). Casa NÃO tem
+      // telefone (o telefone é do contratante, não do local).
       const nova = await addCasa({
         nome,
-        tipo: "outro",
+        tipo: tipoEvento ? TIPO_CASA_POR_EVENTO[tipoEvento] : "outro",
         cidadeId,
         endereco: enderecoLocal.trim() || undefined,
         capacidade: Number(capacidadePublico) || undefined,
@@ -823,6 +852,44 @@ export default function ConcretizarVenda({
       // Degrada pra casa de origem em vez de zerar: sem isso, falha de rede ou
       // addCasa barrado por permissão PERDE o vínculo que já existia.
       return casaIdDegradado;
+    }
+  }
+
+  /**
+   * D1 — casa JÁ existente com categoria "Outro" herda a do evento, PERGUNTANDO
+   * antes. Categoria específica (club/festival/festa-privada/bar/arena) nunca é
+   * tocada: a casa é registro compartilhado e quem cadastrou decidiu.
+   *
+   * O "Outro" é ambíguo de propósito e não dá pra desambiguar aqui: `rowParaCasa`
+   * (mappers/contatos.ts:107) coage `tipo` NULL do banco pra "outro", então o
+   * legado sem categoria e o "Outro" que a pessoa escolheu à mão no CasaForm
+   * chegam idênticos no cliente. Como D1 proíbe sobrescrever em silêncio, a
+   * saída é o mesmo padrão do CasaParecidaModal: pergunta, e o silêncio (ESC /
+   * "Manter") preserva o cadastro.
+   *
+   * Best-effort: casa oculta (PATCH 404) ou sem permissão não pode custar a
+   * venda — o tipo é enriquecimento, não o valor da operação.
+   */
+  async function backfillTipoCasa(casaId: string) {
+    if (!tipoEvento) return;
+    // Casa fora de `casas` (visibilidade derivada) não dá pra avaliar nem
+    // PATCHear — e a recém-criada pelo addCasa já nasceu com o tipo certo.
+    const casa = casas.find((c) => c.id === casaId);
+    if (!casa || casa.tipo !== "outro") return;
+    const ok = await confirmar({
+      titulo: t("Atualizar a categoria do local?"),
+      mensagem: t(
+        'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para esta venda.',
+        { local: casa.nome, categoria: t(LABELS_TIPO_EVENTO[tipoEvento]) }
+      ),
+      confirmarLabel: t("Mudar categoria"),
+      cancelarLabel: t("Manter como está"),
+    });
+    if (!ok) return;
+    try {
+      await updateCasa(casaId, { tipo: TIPO_CASA_POR_EVENTO[tipoEvento] });
+    } catch {
+      /* segue: a casa fica sem categoria, a venda não */
     }
   }
 
@@ -956,6 +1023,7 @@ export default function ConcretizarVenda({
 
     // D4 — a casa de shows nasce junto com a venda (best-effort).
     const casaIdResolvido = await resolverCasaId(cidadeIdResolvido);
+    if (casaIdResolvido) await backfillTipoCasa(casaIdResolvido);
 
     const input: NovaVendaInput = {
       // A origem não muda numa edição — o PATCH nem aceita orcamento_id.
@@ -981,20 +1049,19 @@ export default function ConcretizarVenda({
       efeitos,
       hotel,
       logistica,
-      // D5 — com parcela paga, omite as parcelas: o servidor não toca em nada.
-      parcelas: temParcelaPaga ? undefined : getParcelasEfetivas(),
+      // D5 — com parcela com histórico, omite as parcelas: o servidor não toca
+      // em nada.
+      parcelas: temParcelaComHistorico ? undefined : getParcelasEfetivas(),
       observacoes: observacoes || undefined,
     };
 
     if (v) {
       const r = await atualizarVendaCompleta(v.id, input);
-      if (r.parcelasPreservadas) {
-        avisar(
-          t("Parcelas não recalculadas — há parcela paga. Revise no Financeiro."),
-          "alerta"
-        );
-      }
-      onSaved(v.id);
+      // O aviso NÃO pode morar aqui: o `onSaved` navega pro detalhe da venda e
+      // este form desmonta no mesmo commit (auto-batching) — um Toast local
+      // nunca chegaria a renderizar. Sobe a flag pro destino, que é justamente
+      // onde o "revise no Financeiro" pode ser agido.
+      onSaved(v.id, { parcelasPreservadas: r.parcelasPreservadas });
       return;
     }
 
@@ -1357,6 +1424,49 @@ export default function ConcretizarVenda({
       {/* ============ 📌 INFORMAÇÕES DO EVENTO ============ */}
       <SectionCard icon={<MapPin size={16} />} title={t("Informações do Evento")} accent={accent}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2">
+            <div className="text-xs font-medium text-secondary mb-2">
+              {t("Tipo de evento")}
+              {!emEdicao && <span className="text-danger ml-0.5">*</span>}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {TIPOS_EVENTO.map(({ value, label, icon: Icon, desc }) => {
+                const isActive = tipoEvento === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setTipoEvento(value);
+                      setErrors((p) => ({ ...p, tipoEvento: "" }));
+                    }}
+                    className="card-interactive flex flex-col items-start gap-2 text-left"
+                    style={{
+                      borderColor: isActive ? accent : undefined,
+                      boxShadow: isActive ? `0 0 0 1px ${accent}` : undefined,
+                    }}
+                  >
+                    <div
+                      className="h-9 w-9 rounded-md flex items-center justify-center"
+                      style={{
+                        backgroundColor: isActive ? `${accent}20` : "var(--bg-elevated)",
+                        color: isActive ? accent : "var(--text-secondary)",
+                      }}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-primary">{t(label)}</div>
+                      <div className="text-xs text-muted">{t(desc)}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {errors.tipoEvento && <p className="text-xs text-danger mt-2">{errors.tipoEvento}</p>}
+          </div>
+
           <div className="sm:col-span-2">
             <FieldWithAuto
               label="Cidade do evento"
@@ -1877,21 +1987,22 @@ export default function ConcretizarVenda({
 
       {/* ============ 💳 FORMA DE PAGAMENTO ============ */}
       <SectionCard icon={<CreditCard size={16} />} title={t("Forma de Pagamento")} accent={accent}>
-        {/* D5 — parcela paga: a seção inteira fica só-leitura. Mexer aqui
-            apagaria comprovante/quem-pagou-quando. */}
-        {temParcelaPaga && (
+        {/* D5 — parcela com histórico: a seção inteira fica só-leitura. Mexer
+            aqui apagaria comprovante/quem-pagou-quando, o motivo do
+            cancelamento, o log de cobranças e o 📌. */}
+        {temParcelaComHistorico && (
           <div
             className="card mb-4 flex items-start gap-3"
             style={{ borderColor: "var(--warning)", backgroundColor: "var(--warning-weak)" }}
           >
             <Lock size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
             <div className="text-sm text-secondary">
-              {t("Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.")}
+              {t("Esta venda tem parcela com histórico financeiro (paga, cancelada, cobrada ou fixada) — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.")}
             </div>
           </div>
         )}
         {/* Escolha: Padrão x Detalhado */}
-        <fieldset disabled={temParcelaPaga} className="contents">
+        <fieldset disabled={temParcelaComHistorico} className="contents">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <button
             type="button"
@@ -2076,7 +2187,7 @@ export default function ConcretizarVenda({
         />
       )}
 
-      {avisador}
+      {confirmador}
     </div>
   );
 }

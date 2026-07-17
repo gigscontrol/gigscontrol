@@ -440,6 +440,10 @@ function AppRoot() {
   const [orcamentoSendoTransformado, setOrcamentoSendoTransformado] = useState<string | null>(null);
   // Data pré-selecionada ao abrir "Nova Venda Direta" pelo "+" de um dia da agenda.
   const [dataShowInicial, setDataShowInicial] = useState<string | null>(null);
+  // D5 — a edição salvou sem recalcular as parcelas (alguma tem histórico
+  // financeiro). Mora aqui porque o form desmonta ao navegar pro detalhe: o
+  // aviso precisa sobreviver e aparecer onde dá pra agir (o detalhe da venda).
+  const [avisoParcelasPreservadas, setAvisoParcelasPreservadas] = useState(false);
   // Categoria inicial ao abrir a lista de Contatos
   const [contatoCategoria, setContatoCategoria] = useState<ContatoCategoria>("contratantes");
   // Passados à dashboard de Contratos → Histórico (filtro por status / abrir um contrato).
@@ -504,6 +508,9 @@ function AppRoot() {
   };
 
   const abrirVenda = (id: string) => {
+    // Limpa o aviso da edição anterior: ele é de UMA passagem pelo form, não do
+    // detalhe da venda (quem precisa reafirmá-lo re-seta DEPOIS desta chamada).
+    setAvisoParcelasPreservadas(false);
     irPara(urlDaTela("vendas", "vendas-venda-detalhe", id));
   };
 
@@ -617,6 +624,7 @@ function AppRoot() {
           )}
           {activeTab === "vendas" && activePage === "vendas-historico" && (
             <HistoricoOrcamentos
+              selectedArtistas={selectedArtistas}
               onNovo={() => handlePageChange("vendas-novo-orcamento")}
               onAbrir={abrirOrcamento}
               onTransformarEmVenda={transformarOrcamentoEmVenda}
@@ -651,6 +659,7 @@ function AppRoot() {
           )}
           {activeTab === "vendas" && activePage === "vendas-historico-vendas" && (
             <HistoricoVendas
+              selectedArtistas={selectedArtistas}
               onNovaVenda={() => {
                 setOrcamentoSendoTransformado(null);
                 handlePageChange("vendas-nova-venda");
@@ -666,12 +675,22 @@ function AppRoot() {
                 vendaId={vendaId}
                 onBack={() => handlePageChange("vendas-historico-vendas")}
                 onEditar={editarVenda}
+                avisoParcelasPreservadas={avisoParcelasPreservadas}
+                onDispensarAvisoParcelas={() => setAvisoParcelasPreservadas(false)}
               />
             )}
           {activeTab === "vendas" &&
             activePage === "vendas-editar-venda" &&
             vendaId !== null && (
-              <EditarVendaLoader vendaId={vendaId} onFechar={abrirVenda} />
+              <EditarVendaLoader
+                vendaId={vendaId}
+                onFechar={(id, resultado) => {
+                  // Ordem importa: `abrirVenda` limpa o aviso, então a
+                  // reafirmação vem DEPOIS (o último set do batch vence).
+                  abrirVenda(id);
+                  if (resultado?.parcelasPreservadas) setAvisoParcelasPreservadas(true);
+                }}
+              />
             )}
 
           {/* Agenda */}
@@ -774,7 +793,7 @@ function EditarVendaLoader({
   onFechar,
 }: {
   vendaId: string;
-  onFechar: (id: string) => void;
+  onFechar: (id: string, resultado?: { parcelasPreservadas?: boolean }) => void;
 }) {
   const t = useT();
   const { vendas, carregando } = useVendas();
@@ -805,7 +824,7 @@ function EditarVendaLoader({
     <ConcretizarVenda
       key={venda.id}
       vendaParaEditar={venda}
-      onSaved={() => onFechar(venda.id)}
+      onSaved={(_id, resultado) => onFechar(venda.id, resultado)}
       onCancel={() => onFechar(venda.id)}
     />
   );

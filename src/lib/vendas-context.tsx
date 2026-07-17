@@ -316,8 +316,8 @@ export function VendasProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Payload snake_case da venda. `parcelas` só entra quando o input trouxe:
-   * omitir a chave é o que diz ao servidor "não mexa nas parcelas" (D5).
+   * Payload snake_case da venda. `parcelas` e `info_extra` só entram quando o
+   * input trouxe: omitir a chave é o que diz ao servidor "não mexa nisso" (D5).
    */
   const montarPayloadVenda = useCallback(
     (
@@ -354,8 +354,11 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         hotel: input.hotel,
         logistica: input.logistica,
         observacoes: input.observacoes ?? null,
-        info_extra: input.infoExtra ?? null,
       };
+      // `info_extra` NÃO tem campo no form: mandá-lo sempre faria a edição
+      // zerar o texto que o detalhe da venda gravou. Mesma regra das parcelas —
+      // só vai quando o input trouxe (a criação força a chave logo abaixo).
+      if (input.infoExtra !== undefined) payload.info_extra = input.infoExtra || null;
       if (input.parcelas) {
         payload.parcelas = input.parcelas.map((p) => ({
           percentual: p.percentual,
@@ -379,6 +382,9 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       // 2) Monta payload da venda (snake_case)
       const payload = montarPayloadVenda(input, contratanteId, contratanteSnapshot);
       payload.orcamento_id = input.orcamentoId ?? null;
+      // Na criação a chave é sempre explícita: null aqui é o sinal pro servidor
+      // reherdar o info_extra do orçamento (criarVendaCompleta).
+      payload.info_extra = input.infoExtra ?? null;
       // A criação sempre manda parcelas (o form valida) — `?? []` só satisfaz o
       // tipo agora opcional (a edição é quem pode omitir).
       if (!payload.parcelas) payload.parcelas = [];

@@ -29,6 +29,7 @@ import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
+import { useAviso, useConfirmar } from "./ConfirmarModal";
 import CasaParecidaModal, {
   type CasaCandidata,
   type EscolhaCasaParecida,
@@ -57,10 +58,10 @@ import {
   LABELS_TIPO_EVENTO,
   LOGISTICA_VAZIA,
   MODULE_THEMES,
+  TIPO_CASA_POR_EVENTO,
   type ItemQuantidade,
   type LogisticaSelecao,
   type TipoEvento,
-  type TipoCasa,
   type Artista,
   type Contratante,
   type DetalhesEvento,
@@ -73,18 +74,17 @@ type Props = {
   onDone: () => void;
 };
 
-const TIPOS_EVENTO: { value: TipoEvento; label: string; icon: typeof PartyPopper; desc: string }[] = [
-  { value: "social", label: "Social", icon: PartyPopper, desc: "Festa privada, aniversário, casamento" },
-  { value: "casa-noturna", label: "Casa Noturna", icon: Building2, desc: "Club, bar, balada" },
-  { value: "festival", label: "Festival", icon: Sparkles, desc: "Festival, arena, evento grande" },
+/** Card picker das 3 categorias — reusado pelo ConcretizarVenda (mesmas opções). */
+export const TIPOS_EVENTO: { value: TipoEvento; label: string; icon: typeof PartyPopper; desc: string }[] = [
+  {
+    value: "social",
+    label: LABELS_TIPO_EVENTO.social,
+    icon: PartyPopper,
+    desc: "Festa privada, aniversário, casamento",
+  },
+  { value: "casa-noturna", label: LABELS_TIPO_EVENTO["casa-noturna"], icon: Building2, desc: "Club, bar, balada" },
+  { value: "festival", label: LABELS_TIPO_EVENTO.festival, icon: Sparkles, desc: "Festival, arena, evento grande" },
 ];
-
-/** Tipo do evento → tipo da casa criada junto com o orçamento (D4). */
-const TIPO_CASA_POR_EVENTO: Record<TipoEvento, TipoCasa> = {
-  social: "festa-privada",
-  "casa-noturna": "club",
-  festival: "festival",
-};
 
 type DjBlock = {
   artistaId: string;
@@ -141,6 +141,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
 
   const [step, setStep] = useState(1);
 
@@ -377,6 +379,44 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   /**
+   * D1 — casa JÁ existente com categoria "Outro" herda a do evento, PERGUNTANDO
+   * antes. Categoria específica (club/festival/festa-privada/bar/arena) nunca é
+   * tocada: a casa é registro compartilhado e quem cadastrou decidiu.
+   *
+   * O "Outro" é ambíguo de propósito e não dá pra desambiguar aqui: `rowParaCasa`
+   * (mappers/contatos.ts:107) coage `tipo` NULL do banco pra "outro", então o
+   * legado sem categoria e o "Outro" que a pessoa escolheu à mão no CasaForm
+   * chegam idênticos no cliente. Como D1 proíbe sobrescrever em silêncio, a
+   * saída é o mesmo padrão do CasaParecidaModal: pergunta, e o silêncio (ESC /
+   * "Manter") preserva o cadastro. Espelha o ConcretizarVenda.
+   *
+   * Best-effort: casa oculta (PATCH 404) ou sem permissão não pode custar o
+   * orçamento — o tipo é enriquecimento, não o valor da operação.
+   */
+  async function backfillTipoCasa(casaId: string) {
+    if (!tipoEvento) return;
+    // Casa fora de `casas` (visibilidade derivada) não dá pra avaliar nem
+    // PATCHear — e a recém-criada pelo addCasa já nasceu com o tipo certo.
+    const casa = casas.find((c) => c.id === casaId);
+    if (!casa || casa.tipo !== "outro") return;
+    const ok = await confirmar({
+      titulo: t("Atualizar a categoria do local?"),
+      mensagem: t(
+        'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para este orçamento.',
+        { local: casa.nome, categoria: t(LABELS_TIPO_EVENTO[tipoEvento]) }
+      ),
+      confirmarLabel: t("Mudar categoria"),
+      cancelarLabel: t("Manter como está"),
+    });
+    if (!ok) return;
+    try {
+      await updateCasa(casaId, { tipo: TIPO_CASA_POR_EVENTO[tipoEvento] });
+    } catch {
+      /* segue: a casa fica sem categoria, o orçamento não */
+    }
+  }
+
+  /**
    * D4 — casa do evento (dedupe por nome normalizado + cidade). O endpoint é
    * obrigatório no caminho: `casas` do contexto é filtrado por visibilidade
    * derivada, então pro artista o dedupe local é cego e ele recriaria a casa.
@@ -599,7 +639,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     let casaInput: CasaInput = { tipo: "nenhuma" };
     if (modoOrcamento === "detalhado" && evLocal.trim()) {
       const casaId = await resolverCasaId(cidadeResolvida.id);
-      if (casaId) casaInput = { tipo: "existente", id: casaId };
+      if (casaId) {
+        casaInput = { tipo: "existente", id: casaId };
+        await backfillTipoCasa(casaId);
+      }
     }
 
     const cidadeInputInicial: CidadeInput = {
@@ -698,7 +741,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         setCopiadoIdx(idx);
         setTimeout(() => setCopiadoIdx(null), 2000);
       } catch {
-        alert(t("Não foi possível copiar."));
+        avisar(t("Não foi possível copiar."));
       }
       document.body.removeChild(ta);
     }
@@ -813,6 +856,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             {t("Destino:")}{" "}<strong>+{salvos[0].telefoneE164}</strong>
           </div>
         )}
+
+        {avisador}
       </div>
     );
   }
@@ -1341,6 +1386,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           onFechar={() => fecharDivergencia([])}
         />
       )}
+
+      {confirmador}
 
       {casaParecida && (
         <CasaParecidaModal

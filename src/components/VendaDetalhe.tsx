@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History } from "lucide-react";
+import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History, AlertTriangle } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
 import { useConfirmar } from "./ConfirmarModal";
+import AlteracoesModal, { temDetalhe } from "./AlteracoesModal";
 import type { HistoricoAcao } from "@/lib/mappers/historico";
+import { LABELS_PAPEL } from "@/lib/permissoes";
 import BookingSection from "./agenda/BookingSection";
 import { useVendas } from "@/lib/vendas-context";
 import { useShows } from "@/lib/shows-context";
@@ -24,9 +26,18 @@ type Props = {
   vendaId: string;
   onBack: () => void;
   onEditar: (id: string) => void;
+  /** D5 — a edição salvou sem recalcular as parcelas (alguma tem histórico). */
+  avisoParcelasPreservadas?: boolean;
+  onDispensarAvisoParcelas?: () => void;
 };
 
-export default function VendaDetalhe({ vendaId, onBack, onEditar }: Props) {
+export default function VendaDetalhe({
+  vendaId,
+  onBack,
+  onEditar,
+  avisoParcelasPreservadas,
+  onDispensarAvisoParcelas,
+}: Props) {
   const t = useT();
   const { podeUI, sessao } = useAuth();
   const { confirmar, confirmador } = useConfirmar();
@@ -59,8 +70,13 @@ export default function VendaDetalhe({ vendaId, onBack, onEditar }: Props) {
     let ativo = true;
     (async () => {
       try {
+        // limit no teto da rota (clampInt 1..200): o rastro vem em ordem
+        // DECRESCENTE, então a ação `criar` — o "Vendida por", o dado que D4
+        // nomeia primeiro — é sempre a PRIMEIRA a cair fora da página. Como não
+        // há paginação aqui, cortar em 20 sumiria com ela numa venda muito
+        // editada. É rastro de UMA venda, não a trilha do workspace: cabe.
         const res = await fetch(
-          `/api/historico?modulo=venda&entidade=${encodeURIComponent(vendaId)}&limit=20`,
+          `/api/historico?modulo=venda&entidade=${encodeURIComponent(vendaId)}&limit=200`,
           { credentials: "include" }
         );
         if (!res.ok) {
@@ -292,6 +308,35 @@ export default function VendaDetalhe({ vendaId, onBack, onEditar }: Props) {
           {/* Pagamento / Parcelas */}
           <div className="card">
             <SectionTitle icon={<CreditCard size={14} />} title={t("Pagamento")} accent={accent} />
+            {/* D5 — a edição que acabou de salvar NÃO recalculou as parcelas.
+                Banner (e não Toast no form) porque o form desmonta ao navegar
+                pra cá: o aviso tem que sobreviver e ficar onde dá pra agir. Só
+                o usuário dispensa — some sozinho seria o bug de novo. */}
+            {avisoParcelasPreservadas && (
+              <div
+                className="mb-3 flex items-start gap-3 rounded-md p-3"
+                style={{
+                  border: "1px solid var(--warning)",
+                  backgroundColor: "var(--warning-weak)",
+                }}
+              >
+                <AlertTriangle
+                  size={16}
+                  className="flex-shrink-0 mt-0.5"
+                  style={{ color: "var(--warning)" }}
+                />
+                <div className="text-sm text-secondary">
+                  {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.")}
+                </div>
+                <button
+                  onClick={onDispensarAvisoParcelas}
+                  className="btn-ghost flex-shrink-0 p-1"
+                  aria-label={t("Dispensar aviso")}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {venda.parcelas.map((p, idx) => {
                 const st = statusEfetivoParcela(p);
@@ -594,62 +639,58 @@ export default function VendaDetalhe({ vendaId, onBack, onEditar }: Props) {
   );
 }
 
-/** Uma linha do rastro: quem, quando e (quando houver) o diff campo-a-campo. */
-type AlteracaoRastro = { campo: string; rotulo: string; antes: string; depois: string };
+/**
+ * Verbo da linha do rastro (D4). Tipos fora da lista (remover/restaurar…) caem
+ * no genérico — a linha aparece mesmo assim, sem inventar rótulo errado.
+ */
+const VERBO_RASTRO: Partial<Record<HistoricoAcao["tipo"], string>> = {
+  criar: "Vendida por",
+  editar: "Editada por",
+  cancelar: "Cancelada por",
+};
 
-function lerAlteracoes(dados: Record<string, unknown> | null): AlteracaoRastro[] {
-  const brutas = (dados as { alteracoes?: unknown } | null)?.alteracoes;
-  if (!Array.isArray(brutas)) return [];
-  // Shape gravado pelo servidor (Contrato B). Lê defensivamente: registro
-  // antigo/torto não pode quebrar a tela do detalhe.
-  return brutas.filter(
-    (a): a is AlteracaoRastro =>
-      !!a &&
-      typeof a === "object" &&
-      typeof (a as AlteracaoRastro).rotulo === "string" &&
-      typeof (a as AlteracaoRastro).antes === "string" &&
-      typeof (a as AlteracaoRastro).depois === "string"
-  );
-}
-
+/** Uma linha do rastro: "Vendida por — Nome — Cargo — Data" + popup do diff. */
 function RastroItem({ acao }: { acao: HistoricoAcao }) {
   const t = useT();
+  const [verDetalhe, setVerDetalhe] = useState(false);
   const quando = new Date(acao.criadoEm);
-  const alteracoes = lerAlteracoes(acao.dados);
-  const parcelas = (acao.dados as { parcelas?: { recalculadas?: boolean } } | null)?.parcelas;
-  const motivo = (acao.dados as { motivo?: unknown } | null)?.motivo;
+  const verbo = VERBO_RASTRO[acao.tipo] ?? "Ação de";
+  const nome = acao.actorNome ?? acao.actorEmail ?? t("Alguém");
+  // Cargo é derivado do profile ATUAL (cargo de HOJE, não o da época). Sair da
+  // equipe é SOFT delete, então ex-membro CONTINUA aparecendo com cargo: o
+  // segmento só some depois do purge físico do profile (ou se a RLS esconder) —
+  // e aí é nome+data sem "—" órfão.
+  const cargo = acao.actorPapel ? LABELS_PAPEL[acao.actorPapel]?.nome : null;
+  const data = `${quando.toLocaleDateString("pt-BR")} ${t("às")} ${quando.toLocaleTimeString(
+    "pt-BR",
+    { hour: "2-digit", minute: "2-digit" }
+  )}`;
 
   return (
     <div className="border-b border-border/50 last:border-0 pb-3 last:pb-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <span className="font-semibold text-primary">
-          {acao.actorNome ?? acao.actorEmail ?? t("Alguém")}
-        </span>
-        <span className="text-muted">
-          {quando.toLocaleDateString("pt-BR")} {t("às")}{" "}
-          {quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-        </span>
-        {parcelas?.recalculadas === false && (
-          <span className="badge badge-warning">{t("Parcelas não recalculadas")}</span>
+        <span className="text-muted">{t(verbo)}</span>
+        <span className="font-semibold text-primary">{nome}</span>
+        {cargo && (
+          <>
+            <span className="text-muted">—</span>
+            <span className="text-secondary">{t(cargo)}</span>
+          </>
+        )}
+        <span className="text-muted">—</span>
+        <span className="text-muted">{data}</span>
+        {temDetalhe(acao) && (
+          <button
+            onClick={() => setVerDetalhe(true)}
+            className="btn btn-ghost text-xs py-0.5 px-2"
+          >
+            {t("Ver alterações")}
+          </button>
         )}
       </div>
       <div className="text-sm text-secondary mt-0.5">{acao.descricao}</div>
-      {typeof motivo === "string" && motivo.trim() && (
-        <div className="text-xs text-muted mt-1">
-          {t("Motivo:")} {motivo}
-        </div>
-      )}
-      {alteracoes.length > 0 && (
-        <ul className="flex flex-col gap-0.5 mt-1.5">
-          {alteracoes.map((a) => (
-            <li key={a.campo} className="text-xs text-secondary">
-              <span className="text-muted">{a.rotulo}:</span>{" "}
-              <s className="text-muted">{a.antes}</s>{" "}
-              <span className="text-muted">→</span>{" "}
-              <strong className="text-primary">{a.depois}</strong>
-            </li>
-          ))}
-        </ul>
+      {verDetalhe && (
+        <AlteracoesModal aberto onFechar={() => setVerDetalhe(false)} acao={acao} />
       )}
     </div>
   );

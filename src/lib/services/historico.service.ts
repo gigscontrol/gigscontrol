@@ -8,8 +8,10 @@ import {
 import {
   inserirHistorico,
   listarHistorico,
+  buscarPapeisDosAutores,
   type ListarHistoricoParams,
 } from "@/lib/repositories/historico.repo";
+import type { Papel } from "@/lib/permissoes";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
 /**
@@ -64,13 +66,33 @@ export async function registrarAcao(params: {
 
 export type ListarHistoricoFiltros = Omit<ListarHistoricoParams, "workspaceId">;
 
+/**
+ * Lista o histórico já com o CARGO do autor anexado (`actorPapel`).
+ *
+ * O cargo é derivado do profile na LEITURA, não gravado na ação: é o cargo de
+ * HOJE, não o da época. Quem saiu da equipe CONTINUA com cargo (a remoção é
+ * soft delete — a linha do profile sobrevive); só some depois do purge físico,
+ * e aí o nome continua legível porque é snapshot.
+ */
 export async function listarHistoricoDoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
   filtros: ListarHistoricoFiltros = {}
 ): Promise<HistoricoAcao[]> {
   const rows = await listarHistorico(supabase, { workspaceId, ...filtros });
-  return rows.map(rowParaHistorico);
+  const acoes = rows.map(rowParaHistorico);
+
+  const ids = [
+    ...new Set(
+      acoes.map((a) => a.actorId).filter((id): id is string => !!id)
+    ),
+  ];
+  const papeis = await buscarPapeisDosAutores(supabase, ids);
+
+  return acoes.map((a) => {
+    const papel = a.actorId ? papeis.get(a.actorId) : undefined;
+    return { ...a, actorPapel: papel ? (papel as Papel) : null };
+  });
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   FolderInput,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
+import { useConfirmar } from "../ConfirmarModal";
 import { useContratos, type AssinanteResumo } from "@/lib/contratos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
@@ -63,6 +64,7 @@ export default function MeusContratosPage({
   } = useContratos();
   const { vendas } = useVendas();
   const artistas = useArtistas();
+  const { confirmar, confirmador } = useConfirmar();
 
   const [hover, setHover] = useState<string | null>(null); // pasta com drag em cima
   const [aberta, setAberta] = useState<string | null>(null); // pasta aberta (mostra conteúdo)
@@ -131,7 +133,8 @@ export default function MeusContratosPage({
       dentro.length > 0
         ? t("Excluir a pasta “{nome}”? Os {n} contratos saem da pasta.", { nome: p.nome, n: dentro.length })
         : t("Excluir a pasta “{nome}”?", { nome: p.nome });
-    if (!window.confirm(msg)) return;
+    const ok = await confirmar({ titulo: t("Excluir pasta"), mensagem: msg, perigo: true });
+    if (!ok) return;
     if (aberta === p.id) setAberta(null);
     await comOcupado(async () => {
       // Os contratos NÃO são apagados — voltam pra "sem pasta".
@@ -365,6 +368,7 @@ export default function MeusContratosPage({
           </section>
         </div>
       )}
+      {confirmador}
     </div>
   );
 }

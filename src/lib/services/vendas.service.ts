@@ -18,6 +18,7 @@ import {
   sincronizarShowNoGoogle,
   atualizarShowNoGoogle,
 } from "@/lib/google/calendario";
+import { algumaParcelaTemHistorico } from "@/lib/parcelaHistorico";
 import {
   listarParcelasDaVenda,
   listarTodasParcelas,
@@ -377,11 +378,13 @@ function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
  * Edita uma venda. Diferente do PATCH antigo (que só mexia na linha da venda e
  * deixava show/parcelas/Google desatualizados), esta versão propaga a edição:
  *
- *   1) PARCELAS (D5): se o input trouxe parcelas e NENHUMA está paga, regenera.
- *      Se QUALQUER uma está paga, NÃO TOCA em nada e devolve
+ *   1) PARCELAS (D5): se o input trouxe parcelas e NENHUMA tem histórico
+ *      financeiro (`parcelaTemHistorico`: paga, cancelada, fixada ou cobrada),
+ *      regenera. Se QUALQUER uma tem, NÃO TOCA em nada e devolve
  *      `parcelasPreservadas: true` pra UI avisar que o Financeiro precisa de
- *      revisão. Apagar parcela paga destrói o registro do pagamento — perder
- *      pagamento é MUITO pior que uma parcela desatualizada.
+ *      revisão. O delete→insert não recria `meta` — apagar destruiria o
+ *      comprovante, o motivo do cancelamento e o log de cobranças. Perder isso
+ *      é MUITO pior que uma parcela desatualizada.
  *   2) taxa da agência (recalculada quando artista/cachê/valor digitado mudam);
  *   3) linha da venda;
  *   4) SHOW da agenda (data/horário/casa/cidade/artista/valor) — senão a agenda
@@ -407,8 +410,7 @@ export async function atualizarVendaPorId(
   // 1: parcelas (D5)
   let parcelasPreservadas = false;
   if (input.parcelas !== undefined) {
-    const temPaga = antes.parcelas.some((p) => p.statusBase === "pago");
-    if (temPaga) {
+    if (algumaParcelaTemHistorico(antes.parcelas)) {
       // Nem as pendentes são mexidas: na dúvida, preserva o dado e avisa.
       parcelasPreservadas = true;
     } else {

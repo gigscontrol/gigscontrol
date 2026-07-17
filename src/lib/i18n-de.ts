@@ -2702,10 +2702,18 @@ export const DE: Record<string, string> = {
   "Parcelas não recalculadas": "Raten nicht neu berechnet",
   "Altere o que precisar e salve — o show e o financeiro acompanham.":
     "Ändern Sie, was nötig ist, und speichern Sie — Auftritt und Finanzen ziehen mit.",
-  "Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
-    "Dieser Verkauf hat eine bezahlte Rate — die Raten werden beim Speichern nicht neu berechnet. Wenn Sie die Gage ändern, prüfen Sie die Raten in Finanzen.",
-  "Parcelas não recalculadas — há parcela paga. Revise no Financeiro.":
-    "Raten nicht neu berechnet — es gibt eine bezahlte Rate. Prüfen Sie das in Finanzen.",
+  "Esta venda tem parcela com histórico financeiro (paga, cancelada, cobrada ou fixada) — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "Dieser Verkauf hat eine Rate mit Finanzhistorie (bezahlt, storniert, angemahnt oder angeheftet) — die Raten werden beim Speichern nicht neu berechnet. Wenn Sie die Gage ändern, prüfen Sie die Raten in Finanzen.",
+  "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.":
+    "Raten nicht neu berechnet: Eine hat Finanzhistorie (bezahlt, storniert, angemahnt oder angeheftet) und wurde beibehalten. Wenn sich die Gage geändert hat, prüfen Sie das in Finanzen → Zahlungsverwaltung.",
+  "Dispensar aviso": "Hinweis ausblenden",
+  "Atualizar a categoria do local?": "Kategorie des Veranstaltungsorts aktualisieren?",
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para esta venda.':
+    'Der Ort „{local}“ ist als „Sonstiges“ erfasst. Kategorie auf „{categoria}“ ändern? Das gilt für alle Auftritte an diesem Ort, nicht nur für diesen Verkauf.',
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para este orçamento.':
+    'Der Ort „{local}“ ist als „Sonstiges“ erfasst. Kategorie auf „{categoria}“ ändern? Das gilt für alle Auftritte an diesem Ort, nicht nur für dieses Angebot.',
+  "Mudar categoria": "Kategorie ändern",
+  "Manter como está": "So belassen",
   "Desconectar o Google Calendar deste artista?": "Google Calendar von diesem Künstler trennen?",
   "Os próximos shows não serão mais sincronizados.": "Zukünftige Auftritte werden nicht mehr synchronisiert.",
   "Excluir o contrato {numero}?": "Vertrag {numero} löschen?",
@@ -2713,4 +2721,15 @@ export const DE: Record<string, string> = {
   "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
     "Er wird als storniert markiert, und der Unterschrift-Link funktioniert nicht mehr für alle, die noch nicht unterschrieben haben. Der Vertrag bleibt im Verlauf sichtbar.",
   "Confirmar": "Bestätigen",
+  // Chaves novas do rastro antifraude (D4) e categoria do evento na venda (D1).
+  "Evento social": "Soziales Event",
+  "Vendida por": "Verkauft von",
+  "Editada por": "Bearbeitet von",
+  "Cancelada por": "Storniert von",
+  "Ação de": "Aktion von",
+  "Ver alterações": "Änderungen anzeigen",
+  "Alterações": "Änderungen",
+  "Nenhuma alteração de campo foi registrada nesta ação.": "Für diese Aktion wurde keine Feldänderung erfasst.",
+  "Aceitar orçamento": "Angebot akzeptieren",
+  "Remover orçamento": "Angebot entfernen",
 };

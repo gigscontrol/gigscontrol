@@ -124,7 +124,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         ...(parsed.data.parcelas !== undefined
           ? {
               parcelas: parcelasPreservadas
-                ? { recalculadas: false, motivo: "parcela paga" }
+                ? { recalculadas: false, motivo: "parcela com histórico financeiro" }
                 : { recalculadas: true },
             }
           : {}),

@@ -2702,10 +2702,18 @@ export const ES: Record<string, string> = {
   "Parcelas não recalculadas": "Cuotas no recalculadas",
   "Altere o que precisar e salve — o show e o financeiro acompanham.":
     "Cambia lo que necesites y guarda — el show y las finanzas se mantienen sincronizados.",
-  "Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
-    "Esta venta tiene una cuota pagada — las cuotas no se recalcularán al guardar. Si cambias el caché, revisa las cuotas en Finanzas.",
-  "Parcelas não recalculadas — há parcela paga. Revise no Financeiro.":
-    "Cuotas no recalculadas — hay una cuota pagada. Revísalo en Finanzas.",
+  "Esta venda tem parcela com histórico financeiro (paga, cancelada, cobrada ou fixada) — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "Esta venta tiene una cuota con historial financiero (pagada, cancelada, cobrada o fijada) — las cuotas no se recalcularán al guardar. Si cambias el caché, revisa las cuotas en Finanzas.",
+  "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.":
+    "Cuotas no recalculadas: alguna tiene historial financiero (pagada, cancelada, cobrada o fijada) y se conservó. Si el caché cambió, revísalo en Finanzas → Control de Pagos.",
+  "Dispensar aviso": "Descartar aviso",
+  "Atualizar a categoria do local?": "¿Actualizar la categoría del local?",
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para esta venda.':
+    'El local "{local}" está registrado como "Otro". ¿Cambiar su categoría a "{categoria}"? Esto vale para todos los shows de este local, no solo para esta venta.',
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para este orçamento.':
+    'El local "{local}" está registrado como "Otro". ¿Cambiar su categoría a "{categoria}"? Esto vale para todos los shows de este local, no solo para este presupuesto.',
+  "Mudar categoria": "Cambiar categoría",
+  "Manter como está": "Mantener como está",
   "Desconectar o Google Calendar deste artista?": "¿Desconectar Google Calendar de este artista?",
   "Os próximos shows não serão mais sincronizados.": "Los próximos shows ya no se sincronizarán.",
   "Excluir o contrato {numero}?": "¿Eliminar el contrato {numero}?",
@@ -2713,4 +2721,15 @@ export const ES: Record<string, string> = {
   "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
     "Queda marcado como cancelado y el enlace de firma deja de funcionar para quien todavía no haya firmado. El contrato sigue visible en el historial.",
   "Confirmar": "Confirmar",
+  // Chaves novas do rastro antifraude (D4) e categoria do evento na venda (D1).
+  "Evento social": "Evento social",
+  "Vendida por": "Vendida por",
+  "Editada por": "Editada por",
+  "Cancelada por": "Cancelada por",
+  "Ação de": "Acción de",
+  "Ver alterações": "Ver cambios",
+  "Alterações": "Cambios",
+  "Nenhuma alteração de campo foi registrada nesta ação.": "No se registró ningún cambio de campo en esta acción.",
+  "Aceitar orçamento": "Aceptar presupuesto",
+  "Remover orçamento": "Eliminar presupuesto",
 };

@@ -61,3 +61,38 @@ export async function listarHistorico(
   if (error) throw error;
   return (data ?? []) as unknown as HistorioAcaoRow[];
 }
+
+/**
+ * Cargo ATUAL dos autores das ações (o histórico só guarda nome/email). Uma
+ * query batch pros ids da página, não uma por linha.
+ *
+ * NÃO filtra `deletado_em`: sair da equipe é soft delete e o cargo do ex-membro
+ * segue aparecendo (de propósito — o rastro é antifraude, e quem agiu tinha o
+ * cargo). Só o purge físico tira a linha.
+ *
+ * Best-effort: falha ou autor invisível (RLS de outro workspace) devolve mapa
+ * sem a chave — o rastro exibe nome+data sem o cargo em vez de quebrar.
+ */
+export async function buscarPapeisDosAutores(
+  supabase: SupabaseClient,
+  ids: string[]
+): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>();
+  if (!ids.length) return mapa;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, papel")
+      .in("id", ids);
+    if (error) {
+      console.error("[historico] falha ao buscar cargos (ignorada):", error.message);
+      return mapa;
+    }
+    for (const row of (data ?? []) as { id: string; papel: string | null }[]) {
+      if (row.papel) mapa.set(row.id, row.papel);
+    }
+  } catch (e) {
+    console.error("[historico] exceção ao buscar cargos (ignorada):", (e as Error).message);
+  }
+  return mapa;
+}
