@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea } from "../Field";
 import InputDocumento from "../inputs/InputDocumento";
+import {
+  useRazaoSocialDoCnpj,
+  LabelRazaoSocial,
+  DicaRazaoSocial,
+} from "../inputs/RazaoSocialCnpj";
 import SeletorPais from "../SeletorPais";
 import PhoneInput from "../PhoneInput";
 import { normalizarDocumento, configDocumento, ehCnpj } from "@/lib/data/documentos";
@@ -60,6 +65,18 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
   // Aparece/some conforme o documento digitado vira CNPJ. Fora do BR o helper
   // devolve false — o campo nunca aparece e nada muda pra esses países.
   const docEhCnpj = ehCnpj(pais.code, documento);
+
+  // Fechou 14 dígitos → busca a razão social sozinha (cadastro nosso, senão
+  // Receita). Só preenche campo vazio e falhar é não-evento.
+  const buscaRazao = useRazaoSocialDoCnpj({
+    pais: pais.code,
+    documento,
+    valor: razaoSocial,
+    onPreencher: (r) => {
+      setRazaoSocial(r);
+      setErrors((p) => ({ ...p, razaoSocial: "" }));
+    },
+  });
 
   const handleSave = async () => {
     const errs: Record<string, string> = {};
@@ -144,7 +161,7 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
         {docEhCnpj && (
           <div className="sm:col-span-2">
             <Field
-              label="Razão social / Nome da empresa"
+              label={<LabelRazaoSocial busca={buscaRazao} />}
               required={!initial}
               error={errors.razaoSocial}
             >
@@ -152,10 +169,12 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
                 value={razaoSocial}
                 onChange={(e) => {
                   setRazaoSocial(e.target.value);
+                  buscaRazao.aoEditarManualmente();
                   if (e.target.value) setErrors((p) => ({ ...p, razaoSocial: "" }));
                 }}
                 placeholder="Ex: Silva Produções Artísticas LTDA"
               />
+              <DicaRazaoSocial busca={buscaRazao} valor={razaoSocial} />
             </Field>
           </div>
         )}

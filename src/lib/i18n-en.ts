@@ -3739,4 +3739,10 @@ export const EN: Record<string, string> = {
   "Nenhuma alteração de campo foi registrada nesta ação.": "No field changes were recorded for this action.",
   "Aceitar orçamento": "Accept quote",
   "Remover orçamento": "Remove quote",
+  "buscando…": "searching…",
+  "Preenchido pela Receita": "Filled in from the tax registry",
+  "Preenchido de um cadastro anterior": "Filled in from a previous record",
+  "Na Receita este CNPJ consta como “{oficial}”": "The tax registry lists this CNPJ as “{oficial}”",
+  "Num cadastro anterior este CNPJ consta como “{oficial}”": "A previous record lists this CNPJ as “{oficial}”",
+  "Atenção: este CNPJ consta como {situacao} na Receita": "Note: this CNPJ is listed as {situacao} with the tax registry",
 };

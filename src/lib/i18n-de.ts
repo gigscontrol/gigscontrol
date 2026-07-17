@@ -2733,4 +2733,10 @@ export const DE: Record<string, string> = {
   "Nenhuma alteração de campo foi registrada nesta ação.": "Für diese Aktion wurde keine Feldänderung erfasst.",
   "Aceitar orçamento": "Angebot akzeptieren",
   "Remover orçamento": "Angebot entfernen",
+  "buscando…": "wird gesucht…",
+  "Preenchido pela Receita": "Aus dem Unternehmensregister übernommen",
+  "Preenchido de um cadastro anterior": "Aus einem früheren Eintrag übernommen",
+  "Na Receita este CNPJ consta como “{oficial}”": "Im Unternehmensregister ist diese CNPJ als „{oficial}“ eingetragen",
+  "Num cadastro anterior este CNPJ consta como “{oficial}”": "In einem früheren Eintrag ist diese CNPJ als „{oficial}“ verzeichnet",
+  "Atenção: este CNPJ consta como {situacao} na Receita": "Achtung: Diese CNPJ ist im Unternehmensregister als {situacao} eingetragen",
 };

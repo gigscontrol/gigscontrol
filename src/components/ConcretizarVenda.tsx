@@ -24,6 +24,11 @@ import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
 import InputDocumento from "./inputs/InputDocumento";
+import {
+  useRazaoSocialDoCnpj,
+  LabelRazaoSocial,
+  DicaRazaoSocial,
+} from "./inputs/RazaoSocialCnpj";
 import { normalizarDocumento, configDocumento, ehCnpj } from "@/lib/data/documentos";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
@@ -630,6 +635,20 @@ export default function ConcretizarVenda({
   // nunca aparece e o fluxo desses países segue idêntico ao de hoje.
   const docEhCnpj = ehCnpj(paisOrigem.code, contratanteDocumento);
 
+  // Fechou 14 dígitos → busca a razão social sozinha (nossos cadastros antes da
+  // Receita). Só preenche campo VAZIO — o que veio do snapshot/cadastro na
+  // edição, ou o que o vendedor colou, fica de pé. Falhar é não-evento.
+  const buscaRazao = useRazaoSocialDoCnpj({
+    pais: paisOrigem.code,
+    documento: contratanteDocumento,
+    valor: contratanteRazaoSocial,
+    onPreencher: (r) => {
+      setContratanteRazaoSocial(r);
+      // Não é `marcarEditado`: quem preencheu foi a busca, não o vendedor.
+      setErrors((p) => ({ ...p, contratanteRazaoSocial: "" }));
+    },
+  });
+
   // ------- Validação -------
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -1140,8 +1159,12 @@ export default function ConcretizarVenda({
     // Razão social só entra quando o documento é CNPJ — senão o painel anunciaria
     // um campo que a tela não mostra (e cujo valor o submit descarta). Reavalia
     // com o documento COLADO agora: `docEhCnpj` é do render anterior.
-    if (ehCnpj(paisOrigem.code, campos.contratanteDocumento ?? contratanteDocumento))
+    if (ehCnpj(paisOrigem.code, campos.contratanteDocumento ?? contratanteDocumento)) {
       set(campos.contratanteRazaoSocial, setContratanteRazaoSocial, "Razão social");
+      // Veio do contratante, não da nossa busca: o microtexto de origem não
+      // pode reivindicar um valor que não preencheu.
+      if (campos.contratanteRazaoSocial) buscaRazao.aoEditarManualmente();
+    }
     set(campos.contratanteEndereco, setContratanteEndereco, "Endereço");
     set(campos.nomeEvento, setNomeEvento, "Evento");
     set(campos.eventoInstagram, setEventoInstagram, "Instagram");
@@ -1448,7 +1471,7 @@ export default function ConcretizarVenda({
           {docEhCnpj && (
             <div className="sm:col-span-2">
               <FieldWithAuto
-                label="Razão social / Nome da empresa"
+                label={<LabelRazaoSocial busca={buscaRazao} />}
                 required={!emEdicao}
                 error={errors.contratanteRazaoSocial}
                 showAuto={showAutoBadge("contratanteRazaoSocial")}
@@ -1457,10 +1480,12 @@ export default function ConcretizarVenda({
                   value={contratanteRazaoSocial}
                   onChange={(e) => {
                     setContratanteRazaoSocial(e.target.value);
+                    buscaRazao.aoEditarManualmente();
                     marcarEditado("contratanteRazaoSocial");
                   }}
                   placeholder="Ex: Silva Produções Artísticas LTDA"
                 />
+                <DicaRazaoSocial busca={buscaRazao} valor={contratanteRazaoSocial} />
               </FieldWithAuto>
             </div>
           )}
