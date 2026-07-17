@@ -209,6 +209,7 @@ export type ActivePage =
   | "vendas-nova-venda"
   | "vendas-historico-vendas"
   | "vendas-venda-detalhe"
+  | "vendas-editar-venda"
   | "financeiro-pagamentos"
   | "financeiro-cobrancas"
   | "contratos-novo"

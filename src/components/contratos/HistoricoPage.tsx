@@ -27,6 +27,7 @@ import { useAuth } from "@/lib/auth-context";
 import { temPdfLayout, type Contrato, type ContratoStatus } from "@/lib/mappers/contrato";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
+import { useConfirmar, useAviso } from "../ConfirmarModal";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange } from "@/types";
 
@@ -111,6 +112,8 @@ export default function HistoricoPage({
   const { vendas } = useVendas();
   const artistas = useArtistas();
   const { podeUI, isSuperAdmin, sessao } = useAuth();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
 
   // artistId de um contrato vem da venda vinculada (contrato.vendaId → venda.artistaId).
   const artistaDoContrato = (c: Contrato): string | null => {
@@ -212,7 +215,7 @@ export default function HistoricoPage({
         contrato.numero
       );
     } catch (e) {
-      window.alert((e as Error).message || t("Não foi possível gerar o PDF."));
+      avisar((e as Error).message || t("Não foi possível gerar o PDF."));
     } finally {
       setGerandoPdf(false);
     }
@@ -230,7 +233,7 @@ export default function HistoricoPage({
     try {
       await atualizarContrato(contrato.id, { status });
     } catch (e) {
-      window.alert((e as Error).message || t("Não foi possível alterar o status."));
+      avisar((e as Error).message || t("Não foi possível alterar o status."));
     } finally {
       setSalvandoStatus(false);
     }
@@ -238,9 +241,11 @@ export default function HistoricoPage({
 
   async function excluir(contrato: Contrato) {
     if (
-      !window.confirm(
-        t("Excluir o contrato {numero}? Esta ação não pode ser desfeita.", { numero: contrato.numero })
-      )
+      !(await confirmar({
+        titulo: t("Excluir o contrato {numero}?", { numero: contrato.numero }),
+        mensagem: t("Esta ação não pode ser desfeita."),
+        perigo: true,
+      }))
     ) {
       return;
     }
@@ -249,19 +254,20 @@ export default function HistoricoPage({
       // Se estava aberto no detalhe, volta pra lista.
       setSelecionadoId((atual) => (atual === contrato.id ? null : atual));
     } catch (e) {
-      window.alert((e as Error).message || t("Não foi possível excluir o contrato."));
+      avisar((e as Error).message || t("Não foi possível excluir o contrato."));
     }
   }
 
   async function cancelar(contrato: Contrato) {
     if (contrato.status === "cancelado" || salvandoStatus) return;
     if (
-      !window.confirm(
-        t(
-          "Cancelar o contrato {numero}? Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.",
-          { numero: contrato.numero }
-        )
-      )
+      !(await confirmar({
+        titulo: t("Cancelar o contrato {numero}?", { numero: contrato.numero }),
+        mensagem: t(
+          "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico."
+        ),
+        perigo: true,
+      }))
     ) {
       return;
     }
@@ -269,9 +275,7 @@ export default function HistoricoPage({
     try {
       await atualizarContrato(contrato.id, { status: "cancelado" });
     } catch (e) {
-      window.alert(
-        (e as Error).message || t("Não foi possível cancelar o contrato.")
-      );
+      avisar((e as Error).message || t("Não foi possível cancelar o contrato."));
     } finally {
       setSalvandoStatus(false);
     }
@@ -362,6 +366,8 @@ export default function HistoricoPage({
           )}
         </div>
       )}
+      {confirmador}
+      {avisador}
     </div>
   );
 }

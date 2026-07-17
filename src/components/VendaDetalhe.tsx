@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
-import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel } from "lucide-react";
+import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import { useConfirmar } from "./ConfirmarModal";
+import type { HistoricoAcao } from "@/lib/mappers/historico";
 import BookingSection from "./agenda/BookingSection";
 import { useVendas } from "@/lib/vendas-context";
 import { useShows } from "@/lib/shows-context";
@@ -21,11 +23,13 @@ import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoPar
 type Props = {
   vendaId: string;
   onBack: () => void;
+  onEditar: (id: string) => void;
 };
 
-export default function VendaDetalhe({ vendaId, onBack }: Props) {
+export default function VendaDetalhe({ vendaId, onBack, onEditar }: Props) {
   const t = useT();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
+  const { confirmar, confirmador } = useConfirmar();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, updateVenda } = useVendas();
   const { shows, updateShow } = useShows();
@@ -40,6 +44,40 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
   const [editandoInfoExtra, setEditandoInfoExtra] = useState(false);
   const [infoExtraDraft, setInfoExtraDraft] = useState("");
   const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
+
+  // ---- Rastro de alterações (D6 — antifraude) ----
+  // /api/historico é admin-only (403 pros outros) — mesmo gate do
+  // AgenciaDashboard.tsx:102. Pra não-admin a seção nem existe.
+  const isAdmin = sessao?.usuario.papel === "admin";
+  const [acoes, setAcoes] = useState<HistoricoAcao[]>([]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setAcoes([]);
+      return;
+    }
+    let ativo = true;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/historico?modulo=venda&entidade=${encodeURIComponent(vendaId)}&limit=20`,
+          { credentials: "include" }
+        );
+        if (!res.ok) {
+          if (ativo) setAcoes([]);
+          return;
+        }
+        const body = (await res.json()) as { historico?: HistoricoAcao[] };
+        if (ativo) setAcoes(Array.isArray(body.historico) ? body.historico : []);
+      } catch {
+        // Best-effort: sem rastro a tela segue inteira (a seção só some).
+        if (ativo) setAcoes([]);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [vendaId, isAdmin]);
 
   const venda = vendas.find((v) => v.id === vendaId);
 
@@ -74,9 +112,14 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
     if (processandoShow || !showIdLigado) return;
     if (
       !cancelado &&
-      !window.confirm(
-        t("Cancelar este show? O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).")
-      )
+      !(await confirmar({
+        titulo: t("Cancelar este show?"),
+        mensagem: t(
+          "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser)."
+        ),
+        confirmarLabel: t("Cancelar show"),
+        perigo: true,
+      }))
     ) {
       return;
     }
@@ -139,29 +182,49 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         accentColor={accent}
       />
 
-      {/* Cancelar / reativar o show ligado (reflete a cor no Google Agenda) */}
-      {venda.showId && (
+      {/* Editar a venda + cancelar/reativar o show ligado (D3: os dois lado a
+          lado). A barra também aparece na venda SEM show, só com o editar. */}
+      {(venda.showId || podeEditarVenda) && (
         <div className="bg-surface border border-border rounded flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3">
           <div className="flex items-center gap-2">
             <Music size={14} style={{ color: cancelado ? "var(--danger)" : accent }} />
             <span className="text-sm text-secondary">
-              {cancelado ? t("Show cancelado") : t("Show na agenda")}
+              {venda.showId
+                ? cancelado
+                  ? t("Show cancelado")
+                  : t("Show na agenda")
+                : t("Venda sem show na agenda")}
             </span>
             {cancelado && <span className="badge badge-danger">{t("Cancelado")}</span>}
           </div>
-          <button
-            type="button"
-            onClick={cancelarOuReativarShow}
-            disabled={processandoShow}
-            className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
-            style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
-          >
-            {processandoShow
-              ? t("Salvando…")
-              : cancelado
-              ? t("Reativar show")
-              : t("Cancelar show")}
-          </button>
+          <div className="flex items-center gap-4">
+            {podeEditarVenda && (
+              <button
+                type="button"
+                onClick={() => onEditar(venda.id)}
+                className="text-sm font-semibold inline-flex items-center gap-1.5"
+                style={{ color: accent }}
+              >
+                <Pencil size={14} />
+                {t("Editar venda")}
+              </button>
+            )}
+            {venda.showId && (
+              <button
+                type="button"
+                onClick={cancelarOuReativarShow}
+                disabled={processandoShow}
+                className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+                style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+              >
+                {processandoShow
+                  ? t("Salvando…")
+                  : cancelado
+                  ? t("Reativar show")
+                  : t("Cancelar show")}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -448,6 +511,22 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         </div>
       </div>
 
+      {/* Rastro de alterações (D6) — admin-only, best-effort: sem dados, some. */}
+      {isAdmin && acoes.length > 0 && (
+        <div className="card mt-4">
+          <SectionTitle
+            icon={<History size={14} />}
+            title={t("Histórico de alterações")}
+            accent={accent}
+          />
+          <div className="flex flex-col gap-3">
+            {acoes.map((a) => (
+              <RastroItem key={a.id} acao={a} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end mt-6">
         <button
           onClick={() => setConfirmaRemover(true)}
@@ -509,6 +588,69 @@ export default function VendaDetalhe({ vendaId, onBack }: Props) {
         tipo={toastMsg?.tipo ?? "sucesso"}
         onClose={() => setToastMsg(null)}
       />
+
+      {confirmador}
+    </div>
+  );
+}
+
+/** Uma linha do rastro: quem, quando e (quando houver) o diff campo-a-campo. */
+type AlteracaoRastro = { campo: string; rotulo: string; antes: string; depois: string };
+
+function lerAlteracoes(dados: Record<string, unknown> | null): AlteracaoRastro[] {
+  const brutas = (dados as { alteracoes?: unknown } | null)?.alteracoes;
+  if (!Array.isArray(brutas)) return [];
+  // Shape gravado pelo servidor (Contrato B). Lê defensivamente: registro
+  // antigo/torto não pode quebrar a tela do detalhe.
+  return brutas.filter(
+    (a): a is AlteracaoRastro =>
+      !!a &&
+      typeof a === "object" &&
+      typeof (a as AlteracaoRastro).rotulo === "string" &&
+      typeof (a as AlteracaoRastro).antes === "string" &&
+      typeof (a as AlteracaoRastro).depois === "string"
+  );
+}
+
+function RastroItem({ acao }: { acao: HistoricoAcao }) {
+  const t = useT();
+  const quando = new Date(acao.criadoEm);
+  const alteracoes = lerAlteracoes(acao.dados);
+  const parcelas = (acao.dados as { parcelas?: { recalculadas?: boolean } } | null)?.parcelas;
+  const motivo = (acao.dados as { motivo?: unknown } | null)?.motivo;
+
+  return (
+    <div className="border-b border-border/50 last:border-0 pb-3 last:pb-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <span className="font-semibold text-primary">
+          {acao.actorNome ?? acao.actorEmail ?? t("Alguém")}
+        </span>
+        <span className="text-muted">
+          {quando.toLocaleDateString("pt-BR")} {t("às")}{" "}
+          {quando.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        {parcelas?.recalculadas === false && (
+          <span className="badge badge-warning">{t("Parcelas não recalculadas")}</span>
+        )}
+      </div>
+      <div className="text-sm text-secondary mt-0.5">{acao.descricao}</div>
+      {typeof motivo === "string" && motivo.trim() && (
+        <div className="text-xs text-muted mt-1">
+          {t("Motivo:")} {motivo}
+        </div>
+      )}
+      {alteracoes.length > 0 && (
+        <ul className="flex flex-col gap-0.5 mt-1.5">
+          {alteracoes.map((a) => (
+            <li key={a.campo} className="text-xs text-secondary">
+              <span className="text-muted">{a.rotulo}:</span>{" "}
+              <s className="text-muted">{a.antes}</s>{" "}
+              <span className="text-muted">→</span>{" "}
+              <strong className="text-primary">{a.depois}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -18,9 +18,10 @@ import { MODULE_THEMES } from "@/types";
 type Props = {
   onNovaVenda: () => void;
   onAbrir: (id: string) => void;
+  onEditar: (id: string) => void;
 };
 
-export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
+export default function HistoricoVendas({ onNovaVenda, onAbrir, onEditar }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, recarregar } = useVendas();
@@ -280,7 +281,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           </button>
                           {podeEditar && (
                             <button
-                              onClick={() => onAbrir(v.id)}
+                              onClick={() => onEditar(v.id)}
                               className="btn-ghost p-1.5 rounded"
                               title={t("Editar venda")}
                             >

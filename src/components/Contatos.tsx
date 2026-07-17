@@ -11,6 +11,7 @@ import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
 import MiniLixeira from "./MiniLixeira";
+import { useConfirmar } from "./ConfirmarModal";
 import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -90,6 +91,7 @@ export default function Contatos({
 }) {
   const t = useT();
   const accent = MODULE_THEMES.contatos.color;
+  const { confirmar, confirmador } = useConfirmar();
   const {
     contratantes,
     casas,
@@ -416,8 +418,10 @@ export default function Contatos({
             nomePorUsuario={nomePorUsuario}
             onSelect={(item) => setSelecionado({ tipo: "contratante", item })}
             onEdit={(item) => setModal({ type: "edit-contratante", item })}
-            onRemove={(id) => {
-              if (confirm(t("Remover este contratante?"))) removeContratante(id);
+            onRemove={async (id) => {
+              if (await confirmar({ titulo: t("Remover este contratante?"), perigo: true })) {
+                removeContratante(id);
+              }
             }}
             onBloquear={(item) => abrirBloqueio({ tipo: "contratante", item })}
             onDesbloquear={(item) => desbloquear({ tipo: "contratante", item })}
@@ -430,8 +434,10 @@ export default function Contatos({
             nomePorUsuario={nomePorUsuario}
             onSelect={(item) => setSelecionado({ tipo: "casa", item })}
             onEdit={(item) => setModal({ type: "edit-casa", item })}
-            onRemove={(id) => {
-              if (confirm(t("Remover esta casa?"))) removeCasa(id);
+            onRemove={async (id) => {
+              if (await confirmar({ titulo: t("Remover esta casa?"), perigo: true })) {
+                removeCasa(id);
+              }
             }}
             onBloquear={(item) => abrirBloqueio({ tipo: "casa", item })}
             onDesbloquear={(item) => desbloquear({ tipo: "casa", item })}
@@ -443,8 +449,10 @@ export default function Contatos({
             items={cidadesFiltradas}
             onSelect={(item) => setSelecionado({ tipo: "cidade", item })}
             onEdit={(item) => setModal({ type: "edit-cidade", item })}
-            onRemove={(id) => {
-              if (confirm(t("Remover esta cidade?"))) removeCidade(id);
+            onRemove={async (id) => {
+              if (await confirmar({ titulo: t("Remover esta cidade?"), perigo: true })) {
+                removeCidade(id);
+              }
             }}
           />
         )}
@@ -552,6 +560,7 @@ export default function Contatos({
           </div>
         </div>
       </Modal>
+      {confirmador}
     </div>
   );
 }

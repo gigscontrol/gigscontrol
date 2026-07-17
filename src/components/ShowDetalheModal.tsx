@@ -31,6 +31,7 @@ import {
   Pencil,
 } from "lucide-react";
 import Modal from "./Modal";
+import { useConfirmar, useAviso } from "./ConfirmarModal";
 import BookingSection from "./agenda/BookingSection";
 import NotasDoShow from "./anotacoes/NotasDoShow";
 import { useAnotacoes } from "@/lib/anotacoes-context";
@@ -58,6 +59,8 @@ type Props = {
   onClose: () => void;
   onAbrirOrcamento?: (id: string) => void;
   onAbrirVenda?: (id: string) => void;
+  /** Abre a venda ligada no form de edição (D3 — ao lado do cancelar). */
+  onEditarVenda?: (id: string) => void;
 };
 
 export default function ShowDetalheModal({
@@ -65,8 +68,11 @@ export default function ShowDetalheModal({
   onClose,
   onAbrirOrcamento,
   onAbrirVenda,
+  onEditarVenda,
 }: Props) {
   const t = useT();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
   const { shows, updateShow } = useShows();
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
@@ -112,7 +118,7 @@ export default function ShowDetalheModal({
       setMostrarFormCancel(false);
       setMotivoCancel("");
     } catch (e) {
-      window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
+      avisar((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {
       setProcessando(false);
     }
@@ -120,12 +126,12 @@ export default function ShowDetalheModal({
 
   async function reverterCancelamento() {
     if (processando || !show) return;
-    if (!window.confirm(t("Reverter o cancelamento e reativar o show?"))) return;
+    if (!(await confirmar({ titulo: t("Reverter o cancelamento e reativar o show?") }))) return;
     setProcessando(true);
     try {
       await updateShow(show.id, { status: "confirmado" });
     } catch (e) {
-      window.alert((e as Error).message ?? t("Falha ao atualizar o show."));
+      avisar((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {
       setProcessando(false);
     }
@@ -368,7 +374,23 @@ export default function ShowDetalheModal({
           </div>
         </div>
       ) : (
-        <div className="flex justify-end mb-5">
+        <div className="flex justify-end items-center gap-4 mb-5">
+          {/* D3 — editar a venda ligada fica ao lado do cancelar. Gate de
+              VENDAS (o mesmo do VendaDetalhe), não de agenda. */}
+          {onEditarVenda && venda && podeEditarVendaLigada && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onEditarVenda(venda.id);
+              }}
+              className="text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+              style={{ color: "var(--info)" }}
+            >
+              <Pencil size={11} />
+              {t("Editar venda")}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setMostrarFormCancel(true)}
@@ -711,12 +733,10 @@ export default function ShowDetalheModal({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* UM botão só: os dois destinos eram idênticos (mesma
-                      navegação pro VendaDetalhe), então desabilitar um deles
-                      enquanto o vizinho fazia a mesma coisa era um gate
-                      decorativo. Navegar não é a ação perigosa — a edição em si
-                      já é gateada dentro do VendaDetalhe e no servidor. Aqui o
-                      RÓTULO só antecipa o que a pessoa vai poder fazer lá. */}
+                  {/* Só ABRIR. Este link nunca editou nada — o rótulo "Editar
+                      venda" aqui era decorativo (navegava pro detalhe igual ao
+                      "Abrir"). A edição de verdade tem botão próprio no topo,
+                      ao lado do cancelar. */}
                   {onAbrirVenda && (
                     <button
                       type="button"
@@ -726,17 +746,8 @@ export default function ShowDetalheModal({
                       }}
                       className="btn-ghost text-xs inline-flex items-center gap-1"
                     >
-                      {podeEditarVendaLigada ? (
-                        <>
-                          <Pencil size={11} />
-                          {t("Editar venda")}
-                        </>
-                      ) : (
-                        <>
-                          {t("Abrir")}
-                          <ExternalLink size={11} />
-                        </>
-                      )}
+                      {t("Abrir")}
+                      <ExternalLink size={11} />
                     </button>
                   )}
                 </div>
@@ -780,6 +791,8 @@ export default function ShowDetalheModal({
           </div>
         )}
       </div>
+      {confirmador}
+      {avisador}
     </Modal>
   );
 }

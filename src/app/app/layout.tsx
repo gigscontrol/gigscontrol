@@ -29,7 +29,7 @@ import { ContatosProvider } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { AgendaItemsProvider } from "@/lib/agenda-items-context";
 import { OrcamentosProvider } from "@/lib/orcamentos-context";
-import { VendasProvider } from "@/lib/vendas-context";
+import { VendasProvider, useVendas } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
 import { AnotacoesProvider } from "@/lib/anotacoes-context";
@@ -285,6 +285,8 @@ function resolverRota(seg: string[]): Rota {
     if (b === "vendas") {
       if (!c) return rotaBase("vendas", "vendas-historico-vendas");
       if (c === "nova") return rotaBase("vendas", "vendas-nova-venda");
+      if (seg[3] === "editar")
+        return { ...rotaBase("vendas", "vendas-editar-venda"), vendaId: c };
       return { ...rotaBase("vendas", "vendas-venda-detalhe"), vendaId: c };
     }
     return rotaBase("vendas", "dashboard");
@@ -336,6 +338,8 @@ function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
       return `${BASE}/vendas/vendas/nova`;
     case "vendas-venda-detalhe":
       return `${BASE}/vendas/vendas/${id ?? ""}`;
+    case "vendas-editar-venda":
+      return `${BASE}/vendas/vendas/${id ?? ""}/editar`;
     case "financeiro-pagamentos":
       return `${BASE}/financeiro/pagamentos`;
     case "financeiro-cobrancas":
@@ -503,6 +507,11 @@ function AppRoot() {
     irPara(urlDaTela("vendas", "vendas-venda-detalhe", id));
   };
 
+  /** Lápis do Histórico / botão "Editar venda" → form de criação em modo edição. */
+  const editarVenda = (id: string) => {
+    irPara(urlDaTela("vendas", "vendas-editar-venda", id));
+  };
+
   const transformarOrcamentoEmVenda = (id: string) => {
     setOrcamentoSendoTransformado(id);
     setDataShowInicial(null);
@@ -647,6 +656,7 @@ function AppRoot() {
                 handlePageChange("vendas-nova-venda");
               }}
               onAbrir={abrirVenda}
+              onEditar={editarVenda}
             />
           )}
           {activeTab === "vendas" &&
@@ -655,7 +665,13 @@ function AppRoot() {
               <VendaDetalhe
                 vendaId={vendaId}
                 onBack={() => handlePageChange("vendas-historico-vendas")}
+                onEditar={editarVenda}
               />
+            )}
+          {activeTab === "vendas" &&
+            activePage === "vendas-editar-venda" &&
+            vendaId !== null && (
+              <EditarVendaLoader vendaId={vendaId} onFechar={abrirVenda} />
             )}
 
           {/* Agenda */}
@@ -741,9 +757,57 @@ function AppRoot() {
         onClose={() => setShowModalId(null)}
         onAbrirOrcamento={abrirOrcamento}
         onAbrirVenda={abrirVenda}
+        onEditarVenda={editarVenda}
       />
       </div>
     </div>
+  );
+}
+
+/**
+ * Carrega a venda do contexto e monta o form de criação em MODO EDIÇÃO.
+ * Fica aqui (e não dentro do ConcretizarVenda) pra manter o form agnóstico de
+ * navegação: ele só recebe a venda pronta.
+ */
+function EditarVendaLoader({
+  vendaId,
+  onFechar,
+}: {
+  vendaId: string;
+  onFechar: (id: string) => void;
+}) {
+  const t = useT();
+  const { vendas, carregando } = useVendas();
+  const venda = vendas.find((v) => v.id === vendaId);
+
+  if (!venda) {
+    if (carregando) {
+      return (
+        <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
+          <div className="card text-center py-12">
+            <div className="section-subtitle">{t("Carregando...")}</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
+        <div className="card text-center py-12">
+          <div className="section-title">{t("Venda não encontrada")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // `key` obrigatória: os inicializadores lazy do form só rodam na montagem —
+  // trocar de venda sem remontar deixaria os campos da venda anterior.
+  return (
+    <ConcretizarVenda
+      key={venda.id}
+      vendaParaEditar={venda}
+      onSaved={() => onFechar(venda.id)}
+      onCancel={() => onFechar(venda.id)}
+    />
   );
 }
 

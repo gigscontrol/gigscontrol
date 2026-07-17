@@ -34,6 +34,7 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
+import { useAviso } from "./ConfirmarModal";
 import CasaParecidaModal, {
   type CasaCandidata,
   type EscolhaCasaParecida,
@@ -62,6 +63,7 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type Parcela,
+  type Venda,
 } from "@/types";
 
 /** Dados do contato já cadastrado que a venda vai reusar (D2). */
@@ -96,6 +98,11 @@ type Props = {
   orcamentoId?: string;
   /** Data ISO (YYYY-MM-DD) pré-selecionada — ex: vindo do "+" de um dia da agenda. */
   dataInicial?: string;
+  /**
+   * Venda existente → o form vira MODO EDIÇÃO (campos pré-preenchidos, salva
+   * via PATCH). Sem isso, é criação normal.
+   */
+  vendaParaEditar?: Venda;
   onSaved: (vendaId: string) => void;
   onCancel: () => void;
 };
@@ -188,12 +195,28 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
   return `${dd}/${mm}/${dt.getFullYear()}`;
 }
 
-export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, onCancel }: Props) {
+export default function ConcretizarVenda({
+  orcamentoId,
+  dataInicial,
+  vendaParaEditar,
+  onSaved,
+  onCancel,
+}: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { contratantes, casas, cidades, addCasa, updateCasa } = useContatos();
   const { orcamentos } = useOrcamentos();
-  const { criarVenda } = useVendas();
+  const { criarVenda, atualizarVendaCompleta } = useVendas();
+  const { avisar, avisador } = useAviso();
+
+  // ---- Modo edição (D2) ----
+  const v = vendaParaEditar;
+  const emEdicao = !!v;
+  /**
+   * Parcela paga trava o recálculo (D5): regenerar destruiria comprovante e
+   * "quem/quando pagou". Preserva e avisa — na dúvida, o dado fica.
+   */
+  const temParcelaPaga = v?.parcelas.some((p) => p.statusBase === "pago") ?? false;
   const [copiadoWA, setCopiadoWA] = useState(false);
   const [previewWA, setPreviewWA] = useState(false);
   const [resultadoColagem, setResultadoColagem] = useState<{
@@ -209,6 +232,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const contratanteOrc = orc ? contratantes.find((c) => c.id === orc.contratanteId) : undefined;
   const cidadeOrc = orc ? cidades.find((c) => c.id === orc.cidadeId) : undefined;
   const casaOrc = orc?.casaId ? casas.find((c) => c.id === orc.casaId) : undefined;
+  // Cadastros de origem na EDIÇÃO — âncoras equivalentes às do orçamento no
+  // fluxo de criação (dedupe do contato e da casa dependem delas).
+  const contratanteDaVenda = v ? contratantes.find((c) => c.id === v.contratanteId) : undefined;
+  const casaDaVenda = v?.casaId ? casas.find((c) => c.id === v.casaId) : undefined;
+  const contatoAncora = emEdicao ? contratanteDaVenda : contratanteOrc;
+  const casaAncora = emEdicao ? casaDaVenda : casaOrc;
+  // Fallback quando o dedupe da casa fica cego (rede/permissão): preserva o
+  // vínculo que já existe em vez de zerar. Na edição é a casa da venda — e vale
+  // o id CRU (a casa pode estar oculta pra este usuário, e aí `casaDaVenda` nem
+  // resolve, mas o vínculo continua válido).
+  const casaIdDegradado = emEdicao ? v?.casaId : orc?.casaId;
   // Orçamento detalhado: as infos do evento preenchidas lá têm prioridade no
   // pré-preenchimento (caem pra casa/base do orçamento quando não informadas).
   const det = orc?.detalhesEvento;
@@ -218,57 +252,81 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // Contratante
   // O telefone do cadastro vem em E.164 — separa DDI dos dígitos nacionais pra
   // que o campo remonte EXATAMENTE a mesma chave de dedupe (D1).
+  // Na edição o snapshot da VENDA manda (é o que foi fechado com o
+  // contratante), mas o país vem do CADASTRO — é ele que governa o documento.
   const telInicial = useMemo(
-    () => separarTelefoneE164(contratanteOrc?.telefone ?? "", contratanteOrc?.pais),
-    [contratanteOrc?.telefone, contratanteOrc?.pais]
+    () =>
+      v
+        ? separarTelefoneE164(v.contratanteTelefone ?? "", contratanteDaVenda?.pais)
+        : separarTelefoneE164(contratanteOrc?.telefone ?? "", contratanteOrc?.pais),
+    [v, contratanteDaVenda?.pais, contratanteOrc?.telefone, contratanteOrc?.pais]
   );
-  const [contratanteNome, setContratanteNome] = useState(contratanteOrc?.nome ?? "");
-  const [contratanteEmail, setContratanteEmail] = useState(contratanteOrc?.email ?? "");
+  const [contratanteNome, setContratanteNome] = useState(
+    v?.contratanteNome ?? contratanteOrc?.nome ?? ""
+  );
+  const [contratanteEmail, setContratanteEmail] = useState(
+    v?.contratanteEmail ?? contratanteOrc?.email ?? ""
+  );
   const [country, setCountry] = useState<Country>(() => telInicial.country);
   // País de origem do contratante — define o documento fiscal pedido.
   const [paisOrigem, setPaisOrigem] = useState<Country>(() => {
-    const code = (contratanteOrc?.pais ?? getPaisPadraoCode()).toUpperCase();
+    const code = (
+      (emEdicao ? contratanteDaVenda?.pais : contratanteOrc?.pais) ?? getPaisPadraoCode()
+    ).toUpperCase();
     return buscarPais(code).find((p) => p.code === code) ?? getPaisPadrao();
   });
   const [telDigits, setTelDigits] = useState(() => telInicial.digits);
-  const [contratanteDocumento, setContratanteDocumento] = useState(contratanteOrc?.documento ?? "");
+  const [contratanteDocumento, setContratanteDocumento] = useState(
+    v?.contratanteDocumento ?? contratanteOrc?.documento ?? ""
+  );
   // Pré-preenche do cadastro: sem isso o endereço digitado "divergiria" do
   // cadastro em toda conversão de orçamento.
   const [contratanteEndereco, setContratanteEndereco] = useState(
-    contratanteOrc?.endereco ?? ""
+    v?.contratanteEndereco ?? contratanteOrc?.endereco ?? ""
   );
 
   // Evento — detalhes do orçamento detalhado (det) primeiro; senão casa/base.
-  const [nomeEvento, setNomeEvento] = useState(det?.nomeEvento ?? "");
-  const [eventoInstagram, setEventoInstagram] = useState(det?.instagram ?? "");
-  const [nomeLocal, setNomeLocal] = useState(det?.nomeLocal ?? casaOrc?.nome ?? "");
+  const [nomeEvento, setNomeEvento] = useState(v?.nomeEvento ?? det?.nomeEvento ?? "");
+  const [eventoInstagram, setEventoInstagram] = useState(
+    v ? v.eventoInstagram ?? "" : det?.instagram ?? ""
+  );
+  const [nomeLocal, setNomeLocal] = useState(v?.nomeLocal ?? det?.nomeLocal ?? casaOrc?.nome ?? "");
   const [capacidadePublico, setCapacidadePublico] = useState<string>(
-    det?.capacidade
-      ? String(det.capacidade)
-      : casaOrc?.capacidade
-        ? String(casaOrc.capacidade)
+    v
+      ? v.capacidadePublico
+        ? String(v.capacidadePublico)
         : ""
+      : det?.capacidade
+        ? String(det.capacidade)
+        : casaOrc?.capacidade
+          ? String(casaOrc.capacidade)
+          : ""
   );
   const [enderecoLocal, setEnderecoLocal] = useState(
-    det?.enderecoLocal ?? casaOrc?.endereco ?? ""
+    v?.enderecoLocal ?? det?.enderecoLocal ?? casaOrc?.endereco ?? ""
   );
-  const [dataShow, setDataShow] = useState(det?.dataShow ?? orc?.dataShow ?? dataInicial ?? "");
+  const [dataShow, setDataShow] = useState(
+    v?.dataShow ?? det?.dataShow ?? orc?.dataShow ?? dataInicial ?? ""
+  );
   // "DD/MM" vindo da colagem SEM ano — pré-preenche o campo Data pro vendedor
   // completar só o ano.
   const [dataParcialColada, setDataParcialColada] = useState("");
 
   // Horário início e fim
   const [horarioInicio, setHorarioInicio] = useState(
-    det?.horarioInicio ?? orc?.horario ?? ""
+    v ? v.horario ?? "" : det?.horarioInicio ?? orc?.horario ?? ""
   );
-  const [horarioFim, setHorarioFim] = useState(det?.horarioFim ?? "");
+  const [horarioFim, setHorarioFim] = useState(v ? v.horarioFim ?? "" : det?.horarioFim ?? "");
+  // Não persiste na venda — na edição nasce no padrão (o campo é derivado do
+  // orçamento detalhado, que a venda não guarda).
   const [terminoDiaSeguinte, setTerminoDiaSeguinte] = useState(
-    det?.terminoDiaSeguinte ?? false
+    v ? false : det?.terminoDiaSeguinte ?? false
   );
   // "Horário a definir" — nasce desmarcado (venda de orçamento com horário
-  // continua com horário). Marcado: limpa/desabilita os dois inputs, pula a
-  // validação de obrigatoriedade e envia horário null no payload.
-  const [horarioADefinir, setHorarioADefinir] = useState(false);
+  // continua com horário). Na edição, reflete a venda: sem horário = a definir.
+  // Marcado: limpa/desabilita os dois inputs, pula a validação de
+  // obrigatoriedade e envia horário null no payload.
+  const [horarioADefinir, setHorarioADefinir] = useState(v ? !v.horario : false);
   function toggleHorarioADefinir() {
     setHorarioADefinir((prev) => {
       const novo = !prev;
@@ -282,24 +340,35 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     });
   }
 
-  // Cidade — pré-popula a partir do orçamento se ele tiver ibge_id
+  // Cidade — pré-popula a partir do orçamento (ou da venda, na edição) se
+  // houver ibge_id. Cidade legada resolve `null` e o validate força re-escolha.
   const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(
-    cidadeParaEscolhida(cidadeOrc)
+    cidadeParaEscolhida(v ? cidades.find((c) => c.id === v.cidadeId) : cidadeOrc)
   );
 
   // Show — artistaId é uuid do artista (workspace.artistas).
-  const [artistaId, setDjId] = useState<string | null>(orc?.artistaId ?? null);
+  const [artistaId, setDjId] = useState<string | null>(v?.artistaId ?? orc?.artistaId ?? null);
 
   // Line-Up (outros artistas do evento)
-  const [lineUp, setLineUp] = useState<string[]>([]);
+  const [lineUp, setLineUp] = useState<string[]>(v?.lineUp ?? []);
   const [novoLineUp, setNovoLineUp] = useState("");
 
-  const [cache, setCache] = useState<string>(orc ? String(orc.valorCache) : "");
+  // O `.` do Number vira separador de MILHAR no parseValorBR — `String(1400.5)`
+  // ("1400.5") seria lido como 14005. Troca por vírgula decimal.
+  const [cache, setCache] = useState<string>(
+    v ? String(v.cache).replace(".", ",") : orc ? String(orc.valorCache) : ""
+  );
 
   // Duração — pode ser auto-calculada OU sobrescrita manualmente pelo usuário
-  const [duracaoHorasManual, setDuracaoHorasManual] = useState<number>(orc?.duracaoHoras ?? 1);
-  const [duracaoMinutosManual, setDuracaoMinutosManual] = useState<number>(orc?.duracaoMinutos ?? 0);
-  const [duracaoOverride, setDuracaoOverride] = useState<boolean>(false);
+  const [duracaoHorasManual, setDuracaoHorasManual] = useState<number>(
+    v?.duracaoHoras ?? orc?.duracaoHoras ?? 1
+  );
+  const [duracaoMinutosManual, setDuracaoMinutosManual] = useState<number>(
+    v ? v.duracaoMinutos ?? 0 : orc?.duracaoMinutos ?? 0
+  );
+  // Na edição já nasce "manual": sem isso o efeito de auto-cálculo esmagaria a
+  // duração salva (que pode divergir de fim-menos-início de propósito).
+  const [duracaoOverride, setDuracaoOverride] = useState<boolean>(emEdicao);
 
   // Cálculo automático a partir de início/fim
   const duracaoAuto = useMemo(
@@ -319,19 +388,19 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   const duracaoMinutos = duracaoMinutosManual;
 
   const [camarim, setCamarim] = useState<ItemQuantidade[]>(
-    orc?.camarim ?? CATALOGO_CAMARIM.map((n) => ({ nome: n, qtd: 0 }))
+    v?.camarim ?? orc?.camarim ?? CATALOGO_CAMARIM.map((n) => ({ nome: n, qtd: 0 }))
   );
   const [efeitos, setEfeitos] = useState<ItemQuantidade[]>(
-    orc?.efeitos ?? CATALOGO_EFEITOS.map((n) => ({ nome: n, qtd: 0 }))
+    v?.efeitos ?? orc?.efeitos ?? CATALOGO_EFEITOS.map((n) => ({ nome: n, qtd: 0 }))
   );
   const [hotel, setHotel] = useState<ItemQuantidade[]>(
-    orc?.hotel ?? CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 }))
+    v?.hotel ?? orc?.hotel ?? CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 }))
   );
   const [logistica, setLogistica] = useState<LogisticaSelecao>(
-    orc?.logistica ?? { ...LOGISTICA_VAZIA }
+    v?.logistica ?? orc?.logistica ?? { ...LOGISTICA_VAZIA }
   );
 
-  const [observacoes, setObservacoes] = useState(orc?.observacoes ?? "");
+  const [observacoes, setObservacoes] = useState(v ? v.observacoes ?? "" : orc?.observacoes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Trava o submit: evita double-click criar duas vendas (bug que gerou
   // duas VND com o mesmo número a partir do mesmo orçamento).
@@ -405,15 +474,26 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // ------- Pagamento / Parcelas -------
   const cacheNumAtual = parseValorBR(cache) || 0;
   // Modo de pagamento: "padrao" = 1 parcela 100% na data do show | "detalhado" = parcelas customizadas
-  const [modoPagamento, setModoPagamento] = useState<"padrao" | "detalhado">("padrao");
+  // Na edição, só cai em "padrão" quando a venda REALMENTE é o padrão — senão o
+  // modo padrão sobrescreveria um vencimento customizado calado.
+  const [modoPagamento, setModoPagamento] = useState<"padrao" | "detalhado">(() => {
+    if (!v) return "padrao";
+    const ehPadrao =
+      v.parcelas.length === 1 &&
+      v.parcelas[0].percentual === 100 &&
+      v.parcelas[0].dataVencimento === v.dataShow;
+    return ehPadrao ? "padrao" : "detalhado";
+  });
   const [modoParcela, setModoParcela] = useState<ModoParcela>("percentual");
-  // Começa com 1 parcela de 100%
-  const [parcelas, setParcelas] = useState<Parcela[]>(() => [
-    novaParcela(100, 0),
-  ]);
+  // Começa com 1 parcela de 100% (ou as parcelas reais da venda, na edição)
+  const [parcelas, setParcelas] = useState<Parcela[]>(() =>
+    v ? v.parcelas : [novaParcela(100, 0)]
+  );
 
   // Recalcula os valores das parcelas quando o cachê muda
   useEffect(() => {
+    // D5 — parcela paga não é recalculada: o valor dela é registro de pagamento.
+    if (temParcelaPaga) return;
     setParcelas((prev) =>
       prev.map((p) => ({
         ...p,
@@ -451,9 +531,11 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   }
 
   // ------- Auto-fill tracking -------
+  // Na edição não existe selo "auto": os campos são os da própria venda, não
+  // herança de orçamento.
   const [autoFilled] = useState<Set<string>>(() => {
     const set = new Set<string>();
-    if (orc) {
+    if (orc && !vendaParaEditar) {
       if (contratanteOrc?.nome) set.add("contratanteNome");
       if (contratanteOrc?.email) set.add("contratanteEmail");
       if (contratanteOrc?.telefone) set.add("contratanteTelefone");
@@ -488,7 +570,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // Hotel fica no catálogo fixo. No fluxo vindo de orçamento os itens do
   // orçamento mandam, então não sobrescrevemos.
   function aplicarRiderVendaDireta(novoArtistaId: string) {
-    if (orc) return;
+    // Na EDIÇÃO os itens são o que já foi acordado com o contratante — trocar o
+    // artista não pode reescrevê-los calado (o usuário ajusta na mão se quiser).
+    if (orc || emEdicao) return;
     const a = artistas.find((d) => d.id === novoArtistaId);
     setCamarim(itensDoRider(a?.riderCamarim, CATALOGO_CAMARIM));
     setEfeitos(itensDoRider(a?.riderEfeitos, CATALOGO_EFEITOS));
@@ -545,7 +629,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
     // Parcelas — só valida no modo detalhado.
     // No modo padrão, a parcela é gerada automaticamente (100% na data do show).
-    if (modoPagamento === "detalhado") {
+    // Com parcela paga (D5) elas nem são enviadas e a seção é só-leitura: exigir
+    // que somem o cachê aqui TRAVARIA justamente a correção de cachê que a
+    // pessoa veio fazer — o aviso na seção já explica que revisar é no Financeiro.
+    if (modoPagamento === "detalhado" && !temParcelaPaga) {
       if (parcelas.length === 0) {
         errs.parcelas = t("Defina ao menos uma parcela");
       } else {
@@ -602,8 +689,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   ): Promise<ContatoAlvo | null> {
     const telefoneValido = contarDigitos(telDigits) >= country.minDigits;
 
-    if (contratanteOrc && (!telefoneValido || contratanteOrc.telefone === telefoneE164)) {
-      return alvoDeContratante(contratanteOrc);
+    if (contatoAncora && (!telefoneValido || contatoAncora.telefone === telefoneE164)) {
+      return alvoDeContratante(contatoAncora);
     }
     if (!telefoneValido) return null;
 
@@ -640,10 +727,10 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       );
     }
 
-    // Telefone novo que não bate com ninguém: vindo de orçamento é a MESMA
-    // pessoa com o número corrigido (o popup pergunta se atualiza o cadastro);
-    // sem orçamento, é contato novo mesmo.
-    return contratanteOrc ? alvoDeContratante(contratanteOrc) : null;
+    // Telefone novo que não bate com ninguém: vindo de orçamento (ou editando
+    // uma venda) é a MESMA pessoa com o número corrigido — o popup pergunta se
+    // atualiza o cadastro. Sem âncora, é contato novo mesmo.
+    return contatoAncora ? alvoDeContratante(contatoAncora) : null;
   }
 
   /**
@@ -665,9 +752,13 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     // A chave de dedupe é (nome, cidade) — a cidade entra aqui também: se o
     // usuário corrigiu a cidade na venda, a casa do orçamento é OUTRA casa
     // (mesmo nome, cidade diferente = casa diferente, D4). Deixa cair na busca.
-    if (casaOrc && casaOrc.cidadeId === cidadeId && normalizar(casaOrc.nome) === normalizar(nome))
-      return casaOrc.id;
-    if (!nome || !cidadeId) return orc?.casaId;
+    if (
+      casaAncora &&
+      casaAncora.cidadeId === cidadeId &&
+      normalizar(casaAncora.nome) === normalizar(nome)
+    )
+      return casaAncora.id;
+    if (!nome || !cidadeId) return casaIdDegradado;
 
     try {
       const alvo = normalizar(nome);
@@ -681,8 +772,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       );
       // Resposta não-ok não pode virar `existe: undefined` e cair no addCasa:
       // isso criaria uma casa DUPLICADA sem erro nenhum. Sem poder consultar o
-      // workspace inteiro, o dedupe é cego — degrada pra casa do orçamento.
-      if (!resp.ok) return orc?.casaId;
+      // workspace inteiro, o dedupe é cego — degrada pra casa de origem.
+      if (!resp.ok) return casaIdDegradado;
       const j = await resp.json();
       if (j?.existe && j.casa?.id) return j.casa.id as string;
 
@@ -729,9 +820,9 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       });
       return nova.id;
     } catch {
-      // Degrada pra casa do orçamento em vez de zerar: sem isso, falha de rede
-      // ou addCasa barrado por permissão PERDE o vínculo que o orçamento já tinha.
-      return orc?.casaId;
+      // Degrada pra casa de origem em vez de zerar: sem isso, falha de rede ou
+      // addCasa barrado por permissão PERDE o vínculo que já existia.
+      return casaIdDegradado;
     }
   }
 
@@ -867,7 +958,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     const casaIdResolvido = await resolverCasaId(cidadeIdResolvido);
 
     const input: NovaVendaInput = {
-      orcamentoId,
+      // A origem não muda numa edição — o PATCH nem aceita orcamento_id.
+      orcamentoId: emEdicao ? undefined : orcamentoId,
       contratante: contratanteInput,
       contratanteEndereco,
       nomeEvento,
@@ -889,9 +981,22 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       efeitos,
       hotel,
       logistica,
-      parcelas: getParcelasEfetivas(),
+      // D5 — com parcela paga, omite as parcelas: o servidor não toca em nada.
+      parcelas: temParcelaPaga ? undefined : getParcelasEfetivas(),
       observacoes: observacoes || undefined,
     };
+
+    if (v) {
+      const r = await atualizarVendaCompleta(v.id, input);
+      if (r.parcelasPreservadas) {
+        avisar(
+          t("Parcelas não recalculadas — há parcela paga. Revise no Financeiro."),
+          "alerta"
+        );
+      }
+      onSaved(v.id);
+      return;
+    }
 
     const venda = await criarVenda(input);
     onSaved(venda.id);
@@ -958,6 +1063,24 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     setResultadoColagem({ preenchidos: feitos, naoPreenchidos, avisos });
   }
 
+  /**
+   * Gate do botão salvar. Espelha o servidor pra não existir botão que toma 403:
+   *  - criação/conversão: a permissão do fluxo, no artista escolhido.
+   *  - edição: `editar_venda`/`editar_todos` no artista ATUAL da venda; e se a
+   *    edição MOVE a venda pra outro artista, o PATCH exige também permissão de
+   *    criar no DESTINO (route.ts:76-82 — IDOR de destino).
+   */
+  const podeSalvar = (() => {
+    if (!v) return podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda");
+    const podeEditar =
+      podeUI(v.artistaId || null, "vendas.editar_venda") ||
+      podeUI(v.artistaId || null, "vendas.editar_todos");
+    if (!podeEditar) return false;
+    if (artistaId !== null && artistaId !== v.artistaId)
+      return podeUI(artistaId, "vendas.criar_venda");
+    return true;
+  })();
+
   const artistaSelecionado = artistaId !== null ? artistas.find((d) => d.id === artistaId) : undefined;
 
   // Resolve o DJ a ser usado quando vem de orçamento:
@@ -996,16 +1119,24 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       </button>
 
       <PageHeader
-        title={orc ? `Concretizar Venda · ${orc.numero}` : "Nova Venda Direta"}
+        title={
+          v
+            ? `Editar Venda · ${v.numero}`
+            : orc
+              ? `Concretizar Venda · ${orc.numero}`
+              : "Nova Venda Direta"
+        }
         subtitle={
-          orc
-            ? "Dados do orçamento já preenchidos. Complete o restante e confirme."
-            : "Preencha todos os dados para fechar uma venda sem orçamento prévio."
+          v
+            ? t("Altere o que precisar e salve — o show e o financeiro acompanham.")
+            : orc
+              ? "Dados do orçamento já preenchidos. Complete o restante e confirme."
+              : "Preencha todos os dados para fechar uma venda sem orçamento prévio."
         }
         accentColor={accent}
       />
 
-      {orc && (
+      {orc && !emEdicao && (
         <div
           className="card mb-4 flex items-start gap-3"
           style={{ borderColor: accent, backgroundColor: `${accent}08` }}
@@ -1746,12 +1877,26 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
 
       {/* ============ 💳 FORMA DE PAGAMENTO ============ */}
       <SectionCard icon={<CreditCard size={16} />} title={t("Forma de Pagamento")} accent={accent}>
+        {/* D5 — parcela paga: a seção inteira fica só-leitura. Mexer aqui
+            apagaria comprovante/quem-pagou-quando. */}
+        {temParcelaPaga && (
+          <div
+            className="card mb-4 flex items-start gap-3"
+            style={{ borderColor: "var(--warning)", backgroundColor: "var(--warning-weak)" }}
+          >
+            <Lock size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
+            <div className="text-sm text-secondary">
+              {t("Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.")}
+            </div>
+          </div>
+        )}
         {/* Escolha: Padrão x Detalhado */}
+        <fieldset disabled={temParcelaPaga} className="contents">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <button
             type="button"
             onClick={() => setModoPagamento("padrao")}
-            className="card-interactive flex items-start gap-3 text-left"
+            className="card-interactive flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               borderColor: modoPagamento === "padrao" ? accent : undefined,
               boxShadow: modoPagamento === "padrao" ? `0 0 0 1px ${accent}` : undefined,
@@ -1778,7 +1923,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           <button
             type="button"
             onClick={() => setModoPagamento("detalhado")}
-            className="card-interactive flex items-start gap-3 text-left"
+            className="card-interactive flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               borderColor: modoPagamento === "detalhado" ? accent : undefined,
               boxShadow:
@@ -1858,6 +2003,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
             </div>
           </>
         )}
+        </fieldset>
       </SectionCard>
 
       {/* Observações */}
@@ -1889,20 +2035,19 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </button>
         <button
           onClick={handleSubmit}
-          disabled={
-            salvando ||
-            !podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
-          }
-          title={
-            !podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda")
-              ? "Você não tem permissão para isso."
-              : undefined
-          }
+          disabled={salvando || !podeSalvar}
+          title={!podeSalvar ? "Você não tem permissão para isso." : undefined}
           className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: accent, color: "#fff" }}
         >
           <CheckCircle2 size={14} />
-          {salvando ? t("Concretizando...") : t("Concretizar Venda")}
+          {emEdicao
+            ? salvando
+              ? t("Salvando...")
+              : t("Salvar alterações")
+            : salvando
+              ? t("Concretizando...")
+              : t("Concretizar Venda")}
         </button>
       </div>
 
@@ -1930,6 +2075,8 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           onFechar={() => fecharCasaParecida({ tipo: "nova" })}
         />
       )}
+
+      {avisador}
     </div>
   );
 }

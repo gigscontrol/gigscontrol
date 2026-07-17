@@ -72,8 +72,13 @@ export async function POST(request: Request, { params }: RouteCtx) {
     //    Reusa EXATAMENTE o formato de parcelas.meta.cancelamento do PATCH avulso
     //    de parcela (merge atômico via merge_parcela_meta).
     const parcelas = await listarParcelasDaVenda(r.sessao.supabase, params.id);
+    let parcelasCanceladas = 0;
+    let parcelasPagasMantidas = 0;
     for (const p of parcelas) {
-      if (p.status_base === "pago") continue;
+      if (p.status_base === "pago") {
+        parcelasPagasMantidas++;
+        continue;
+      }
       if (p.meta?.cancelamento?.cancelado) continue; // já cancelada avulsa
       const { error: mErr } = await r.sessao.supabase.rpc("merge_parcela_meta", {
         p_id: p.id,
@@ -90,6 +95,7 @@ export async function POST(request: Request, { params }: RouteCtx) {
         p_cobranca: null,
       });
       if (mErr) throw mErr;
+      parcelasCanceladas++;
     }
 
     await auditAndNotify(r.sessao, {
@@ -100,6 +106,13 @@ export async function POST(request: Request, { params }: RouteCtx) {
       descricao: motivo
         ? `Cancelou a venda ${row.numero} — motivo: ${motivo}`
         : `Cancelou a venda ${row.numero}`,
+      // Rastro (D6): o motivo e o destino das parcelas ficam registrados.
+      dados: {
+        versao: 1,
+        motivo: motivo || null,
+        parcelasCanceladas,
+        parcelasPagasMantidas,
+      },
     });
 
     // Devolve a venda já com status/parcelas atualizados (redigida se não vê financeiro).

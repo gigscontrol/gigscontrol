@@ -31,6 +31,8 @@ export type ListarHistoricoParams = {
   workspaceId: string;
   modulo?: ModuloHistorico;
   actorId?: string;
+  /** Rastro de UMA entidade (ex.: o histórico de alterações de uma venda). */
+  entidadeId?: string;
   desde?: string;  // ISO timestamp (inclusive)
   limit?: number;
   offset?: number;
@@ -48,6 +50,7 @@ export async function listarHistorico(
 
   if (params.modulo) q = q.eq("modulo", params.modulo);
   if (params.actorId) q = q.eq("actor_id", params.actorId);
+  if (params.entidadeId) q = q.eq("entidade_id", params.entidadeId);
   if (params.desde) q = q.gte("criado_em", params.desde);
 
   const limit = params.limit ?? 50;

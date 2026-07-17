@@ -17,8 +17,11 @@ const MODULOS_VALIDOS: ModuloHistorico[] = [
 ];
 
 /**
- * GET /api/historico?modulo=&actor=&periodo=&limit=&offset=
+ * GET /api/historico?modulo=&actor=&entidade=&periodo=&limit=&offset=
  * Lista a trilha de auditoria do workspace. Restrito a admin.
+ *
+ * `entidade` estreita o rastro a UMA entidade (ex.: o histórico de alterações
+ * de uma venda específica, exibido no detalhe dela).
  */
 export async function GET(request: Request) {
   const r = await autenticarComWorkspace();
@@ -35,6 +38,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const moduloParam = url.searchParams.get("modulo");
   const actor = url.searchParams.get("actor") ?? undefined;
+  const entidade = url.searchParams.get("entidade") ?? undefined;
   const periodo = url.searchParams.get("periodo"); // "24h" | "7d" | "30d" | "tudo"
   const limit = clampInt(url.searchParams.get("limit"), 1, 200, 50);
   const offset = clampInt(url.searchParams.get("offset"), 0, 100000, 0);
@@ -57,7 +61,7 @@ export async function GET(request: Request) {
     const historico = await listarHistoricoDoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,
-      { modulo, actorId: actor, desde, limit, offset }
+      { modulo, actorId: actor, entidadeId: entidade, desde, limit, offset }
     );
     return NextResponse.json({ historico, limit, offset });
   } catch (e) {

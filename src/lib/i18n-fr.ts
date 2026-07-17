@@ -2691,4 +2691,26 @@ export const FR: Record<string, string> = {
     "Vous n'avez pas accès aux données de ce lieu, il est donc impossible de confirmer qu'il s'agit du même. Créez-le comme nouveau lieu ou demandez à quelqu'un qui y a accès de vérifier.",
   "É outro local": "C'est un autre lieu",
   "É o mesmo local": "C'est le même lieu",
+  // Chaves novas de edição de venda (D2-D6), diálogos com ConfirmarModal e refino de cancelar/excluir contrato.
+  "Cancelar este show?": "Annuler ce concert ?",
+  "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).":
+    "L'événement dans Google Agenda passera en ROUGE (il n'est pas supprimé — supprimez-le manuellement si vous le souhaitez).",
+  "Venda sem show na agenda": "Vente sans concert à l'agenda",
+  "Histórico de alterações": "Historique des modifications",
+  "Alguém": "Quelqu'un",
+  "às": "à",
+  "Parcelas não recalculadas": "Versements non recalculés",
+  "Altere o que precisar e salve — o show e o financeiro acompanham.":
+    "Modifiez ce qu'il faut et enregistrez — le concert et les finances suivent.",
+  "Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "Cette vente a un versement payé — les versements ne seront pas recalculés à l'enregistrement. Si vous modifiez le cachet, vérifiez les versements dans Finances.",
+  "Parcelas não recalculadas — há parcela paga. Revise no Financeiro.":
+    "Versements non recalculés — un versement est déjà payé. Vérifiez dans Finances.",
+  "Desconectar o Google Calendar deste artista?": "Déconnecter Google Agenda de cet artiste ?",
+  "Os próximos shows não serão mais sincronizados.": "Les prochains concerts ne seront plus synchronisés.",
+  "Excluir o contrato {numero}?": "Supprimer le contrat {numero} ?",
+  "Cancelar o contrato {numero}?": "Annuler le contrat {numero} ?",
+  "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
+    "Il sera marqué comme annulé et le lien de signature cessera de fonctionner pour les personnes qui n'ont pas encore signé. Le contrat reste visible dans l'historique.",
+  "Confirmar": "Confirmer",
 };

@@ -96,8 +96,11 @@ export type NovaVendaInput = {
   hotel: ItemQuantidade[];
   logistica: LogisticaSelecao;
 
-  // Pagamento
-  parcelas: Parcela[];
+  /**
+   * Pagamento. Opcional: na EDIÇÃO de venda com parcela paga o form omite as
+   * parcelas de propósito (o servidor preserva o que já foi pago — D5).
+   */
+  parcelas?: Parcela[];
 
   observacoes?: string;
   infoExtra?: string;
@@ -109,6 +112,15 @@ type VendasContextValue = {
   erro: string | null;
   recarregar: () => Promise<void>;
   criarVenda: (input: NovaVendaInput) => Promise<Venda>;
+  /**
+   * Edição COMPLETA da venda (mesmo input da criação). O servidor sincroniza o
+   * show e o Google, e recalcula as parcelas — exceto quando alguma já está
+   * paga, e aí `parcelasPreservadas` volta true pra UI avisar (D5).
+   */
+  atualizarVendaCompleta: (
+    id: string,
+    input: NovaVendaInput
+  ) => Promise<{ venda: Venda; parcelasPreservadas: boolean }>;
   updateVenda: (id: string, patch: Partial<Venda>) => Promise<Venda>;
   removeVenda: (id: string) => Promise<void>;
   /** Atualiza uma parcela específica (status, data, observação). */
@@ -211,9 +223,18 @@ export function VendasProvider({ children }: { children: ReactNode }) {
     void recarregar();
   }, [recarregar]);
 
-  const criarVenda = useCallback(
-    async (input: NovaVendaInput): Promise<Venda> => {
-      // 1) Resolver contratante (existente → atualizar; novo → criar)
+  /**
+   * Resolve o contratante do input (existente → atualizar o que foi aprovado;
+   * novo → criar) e devolve o id + o snapshot que a venda grava.
+   * Compartilhado entre criar e editar — a regra de dedupe/backfill é a mesma.
+   */
+  const resolverContratanteDoInput = useCallback(
+    async (
+      input: NovaVendaInput
+    ): Promise<{
+      contratanteId: string;
+      contratanteSnapshot: { nome: string; email: string; telefone: string; documento: string };
+    }> => {
       let contratanteId: string;
       let contratanteSnapshot = {
         nome: "",
@@ -289,9 +310,22 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      // 2) Monta payload da venda (snake_case)
+      return { contratanteId, contratanteSnapshot };
+    },
+    [addContratante, updateContratante]
+  );
+
+  /**
+   * Payload snake_case da venda. `parcelas` só entra quando o input trouxe:
+   * omitir a chave é o que diz ao servidor "não mexa nas parcelas" (D5).
+   */
+  const montarPayloadVenda = useCallback(
+    (
+      input: NovaVendaInput,
+      contratanteId: string,
+      contratanteSnapshot: { nome: string; email: string; telefone: string; documento: string }
+    ): Record<string, unknown> => {
       const payload: Record<string, unknown> = {
-        orcamento_id: input.orcamentoId ?? null,
         contratante_id: contratanteId,
         contratante_nome: contratanteSnapshot.nome,
         contratante_email: contratanteSnapshot.email,
@@ -321,15 +355,33 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         logistica: input.logistica,
         observacoes: input.observacoes ?? null,
         info_extra: input.infoExtra ?? null,
-        parcelas: input.parcelas.map((p) => ({
+      };
+      if (input.parcelas) {
+        payload.parcelas = input.parcelas.map((p) => ({
           percentual: p.percentual,
           valor: p.valor,
           data_vencimento: p.dataVencimento || null,
           status_base: p.statusBase,
           data_pagamento: p.dataPagamento || null,
           observacao: p.observacao ?? null,
-        })),
-      };
+        }));
+      }
+      return payload;
+    },
+    []
+  );
+
+  const criarVenda = useCallback(
+    async (input: NovaVendaInput): Promise<Venda> => {
+      // 1) Resolver contratante (existente → atualizar; novo → criar)
+      const { contratanteId, contratanteSnapshot } = await resolverContratanteDoInput(input);
+
+      // 2) Monta payload da venda (snake_case)
+      const payload = montarPayloadVenda(input, contratanteId, contratanteSnapshot);
+      payload.orcamento_id = input.orcamentoId ?? null;
+      // A criação sempre manda parcelas (o form valida) — `?? []` só satisfaz o
+      // tipo agora opcional (a edição é quem pode omitir).
+      if (!payload.parcelas) payload.parcelas = [];
 
       // 3) POST único — o servidor cuida de show + orçamento
       const res = await fetch("/api/vendas", {
@@ -348,7 +400,41 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       void recarregarShows();
       return comDj;
     },
-    [addContratante, updateContratante, recarregarShows]
+    [resolverContratanteDoInput, montarPayloadVenda, recarregarShows]
+  );
+
+  /**
+   * Edição completa: MESMO input/payload da criação, via PATCH. Sem
+   * `orcamento_id` — a origem da venda não muda numa edição.
+   */
+  const atualizarVendaCompleta = useCallback(
+    async (
+      id: string,
+      input: NovaVendaInput
+    ): Promise<{ venda: Venda; parcelasPreservadas: boolean }> => {
+      const { contratanteId, contratanteSnapshot } = await resolverContratanteDoInput(input);
+      const payload = montarPayloadVenda(input, contratanteId, contratanteSnapshot);
+
+      const res = await fetch(`/api/vendas/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await jsonOuErro(res);
+      const atual = body.venda as Venda;
+
+      // O artista PODE mudar na edição — vale o do input (espelha o `comDj` da
+      // criação, já que a resposta redigida pode não trazer o artist_id).
+      setVendas((prev) =>
+        prev.map((v) => (v.id === id ? { ...v, ...atual, artistaId: input.artistaId } : v))
+      );
+      // O servidor sincronizou o show — a agenda local precisa acompanhar.
+      void recarregarShows();
+
+      return { venda: atual, parcelasPreservadas: body.parcelasPreservadas === true };
+    },
+    [resolverContratanteDoInput, montarPayloadVenda, recarregarShows]
   );
 
   const updateVenda = useCallback(
@@ -449,12 +535,24 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       erro,
       recarregar,
       criarVenda,
+      atualizarVendaCompleta,
       updateVenda,
       removeVenda,
       atualizarParcela,
       acaoParcela,
     }),
-    [vendas, carregando, erro, recarregar, criarVenda, updateVenda, removeVenda, atualizarParcela, acaoParcela]
+    [
+      vendas,
+      carregando,
+      erro,
+      recarregar,
+      criarVenda,
+      atualizarVendaCompleta,
+      updateVenda,
+      removeVenda,
+      atualizarParcela,
+      acaoParcela,
+    ]
   );
 
   return <VendasContext.Provider value={value}>{children}</VendasContext.Provider>;

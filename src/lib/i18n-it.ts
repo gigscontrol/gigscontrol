@@ -2691,4 +2691,26 @@ export const IT: Record<string, string> = {
     "Non hai accesso ai dati di questo locale, quindi non è possibile confermare che sia lo stesso. Crealo come nuovo locale o chiedi a qualcuno con accesso di verificare.",
   "É outro local": "È un altro locale",
   "É o mesmo local": "È lo stesso locale",
+  // Chaves novas de edição de venda (D2-D6), diálogos com ConfirmarModal e refino de cancelar/excluir contrato.
+  "Cancelar este show?": "Annullare questo show?",
+  "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).":
+    "L'evento in Google Calendar diventerà ROSSO (non viene eliminato — lo elimini manualmente se vuoi).",
+  "Venda sem show na agenda": "Vendita senza show in agenda",
+  "Histórico de alterações": "Cronologia delle modifiche",
+  "Alguém": "Qualcuno",
+  "às": "alle",
+  "Parcelas não recalculadas": "Rate non ricalcolate",
+  "Altere o que precisar e salve — o show e o financeiro acompanham.":
+    "Modifica ciò che serve e salva — lo show e la parte finanziaria si aggiornano di conseguenza.",
+  "Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "Questa vendita ha una rata pagata — le rate non verranno ricalcolate al salvataggio. Se modifichi il cachet, controlla le rate in Finanze.",
+  "Parcelas não recalculadas — há parcela paga. Revise no Financeiro.":
+    "Rate non ricalcolate — c'è una rata pagata. Controlla in Finanze.",
+  "Desconectar o Google Calendar deste artista?": "Disconnettere Google Calendar da questo artista?",
+  "Os próximos shows não serão mais sincronizados.": "I prossimi show non verranno più sincronizzati.",
+  "Excluir o contrato {numero}?": "Eliminare il contratto {numero}?",
+  "Cancelar o contrato {numero}?": "Annullare il contratto {numero}?",
+  "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
+    "Verrà contrassegnato come annullato e il link di firma smetterà di funzionare per chi non ha ancora firmato. Il contratto resta visibile nello storico.",
+  "Confirmar": "Conferma",
 };

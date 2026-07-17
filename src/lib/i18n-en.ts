@@ -3697,4 +3697,26 @@ export const EN: Record<string, string> = {
     "You don't have access to this venue's data, so there is no way to confirm it is the same one. Create it as a new venue or ask someone with access to check.",
   "É outro local": "It's another venue",
   "É o mesmo local": "It's the same venue",
+  // Chaves novas de edição de venda (D2-D6), diálogos com ConfirmarModal e refino de cancelar/excluir contrato.
+  "Cancelar este show?": "Cancel this show?",
+  "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).":
+    "The event in Google Calendar turns RED (it is not deleted — you delete it manually if you want).",
+  "Venda sem show na agenda": "Sale without a show in the schedule",
+  "Histórico de alterações": "Change history",
+  "Alguém": "Someone",
+  "às": "at",
+  "Parcelas não recalculadas": "Installments not recalculated",
+  "Altere o que precisar e salve — o show e o financeiro acompanham.":
+    "Change what you need and save — the show and the finances stay in sync.",
+  "Esta venda tem parcela paga — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "This sale has a paid installment — the installments won't be recalculated when you save. If you change the fee, review the installments in Finance.",
+  "Parcelas não recalculadas — há parcela paga. Revise no Financeiro.":
+    "Installments not recalculated — there's a paid installment. Review it in Finance.",
+  "Desconectar o Google Calendar deste artista?": "Disconnect Google Calendar for this artist?",
+  "Os próximos shows não serão mais sincronizados.": "Upcoming shows will no longer be synced.",
+  "Excluir o contrato {numero}?": "Delete contract {numero}?",
+  "Cancelar o contrato {numero}?": "Cancel contract {numero}?",
+  "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
+    "It will be marked as canceled and the signature link stops working for anyone who hasn't signed yet. The contract stays visible in the history.",
+  "Confirmar": "Confirm",
 };

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
 import { useT } from "@/lib/i18n";
+import { useConfirmar } from "../ConfirmarModal";
 import ColorPicker from "../ColorPicker";
 import type {
   SecaoModelo,
@@ -158,6 +159,7 @@ export default function EditorModelo({
 }: Props) {
   const t = useT();
   const { criarModelo, atualizarModelo } = useModelos();
+  const { confirmar, confirmador } = useConfirmar();
 
   const [nome, setNome] = useState(nomeInicial);
   const [secoes, setSecoes] = useState<SecaoModelo[]>(secoesIniciais);
@@ -199,9 +201,9 @@ export default function EditorModelo({
     setMenuAberto(false);
   }
 
-  function removerSecao(id: string) {
+  async function removerSecao(id: string) {
     if (temConteudo(secoes.filter((s) => s.id === id)) &&
-        !window.confirm(t("Remover esta seção? O conteúdo será perdido."))) {
+        !(await confirmar({ titulo: t("Remover esta seção? O conteúdo será perdido."), perigo: true }))) {
       return;
     }
     setSecoes((prev) => prev.filter((s) => s.id !== id));
@@ -330,12 +332,12 @@ export default function EditorModelo({
     );
   }
 
-  function removerItem(secaoId: string, itemId: string) {
+  async function removerItem(secaoId: string, itemId: string) {
     const secao = secoes.find((s) => s.id === secaoId);
     const item =
       secao?.tipo === "clausula" ? secao.itens.find((i) => i.id === itemId) : null;
     if (item?.texto.trim() &&
-        !window.confirm(t("Remover este item? O conteúdo será perdido."))) {
+        !(await confirmar({ titulo: t("Remover este item? O conteúdo será perdido."), perigo: true }))) {
       return;
     }
     setSecoes((prev) =>
@@ -1020,6 +1022,7 @@ export default function EditorModelo({
           </div>
         </aside>
       </div>
+      {confirmador}
     </div>
   );
 }

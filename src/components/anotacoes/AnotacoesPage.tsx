@@ -28,6 +28,7 @@ import type { Show, Artista } from "@/types";
 import type { AnotacaoPasta, Anotacao, VisibilidadePasta, MembroPasta } from "@/lib/mappers/anotacoes";
 import { useEquipe, fmtQuando, type UsuarioResumo } from "./anotacoesShared";
 import NotaCard from "./NotaCard";
+import { useConfirmar, useAviso } from "../ConfirmarModal";
 import NotaEditor, { type NotaEditorDados } from "./NotaEditor";
 import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
@@ -63,6 +64,7 @@ export default function AnotacoesPage() {
   const { shows } = useShows();
   const artistas = useArtistas();
   const usuarios = useEquipe();
+  const { confirmar, confirmador } = useConfirmar();
 
   const meuId = sessao?.usuario?.id ?? "";
   const souAdmin = sessao?.usuario?.papel === "admin" || sessao?.tipo === "super-admin";
@@ -234,9 +236,10 @@ export default function AnotacoesPage() {
             onEditarPasta={() => setModalPasta({ modo: "editar", pasta: pastaAberta })}
             onExcluirPasta={async () => {
               if (
-                window.confirm(
-                  t('Excluir a pasta "{nome}" e todas as suas anotações?', { nome: pastaAberta.nome })
-                )
+                await confirmar({
+                  titulo: t('Excluir a pasta "{nome}" e todas as suas anotações?', { nome: pastaAberta.nome }),
+                  perigo: true,
+                })
               ) {
                 await removePasta(pastaAberta.id);
                 voltarParaPastas();
@@ -398,6 +401,7 @@ export default function AnotacoesPage() {
           }}
         />
       )}
+      {confirmador}
     </div>
   );
 }
@@ -779,6 +783,7 @@ function PastaFormModal({
   }) => Promise<void>;
 }) {
   const t = useT();
+  const { avisar, avisador } = useAviso();
   const [nome, setNome] = useState(inicial?.nome ?? "");
   const [cor, setCor] = useState<string>(inicial?.cor ?? CORES[0]);
   const [icone, setIcone] = useState<string>(inicial?.icone ?? "📁");
@@ -810,7 +815,7 @@ function PastaFormModal({
           : [];
       await onSalvar({ nome: nome.trim(), cor, icone, visibilidade, membros });
     } catch (e) {
-      window.alert((e as Error).message || t("Falha ao salvar."));
+      avisar((e as Error).message || t("Falha ao salvar."));
       setSalvando(false);
     }
   };
@@ -822,6 +827,7 @@ function PastaFormModal({
   ];
 
   return (
+    <>
     <Modal
       isOpen
       onClose={onClose}
@@ -970,5 +976,7 @@ function PastaFormModal({
         </div>
       </div>
     </Modal>
+    {avisador}
+    </>
   );
 }
