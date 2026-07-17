@@ -6,7 +6,7 @@ import { Field, TextInput, TextArea } from "../Field";
 import InputDocumento from "../inputs/InputDocumento";
 import SeletorPais from "../SeletorPais";
 import PhoneInput from "../PhoneInput";
-import { normalizarDocumento, configDocumento } from "@/lib/data/documentos";
+import { normalizarDocumento, configDocumento, ehCnpj } from "@/lib/data/documentos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
@@ -42,6 +42,8 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [pais, setPais] = useState<Country>(paisDe(initial?.pais));
   const [documento, setDocumento] = useState(initial?.documento ?? "");
+  // Razão social do documento PRINCIPAL — só existe quando ele é CNPJ.
+  const [razaoSocial, setRazaoSocial] = useState(initial?.razaoSocial ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
 
   // Telefone: país (DDI) + dígitos nacionais. Prefill remove o DDI se colado.
@@ -55,11 +57,19 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
   const [observacoes, setObservacoes] = useState(initial?.observacoes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Aparece/some conforme o documento digitado vira CNPJ. Fora do BR o helper
+  // devolve false — o campo nunca aparece e nada muda pra esses países.
+  const docEhCnpj = ehCnpj(pais.code, documento);
+
   const handleSave = async () => {
     const errs: Record<string, string> = {};
     if (!nome.trim()) errs.nome = t("Nome obrigatório");
     if (!telDigits.trim()) errs.telefone = t("Telefone obrigatório");
     if (!cidadeSel) errs.cidade = t("Selecione uma cidade");
+    // Só no cadastro novo: contratante antigo já gravado no CNPJ não tem razão
+    // social, e exigi-la travaria uma edição que nada tem a ver com isso.
+    if (docEhCnpj && !razaoSocial.trim() && !initial)
+      errs.razaoSocial = t("Razão social obrigatória");
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -83,6 +93,9 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
       nome,
       pais: pais.code,
       documento: normalizarDocumento(pais.code, documento),
+      // Segue o documento (D1): CPF não tem razão social — manda vazio pra não
+      // deixar pendurada a razão de um CNPJ que foi trocado.
+      razaoSocial: docEhCnpj ? razaoSocial.trim() : "",
       email: email || "",
       telefone: montarTelefoneE164(telPais, telDigits),
       cidadeId: cidadeIdResolvido,
@@ -128,6 +141,24 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
         <Field label={configDocumento(pais.code).label} hint="Necessário ao converter em venda">
           <InputDocumento pais={pais.code} value={documento} onChange={setDocumento} />
         </Field>
+        {docEhCnpj && (
+          <div className="sm:col-span-2">
+            <Field
+              label="Razão social / Nome da empresa"
+              required={!initial}
+              error={errors.razaoSocial}
+            >
+              <TextInput
+                value={razaoSocial}
+                onChange={(e) => {
+                  setRazaoSocial(e.target.value);
+                  if (e.target.value) setErrors((p) => ({ ...p, razaoSocial: "" }));
+                }}
+                placeholder="Ex: Silva Produções Artísticas LTDA"
+              />
+            </Field>
+          </div>
+        )}
         <Field label="Cidade" required error={errors.cidade}>
           <CidadeGlobalAutocomplete
             value={cidadeSel}

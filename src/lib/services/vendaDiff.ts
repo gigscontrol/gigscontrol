@@ -140,6 +140,7 @@ export async function diffVenda(
   add("contratante_email", "E-mail do contratante", texto(antes.contratanteEmail), texto(depois.contratanteEmail));
   add("contratante_telefone", "Telefone do contratante", telefone(antes.contratanteTelefone), telefone(depois.contratanteTelefone));
   add("contratante_documento", "Documento do contratante", documento(antes.contratanteDocumento), documento(depois.contratanteDocumento));
+  add("contratante_razao_social", "Razão social do contratante", texto(antes.contratanteRazaoSocial), texto(depois.contratanteRazaoSocial));
   add("contratante_endereco", "Endereço do contratante", texto(antes.contratanteEndereco), texto(depois.contratanteEndereco));
 
   // Evento

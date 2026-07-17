@@ -237,6 +237,12 @@ export type DocumentoContratante = {
   documento: string;
   /** País de origem do documento (ISO2). */
   pais?: string;
+  /**
+   * Razão social DESTE documento (migração 91) — só existe quando ele é CNPJ.
+   * A razão social pertence ao documento, não à pessoa: o mesmo contratante
+   * pode ter CPF (sem razão) + dois CNPJs com razões diferentes.
+   */
+  razao_social?: string;
   primeiro_uso: string;
   ultimo_uso: string;
 };
@@ -250,6 +256,12 @@ export type Contratante = {
    * (= último usado). Escrita SÓ no servidor — o cliente nunca manda este array.
    */
   documentos?: DocumentoContratante[];
+  /**
+   * Razão social do documento PRINCIPAL (migração 91) — preenchida só quando
+   * `documento` é CNPJ (`ehCnpj`). A razão de cada documento do histórico vive
+   * em `documentos[].razao_social`.
+   */
+  razaoSocial?: string;
   /** País de origem (ISO2). Define o tipo de documento. Default 'BR'. */
   pais?: string;
   email?: string; // ✱ agora opcional
@@ -564,6 +576,8 @@ export type Venda = {
   contratanteEmail: string;
   contratanteTelefone: string;
   contratanteDocumento: string; // CPF/CNPJ
+  /** Snapshot da razão social (migração 91) — só quando o documento é CNPJ. */
+  contratanteRazaoSocial?: string;
   contratanteEndereco: string;
 
   // 📌 Evento

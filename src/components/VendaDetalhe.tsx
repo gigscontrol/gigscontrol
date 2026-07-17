@@ -256,6 +256,9 @@ export default function VendaDetalhe({
               value={venda.contratanteTelefone ? `+${venda.contratanteTelefone}` : "—"}
             />
             <InfoLine label={t("CPF/CNPJ")} value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
+            {venda.contratanteRazaoSocial && (
+              <InfoLine label={t("Razão Social")} value={venda.contratanteRazaoSocial} />
+            )}
             <InfoLine label={t("Endereço")} value={venda.contratanteEndereco || "—"} />
           </div>
 

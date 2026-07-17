@@ -18,6 +18,7 @@ import type {
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { contratanteIdsVisiveis } from "@/lib/services/contatosAcesso";
 import { resolverGeoDoContato } from "@/lib/services/geoContato";
+import { ehCnpj } from "@/lib/data/documentos";
 
 function entradaParaEscrita(
   input: ContratanteCreateInput | ContratanteUpdateInput
@@ -25,6 +26,7 @@ function entradaParaEscrita(
   const out: ContratanteEscrita = {};
   if (input.nome !== undefined) out.nome = input.nome;
   if (input.documento !== undefined) out.documento = input.documento;
+  if (input.razao_social !== undefined) out.razao_social = input.razao_social;
   if (input.pais !== undefined) out.pais = input.pais;
   // Zod normaliza string vazia em e-mail como ""; tratamos como null no banco
   if (input.email !== undefined) out.email = input.email === "" ? null : input.email;
@@ -49,15 +51,38 @@ function acumularDocumento(
   atuais: DocumentoContratante[],
   documento: string,
   pais: string | undefined,
+  razaoSocial: string | undefined,
   agora: string
 ): DocumentoContratante[] {
+  // Razão social é do DOCUMENTO (migração 91): cada item carrega a SUA. Vazia →
+  // não sobrescreve a que já estava (CPF nunca teve; CNPJ mantém a última boa).
+  const razao = razaoSocial ? { razao_social: razaoSocial } : {};
   const i = atuais.findIndex((d) => d.documento === documento);
   if (i === -1) {
-    return [...atuais, { documento, ...(pais ? { pais } : {}), primeiro_uso: agora, ultimo_uso: agora }];
+    return [
+      ...atuais,
+      { documento, ...(pais ? { pais } : {}), ...razao, primeiro_uso: agora, ultimo_uso: agora },
+    ];
   }
   const out = [...atuais];
-  out[i] = { ...out[i], ...(pais ? { pais } : {}), ultimo_uso: agora };
+  // Mesmo CNPJ com razão social diferente ATUALIZA em silêncio (a empresa foi
+  // renomeada/corrigida) — nunca vira popup de divergência.
+  out[i] = { ...out[i], ...(pais ? { pais } : {}), ...razao, ultimo_uso: agora };
   return out;
+}
+
+/**
+ * A razão social pertence ao DOCUMENTO, não à pessoa (migração 91): só existe
+ * quando o documento principal é CNPJ. CPF (ou documento de país sem regra) →
+ * sempre null, pra não sobrar razão social órfã de um CNPJ que virou CPF.
+ */
+function razaoSocialCoerente(
+  documento: string | null | undefined,
+  pais: string | null | undefined,
+  razaoSocial: string | null | undefined
+): string | null {
+  if (!ehCnpj(pais, documento)) return null;
+  return (razaoSocial ?? "").trim() || null;
 }
 
 /**
@@ -126,12 +151,19 @@ export async function criarContratanteNoWorkspace(
   input: ContratanteCreateInput
 ): Promise<Contratante> {
   const escrita = entradaParaEscrita(input);
-  // Documento nasce já acumulado no histórico (migração 90).
+  // Razão social segue o documento principal (migração 91): CPF → null.
+  escrita.razao_social = razaoSocialCoerente(
+    escrita.documento,
+    escrita.pais,
+    input.razao_social
+  );
+  // Documento nasce já acumulado no histórico (migração 90), com a razão dele.
   if (typeof escrita.documento === "string" && escrita.documento.trim()) {
     escrita.documentos = acumularDocumento(
       [],
       escrita.documento,
       escrita.pais ?? undefined,
+      escrita.razao_social ?? undefined,
       new Date().toISOString()
     );
   }
@@ -159,9 +191,29 @@ export async function atualizarContratantePorId(
       ? escrita.documento
       : null;
   const mexeEmGeo = input.endereco !== undefined || input.cidade_id !== undefined;
+  // Documento e razão social andam juntos (migração 91): mexer num decide o outro.
+  const mexeEmRazao = input.documento !== undefined || input.razao_social !== undefined;
 
-  // Uma leitura só, compartilhada pelo re-geocode e pelo acúmulo de documento.
-  const atual = mexeEmGeo || documentoNovo ? await repoBuscar(supabase, id) : null;
+  // Uma leitura só, compartilhada pelo re-geocode, o acúmulo de documento e a razão social.
+  const atual =
+    mexeEmGeo || documentoNovo || mexeEmRazao ? await repoBuscar(supabase, id) : null;
+
+  // Razão social segue o documento PRINCIPAL final (o input é parcial: o que não
+  // veio agora vem do cadastro). Trocar CNPJ por CPF zera a razão.
+  //
+  // Razão VAZIA = "não informada", não "apague" — mesma semântica do
+  // `acumularDocumento` acima, senão as duas metades do dado (coluna e jsonb)
+  // divergem. Sem isso, qualquer PATCH que mande o documento com a razão em
+  // branco (form que não reidratou, campo escondido) apaga a razão do cadastro
+  // em silêncio. Quem zera é só o CNPJ→CPF, pelo `!ehCnpj` do razaoSocialCoerente.
+  if (mexeEmRazao) {
+    const razaoInformada = (input.razao_social ?? "").trim() ? input.razao_social : undefined;
+    escrita.razao_social = razaoSocialCoerente(
+      input.documento !== undefined ? escrita.documento : atual?.documento,
+      escrita.pais ?? atual?.pais,
+      razaoInformada ?? atual?.razao_social
+    );
+  }
 
   // Documento ACUMULA (migração 90) — nunca é sobrescrito no histórico, e nunca
   // entra em popup de divergência. `documento` segue como o principal (último usado).
@@ -170,6 +222,7 @@ export async function atualizarContratantePorId(
       (atual?.documentos ?? []) as DocumentoContratante[],
       documentoNovo,
       escrita.pais ?? atual?.pais ?? undefined,
+      escrita.razao_social ?? undefined,
       new Date().toISOString()
     );
   }

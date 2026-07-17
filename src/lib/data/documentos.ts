@@ -74,3 +74,19 @@ export function normalizarDocumento(pais: string | undefined | null, raw: string
   const p = (pais ?? "BR").toUpperCase();
   return NUMERICOS.has(p) ? digitos(raw) : alnum(raw);
 }
+
+/**
+ * O documento é de PESSOA JURÍDICA (= tem razão social)? Ponto ÚNICO da regra —
+ * nada de `length === 14` espalhado pelo app.
+ *
+ * Hoje só BR: CNPJ = 14 dígitos, CPF = 11 (a distinção é por contagem de
+ * dígitos do valor normalizado). Os outros países também têm documento de
+ * empresa (SIRET, CUIT, RUC…), mas sem regra definida aqui eles respondem
+ * `false` — o campo de razão social nunca aparece pra eles e o fluxo segue
+ * exatamente como hoje. Pra generalizar depois, basta ramificar por país.
+ */
+export function ehCnpj(pais: string | undefined | null, documento: string | null | undefined): boolean {
+  const p = (pais ?? "BR").toUpperCase();
+  if (p !== "BR" || !documento) return false;
+  return normalizarDocumento(p, documento).length === 14;
+}

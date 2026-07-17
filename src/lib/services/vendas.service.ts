@@ -82,6 +82,7 @@ function vendaInputParaEscrita(
   if (input.contratante_email !== undefined) out.contratante_email = input.contratante_email;
   if (input.contratante_telefone !== undefined) out.contratante_telefone = input.contratante_telefone;
   if (input.contratante_documento !== undefined) out.contratante_documento = input.contratante_documento;
+  if (input.contratante_razao_social !== undefined) out.contratante_razao_social = input.contratante_razao_social;
   if (input.contratante_endereco !== undefined) out.contratante_endereco = input.contratante_endereco;
   if (input.nome_evento !== undefined) out.nome_evento = input.nome_evento;
   if (input.evento_instagram !== undefined) out.evento_instagram = input.evento_instagram;

@@ -5,7 +5,8 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 const COLS = `
   id, workspace_id, numero, orcamento_id, show_id,
   contratante_id, contratante_nome, contratante_email,
-  contratante_telefone, contratante_documento, contratante_endereco,
+  contratante_telefone, contratante_documento, contratante_razao_social,
+  contratante_endereco,
   nome_evento, evento_instagram, nome_local, capacidade_publico, endereco_local,
   data_show, horario, horario_fim, fuso_horario, cidade_id, casa_id, artist_id,
   line_up, cache, duracao_horas, duracao_minutos,

@@ -69,6 +69,9 @@ function contratanteParaApi(
   const out: Record<string, unknown> = {};
   if (c.nome !== undefined) out.nome = c.nome;
   if (c.documento !== undefined) out.documento = c.documento || null;
+  // Razão social (migração 91) — o servidor só a mantém quando o documento
+  // principal é CNPJ; mandar vazio pra CPF é o certo (zera).
+  if (c.razaoSocial !== undefined) out.razao_social = c.razaoSocial || null;
   if (c.pais !== undefined) out.pais = c.pais || null;
   if (c.email !== undefined) out.email = c.email || null;
   if (c.telefone !== undefined) out.telefone = c.telefone || null;

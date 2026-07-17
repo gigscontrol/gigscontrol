@@ -24,7 +24,7 @@ import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
 import InputDocumento from "./inputs/InputDocumento";
-import { normalizarDocumento, configDocumento } from "@/lib/data/documentos";
+import { normalizarDocumento, configDocumento, ehCnpj } from "@/lib/data/documentos";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
@@ -290,6 +290,13 @@ export default function ConcretizarVenda({
   const [telDigits, setTelDigits] = useState(() => telInicial.digits);
   const [contratanteDocumento, setContratanteDocumento] = useState(
     v?.contratanteDocumento ?? contratanteOrc?.documento ?? ""
+  );
+  // Razão social do DOCUMENTO digitado (só existe quando ele é CNPJ). Reidrata
+  // do snapshot da venda e, quando ele é vazio (venda fechada antes da migração
+  // 91), do CADASTRO pela âncora — campo que não reidrata é APAGADO ao salvar.
+  // Usa `||` e não `??`: snapshot vazio tem que cair pro cadastro.
+  const [contratanteRazaoSocial, setContratanteRazaoSocial] = useState(
+    v?.contratanteRazaoSocial || contatoAncora?.razaoSocial || ""
   );
   // Pré-preenche do cadastro: sem isso o endereço digitado "divergiria" do
   // cadastro em toda conversão de orçamento.
@@ -563,6 +570,7 @@ export default function ConcretizarVenda({
       if (contratanteOrc?.email) set.add("contratanteEmail");
       if (contratanteOrc?.telefone) set.add("contratanteTelefone");
       if (contratanteOrc?.documento) set.add("contratanteDocumento");
+      if (contratanteOrc?.razaoSocial) set.add("contratanteRazaoSocial");
       if (det?.nomeEvento) set.add("nomeEvento");
       if (det?.instagram) set.add("eventoInstagram");
       if (det?.nomeLocal || casaOrc?.nome) set.add("nomeLocal");
@@ -617,6 +625,11 @@ export default function ConcretizarVenda({
     setLineUp(lineUp.filter((_, i) => i !== idx));
   }
 
+  // Razão social só faz sentido pra pessoa JURÍDICA: aparece/some conforme o
+  // documento digitado vira CNPJ. Fora do BR o helper devolve false — o campo
+  // nunca aparece e o fluxo desses países segue idêntico ao de hoje.
+  const docEhCnpj = ehCnpj(paisOrigem.code, contratanteDocumento);
+
   // ------- Validação -------
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -626,6 +639,11 @@ export default function ConcretizarVenda({
     if (dig === 0) errs.contratanteTelefone = t("Telefone obrigatório");
     else if (dig < country.minDigits) errs.contratanteTelefone = t("Faltam dígitos");
     if (!contratanteDocumento.trim()) errs.contratanteDocumento = t("CPF/CNPJ obrigatório");
+    // Só na criação: venda antiga fechada no CNPJ não tem razão social gravada
+    // e exigi-la travaria uma edição que nada tem a ver com isso (mesma regra
+    // do tipo de evento, logo abaixo).
+    if (docEhCnpj && !contratanteRazaoSocial.trim() && !emEdicao)
+      errs.contratanteRazaoSocial = t("Razão social obrigatória");
     if (!contratanteEndereco.trim()) errs.contratanteEndereco = t("Endereço obrigatório");
 
     // Só na criação: venda antiga cuja casa é bar/arena/outro reidrata sem
@@ -923,6 +941,13 @@ export default function ConcretizarVenda({
     // CUIT argentino como "BR" corrompe o documento principal e o histórico.
     const paisDoDoc = alvo?.pais || paisOrigem.code;
     const docNorm = normalizarDocumento(paisDoDoc, contratanteDocumento);
+    // A razão social pertence ao DOCUMENTO, não à pessoa: se o documento que
+    // está indo é CPF, não existe razão social pra ele. Usa o MESMO país do
+    // `docNorm` — senão gravaríamos uma razão social num documento que o
+    // cadastro não lê como CNPJ.
+    const razaoSocialDoDoc = ehCnpj(paisDoDoc, contratanteDocumento)
+      ? contratanteRazaoSocial.trim()
+      : "";
 
     let contratanteInput: NovaVendaInput["contratante"];
     if (alvo) {
@@ -988,6 +1013,7 @@ export default function ConcretizarVenda({
           email: contratanteEmail.trim(),
           telefone: telefoneE164,
           documento: docNorm,
+          razaoSocial: razaoSocialDoDoc,
         },
       };
       // Grava o campo se foi aceito no popup OU se o cadastro estava vazio
@@ -1000,6 +1026,13 @@ export default function ConcretizarVenda({
         existente.enderecoNovo = contratanteEndereco.trim();
       if (aceitos.includes("telefone") || ehBackfill(alvo.telefone, telefoneE164))
         existente.telefoneNovo = telefoneE164;
+      // Razão social anda colada no documento (D6): CNPJ já cadastrado com razão
+      // diferente = empresa renomeada/corrigida → atualiza calado, nunca vira
+      // divergência. Em BRANCO ela NÃO vai: o campo pode estar escondido (o país
+      // que a tela usa é o `paisOrigem`, o que grava é o do cadastro) e um branco
+      // invisível apagaria a razão do cadastro. Trocar CNPJ→CPF continua zerando
+      // pelo `documentoNovo` (o servidor deriva a razão do documento principal).
+      if (razaoSocialDoDoc) existente.razaoSocialNovo = razaoSocialDoDoc;
       // D5 — cidade só entra quando o cadastro NÃO tem (backfill-se-vazio):
       // o cidade_id alimenta geocode/mapa e não deve pular a cada venda.
       if (!alvo.cidadeId) existente.cidadeIdNovo = cidadeIdResolvido;
@@ -1016,6 +1049,7 @@ export default function ConcretizarVenda({
         email: contratanteEmail.trim(),
         telefone: telefoneE164,
         documento: docNorm,
+        razaoSocial: razaoSocialDoDoc,
         pais: paisOrigem.code,
         cidadeId: cidadeIdResolvido,
       };
@@ -1103,6 +1137,11 @@ export default function ConcretizarVenda({
     set(campos.contratanteNome, setContratanteNome, "Nome");
     set(campos.contratanteEmail, setContratanteEmail, "E-mail");
     set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
+    // Razão social só entra quando o documento é CNPJ — senão o painel anunciaria
+    // um campo que a tela não mostra (e cujo valor o submit descarta). Reavalia
+    // com o documento COLADO agora: `docEhCnpj` é do render anterior.
+    if (ehCnpj(paisOrigem.code, campos.contratanteDocumento ?? contratanteDocumento))
+      set(campos.contratanteRazaoSocial, setContratanteRazaoSocial, "Razão social");
     set(campos.contratanteEndereco, setContratanteEndereco, "Endereço");
     set(campos.nomeEvento, setNomeEvento, "Evento");
     set(campos.eventoInstagram, setEventoInstagram, "Instagram");
@@ -1227,6 +1266,7 @@ export default function ConcretizarVenda({
             ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
             : "",
           contratanteDocumento,
+          contratanteRazaoSocial,
           contratanteEndereco,
           nomeEvento,
           eventoInstagram,
@@ -1404,6 +1444,26 @@ export default function ConcretizarVenda({
               }}
             />
           </FieldWithAuto>
+
+          {docEhCnpj && (
+            <div className="sm:col-span-2">
+              <FieldWithAuto
+                label="Razão social / Nome da empresa"
+                required={!emEdicao}
+                error={errors.contratanteRazaoSocial}
+                showAuto={showAutoBadge("contratanteRazaoSocial")}
+              >
+                <TextInput
+                  value={contratanteRazaoSocial}
+                  onChange={(e) => {
+                    setContratanteRazaoSocial(e.target.value);
+                    marcarEditado("contratanteRazaoSocial");
+                  }}
+                  placeholder="Ex: Silva Produções Artísticas LTDA"
+                />
+              </FieldWithAuto>
+            </div>
+          )}
 
           <div className="sm:col-span-2">
             <Field

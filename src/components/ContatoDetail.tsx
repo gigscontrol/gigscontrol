@@ -43,6 +43,9 @@ type Props = {
 type DocumentoHistorico = {
   documento: string;
   pais?: string;
+  /** Razão social DESTE documento (migração 91) — a razão pertence ao
+   *  documento, não à pessoa (D1): cada CNPJ do histórico tem a sua. */
+  razao_social?: string;
   primeiro_uso: string;
   ultimo_uso: string;
 };
@@ -168,6 +171,9 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             <div className="section-title mb-4">{t("Informações")}</div>
             <div className="flex flex-col gap-3 text-sm">
               <InfoRow icon={<Hash size={13} />} label={t("Documento")} value={mascararCpfCnpj(atual.documento) || "—"} />
+              {atual.razaoSocial && (
+                <InfoRow icon={<Building2 size={13} />} label={t("Razão Social")} value={atual.razaoSocial} />
+              )}
               <InfoRow icon={<Mail size={13} />} label={t("E-mail")} value={atual.email || "—"} mono />
               <InfoRow icon={<Phone size={13} />} label={t("Telefone")} value={atual.telefone} />
               <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(cidadePrincipalId, cidades)} />
@@ -196,7 +202,13 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                             key={d.documento}
                             className="flex items-center justify-between gap-2 text-xs bg-elevated border border-border rounded-md px-2.5 py-1.5"
                           >
-                            <span className="font-mono text-secondary">{mascararCpfCnpj(d.documento)}</span>
+                            <span className="flex flex-col min-w-0">
+                              <span className="font-mono text-secondary">{mascararCpfCnpj(d.documento)}</span>
+                              {/* D1 — razão social é DESTE documento, não da pessoa: cada CNPJ do histórico mostra a sua. */}
+                              {d.razao_social && (
+                                <span className="text-muted truncate">{d.razao_social}</span>
+                              )}
+                            </span>
                             <span className="flex items-center gap-1.5 text-muted flex-shrink-0">
                               {d.pais && d.pais !== "BR" && <span>{d.pais}</span>}
                               {principal && <span className="badge badge-info">{t("Atual")}</span>}

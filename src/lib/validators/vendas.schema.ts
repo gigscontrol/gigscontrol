@@ -41,6 +41,9 @@ export const vendaCreateSchema = z.object({
   contratante_email: z.string().nullable().optional(),
   contratante_telefone: z.string().nullable().optional(),
   contratante_documento: z.string().nullable().optional(),
+  // Snapshot da razão social (migração 91) — só faz sentido quando o documento
+  // é CNPJ; o cliente já manda vazio pra CPF.
+  contratante_razao_social: z.string().max(140).nullable().optional(),
   contratante_endereco: z.string().nullable().optional(),
   nome_evento: z.string().nullable().optional(),
   evento_instagram: z.string().nullable().optional(),

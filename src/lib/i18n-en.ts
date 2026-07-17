@@ -1241,6 +1241,7 @@ const SWEEP2: Record<string, string> = {
   "Nenhum ainda": "None yet",
   "Informações": "Information",
   "Documento": "Document",
+  "Razão Social": "Legal Name",
   "E-mail": "Email",
   "Telefone": "Phone",
   "Observações": "Notes",

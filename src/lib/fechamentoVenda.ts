@@ -8,6 +8,9 @@ export type DadosFechamento = {
   contratanteEmail?: string;
   contratanteTelefone?: string;
   contratanteDocumento?: string;
+  /** Razão social — só se o documento for CNPJ (D2). O modelo é gerado ANTES
+   *  de saber isso, então o rótulo já avisa "(se CNPJ)". */
+  contratanteRazaoSocial?: string;
   contratanteEndereco?: string;
   nomeEvento?: string;
   eventoInstagram?: string;
@@ -53,6 +56,9 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     campo("E-mail", v.contratanteEmail),
     campo("Telefone", v.contratanteTelefone ? `+${v.contratanteTelefone.replace(/\D/g, "")}` : ""),
     campo("CPF/CNPJ", v.contratanteDocumento),
+    // D4 — só faz sentido pra CNPJ; como o modelo é gerado antes de saber o
+    // documento, o próprio rótulo deixa isso claro pro contratante.
+    campo("Razão Social (se CNPJ)", v.contratanteRazaoSocial),
     campo("Endereço do contratante/empresa", v.contratanteEndereco),
   ];
 

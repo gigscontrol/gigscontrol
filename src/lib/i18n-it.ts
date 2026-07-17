@@ -917,6 +917,7 @@ export const IT: Record<string, string> = {
   "Histórico de Vendas": "Storico Vendite",
   "{tituloMes} — por data de criação": "{tituloMes} — per data di creazione",
   "Documento": "Documento",
+  "Razão Social": "Ragione Sociale",
   "Sem artista": "Nessun artista",
   "Tudo resolvido": "Tutto a posto",
   "confirmação": "conferma",

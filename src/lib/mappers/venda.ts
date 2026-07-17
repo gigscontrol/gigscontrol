@@ -23,6 +23,7 @@ export type VendaRow = {
   contratante_email: string | null;
   contratante_telefone: string | null;
   contratante_documento: string | null;
+  contratante_razao_social: string | null;
   contratante_endereco: string | null;
   nome_evento: string | null;
   evento_instagram: string | null;
@@ -87,6 +88,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     contratanteEmail: row.contratante_email ?? "",
     contratanteTelefone: row.contratante_telefone ?? "",
     contratanteDocumento: row.contratante_documento ?? "",
+    contratanteRazaoSocial: row.contratante_razao_social ?? undefined,
     contratanteEndereco: row.contratante_endereco ?? "",
 
     nomeEvento: row.nome_evento ?? "",
@@ -164,6 +166,7 @@ export type VendaEscrita = {
   contratante_email?: string | null;
   contratante_telefone?: string | null;
   contratante_documento?: string | null;
+  contratante_razao_social?: string | null;
   contratante_endereco?: string | null;
   nome_evento?: string | null;
   evento_instagram?: string | null;
