@@ -26,7 +26,8 @@ import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL } from "@/lib/whatsapp";
+import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
 
 type Props = {
@@ -379,7 +380,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
                           : <span className="text-muted italic">{t("a definir")}</span>}
                       </Td>
                       <Td className="text-right tabular-nums font-semibold">
-                        {formatBRL(o.valorCache)}
+                        {formatarMoeda(o.valorCache, o.moeda)}
                       </Td>
                       <Td>
                         <span className={`badge ${st.badge}`}>{t(st.label)}</span>

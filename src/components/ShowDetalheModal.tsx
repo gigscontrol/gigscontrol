@@ -41,7 +41,8 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useContratos } from "@/lib/contratos-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { formatarDuracao } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import {
@@ -177,6 +178,8 @@ export default function ShowDetalheModal({
   }
 
   const cache = venda?.cache ?? orcamento?.valorCache ?? show.valor;
+  const moedaShow = venda?.moeda ?? orcamento?.moeda ?? "BRL";
+  const fmtM = (val: number) => formatarMoeda(val, moedaShow);
   const lineUp = venda?.lineUp;
   const tipoEvento = venda
     ? undefined
@@ -479,7 +482,7 @@ export default function ShowDetalheModal({
           )}
           {cache !== undefined && cache > 0 && (
             <Linha icon={<DollarSign size={13} />} bold>
-              <span className="tabular-nums">{formatBRL(cache)}</span>
+              <span className="tabular-nums">{fmtM(cache)}</span>
               <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
             </Linha>
           )}
@@ -574,20 +577,20 @@ export default function ShowDetalheModal({
                     <span className="text-secondary">
                       {t("Recebido:")}{" "}
                       <span className="font-semibold" style={{ color: "var(--success)" }}>
-                        {formatBRL(pago)}
+                        {fmtM(pago)}
                       </span>
                     </span>
                     <span className="text-secondary">
                       {t("A receber:")}{" "}
                       <span className="font-semibold text-primary">
-                        {formatBRL(restante)}
+                        {fmtM(restante)}
                       </span>
                     </span>
                     {atrasado > 0 && (
                       <span className="text-secondary">
                         {t("Atrasado:")}{" "}
                         <span className="font-semibold" style={{ color: "var(--danger)" }}>
-                          {formatBRL(atrasado)}
+                          {fmtM(atrasado)}
                         </span>
                       </span>
                     )}
@@ -627,7 +630,7 @@ export default function ShowDetalheModal({
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="font-semibold tabular-nums text-primary">
-                            {formatBRL(p.valor)}
+                            {fmtM(p.valor)}
                           </span>
                           <span className={`badge ${label.badge}`}>
                             {st === "pago" && <CheckCircle2 size={10} />}

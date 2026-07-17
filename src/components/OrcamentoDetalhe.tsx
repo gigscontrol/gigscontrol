@@ -11,7 +11,8 @@ import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { gerarTextoWhatsApp, montarLinkWhatsApp, formatarDuracao } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
 import { mascararCpfCnpj } from "@/lib/formatters";
@@ -70,6 +71,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
     );
   }
 
+  const fmtM = (val: number) => formatarMoeda(val, orc.moeda);
   const cont = contratantes.find((c) => c.id === orc.contratanteId);
   const cs = orc.casaId ? casas.find((c) => c.id === orc.casaId) : undefined;
   const cid = cidades.find((c) => c.id === orc.cidadeId);
@@ -245,7 +247,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               <InfoItem label={t("Artista")} value={artista?.name ?? "—"} />
               <InfoItem
                 label={t("Valor do cachê")}
-                value={formatBRL(orc.valorCache)}
+                value={fmtM(orc.valorCache)}
                 bold
                 accent={accent}
               />
@@ -253,11 +255,11 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 <>
                   <InfoItem
                     label={t("Taxa de agência")}
-                    value={formatBRL(orc.taxaAgenciaValor)}
+                    value={fmtM(orc.taxaAgenciaValor)}
                   />
                   <InfoItem
                     label={t("Líquido do artista")}
-                    value={formatBRL(liquidoArtista(orc.valorCache ?? 0, orc.taxaAgenciaValor))}
+                    value={fmtM(liquidoArtista(orc.valorCache ?? 0, orc.taxaAgenciaValor))}
                     bold
                     accent={accent}
                   />

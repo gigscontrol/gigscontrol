@@ -12,7 +12,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import { MODULE_THEMES } from "@/types";
 
 type Props = {
@@ -86,10 +86,6 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   // Derivam de vendasVisiveis (não da lista crua) pra ficar coerente com o
   // filtro de artista da sidebar.
   const ativas = useMemo(() => vendasVisiveis.filter((v) => v.status !== "cancelada"), [vendasVisiveis]);
-  const totalCache = useMemo(
-    () => ativas.reduce((acc, v) => acc + (v.cache ?? 0), 0),
-    [ativas]
-  );
 
   function handleRemover(id: string) {
     // (Etapa 6) — modal+toast injetado mais abaixo via state pra remover
@@ -134,7 +130,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Histórico de Vendas"
-        subtitle={`${ativas.length} ${ativas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${formatBRL(totalCache)}`}
+        subtitle={`${ativas.length} ${ativas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${totaisPorMoeda(ativas.map((v) => ({ valor: v.cache, moeda: v.moeda })))}`}
         accentColor={accent}
         actions={
           <button
@@ -276,7 +272,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
                         {new Date(v.dataShow + "T12:00:00").toLocaleDateString("pt-BR")}
                       </Td>
                       <Td className="text-right tabular-nums font-semibold">
-                        {formatBRL(v.cache)}
+                        {formatarMoeda(v.cache, v.moeda)}
                       </Td>
                       <Td>
                         {orc ? (

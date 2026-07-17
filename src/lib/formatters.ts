@@ -49,6 +49,28 @@ export function formatarMoeda(
   return `${sinal}${SIMBOLO_MOEDA[moeda] ?? "R$"} ${n}`;
 }
 
+/**
+ * Total de uma lista de valores AGRUPADO por moeda — nunca soma moedas
+ * diferentes num número só (aritmética falsa; não há câmbio no sistema).
+ * Com UMA moeda (o caso normal), devolve só ela: "R$ 45.000,00". Com várias:
+ * "R$ 45.000,00 + US$ 8.000,00" (ordem estável BRL, USD, EUR). Lista vazia →
+ * "R$ 0,00" (mantém o comportamento de hoje pra agência BRL sem dados).
+ */
+export function totaisPorMoeda(
+  itens: { valor: number; moeda: Moeda }[],
+  casas = 2
+): string {
+  const soma = new Map<Moeda, number>();
+  for (const it of itens) {
+    soma.set(it.moeda, (soma.get(it.moeda) ?? 0) + (it.valor || 0));
+  }
+  const ordem: Moeda[] = ["BRL", "USD", "EUR"];
+  const partes = ordem
+    .filter((m) => soma.has(m))
+    .map((m) => formatarMoeda(soma.get(m) ?? 0, m, casas));
+  return partes.length > 0 ? partes.join(" + ") : formatarMoeda(0, "BRL", casas);
+}
+
 // ============================================================
 // CPF / CNPJ
 // ============================================================
