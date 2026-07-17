@@ -2676,4 +2676,19 @@ export const IT: Record<string, string> = {
   "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "Se esci ora, le modifiche andranno perse. Cosa vuoi fare?",
   "Descartar": "Scarta",
   "Salvar e sair": "Salva ed esci",
+  "Local parecido encontrado": "Trovato un locale simile",
+  "Já existe um local parecido com \"{nome}\" nesta cidade. É o mesmo?":
+    "Esiste già un locale simile a \"{nome}\" in questa città. È lo stesso?",
+  "(sem endereço cadastrado)": "(nessun indirizzo registrato)",
+  "Endereço parecido": "Indirizzo simile",
+  "Dados restritos": "Dati riservati",
+  "Qual nome deve ficar?": "Quale nome deve restare?",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também.":
+    "Questo locale compare in show già registrati — cambiare il nome aggiorna anche lo storico.",
+  "Manter \"{nome}\"": "Mantieni \"{nome}\"",
+  "Usar \"{nome}\"": "Usa \"{nome}\"",
+  "Você não tem acesso aos dados desse local, então não dá pra confirmar que é o mesmo. Crie como novo local ou peça pra alguém com acesso conferir.":
+    "Non hai accesso ai dati di questo locale, quindi non è possibile confermare che sia lo stesso. Crealo come nuovo locale o chiedi a qualcuno con accesso di verificare.",
+  "É outro local": "È un altro locale",
+  "É o mesmo local": "È lo stesso locale",
 };
