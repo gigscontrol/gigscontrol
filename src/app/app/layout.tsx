@@ -683,7 +683,11 @@ function AppRoot() {
             <ContatosDashboard onAbrirCategoria={abrirContatos} />
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
-            <Contatos categoriaInicial={contatoCategoria} selectedArtistas={selectedArtistas} />
+            <Contatos
+              categoriaInicial={contatoCategoria}
+              selectedArtistas={selectedArtistas}
+              onAbrirShow={(id) => setShowModalId(id)}
+            />
           )}
           {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
@@ -31,9 +31,11 @@ import InputHora from "./inputs/InputHora";
 import { apenasDigitos } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
-import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
+import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
+import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
 import { buscarPais } from "@/lib/data/countries";
+import { normalizar } from "@/lib/normalizar";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { getPaisPadrao, getPaisPadraoCode } from "@/lib/preferencias";
 import { useContatos } from "@/lib/contatos-context";
@@ -52,10 +54,39 @@ import {
   CATALOGO_HOTEL,
   LOGISTICA_VAZIA,
   MODULE_THEMES,
+  type Contratante,
   type ItemQuantidade,
   type LogisticaSelecao,
   type Parcela,
 } from "@/types";
+
+/** Dados do contato já cadastrado que a venda vai reusar (D2). */
+type ContatoAlvo = {
+  id: string;
+  nome: string;
+  email: string;
+  endereco: string;
+  telefone: string;
+  cidadeId: string;
+  /** País do CADASTRO. Governa a normalização do documento — sobrescrevê-lo com
+   *  o padrão da agência corrompe o CPF/CNPJ/CUIT do contato (ver `submeter`). */
+  pais: string;
+  /** true quando o alvo veio do /existe, isto é, é um contato FORA da
+   *  visibilidade derivada deste usuário. O popup não imprime valores dele. */
+  oculto?: boolean;
+};
+
+function alvoDeContratante(c: Contratante): ContatoAlvo {
+  return {
+    id: c.id,
+    nome: c.nome ?? "",
+    email: c.email ?? "",
+    endereco: c.endereco ?? "",
+    telefone: c.telefone ?? "",
+    cidadeId: c.cidadeId ?? "",
+    pais: c.pais ?? "",
+  };
+}
 
 type Props = {
   orcamentoId?: string;
@@ -83,6 +114,65 @@ function calcularDuracao(inicio: string, fim: string): { horas: number; minutos:
   return { horas, minutos };
 }
 
+/**
+ * Quebra um telefone E.164 (sem "+") em país + dígitos nacionais.
+ *
+ * A chave de dedupe do contratante é o telefone (D1), então remontá-lo com o
+ * DDI errado cria duplicata garantida: o contratante estrangeiro vindo de um
+ * orçamento seria remontado com o DDI padrão da agência (55 + número gringo).
+ *
+ * Ordem: (1) DDI do país-dica (o `pais` do cadastro, quando bate); (2) match do
+ * DDI mais LONGO que sobre uma quantidade de dígitos plausível pro país (evita
+ * "598…" cair em "5…"); (3) nada plausível → país padrão + dígitos crus, que é
+ * o comportamento legado pra número gravado sem DDI.
+ */
+function separarTelefoneE164(
+  e164: string,
+  paisDica?: string
+): { country: Country; digits: string } {
+  const padrao = getPaisPadrao();
+  const digs = (e164 ?? "").replace(/\D/g, "");
+  if (!digs) return { country: padrao, digits: "" };
+
+  const plausivel = (c: Country, resto: string) =>
+    resto.length >= c.minDigits && resto.length <= c.maxDigits;
+
+  const dica = paisDica
+    ? COUNTRIES.find((c) => c.code === paisDica.toUpperCase())
+    : undefined;
+  if (dica && digs.startsWith(dica.ddi)) {
+    const resto = digs.slice(dica.ddi.length);
+    if (plausivel(dica, resto)) return { country: dica, digits: resto };
+  }
+
+  const candidatos = COUNTRIES.filter((c) => digs.startsWith(c.ddi)).sort(
+    (a, b) => b.ddi.length - a.ddi.length
+  );
+  for (const c of candidatos) {
+    const resto = digs.slice(c.ddi.length);
+    if (plausivel(c, resto)) return { country: c, digits: resto };
+  }
+
+  return { country: padrao, digits: digs };
+}
+
+/**
+ * Divergência = os DOIS lados preenchidos e diferentes. Cadastro vazio + valor
+ * digitado NÃO é conflito, é backfill (vai calado) — senão todo orçamento, que
+ * cria o contratante só com nome/telefone/cidade, abriria popup à toa.
+ */
+function diferem(atual: string, novo: string, ignorarCaixa = false): boolean {
+  const a = (atual ?? "").trim();
+  const b = (novo ?? "").trim();
+  if (!a || !b) return false;
+  return ignorarCaixa ? a.toLowerCase() !== b.toLowerCase() : a !== b;
+}
+
+/** Cadastro vazio + valor digitado → grava sem perguntar. */
+function ehBackfill(atual: string, novo: string): boolean {
+  return !(atual ?? "").trim() && !!(novo ?? "").trim();
+}
+
 /** Data ISO (YYYY-MM-DD) + offset de dias → "DD/MM/YYYY" (vazio se inválida). */
 function formatarDataOffset(iso: string, offsetDias: number): string {
   if (!iso) return "";
@@ -97,7 +187,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, onCancel }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, casas, cidades } = useContatos();
+  const { contratantes, casas, cidades, addCasa } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
   const [copiadoWA, setCopiadoWA] = useState(false);
@@ -122,22 +212,27 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // -------------------- Estado --------------------
 
   // Contratante
+  // O telefone do cadastro vem em E.164 — separa DDI dos dígitos nacionais pra
+  // que o campo remonte EXATAMENTE a mesma chave de dedupe (D1).
+  const telInicial = useMemo(
+    () => separarTelefoneE164(contratanteOrc?.telefone ?? "", contratanteOrc?.pais),
+    [contratanteOrc?.telefone, contratanteOrc?.pais]
+  );
   const [contratanteNome, setContratanteNome] = useState(contratanteOrc?.nome ?? "");
   const [contratanteEmail, setContratanteEmail] = useState(contratanteOrc?.email ?? "");
-  const [country, setCountry] = useState<Country>(() => getPaisPadrao());
+  const [country, setCountry] = useState<Country>(() => telInicial.country);
   // País de origem do contratante — define o documento fiscal pedido.
   const [paisOrigem, setPaisOrigem] = useState<Country>(() => {
     const code = (contratanteOrc?.pais ?? getPaisPadraoCode()).toUpperCase();
     return buscarPais(code).find((p) => p.code === code) ?? getPaisPadrao();
   });
-  const [telDigits, setTelDigits] = useState(() => {
-    const tel = contratanteOrc?.telefone ?? "";
-    const digs = tel.replace(/\D/g, "");
-    if (digs.startsWith("55") && digs.length >= 12) return digs.slice(2);
-    return digs;
-  });
+  const [telDigits, setTelDigits] = useState(() => telInicial.digits);
   const [contratanteDocumento, setContratanteDocumento] = useState(contratanteOrc?.documento ?? "");
-  const [contratanteEndereco, setContratanteEndereco] = useState("");
+  // Pré-preenche do cadastro: sem isso o endereço digitado "divergiria" do
+  // cadastro em toda conversão de orçamento.
+  const [contratanteEndereco, setContratanteEndereco] = useState(
+    contratanteOrc?.endereco ?? ""
+  );
 
   // Evento — detalhes do orçamento detalhado (det) primeiro; senão casa/base.
   const [nomeEvento, setNomeEvento] = useState(det?.nomeEvento ?? "");
@@ -237,6 +332,40 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
   // Trava o submit: evita double-click criar duas vendas (bug que gerou
   // duas VND com o mesmo número a partir do mesmo orçamento).
   const [salvando, setSalvando] = useState(false);
+
+  // ------- Popup de divergência do contato (D2) -------
+  // O submit é async e roda dentro do guard `salvando`; o modal responde por
+  // Promise pra não quebrar o fluxo em dois caminhos.
+  const [divergencias, setDivergencias] = useState<Divergencia[] | null>(null);
+  const [nomeContatoDiv, setNomeContatoDiv] = useState("");
+  const [divCego, setDivCego] = useState(false);
+  const responderDivergencia = useRef<((campos: string[]) => void) | null>(null);
+
+  /**
+   * Abre o popup e resolve com os campos que o usuário aceitou atualizar.
+   * `cego` = contato fora da visibilidade derivada (veio do /existe): o popup
+   * não imprime os valores do cadastro.
+   */
+  function perguntarDivergencias(
+    nomeContato: string,
+    divs: Divergencia[],
+    cego = false
+  ): Promise<string[]> {
+    return new Promise((resolve) => {
+      responderDivergencia.current = resolve;
+      setNomeContatoDiv(nomeContato);
+      setDivCego(cego);
+      setDivergencias(divs);
+    });
+  }
+
+  /** Fechar/Manter/Confirmar — sempre resolve (fechar = manter, nunca trava). */
+  function fecharDivergencia(campos: string[]) {
+    setDivergencias(null);
+    const resolver = responderDivergencia.current;
+    responderDivergencia.current = null;
+    resolver?.(campos);
+  }
 
   // ------- Pagamento / Parcelas -------
   const cacheNumAtual = parseValorBR(cache) || 0;
@@ -424,6 +553,120 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     }
   }
 
+  /**
+   * Qual contratante esta venda usa. Chave = TELEFONE em E.164 (D1): cada
+   * número de telefone = 1 contato, nunca duplica.
+   *
+   * Ordem: telefone inalterado vindo de orçamento → é ele mesmo; senão procura
+   * local e, por fim, no endpoint (que enxerga o workspace inteiro, inclusive
+   * contato OCULTO por visibilidade derivada — o contexto local é cego pra ele).
+   * Rede falhando não bloqueia a venda.
+   */
+  async function resolverContratanteAlvo(
+    telefoneE164: string
+  ): Promise<ContatoAlvo | null> {
+    const telefoneValido = contarDigitos(telDigits) >= country.minDigits;
+
+    if (contratanteOrc && (!telefoneValido || contratanteOrc.telefone === telefoneE164)) {
+      return alvoDeContratante(contratanteOrc);
+    }
+    if (!telefoneValido) return null;
+
+    const local = contratantes.find((c) => c.telefone === telefoneE164);
+    if (local) return alvoDeContratante(local);
+
+    try {
+      const resp = await fetch(
+        `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(telefoneE164)}`
+      );
+      // Sem a resposta do endpoint não existe dedupe possível (o contexto local
+      // é cego pra contato fora da visibilidade derivada). Cair no ramo "novo"
+      // aqui duplicaria o telefone, que é justamente o que D1 proíbe — então
+      // propaga: handleSubmit mostra o erro e a pessoa tenta de novo.
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const j = await resp.json();
+      if (j?.existe && j.contratante?.id) {
+        const c = j.contratante;
+        return {
+          id: c.id as string,
+          nome: (c.nome as string) ?? "",
+          email: (c.email as string) ?? "",
+          endereco: (c.endereco as string) ?? "",
+          telefone: (c.telefone as string) ?? "",
+          cidadeId: (c.cidade_id as string) ?? "",
+          pais: (c.pais as string) ?? "",
+          // Veio do /existe → fora da visibilidade derivada deste usuário.
+          oculto: true,
+        };
+      }
+    } catch {
+      throw new Error(
+        t("Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.")
+      );
+    }
+
+    // Telefone novo que não bate com ninguém: vindo de orçamento é a MESMA
+    // pessoa com o número corrigido (o popup pergunta se atualiza o cadastro);
+    // sem orçamento, é contato novo mesmo.
+    return contratanteOrc ? alvoDeContratante(contratanteOrc) : null;
+  }
+
+  /**
+   * D4 — a casa de shows nasce junto com a venda: antes, o local só existia
+   * como texto em `nome_local` e a casa NUNCA era criada.
+   *
+   * Dedupe = (nome normalizado) + cidade. O endpoint é obrigatório no caminho:
+   * `casas` do contexto é filtrado por visibilidade derivada, então pro artista
+   * o dedupe local é cego e ele recriaria a casa.
+   *
+   * Best-effort: falhar aqui NÃO bloqueia a venda (o local segue como texto).
+   */
+  async function resolverCasaId(cidadeId: string): Promise<string | undefined> {
+    const nome = nomeLocal.trim();
+    // A casa do orçamento vale enquanto o nome do local não mudou. Se mudou (ou
+    // se ela está OCULTA pra este usuário, e aí `casaOrc` nem resolve), cai na
+    // busca por nome — que reencontra a mesma casa pelo endpoint em vez de
+    // fixar a casa errada na venda.
+    // A chave de dedupe é (nome, cidade) — a cidade entra aqui também: se o
+    // usuário corrigiu a cidade na venda, a casa do orçamento é OUTRA casa
+    // (mesmo nome, cidade diferente = casa diferente, D4). Deixa cair na busca.
+    if (casaOrc && casaOrc.cidadeId === cidadeId && normalizar(casaOrc.nome) === normalizar(nome))
+      return casaOrc.id;
+    if (!nome || !cidadeId) return orc?.casaId;
+
+    try {
+      const alvo = normalizar(nome);
+      const local = casas.find(
+        (c) => normalizar(c.nome) === alvo && c.cidadeId === cidadeId
+      );
+      if (local) return local.id;
+
+      const resp = await fetch(
+        `/api/contatos/casas/existe?nome=${encodeURIComponent(nome)}&cidade_id=${encodeURIComponent(cidadeId)}`
+      );
+      // Resposta não-ok não pode virar `existe: undefined` e cair no addCasa:
+      // isso criaria uma casa DUPLICADA sem erro nenhum. Sem poder consultar o
+      // workspace inteiro, o dedupe é cego — degrada pra casa do orçamento.
+      if (!resp.ok) return orc?.casaId;
+      const j = await resp.json();
+      if (j?.existe && j.casa?.id) return j.casa.id as string;
+
+      // Venda direta não tem tipo de evento → "outro". Casa NÃO tem telefone.
+      const nova = await addCasa({
+        nome,
+        tipo: "outro",
+        cidadeId,
+        endereco: enderecoLocal.trim() || undefined,
+        capacidade: Number(capacidadePublico) || undefined,
+      });
+      return nova.id;
+    } catch {
+      // Degrada pra casa do orçamento em vez de zerar: sem isso, falha de rede
+      // ou addCasa barrado por permissão PERDE o vínculo que o orçamento já tinha.
+      return orc?.casaId;
+    }
+  }
+
   async function submeter() {
     // Re-narrowing pro TS (o guard real está em handleSubmit, mas o
     // type-checker não atravessa a fronteira de função).
@@ -442,61 +685,122 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       return;
     }
 
-    const docNorm = normalizarDocumento(paisOrigem.code, contratanteDocumento);
+    // ---- Contratante: a chave é o TELEFONE (D1) ----
+    // O documento NÃO serve de chave: o mesmo contratante fecha um show no CPF
+    // e outro no CNPJ de propósito — como chave, ele duplicaria. Aqui o
+    // documento só acumula no histórico (D3, no servidor).
+    const alvo = await resolverContratanteAlvo(telefoneE164);
 
-    // "Já existe": em venda DIRETA (sem orçamento), o documento digitado pode
-    // bater com um contratante que EXISTE mas está OCULTO pra este usuário.
-    // Oferece reusar em vez de duplicar (one-shot no submit; rede falha → segue).
-    let contratanteExistenteId: string | null = null;
-    if (!contratanteOrc && docNorm) {
-      try {
-        const resp = await fetch(
-          `/api/contatos/contratantes/existe?documento=${encodeURIComponent(docNorm)}`
-        );
-        const j = await resp.json();
-        if (j?.existe && j.contratante?.id) {
-          const usar = window.confirm(
-            t(
-              'Já existe um contratante com esse documento: {nome}. Usar o cadastro existente em vez de criar um novo?',
-              { nome: j.contratante.nome }
+    // O país do CADASTRO manda na normalização do documento. Em venda direta
+    // `paisOrigem` nasce no padrão da agência (BR) e o país nem entra no popup
+    // (D3 excluiu só o documento, mas o país segue junto dele) — normalizar um
+    // CUIT argentino como "BR" corrompe o documento principal e o histórico.
+    const paisDoDoc = alvo?.pais || paisOrigem.code;
+    const docNorm = normalizarDocumento(paisDoDoc, contratanteDocumento);
+
+    let contratanteInput: NovaVendaInput["contratante"];
+    if (alvo) {
+      // Reusa SEMPRE (jamais duplica). Se algum dado digitado conflita com o
+      // cadastro, o popup pergunta campo-a-campo o que atualizar (D2).
+      const divs: Divergencia[] = [];
+      if (diferem(alvo.nome, contratanteNome))
+        divs.push({
+          campo: "nome",
+          rotulo: t("Nome"),
+          atual: alvo.nome,
+          novo: contratanteNome.trim(),
+        });
+      if (diferem(alvo.email, contratanteEmail, true))
+        divs.push({
+          campo: "email",
+          rotulo: t("E-mail"),
+          atual: alvo.email,
+          novo: contratanteEmail.trim(),
+        });
+      if (diferem(alvo.endereco, contratanteEndereco))
+        divs.push({
+          campo: "endereco",
+          rotulo: t("Endereço"),
+          atual: alvo.endereco,
+          novo: contratanteEndereco.trim(),
+        });
+      if (diferem(alvo.telefone, telefoneE164))
+        divs.push({
+          campo: "telefone",
+          rotulo: t("Telefone"),
+          atual: `+${alvo.telefone}`,
+          novo: `+${telefoneE164}`,
+        });
+      // DOCUMENTO NUNCA ENTRA NO POPUP (D3) — ele acumula, não conflita.
+
+      // Só pergunta o que dá pra gravar: o PATCH exige `contatos.editar`
+      // (verificarMutacaoContato). Sem a permissão, o popup prometeria uma
+      // atualização que o servidor 403a — a venda segue com o snapshot digitado.
+      const podeEditarContato = podeUI(artistaId, "contatos.editar");
+      // Contato oculto: o próprio NOME do cadastro é PII que este usuário não
+      // pode ver — o popup se identifica pelo nome digitado.
+      const aceitos =
+        divs.length > 0 && podeEditarContato
+          ? await perguntarDivergencias(
+              alvo.oculto ? contratanteNome : alvo.nome || contratanteNome,
+              divs,
+              alvo.oculto
             )
-          );
-          if (usar) contratanteExistenteId = j.contratante.id as string;
-        }
-      } catch {
-        /* offline/erro → segue criando novo, não bloqueia a venda */
-      }
+          : [];
+
+      const existente: Extract<NovaVendaInput["contratante"], { tipo: "existente" }> = {
+        tipo: "existente",
+        id: alvo.id,
+        // Documento vai SEMPRE, inclusive em "Manter como está": o servidor
+        // acumula o histórico e o principal vira o último usado (D3).
+        // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara pra exibir.
+        documentoNovo: docNorm,
+        // O snapshot da venda é o que foi DIGITADO agora — independente do que
+        // o usuário decidiu gravar no cadastro.
+        snapshot: {
+          nome: contratanteNome.trim(),
+          email: contratanteEmail.trim(),
+          telefone: telefoneE164,
+          documento: docNorm,
+        },
+      };
+      // Grava o campo se foi aceito no popup OU se o cadastro estava vazio
+      // (backfill silencioso — não é conflito).
+      if (aceitos.includes("nome") || ehBackfill(alvo.nome, contratanteNome))
+        existente.nomeNovo = contratanteNome.trim();
+      if (aceitos.includes("email") || ehBackfill(alvo.email, contratanteEmail))
+        existente.emailNovo = contratanteEmail.trim();
+      if (aceitos.includes("endereco") || ehBackfill(alvo.endereco, contratanteEndereco))
+        existente.enderecoNovo = contratanteEndereco.trim();
+      if (aceitos.includes("telefone") || ehBackfill(alvo.telefone, telefoneE164))
+        existente.telefoneNovo = telefoneE164;
+      // D5 — cidade só entra quando o cadastro NÃO tem (backfill-se-vazio):
+      // o cidade_id alimenta geocode/mapa e não deve pular a cada venda.
+      if (!alvo.cidadeId) existente.cidadeIdNovo = cidadeIdResolvido;
+      // País, mesma regra: backfill-se-vazio. O seletor da venda direta nasce no
+      // padrão da agência, então mandá-lo sempre trocaria o país do cadastro
+      // calado (e o país não entra no popup pra ser confirmado).
+      if (!alvo.pais) existente.paisNovo = paisOrigem.code;
+
+      contratanteInput = existente;
+    } else {
+      contratanteInput = {
+        tipo: "novo",
+        nome: contratanteNome.trim(),
+        email: contratanteEmail.trim(),
+        telefone: telefoneE164,
+        documento: docNorm,
+        pais: paisOrigem.code,
+        cidadeId: cidadeIdResolvido,
+      };
     }
 
-    const contratanteExistente = contratanteOrc
-      ? { tipo: "existente" as const, id: contratanteOrc.id }
-      : contratanteExistenteId
-        ? { tipo: "existente" as const, id: contratanteExistenteId }
-        : null;
+    // D4 — a casa de shows nasce junto com a venda (best-effort).
+    const casaIdResolvido = await resolverCasaId(cidadeIdResolvido);
 
     const input: NovaVendaInput = {
       orcamentoId,
-      contratante: contratanteExistente
-        ? {
-            ...contratanteExistente,
-            nomeNovo: contratanteNome,
-            emailNovo: contratanteEmail,
-            telefoneNovo: telefoneE164,
-            // Persiste só dígitos do CPF/CNPJ — a UI re-aplica máscara
-            // pra exibir. Mantém o banco consistente entre cadastros
-            // antigos (mascarados) e novos.
-            documentoNovo: docNorm,
-            paisNovo: paisOrigem.code,
-          }
-        : {
-            tipo: "novo",
-            nome: contratanteNome,
-            email: contratanteEmail,
-            telefone: telefoneE164,
-            documento: docNorm,
-            pais: paisOrigem.code,
-            cidadeId: cidadeIdResolvido,
-          },
+      contratante: contratanteInput,
       contratanteEndereco,
       nomeEvento,
       eventoInstagram: eventoInstagram || undefined,
@@ -507,7 +811,7 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       horario: horarioADefinir ? null : horarioInicio,
       horarioFim: horarioADefinir ? null : horarioFim,
       cidadeId: cidadeIdResolvido,
-      casaId: casaOrc?.id,
+      casaId: casaIdResolvido,
       artistaId,
       lineUp: lineUp.length > 0 ? lineUp : undefined,
       cache: cacheNum,
@@ -1499,6 +1803,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       </SectionCard>
 
       {/* Ações sticky */}
+      {/* `errors.geral` era gravado no catch do handleSubmit mas nunca chegava
+          à tela: a venda falhava e o botão só voltava a "Concretizar Venda",
+          sem dizer nada. */}
+      {errors.geral && (
+        <p
+          className="text-xs text-danger mt-6 -mb-2 text-right"
+          role="alert"
+        >
+          {errors.geral}
+        </p>
+      )}
       <div className="sticky bottom-4 mt-6 flex justify-between items-center gap-2 bg-surface border border-border rounded-lg px-4 py-3 shadow-lg">
         <button onClick={onCancel} className="btn btn-secondary">
           <ArrowLeft size={14} />
@@ -1523,6 +1838,17 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
         </button>
       </div>
 
+      {divergencias && (
+        <DivergenciaContatoModal
+          aberto
+          nomeContato={nomeContatoDiv}
+          divergencias={divergencias}
+          cego={divCego}
+          onConfirmar={(campos) => fecharDivergencia(campos)}
+          onManter={() => fecharDivergencia([])}
+          onFechar={() => fecharDivergencia([])}
+        />
+      )}
     </div>
   );
 }

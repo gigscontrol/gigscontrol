@@ -80,9 +80,13 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
 export default function Contatos({
   categoriaInicial = "contratantes",
   selectedArtistas = [],
+  onAbrirShow,
 }: {
   categoriaInicial?: ContatoCategoria;
   selectedArtistas?: string[];
+  /** Abre o modal global de detalhe do show (ShowDetalheModal, em
+   *  layout.tsx). Repassado ao ContatoDetail — histórico de shows clicável. */
+  onAbrirShow?: (id: string) => void;
 }) {
   const t = useT();
   const accent = MODULE_THEMES.contatos.color;
@@ -311,6 +315,7 @@ export default function Contatos({
             setModal({ type: "edit-casa", item: selecionado.item });
           else setModal({ type: "edit-cidade", item: selecionado.item });
         }}
+        onAbrirShow={onAbrirShow}
       />
     );
   }

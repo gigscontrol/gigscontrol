@@ -83,6 +83,27 @@ export function getCidadeStats(
   };
 }
 
+/** D6 — cidade "principal" exibida do contratante = cidade do ÚLTIMO SHOW
+ *  REALIZADO (data <= hoje, não cancelado), não o show de data mais futura
+ *  (isso é `stats.ultimoShow`, de getContratanteStats — não reusar aqui).
+ *  Retorna undefined quando não há show usável; quem chama faz o fallback
+ *  pro `cidade_id` gravado no cadastro. Só exibição — não persiste nada. */
+export function getCidadePrincipalContratante(
+  contratanteId: string,
+  shows: Show[]
+): string | undefined {
+  const hojeISO = new Date().toISOString().slice(0, 10);
+  const realizados = shows.filter(
+    (s) =>
+      s.contratanteId === contratanteId &&
+      !!s.data &&
+      s.data <= hojeISO &&
+      s.status !== "cancelado"
+  );
+  realizados.sort((a, b) => (b.data as string).localeCompare(a.data as string));
+  return realizados[0]?.cidadeId;
+}
+
 // ---------- Helpers gerais ----------
 
 export function getCidadeNome(cidadeId: string, cidades: Cidade[]) {

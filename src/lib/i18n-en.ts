@@ -3383,6 +3383,26 @@ const RECURSOS_PAGE: Record<string, string> = {
   "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar.": "Six modules that talk to each other — from booking to the fee in your account, your entire agency business in one place.",
 };
 
+// ---- Contatos: dedupe por telefone, popup de divergência, casa auto-criada, editar venda (2026-07-17) ----
+const CONTATOS_DIVERGENCIA_JUL17: Record<string, string> = {
+  "Esse contato já está cadastrado": "This contact is already registered",
+  "Alguns dados digitados são diferentes do cadastro de {nome}.": "Some of the details entered are different from {nome}'s record.",
+  "Escolha o que deve ser atualizado no contato. O que ficar desmarcado continua como está no cadastro.": "Choose what should be updated on the contact. Anything left unchecked stays as it is in the record.",
+  "(vazio)": "(empty)",
+  "(valor do cadastro)": "(value on record)",
+  "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.": "We couldn't check whether this phone number is already registered. Please try again.",
+  "Manter como está": "Keep as is",
+  "Atualizar contato": "Update contact",
+  "Documentos já utilizados": "Documents used",
+  "Atual": "Current",
+  "Último uso": "Last used",
+  "Quem já contratou aqui": "Who has booked here",
+  "Nenhum contratante visível nos shows desta casa.": "No visible client in this venue's shows.",
+  "Ver todos ({n})": "See all ({n})",
+  "Shows em {casa}": "Shows at {casa}",
+  "Editar venda": "Edit sale",
+};
+
 export const EN: Record<string, string> = {
   "Limite de contratos atingido": "Contract limit reached",
   "Plano {plano} — {limite} contratos no ciclo": "{plano} plan — {limite} contracts per cycle",
@@ -3490,6 +3510,7 @@ export const EN: Record<string, string> = {
   ...CADASTRO_JUL11_EN,
   ...PERMISSOES_REWORK_JUL13,
   ...RECURSOS_PAGE,
+  ...CONTATOS_DIVERGENCIA_JUL17,
   // Toggle de tema claro/escuro (BotaoTema)
   "Mudar para tema claro": "Switch to light theme",
   "Mudar para tema escuro": "Switch to dark theme",

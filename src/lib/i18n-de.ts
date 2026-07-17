@@ -481,6 +481,26 @@ const RECURSOS_PAGE: Record<string, string> = {
   "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar.": "Sechs Module, die miteinander sprechen — vom Booking bis zur Gage auf dem Konto, Ihr gesamtes Agenturgeschäft an einem Ort.",
 };
 
+// ---- Contatos: dedupe por telefone, popup de divergência, casa auto-criada, editar venda (2026-07-17) ----
+const CONTATOS_DIVERGENCIA_JUL17: Record<string, string> = {
+  "Esse contato já está cadastrado": "Dieser Kontakt ist bereits registriert",
+  "Alguns dados digitados são diferentes do cadastro de {nome}.": "Einige eingegebene Daten weichen vom Datensatz von {nome} ab.",
+  "Escolha o que deve ser atualizado no contato. O que ficar desmarcado continua como está no cadastro.": "Wählen Sie aus, was im Kontakt aktualisiert werden soll. Was nicht markiert ist, bleibt im Datensatz unverändert.",
+  "(vazio)": "(leer)",
+  "(valor do cadastro)": "(Wert im Datensatz)",
+  "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.": "Es konnte nicht geprüft werden, ob diese Telefonnummer bereits registriert ist. Bitte erneut versuchen.",
+  "Manter como está": "So belassen",
+  "Atualizar contato": "Kontakt aktualisieren",
+  "Documentos já utilizados": "Bereits verwendete Dokumente",
+  "Atual": "Aktuell",
+  "Último uso": "Zuletzt verwendet",
+  "Quem já contratou aqui": "Wer hier schon gebucht hat",
+  "Nenhum contratante visível nos shows desta casa.": "Kein sichtbarer Kunde bei den Shows dieser Location.",
+  "Ver todos ({n})": "Alle anzeigen ({n})",
+  "Shows em {casa}": "Shows in {casa}",
+  "Editar venda": "Verkauf bearbeiten",
+};
+
 export const DE: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Unterkunft",
   "Pra organizar a hospedagem, preciso destas informações:": "Um die Unterkunft zu organisieren, brauche ich diese Angaben:",
@@ -2484,6 +2504,7 @@ export const DE: Record<string, string> = {
   ...CADASTRO_JUL11_DE,
   ...PERMISSOES_REWORK_JUL13,
   ...RECURSOS_PAGE,
+  ...CONTATOS_DIVERGENCIA_JUL17,
   // Toggle de tema claro/escuro (BotaoTema)
   "Mudar para tema claro": "Zum hellen Design wechseln",
   "Mudar para tema escuro": "Zum dunklen Design wechseln",

@@ -481,6 +481,26 @@ const RECURSOS_PAGE: Record<string, string> = {
   "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar.": "Sei moduli che comunicano tra loro — dal booking al cachet in conto, tutto l'agenziamento in un unico posto.",
 };
 
+// ---- Contatos: dedupe por telefone, popup de divergência, casa auto-criada, editar venda (2026-07-17) ----
+const CONTATOS_DIVERGENCIA_JUL17: Record<string, string> = {
+  "Esse contato já está cadastrado": "Questo contatto è già registrato",
+  "Alguns dados digitados são diferentes do cadastro de {nome}.": "Alcuni dati inseriti sono diversi dalla scheda di {nome}.",
+  "Escolha o que deve ser atualizado no contato. O que ficar desmarcado continua como está no cadastro.": "Scegli cosa aggiornare nel contatto. Ciò che resta deselezionato rimane invariato nella scheda.",
+  "(vazio)": "(vuoto)",
+  "(valor do cadastro)": "(valore della scheda)",
+  "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.": "Non è stato possibile verificare se questo numero è già registrato. Riprova.",
+  "Manter como está": "Mantieni così",
+  "Atualizar contato": "Aggiorna contatto",
+  "Documentos já utilizados": "Documenti già utilizzati",
+  "Atual": "Attuale",
+  "Último uso": "Ultimo utilizzo",
+  "Quem já contratou aqui": "Chi ha già prenotato qui",
+  "Nenhum contratante visível nos shows desta casa.": "Nessun committente visibile negli show di questo locale.",
+  "Ver todos ({n})": "Vedi tutti ({n})",
+  "Shows em {casa}": "Show a {casa}",
+  "Editar venda": "Modifica vendita",
+};
+
 export const IT: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Alloggio",
   "Pra organizar a hospedagem, preciso destas informações:": "Per organizzare l'alloggio, mi servono queste informazioni:",
@@ -2484,6 +2504,7 @@ export const IT: Record<string, string> = {
   ...CADASTRO_JUL11_IT,
   ...PERMISSOES_REWORK_JUL13,
   ...RECURSOS_PAGE,
+  ...CONTATOS_DIVERGENCIA_JUL17,
   // Toggle de tema claro/escuro (BotaoTema)
   "Mudar para tema claro": "Passa al tema chiaro",
   "Mudar para tema escuro": "Passa al tema scuro",

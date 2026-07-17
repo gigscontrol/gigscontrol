@@ -481,6 +481,26 @@ const RECURSOS_PAGE: Record<string, string> = {
   "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar.": "Six modules qui communiquent entre eux — du booking au cachet sur le compte, toute votre activité d'agence au même endroit.",
 };
 
+// ---- Contatos: dedupe por telefone, popup de divergência, casa auto-criada, editar venda (2026-07-17) ----
+const CONTATOS_DIVERGENCIA_JUL17: Record<string, string> = {
+  "Esse contato já está cadastrado": "Ce contact est déjà enregistré",
+  "Alguns dados digitados são diferentes do cadastro de {nome}.": "Certaines informations saisies diffèrent de la fiche de {nome}.",
+  "Escolha o que deve ser atualizado no contato. O que ficar desmarcado continua como está no cadastro.": "Choisissez ce qui doit être mis à jour dans le contact. Ce qui reste décoché ne change pas dans la fiche.",
+  "(vazio)": "(vide)",
+  "(valor do cadastro)": "(valeur de la fiche)",
+  "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.": "Impossible de vérifier si ce numéro est déjà enregistré. Veuillez réessayer.",
+  "Manter como está": "Garder tel quel",
+  "Atualizar contato": "Mettre à jour le contact",
+  "Documentos já utilizados": "Documents déjà utilisés",
+  "Atual": "Actuel",
+  "Último uso": "Dernière utilisation",
+  "Quem já contratou aqui": "Qui a déjà réservé ici",
+  "Nenhum contratante visível nos shows desta casa.": "Aucun contact visible dans les concerts de ce lieu.",
+  "Ver todos ({n})": "Voir tout ({n})",
+  "Shows em {casa}": "Concerts à {casa}",
+  "Editar venda": "Modifier la vente",
+};
+
 export const FR: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Hébergement",
   "Pra organizar a hospedagem, preciso destas informações:": "Pour organiser l'hébergement, j'ai besoin de ces informations :",
@@ -2484,6 +2504,7 @@ export const FR: Record<string, string> = {
   ...CADASTRO_JUL11_FR,
   ...PERMISSOES_REWORK_JUL13,
   ...RECURSOS_PAGE,
+  ...CONTATOS_DIVERGENCIA_JUL17,
   // Toggle de tema claro/escuro (BotaoTema)
   "Mudar para tema claro": "Passer au thème clair",
   "Mudar para tema escuro": "Passer au thème sombre",

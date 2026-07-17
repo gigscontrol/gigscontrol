@@ -106,10 +106,19 @@ function cidadeParaApi(c: AddCidadeInput | UpdateCidadeInput): Record<string, un
   return out;
 }
 
+/** Erro de contato com o status HTTP preservado. Quem chama precisa distinguir
+ *  404 (contato OCULTO por visibilidade derivada — silêncio é INTENCIONAL) de
+ *  403/5xx (falha de verdade), senão um catch vazio engole os dois. */
+export type ErroContato = Error & { status?: number };
+
 async function jsonOuErro(res: Response): Promise<Record<string, unknown>> {
   const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
-    throw new Error((body.erro as string) ?? `HTTP ${res.status}`);
+    const erro: ErroContato = new Error(
+      (body.erro as string) ?? `HTTP ${res.status}`
+    );
+    erro.status = res.status;
+    throw erro;
   }
   return body;
 }

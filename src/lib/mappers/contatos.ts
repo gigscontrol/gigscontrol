@@ -1,4 +1,11 @@
-import type { Contratante, Casa, Cidade, TipoCasa, GeoPrecisao } from "@/types";
+import type {
+  Contratante,
+  Casa,
+  Cidade,
+  TipoCasa,
+  GeoPrecisao,
+  DocumentoContratante,
+} from "@/types";
 import { ufParaRegiao } from "@/lib/data/cidades-br";
 
 function geoPrecisaoValida(v: string | null | undefined): GeoPrecisao | undefined {
@@ -146,6 +153,7 @@ export type ContratanteRow = {
   workspace_id: string;
   nome: string;
   documento: string | null;
+  documentos: unknown[] | null;
   pais: string | null;
   email: string | null;
   telefone: string | null;
@@ -168,6 +176,7 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     id: row.id,
     nome: row.nome,
     documento: row.documento ?? undefined,
+    documentos: (row.documentos ?? []) as DocumentoContratante[],
     pais: row.pais ?? "BR",
     email: row.email ?? undefined,
     telefone: row.telefone ?? "",
@@ -194,6 +203,8 @@ export type ContratanteEscrita = {
   workspace_id?: string;
   nome?: string;
   documento?: string | null;
+  /** Escrita SÓ pelo service (acumularDocumento) — nunca vem do cliente. */
+  documentos?: unknown;
   pais?: string | null;
   email?: string | null;
   telefone?: string | null;

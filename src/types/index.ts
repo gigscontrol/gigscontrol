@@ -228,10 +228,27 @@ export type UserRole = "admin" | "artista" | "vendedor" | "financeiro";
 /** Precisão da geolocalização de um contato (tokens.md §7). */
 export type GeoPrecisao = "address" | "city";
 
+/**
+ * Um documento (CPF/CNPJ) já usado por um contratante (migração 90).
+ * O documento acumula — não é chave de identidade (a chave é o telefone).
+ */
+export type DocumentoContratante = {
+  documento: string;
+  /** País de origem do documento (ISO2). */
+  pais?: string;
+  primeiro_uso: string;
+  ultimo_uso: string;
+};
+
 export type Contratante = {
   id: string;
   nome: string;
   documento?: string; // ✱ agora opcional
+  /**
+   * Histórico de documentos usados (migração 90). `documento` é o principal
+   * (= último usado). Escrita SÓ no servidor — o cliente nunca manda este array.
+   */
+  documentos?: DocumentoContratante[];
   /** País de origem (ISO2). Define o tipo de documento. Default 'BR'. */
   pais?: string;
   email?: string; // ✱ agora opcional

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
@@ -28,12 +28,14 @@ import Stepper from "./Stepper";
 import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
+import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
 import HistoricoContratante from "./HistoricoContratante";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { resolverCidade } from "@/lib/cidade-helpers";
+import { normalizar } from "@/lib/normalizar";
 import { itensDoRider } from "@/lib/rider";
 import { parseValorBR } from "@/lib/valor";
 import { exemploEndereco } from "@/lib/data/exemplos";
@@ -54,6 +56,7 @@ import {
   type ItemQuantidade,
   type LogisticaSelecao,
   type TipoEvento,
+  type TipoCasa,
   type Artista,
   type Contratante,
   type DetalhesEvento,
@@ -71,6 +74,13 @@ const TIPOS_EVENTO: { value: TipoEvento; label: string; icon: typeof PartyPopper
   { value: "casa-noturna", label: "Casa Noturna", icon: Building2, desc: "Club, bar, balada" },
   { value: "festival", label: "Festival", icon: Sparkles, desc: "Festival, arena, evento grande" },
 ];
+
+/** Tipo do evento → tipo da casa criada junto com o orçamento (D4). */
+const TIPO_CASA_POR_EVENTO: Record<TipoEvento, TipoCasa> = {
+  social: "festa-privada",
+  "casa-noturna": "club",
+  festival: "festival",
+};
 
 type DjBlock = {
   artistaId: string;
@@ -122,7 +132,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, updateContratante, cidades } = useContatos();
+  const { contratantes, updateContratante, casas, addCasa, cidades } = useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
@@ -164,6 +174,38 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // de um dropdown pré-selecionado). NÃO pré-selecionar o primeiro da lista.
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ------- Popup de divergência do contato (D2) -------
+  const [divergencias, setDivergencias] = useState<Divergencia[] | null>(null);
+  const [nomeContatoDiv, setNomeContatoDiv] = useState("");
+  const [divCego, setDivCego] = useState(false);
+  const responderDivergencia = useRef<((campos: string[]) => void) | null>(null);
+
+  /**
+   * Abre o popup e resolve com os campos que o usuário aceitou atualizar.
+   * `cego` = contato fora da visibilidade derivada (veio do /existe): o popup
+   * não imprime os valores do cadastro.
+   */
+  function perguntarDivergencias(
+    nomeContato: string,
+    divs: Divergencia[],
+    cego = false
+  ): Promise<string[]> {
+    return new Promise((resolve) => {
+      responderDivergencia.current = resolve;
+      setNomeContatoDiv(nomeContato);
+      setDivCego(cego);
+      setDivergencias(divs);
+    });
+  }
+
+  /** Fechar/Manter/Confirmar — sempre resolve (fechar = manter, nunca trava). */
+  function fecharDivergencia(campos: string[]) {
+    setDivergencias(null);
+    const resolver = responderDivergencia.current;
+    responderDivergencia.current = null;
+    resolver?.(campos);
+  }
 
   // Tela 3
   const [salvos, setSalvos] = useState<Array<{
@@ -296,6 +338,43 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     return Object.keys(d).length > 0 ? d : undefined;
   }
 
+  /**
+   * D4 — casa do evento (dedupe por nome normalizado + cidade). O endpoint é
+   * obrigatório no caminho: `casas` do contexto é filtrado por visibilidade
+   * derivada, então pro artista o dedupe local é cego e ele recriaria a casa.
+   * Best-effort: falhar aqui não bloqueia o orçamento (fica sem casa).
+   */
+  async function resolverCasaId(cidadeId: string): Promise<string | undefined> {
+    const nome = evLocal.trim();
+    if (!nome || !cidadeId) return undefined;
+    try {
+      const alvo = normalizar(nome);
+      const local = casas.find(
+        (c) => normalizar(c.nome) === alvo && c.cidadeId === cidadeId
+      );
+      if (local) return local.id;
+
+      const resp = await fetch(
+        `/api/contatos/casas/existe?nome=${encodeURIComponent(nome)}&cidade_id=${encodeURIComponent(cidadeId)}`
+      );
+      const j = await resp.json();
+      if (j?.existe && j.casa?.id) return j.casa.id as string;
+
+      // Casa NÃO tem telefone (o telefone é do contratante, não do local).
+      const cap = parseInt(evCapacidade.replace(/\D/g, ""), 10);
+      const nova = await addCasa({
+        nome,
+        tipo: tipoEvento ? TIPO_CASA_POR_EVENTO[tipoEvento] : "outro",
+        cidadeId,
+        endereco: evEndereco.trim() || undefined,
+        capacidade: !isNaN(cap) && cap > 0 ? cap : undefined,
+      });
+      return nova.id;
+    } catch {
+      return undefined;
+    }
+  }
+
   // ----- Salvar todos os blocos -----
   async function handleSubmit() {
     if (!validateStep1()) { setStep(1); return; }
@@ -313,44 +392,100 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     }
 
     let vinculoResolvido = vinculadoId;
+    // Dados do contato vinculado quando ele NÃO está na lista local (contato
+    // OCULTO por visibilidade derivada, vindo do endpoint).
+    let alvoRemoto: { nome: string; cidadeId: string } | null = null;
 
-    // "Já existe": o telefone digitado pode bater com um contato que EXISTE mas
-    // está OCULTO pra este usuário (visibilidade derivada). Antes de criar um
-    // novo, checa no backend (workspace inteiro) e oferece reusar — evita
-    // duplicar. One-shot no submit (sem efeito/lifecycle). Rede falha → segue.
-    if (contratanteMode === "novo" && !vinculoResolvido) {
+    // "Cada telefone = 1 contato" (D1): antes de criar, procura pelo telefone —
+    // primeiro local, depois no backend (workspace inteiro, enxerga contato
+    // OCULTO por visibilidade derivada). Achou → REUSA, jamais duplica (D2).
+    // One-shot no submit (sem efeito/lifecycle). Rede falha → segue.
+    if (
+      contratanteMode === "novo" &&
+      !vinculoResolvido &&
+      contarDigitos(telDigits) >= country.minDigits
+    ) {
       const e164 = montarTelefoneE164(country, telDigits);
       const localMatch = contratantes.find((c) => c.telefone === e164);
-      if (!localMatch && contarDigitos(telDigits) >= country.minDigits) {
+      if (localMatch) {
+        // O banner de duplicata da etapa 1 oferece isso, mas ignorá-lo não pode
+        // criar um contato com telefone repetido.
+        vinculoResolvido = localMatch.id;
+      } else {
+        // Sem a resposta do endpoint não existe dedupe possível: o contexto
+        // local é cego pra contato fora da visibilidade derivada. Seguir e
+        // criar "no escuro" duplicaria o telefone (quebra D1) — e duplicata de
+        // contato é dor de cabeça manual pra desfazer. Então: erro claro e
+        // retentável, em vez de sujeira silenciosa no cadastro.
+        let checou = false;
         try {
           const resp = await fetch(
             `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(e164)}`
           );
-          const j = await resp.json();
-          if (j?.existe && j.contratante?.id) {
-            const usar = window.confirm(
-              t(
-                'Já existe um contratante com esse telefone: {nome}. Usar o cadastro existente em vez de criar um novo?',
-                { nome: j.contratante.nome }
-              )
-            );
-            if (usar) vinculoResolvido = j.contratante.id as string;
+          if (resp.ok) {
+            const j = await resp.json();
+            checou = true;
+            if (j?.existe && j.contratante?.id) {
+              vinculoResolvido = j.contratante.id as string;
+              alvoRemoto = {
+                nome: (j.contratante.nome as string) ?? "",
+                cidadeId: (j.contratante.cidade_id as string) ?? "",
+              };
+            }
           }
         } catch {
-          /* offline/erro → segue criando novo, não bloqueia o orçamento */
+          /* rede caiu → `checou` segue false */
+        }
+        if (!checou) {
+          setErrors((p) => ({
+            ...p,
+            contratanteTel: t(
+              "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo."
+            ),
+          }));
+          setStep(1);
+          return;
         }
       }
     }
 
     // Telefone "novo" vinculado a um contato existente: reusa o id (sem
-    // duplicar) e corrige o nome no contato salvo se foi alterado.
+    // duplicar). Se o nome digitado diverge do cadastro, PERGUNTA (D2) — nunca
+    // sobrescreve calado. Cadastro sem nome → backfill silencioso.
     if (contratanteMode === "novo" && vinculoResolvido) {
       const existente = contratantes.find((c) => c.id === vinculoResolvido);
-      if (existente && novoNome.trim() && novoNome.trim() !== existente.nome) {
+      const nomeAtual = existente?.nome ?? alvoRemoto?.nome ?? "";
+      const nomeDigitado = novoNome.trim();
+      let gravarNome = false;
+      if (nomeDigitado && nomeAtual && nomeDigitado !== nomeAtual) {
+        const aceitos = await perguntarDivergencias(nomeAtual, [
+          { campo: "nome", rotulo: t("Nome"), atual: nomeAtual, novo: nomeDigitado },
+        ]);
+        gravarNome = aceitos.includes("nome");
+      } else if (nomeDigitado && !nomeAtual) {
+        gravarNome = true;
+      }
+      if (gravarNome) {
         try {
-          await updateContratante(vinculoResolvido, { nome: novoNome.trim() });
+          await updateContratante(vinculoResolvido, { nome: nomeDigitado });
         } catch {
-          /* não bloqueia o orçamento se a atualização do nome falhar */
+          /* contato oculto (PATCH 404) ou falha → não bloqueia o orçamento */
+        }
+      }
+    }
+
+    // D5 — cidade do contratante REUSADO: backfill só se o cadastro não tem
+    // (o cidade_id alimenta geocode/mapa, não deve pular a cada orçamento).
+    const alvoReuso =
+      vinculoResolvido ?? (contratanteMode === "existente" ? contratanteId : null);
+    if (alvoReuso) {
+      const existente = contratantes.find((c) => c.id === alvoReuso);
+      const temCidade = existente ? !!existente.cidadeId : !!alvoRemoto?.cidadeId;
+      if (!temCidade) {
+        try {
+          await updateContratante(alvoReuso, { cidadeId: cidadeResolvida.id });
+        } catch {
+          /* contato oculto (PATCH 404) → best-effort, não bloqueia */
         }
       }
     }
@@ -368,7 +503,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               },
             };
 
-    const casaInput: CasaInput = { tipo: "nenhuma" };
+    // D4 — a casa de shows nasce junto (antes o local só existia como texto).
+    // Resolvida UMA VEZ, ANTES do loop de blocos: cada artista gera um
+    // orçamento, e resolver dentro do loop criaria N casas idênticas.
+    // Só no detalhado: no simples não há nome de local (nasceria casa sem nome).
+    let casaInput: CasaInput = { tipo: "nenhuma" };
+    if (modoOrcamento === "detalhado" && evLocal.trim()) {
+      const casaId = await resolverCasaId(cidadeResolvida.id);
+      if (casaId) casaInput = { tipo: "existente", id: casaId };
+    }
 
     const cidadeInputInicial: CidadeInput = {
       tipo: "existente",
@@ -1094,6 +1237,18 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           </button>
         )}
       </div>
+
+      {divergencias && (
+        <DivergenciaContatoModal
+          aberto
+          nomeContato={nomeContatoDiv}
+          divergencias={divergencias}
+          cego={divCego}
+          onConfirmar={(campos) => fecharDivergencia(campos)}
+          onManter={() => fecharDivergencia([])}
+          onFechar={() => fecharDivergencia([])}
+        />
+      )}
     </div>
   );
 }
