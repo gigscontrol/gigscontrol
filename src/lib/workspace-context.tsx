@@ -9,7 +9,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { Artista, TaxaAgenciaModo, DocumentoTipo } from "@/types";
+import type { Artista, TaxaAgenciaModo, DocumentoTipo, Moeda } from "@/types";
+import { moedaValida } from "./mappers/venda";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
 import { useAuth } from "./auth-context";
@@ -37,6 +38,8 @@ export type WorkspacePreferencias = {
   paisPadrao: string | null;
   formatoData: string | null;
   fusoPadrao: string | null;
+  /** Moeda padrão da agência (migração 92) — default dos forms novos. */
+  moeda: Moeda;
 };
 
 export type ArtistaWS = Artista;
@@ -295,6 +298,7 @@ type WorkspaceApi = {
   paisPadrao: string | null;
   formatoData: string | null;
   fusoPadrao: string | null;
+  moeda: string | null;
 };
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -308,6 +312,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     paisPadrao: null,
     formatoData: null,
     fusoPadrao: null,
+    moeda: "BRL",
   });
 
   const [artistas, setArtistas] = useState<ArtistaWS[]>([]);
@@ -348,6 +353,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         paisPadrao: ws.paisPadrao,
         formatoData: ws.formatoData,
         fusoPadrao: ws.fusoPadrao,
+        moeda: moedaValida(ws.moeda),
       });
       setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
     } catch {
@@ -388,6 +394,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           pais_padrao: p.paisPadrao,
           formato_data: p.formatoData,
           fuso_padrao: p.fusoPadrao,
+          moeda: p.moeda,
         }),
       });
       const body = await jsonOuErro(res);
@@ -397,6 +404,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         paisPadrao: ws.paisPadrao,
         formatoData: ws.formatoData,
         fusoPadrao: ws.fusoPadrao,
+        moeda: moedaValida(ws.moeda),
       });
       setPreferenciasGlobais({ pais: ws.paisPadrao, formatoData: ws.formatoData });
     },

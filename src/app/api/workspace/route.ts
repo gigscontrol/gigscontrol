@@ -8,7 +8,7 @@ import { auditAndNotify } from "@/lib/services/historico.service";
 
 const COLS =
   "id, nome, plano, ciclo, status, logo_url, slug, whatsapp, cor_acento, " +
-  "cidade_ibge_id, cidade_nome, cidade_uf, idioma_padrao, pais_padrao, formato_data, fuso_padrao, criado_em";
+  "cidade_ibge_id, cidade_nome, cidade_uf, idioma_padrao, pais_padrao, formato_data, fuso_padrao, moeda, criado_em";
 
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
@@ -72,6 +72,7 @@ export async function PATCH(request: Request) {
   if (parsed.data.pais_padrao !== undefined) patch.pais_padrao = parsed.data.pais_padrao;
   if (parsed.data.formato_data !== undefined) patch.formato_data = parsed.data.formato_data;
   if (parsed.data.fuso_padrao !== undefined) patch.fuso_padrao = parsed.data.fuso_padrao;
+  if (parsed.data.moeda !== undefined) patch.moeda = parsed.data.moeda;
 
   if (Object.keys(patch).length === 0) {
     // Nada pra atualizar — devolve o estado atual

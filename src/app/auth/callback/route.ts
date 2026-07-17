@@ -96,11 +96,15 @@ export async function GET(request: Request) {
   if (temDadosCompletos) {
     // Veio do /signup com email/senha — tudo no metadata.
     try {
-      await setupWorkspaceParaNovoUsuario(admin, {
-        id: user.id,
-        email: user.email ?? "",
-        user_metadata: meta,
-      });
+      await setupWorkspaceParaNovoUsuario(
+        admin,
+        {
+          id: user.id,
+          email: user.email ?? "",
+          user_metadata: meta,
+        },
+        request.headers.get("x-vercel-ip-country")
+      );
     } catch (e) {
       console.error("[auth/callback] setup falhou:", (e as Error).message);
     }

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PlanoId, CicloCobranca } from "@/lib/planos";
+import { moedaAgenciaDe } from "@/lib/regiao";
 
 /**
  * Gera um slug a partir do nome (lowercase, sem acentos, só letras
@@ -60,7 +61,9 @@ export async function setupWorkspaceParaNovoUsuario(
     id: string;
     email: string;
     user_metadata?: Record<string, unknown> | null;
-  }
+  },
+  /** País do IP no cadastro (ISO2) — define a moeda padrão da agência, invisível. */
+  paisIso?: string | null
 ): Promise<ResultadoSetup> {
   // 1. Já existe profile? Idempotência.
   const { data: jaTem } = await admin
@@ -108,6 +111,9 @@ export async function setupWorkspaceParaNovoUsuario(
       slug,
       status: "trial",
       ciclo: cicloId,
+      // Moeda padrão pela região do IP (invisível): BR→BRL, Américas→USD,
+      // Europa→EUR, resto→USD. O admin troca depois em Preferências.
+      moeda: moedaAgenciaDe(paisIso),
     })
     .select("id")
     .single();
