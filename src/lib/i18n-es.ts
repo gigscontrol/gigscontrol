@@ -481,6 +481,26 @@ const RECURSOS_PAGE: Record<string, string> = {
   "Seis módulos que conversam entre si — do booking ao cachê na conta, todo o agenciamento num só lugar.": "Seis módulos que se comunican entre sí — del booking al caché en la cuenta, todo el agenciamiento en un solo lugar.",
 };
 
+// ---- Contatos: dedupe por telefone, popup de divergência, casa auto-criada, editar venda (2026-07-17) ----
+const CONTATOS_DIVERGENCIA_JUL17: Record<string, string> = {
+  "Esse contato já está cadastrado": "Este contacto ya está registrado",
+  "Alguns dados digitados são diferentes do cadastro de {nome}.": "Algunos datos ingresados son diferentes del registro de {nome}.",
+  "Escolha o que deve ser atualizado no contato. O que ficar desmarcado continua como está no cadastro.": "Elige qué se debe actualizar en el contacto. Lo que quede sin marcar sigue igual en el registro.",
+  "(vazio)": "(vacío)",
+  "(valor do cadastro)": "(valor del registro)",
+  "Não foi possível verificar se esse telefone já tem cadastro. Tente de novo.": "No se pudo verificar si ese teléfono ya está registrado. Inténtalo de nuevo.",
+  "Manter como está": "Mantener como está",
+  "Atualizar contato": "Actualizar contacto",
+  "Documentos já utilizados": "Documentos ya utilizados",
+  "Atual": "Actual",
+  "Último uso": "Último uso",
+  "Quem já contratou aqui": "Quién ya contrató aquí",
+  "Nenhum contratante visível nos shows desta casa.": "Ningún cliente visible en los shows de este local.",
+  "Ver todos ({n})": "Ver todos ({n})",
+  "Shows em {casa}": "Shows en {casa}",
+  "Editar venda": "Editar venta",
+};
+
 export const ES: Record<string, string> = {
   "Booking / Hospedagem": "Booking / Alojamiento",
   "Pra organizar a hospedagem, preciso destas informações:": "Para organizar el alojamiento, necesito estos datos:",
@@ -2484,6 +2504,7 @@ export const ES: Record<string, string> = {
   ...CADASTRO_JUL11_ES,
   ...PERMISSOES_REWORK_JUL13,
   ...RECURSOS_PAGE,
+  ...CONTATOS_DIVERGENCIA_JUL17,
   // Toggle de tema claro/escuro (BotaoTema)
   "Mudar para tema claro": "Cambiar a tema claro",
   "Mudar para tema escuro": "Cambiar a tema oscuro",

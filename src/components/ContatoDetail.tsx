@@ -8,6 +8,7 @@ import {
   getCasaStats,
   getCidadeStats,
   getCidadeNome,
+  getCidadePrincipalContratante,
   formatBRL,
 } from "@/lib/contatos-stats";
 import { useShows } from "@/lib/shows-context";
@@ -15,7 +16,9 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { MODULE_THEMES } from "@/types";
 import { useT } from "@/lib/i18n";
 import { mascararCpfCnpj } from "@/lib/formatters";
-import type { Contratante, Casa, Cidade } from "@/types";
+import { ResumoModal, ResumoLista } from "./DashboardResumo";
+import { useState } from "react";
+import type { Contratante, Casa, Cidade, Show } from "@/types";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -26,7 +29,28 @@ type Props = {
   selecionado: Selecionado;
   onBack: () => void;
   onEdit: () => void;
+  /** Abre o modal global de detalhe do show (ShowDetalheModal, montado em
+   *  layout.tsx). Histórico de shows do contratante/casa/cidade fica
+   *  clicável quando presente; sem a prop, as linhas ficam estáticas. */
+  onAbrirShow?: (id: string) => void;
 };
+
+/** Espelha `DocumentoContratante` (tipo do WI-B, ainda não necessariamente
+ *  presente em types/index.ts dependendo da ordem de merge) — declarado
+ *  localmente pra não invadir arquivo de outro WI. Acesso via cast degrada
+ *  com elegância pra lista vazia quando o campo `documentos` não existe
+ *  (contatos antigos / WI-B ainda não aplicado). */
+type DocumentoHistorico = {
+  documento: string;
+  pais?: string;
+  primeiro_uso: string;
+  ultimo_uso: string;
+};
+
+function getDocumentosHistorico(item: Contratante): DocumentoHistorico[] {
+  const raw = (item as unknown as { documentos?: unknown }).documentos;
+  return Array.isArray(raw) ? (raw as DocumentoHistorico[]) : [];
+}
 
 const TIPO_CASA_LABEL: Record<string, string> = {
   club: "Club",
@@ -41,14 +65,20 @@ const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
   confirmado: { label: "Confirmado", cls: "badge-success" },
   pendente: { label: "Pendente", cls: "badge-danger" },
   logistica: { label: "Logística", cls: "badge-warning" },
+  cancelado: { label: "Cancelado", cls: "badge-danger" },
 };
 
-export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
+export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.contatos.color;
-  const { cidades } = useContatos();
+  const { cidades, contratantes } = useContatos();
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
+  // D8 — estado do modal "ver todos os shows" da casa. Mora aqui (no
+  // componente-pai) porque CasaDetail é uma function declarada dentro deste
+  // corpo e é recriada a cada render — um useState dentro dela reiniciaria
+  // a cada re-render do pai.
+  const [casaVerTodosAberto, setCasaVerTodosAberto] = useState(false);
 
   return (
     <div className="max-w-[1200px] mx-auto w-full p-6 lg:p-8">
@@ -81,16 +111,30 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
     accent: string;
     onEdit: () => void;
   }) {
-    const stats = getContratanteStats(item.id, shows, orcamentos);
-    const showsContratante = shows.filter((s) => s.contratanteId === item.id);
+    // Evita stale prop: `item` chega por valor e pode ficar velho depois que
+    // o popup de divergência (WI-A) atualiza o contato com o detalhe aberto.
+    const atual = contratantes.find((c) => c.id === item.id) ?? item;
+    const stats = getContratanteStats(atual.id, shows, orcamentos);
+    const showsContratante = shows.filter((s) => s.contratanteId === atual.id);
+    // D6 — cidade "principal" exibida = cidade do último show REALIZADO,
+    // com fallback pro cidade_id gravado. Só exibição — não mexe no
+    // cidade_id gravado (que alimenta geocode/mapa).
+    const cidadePrincipalId = getCidadePrincipalContratante(atual.id, shows) ?? atual.cidadeId;
+    // D3-UI — histórico de documentos (jsonb, WI-B). Degrada pra nada quando
+    // vazio/ausente (contato antigo ou WI-B ainda não aplicado).
+    const documentosHistorico = getDocumentosHistorico(atual);
+    const temHistoricoDocumentos =
+      documentosHistorico.length > 1 ||
+      (documentosHistorico.length === 1 && documentosHistorico[0].documento !== atual.documento);
+
     return (
       <>
         <PageHeader
-          title={item.nome}
+          title={atual.nome}
           subtitle={
             <span className="inline-flex items-center gap-2">
               <Users size={12} /> {t("Contratante")} · {t("cadastrado em")}{" "}
-              {new Date(item.criadoEm).toLocaleDateString("pt-BR")}
+              {new Date(atual.criadoEm).toLocaleDateString("pt-BR")}
             </span>
           }
           accentColor={accent}
@@ -123,17 +167,47 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
           <div className="card">
             <div className="section-title mb-4">{t("Informações")}</div>
             <div className="flex flex-col gap-3 text-sm">
-              <InfoRow icon={<Hash size={13} />} label={t("Documento")} value={mascararCpfCnpj(item.documento) || "—"} />
-              <InfoRow icon={<Mail size={13} />} label={t("E-mail")} value={item.email || "—"} mono />
-              <InfoRow icon={<Phone size={13} />} label={t("Telefone")} value={item.telefone} />
-              <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(item.cidadeId, cidades)} />
-              {item.observacoes && (
+              <InfoRow icon={<Hash size={13} />} label={t("Documento")} value={mascararCpfCnpj(atual.documento) || "—"} />
+              <InfoRow icon={<Mail size={13} />} label={t("E-mail")} value={atual.email || "—"} mono />
+              <InfoRow icon={<Phone size={13} />} label={t("Telefone")} value={atual.telefone} />
+              <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(cidadePrincipalId, cidades)} />
+              {atual.observacoes && (
                 <div className="mt-2 pt-3 border-t border-border">
                   <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
                     <FileText size={13} />
                     {t("Observações")}
                   </div>
-                  <div className="text-sm text-secondary whitespace-pre-wrap">{item.observacoes}</div>
+                  <div className="text-sm text-secondary whitespace-pre-wrap">{atual.observacoes}</div>
+                </div>
+              )}
+              {temHistoricoDocumentos && (
+                <div className="mt-2 pt-3 border-t border-border">
+                  <div className="flex items-center gap-1.5 text-xs text-muted mb-1.5">
+                    <Hash size={13} />
+                    {t("Documentos já utilizados")}
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {[...documentosHistorico]
+                      .sort((a, b) => (b.ultimo_uso || "").localeCompare(a.ultimo_uso || ""))
+                      .map((d) => {
+                        const principal = d.documento === atual.documento;
+                        return (
+                          <div
+                            key={d.documento}
+                            className="flex items-center justify-between gap-2 text-xs bg-elevated border border-border rounded-md px-2.5 py-1.5"
+                          >
+                            <span className="font-mono text-secondary">{mascararCpfCnpj(d.documento)}</span>
+                            <span className="flex items-center gap-1.5 text-muted flex-shrink-0">
+                              {d.pais && d.pais !== "BR" && <span>{d.pais}</span>}
+                              {principal && <span className="badge badge-info">{t("Atual")}</span>}
+                              <span>
+                                {t("Último uso")}: {d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleDateString("pt-BR") : "—"}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </div>
               )}
             </div>
@@ -148,34 +222,15 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {showsContratante.map((show) => {
-                  const badge = STATUS_BADGES[show.status];
-                  return (
-                    <div
-                      key={show.id}
-                      className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3"
-                    >
-                      <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
-                        <Music size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.artistaNome}</span>
-                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
-                        </div>
-                        <div className="text-xs text-muted truncate">
-                          {show.venue} · {show.location} · {t("Dia {n}", { n: show.dayId })} · {show.time || t("A definir")}
-                        </div>
-                      </div>
-                      {show.valor && (
-                        <div className="text-right">
-                          <div className="text-xs text-muted">{t("Valor")}</div>
-                          <div className="text-sm font-semibold tabular-nums">{formatBRL(show.valor)}</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {showsContratante.map((show) => (
+                  <LinhaShow
+                    key={show.id}
+                    show={show}
+                    valorComLabel
+                    subtitulo={`${show.venue} · ${show.location} · ${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
+                    onAbrirShow={onAbrirShow}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -186,7 +241,26 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
 
   function CasaDetail({ item, accent, onEdit }: { item: Casa; accent: string; onEdit: () => void }) {
     const stats = getCasaStats(item.id, shows);
-    const showsCasa = shows.filter((s) => s.casaId === item.id);
+    // Mais recente primeiro; shows sem data ficam por último.
+    const showsCasa = [...shows.filter((s) => s.casaId === item.id)].sort((a, b) => {
+      if (!a.data && !b.data) return 0;
+      if (!a.data) return 1;
+      if (!b.data) return -1;
+      return b.data.localeCompare(a.data);
+    });
+    const showsRecentes = showsCasa.slice(0, 5);
+
+    // D8 — "quem já contratou aqui": contratantes distintos derivados dos
+    // shows desta casa. Lista vazia é estado NORMAL (a visibilidade derivada
+    // zera contratanteId pra quem só tem agenda.ver) — nunca derivar de
+    // `vendas` pra "consertar" (reabriria o vazamento que stripShowDetalhado
+    // fecha de propósito).
+    const contratantesAqui = Array.from(
+      new Set(showsCasa.map((s) => s.contratanteId).filter((id): id is string => Boolean(id)))
+    )
+      .map((id) => contratantes.find((c) => c.id === id))
+      .filter((c): c is Contratante => Boolean(c));
+
     return (
       <>
         <PageHeader
@@ -247,42 +321,77 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
                 </div>
               </div>
             )}
+
+            {/* D8 — quem já contratou aqui */}
+            <div className="mt-5 pt-5 border-t border-border">
+              <div className="text-xs text-muted mb-2 uppercase tracking-wider font-semibold">
+                {t("Quem já contratou aqui")}
+              </div>
+              {contratantesAqui.length === 0 ? (
+                <div className="text-xs text-muted italic">{t("Nenhum contratante visível nos shows desta casa.")}</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {contratantesAqui.map((c) => (
+                    <span key={c.id} className="badge badge-neutral">{c.nome}</span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="card">
-            <div className="section-title mb-4">{t("Shows realizados")}</div>
-            {showsCasa.length === 0 ? (
+            <div className="flex items-center justify-between mb-4">
+              <div className="section-title">{t("Shows realizados")}</div>
+              {showsCasa.length > showsRecentes.length && (
+                <button
+                  type="button"
+                  onClick={() => setCasaVerTodosAberto(true)}
+                  className="text-xs font-medium text-info hover:underline"
+                >
+                  {t("Ver todos ({n})", { n: showsCasa.length })}
+                </button>
+              )}
+            </div>
+            {showsRecentes.length === 0 ? (
               <div className="text-sm text-muted py-6 text-center">
                 {t("Nenhum show registrado nesta casa ainda.")}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {showsCasa.map((show) => {
-                  const badge = STATUS_BADGES[show.status];
-                  return (
-                    <div key={show.id} className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
-                        <Music size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.artistaNome}</span>
-                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
-                        </div>
-                        <div className="text-xs text-muted truncate">
-                          {t("Dia {n}", { n: show.dayId })} · {show.time || t("A definir")}
-                        </div>
-                      </div>
-                      {show.valor && (
-                        <div className="text-sm font-semibold tabular-nums flex-shrink-0">{formatBRL(show.valor)}</div>
-                      )}
-                    </div>
-                  );
-                })}
+                {showsRecentes.map((show) => (
+                  <LinhaShow
+                    key={show.id}
+                    show={show}
+                    subtitulo={`${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
+                    onAbrirShow={onAbrirShow}
+                  />
+                ))}
               </div>
             )}
           </div>
         </div>
+
+        {/* D8 — "ver todos os shows" com acesso ao detalhe de cada um */}
+        <ResumoModal
+          isOpen={casaVerTodosAberto}
+          onClose={() => setCasaVerTodosAberto(false)}
+          title={t("Shows em {casa}", { casa: item.nome })}
+          accentColor={accent}
+        >
+          <ResumoLista
+            itens={showsCasa.map((show) => ({
+              id: show.id,
+              titulo: `${show.artistaNome} — ${t("Dia {n}", { n: show.dayId })}`,
+              subtitulo: `${t(STATUS_BADGES[show.status]?.label ?? show.status)}${show.time ? ` · ${show.time}` : ""}`,
+              valor: show.valor ? formatBRL(show.valor) : undefined,
+            }))}
+            maxItens={showsCasa.length}
+            onItemClick={(id) => {
+              setCasaVerTodosAberto(false);
+              onAbrirShow?.(id);
+            }}
+          />
+        </ResumoModal>
       </>
     );
   }
@@ -354,28 +463,14 @@ export default function ContatoDetail({ selecionado, onBack, onEdit }: Props) {
               <div className="text-sm text-muted py-6 text-center">{t("Nenhum show realizado aqui ainda.")}</div>
             ) : (
               <div className="flex flex-col gap-2">
-                {showsCidade.map((show) => {
-                  const badge = STATUS_BADGES[show.status];
-                  return (
-                    <div key={show.id} className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
-                        <Music size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-primary">{show.artistaNome}</span>
-                          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
-                        </div>
-                        <div className="text-xs text-muted truncate">
-                          {show.venue} · {t("Dia {n}", { n: show.dayId })}
-                        </div>
-                      </div>
-                      {show.valor && (
-                        <div className="text-sm font-semibold tabular-nums flex-shrink-0">{formatBRL(show.valor)}</div>
-                      )}
-                    </div>
-                  );
-                })}
+                {showsCidade.map((show) => (
+                  <LinhaShow
+                    key={show.id}
+                    show={show}
+                    subtitulo={`${show.venue} · ${t("Dia {n}", { n: show.dayId })}`}
+                    onAbrirShow={onAbrirShow}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -440,5 +535,66 @@ function InfoRow({
         <div className={`text-sm text-primary break-words ${mono ? "font-mono" : ""}`}>{value}</div>
       </div>
     </div>
+  );
+}
+
+/** D9/D8 — linha de show do histórico (contratante/casa/cidade). Clicável
+ *  quando `onAbrirShow` está presente (abre o ShowDetalheModal global); sem
+ *  a prop, degrada pra linha estática (comportamento antigo). */
+function LinhaShow({
+  show,
+  subtitulo,
+  valorComLabel,
+  onAbrirShow,
+}: {
+  show: Show;
+  subtitulo: React.ReactNode;
+  /** "Valor" com rótulo acima (Histórico do contratante) vs. só o número (casa/cidade). */
+  valorComLabel?: boolean;
+  onAbrirShow?: (id: string) => void;
+}) {
+  const t = useT();
+  const badge = STATUS_BADGES[show.status] ?? STATUS_BADGES.pendente;
+  const conteudo = (
+    <>
+      <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
+        <Music size={16} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-primary">{show.artistaNome}</span>
+          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
+        </div>
+        <div className="text-xs text-muted truncate">{subtitulo}</div>
+      </div>
+      {show.valor ? (
+        valorComLabel ? (
+          <div className="text-right flex-shrink-0">
+            <div className="text-xs text-muted">{t("Valor")}</div>
+            <div className="text-sm font-semibold tabular-nums">{formatBRL(show.valor)}</div>
+          </div>
+        ) : (
+          <div className="text-sm font-semibold tabular-nums flex-shrink-0">{formatBRL(show.valor)}</div>
+        )
+      ) : null}
+    </>
+  );
+
+  if (!onAbrirShow) {
+    return (
+      <div className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3">
+        {conteudo}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrirShow(show.id)}
+      className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3 text-left w-full hover:border-border-strong transition-colors"
+    >
+      {conteudo}
+    </button>
   );
 }

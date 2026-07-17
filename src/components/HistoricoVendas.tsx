@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText, Ban } from "lucide-react";
+import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText, Ban, Pencil } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -212,6 +212,14 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                   const cancelada = v.status === "cancelada";
                   const podeCancelar =
                     !cancelada && podeUI(v.artistaId || null, "vendas.cancelar_venda");
+                  // Mesmo gate do VendaDetalhe.tsx:62-65 — permissão de VENDAS,
+                  // não de agenda. Sem `!cancelada`: nem o VendaDetalhe nem o
+                  // PATCH do servidor travam a edição de venda cancelada, e
+                  // esconder só o atalho aqui daria a impressão falsa de trava
+                  // (o ícone "Ver" ao lado leva à mesma edição).
+                  const podeEditar =
+                    podeUI(v.artistaId || null, "vendas.editar_venda") ||
+                    podeUI(v.artistaId || null, "vendas.editar_todos");
                   return (
                     <tr
                       key={v.id}
@@ -270,6 +278,15 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           >
                             <Eye size={14} />
                           </button>
+                          {podeEditar && (
+                            <button
+                              onClick={() => onAbrir(v.id)}
+                              className="btn-ghost p-1.5 rounded"
+                              title={t("Editar venda")}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
                           {podeCancelar && (
                             <button
                               onClick={() => {

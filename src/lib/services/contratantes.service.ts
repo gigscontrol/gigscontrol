@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Contratante } from "@/types";
+import type { Contratante, DocumentoContratante } from "@/types";
 import {
   rowParaContratante,
   type ContratanteEscrita,
@@ -32,6 +32,31 @@ function entradaParaEscrita(
   if (input.endereco !== undefined) out.endereco = input.endereco;
   if (input.cidade_id !== undefined) out.cidade_id = input.cidade_id;
   if (input.observacoes !== undefined) out.observacoes = input.observacoes;
+  return out;
+}
+
+/**
+ * Acumula um documento no histórico do contratante (migração 90).
+ *
+ * O documento NÃO é chave de identidade (a chave é o telefone) — o mesmo
+ * contratante fecha um show com CPF e outro com CNPJ. Por isso ele acumula e
+ * nunca entra em popup de divergência: já existe → só atualiza `ultimo_uso`;
+ * novo → entra na lista. `contratantes.documento` segue como o principal.
+ *
+ * Compara por igualdade exata: o cliente já manda normalizado (normalizarDocumento).
+ */
+function acumularDocumento(
+  atuais: DocumentoContratante[],
+  documento: string,
+  pais: string | undefined,
+  agora: string
+): DocumentoContratante[] {
+  const i = atuais.findIndex((d) => d.documento === documento);
+  if (i === -1) {
+    return [...atuais, { documento, ...(pais ? { pais } : {}), primeiro_uso: agora, ultimo_uso: agora }];
+  }
+  const out = [...atuais];
+  out[i] = { ...out[i], ...(pais ? { pais } : {}), ultimo_uso: agora };
   return out;
 }
 
@@ -101,6 +126,15 @@ export async function criarContratanteNoWorkspace(
   input: ContratanteCreateInput
 ): Promise<Contratante> {
   const escrita = entradaParaEscrita(input);
+  // Documento nasce já acumulado no histórico (migração 90).
+  if (typeof escrita.documento === "string" && escrita.documento.trim()) {
+    escrita.documentos = acumularDocumento(
+      [],
+      escrita.documento,
+      escrita.pais ?? undefined,
+      new Date().toISOString()
+    );
+  }
   // Geocodifica NO CADASTRO (tokens.md §7): endereço → ponto exato;
   // senão centroide da cidade. Falha nunca bloqueia o save.
   const geo = await resolverGeoDoContato(supabase, {
@@ -120,9 +154,28 @@ export async function atualizarContratantePorId(
 ): Promise<Contratante> {
   let escrita = entradaParaEscrita(input);
 
+  const documentoNovo =
+    typeof escrita.documento === "string" && escrita.documento.trim()
+      ? escrita.documento
+      : null;
+  const mexeEmGeo = input.endereco !== undefined || input.cidade_id !== undefined;
+
+  // Uma leitura só, compartilhada pelo re-geocode e pelo acúmulo de documento.
+  const atual = mexeEmGeo || documentoNovo ? await repoBuscar(supabase, id) : null;
+
+  // Documento ACUMULA (migração 90) — nunca é sobrescrito no histórico, e nunca
+  // entra em popup de divergência. `documento` segue como o principal (último usado).
+  if (documentoNovo) {
+    escrita.documentos = acumularDocumento(
+      (atual?.documentos ?? []) as DocumentoContratante[],
+      documentoNovo,
+      escrita.pais ?? atual?.pais ?? undefined,
+      new Date().toISOString()
+    );
+  }
+
   // Re-geocodifica SÓ se endereço/cidade mudaram (cache via geocoded_at).
-  if (input.endereco !== undefined || input.cidade_id !== undefined) {
-    const atual = await repoBuscar(supabase, id);
+  if (mexeEmGeo) {
     const enderecoNovo = input.endereco !== undefined ? (input.endereco ?? null) : (atual?.endereco ?? null);
     const cidadeNova = input.cidade_id !== undefined ? (input.cidade_id ?? null) : (atual?.cidade_id ?? null);
     const mudou =

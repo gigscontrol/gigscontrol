@@ -28,6 +28,7 @@ import {
   CreditCard,
   CheckCircle2,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import Modal from "./Modal";
 import BookingSection from "./agenda/BookingSection";
@@ -139,6 +140,11 @@ export default function ShowDetalheModal({
     ? orcamentos.find((o) => String(o.id) === show.orcamentoId)
     : null;
   const venda = show.vendaId ? vendas.find((v) => String(v.id) === show.vendaId) : null;
+  // Mesmo gate do VendaDetalhe.tsx:62-65 — permissão de VENDAS (não agenda.*).
+  const podeEditarVendaLigada = venda
+    ? podeUI(venda.artistaId || null, "vendas.editar_venda") ||
+      podeUI(venda.artistaId || null, "vendas.editar_todos")
+    : false;
 
   // Status contratual do show (Fase 3) — derivado da venda vinculada.
   const resumoContrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
@@ -704,19 +710,36 @@ export default function ShowDetalheModal({
                     {venda.numero}
                   </span>
                 </div>
-                {onAbrirVenda && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onAbrirVenda(venda.id);
-                    }}
-                    className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
-                  >
-                    {t("Abrir")}
-                    <ExternalLink size={11} />
-                  </button>
-                )}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* UM botão só: os dois destinos eram idênticos (mesma
+                      navegação pro VendaDetalhe), então desabilitar um deles
+                      enquanto o vizinho fazia a mesma coisa era um gate
+                      decorativo. Navegar não é a ação perigosa — a edição em si
+                      já é gateada dentro do VendaDetalhe e no servidor. Aqui o
+                      RÓTULO só antecipa o que a pessoa vai poder fazer lá. */}
+                  {onAbrirVenda && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onAbrirVenda(venda.id);
+                      }}
+                      className="btn-ghost text-xs inline-flex items-center gap-1"
+                    >
+                      {podeEditarVendaLigada ? (
+                        <>
+                          <Pencil size={11} />
+                          {t("Editar venda")}
+                        </>
+                      ) : (
+                        <>
+                          {t("Abrir")}
+                          <ExternalLink size={11} />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
             {orcamento && (

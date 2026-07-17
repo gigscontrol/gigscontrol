@@ -4,7 +4,7 @@ import { verificarAcessoContatos } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 /**
- * GET /api/contatos/contratantes/existe?documento=X | ?nome=Y
+ * GET /api/contatos/contratantes/existe?documento=X | ?telefone=Y | ?nome=Z
  *
  * Atalho ANTI-DUPLICATA. Ao montar um orçamento/venda, se a pessoa digita um
  * contratante que NÃO está na lista visível dela (visibilidade derivada), a UI
@@ -16,8 +16,15 @@ import { respostaDeErro } from "@/lib/api/erros";
 export async function GET(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const g = verificarAcessoContatos(r.sessao);
-  if (g) return g;
+  // Artista NÃO é barrado aqui — espelha o GET de listagem (contratantes/route.ts:20).
+  // O `contratantes` do contexto do artista é filtrado por visibilidade derivada,
+  // então este endpoint é o ÚNICO caminho que reencontra o contato já cadastrado
+  // pelo telefone (D1). Barrado, o artista cai no ramo "novo" → o POST de criação
+  // 403a → a venda inteira falha. Não vira browse: uma linha só, por match forte.
+  if (r.sessao.papel !== "artista") {
+    const g = verificarAcessoContatos(r.sessao);
+    if (g) return g;
+  }
 
   const url = new URL(request.url);
   const documento = url.searchParams.get("documento")?.trim() || "";
@@ -30,7 +37,9 @@ export async function GET(request: Request) {
   try {
     let q = r.sessao.supabase
       .from("contratantes")
-      .select("id, nome, documento, telefone, email, cidade_id")
+      // endereco/pais entram porque o popup de divergência compara campo-a-campo
+      // contra o cadastro — sem eles, tudo "diverge" contra undefined.
+      .select("id, nome, documento, telefone, email, cidade_id, endereco, pais")
       .is("deletado_em", null)
       .limit(1);
     // Match do mais forte pro mais fraco: documento (CPF/CNPJ) → telefone (E.164)

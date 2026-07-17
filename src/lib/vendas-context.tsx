@@ -38,6 +38,27 @@ export type NovaVendaInput = {
         documentoNovo?: string;
         paisNovo?: string;
         observacoesNovo?: string;
+        /**
+         * Backfill da cidade do contato reusado (D5): só vem preenchido quando
+         * o cadastro NÃO tem cidade. O cidade_id alimenta geocode/mapa — não
+         * fica trocando a cada venda (a "cidade principal" exibida é derivada
+         * do último show).
+         */
+        cidadeIdNovo?: string;
+        /** Só vem preenchido quando aprovado no popup de divergência (ou backfill). */
+        enderecoNovo?: string;
+        /**
+         * Snapshot `contratante_*` da venda = o que foi DIGITADO agora, mesmo
+         * que o usuário tenha recusado atualizar o cadastro (o snapshot é
+         * independente do cadastro). Sem ele, cai no comportamento antigo
+         * (deriva do patch/retorno do PATCH).
+         */
+        snapshot?: {
+          nome: string;
+          email: string;
+          telefone: string;
+          documento: string;
+        };
       }
     | {
         tipo: "novo";
@@ -209,27 +230,45 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.telefoneNovo !== undefined) patch.telefone = input.contratante.telefoneNovo;
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
         if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
+        if (input.contratante.cidadeIdNovo !== undefined) patch.cidadeId = input.contratante.cidadeIdNovo;
+        if (input.contratante.enderecoNovo !== undefined) patch.endereco = input.contratante.enderecoNovo;
+        const snap = input.contratante.snapshot;
+        if (snap) contratanteSnapshot = { ...snap };
         if (Object.keys(patch).length > 0) {
           try {
             const atual = await updateContratante(contratanteId, patch);
-            contratanteSnapshot = {
-              nome: atual.nome ?? "",
-              email: atual.email ?? "",
-              telefone: atual.telefone ?? "",
-              documento: atual.documento ?? "",
-            };
-          } catch {
+            if (!snap) {
+              contratanteSnapshot = {
+                nome: atual.nome ?? "",
+                email: atual.email ?? "",
+                telefone: atual.telefone ?? "",
+                documento: atual.documento ?? "",
+              };
+            }
+          } catch (e) {
             // Contato existente porém OCULTO para este usuário (visibilidade
             // derivada) → o PATCH de dados retorna 404. Reusar mesmo assim é o
             // objetivo do fluxo "já existe, quer usar?": segue com o
             // contratante_id (a própria venda cria a visibilidade derivada) e
             // monta o snapshot a partir do que a pessoa digitou.
-            contratanteSnapshot = {
-              nome: patch.nome ?? "",
-              email: patch.email ?? "",
-              telefone: patch.telefone ?? "",
-              documento: patch.documento ?? "",
-            };
+            //
+            // 404 é o único silêncio INTENCIONAL. 403 (sem `contatos.editar`)
+            // e 5xx não podem sumir calados: a venda segue (o snapshot dela é
+            // o que a pessoa digitou e não depende do cadastro), mas o erro
+            // fica registrado em vez de virar "atualizou" mentiroso. A UI já
+            // não abre o popup pra quem não pode editar (gate no cliente).
+            const status = (e as { status?: number }).status;
+            if (status !== 404) {
+              console.error("Falha ao atualizar o contratante da venda:", e);
+            }
+            if (!snap) {
+              contratanteSnapshot = {
+                nome: patch.nome ?? "",
+                email: patch.email ?? "",
+                telefone: patch.telefone ?? "",
+                documento: patch.documento ?? "",
+              };
+            }
           }
         }
       } else {

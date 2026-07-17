@@ -148,11 +148,11 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
       />
 
       {/* Cards de status */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatusCard
           label={t("Pendentes")}
           value={totalPorStatus.pendente}
-          color="var(--text-secondary)"
+          color="var(--warning)"
           icon={<Clock size={14} />}
           active={filtroStatus === "pendente"}
           onClick={() =>
@@ -162,7 +162,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
         <StatusCard
           label={t("Em negociação")}
           value={totalPorStatus.negociacao}
-          color="var(--warning)"
+          color="var(--info)"
           icon={<MessageCircle size={14} />}
           active={filtroStatus === "negociacao"}
           onClick={() =>
@@ -422,26 +422,24 @@ function StatusCard({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="card-interactive flex items-center justify-between gap-3 text-left"
+      className="card flex flex-col gap-2 sm:gap-4 min-h-0 sm:min-h-[140px] p-3 sm:p-5 text-left cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0"
       style={{
         borderColor: active ? color : undefined,
         boxShadow: active ? `0 0 0 1px ${color}` : undefined,
       }}
     >
-      <div>
-        <div className="stat-label">{label}</div>
-        <div className="text-2xl font-bold tabular-nums mt-0.5">{value}</div>
+      <div className="flex items-start justify-between">
+        <span className="stat-label">{label}</span>
+        <div
+          className="h-[30px] w-[30px] rounded-chip flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: color, color: "var(--text-primary)" }}
+        >
+          {icon}
+        </div>
       </div>
-      <div
-        className="h-8 w-8 rounded-chip flex items-center justify-center flex-shrink-0"
-        style={{
-          backgroundColor: active ? `${color}20` : "var(--bg-elevated)",
-          color,
-        }}
-      >
-        {icon}
-      </div>
+      <div className="stat-value max-sm:text-2xl max-sm:truncate">{value}</div>
     </button>
   );
 }
