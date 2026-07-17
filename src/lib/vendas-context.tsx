@@ -17,6 +17,7 @@ import type {
   Parcela,
   ItemQuantidade,
   LogisticaSelecao,
+  Moeda,
 } from "@/types";
 
 /**
@@ -107,6 +108,8 @@ export type NovaVendaInput = {
   artistaId: string; // UUID do artista (workspace.artistas)
   lineUp?: string[];
   cache: number;
+  /** Moeda da venda (migração 92). Default = moeda da agência. */
+  moeda: Moeda;
   duracaoHoras: number;
   duracaoMinutos?: number;
   camarim: ItemQuantidade[];
@@ -197,6 +200,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.artistaId !== undefined) out.artist_id = p.artistaId || null;
   if (p.lineUp !== undefined) out.line_up = p.lineUp;
   if (p.cache !== undefined) out.cache = p.cache;
+  if (p.moeda !== undefined) out.moeda = p.moeda;
   if (p.duracaoHoras !== undefined) out.duracao_horas = p.duracaoHoras;
   if (p.duracaoMinutos !== undefined) out.duracao_minutos = p.duracaoMinutos;
   if (p.camarim !== undefined) out.camarim = p.camarim;
@@ -386,6 +390,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         artist_id: input.artistaId || null,
         line_up: input.lineUp ?? [],
         cache: input.cache,
+        moeda: input.moeda,
         duracao_horas: input.duracaoHoras,
         duracao_minutos: input.duracaoMinutos ?? null,
         camarim: input.camarim,

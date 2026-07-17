@@ -39,7 +39,7 @@ import {
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
-import { apenasDigitos } from "@/lib/formatters";
+import { apenasDigitos, SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
@@ -58,7 +58,8 @@ import { getPaisPadrao, getPaisPadraoCode } from "@/lib/preferencias";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
+import { moedaValida } from "@/lib/mappers/venda";
 import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
@@ -75,9 +76,11 @@ import {
   MODULE_THEMES,
   TIPO_CASA_POR_EVENTO,
   TIPO_EVENTO_POR_CASA,
+  MOEDAS,
   type Contratante,
   type ItemQuantidade,
   type LogisticaSelecao,
+  type Moeda,
   type Parcela,
   type TipoEvento,
   type Venda,
@@ -408,6 +411,19 @@ export default function ConcretizarVenda({
   const [cache, setCache] = useState<string>(
     v ? String(v.cache).replace(".", ",") : orc ? String(orc.valorCache) : ""
   );
+
+  // Moeda: reidrata da venda (edição) ou do orçamento; caso contrário nasce na
+  // moeda PADRÃO da agência. `moedaTocada` evita que o sync com a agência (que
+  // só chega quando as prefs carregam) sobrescreva a escolha do usuário.
+  const { preferencias } = useWorkspace();
+  const moedaAgencia = moedaValida(preferencias.moeda);
+  const [moeda, setMoeda] = useState<Moeda>(v?.moeda ?? orc?.moeda ?? moedaAgencia);
+  const moedaTocada = useRef(false);
+  useEffect(() => {
+    // Só numa venda NOVA (sem v/orc) e enquanto o usuário não escolheu: segue a
+    // agência quando as preferências terminam de carregar.
+    if (!v && !orc && !moedaTocada.current) setMoeda(moedaAgencia);
+  }, [moedaAgencia, v, orc]);
 
   // Duração — pode ser auto-calculada OU sobrescrita manualmente pelo usuário
   const [duracaoHorasManual, setDuracaoHorasManual] = useState<number>(
@@ -1126,6 +1142,7 @@ export default function ConcretizarVenda({
       artistaId,
       lineUp: lineUp.length > 0 ? lineUp : undefined,
       cache: cacheNum,
+      moeda,
       duracaoHoras,
       duracaoMinutos: duracaoMinutos > 0 ? duracaoMinutos : undefined,
       camarim,
@@ -2045,16 +2062,37 @@ export default function ConcretizarVenda({
             error={errors.cache}
             showAuto={showAutoBadge("cache")}
           >
-            <TextInput
-              type="text"
-              inputMode="decimal"
-              value={cache}
-              onChange={(e) => {
-                setCache(e.target.value.replace(/[^\d.,]/g, ""));
-                marcarEditado("cache");
-              }}
-              placeholder="15000"
-            />
+            <div className="flex items-stretch gap-2">
+              {/* Moeda da venda — o símbolo vem ANTES do valor e é o seletor. */}
+              <select
+                value={moeda}
+                onChange={(e) => {
+                  moedaTocada.current = true;
+                  setMoeda(e.target.value as Moeda);
+                }}
+                aria-label={t("Moeda")}
+                title={t("Moeda")}
+                className="campo-input w-auto font-semibold shrink-0"
+              >
+                {MOEDAS.map((m) => (
+                  <option key={m} value={m}>
+                    {SIMBOLO_MOEDA[m]}
+                  </option>
+                ))}
+              </select>
+              <div className="flex-1">
+                <TextInput
+                  type="text"
+                  inputMode="decimal"
+                  value={cache}
+                  onChange={(e) => {
+                    setCache(e.target.value.replace(/[^\d.,]/g, ""));
+                    marcarEditado("cache");
+                  }}
+                  placeholder="15000"
+                />
+              </div>
+            </div>
           </FieldWithAuto>
 
           {/* Horas + minutos numa célula só → sempre na mesma linha,
@@ -2101,7 +2139,7 @@ export default function ConcretizarVenda({
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm mt-4 mb-4">
             <span className="text-muted">{t("Cachê:")}</span>{" "}
             <span className="font-bold text-primary tabular-nums">
-              {formatBRL(parseValorBR(cache) || 0)}
+              {formatarMoeda(parseValorBR(cache) || 0, moeda)}
             </span>{" "}
             <span className="text-muted">
               {t("por")} {formatarDuracao(duracaoHoras, duracaoMinutos)}
@@ -2249,7 +2287,7 @@ export default function ConcretizarVenda({
               <>
                 <span className="text-muted">{t("Pagamento único de")} </span>
                 <span className="font-bold text-primary tabular-nums">
-                  {formatBRL(cacheNumAtual)}
+                  {formatarMoeda(cacheNumAtual, moeda)}
                 </span>
                 <span className="text-muted">
                   {" "}

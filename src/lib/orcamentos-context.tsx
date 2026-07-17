@@ -20,6 +20,7 @@ import type {
   LogisticaSelecao,
   TipoEvento,
   DetalhesEvento,
+  Moeda,
 } from "@/types";
 
 export type ContratanteInput =
@@ -46,6 +47,8 @@ export type NovoOrcamentoInput = {
   /** UUID do artista (vem do workspace.artistas). */
   artistaId: string;
   valorCache: number;
+  /** Moeda do orçamento (migração 92). Default = moeda da agência. */
+  moeda?: Moeda;
   duracaoHoras: number;
   duracaoMinutos?: number;
   dataShow?: string;
@@ -101,6 +104,7 @@ function orcamentoParaApi(o: Partial<Orcamento>): Record<string, unknown> {
   if (o.cidadeId !== undefined) out.cidade_id = o.cidadeId || null;
   if (o.artistaId !== undefined) out.artist_id = o.artistaId || null;
   if (o.valorCache !== undefined) out.valor_cache = o.valorCache;
+  if (o.moeda !== undefined) out.moeda = o.moeda;
   if (o.duracaoHoras !== undefined) out.duracao_horas = o.duracaoHoras;
   if (o.duracaoMinutos !== undefined) out.duracao_minutos = o.duracaoMinutos;
   if (o.camarim !== undefined) out.camarim = o.camarim;

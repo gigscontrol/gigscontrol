@@ -8,10 +8,10 @@
  * na tela de Novo Contrato — todos os valores são editáveis lá.
  */
 import type { IdiomaModelo, SecaoModelo } from "@/lib/mappers/contratoModelo";
-import type { Artista, Contratante, Parcela, Venda } from "@/types";
+import type { Artista, Contratante, Moeda, Parcela, Venda } from "@/types";
 import { preencher } from "./variaveis";
 import { cachePorExtenso, dataPorExtenso } from "./extenso";
-import { formatBRL } from "@/lib/contatos-stats";
+import { formatarMoeda } from "@/lib/formatters";
 import { configDocumento } from "@/lib/data/documentos";
 import { ehEmailInterno } from "@/lib/email-interno";
 
@@ -29,11 +29,12 @@ function formatarTempo(horas: number | undefined, minutos: number | undefined): 
   return "";
 }
 
-/** Plano de parcelas legível: "1ª parcela: R$ … até DD/MM/AAAA; 2ª: …". */
-function formatarParcelas(parcelas: Parcela[] | undefined): string {
+/** Plano de parcelas legível: "1ª parcela: R$ … até DD/MM/AAAA; 2ª: …". Na
+ * moeda da venda (as parcelas herdam). */
+function formatarParcelas(parcelas: Parcela[] | undefined, moeda: Moeda): string {
   if (!parcelas || parcelas.length === 0) return "";
   return parcelas
-    .map((p, i) => `${i + 1}ª parcela: ${formatBRL(p.valor)} até ${dataBR(p.dataVencimento)}`)
+    .map((p, i) => `${i + 1}ª parcela: ${formatarMoeda(p.valor, moeda)} até ${dataBR(p.dataVencimento)}`)
     .join("; ");
 }
 
@@ -108,11 +109,11 @@ export function valoresDeVenda(opts: {
     horario: venda.horario ?? "",
     horario_fim: venda.horarioFim ?? "",
     tempo_apresentacao: formatarTempo(venda.duracaoHoras, venda.duracaoMinutos),
-    // Valores
-    cache: typeof venda.cache === "number" ? formatBRL(venda.cache) : "",
+    // Valores (na moeda da venda — snapshot da migração 92)
+    cache: typeof venda.cache === "number" ? formatarMoeda(venda.cache, venda.moeda) : "",
     cache_extenso:
-      typeof venda.cache === "number" ? cachePorExtenso(venda.cache, idioma) : "",
-    parcelas: formatarParcelas(venda.parcelas),
+      typeof venda.cache === "number" ? cachePorExtenso(venda.cache, idioma, venda.moeda) : "",
+    parcelas: formatarParcelas(venda.parcelas, venda.moeda),
     "forma de pagamento": "",
     // Riders (dos dados do artista)
     "rider de camarim": juntarRider(artista?.riderCamarim),

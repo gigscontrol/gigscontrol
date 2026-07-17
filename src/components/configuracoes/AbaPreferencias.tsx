@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Languages, Globe, CalendarDays, Clock } from "lucide-react";
+import { Check, Languages, Globe, CalendarDays, Clock, Coins } from "lucide-react";
 import { useT, useLang, type Lang } from "@/lib/i18n";
 import { useWorkspace } from "@/lib/workspace-context";
+import { MOEDAS, type Moeda } from "@/types";
+import { SIMBOLO_MOEDA } from "@/lib/formatters";
 import SeletorPais from "../SeletorPais";
 import Flag from "../Flag";
 import { buscarPais, BRASIL, type Country } from "@/lib/data/countries";
@@ -46,6 +48,7 @@ export default function AbaPreferencias() {
   const idiomaAtual = (preferencias.idiomaPadrao ?? "pt") as Lang;
   const paisAtual = paisDe(preferencias.paisPadrao);
   const formatoAtual = preferencias.formatoData === "mdy" ? "mdy" : "dmy";
+  const moedaAtual = preferencias.moeda ?? "BRL";
   const fusoDetectado = useMemo(() => fusoDoNavegador(), []);
 
   async function salvar(area: string, patch: Parameters<typeof atualizarPreferencias>[0]) {
@@ -192,6 +195,50 @@ export default function AbaPreferencias() {
           </button>
         )}
       </section>
+
+      {/* Moeda padrão da agência */}
+      <section className="card flex flex-col gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Coins size={16} style={{ color: "var(--brand)" }} />
+            <div className="section-title">{t("Moeda padrão da agência")}</div>
+          </div>
+          <p className="text-xs text-muted">
+            {t("Moeda que já vem selecionada ao criar orçamentos e vendas. Cada venda guarda a sua — trocar aqui não altera vendas já feitas.")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {MOEDAS.map((m) => {
+            const ativo = (moedaAtual as Moeda) === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                disabled={!!salvando}
+                onClick={() => salvar("moeda", { moeda: m })}
+                aria-pressed={ativo}
+                className="flex items-center gap-2 px-4 py-2 rounded-control border text-sm font-medium transition disabled:opacity-60"
+                style={{
+                  borderColor: ativo ? "var(--brand)" : "var(--borda)",
+                  background: ativo ? "color-mix(in srgb, var(--brand) 12%, transparent)" : "transparent",
+                  color: ativo ? "var(--brand)" : "var(--texto)",
+                }}
+              >
+                <span className="font-semibold">{SIMBOLO_MOEDA[m]}</span>
+                {t(NOME_MOEDA[m])}
+                {ativo && <Check size={14} />}
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
+
+/** Nome legível de cada moeda (chave i18n = literal PT). */
+const NOME_MOEDA: Record<Moeda, string> = {
+  BRL: "Real",
+  USD: "Dólar",
+  EUR: "Euro",
+};
