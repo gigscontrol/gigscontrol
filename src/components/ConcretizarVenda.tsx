@@ -34,6 +34,10 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
+import CasaParecidaModal, {
+  type CasaCandidata,
+  type EscolhaCasaParecida,
+} from "./CasaParecidaModal";
 import { buscarPais } from "@/lib/data/countries";
 import { normalizar } from "@/lib/normalizar";
 import { exemploEndereco } from "@/lib/data/exemplos";
@@ -187,7 +191,7 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, onCancel }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, casas, cidades, addCasa } = useContatos();
+  const { contratantes, casas, cidades, addCasa, updateCasa } = useContatos();
   const { orcamentos } = useOrcamentos();
   const { criarVenda } = useVendas();
   const [copiadoWA, setCopiadoWA] = useState(false);
@@ -365,6 +369,37 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
     const resolver = responderDivergencia.current;
     responderDivergencia.current = null;
     resolver?.(campos);
+  }
+
+  // ------- Popup de local parecido (dedupe difuso da casa) -------
+  // Estados PRÓPRIOS (não reusa os do contato): o submit abre os dois popups em
+  // sequência, então eles coexistem.
+  const [casaParecida, setCasaParecida] = useState<{
+    nomeDigitado: string;
+    candidatas: CasaCandidata[];
+  } | null>(null);
+  const responderCasaParecida = useRef<((r: EscolhaCasaParecida) => void) | null>(null);
+
+  /** Abre o popup e resolve com a escolha (vincular na existente x criar nova). */
+  function perguntarCasaParecida(
+    nomeDigitado: string,
+    candidatas: CasaCandidata[]
+  ): Promise<EscolhaCasaParecida> {
+    return new Promise((resolve) => {
+      responderCasaParecida.current = resolve;
+      setCasaParecida({ nomeDigitado, candidatas });
+    });
+  }
+
+  /**
+   * Todo caminho de saída passa por aqui — deixar a Promise pendurada
+   * congelaria o submit com `salvando = true` pra sempre.
+   */
+  function fecharCasaParecida(r: EscolhaCasaParecida) {
+    setCasaParecida(null);
+    const resolver = responderCasaParecida.current;
+    responderCasaParecida.current = null;
+    resolver?.(r);
   }
 
   // ------- Pagamento / Parcelas -------
@@ -650,6 +685,39 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
       if (!resp.ok) return orc?.casaId;
       const j = await resp.json();
       if (j?.existe && j.casa?.id) return j.casa.id as string;
+
+      // Sem match EXATO: pode existir casa PARECIDA na mesma cidade ("Downtown"
+      // cadastrado, digitou "Downtown Urban Club"). Busca best-effort e num
+      // try/catch PRÓPRIO: falhar aqui não pode escorrer pro catch externo (a
+      // venda viraria orc?.casaId em silêncio) — degrada pro fluxo de hoje.
+      let candidatas: CasaCandidata[] = [];
+      try {
+        const r2 = await fetch(
+          `/api/contatos/casas/parecidas?nome=${encodeURIComponent(nome)}&cidade_id=${encodeURIComponent(cidadeId)}&endereco=${encodeURIComponent(enderecoLocal.trim())}`
+        );
+        if (r2.ok) {
+          const j2 = await r2.json();
+          candidatas = Array.isArray(j2?.candidatas) ? j2.candidatas : [];
+        }
+      } catch {
+        /* segue pro fluxo de hoje (cria nova) */
+      }
+      if (candidatas.length > 0) {
+        const escolha = await perguntarCasaParecida(nome, candidatas);
+        if (escolha.tipo === "vincular") {
+          if (escolha.renomearPara) {
+            // Best-effort: a casa pode estar fora da visibilidade (PATCH 404) ou
+            // o PATCH ser barrado. O VÍNCULO é o valor real e não pode ser
+            // perdido por um rename cosmético.
+            try {
+              await updateCasa(escolha.casaId, { nome: escolha.renomearPara });
+            } catch {
+              /* rename falhou → vincula assim mesmo */
+            }
+          }
+          return escolha.casaId;
+        }
+      }
 
       // Venda direta não tem tipo de evento → "outro". Casa NÃO tem telefone.
       const nova = await addCasa({
@@ -1847,6 +1915,19 @@ export default function ConcretizarVenda({ orcamentoId, dataInicial, onSaved, on
           onConfirmar={(campos) => fecharDivergencia(campos)}
           onManter={() => fecharDivergencia([])}
           onFechar={() => fecharDivergencia([])}
+        />
+      )}
+
+      {casaParecida && (
+        <CasaParecidaModal
+          aberto
+          nomeDigitado={casaParecida.nomeDigitado}
+          candidatas={casaParecida.candidatas}
+          podeRenomear={podeUI(artistaId, "contatos.editar")}
+          onEscolher={fecharCasaParecida}
+          // Fechar/ESC/clique-fora = "É outro local": o caminho seguro é o de
+          // hoje (cria nova). Nunca vincula sem clique explícito.
+          onFechar={() => fecharCasaParecida({ tipo: "nova" })}
         />
       )}
     </div>

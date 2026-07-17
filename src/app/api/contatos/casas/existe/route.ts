@@ -39,8 +39,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Compara em JS com o `normalizar` canônico (acento/caixa): o Postgres não
-    // tem unaccent habilitado aqui, e o escopo é uma cidade só — poucas linhas.
+    // Compara em JS com o `normalizar` canônico (acento/caixa) — a mesma função
+    // do front — e o escopo é uma cidade só, poucas linhas.
     const { data, error } = await r.sessao.supabase
       .from("casas")
       .select("id, nome, tipo, cidade_id")

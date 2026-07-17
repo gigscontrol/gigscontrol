@@ -2676,4 +2676,19 @@ export const DE: Record<string, string> = {
   "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "Wenn du jetzt verlässt, gehen deine Änderungen verloren. Was möchtest du tun?",
   "Descartar": "Verwerfen",
   "Salvar e sair": "Speichern und verlassen",
+  "Local parecido encontrado": "Ähnlicher Veranstaltungsort gefunden",
+  "Já existe um local parecido com \"{nome}\" nesta cidade. É o mesmo?":
+    "In dieser Stadt gibt es bereits einen Veranstaltungsort ähnlich \"{nome}\". Ist es derselbe?",
+  "(sem endereço cadastrado)": "(keine Adresse hinterlegt)",
+  "Endereço parecido": "Ähnliche Adresse",
+  "Dados restritos": "Eingeschränkte Daten",
+  "Qual nome deve ficar?": "Welcher Name soll bleiben?",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também.":
+    "Dieser Veranstaltungsort erscheint in bereits erfassten Shows — eine Namensänderung aktualisiert auch die Historie.",
+  "Manter \"{nome}\"": "\"{nome}\" behalten",
+  "Usar \"{nome}\"": "\"{nome}\" verwenden",
+  "Você não tem acesso aos dados desse local, então não dá pra confirmar que é o mesmo. Crie como novo local ou peça pra alguém com acesso conferir.":
+    "Du hast keinen Zugriff auf die Daten dieses Veranstaltungsorts, daher lässt sich nicht bestätigen, dass es derselbe ist. Lege ihn als neuen Ort an oder bitte jemanden mit Zugriff um Prüfung.",
+  "É outro local": "Es ist ein anderer Ort",
+  "É o mesmo local": "Es ist derselbe Ort",
 };

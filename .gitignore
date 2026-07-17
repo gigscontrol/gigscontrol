@@ -24,3 +24,15 @@ gerar_contrato_dj.py
 stripe.exe
 _i18n_tmp/
 *.log
+
+# Downloads e material de referência que ficam na raiz (bundles baixados,
+# prints mandados no WhatsApp). Nenhum .zip/.jpeg é versionado neste repo.
+*.zip
+*.jpeg
+*.jpg
+
+# Protótipos/preview que rodam só local. O onboarding-navegavel mora em
+# public/, então commitá-lo o publicaria como página do site.
+Gigs Control - Redesign (standalone).html
+public/onboarding-navegavel.html
+src/app/dev/

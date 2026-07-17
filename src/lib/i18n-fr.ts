@@ -2676,4 +2676,19 @@ export const FR: Record<string, string> = {
   "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "Si vous quittez maintenant, vos modifications seront perdues. Que souhaitez-vous faire ?",
   "Descartar": "Ignorer",
   "Salvar e sair": "Enregistrer et quitter",
+  "Local parecido encontrado": "Lieu similaire trouvé",
+  "Já existe um local parecido com \"{nome}\" nesta cidade. É o mesmo?":
+    "Il existe déjà un lieu similaire à \"{nome}\" dans cette ville. Est-ce le même ?",
+  "(sem endereço cadastrado)": "(aucune adresse enregistrée)",
+  "Endereço parecido": "Adresse similaire",
+  "Dados restritos": "Données restreintes",
+  "Qual nome deve ficar?": "Quel nom faut-il garder ?",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também.":
+    "Ce lieu apparaît dans des concerts déjà enregistrés — changer le nom met aussi à jour l'historique.",
+  "Manter \"{nome}\"": "Garder \"{nome}\"",
+  "Usar \"{nome}\"": "Utiliser \"{nome}\"",
+  "Você não tem acesso aos dados desse local, então não dá pra confirmar que é o mesmo. Crie como novo local ou peça pra alguém com acesso conferir.":
+    "Vous n'avez pas accès aux données de ce lieu, il est donc impossible de confirmer qu'il s'agit du même. Créez-le comme nouveau lieu ou demandez à quelqu'un qui y a accès de vérifier.",
+  "É outro local": "C'est un autre lieu",
+  "É o mesmo local": "C'est le même lieu",
 };

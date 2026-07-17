@@ -3682,4 +3682,19 @@ export const EN: Record<string, string> = {
   "Se sair agora, suas alterações serão perdidas. O que deseja fazer?": "If you leave now, your changes will be lost. What would you like to do?",
   "Descartar": "Discard",
   "Salvar e sair": "Save and leave",
+  "Local parecido encontrado": "Similar venue found",
+  "Já existe um local parecido com \"{nome}\" nesta cidade. É o mesmo?":
+    "There is already a venue similar to \"{nome}\" in this city. Is it the same one?",
+  "(sem endereço cadastrado)": "(no address on file)",
+  "Endereço parecido": "Similar address",
+  "Dados restritos": "Restricted data",
+  "Qual nome deve ficar?": "Which name should stay?",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também.":
+    "This venue appears in shows already on file — changing the name updates the history too.",
+  "Manter \"{nome}\"": "Keep \"{nome}\"",
+  "Usar \"{nome}\"": "Use \"{nome}\"",
+  "Você não tem acesso aos dados desse local, então não dá pra confirmar que é o mesmo. Crie como novo local ou peça pra alguém com acesso conferir.":
+    "You don't have access to this venue's data, so there is no way to confirm it is the same one. Create it as a new venue or ask someone with access to check.",
+  "É outro local": "It's another venue",
+  "É o mesmo local": "It's the same venue",
 };

@@ -29,6 +29,10 @@ import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
+import CasaParecidaModal, {
+  type CasaCandidata,
+  type EscolhaCasaParecida,
+} from "./CasaParecidaModal";
 import HistoricoContratante from "./HistoricoContratante";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
@@ -132,7 +136,8 @@ function formatarDataOffset(iso: string, offsetDias: number): string {
 export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
-  const { contratantes, updateContratante, casas, addCasa, cidades } = useContatos();
+  const { contratantes, updateContratante, casas, addCasa, updateCasa, cidades } =
+    useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
   const { podeUI } = useAuth();
@@ -206,6 +211,39 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     responderDivergencia.current = null;
     resolver?.(campos);
   }
+
+  // ------- Popup de local parecido (dedupe difuso da casa) -------
+  const [casaParecida, setCasaParecida] = useState<{
+    nomeDigitado: string;
+    candidatas: CasaCandidata[];
+  } | null>(null);
+  const responderCasaParecida = useRef<((r: EscolhaCasaParecida) => void) | null>(null);
+
+  /** Abre o popup e resolve com a escolha (vincular na existente x criar nova). */
+  function perguntarCasaParecida(
+    nomeDigitado: string,
+    candidatas: CasaCandidata[]
+  ): Promise<EscolhaCasaParecida> {
+    return new Promise((resolve) => {
+      responderCasaParecida.current = resolve;
+      setCasaParecida({ nomeDigitado, candidatas });
+    });
+  }
+
+  /**
+   * Todo caminho de saída passa por aqui — deixar a Promise pendurada
+   * congelaria o submit com `salvando = true` pra sempre.
+   */
+  function fecharCasaParecida(r: EscolhaCasaParecida) {
+    setCasaParecida(null);
+    const resolver = responderCasaParecida.current;
+    responderCasaParecida.current = null;
+    resolver?.(r);
+  }
+
+  // Trava o submit: um 2º clique com o popup aberto sobrescreveria o ref de
+  // resposta (Promise pendurada) e ainda criaria orçamento duplicado.
+  const [salvando, setSalvando] = useState(false);
 
   // Tela 3
   const [salvos, setSalvos] = useState<Array<{
@@ -357,8 +395,46 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
       const resp = await fetch(
         `/api/contatos/casas/existe?nome=${encodeURIComponent(nome)}&cidade_id=${encodeURIComponent(cidadeId)}`
       );
-      const j = await resp.json();
-      if (j?.existe && j.casa?.id) return j.casa.id as string;
+      // Endpoint fora do ar = dedupe cego, mas aqui NÃO existe casa anterior pra
+      // degradar (diferente do ConcretizarVenda, que cai no `orc?.casaId`):
+      // abortar deixaria o orçamento SEM casa nenhuma em silêncio, perdendo o
+      // vínculo que o fluxo veio criar. Segue pro addCasa — no pior caso nasce
+      // uma duplicata visível, que é melhor que um orçamento sem local.
+      if (resp.ok) {
+        const j = await resp.json();
+        if (j?.existe && j.casa?.id) return j.casa.id as string;
+      }
+
+      // Sem match EXATO: pode existir casa PARECIDA na mesma cidade ("Downtown"
+      // cadastrado, digitou "Downtown Urban Club"). Busca best-effort num
+      // try/catch PRÓPRIO — falhar aqui degrada pro fluxo de hoje (cria nova).
+      let candidatas: CasaCandidata[] = [];
+      try {
+        const r2 = await fetch(
+          `/api/contatos/casas/parecidas?nome=${encodeURIComponent(nome)}&cidade_id=${encodeURIComponent(cidadeId)}&endereco=${encodeURIComponent(evEndereco.trim())}`
+        );
+        if (r2.ok) {
+          const j2 = await r2.json();
+          candidatas = Array.isArray(j2?.candidatas) ? j2.candidatas : [];
+        }
+      } catch {
+        /* segue pro fluxo de hoje (cria nova) */
+      }
+      if (candidatas.length > 0) {
+        const escolha = await perguntarCasaParecida(nome, candidatas);
+        if (escolha.tipo === "vincular") {
+          if (escolha.renomearPara) {
+            // Best-effort: casa oculta (PATCH 404) ou sem permissão não pode
+            // custar o VÍNCULO, que é o valor real.
+            try {
+              await updateCasa(escolha.casaId, { nome: escolha.renomearPara });
+            } catch {
+              /* rename falhou → vincula assim mesmo */
+            }
+          }
+          return escolha.casaId;
+        }
+      }
 
       // Casa NÃO tem telefone (o telefone é do contratante, não do local).
       const cap = parseInt(evCapacidade.replace(/\D/g, ""), 10);
@@ -377,6 +453,19 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
 
   // ----- Salvar todos os blocos -----
   async function handleSubmit() {
+    // Guard de reentrada: o submit é async e ainda pode PARAR num popup
+    // (divergência / local parecido). Sem o guard, um 2º clique sobrescreve o
+    // ref de resposta — Promise pendurada + orçamento duplicado.
+    if (salvando) return;
+    setSalvando(true);
+    try {
+      await submeter();
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function submeter() {
     if (!validateStep1()) { setStep(1); return; }
     if (!validateStep2()) return;
     if (!tipoEvento || !cidadeIbge) return;
@@ -1221,7 +1310,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         ) : (
           <button
             onClick={handleSubmit}
-            disabled={blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))}
+            disabled={
+              salvando ||
+              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))
+            }
             title={
               blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))
                 ? "Você não tem permissão para isso."
@@ -1247,6 +1339,21 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           onConfirmar={(campos) => fecharDivergencia(campos)}
           onManter={() => fecharDivergencia([])}
           onFechar={() => fecharDivergencia([])}
+        />
+      )}
+
+      {casaParecida && (
+        <CasaParecidaModal
+          aberto
+          nomeDigitado={casaParecida.nomeDigitado}
+          candidatas={casaParecida.candidatas}
+          // O rename é best-effort e o enforcement real é do servidor; gateia
+          // pelo artista do 1º bloco (o evento é o mesmo pra todos).
+          podeRenomear={podeUI(blocos[0]?.artistaId || null, "contatos.editar")}
+          onEscolher={fecharCasaParecida}
+          // Fechar/ESC/clique-fora = "É outro local": o caminho seguro é o de
+          // hoje (cria nova). Nunca vincula sem clique explícito.
+          onFechar={() => fecharCasaParecida({ tipo: "nova" })}
         />
       )}
     </div>
