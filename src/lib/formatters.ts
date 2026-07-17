@@ -10,6 +10,7 @@
  */
 
 import { getFormatoData } from "./preferencias";
+import type { Moeda } from "@/types";
 
 /** Remove tudo que não é dígito. */
 export function apenasDigitos(s: string | null | undefined): string {
@@ -20,24 +21,32 @@ export function apenasDigitos(s: string | null | undefined): string {
 // Moeda
 // ============================================================
 
+/** Símbolo por moeda — usado no prefixo dos campos de valor e na formatação. */
+export const SIMBOLO_MOEDA: Record<Moeda, string> = {
+  BRL: "R$",
+  USD: "US$",
+  EUR: "€",
+};
+
 /**
- * Formatador de moeda ÚNICO do app (BRL/USD). Antes existiam 2 `formatBRL`
- * divergentes (0 vs 2 casas) + formatadores inline; agora todos delegam aqui.
- * `casas` controla as decimais (2 = detalhado "R$ 1.234,56"; 0 = resumo
- * "R$ 1.234").
+ * Formatador de moeda ÚNICO do app (BRL/USD/EUR — migração 92). Antes existiam
+ * 2 `formatBRL` divergentes + formatadores inline; agora todos delegam aqui.
+ * A grade numérica é a do app (pt-BR: 1.234,56); SÓ o símbolo muda por moeda —
+ * assim uma agência que sempre foi BRL não vê NENHUMA diferença. `casas`
+ * controla as decimais (2 = "R$ 1.234,56"; 0 = "R$ 1.234").
  */
 export function formatarMoeda(
   valor: number,
-  moeda: "BRL" | "USD" = "BRL",
+  moeda: Moeda = "BRL",
   casas = 2
 ): string {
-  const locale = moeda === "USD" ? "en-US" : "pt-BR";
-  return valor.toLocaleString(locale, {
-    style: "currency",
-    currency: moeda,
+  const v = Number.isFinite(valor) ? valor : 0;
+  const sinal = v < 0 ? "-" : "";
+  const n = Math.abs(v).toLocaleString("pt-BR", {
     minimumFractionDigits: casas,
     maximumFractionDigits: casas,
   });
+  return `${sinal}${SIMBOLO_MOEDA[moeda] ?? "R$"} ${n}`;
 }
 
 // ============================================================

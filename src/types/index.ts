@@ -294,6 +294,15 @@ export type Contratante = {
 
 export type TipoCasa = "club" | "festival" | "festa-privada" | "bar" | "arena" | "outro";
 
+/**
+ * Moeda do dinheiro no app (código ISO). Escolhida por venda/orçamento, com o
+ * padrão da agência (workspaces.moeda) pré-selecionado. NÃO se converte entre
+ * moedas — cada registro lembra a sua e os dashboards somam por moeda.
+ * (Distinto do `Moeda` de `./planos`, que é o do checkout do próprio SaaS.)
+ */
+export type Moeda = "BRL" | "USD" | "EUR";
+export const MOEDAS: readonly Moeda[] = ["BRL", "USD", "EUR"];
+
 export type Casa = {
   id: string;
   nome: string;
@@ -417,6 +426,8 @@ export type Orcamento = {
   duracaoHoras: number;
   duracaoMinutos?: number;
   valorCache: number;
+  /** Moeda do orçamento (migração 92). Herdada pela venda na conversão. */
+  moeda: Moeda;
 
   // adicionais
   camarim: ItemQuantidade[];
@@ -606,6 +617,8 @@ export type Venda = {
   artistaId: string; // artista da agência (uuid quando vier do banco)
   lineUp?: string[]; // outros artistas do evento (não obrigatório)
   cache: number;
+  /** Moeda da venda (migração 92). Snapshot — as parcelas herdam. */
+  moeda: Moeda;
   duracaoHoras: number;
   duracaoMinutos?: number;
   camarim: ItemQuantidade[];

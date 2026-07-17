@@ -5,8 +5,14 @@ import type {
   ItemQuantidade,
   LogisticaSelecao,
   TaxaAgenciaModo,
+  Moeda,
 } from "@/types";
 import { LOGISTICA_VAZIA } from "@/types";
+
+/** Coage o texto do banco pro enum de moeda; qualquer coisa fora → BRL. */
+export function moedaValida(m: string | null | undefined): Moeda {
+  return m === "USD" || m === "EUR" ? m : "BRL";
+}
 
 // ============================================================
 // Venda
@@ -39,6 +45,7 @@ export type VendaRow = {
   artist_id: string | null;
   line_up: string[] | null;
   cache: number | string | null;
+  moeda: string | null;
   duracao_horas: number | null;
   duracao_minutos: number | null;
   camarim: ItemQuantidade[] | null;
@@ -106,6 +113,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     artistaId: row.artist_id ?? "",
     lineUp: Array.isArray(row.line_up) ? row.line_up : undefined,
     cache: paraNumero(row.cache),
+    moeda: moedaValida(row.moeda),
     duracaoHoras: row.duracao_horas ?? 0,
     duracaoMinutos: row.duracao_minutos ?? undefined,
     camarim: Array.isArray(row.camarim) ? row.camarim : [],
@@ -182,6 +190,7 @@ export type VendaEscrita = {
   artist_id?: string | null;
   line_up?: string[];
   cache?: number;
+  moeda?: Moeda;
   duracao_horas?: number | null;
   duracao_minutos?: number | null;
   camarim?: ItemQuantidade[];

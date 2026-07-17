@@ -36,6 +36,7 @@ export const orcamentoCreateSchema = z.object({
   cidade_id: uuidLike.nullable().optional(),
   artist_id: uuidLike.nullable().optional(),
   valor_cache: z.number().nonnegative().nullable().optional(),
+  moeda: z.enum(["BRL", "USD", "EUR"]).optional(),
   duracao_horas: z.number().int().nonnegative().nullable().optional(),
   duracao_minutos: z.number().int().nonnegative().nullable().optional(),
   camarim: z.array(itemQtdSchema).optional(),

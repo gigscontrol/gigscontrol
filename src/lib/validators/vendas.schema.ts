@@ -71,6 +71,7 @@ export const vendaCreateSchema = z.object({
   artist_id: uuidLike.nullable().optional(),
   line_up: z.array(z.string()).optional(),
   cache: z.number().nonnegative(),
+  moeda: z.enum(["BRL", "USD", "EUR"]).optional(),
   // Taxa da agência digitada (modos VARIÁVEIS). Fixos: servidor calcula do config.
   taxa_digitada: z.number().nonnegative().nullable().optional(),
   duracao_horas: z.number().int().nonnegative().nullable().optional(),

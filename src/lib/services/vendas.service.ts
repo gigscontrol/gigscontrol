@@ -98,6 +98,7 @@ function vendaInputParaEscrita(
   if (input.artist_id !== undefined) out.artist_id = normalizarUuid(input.artist_id ?? null);
   if (input.line_up !== undefined) out.line_up = input.line_up;
   if (input.cache !== undefined) out.cache = input.cache;
+  if (input.moeda !== undefined) out.moeda = input.moeda;
   if (input.duracao_horas !== undefined) out.duracao_horas = input.duracao_horas;
   if (input.duracao_minutos !== undefined) out.duracao_minutos = input.duracao_minutos;
   if (input.camarim !== undefined) out.camarim = input.camarim;

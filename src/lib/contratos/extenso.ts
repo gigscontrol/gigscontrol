@@ -6,6 +6,7 @@
  * próprio da moeda, com a flexão mínima que cada língua realmente usa).
  */
 import type { IdiomaModelo } from "@/lib/mappers/contratoModelo";
+import type { Moeda } from "@/types";
 
 // ---------------- Números por extenso (PT) ----------------
 
@@ -315,36 +316,68 @@ function inteiroIt(n: number): string {
 // ---------------- API pública ----------------
 
 /**
- * Regras monetárias por idioma: numerador, moeda (a flexão que a língua usa de
- * verdade pro real brasileiro), centavos, conector, e a preposição de milhão
- * exato ("um milhão DE reais" pt/es/fr, "di" it; de/en não usam).
+ * Regra POR IDIOMA (independe da moeda): numerador por extenso, conector entre
+ * inteiro e centavos, e a preposição do milhão exato ("um milhão DE dólares"
+ * pt/es/fr, "di" it; de/en não usam).
  */
-const MOEDA: Record<
+const IDIOMA_REGRA: Record<
   IdiomaModelo,
-  {
-    n: (v: number) => string;
-    real: [string, string];
-    cent: [string, string];
-    e: string;
-    deMilhao: string;
-  }
+  { n: (v: number) => string; e: string; deMilhao: string }
 > = {
-  pt: { n: inteiroPt, real: ["real", "reais"], cent: ["centavo", "centavos"], e: " e ", deMilhao: "de " },
-  en: { n: inteiroEn, real: ["real", "reais"], cent: ["cent", "cents"], e: " and ", deMilhao: "" },
-  es: { n: inteiroEs, real: ["real", "reales"], cent: ["centavo", "centavos"], e: " con ", deMilhao: "de " },
-  fr: { n: inteiroFr, real: ["real", "reais"], cent: ["centavo", "centavos"], e: " et ", deMilhao: "de " },
-  de: { n: inteiroDe, real: ["Real", "Reais"], cent: ["Centavo", "Centavos"], e: " und ", deMilhao: "" },
-  it: { n: inteiroIt, real: ["real", "reais"], cent: ["centavo", "centavi"], e: " e ", deMilhao: "di " },
+  pt: { n: inteiroPt, e: " e ", deMilhao: "de " },
+  en: { n: inteiroEn, e: " and ", deMilhao: "" },
+  es: { n: inteiroEs, e: " con ", deMilhao: "de " },
+  fr: { n: inteiroFr, e: " et ", deMilhao: "de " },
+  de: { n: inteiroDe, e: " und ", deMilhao: "" },
+  it: { n: inteiroIt, e: " e ", deMilhao: "di " },
+};
+
+type PalavrasMoeda = { unidade: [string, string]; cent: [string, string] };
+
+/**
+ * Palavra da moeda POR moeda × idioma [singular, plural]. Atenção às formas
+ * INVARIÁVEIS (mesmo singular/plural): em alemão Dollar/Euro/Cent não flexionam
+ * ("zwei Dollar"), e em italiano "euro" é invariável ("due euro").
+ */
+const PALAVRAS_MOEDA: Record<Moeda, Record<IdiomaModelo, PalavrasMoeda>> = {
+  BRL: {
+    pt: { unidade: ["real", "reais"], cent: ["centavo", "centavos"] },
+    en: { unidade: ["real", "reais"], cent: ["cent", "cents"] },
+    es: { unidade: ["real", "reales"], cent: ["centavo", "centavos"] },
+    fr: { unidade: ["real", "reais"], cent: ["centavo", "centavos"] },
+    de: { unidade: ["Real", "Reais"], cent: ["Centavo", "Centavos"] },
+    it: { unidade: ["real", "reais"], cent: ["centavo", "centavi"] },
+  },
+  USD: {
+    pt: { unidade: ["dólar", "dólares"], cent: ["centavo", "centavos"] },
+    en: { unidade: ["dollar", "dollars"], cent: ["cent", "cents"] },
+    es: { unidade: ["dólar", "dólares"], cent: ["centavo", "centavos"] },
+    fr: { unidade: ["dollar", "dollars"], cent: ["cent", "cents"] },
+    de: { unidade: ["Dollar", "Dollar"], cent: ["Cent", "Cent"] }, // invariável
+    it: { unidade: ["dollaro", "dollari"], cent: ["centesimo", "centesimi"] },
+  },
+  EUR: {
+    pt: { unidade: ["euro", "euros"], cent: ["centavo", "centavos"] },
+    en: { unidade: ["euro", "euros"], cent: ["cent", "cents"] },
+    es: { unidade: ["euro", "euros"], cent: ["céntimo", "céntimos"] },
+    fr: { unidade: ["euro", "euros"], cent: ["centime", "centimes"] },
+    de: { unidade: ["Euro", "Euro"], cent: ["Cent", "Cent"] }, // invariável
+    it: { unidade: ["euro", "euro"], cent: ["centesimo", "centesimi"] }, // euro invariável
+  },
 };
 
 /**
- * Cachê por extenso no idioma do MODELO. Ex.: 3500.50 →
- *   PT "três mil e quinhentos reais e cinquenta centavos"
- *   EN "three thousand five hundred reais and fifty cents"
- *   ES "tres mil quinientos reales con cincuenta centavos"
- * Cobre 0..999.999.999 reais; valor ≤ 0 / não-finito / fora do alcance → "".
+ * Cachê por extenso no idioma do MODELO e na MOEDA da venda. Ex.: 3500.50 →
+ *   PT/BRL "três mil e quinhentos reais e cinquenta centavos"
+ *   EN/USD "three thousand five hundred dollars and fifty cents"
+ *   IT/EUR "tremilacinquecento euro e cinquanta centesimi"
+ * Cobre 0..999.999.999; valor ≤ 0 / não-finito / fora do alcance → "".
  */
-export function cachePorExtenso(valor: number, idioma: IdiomaModelo): string {
+export function cachePorExtenso(
+  valor: number,
+  idioma: IdiomaModelo,
+  moeda: Moeda = "BRL"
+): string {
   if (!Number.isFinite(valor) || valor <= 0) return "";
   // Centavos por inteiro pra não escorregar no float (nunca `valor % 1`).
   const cents = Math.round(valor * 100);
@@ -352,15 +385,16 @@ export function cachePorExtenso(valor: number, idioma: IdiomaModelo): string {
   const cent = cents % 100;
   if (inteiro > 999_999_999) return "";
 
-  const m = MOEDA[idioma] ?? MOEDA.pt;
+  const r = IDIOMA_REGRA[idioma] ?? IDIOMA_REGRA.pt;
+  const p = (PALAVRAS_MOEDA[moeda] ?? PALAVRAS_MOEDA.BRL)[idioma];
   const partes: string[] = [];
   if (inteiro > 0) {
-    // Milhão exato exige a preposição ("um milhão DE reais" / "di reais").
-    const de = inteiro % 1_000_000 === 0 ? m.deMilhao : "";
-    partes.push(`${m.n(inteiro)} ${de}${inteiro === 1 ? m.real[0] : m.real[1]}`);
+    // Milhão exato exige a preposição ("um milhão DE dólares" / "di euro").
+    const de = inteiro % 1_000_000 === 0 ? r.deMilhao : "";
+    partes.push(`${r.n(inteiro)} ${de}${inteiro === 1 ? p.unidade[0] : p.unidade[1]}`);
   }
-  if (cent > 0) partes.push(`${m.n(cent)} ${cent === 1 ? m.cent[0] : m.cent[1]}`);
-  return partes.join(m.e);
+  if (cent > 0) partes.push(`${r.n(cent)} ${cent === 1 ? p.cent[0] : p.cent[1]}`);
+  return partes.join(r.e);
 }
 
 const MESES: Record<IdiomaModelo, string[]> = {
