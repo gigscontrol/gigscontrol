@@ -59,8 +59,11 @@ export const contratanteCreateSchema = z.object({
   nome: z.string().min(1, "nome obrigatório"),
   documento: z.string().nullable().optional(),
   // Razão social do documento (migração 91). O servidor só a mantém quando o
-  // documento principal é CNPJ (`ehCnpj`) — ver contratantes.service.
+  // documento é de empresa (`ehDocumentoEmpresa`) — ver contratantes.service.
   razao_social: z.string().max(140).nullable().optional(),
+  // PF/Empresa escolhido manualmente (só países ambíguos — migração-zero, vai
+  // pro jsonb `documentos[].tipo`). Países com regra ignoram (a regra ganha).
+  documento_tipo: z.enum(["pf", "pj"]).nullable().optional(),
   pais: z.string().length(2).nullable().optional(),
   email: z.string().email("e-mail inválido").nullable().optional().or(z.literal("")),
   telefone: z.string().nullable().optional(),

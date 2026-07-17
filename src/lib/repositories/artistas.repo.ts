@@ -10,7 +10,7 @@ const COLS =
   "cidade_ibge_id, cidade_nome, cidade_uf, cidade_id, taxa_modo, taxa_valor, " +
   "rider_camarim, rider_efeitos, rider_tecnico, posicao, privacidade, " +
   "pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, " +
-  "data_nascimento, " +
+  "data_nascimento, email, " +
   "cidade:cidades!cidade_id(id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id)";
 
 /** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */

@@ -26,7 +26,14 @@ import { useAuth } from "./auth-context";
 
 // ---- Tipos de entrada (camelCase, como a UI consome) ----
 
-export type AddContratanteInput = Omit<Contratante, "id" | "criadoEm">;
+export type AddContratanteInput = Omit<Contratante, "id" | "criadoEm"> & {
+  /**
+   * Sinal TRANSITÓRIO da UI (país ambíguo): PF/Empresa marcado à mão. Não é
+   * campo persistido do contratante — vira `documento_tipo` no body e, no
+   * servidor, grava só no item do jsonb `documentos`. Países com regra ignoram.
+   */
+  documentoTipo?: "pf" | "pj";
+};
 export type UpdateContratanteInput = Partial<AddContratanteInput>;
 
 export type AddCasaInput = Omit<Casa, "id">;
@@ -78,6 +85,8 @@ function contratanteParaApi(
   if (c.endereco !== undefined) out.endereco = c.endereco || null;
   if (c.cidadeId !== undefined) out.cidade_id = c.cidadeId || null;
   if (c.observacoes !== undefined) out.observacoes = c.observacoes || null;
+  // PF/Empresa manual (país ambíguo) → o servidor grava no jsonb `documentos`.
+  if (c.documentoTipo !== undefined) out.documento_tipo = c.documentoTipo ?? null;
   // Bloqueio (migração 83) — bloqueado_por/em são carimbados no servidor.
   if (c.bloqueado !== undefined) out.bloqueado = c.bloqueado;
   if (c.bloqueadoMotivo !== undefined) out.bloqueado_motivo = c.bloqueadoMotivo || null;

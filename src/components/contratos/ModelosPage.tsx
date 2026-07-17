@@ -23,6 +23,7 @@ import type {
   ContratoModelo,
   SecaoModelo,
   EstiloModelo,
+  IdiomaModelo,
 } from "@/lib/mappers/contratoModelo";
 import { ESTILO_PADRAO } from "@/lib/mappers/contratoModelo";
 import {
@@ -45,6 +46,8 @@ type EditorInicial = {
   nome: string;
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
+  /** Idioma do modelo — persistido no JSON de `corpo`; dirige o A4 na geração. */
+  idioma: IdiomaModelo;
 };
 
 /**
@@ -123,6 +126,7 @@ export default function ModelosPage() {
       nome: NOME_MODELO_EXEMPLO,
       secoes: clonarSecoes(SECOES_MODELO_EXEMPLO),
       estilo: ESTILO_PADRAO,
+      idioma: "pt", // Modelo Padrão BR
     });
     setVista("editor");
   }
@@ -133,13 +137,14 @@ export default function ModelosPage() {
       nome: NOME_MODELO_GLOBAL,
       secoes: clonarSecoes(SECOES_MODELO_GLOBAL),
       estilo: ESTILO_PADRAO,
+      idioma: "en", // Modelo Padrão Global (inglês)
     });
     setVista("editor");
   }
 
   function abrirNovoEmBranco() {
     // Em branco: sem seções — o usuário adiciona pelo menu "Adicionar seção".
-    setEditando({ modeloId: null, nome: "", secoes: [], estilo: ESTILO_PADRAO });
+    setEditando({ modeloId: null, nome: "", secoes: [], estilo: ESTILO_PADRAO, idioma: "pt" });
     setVista("editor");
   }
 
@@ -150,6 +155,7 @@ export default function ModelosPage() {
       // Cópia estrutural preservando os ids (não regenera como o "Duplicar").
       secoes: copiarSecoes(modelo.secoes),
       estilo: modelo.estilo,
+      idioma: modelo.idioma,
     });
     setVista("editor");
   }
@@ -233,6 +239,7 @@ export default function ModelosPage() {
           nomeInicial={editando.nome}
           secoesIniciais={editando.secoes}
           estiloInicial={editando.estilo}
+          idioma={editando.idioma}
           onVoltar={voltarParaLista}
           onSalvo={voltarParaLista}
         />

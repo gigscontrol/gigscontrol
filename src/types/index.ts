@@ -243,6 +243,14 @@ export type DocumentoContratante = {
    * pode ter CPF (sem razão) + dois CNPJs com razões diferentes.
    */
   razao_social?: string;
+  /**
+   * PF/Empresa escolhido MANUALMENTE (migração-zero, no jsonb). Gravado SÓ
+   * quando o país é ambíguo (`detectarEmpresa` devolve `null` — ex.: US, GB) e
+   * o usuário marcou o seletor. Países com regra (BR, PT, AR…) derivam do
+   * próprio documento e NÃO gravam este campo. Na reedição o toggle reidrata
+   * daqui.
+   */
+  tipo?: "pf" | "pj";
   primeiro_uso: string;
   ultimo_uso: string;
 };
@@ -258,8 +266,8 @@ export type Contratante = {
   documentos?: DocumentoContratante[];
   /**
    * Razão social do documento PRINCIPAL (migração 91) — preenchida só quando
-   * `documento` é CNPJ (`ehCnpj`). A razão de cada documento do histórico vive
-   * em `documentos[].razao_social`.
+   * `documento` é de empresa (`ehDocumentoEmpresa`). A razão de cada documento
+   * do histórico vive em `documentos[].razao_social`.
    */
   razaoSocial?: string;
   /** País de origem (ISO2). Define o tipo de documento. Default 'BR'. */

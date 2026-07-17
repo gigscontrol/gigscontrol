@@ -42,6 +42,12 @@ export type NovaVendaInput = {
          * no popup de divergência.
          */
         razaoSocialNovo?: string;
+        /**
+         * Escolha manual PF/Empresa (B4) — só vem preenchida em país AMBÍGUO
+         * (sem regra automática). País com regra deriva o tipo do documento e
+         * ignora este campo com segurança. Persiste no item do jsonb `documentos`.
+         */
+        documentoTipo?: "pf" | "pj";
         paisNovo?: string;
         observacoesNovo?: string;
         /**
@@ -74,8 +80,10 @@ export type NovaVendaInput = {
         email: string;
         telefone: string;
         documento: string;
-        /** Só quando o documento é CNPJ. */
+        /** Só quando o documento é de empresa. */
         razaoSocial?: string;
+        /** Escolha manual PF/Empresa (B4) — só em país ambíguo. Ver acima. */
+        documentoTipo?: "pf" | "pj";
         pais: string;
         cidadeId: string;
       };
@@ -272,6 +280,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.telefoneNovo !== undefined) patch.telefone = input.contratante.telefoneNovo;
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
         if (input.contratante.razaoSocialNovo !== undefined) patch.razaoSocial = input.contratante.razaoSocialNovo;
+        if (input.contratante.documentoTipo !== undefined) patch.documentoTipo = input.contratante.documentoTipo;
         if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
         if (input.contratante.cidadeIdNovo !== undefined) patch.cidadeId = input.contratante.cidadeIdNovo;
         if (input.contratante.enderecoNovo !== undefined) patch.endereco = input.contratante.enderecoNovo;
@@ -323,6 +332,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
           telefone: input.contratante.telefone,
           documento: input.contratante.documento,
           razaoSocial: input.contratante.razaoSocial,
+          documentoTipo: input.contratante.documentoTipo,
           pais: input.contratante.pais,
           cidadeId: input.contratante.cidadeId,
         });

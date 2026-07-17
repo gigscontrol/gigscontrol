@@ -29,7 +29,13 @@ import {
   LabelRazaoSocial,
   DicaRazaoSocial,
 } from "./inputs/RazaoSocialCnpj";
-import { normalizarDocumento, configDocumento, ehCnpj } from "@/lib/data/documentos";
+import {
+  normalizarDocumento,
+  configDocumento,
+  detectarEmpresa,
+  ehDocumentoEmpresa,
+  rotuloEmpresa,
+} from "@/lib/data/documentos";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
@@ -303,6 +309,16 @@ export default function ConcretizarVenda({
   const [contratanteRazaoSocial, setContratanteRazaoSocial] = useState(
     v?.contratanteRazaoSocial || contatoAncora?.razaoSocial || ""
   );
+  // Escolha manual PF/Empresa — só entra em cena em país AMBÍGUO (sem regra).
+  // Reidrata (B4) do item do jsonb `documentos` do contato-âncora que casa com
+  // o documento; sem item (venda pura, contato oculto), heurística pela razão.
+  const [tipoManual, setTipoManual] = useState<"pf" | "pj">(() => {
+    const docNorm = normalizarDocumento(paisOrigem.code, contratanteDocumento);
+    return (
+      contatoAncora?.documentos?.find((d) => d.documento === docNorm)?.tipo ??
+      (contratanteRazaoSocial ? "pj" : "pf")
+    );
+  });
   // Pré-preenche do cadastro: sem isso o endereço digitado "divergiria" do
   // cadastro em toda conversão de orçamento.
   const [contratanteEndereco, setContratanteEndereco] = useState(
@@ -630,10 +646,16 @@ export default function ConcretizarVenda({
     setLineUp(lineUp.filter((_, i) => i !== idx));
   }
 
-  // Razão social só faz sentido pra pessoa JURÍDICA: aparece/some conforme o
-  // documento digitado vira CNPJ. Fora do BR o helper devolve false — o campo
-  // nunca aparece e o fluxo desses países segue idêntico ao de hoje.
-  const docEhCnpj = ehCnpj(paisOrigem.code, contratanteDocumento);
+  // Regra do país decide o tipo do documento. `detectEmpresa === null` = país
+  // AMBÍGUO (sem regra): aí quem manda é a escolha manual. No BR/países com regra
+  // o toggle nunca aparece e o fluxo segue idêntico ao de hoje.
+  const detectEmpresa = detectarEmpresa(paisOrigem.code, contratanteDocumento);
+  const docEhEmpresa = ehDocumentoEmpresa(
+    paisOrigem.code,
+    contratanteDocumento,
+    tipoManual === "pj"
+  );
+  const mostrarToggleEmpresa = !!contratanteDocumento.trim() && detectEmpresa === null;
 
   // Fechou 14 dígitos → busca a razão social sozinha (nossos cadastros antes da
   // Receita). Só preenche campo VAZIO — o que veio do snapshot/cadastro na
@@ -661,7 +683,7 @@ export default function ConcretizarVenda({
     // Só na criação: venda antiga fechada no CNPJ não tem razão social gravada
     // e exigi-la travaria uma edição que nada tem a ver com isso (mesma regra
     // do tipo de evento, logo abaixo).
-    if (docEhCnpj && !contratanteRazaoSocial.trim() && !emEdicao)
+    if (docEhEmpresa && !contratanteRazaoSocial.trim() && !emEdicao)
       errs.contratanteRazaoSocial = t("Razão social obrigatória");
     if (!contratanteEndereco.trim()) errs.contratanteEndereco = t("Endereço obrigatório");
 
@@ -961,12 +983,16 @@ export default function ConcretizarVenda({
     const paisDoDoc = alvo?.pais || paisOrigem.code;
     const docNorm = normalizarDocumento(paisDoDoc, contratanteDocumento);
     // A razão social pertence ao DOCUMENTO, não à pessoa: se o documento que
-    // está indo é CPF, não existe razão social pra ele. Usa o MESMO país do
-    // `docNorm` — senão gravaríamos uma razão social num documento que o
-    // cadastro não lê como CNPJ.
-    const razaoSocialDoDoc = ehCnpj(paisDoDoc, contratanteDocumento)
+    // está indo é de pessoa física, não existe razão social pra ele. Usa o MESMO
+    // país do `docNorm` — senão gravaríamos uma razão social num documento que o
+    // cadastro não lê como empresa.
+    const razaoSocialDoDoc = ehDocumentoEmpresa(paisDoDoc, contratanteDocumento, tipoManual === "pj")
       ? contratanteRazaoSocial.trim()
       : "";
+    // Escolha manual PF/Empresa: só viaja quando o país do CADASTRO é ambíguo
+    // (sem regra). País com regra deriva e o servidor ignora este campo.
+    const documentoTipoManual: "pf" | "pj" | undefined =
+      detectarEmpresa(paisDoDoc, contratanteDocumento) === null && docNorm ? tipoManual : undefined;
 
     let contratanteInput: NovaVendaInput["contratante"];
     if (alvo) {
@@ -1052,6 +1078,9 @@ export default function ConcretizarVenda({
       // invisível apagaria a razão do cadastro. Trocar CNPJ→CPF continua zerando
       // pelo `documentoNovo` (o servidor deriva a razão do documento principal).
       if (razaoSocialDoDoc) existente.razaoSocialNovo = razaoSocialDoDoc;
+      // Escolha manual PF/Empresa (país ambíguo): acompanha o documento (D6),
+      // fora do popup. Só vai quando houve escolha manual de fato.
+      if (documentoTipoManual) existente.documentoTipo = documentoTipoManual;
       // D5 — cidade só entra quando o cadastro NÃO tem (backfill-se-vazio):
       // o cidade_id alimenta geocode/mapa e não deve pular a cada venda.
       if (!alvo.cidadeId) existente.cidadeIdNovo = cidadeIdResolvido;
@@ -1069,6 +1098,7 @@ export default function ConcretizarVenda({
         telefone: telefoneE164,
         documento: docNorm,
         razaoSocial: razaoSocialDoDoc,
+        documentoTipo: documentoTipoManual,
         pais: paisOrigem.code,
         cidadeId: cidadeIdResolvido,
       };
@@ -1156,10 +1186,16 @@ export default function ConcretizarVenda({
     set(campos.contratanteNome, setContratanteNome, "Nome");
     set(campos.contratanteEmail, setContratanteEmail, "E-mail");
     set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
-    // Razão social só entra quando o documento é CNPJ — senão o painel anunciaria
-    // um campo que a tela não mostra (e cujo valor o submit descarta). Reavalia
-    // com o documento COLADO agora: `docEhCnpj` é do render anterior.
-    if (ehCnpj(paisOrigem.code, campos.contratanteDocumento ?? contratanteDocumento)) {
+    // Razão social só entra quando o documento é de empresa — senão o painel
+    // anunciaria um campo que a tela não mostra (e cujo valor o submit descarta).
+    // Reavalia com o documento COLADO agora: `docEhEmpresa` é do render anterior.
+    if (
+      ehDocumentoEmpresa(
+        paisOrigem.code,
+        campos.contratanteDocumento ?? contratanteDocumento,
+        tipoManual === "pj"
+      )
+    ) {
       set(campos.contratanteRazaoSocial, setContratanteRazaoSocial, "Razão social");
       // Veio do contratante, não da nossa busca: o microtexto de origem não
       // pode reivindicar um valor que não preencheu.
@@ -1431,6 +1467,8 @@ export default function ConcretizarVenda({
               onChange={(p) => {
                 setPaisOrigem(p);
                 setCountry(p);
+                // Cada país tem sua regra — a escolha manual do anterior não vale.
+                setTipoManual("pf");
               }}
             />
           </Field>
@@ -1464,29 +1502,88 @@ export default function ConcretizarVenda({
               onChange={(novo) => {
                 setContratanteDocumento(novo);
                 marcarEditado("contratanteDocumento");
+                // Limpou o documento → a escolha manual perde o sentido.
+                if (!novo.trim()) setTipoManual("pf");
               }}
             />
           </FieldWithAuto>
 
-          {docEhCnpj && (
+          {/* País ambíguo (sem regra) com documento preenchido: o vendedor diz se
+              é pessoa física ou empresa. BR/países com regra nunca veem isto. */}
+          {mostrarToggleEmpresa && (
             <div className="sm:col-span-2">
-              <FieldWithAuto
-                label={<LabelRazaoSocial busca={buscaRazao} />}
-                required={!emEdicao}
-                error={errors.contratanteRazaoSocial}
-                showAuto={showAutoBadge("contratanteRazaoSocial")}
-              >
-                <TextInput
-                  value={contratanteRazaoSocial}
-                  onChange={(e) => {
-                    setContratanteRazaoSocial(e.target.value);
-                    buscaRazao.aoEditarManualmente();
-                    marcarEditado("contratanteRazaoSocial");
-                  }}
-                  placeholder="Ex: Silva Produções Artísticas LTDA"
-                />
-                <DicaRazaoSocial busca={buscaRazao} valor={contratanteRazaoSocial} />
-              </FieldWithAuto>
+              <span className="text-xs font-medium text-secondary mb-1.5 block">
+                {t("Tipo de documento")}
+              </span>
+              <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+                {[
+                  { v: "pf" as const, label: "Pessoa física" },
+                  { v: "pj" as const, label: "Empresa" },
+                ].map((opt, i) => {
+                  const ativo = tipoManual === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setTipoManual(opt.v)}
+                      className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                        i === 1 ? "border-l border-border" : ""
+                      }`}
+                      style={
+                        ativo
+                          ? {
+                              color: accent,
+                              background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                            }
+                          : { color: "var(--text-muted)" }
+                      }
+                    >
+                      {t(opt.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {docEhEmpresa && (
+            <div className="sm:col-span-2">
+              {paisOrigem.code === "BR" ? (
+                <FieldWithAuto
+                  label={<LabelRazaoSocial busca={buscaRazao} />}
+                  required={!emEdicao}
+                  error={errors.contratanteRazaoSocial}
+                  showAuto={showAutoBadge("contratanteRazaoSocial")}
+                >
+                  <TextInput
+                    value={contratanteRazaoSocial}
+                    onChange={(e) => {
+                      setContratanteRazaoSocial(e.target.value);
+                      buscaRazao.aoEditarManualmente();
+                      marcarEditado("contratanteRazaoSocial");
+                    }}
+                    placeholder="Ex: Silva Produções Artísticas LTDA"
+                  />
+                  <DicaRazaoSocial busca={buscaRazao} valor={contratanteRazaoSocial} />
+                </FieldWithAuto>
+              ) : (
+                <FieldWithAuto
+                  label={t(rotuloEmpresa(paisOrigem.code))}
+                  required={!emEdicao}
+                  error={errors.contratanteRazaoSocial}
+                  showAuto={showAutoBadge("contratanteRazaoSocial")}
+                >
+                  <TextInput
+                    value={contratanteRazaoSocial}
+                    onChange={(e) => {
+                      setContratanteRazaoSocial(e.target.value);
+                      marcarEditado("contratanteRazaoSocial");
+                    }}
+                    placeholder={t(rotuloEmpresa(paisOrigem.code))}
+                  />
+                </FieldWithAuto>
+              )}
             </div>
           )}
 

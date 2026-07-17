@@ -18,7 +18,7 @@ import type {
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { contratanteIdsVisiveis } from "@/lib/services/contatosAcesso";
 import { resolverGeoDoContato } from "@/lib/services/geoContato";
-import { ehCnpj } from "@/lib/data/documentos";
+import { ehDocumentoEmpresa, detectarEmpresa } from "@/lib/data/documentos";
 
 function entradaParaEscrita(
   input: ContratanteCreateInput | ContratanteUpdateInput
@@ -52,36 +52,48 @@ function acumularDocumento(
   documento: string,
   pais: string | undefined,
   razaoSocial: string | undefined,
-  agora: string
+  agora: string,
+  tipoManual: "pf" | "pj" | undefined
 ): DocumentoContratante[] {
   // Razão social é do DOCUMENTO (migração 91): cada item carrega a SUA. Vazia →
   // não sobrescreve a que já estava (CPF nunca teve; CNPJ mantém a última boa).
   const razao = razaoSocial ? { razao_social: razaoSocial } : {};
+  // `tipo` (PF/Empresa manual) grava SÓ quando o país é ambíguo E a escolha veio
+  // do cliente. País com regra deriva do documento → não persiste. `tipoManual`
+  // undefined → objeto vazio: preserva o `tipo` que já estava (via spread),
+  // nunca escreve `tipo: undefined` por cima (o caso de borda crítico do B4).
+  const tipo =
+    detectarEmpresa(pais, documento) === null && tipoManual ? { tipo: tipoManual } : {};
   const i = atuais.findIndex((d) => d.documento === documento);
   if (i === -1) {
     return [
       ...atuais,
-      { documento, ...(pais ? { pais } : {}), ...razao, primeiro_uso: agora, ultimo_uso: agora },
+      { documento, ...(pais ? { pais } : {}), ...razao, ...tipo, primeiro_uso: agora, ultimo_uso: agora },
     ];
   }
   const out = [...atuais];
-  // Mesmo CNPJ com razão social diferente ATUALIZA em silêncio (a empresa foi
-  // renomeada/corrigida) — nunca vira popup de divergência.
-  out[i] = { ...out[i], ...(pais ? { pais } : {}), ...razao, ultimo_uso: agora };
+  // Mesmo documento de empresa com razão social diferente ATUALIZA em silêncio
+  // (a empresa foi renomeada/corrigida) — nunca vira popup de divergência.
+  out[i] = { ...out[i], ...(pais ? { pais } : {}), ...razao, ...tipo, ultimo_uso: agora };
   return out;
 }
 
 /**
  * A razão social pertence ao DOCUMENTO, não à pessoa (migração 91): só existe
- * quando o documento principal é CNPJ. CPF (ou documento de país sem regra) →
- * sempre null, pra não sobrar razão social órfã de um CNPJ que virou CPF.
+ * quando o documento é de EMPRESA (`ehDocumentoEmpresa`). Pessoa física (ou
+ * documento que a UI marcou como PF num país ambíguo) → sempre null, pra não
+ * sobrar razão social órfã de um documento de empresa que virou pessoa.
+ *
+ * `empresaManual` = a escolha do seletor PF/Empresa (só pesa em país ambíguo;
+ * país com regra ignora — a regra ganha).
  */
 function razaoSocialCoerente(
   documento: string | null | undefined,
   pais: string | null | undefined,
-  razaoSocial: string | null | undefined
+  razaoSocial: string | null | undefined,
+  empresaManual: boolean
 ): string | null {
-  if (!ehCnpj(pais, documento)) return null;
+  if (!ehDocumentoEmpresa(pais, documento, empresaManual)) return null;
   return (razaoSocial ?? "").trim() || null;
 }
 
@@ -151,11 +163,15 @@ export async function criarContratanteNoWorkspace(
   input: ContratanteCreateInput
 ): Promise<Contratante> {
   const escrita = entradaParaEscrita(input);
-  // Razão social segue o documento principal (migração 91): CPF → null.
+  // País ambíguo (US, GB…) → o cliente manda `documento_tipo`; país com regra
+  // ignora (a regra do documento decide).
+  const empresaManual = input.documento_tipo === "pj";
+  // Razão social segue o documento principal (migração 91): pessoa física → null.
   escrita.razao_social = razaoSocialCoerente(
     escrita.documento,
     escrita.pais,
-    input.razao_social
+    input.razao_social,
+    empresaManual
   );
   // Documento nasce já acumulado no histórico (migração 90), com a razão dele.
   if (typeof escrita.documento === "string" && escrita.documento.trim()) {
@@ -164,7 +180,8 @@ export async function criarContratanteNoWorkspace(
       escrita.documento,
       escrita.pais ?? undefined,
       escrita.razao_social ?? undefined,
-      new Date().toISOString()
+      new Date().toISOString(),
+      input.documento_tipo ?? undefined
     );
   }
   // Geocodifica NO CADASTRO (tokens.md §7): endereço → ponto exato;
@@ -199,19 +216,31 @@ export async function atualizarContratantePorId(
     mexeEmGeo || documentoNovo || mexeEmRazao ? await repoBuscar(supabase, id) : null;
 
   // Razão social segue o documento PRINCIPAL final (o input é parcial: o que não
-  // veio agora vem do cadastro). Trocar CNPJ por CPF zera a razão.
+  // veio agora vem do cadastro). Trocar empresa por pessoa física zera a razão.
   //
   // Razão VAZIA = "não informada", não "apague" — mesma semântica do
   // `acumularDocumento` acima, senão as duas metades do dado (coluna e jsonb)
   // divergem. Sem isso, qualquer PATCH que mande o documento com a razão em
   // branco (form que não reidratou, campo escondido) apaga a razão do cadastro
-  // em silêncio. Quem zera é só o CNPJ→CPF, pelo `!ehCnpj` do razaoSocialCoerente.
+  // em silêncio. Quem zera é só empresa→pessoa, pelo `ehDocumentoEmpresa`.
+  //
+  // Em país AMBÍGUO, a reedição que NÃO reenviou o seletor (documento_tipo
+  // undefined) não pode zerar a razão de um contato pj — cai no `tipo` salvo no
+  // histórico. Este é O caso de borda crítico do B4.
   if (mexeEmRazao) {
     const razaoInformada = (input.razao_social ?? "").trim() ? input.razao_social : undefined;
+    const docFinal = input.documento !== undefined ? escrita.documento : atual?.documento;
+    const tipoSalvo = ((atual?.documentos ?? []) as DocumentoContratante[]).find(
+      (d) => d.documento === docFinal
+    )?.tipo;
+    const empresaManual = input.documento_tipo
+      ? input.documento_tipo === "pj"
+      : tipoSalvo === "pj";
     escrita.razao_social = razaoSocialCoerente(
-      input.documento !== undefined ? escrita.documento : atual?.documento,
+      docFinal,
       escrita.pais ?? atual?.pais,
-      razaoInformada ?? atual?.razao_social
+      razaoInformada ?? atual?.razao_social,
+      empresaManual
     );
   }
 
@@ -223,7 +252,8 @@ export async function atualizarContratantePorId(
       documentoNovo,
       escrita.pais ?? atual?.pais ?? undefined,
       escrita.razao_social ?? undefined,
-      new Date().toISOString()
+      new Date().toISOString(),
+      input.documento_tipo ?? undefined
     );
   }
 

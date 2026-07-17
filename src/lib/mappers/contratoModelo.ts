@@ -97,6 +97,18 @@ export const ESTILO_PADRAO: EstiloModelo = {
   corTitulo: "#111111",
 };
 
+/**
+ * Idioma do modelo — dirige, SÓ na geração do contrato, os fallbacks
+ * "Não informado"/"Not provided"/…​ e o por-extenso (data + cachê). Vive no
+ * MESMO JSON da coluna `corpo` (chave extra `idioma`), sem migration. Modelo
+ * antigo sem marca => "pt" (default seguro).
+ */
+export type IdiomaModelo = "pt" | "en" | "es" | "fr" | "de" | "it";
+
+export const IDIOMAS_MODELO: readonly IdiomaModelo[] = [
+  "pt", "en", "es", "fr", "de", "it",
+];
+
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 /**
@@ -122,9 +134,29 @@ export function estiloValido(corpo: unknown): EstiloModelo {
   }
 }
 
-/** Serializa o estilo pra guardar na coluna `corpo`. */
-export function estiloParaCorpo(estilo: EstiloModelo): string {
-  return JSON.stringify(estilo);
+/**
+ * Idioma guardado no MESMO JSON da coluna `corpo` (chave `idioma`). Tolera
+ * corpo não-JSON / texto legado exatamente como `estiloValido` → default "pt".
+ */
+export function idiomaDoCorpo(corpo: unknown): IdiomaModelo {
+  if (typeof corpo !== "string" || !corpo.trim()) return "pt";
+  try {
+    const o = JSON.parse(corpo) as Record<string, unknown>;
+    return (IDIOMAS_MODELO as readonly unknown[]).includes(o.idioma)
+      ? (o.idioma as IdiomaModelo)
+      : "pt";
+  } catch {
+    return "pt";
+  }
+}
+
+/**
+ * Serializa o estilo pra guardar na coluna `corpo`. `idioma` é opcional pra
+ * não quebrar chamadas existentes; quando informado, viaja no mesmo JSON
+ * (chave extra que `estiloValido` ignora — zero migration).
+ */
+export function estiloParaCorpo(estilo: EstiloModelo, idioma?: IdiomaModelo): string {
+  return JSON.stringify(idioma ? { ...estilo, idioma } : { ...estilo });
 }
 
 // ---------------- Linha / modelo ----------------
@@ -151,6 +183,8 @@ export type ContratoModelo = {
   corpo: string | null;
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
+  /** Idioma do modelo (derivado do JSON de `corpo`) — dirige os fallbacks/por-extenso na geração. */
+  idioma: IdiomaModelo;
   arquivoUrl: string | null;
   arquivoNome: string | null;
   criadoEm: string;
@@ -245,6 +279,7 @@ export function rowParaModelo(row: ContratoModeloRow): ContratoModelo {
     corpo: row.corpo ?? null,
     secoes: secoesValidas(row.secoes),
     estilo: estiloValido(row.corpo),
+    idioma: idiomaDoCorpo(row.corpo),
     arquivoUrl: row.arquivo_url ?? null,
     arquivoNome: row.arquivo_nome ?? null,
     criadoEm: row.criado_em ?? "",

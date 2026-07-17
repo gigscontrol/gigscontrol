@@ -21,26 +21,40 @@ export type VariavelContrato = {
  */
 export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   // Artista/Agência
-  { token: "artista", label: "Artista", grupo: "Artista/Agência" },
+  // NB: `artista` é o nome ARTÍSTICO (stage name) — o token continua "artista".
+  { token: "artista", label: "Nome artístico", grupo: "Artista/Agência" },
   { token: "agencia", label: "Agência", grupo: "Artista/Agência" },
+  { token: "artista_nome_civil", label: "Nome civil", grupo: "Artista/Agência" },
+  { token: "artista_razao_social", label: "Razão social do artista", grupo: "Artista/Agência" },
+  { token: "artista_documento", label: "Documento do artista", grupo: "Artista/Agência" },
+  { token: "artista_email", label: "E-mail do artista", grupo: "Artista/Agência" },
+  { token: "artista_endereco", label: "Endereço do artista", grupo: "Artista/Agência" },
+  { token: "artista_telefone", label: "Telefone do artista", grupo: "Artista/Agência" },
 
   // Contratante
   { token: "contratante", label: "Contratante", grupo: "Contratante" },
-  { token: "documento", label: "CPF/CNPJ", grupo: "Contratante" },
+  { token: "documento", label: "Documento", grupo: "Contratante" },
+  { token: "razao_social", label: "Razão social", grupo: "Contratante" },
+  { token: "email", label: "E-mail", grupo: "Contratante" },
   { token: "endereco", label: "Endereço do contratante", grupo: "Contratante" },
   { token: "telefone", label: "Telefone", grupo: "Contratante" },
 
   // Evento
   { token: "evento", label: "Nome do evento", grupo: "Evento" },
   { token: "local", label: "Local", grupo: "Evento" },
-  { token: "endereco_local", label: "Endereço do local", grupo: "Evento" },
+  { token: "endereco_local", label: "Endereço do evento", grupo: "Evento" },
   { token: "cidade", label: "Cidade", grupo: "Evento" },
+  { token: "capacidade", label: "Capacidade do local", grupo: "Evento" },
   { token: "data", label: "Data do show", grupo: "Evento" },
+  { token: "data_extenso", label: "Data do show por extenso", grupo: "Evento" },
   { token: "horario", label: "Horário (início)", grupo: "Evento" },
   { token: "horario_fim", label: "Horário (fim)", grupo: "Evento" },
+  { token: "tempo_apresentacao", label: "Tempo de apresentação", grupo: "Evento" },
 
   // Valores
   { token: "cache", label: "Cachê", grupo: "Valores" },
+  { token: "cache_extenso", label: "Cachê por extenso", grupo: "Valores" },
+  { token: "parcelas", label: "Plano de parcelas", grupo: "Valores" },
   {
     token: "forma de pagamento",
     label: "Forma de pagamento",
@@ -107,10 +121,18 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   // Artista/Agência
   artista: "Maninhoo",
   agencia: "GIGS Control Agência de Eventos LTDA",
+  artista_nome_civil: "Matheus Oliveira",
+  artista_razao_social: "Maninhoo Produções LTDA",
+  artista_documento: "12.345.678/0001-90",
+  artista_email: "contato@maninhoo.com",
+  artista_endereco: "Rua Augusta, 900 — São Paulo/SP",
+  artista_telefone: "(11) 91234-5678",
 
   // Contratante
   contratante: "Marcos Lima",
   documento: "123.456.789-00",
+  razao_social: "Lima Eventos LTDA",
+  email: "marcos@limaeventos.com.br",
   endereco: "Rua das Palmeiras, 245 — Centro, São Paulo/SP",
   telefone: "(11) 98765-4321",
 
@@ -119,12 +141,18 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   local: "Praia Club",
   endereco_local: "Av. Beira-Mar, 1500 — Praia Grande/SP",
   cidade: "Praia Grande/SP",
+  capacidade: "1.500 pessoas",
   data: "31/12/2026",
+  data_extenso: "31 de dezembro de 2026",
   horario: "23h00",
   horario_fim: "04h00",
+  tempo_apresentacao: "2h30",
 
   // Valores
   cache: "R$ 8.000,00",
+  cache_extenso: "oito mil reais",
+  parcelas:
+    "1ª parcela: R$ 4.000,00 até 01/12/2026; 2ª parcela: R$ 4.000,00 até 24/12/2026",
   "forma de pagamento": "50% na assinatura, 50% até 7 dias antes do evento",
 
   // Riders/Hospedagem
