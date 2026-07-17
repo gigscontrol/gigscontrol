@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import EditorModelo from "./EditorModelo";
+import { useConfirmar, useAviso } from "../ConfirmarModal";
 import { useModelos } from "@/lib/modelos-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
@@ -98,6 +99,8 @@ export default function ModelosPage() {
   const t = useT();
   const { modelos, carregando, removerModelo } = useModelos();
   const { sessao } = useAuth();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
 
   const [vista, setVista] = useState<Vista>("lista");
   const [editando, setEditando] = useState<EditorInicial | null>(null);
@@ -157,13 +160,16 @@ export default function ModelosPage() {
   }
 
   async function excluir(modelo: ContratoModelo) {
-    if (!window.confirm(t("Excluir o modelo \"{nome}\"? Esta ação não pode ser desfeita.", { nome: modelo.nome }))) {
-      return;
-    }
+    const ok = await confirmar({
+      titulo: t("Excluir modelo"),
+      mensagem: t("Excluir o modelo \"{nome}\"? Esta ação não pode ser desfeita.", { nome: modelo.nome }),
+      perigo: true,
+    });
+    if (!ok) return;
     try {
       await removerModelo(modelo.id);
     } catch (e) {
-      window.alert((e as Error).message || t("Não foi possível excluir o modelo."));
+      avisar((e as Error).message || t("Não foi possível excluir o modelo."));
     }
   }
 
@@ -391,6 +397,8 @@ export default function ModelosPage() {
           </div>
         </div>
       )}
+      {confirmador}
+      {avisador}
     </div>
   );
 }

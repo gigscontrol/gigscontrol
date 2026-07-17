@@ -209,6 +209,7 @@ export type ActivePage =
   | "vendas-nova-venda"
   | "vendas-historico-vendas"
   | "vendas-venda-detalhe"
+  | "vendas-editar-venda"
   | "financeiro-pagamentos"
   | "financeiro-cobrancas"
   | "contratos-novo"
@@ -322,9 +323,23 @@ export type OrcamentoStatus = "pendente" | "negociacao" | "aceito" | "recusado";
 export type TipoEvento = "social" | "casa-noturna" | "festival";
 
 export const LABELS_TIPO_EVENTO: Record<TipoEvento, string> = {
-  social: "Social",
+  social: "Evento social",
   "casa-noturna": "Casa Noturna",
   festival: "Festival",
+};
+
+/** Categoria do evento → tipo da casa criada/backfillada junto (D1). */
+export const TIPO_CASA_POR_EVENTO: Record<TipoEvento, TipoCasa> = {
+  social: "festa-privada",
+  "casa-noturna": "club",
+  festival: "festival",
+};
+
+/** Volta parcial (reidratação no editar venda): bar/arena/outro não têm categoria. */
+export const TIPO_EVENTO_POR_CASA: Partial<Record<TipoCasa, TipoEvento>> = {
+  "festa-privada": "social",
+  club: "casa-noturna",
+  festival: "festival",
 };
 
 export type ItemQuantidade = {

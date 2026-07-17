@@ -11,6 +11,7 @@ import { renderMarkdownSeguro } from "./markdownSeguro";
 import { useEquipe, fmtQuando } from "./anotacoesShared";
 import NotaCard from "./NotaCard";
 import { useT } from "@/lib/i18n";
+import { useConfirmar, useAviso } from "../ConfirmarModal";
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const MAX_POR_SHOW = 4;
@@ -27,6 +28,8 @@ export default function NotasDoShow({ showId }: { showId: string }) {
   const { notas, addNota, updateNota, removeNota } = useAnotacoes();
   const equipe = useEquipe();
   const artistas = useArtistas();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
 
   const meuId = sessao?.usuario?.id ?? "";
   const souAdmin = sessao?.usuario?.papel === "admin" || sessao?.tipo === "super-admin";
@@ -61,24 +64,28 @@ export default function NotasDoShow({ showId }: { showId: string }) {
 
   const excluir = async () => {
     if (!notaAberta) return;
-    if (!window.confirm(t("Excluir esta anotação?"))) return;
+    if (!(await confirmar({ titulo: t("Excluir esta anotação?"), perigo: true }))) return;
     try {
       await removeNota(notaAberta.id);
       setAbertoId(null);
     } catch (e) {
-      window.alert((e as Error).message || t("Falha ao excluir."));
+      avisar((e as Error).message || t("Falha ao excluir."));
     }
   };
 
   if (abertoId !== null) {
     return (
-      <NotaShowEditor
-        nota={notaAberta}
-        somenteLeitura={!!notaAberta && !podeMexer(notaAberta)}
-        onSalvar={salvar}
-        onExcluir={notaAberta && podeMexer(notaAberta) ? excluir : undefined}
-        onFechar={() => setAbertoId(null)}
-      />
+      <>
+        <NotaShowEditor
+          nota={notaAberta}
+          somenteLeitura={!!notaAberta && !podeMexer(notaAberta)}
+          onSalvar={salvar}
+          onExcluir={notaAberta && podeMexer(notaAberta) ? excluir : undefined}
+          onFechar={() => setAbertoId(null)}
+        />
+        {confirmador}
+        {avisador}
+      </>
     );
   }
 
@@ -141,6 +148,7 @@ function NotaShowEditor({
   onFechar: () => void;
 }) {
   const t = useT();
+  const { avisar, avisador } = useAviso();
   const [titulo, setTitulo] = useState(nota?.titulo ?? "");
   const [conteudo, setConteudo] = useState(nota?.conteudo ?? "");
   const [salvando, setSalvando] = useState(false);
@@ -152,7 +160,7 @@ function NotaShowEditor({
     try {
       await onSalvar({ titulo: titulo.trim(), conteudo: corpo });
     } catch (e) {
-      window.alert((e as Error).message || t("Falha ao salvar."));
+      avisar((e as Error).message || t("Falha ao salvar."));
       setSalvando(false);
     }
   };
@@ -213,6 +221,7 @@ function NotaShowEditor({
           />
         </div>
       )}
+      {avisador}
     </div>
   );
 }

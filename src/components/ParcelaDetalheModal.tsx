@@ -19,6 +19,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import Modal from "./Modal";
+import { useAviso } from "./ConfirmarModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useAuth } from "@/lib/auth-context";
 import { useArtistas } from "@/lib/workspace-context";
@@ -50,6 +51,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
   const { vendas, acaoParcela } = useVendas();
   const { podeUI, modoVisitante } = useAuth();
   const artistas = useArtistas();
+  const { avisar, avisador } = useAviso();
 
   const [modo, setModo] = useState<"info" | "pagar" | "cancelar">("info");
   const [nota, setNota] = useState("");
@@ -90,7 +92,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
       await fn();
       reset();
     } catch (e) {
-      window.alert((e as Error).message ?? t("Falha na operação."));
+      avisar((e as Error).message ?? t("Falha na operação."));
     } finally {
       setSalvando(false);
     }
@@ -124,13 +126,17 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
       const res = await fetch(`/api/parcelas/${parcela!.id}/comprovante`, { credentials: "include" });
       const b = (await res.json()) as { url?: string | null };
       if (b.url) window.open(b.url, "_blank", "noopener");
-      else window.alert(t("Comprovante indisponível."));
+      else avisar(t("Comprovante indisponível."));
     } catch {
-      window.alert(t("Falha ao abrir o comprovante."));
+      avisar(t("Falha ao abrir o comprovante."));
     }
   }
 
   return (
+    // avisador FORA do Modal (não como children): o container de conteúdo do
+    // Modal tem transform (animate-modal) + overflow-y-auto, o que confinaria
+    // um Toast position:fixed dentro dele em vez do viewport.
+    <>
     <Modal isOpen onClose={onClose} title={t("Parcela {i}/{n}", { i: idx + 1, n: venda.parcelas.length })}>
       <div className="flex flex-col gap-5">
         {/* ===== RESUMO ===== */}
@@ -351,6 +357,8 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
         )}
       </div>
     </Modal>
+    {avisador}
+    </>
   );
 }
 

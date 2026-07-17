@@ -2691,4 +2691,45 @@ export const FR: Record<string, string> = {
     "Vous n'avez pas accès aux données de ce lieu, il est donc impossible de confirmer qu'il s'agit du même. Créez-le comme nouveau lieu ou demandez à quelqu'un qui y a accès de vérifier.",
   "É outro local": "C'est un autre lieu",
   "É o mesmo local": "C'est le même lieu",
+  // Chaves novas de edição de venda (D2-D6), diálogos com ConfirmarModal e refino de cancelar/excluir contrato.
+  "Cancelar este show?": "Annuler ce concert ?",
+  "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).":
+    "L'événement dans Google Agenda passera en ROUGE (il n'est pas supprimé — supprimez-le manuellement si vous le souhaitez).",
+  "Venda sem show na agenda": "Vente sans concert à l'agenda",
+  "Histórico de alterações": "Historique des modifications",
+  "Alguém": "Quelqu'un",
+  "às": "à",
+  "Parcelas não recalculadas": "Versements non recalculés",
+  "Altere o que precisar e salve — o show e o financeiro acompanham.":
+    "Modifiez ce qu'il faut et enregistrez — le concert et les finances suivent.",
+  "Esta venda tem parcela com histórico financeiro (paga, cancelada, cobrada ou fixada) — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "Cette vente a un versement avec un historique financier (payé, annulé, relancé ou épinglé) — les versements ne seront pas recalculés à l'enregistrement. Si vous modifiez le cachet, vérifiez les versements dans Finances.",
+  "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.":
+    "Versements non recalculés : l'un d'eux a un historique financier (payé, annulé, relancé ou épinglé) et a été conservé. Si le cachet a changé, vérifiez dans Finances → Contrôle des paiements.",
+  "Dispensar aviso": "Ignorer l'avertissement",
+  "Atualizar a categoria do local?": "Mettre à jour la catégorie du lieu ?",
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para esta venda.':
+    'Le lieu « {local} » est enregistré comme « Autre ». Changer sa catégorie en « {categoria} » ? Cela vaut pour tous les concerts de ce lieu, pas seulement pour cette vente.',
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para este orçamento.':
+    'Le lieu « {local} » est enregistré comme « Autre ». Changer sa catégorie en « {categoria} » ? Cela vaut pour tous les concerts de ce lieu, pas seulement pour ce devis.',
+  "Mudar categoria": "Changer la catégorie",
+  "Manter como está": "Garder tel quel",
+  "Desconectar o Google Calendar deste artista?": "Déconnecter Google Agenda de cet artiste ?",
+  "Os próximos shows não serão mais sincronizados.": "Les prochains concerts ne seront plus synchronisés.",
+  "Excluir o contrato {numero}?": "Supprimer le contrat {numero} ?",
+  "Cancelar o contrato {numero}?": "Annuler le contrat {numero} ?",
+  "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
+    "Il sera marqué comme annulé et le lien de signature cessera de fonctionner pour les personnes qui n'ont pas encore signé. Le contrat reste visible dans l'historique.",
+  "Confirmar": "Confirmer",
+  // Chaves novas do rastro antifraude (D4) e categoria do evento na venda (D1).
+  "Evento social": "Événement social",
+  "Vendida por": "Vendue par",
+  "Editada por": "Modifiée par",
+  "Cancelada por": "Annulée par",
+  "Ação de": "Action de",
+  "Ver alterações": "Voir les modifications",
+  "Alterações": "Modifications",
+  "Nenhuma alteração de campo foi registrada nesta ação.": "Aucune modification de champ n'a été enregistrée pour cette action.",
+  "Aceitar orçamento": "Accepter le devis",
+  "Remover orçamento": "Supprimer le devis",
 };

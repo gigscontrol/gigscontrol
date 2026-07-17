@@ -7,6 +7,7 @@ import {
   vendaVisivelParaSessao,
 } from "@/lib/services/vendas.service";
 import { vendaUpdateSchema } from "@/lib/validators/vendas.schema";
+import { diffVenda, type AlteracaoVenda } from "@/lib/services/vendaDiff";
 import {
   verificarAcessoVendas,
   podeEditarVenda,
@@ -82,15 +83,58 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   }
 
   try {
-    const venda = await atualizarVendaPorId(r.sessao.supabase, params.id, parsed.data);
+    // Snapshot ANTES da edição — insumo do rastro antifraude (o `row` acima é a
+    // linha crua, sem parcelas mapeadas).
+    const antesVenda = await buscarVendaPorId(r.sessao.supabase, params.id);
+
+    const { venda, parcelasPreservadas } = await atualizarVendaPorId(
+      r.sessao.supabase,
+      params.id,
+      parsed.data
+    );
+
+    // RASTRO (D6): grava QUEM editou, QUANDO e O QUE mudou, campo a campo. O
+    // diff é acessório — se ele falhar, a edição já commitou e continua valendo.
+    let alteracoes: AlteracaoVenda[] = [];
+    try {
+      if (antesVenda) {
+        alteracoes = await diffVenda(r.sessao.supabase, antesVenda, venda);
+      }
+    } catch (e) {
+      console.error("[historico] falha ao montar o diff da venda (ignorada):", e);
+    }
+
+    const resumo = alteracoes.length
+      ? ` — ${alteracoes
+          .slice(0, 3)
+          .map((a) => a.rotulo.toLowerCase())
+          .join(", ")}${alteracoes.length > 3 ? ` e mais ${alteracoes.length - 3}` : ""}`
+      : "";
+
     await auditAndNotify(r.sessao, {
       modulo: "venda",
       tipo: "editar",
       entidadeId: venda.id,
       entidadeNome: venda.numero,
-      descricao: `Editou venda ${venda.numero}`,
+      descricao: `Editou venda ${venda.numero}${resumo}`,
+      dados: {
+        versao: 1,
+        alteracoes,
+        // Só quando o PATCH mexeu em parcelas — senão a chave nem aparece.
+        ...(parsed.data.parcelas !== undefined
+          ? {
+              parcelas: parcelasPreservadas
+                ? { recalculadas: false, motivo: "parcela com histórico financeiro" }
+                : { recalculadas: true },
+            }
+          : {}),
+      },
     });
-    return NextResponse.json({ venda: redigirVendaParaSessao(r.sessao, venda) });
+
+    return NextResponse.json({
+      venda: redigirVendaParaSessao(r.sessao, venda),
+      parcelasPreservadas,
+    });
   } catch (e) {
     return respostaDeErro(e, "Falha ao atualizar venda.");
   }

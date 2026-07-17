@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, Check, Loader2, Plug, Unplug } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import { useConfirmar } from "../ConfirmarModal";
 
 /**
  * Card "Google Calendar" no perfil do artista (read-only console).
@@ -20,6 +21,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
   const t = useT();
   const { sessao } = useAuth();
   const isAdmin = sessao?.usuario?.papel === "admin";
+  const { confirmar, confirmador } = useConfirmar();
 
   const [estado, setEstado] = useState<Estado>("carregando");
   const [email, setEmail] = useState<string | null>(null);
@@ -75,9 +77,11 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
 
   async function desconectar() {
     if (
-      !window.confirm(
-        t("Desconectar o Google Calendar deste artista? Os próximos shows não serão mais sincronizados.")
-      )
+      !(await confirmar({
+        titulo: t("Desconectar o Google Calendar deste artista?"),
+        mensagem: t("Os próximos shows não serão mais sincronizados."),
+        perigo: true,
+      }))
     ) {
       return;
     }
@@ -170,6 +174,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
           {erro}
         </p>
       )}
+      {confirmador}
     </div>
   );
 }

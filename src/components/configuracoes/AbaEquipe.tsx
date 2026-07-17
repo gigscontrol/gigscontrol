@@ -29,6 +29,7 @@ import Modal from "../Modal";
 import PageHeader from "../PageHeader";
 import Toast from "../Toast";
 import ConfirmarSaidaModal from "../ConfirmarSaidaModal";
+import { useConfirmar } from "../ConfirmarModal";
 import { useNavegacaoOpcional } from "../NavOverlay";
 import {
   useWorkspace,
@@ -1312,6 +1313,7 @@ export function ModalUsuario({
 }) {
   const t = useT();
   const artistas = useArtistas();
+  const { confirmar, confirmador } = useConfirmar();
   const [nome, setNome] = useState(inicial?.nome ?? "");
   // Login (só na criação): raiz digitada pelo admin; auto-preenche a
   // partir do nome enquanto o admin não editar o campo manualmente.
@@ -2164,11 +2166,11 @@ export function ModalUsuario({
               {onResetarSenha && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      confirm(
-                        t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" })
-                      )
+                      await confirmar({
+                        titulo: t("Gerar uma nova senha aleatória pro usuário {nome}?", { nome: nome || inicial?.nome || "" }),
+                      })
                     ) {
                       void onResetarSenha();
                     }
@@ -2420,6 +2422,7 @@ export function ModalUsuario({
             }}
           />
         )}
+        {confirmador}
       </div>
   );
 

@@ -14,11 +14,16 @@ import {
   atualizarVendaRow,
   removerVendaRow,
 } from "@/lib/repositories/vendas.repo";
-import { sincronizarShowNoGoogle } from "@/lib/google/calendario";
+import {
+  sincronizarShowNoGoogle,
+  atualizarShowNoGoogle,
+} from "@/lib/google/calendario";
+import { algumaParcelaTemHistorico } from "@/lib/parcelaHistorico";
 import {
   listarParcelasDaVenda,
   listarTodasParcelas,
   inserirParcelasEmLote,
+  removerParcelasDaVenda,
   atualizarParcelaRow,
 } from "@/lib/repositories/parcelas.repo";
 import type {
@@ -349,24 +354,103 @@ export async function criarVendaCompleta(
   }
 }
 
+/** A venda editada, no formato que o Google Calendar consome (snake_case). */
+function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
+  return {
+    contratante_nome: v.contratanteNome || null,
+    contratante_telefone: v.contratanteTelefone || null,
+    nome_evento: v.nomeEvento || null,
+    nome_local: v.nomeLocal || null,
+    capacidade_publico: v.capacidadePublico ?? null,
+    endereco_local: v.enderecoLocal || null,
+    data_show: v.dataShow || null,
+    horario: v.horario || null,
+    horario_fim: v.horarioFim ?? null,
+    cache: v.cache,
+    camarim: v.camarim,
+    efeitos: v.efeitos,
+    hotel: v.hotel,
+    logistica: v.logistica,
+  };
+}
+
+/**
+ * Edita uma venda. Diferente do PATCH antigo (que só mexia na linha da venda e
+ * deixava show/parcelas/Google desatualizados), esta versão propaga a edição:
+ *
+ *   1) PARCELAS (D5): se o input trouxe parcelas e NENHUMA tem histórico
+ *      financeiro (`parcelaTemHistorico`: paga, cancelada, fixada ou cobrada),
+ *      regenera. Se QUALQUER uma tem, NÃO TOCA em nada e devolve
+ *      `parcelasPreservadas: true` pra UI avisar que o Financeiro precisa de
+ *      revisão. O delete→insert não recria `meta` — apagar destruiria o
+ *      comprovante, o motivo do cancelamento e o log de cobranças. Perder isso
+ *      é MUITO pior que uma parcela desatualizada.
+ *   2) taxa da agência (recalculada quando artista/cachê/valor digitado mudam);
+ *   3) linha da venda;
+ *   4) SHOW da agenda (data/horário/casa/cidade/artista/valor) — senão a agenda
+ *      mostraria o show na data velha;
+ *   5) Google Calendar (best-effort — falha NÃO derruba a edição).
+ */
 export async function atualizarVendaPorId(
   supabase: SupabaseClient,
   id: string,
   input: VendaUpdateInput
-): Promise<Venda> {
+): Promise<{ venda: Venda; parcelasPreservadas: boolean }> {
+  // O "antes" é necessário de qualquer jeito (parcelas, taxa, show_id) — carrega
+  // uma vez só, a partir da row (que traz workspace_id e show_id).
+  const rowAntes = await repoBuscar(supabase, id);
+  if (!rowAntes) throw new Error("Venda não encontrada.");
+  const antes = rowParaVenda(
+    rowAntes,
+    (await listarParcelasDaVenda(supabase, id)).map(rowParaParcela)
+  );
+
   const escrita = vendaInputParaEscrita(input);
-  // Recalcula a taxa quando o que a define muda (artista/cachê/valor digitado).
+
+  // 1: parcelas (D5)
+  let parcelasPreservadas = false;
+  if (input.parcelas !== undefined) {
+    if (algumaParcelaTemHistorico(antes.parcelas)) {
+      // Nem as pendentes são mexidas: na dúvida, preserva o dado e avisa.
+      parcelasPreservadas = true;
+    } else {
+      const novas = input.parcelas ?? [];
+      const cacheAlvo = input.cache !== undefined ? input.cache : antes.cache;
+      // Mesmo guard de integridade da criação: a soma tem que bater com o cachê.
+      if (novas.length > 0) {
+        const soma = novas.reduce((acc, p) => acc + (p.valor ?? 0), 0);
+        const tolerancia = 0.01 * novas.length + 0.01;
+        if (Math.abs(soma - cacheAlvo) > tolerancia) {
+          throw new ParcelasNaoBatemError(soma, cacheAlvo);
+        }
+      }
+      const hojeYmd = new Date().toISOString().slice(0, 10);
+      const payload: ParcelaEscrita[] = novas.map((p) => ({
+        percentual: p.percentual,
+        valor: p.valor,
+        data_vencimento: p.data_vencimento ?? null,
+        status_base: p.status_base ?? "pendente",
+        data_pagamento: p.status_base === "pago" ? p.data_pagamento ?? hojeYmd : null,
+        observacao: p.observacao ?? null,
+      }));
+      // Ordem delete→insert. Se o insert falhar o erro propaga: só se perdem
+      // parcelas PENDENTES (regeneráveis pelo form) — nenhum pagamento.
+      await removerParcelasDaVenda(supabase, id);
+      await inserirParcelasEmLote(supabase, rowAntes.workspace_id, id, payload);
+    }
+  }
+
+  // 2: taxa da agência — recalcula quando o que a define muda.
   if (
     input.artist_id !== undefined ||
     input.cache !== undefined ||
     input.taxa_digitada !== undefined
   ) {
-    const atual = await carregarVendaCompleta(supabase, id);
     const artistId =
       input.artist_id !== undefined
         ? normalizarUuid(input.artist_id ?? null)
-        : atual?.artistaId ?? null;
-    const cache = input.cache !== undefined ? input.cache : atual?.cache ?? null;
+        : antes.artistaId || null;
+    const cache = input.cache !== undefined ? input.cache : antes.cache ?? null;
     const taxa = await resolverTaxaAgencia(supabase, {
       artistId,
       cache,
@@ -378,10 +462,49 @@ export async function atualizarVendaPorId(
       escrita.taxa_modo_aplicado = taxa.taxa_modo_aplicado;
     }
   }
+
+  // 3: linha da venda
   await atualizarVendaRow(supabase, id, escrita);
   const final = await carregarVendaCompleta(supabase, id);
   if (!final) throw new Error("Venda não encontrada após atualização.");
-  return final;
+
+  // 4 + 5: show + Google. Só quando o input mexeu em algo que o show reflete.
+  const mexeuNoShow =
+    input.data_show !== undefined ||
+    input.horario !== undefined ||
+    input.casa_id !== undefined ||
+    input.cidade_id !== undefined ||
+    input.artist_id !== undefined ||
+    input.contratante_id !== undefined ||
+    input.cache !== undefined;
+
+  if (rowAntes.show_id && mexeuNoShow) {
+    // Payload montado do estado FINAL (o input é parcial). SEM `status`: não
+    // ressuscita show cancelado nem re-carimba o que já estava lá.
+    await atualizarShowPorId(supabase, rowAntes.show_id, {
+      artist_id: normalizarUuid(final.artistaId),
+      contratante_id: normalizarUuid(final.contratanteId),
+      casa_id: normalizarUuid(final.casaId ?? null),
+      cidade_id: normalizarUuid(final.cidadeId),
+      data: final.dataShow || null,
+      horario: final.horario || null,
+      valor: final.cache ?? null,
+    });
+
+    if (final.artistaId) {
+      try {
+        await atualizarShowNoGoogle(supabase, {
+          artistId: final.artistaId,
+          showId: rowAntes.show_id,
+          input: vendaParaInputDoGoogle(final),
+        });
+      } catch (e) {
+        console.error("[google-calendar] falha ao atualizar show editado:", e);
+      }
+    }
+  }
+
+  return { venda: final, parcelasPreservadas };
 }
 
 export async function removerVendaPorId(

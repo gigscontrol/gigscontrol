@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText, Ban, Pencil } from "lucide-react";
 import PageHeader from "./PageHeader";
@@ -16,11 +16,13 @@ import { formatBRL } from "@/lib/whatsapp";
 import { MODULE_THEMES } from "@/types";
 
 type Props = {
+  selectedArtistas: string[];
   onNovaVenda: () => void;
   onAbrir: (id: string) => void;
+  onEditar: (id: string) => void;
 };
 
-export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
+export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir, onEditar }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, recarregar } = useVendas();
@@ -32,8 +34,24 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
   const [search, setSearch] = useState("");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
 
+  // Respeita a seleção de artistas da sidebar (filtro de visualização, não de
+  // permissão — D3). Venda sem artistaId nunca some (não tem checkbox pra
+  // remarcar).
+  const vendasVisiveis = useMemo(
+    () => vendas.filter((v) => !v.artistaId || selectedArtistas.includes(v.artistaId)),
+    [vendas, selectedArtistas]
+  );
+
+  // Se o artista da pill foi desmarcado na sidebar, volta pra "todos" — senão
+  // o dono fica preso vendo zero resultado sem pill visível pra desfazer.
+  useEffect(() => {
+    if (filtroDJ !== "todos" && !selectedArtistas.includes(filtroDJ)) {
+      setFiltroDJ("todos");
+    }
+  }, [selectedArtistas, filtroDJ]);
+
   const lista = useMemo(() => {
-    return [...vendas]
+    return [...vendasVisiveis]
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
       .filter((v) => {
         if (filtroDJ !== "todos" && v.artistaId !== filtroDJ) return false;
@@ -61,11 +79,13 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
         }
         return true;
       });
-  }, [vendas, search, filtroDJ, cidades, orcamentos, artistas]);
+  }, [vendasVisiveis, search, filtroDJ, cidades, orcamentos, artistas]);
 
   // Métricas do topo contam só as ATIVAS — as canceladas continuam listadas
   // (com badge) mas não entram no faturamento nem na contagem de concretizadas.
-  const ativas = useMemo(() => vendas.filter((v) => v.status !== "cancelada"), [vendas]);
+  // Derivam de vendasVisiveis (não da lista crua) pra ficar coerente com o
+  // filtro de artista da sidebar.
+  const ativas = useMemo(() => vendasVisiveis.filter((v) => v.status !== "cancelada"), [vendasVisiveis]);
   const totalCache = useMemo(
     () => ativas.reduce((acc, v) => acc + (v.cache ?? 0), 0),
     [ativas]
@@ -148,16 +168,18 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
           >
             {t("Todos artistas")}
           </button>
-          {artistas.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              className={`pill ${filtroDJ === d.id ? "active" : ""}`}
-              onClick={() => setFiltroDJ(d.id)}
-            >
-              {d.name}
-            </button>
-          ))}
+          {artistas
+            .filter((d) => selectedArtistas.includes(d.id))
+            .map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className={`pill ${filtroDJ === d.id ? "active" : ""}`}
+                onClick={() => setFiltroDJ(d.id)}
+              >
+                {d.name}
+              </button>
+            ))}
         </div>
       </div>
 
@@ -280,7 +302,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir }: Props) {
                           </button>
                           {podeEditar && (
                             <button
-                              onClick={() => onAbrir(v.id)}
+                              onClick={() => onEditar(v.id)}
                               className="btn-ghost p-1.5 rounded"
                               title={t("Editar venda")}
                             >

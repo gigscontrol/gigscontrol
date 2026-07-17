@@ -39,6 +39,7 @@ import {
 import Toast from "../Toast";
 import PageHeader from "../PageHeader";
 import ConfirmarSaidaModal from "../ConfirmarSaidaModal";
+import { useConfirmar } from "../ConfirmarModal";
 import { useNavegacaoOpcional } from "../NavOverlay";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import ColorPicker from "../ColorPicker";
@@ -2098,6 +2099,7 @@ function ModalEditarArtista({
 }: EditarProps) {
   const t = useT();
   const { atualizarArtista } = useWorkspace();
+  const { confirmar, confirmador } = useConfirmar();
 
   // Username "raiz" — o que aparece antes do "-slug". Derivado do
   // username completo no banco. Ex: "brunosocek-twobookings" → "brunosocek"
@@ -2759,11 +2761,11 @@ function ModalEditarArtista({
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    confirm(
-                      t("Gerar uma nova senha aleatória pro artista {nome}?", { nome: artista.nome })
-                    )
+                    await confirmar({
+                      titulo: t("Gerar uma nova senha aleatória pro artista {nome}?", { nome: artista.nome }),
+                    })
                   ) {
                     void onResetarSenha();
                   }
@@ -2946,6 +2948,7 @@ function ModalEditarArtista({
           }}
         />
       )}
+      {confirmador}
     </>
   );
 

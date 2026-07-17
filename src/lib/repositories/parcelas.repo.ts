@@ -59,6 +59,22 @@ export async function inserirParcelasEmLote(
   return (data ?? []) as unknown as ParcelaRow[];
 }
 
+/**
+ * Apaga TODAS as parcelas de uma venda (delete hard — parcela não tem lixeira).
+ *
+ * SÓ pode ser chamada quando NENHUMA parcela da venda está paga: apagar uma
+ * parcela paga destruiria o registro do pagamento (comprovante, quem/quando,
+ * log de cobranças) e isso é irrecuperável. O guard vive em
+ * `atualizarVendaPorId` (regra D5), que é o único chamador.
+ */
+export async function removerParcelasDaVenda(
+  supabase: SupabaseClient,
+  vendaId: string
+): Promise<void> {
+  const { error } = await supabase.from("parcelas").delete().eq("venda_id", vendaId);
+  if (error) throw error;
+}
+
 export async function atualizarParcelaRow(
   supabase: SupabaseClient,
   id: string,

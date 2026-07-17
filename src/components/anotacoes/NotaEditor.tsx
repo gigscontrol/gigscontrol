@@ -7,6 +7,7 @@ import type { Artista } from "@/types";
 import { MODULE_THEMES } from "@/types";
 import { renderMarkdownSeguro } from "./markdownSeguro";
 import { useT } from "@/lib/i18n";
+import { useConfirmar, useAviso } from "../ConfirmarModal";
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const CORES = ["#3D7BFF", "#37D39A", "#F5B046", "#FF5C6C", "#9A7BFF", "#22B8CF", "#FF922B", "#94A3B8"];
@@ -41,6 +42,8 @@ export default function NotaEditor({
   onVoltar: () => void;
 }) {
   const t = useT();
+  const { confirmar, confirmador } = useConfirmar();
+  const { avisar, avisador } = useAviso();
   const editando = !!nota;
 
   const inicial = useMemo<NotaEditorDados>(
@@ -84,20 +87,20 @@ export default function NotaEditor({
         artistId,
       });
     } catch (e) {
-      window.alert((e as Error).message || t("Falha ao salvar."));
+      avisar((e as Error).message || t("Falha ao salvar."));
     } finally {
       setSalvando(false);
     }
   };
 
-  const voltar = () => {
-    if (sujo && !window.confirm(t("Descartar as alterações não salvas?"))) return;
+  const voltar = async () => {
+    if (sujo && !(await confirmar({ titulo: t("Descartar as alterações não salvas?") }))) return;
     onVoltar();
   };
 
   const excluir = async () => {
     if (!editando) return;
-    if (!window.confirm(t("Excluir esta anotação?"))) return;
+    if (!(await confirmar({ titulo: t("Excluir esta anotação?"), perigo: true }))) return;
     await onExcluir();
   };
 
@@ -260,6 +263,8 @@ export default function NotaEditor({
           </div>
         </div>
       </div>
+      {confirmador}
+      {avisador}
     </div>
   );
 }

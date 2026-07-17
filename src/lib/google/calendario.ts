@@ -91,6 +91,42 @@ function montarDescricao(input: VendaCreateInput, artistaNome: string | null): s
   return linhas.join("\n");
 }
 
+/**
+ * Corpo do evento (sem a cor). Compartilhado pela criação e pela atualização —
+ * assim o evento editado fica IDÊNTICO ao que a criação teria gerado.
+ */
+function corpoDoEvento(
+  input: VendaCreateInput,
+  artistaNome: string | null,
+  dataShow: string
+): Record<string, unknown> {
+  const titulo = `🎧 ${input.nome_evento || input.nome_local || "Show"}`;
+  const local = [input.nome_local, input.endereco_local].filter(Boolean).join(", ");
+  const evento: Record<string, unknown> = {
+    summary: titulo,
+    description: montarDescricao(input, artistaNome),
+    // SEMPRE dia inteiro na data agendada (end.date é exclusivo no Google).
+    start: { date: dataShow },
+    end: { date: addDias(dataShow, 1) },
+    reminders: SEM_ALARME, // sem alarme
+  };
+  if (local) evento.location = local;
+  return evento;
+}
+
+/** Nome do artista (pra descrição do evento). */
+async function nomeDoArtista(
+  supabase: SupabaseClient,
+  artistId: string
+): Promise<string | null> {
+  const { data: artista } = await supabase
+    .from("artists")
+    .select("nome")
+    .eq("id", artistId)
+    .maybeSingle();
+  return (artista as { nome?: string } | null)?.nome ?? null;
+}
+
 /** POST de baixo nível na API do Calendar. Devolve o id do evento criado. */
 export async function criarEvento(
   accessToken: string,
@@ -136,27 +172,11 @@ export async function sincronizarShowNoGoogle(
   const conexao = await accessTokenValido(supabase, artistId);
   if (!conexao) return null; // artista sem Google conectado — ignora
 
-  // Nome do DJ (pra descrição).
-  const { data: artista } = await supabase
-    .from("artists")
-    .select("nome")
-    .eq("id", artistId)
-    .maybeSingle();
-  const artistaNome = (artista as { nome?: string } | null)?.nome ?? null;
-
-  const titulo = `🎧 ${input.nome_evento || input.nome_local || "Show"}`;
-  const local = [input.nome_local, input.endereco_local].filter(Boolean).join(", ");
-
-  const evento: Record<string, unknown> = {
-    summary: titulo,
-    description: montarDescricao(input, artistaNome),
-    // SEMPRE dia inteiro na data agendada (end.date é exclusivo no Google).
-    start: { date: input.data_show },
-    end: { date: addDias(input.data_show, 1) },
+  const artistaNome = await nomeDoArtista(supabase, artistId);
+  const evento = {
+    ...corpoDoEvento(input, artistaNome, input.data_show),
     colorId: COR_UVA, // show agendado = roxo/uva
-    reminders: SEM_ALARME, // sem alarme
   };
-  if (local) evento.location = local;
 
   const eventId = await criarEvento(conexao.accessToken, conexao.calendarId, evento);
 
@@ -169,6 +189,77 @@ export async function sincronizarShowNoGoogle(
     `[google-calendar] evento criado ${eventId} (show ${showId}, calendar ${conexao.calendarId})`
   );
   return { eventId };
+}
+
+/**
+ * Reflete a EDIÇÃO da venda no evento já existente do Google (PATCH).
+ *
+ * Por que não reusar `sincronizarShowNoGoogle`: aquela função faz POST, ou seja
+ * a cada edição criaria um evento NOVO e o `google_event_id` antigo viraria
+ * órfão no calendário do artista (evento duplicado). Aqui:
+ *   - show sem evento (ou artista que conectou o Google depois) → cria;
+ *   - evento existente → PATCH dos campos; se o Google diz que sumiu
+ *     (404/410 — apagado na mão, ou é evento do artista ANTERIOR quando a venda
+ *     trocou de artista), cria um novo no calendário atual.
+ *
+ * NÃO manda `colorId`: a cor carrega o estado de cancelado (vermelho) — re-carimbar
+ * uva aqui "descancelaria" o evento visualmente.
+ *
+ * LIMITAÇÃO ACEITA: se a venda muda de artista, o evento antigo continua no
+ * calendário do artista anterior (não temos o token dele nesse fluxo pra apagar,
+ * e a regra do produto é NUNCA apagar evento do usuário).
+ *
+ * BEST-EFFORT: pensado pra ser chamado dentro de try/catch.
+ */
+export async function atualizarShowNoGoogle(
+  supabase: SupabaseClient,
+  params: { artistId: string; showId: string; input: VendaCreateInput }
+): Promise<{ eventId: string } | null> {
+  const { artistId, showId, input } = params;
+  if (!input.data_show) return null;
+
+  const { data } = await supabase
+    .from("shows")
+    .select("google_event_id")
+    .eq("id", showId)
+    .maybeSingle();
+  const eventoAtual = (data as { google_event_id?: string | null } | null)?.google_event_id;
+  if (!eventoAtual) {
+    return sincronizarShowNoGoogle(supabase, params);
+  }
+
+  const conexao = await accessTokenValido(supabase, artistId);
+  if (!conexao) return null; // artista sem Google conectado — ignora
+
+  const artistaNome = await nomeDoArtista(supabase, artistId);
+  const evento = corpoDoEvento(input, artistaNome, input.data_show);
+
+  const res = await fetch(
+    `${CAL_API}/${encodeURIComponent(conexao.calendarId)}/events/${encodeURIComponent(
+      eventoAtual
+    )}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${conexao.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(evento),
+    }
+  );
+
+  if (res.status === 404 || res.status === 410) {
+    // Evento sumiu do calendário atual → recria e re-vincula.
+    return sincronizarShowNoGoogle(supabase, params);
+  }
+  if (!res.ok) {
+    throw new Error(`Calendar API (editar) ${res.status}: ${await res.text()}`);
+  }
+
+  console.log(
+    `[google-calendar] evento atualizado ${eventoAtual} (show ${showId}, calendar ${conexao.calendarId})`
+  );
+  return { eventId: eventoAtual };
 }
 
 /**

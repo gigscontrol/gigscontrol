@@ -7,6 +7,7 @@ import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, A
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
@@ -32,6 +33,7 @@ type Props = {
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
   const t = useT();
   const { podeUI } = useAuth();
+  const { confirmar, confirmador } = useConfirmar();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
@@ -164,11 +166,11 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         )}
         {orc.status !== "aceito" && (
           <button
-            onClick={() => {
+            onClick={async () => {
               const msg = !orc.dataShow
                 ? t("Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso.")
                 : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
-              if (confirm(msg)) aceitarOrcamento(orc.id);
+              if (await confirmar({ titulo: t("Aceitar orçamento"), mensagem: msg })) aceitarOrcamento(orc.id);
             }}
             disabled={!podeEditarOrc}
             title={!podeEditarOrc ? semPermissao : undefined}
@@ -213,8 +215,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           {t("Duplicar")}
         </button>
         <button
-          onClick={() => {
-            if (confirm(t("Remover este orçamento permanentemente?"))) {
+          onClick={async () => {
+            const ok = await confirmar({
+              titulo: t("Remover orçamento"),
+              mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
+              perigo: true,
+            });
+            if (ok) {
               removeOrcamento(orc.id);
               onBack();
             }
@@ -511,6 +518,8 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         onAcao={toast?.onAcao}
         onClose={() => setToast(null)}
       />
+
+      {confirmador}
     </div>
   );
 }

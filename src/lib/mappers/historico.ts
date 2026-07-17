@@ -1,3 +1,5 @@
+import type { Papel } from "@/lib/permissoes";
+
 /**
  * Tipos do módulo Histórico de Ações.
  *
@@ -52,6 +54,12 @@ export type HistoricoAcao = {
   actorId: string | null;
   actorNome: string | null;
   actorEmail: string | null;
+  /**
+   * Cargo do autor HOJE — derivado do profile na leitura, não gravado na ação.
+   * Ex-membro (soft delete) CONTINUA com cargo; null só após o purge físico do
+   * profile (o nome é snapshot justamente por isso).
+   */
+  actorPapel?: Papel | null;
   modulo: ModuloHistorico;
   tipo: TipoHistorico;
   entidadeId: string | null;

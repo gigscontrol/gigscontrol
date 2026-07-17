@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -22,6 +22,7 @@ import {
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import MiniLixeira from "./MiniLixeira";
+import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
@@ -29,6 +30,7 @@ import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL } from "@/lib/whatsap
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
 
 type Props = {
+  selectedArtistas: string[];
   onNovo: () => void;
   onAbrir: (id: string) => void;
   onTransformarEmVenda: (orcamentoId: string) => void;
@@ -42,13 +44,14 @@ const STATUS_FILTROS: { value: OrcamentoStatus | "todos"; label: string }[] = [
   { value: "recusado", label: "Recusados" },
 ];
 
-export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVenda }: Props) {
+export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir, onTransformarEmVenda }: Props) {
   const t = useT();
   const { podeUI } = useAuth();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
   const { contratantes, cidades, casas } = useContatos();
   const artistas = useArtistas();
+  const { confirmar, confirmador } = useConfirmar();
 
   // Botão "Novo orçamento" não tem artista fixo (escolhido no wizard) →
   // habilita se o usuário puder criar orçamento em ALGUM artista.
@@ -61,8 +64,24 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
 
   const artistaSelecionado = artistas.find((d) => d.id === filtroDJ);
 
+  // Respeita a seleção de artistas da sidebar (filtro de visualização, não de
+  // permissão — D3). Orçamento sem artistaId nunca some (não tem checkbox pra
+  // remarcar).
+  const orcamentosVisiveis = useMemo(
+    () => orcamentos.filter((o) => !o.artistaId || selectedArtistas.includes(o.artistaId)),
+    [orcamentos, selectedArtistas]
+  );
+
+  // Se o artista do filtro foi desmarcado na sidebar, volta pra "todos" —
+  // senão o dono fica preso vendo zero resultado sem opção visível pra desfazer.
+  useEffect(() => {
+    if (filtroDJ !== "todos" && !selectedArtistas.includes(filtroDJ)) {
+      setFiltroDJ("todos");
+    }
+  }, [selectedArtistas, filtroDJ]);
+
   const lista = useMemo(() => {
-    return [...orcamentos]
+    return [...orcamentosVisiveis]
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
       .filter((o) => {
         if (filtroStatus !== "todos" && o.status !== filtroStatus) return false;
@@ -86,8 +105,10 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
         }
         return true;
       });
-  }, [orcamentos, filtroStatus, filtroDJ, search, contratantes, cidades, casas, artistas]);
+  }, [orcamentosVisiveis, filtroStatus, filtroDJ, search, contratantes, cidades, casas, artistas]);
 
+  // Cards de status também derivam da lista visível, pra ficar coerente com
+  // o filtro de artista da sidebar.
   const totalPorStatus = useMemo(() => {
     const acc: Record<OrcamentoStatus, number> = {
       pendente: 0,
@@ -95,11 +116,11 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
       aceito: 0,
       recusado: 0,
     };
-    orcamentos.forEach((o) => {
+    orcamentosVisiveis.forEach((o) => {
       acc[o.status] = (acc[o.status] ?? 0) + 1;
     });
     return acc;
-  }, [orcamentos]);
+  }, [orcamentosVisiveis]);
 
   function handleEnviarWA(id: string) {
     const orc = orcamentos.find((o) => o.id === id);
@@ -112,19 +133,22 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
     window.open(link, "_blank", "noopener,noreferrer");
   }
 
-  function handleAceitar(id: string) {
+  async function handleAceitar(id: string) {
     const orc = orcamentos.find((o) => o.id === id);
     if (!orc) return;
     const msg = !orc.dataShow
       ? t("Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso.")
       : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
-    if (confirm(msg)) aceitarOrcamento(id);
+    if (await confirmar({ titulo: t("Aceitar orçamento"), mensagem: msg })) aceitarOrcamento(id);
   }
 
-  function handleRemover(id: string) {
-    if (confirm(t("Remover este orçamento? Esta ação não pode ser desfeita."))) {
-      removeOrcamento(id);
-    }
+  async function handleRemover(id: string) {
+    const ok = await confirmar({
+      titulo: t("Remover orçamento"),
+      mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
+      perigo: true,
+    });
+    if (ok) removeOrcamento(id);
   }
 
   return (
@@ -251,34 +275,36 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
               <Check size={16} style={{ color: "var(--brand)" }} />
             )}
           </button>
-          {artistas.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => {
-                setFiltroDJ(d.id);
-                setModalArtista(false);
-              }}
-              className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
-            >
-              <span
-                className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{
-                  backgroundColor: d.color,
-                  color: "#fff",
-                  boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
+          {artistas
+            .filter((d) => selectedArtistas.includes(d.id))
+            .map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => {
+                  setFiltroDJ(d.id);
+                  setModalArtista(false);
                 }}
+                className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
               >
-                {d.name.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="flex-1 text-sm font-semibold text-primary">
-                {d.name}
-              </span>
-              {filtroDJ === d.id && (
-                <Check size={16} style={{ color: "var(--brand)" }} />
-              )}
-            </button>
-          ))}
+                <span
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={{
+                    backgroundColor: d.color,
+                    color: "#fff",
+                    boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
+                  }}
+                >
+                  {d.name.slice(0, 2).toUpperCase()}
+                </span>
+                <span className="flex-1 text-sm font-semibold text-primary">
+                  {d.name}
+                </span>
+                {filtroDJ === d.id && (
+                  <Check size={16} style={{ color: "var(--brand)" }} />
+                )}
+              </button>
+            ))}
         </div>
       </Modal>
 
@@ -387,6 +413,7 @@ export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVe
       </div>
 
       <MiniLixeira tipo="orcamento" />
+      {confirmador}
     </div>
   );
 }

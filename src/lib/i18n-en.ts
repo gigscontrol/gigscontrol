@@ -3697,4 +3697,45 @@ export const EN: Record<string, string> = {
     "You don't have access to this venue's data, so there is no way to confirm it is the same one. Create it as a new venue or ask someone with access to check.",
   "É outro local": "It's another venue",
   "É o mesmo local": "It's the same venue",
+  // Chaves novas de edição de venda (D2-D6), diálogos com ConfirmarModal e refino de cancelar/excluir contrato.
+  "Cancelar este show?": "Cancel this show?",
+  "O evento no Google Agenda fica VERMELHO (não é apagado — você apaga manualmente se quiser).":
+    "The event in Google Calendar turns RED (it is not deleted — you delete it manually if you want).",
+  "Venda sem show na agenda": "Sale without a show in the schedule",
+  "Histórico de alterações": "Change history",
+  "Alguém": "Someone",
+  "às": "at",
+  "Parcelas não recalculadas": "Installments not recalculated",
+  "Altere o que precisar e salve — o show e o financeiro acompanham.":
+    "Change what you need and save — the show and the finances stay in sync.",
+  "Esta venda tem parcela com histórico financeiro (paga, cancelada, cobrada ou fixada) — as parcelas não serão recalculadas ao salvar. Se mudar o cachê, revise as parcelas no Financeiro.":
+    "This sale has an installment with financial history (paid, cancelled, charged or pinned) — the installments won't be recalculated when you save. If you change the fee, review the installments in Finance.",
+  "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.":
+    "Installments not recalculated: one has financial history (paid, cancelled, charged or pinned) and was preserved. If the fee changed, review it in Finance → Payment Control.",
+  "Dispensar aviso": "Dismiss warning",
+  "Atualizar a categoria do local?": "Update the venue category?",
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para esta venda.':
+    'The venue "{local}" is registered as "Other". Change its category to "{categoria}"? This applies to every show at this venue, not just this sale.',
+  'O local "{local}" está cadastrado como "Outro". Mudar a categoria dele para "{categoria}"? Isso vale para todos os shows deste local, não só para este orçamento.':
+    'The venue "{local}" is registered as "Other". Change its category to "{categoria}"? This applies to every show at this venue, not just this quote.',
+  "Mudar categoria": "Change category",
+  "Manter como está": "Keep as is",
+  "Desconectar o Google Calendar deste artista?": "Disconnect Google Calendar for this artist?",
+  "Os próximos shows não serão mais sincronizados.": "Upcoming shows will no longer be synced.",
+  "Excluir o contrato {numero}?": "Delete contract {numero}?",
+  "Cancelar o contrato {numero}?": "Cancel contract {numero}?",
+  "Ele fica marcado como cancelado e o link de assinatura para de funcionar para quem ainda não assinou. O contrato continua visível no histórico.":
+    "It will be marked as canceled and the signature link stops working for anyone who hasn't signed yet. The contract stays visible in the history.",
+  "Confirmar": "Confirm",
+  // Chaves novas do rastro antifraude (D4) e categoria do evento na venda (D1).
+  "Evento social": "Social event",
+  "Vendida por": "Sold by",
+  "Editada por": "Edited by",
+  "Cancelada por": "Canceled by",
+  "Ação de": "Action by",
+  "Ver alterações": "View changes",
+  "Alterações": "Changes",
+  "Nenhuma alteração de campo foi registrada nesta ação.": "No field changes were recorded for this action.",
+  "Aceitar orçamento": "Accept quote",
+  "Remover orçamento": "Remove quote",
 };
