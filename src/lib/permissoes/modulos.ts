@@ -16,6 +16,7 @@
  */
 
 import { artistasVisiveis, type CtxPermissao } from "./resolver";
+import { CHAVES_SETORES_AGENDA } from "./setoresAgenda";
 
 /** Tabs de módulo da Sidebar (espelha ActiveTab de @/types). */
 export type TabModulo =
@@ -75,7 +76,10 @@ function temPrefixoEmAlgumVinculo(ctx: CtxPermissao, prefixo: string): boolean {
  */
 /** Alcança a AGENDA de shows (dashboard + calendário) por chave de agenda. */
 function podeVerAgendaShows(ctx: CtxPermissao): boolean {
-  return alcancaAlguma(ctx, ["agenda.ver", "agenda.ver_detalhado"]);
+  // Qualquer SETOR da ficha do show dá acesso à agenda — espelha
+  // `aplicarFiltroShows` no servidor. As chaves de 2 níveis viraram legado e
+  // são expandidas na leitura da sessão (`expandirLegadoAgenda`).
+  return alcancaAlguma(ctx, [...CHAVES_SETORES_AGENDA]);
 }
 
 /**

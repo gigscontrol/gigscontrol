@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { expandirLegadoAgenda } from "@/lib/permissoes/setoresAgenda";
 
 /**
  * Acesso a `membros_artista` — o vínculo (usuário × artista) que carrega os
@@ -65,7 +66,11 @@ export async function listarVinculosDoArtista(
 /** Mapa artist_id → permissões concedidas (formato consumido pelo motor). */
 export function mapaDeVinculos(rows: VinculoRow[]): Record<string, string[]> {
   const mapa: Record<string, string[]> = {};
-  for (const v of rows) mapa[v.artist_id] = v.permissoes;
+  // Expande as chaves LEGADAS de leitura (`agenda.ver`/`agenda.ver_detalhado`)
+  // nos setores equivalentes. Sem isto, todo vínculo gravado antes da mudança
+  // perderia a ficha do show no primeiro deploy — o banco fica intacto, a
+  // tradução acontece na leitura.
+  for (const v of rows) mapa[v.artist_id] = expandirLegadoAgenda(v.permissoes);
   return mapa;
 }
 

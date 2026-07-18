@@ -21,6 +21,7 @@ import { privacidadeValida } from "./mappers/artista";
 import { DEFAULT_SELECTED_ARTISTA_IDS } from "./artistas-fallback";
 import { criarClienteBrowser } from "./db/supabase-browser";
 import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
+import { expandirLegadoAgenda } from "./permissoes/setoresAgenda";
 
 /**
  * Camada de autenticação do GIGS CONTROL — ligada ao Supabase Auth.
@@ -363,9 +364,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         for (const v of vinc ?? []) {
           const perms = (v as { permissoes?: unknown }).permissoes;
-          vinculos[(v as { artist_id: string }).artist_id] = Array.isArray(perms)
-            ? (perms.filter((x) => typeof x === "string") as string[])
-            : [];
+          // Espelha `mapaDeVinculos` do servidor: expande as chaves legadas de
+          // leitura da agenda nos setores. Se um lado expandir e o outro não,
+          // a UI e o servidor discordam sobre o que a pessoa vê.
+          vinculos[(v as { artist_id: string }).artist_id] = expandirLegadoAgenda(
+            Array.isArray(perms)
+              ? (perms.filter((x) => typeof x === "string") as string[])
+              : []
+          );
         }
 
         // Falha aqui NÃO derruba a sessão: o pior caso é o item "Anotações"
@@ -526,9 +532,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const novos: Record<string, string[]> = {};
       for (const v of data ?? []) {
         const perms = (v as { permissoes?: unknown }).permissoes;
-        novos[(v as { artist_id: string }).artist_id] = Array.isArray(perms)
-          ? (perms.filter((x) => typeof x === "string") as string[])
-          : [];
+        novos[(v as { artist_id: string }).artist_id] = expandirLegadoAgenda(
+          Array.isArray(perms)
+            ? (perms.filter((x) => typeof x === "string") as string[])
+            : []
+        );
       }
 
       setSessao((s) => {

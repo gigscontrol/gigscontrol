@@ -14,6 +14,8 @@
  * (aparece no editor marcado "(em breve)"). Mantido à prova de futuro.
  */
 
+import { SETORES_AGENDA } from "./setoresAgenda";
+
 export type ModuloPermissao =
   | "agenda"
   | "vendas"
@@ -65,8 +67,20 @@ export const CATALOGO: Permissao[] = [
   // `vendas.criar_venda` PERDE "Novo Show". Presets afetados: ver perfis.ts
   // (equipe/manager). Isto foi pedido pelo dono: mexer em show é papel de quem
   // tem permissão de VENDAS.
-  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local e horário)", existe: true },
-  { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — completo (todas as informações)", existe: true },
+  // LEGADO — a leitura da agenda virou UMA CHAVE POR SETOR (setoresAgenda.ts).
+  // Estas duas continuam VÁLIDAS porque há vínculos gravados com elas; são
+  // expandidas nos setores equivalentes na leitura da sessão
+  // (`expandirLegadoAgenda`), nos dois lados. Não gravar mais.
+  { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (legado)", existe: true },
+  { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — completo (legado)", existe: true },
+  // Um item por SETOR da ficha do show — a fonte é `setoresAgenda.ts`.
+  ...SETORES_AGENDA.map((s) => ({
+    chave: s.chave,
+    modulo: "agenda" as const,
+    nivel: "artista" as const,
+    label: `Ver na agenda — ${s.label}`,
+    existe: true,
+  })),
   { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar voo, transporte terrestre e evento personalizado", existe: true },
   { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os voos/transportes/eventos que ele criou", existe: true },
   { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer voo/transporte/evento", existe: true },

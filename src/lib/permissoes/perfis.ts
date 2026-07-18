@@ -10,6 +10,8 @@
  * (tabela no banco) fica pra uma fase posterior — ver agencia.criar_perfil.
  */
 
+import { CHAVES_SETORES_AGENDA, CHAVES_SETORES_BASICO } from "./setoresAgenda";
+
 export type PerfilId =
   | "manager"
   | "financeiro"
@@ -83,7 +85,7 @@ export const PERFIS: Perfil[] = [
     descricao: "Gerencia o artista de ponta a ponta (agenda, vendas, financeiro, contratos, contatos).",
     cor: "#6366f1",
     permissoes: [
-      "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar", "agenda.editar_todos",
+      ...CHAVES_SETORES_AGENDA, "agenda.criar", "agenda.editar", "agenda.editar_todos",
       "vendas.ver", "vendas.ver_orcamentos", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
       "vendas.criar_venda", "vendas.editar_venda", "vendas.editar_todos", "vendas.cancelar_venda",
       "financeiro.ver",
@@ -121,7 +123,7 @@ export const PERFIS: Perfil[] = [
     descricao: "Cria orçamentos e fecha vendas do artista.",
     cor: "#22c55e",
     permissoes: [
-      "agenda.ver",
+      ...CHAVES_SETORES_BASICO,
       "vendas.ver", "vendas.ver_orcamentos", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
       "vendas.criar_venda", "vendas.editar_venda", "vendas.cancelar_venda",
       "anotacoes.ver", "anotacoes.criar",
@@ -133,7 +135,7 @@ export const PERFIS: Perfil[] = [
     descricao: "Operação e logística — cuida da agenda e do dia a dia.",
     cor: "#f59e0b",
     permissoes: [
-      "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar",
+      ...CHAVES_SETORES_AGENDA, "agenda.criar", "agenda.editar",
       "vendas.ver", "vendas.ver_orcamentos",
       "anotacoes.ver", "anotacoes.criar",
     ],
@@ -144,7 +146,7 @@ export const PERFIS: Perfil[] = [
     descricao: "O próprio artista — vê os dados dele.",
     cor: "#a855f7",
     permissoes: [
-      "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "vendas.ver_orcamentos", "financeiro.ver", "contratos.ver",
+      ...CHAVES_SETORES_AGENDA, "vendas.ver", "vendas.ver_orcamentos", "financeiro.ver", "contratos.ver",
       "anotacoes.ver",
     ],
   },
