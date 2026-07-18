@@ -1,5 +1,5 @@
-import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao } from "@/types";
-import { formatBRL } from "./whatsapp";
+import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
+import { formatarMoeda } from "./formatters";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
  *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
@@ -21,6 +21,8 @@ export type DadosFechamento = {
   horario?: string;
   horarioFim?: string;
   cache?: number;
+  /** Moeda da venda — o cachê é formatado nela. Ausente → BRL (caminho de ouro). */
+  moeda?: Moeda;
   lineUp?: string[];
   efeitos?: ItemQuantidade[];
   camarim?: ItemQuantidade[];
@@ -70,7 +72,7 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     campo("Endereço", v.enderecoLocal),
     campo("Data", fmtData(v.dataShow)),
     campo("Horário da apresentação", v.horarioFim ? `${v.horario} — ${v.horarioFim}` : v.horario),
-    campo("Cachê", v.cache ? formatBRL(v.cache) : ""),
+    campo("Cachê", v.cache ? formatarMoeda(v.cache, v.moeda ?? "BRL") : ""),
     campo("Line-UP", v.lineUp && v.lineUp.length ? v.lineUp.join(", ") : ""),
   ];
 

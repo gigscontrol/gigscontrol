@@ -4,7 +4,9 @@ import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { gradienteSutil } from "@/lib/gradiente";
+import { totaisPorMoeda } from "@/lib/formatters";
 import type { RankingLinha } from "@/lib/agencia-dashboard";
+import type { Moeda } from "@/types";
 
 /**
  * Card de ranking do Dashboard da Agência — APRESENTACIONAL puro (sem
@@ -20,6 +22,13 @@ export type MetricaConfig = {
   campo: "a" | "b";
   /** Formata o número pra exibição (ex.: formatBRL pra R$, String pra contagem). */
   formato: (n: number) => string;
+  /**
+   * Métrica MONETÁRIA: exibe por moeda (`totaisPorMoeda` sobre a quebra da
+   * linha — regra-mãe: nunca soma moedas diferentes) em vez de `formato`.
+   * Ordena/dimensiona a barra ainda por `l[campo]` (soma bruta — D-RANKING).
+   * Sem a quebra na linha (caso 1-moeda antigo) cai no `formato`.
+   */
+  moeda?: boolean;
 };
 
 type Props = {
@@ -65,6 +74,21 @@ export default function RankingCard({
   const max = ordenadas.length > 0 ? ordenadas[0][metrica.campo] : 1;
   const visiveis = expandido ? ordenadas : ordenadas.slice(0, TOP);
   const temMais = ordenadas.length > TOP;
+
+  // Texto exibido da métrica: se for monetária e a linha trouxer a quebra por
+  // moeda, mostra "R$ … + US$ …" (nunca uma soma mista); senão, o número puro.
+  const textoMetrica = (l: RankingLinha): string => {
+    if (metrica.moeda) {
+      const mapa = metrica.campo === "a" ? l.moedasA : l.moedasB;
+      if (mapa) {
+        const itens = (Object.entries(mapa) as [Moeda, number][]).map(
+          ([moeda, valor]) => ({ valor, moeda })
+        );
+        return totaisPorMoeda(itens);
+      }
+    }
+    return metrica.formato(l[metrica.campo]);
+  };
 
   return (
     <div className="card">
@@ -135,7 +159,7 @@ export default function RankingCard({
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm text-primary truncate">{l.nome}</span>
                       <span className="text-sm tabular-nums text-secondary flex-shrink-0">
-                        {metrica.formato(valor)}
+                        {textoMetrica(l)}
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-elevated overflow-hidden">

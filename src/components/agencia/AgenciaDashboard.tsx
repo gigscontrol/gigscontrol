@@ -31,6 +31,7 @@ import { useContatos } from "@/lib/contatos-context";
 import { useContratos } from "@/lib/contratos-context";
 import { useNavegacao } from "@/components/NavOverlay";
 import { formatBRL } from "@/lib/whatsapp";
+import { totaisPorMoeda } from "@/lib/formatters";
 import {
   resolverPeriodo,
   contarStatCards,
@@ -43,7 +44,7 @@ import {
   rankingOrcamentosPorUsuario,
   MESES_LONGO,
 } from "@/lib/agencia-dashboard";
-import type { AgendaDateRange } from "@/types";
+import type { AgendaDateRange, Moeda } from "@/types";
 import type { HistoricoAcao, ModuloHistorico } from "@/lib/mappers/historico";
 import PageHeader from "../PageHeader";
 import StatCard from "../StatCard";
@@ -183,14 +184,24 @@ export default function AgenciaDashboard() {
     };
   }, [isAdmin]);
 
-  // Formatação das métricas dos rankings.
+  // Formatação das métricas dos rankings. `brl` é só o fallback 1-moeda; quando
+  // `moeda: true`, o RankingCard exibe por moeda (totaisPorMoeda) usando a
+  // quebra que cada linha carrega — nunca soma moedas diferentes (regra-mãe).
   const brl = (n: number) => formatBRL(n);
   const num = (n: number) => String(n);
   const m = (
     label: string,
     campo: "a" | "b",
-    formato: (n: number) => string
-  ): MetricaConfig => ({ label, campo, formato });
+    formato: (n: number) => string,
+    moeda = false
+  ): MetricaConfig => ({ label, campo, formato, moeda });
+
+  // Formata um mapa {moeda → valor} pra exibição (mesmas 2 casas do formatBRL).
+  const fmtMoedaMapa = (mapa: Partial<Record<Moeda, number>>) =>
+    totaisPorMoeda(
+      (Object.entries(mapa) as [Moeda, number][]).map(([moeda, valor]) => ({ valor, moeda })),
+      2
+    );
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -254,7 +265,7 @@ export default function AgenciaDashboard() {
             <AlertaCard
               icon={<AlertTriangle size={15} />}
               label={t("Parcelas atrasadas")}
-              valor={formatBRL(alertas.parcelasAtrasadasValor)}
+              valor={fmtMoedaMapa(alertas.parcelasAtrasadasPorMoeda)}
               sub={`${alertas.parcelasAtrasadasContagem} ${
                 alertas.parcelasAtrasadasContagem === 1 ? t("parcela") : t("parcelas")
               }`}
@@ -302,8 +313,8 @@ export default function AgenciaDashboard() {
               titulo={t("Faturamento por artista")}
               linhas={r1}
               metricas={[
-                m(t("Bruto"), "a", brl),
-                m(t("Taxa de agência"), "b", brl),
+                m(t("Bruto"), "a", brl, true),
+                m(t("Taxa de agência"), "b", brl, true),
               ]}
               vazioLabel={t("Sem dados no período.")}
             />
@@ -311,21 +322,21 @@ export default function AgenciaDashboard() {
               icon={<Users size={16} />}
               titulo={t("Contratantes")}
               linhas={r2}
-              metricas={[m(t("Valor"), "a", brl), m(t("Shows"), "b", num)]}
+              metricas={[m(t("Valor"), "a", brl, true), m(t("Shows"), "b", num)]}
               vazioLabel={t("Sem dados no período.")}
             />
             <RankingCard
               icon={<Building2 size={16} />}
               titulo={t("Casas")}
               linhas={r3}
-              metricas={[m(t("Shows"), "a", num), m(t("Valor"), "b", brl)]}
+              metricas={[m(t("Shows"), "a", num), m(t("Valor"), "b", brl, true)]}
               vazioLabel={t("Sem dados no período.")}
             />
             <RankingCard
               icon={<MapPin size={16} />}
               titulo={t("Cidades")}
               linhas={r4}
-              metricas={[m(t("Valor"), "a", brl), m(t("Shows"), "b", num)]}
+              metricas={[m(t("Valor"), "a", brl, true), m(t("Shows"), "b", num)]}
               vazioLabel={t("Sem dados no período.")}
             />
             <RankingCard
@@ -333,7 +344,7 @@ export default function AgenciaDashboard() {
               titulo={t("Vendas por usuário")}
               linhas={r5}
               metricas={[
-                m(t("Valor"), "a", brl),
+                m(t("Valor"), "a", brl, true),
                 m(t("Nº de vendas"), "b", num),
               ]}
               vazioLabel={t("Sem dados no período.")}
@@ -342,7 +353,7 @@ export default function AgenciaDashboard() {
               icon={<FileText size={16} />}
               titulo={t("Orçamentos por usuário")}
               linhas={r6}
-              metricas={[m(t("Valor"), "a", brl), m(t("Nº"), "b", num)]}
+              metricas={[m(t("Valor"), "a", brl, true), m(t("Nº"), "b", num)]}
               vazioLabel={t("Sem dados no período.")}
             />
           </div>

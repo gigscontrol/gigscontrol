@@ -30,7 +30,7 @@ export function gerarTextoWhatsApp(
 ): string {
   const cidadeNome = ctx.cidade?.nome ?? "—";
   const artistaNome = ctx.artista?.name ?? "—";
-  const valor = formatBRL(orc.valorCache);
+  const valor = formatarMoeda(orc.valorCache, orc.moeda);
   const duracao = formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0);
 
   const linhas: string[] = [];

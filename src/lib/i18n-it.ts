@@ -2768,4 +2768,6 @@ export const IT: Record<string, string> = {
   "Tempo de apresentação": "Durata dell'esibizione",
   "Cachê por extenso": "Cachet in lettere",
   "Plano de parcelas": "Piano di pagamento rateale",
+  "Ticket médio indisponível com múltiplas moedas": "Ticket medio non disponibile con più valute",
+  "Valor {simbolo}": "Importo {simbolo}",
 };

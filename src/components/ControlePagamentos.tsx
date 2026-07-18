@@ -21,13 +21,14 @@ import DateRangeSelector from "./DateRangeSelector";
 import ParcelaDetalheModal from "./ParcelaDetalheModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type StatusParcela,
   type Parcela,
   type AgendaDateRange,
+  type Moeda,
 } from "@/types";
 import { useT } from "@/lib/i18n";
 
@@ -77,6 +78,8 @@ type LinhaParcela = {
   contratante: string;
   nomeEvento: string;
   status: StatusParcela;
+  /** Moeda da venda dona — a parcela herda (não tem moeda própria). */
+  moeda: Moeda;
 };
 
 function fmtData(iso?: string): string {
@@ -130,6 +133,7 @@ export default function ControlePagamentos({
           contratante: v.contratanteNome,
           nomeEvento: v.nomeEvento,
           status: statusEfetivoParcela(parcela),
+          moeda: v.moeda,
         });
       });
     }
@@ -146,18 +150,30 @@ export default function ControlePagamentos({
     [todasParcelas, periodo]
   );
 
-  // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado.
+  // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado. Agrupa por
+  // moeda (a parcela herda a moeda da venda); nunca soma moedas diferentes num
+  // R$ único. `atrasadoNum` é só a soma crua pro alerta de "tem X atrasado".
   const totais = useMemo(() => {
-    let recebido = 0;
-    let aReceber = 0;
-    let atrasado = 0;
+    const recArr: { valor: number; moeda: Moeda }[] = [];
+    const recvArr: { valor: number; moeda: Moeda }[] = [];
+    const atrArr: { valor: number; moeda: Moeda }[] = [];
+    let atrasadoNum = 0;
     for (const l of parcelasPeriodo) {
       if (l.status === "cancelado") continue;
-      if (l.status === "pago") recebido += l.parcela.valor;
-      else if (l.status === "atrasado") atrasado += l.parcela.valor;
-      else aReceber += l.parcela.valor;
+      const item = { valor: l.parcela.valor, moeda: l.moeda };
+      if (l.status === "pago") recArr.push(item);
+      else if (l.status === "atrasado") {
+        atrArr.push(item);
+        atrasadoNum += l.parcela.valor;
+      } else recvArr.push(item);
     }
-    return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
+    return {
+      recebido: totaisPorMoeda(recArr),
+      aReceber: totaisPorMoeda(recvArr),
+      atrasado: totaisPorMoeda(atrArr),
+      total: totaisPorMoeda([...recArr, ...recvArr, ...atrArr]),
+      atrasadoNum,
+    };
   }, [parcelasPeriodo]);
 
   const lista = useMemo(() => {
@@ -241,10 +257,10 @@ export default function ControlePagamentos({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title={t("Total em vendas")} value={formatBRL(totais.total)} icon={<DollarSign size={18} />} accentColor={accent} />
-        <StatCard title={t("Recebido")} value={formatBRL(totais.recebido)} icon={<CheckCircle2 size={18} />} accentColor="var(--success)" />
-        <StatCard title={t("A receber")} value={formatBRL(totais.aReceber)} icon={<CalendarClock size={18} />} accentColor="var(--warning)" />
-        <StatCard title={t("Atrasado")} value={formatBRL(totais.atrasado)} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
+        <StatCard title={t("Total em vendas")} value={totais.total} icon={<DollarSign size={18} />} accentColor={accent} />
+        <StatCard title={t("Recebido")} value={totais.recebido} icon={<CheckCircle2 size={18} />} accentColor="var(--success)" />
+        <StatCard title={t("A receber")} value={totais.aReceber} icon={<CalendarClock size={18} />} accentColor="var(--warning)" />
+        <StatCard title={t("Atrasado")} value={totais.atrasado} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
       </div>
 
       {!ehCobrancas && (
@@ -340,11 +356,11 @@ export default function ControlePagamentos({
         </div>
       )}
 
-      {!ehCobrancas && totais.atrasado > 0 && (
+      {!ehCobrancas && totais.atrasadoNum > 0 && (
         <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "rgba(239,68,68,0.06)" }}>
           <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
           <div className="text-sm text-secondary">
-            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong>{" "}
+            {t("Você tem")} <strong>{totais.atrasado}</strong>{" "}
             {t("em parcelas atrasadas ({n} {parcela}). Filtre por \"Atrasadas\" para ver e cobrar.", {
               n: contadores.atrasado,
               parcela: contadores.atrasado === 1 ? t("parcela") : t("parcelas"),
@@ -452,7 +468,7 @@ function ParcelaRow({
 
       {/* Valor */}
       <div className="text-right tabular-nums font-bold text-primary whitespace-nowrap">
-        {formatBRL(l.parcela.valor)}
+        {formatarMoeda(l.parcela.valor, l.moeda)}
       </div>
 
       {/* Status */}

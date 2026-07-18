@@ -26,9 +26,9 @@ import { useContatos } from "@/lib/contatos-context";
 import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarFaturamento } from "@/lib/contatos-stats";
 import { MODULE_THEMES } from "@/types";
-import type { ContatoCategoria, AgendaDateRange } from "@/types";
+import type { ContatoCategoria, AgendaDateRange, Moeda } from "@/types";
 
 const ACCENT = MODULE_THEMES.contatos.color;
 
@@ -117,17 +117,25 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
 
   // Ranking de contratantes por faturamento NO PERÍODO (só quem teve atividade).
+  // D-RANKING: ordena pelo faturamento BRUTO (heurística — exata no caso de uma
+  // moeda só) mas EXIBE por moeda (faturamentoPorMoeda), sem somar moedas
+  // diferentes num R$ mentiroso.
   const rankingContratantes = useMemo(() => {
     return contratantes
       .map((c) => {
         const vDo = vendasPeriodo.filter((v) => v.contratanteId === c.id);
         const sDo = showsPeriodo.filter((s) => s.contratanteId === c.id);
         const faturamento = vDo.reduce((acc, v) => acc + v.cache, 0);
+        const faturamentoPorMoeda: Partial<Record<Moeda, number>> = {};
+        for (const v of vDo) {
+          faturamentoPorMoeda[v.moeda] = (faturamentoPorMoeda[v.moeda] ?? 0) + v.cache;
+        }
         return {
           contratante: c,
           totalShows: sDo.length,
           totalVendas: vDo.length,
           faturamento,
+          faturamentoPorMoeda,
         };
       })
       .filter((r) => r.faturamento > 0 || r.totalShows > 0 || r.totalVendas > 0)
@@ -146,7 +154,8 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         id: r.contratante.id,
         titulo: r.contratante.nome,
         subtitulo: `${r.totalShows} ${r.totalShows === 1 ? t("show") : t("shows")}`,
-        valor: r.faturamento > 0 ? formatBRL(r.faturamento) : "—",
+        // casas = 2 pra bater exatamente com o antigo formatBRL (whatsapp) daqui.
+        valor: r.faturamento > 0 ? formatarFaturamento(r.faturamentoPorMoeda, 2) : "—",
       })),
     [rankingContratantes, t]
   );
@@ -319,7 +328,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
                       {r.contratante.nome}
                     </span>
                     <span className="tabular-nums text-secondary flex-shrink-0 ml-2">
-                      {r.faturamento > 0 ? formatBRL(r.faturamento) : "—"}
+                      {r.faturamento > 0 ? formatarFaturamento(r.faturamentoPorMoeda, 2) : "—"}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-elevated overflow-hidden">

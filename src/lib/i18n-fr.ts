@@ -2768,4 +2768,6 @@ export const FR: Record<string, string> = {
   "Tempo de apresentação": "Durée de la prestation",
   "Cachê por extenso": "Cachet en toutes lettres",
   "Plano de parcelas": "Échéancier de paiement",
+  "Ticket médio indisponível com múltiplas moedas": "Cachet moyen indisponible avec plusieurs devises",
+  "Valor {simbolo}": "Montant {simbolo}",
 };

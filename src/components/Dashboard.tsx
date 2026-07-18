@@ -25,11 +25,12 @@ import {
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { gradienteSutil } from "@/lib/gradiente";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
   type Parcela,
+  type Moeda,
 } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange } from "@/types";
 import { useT } from "@/lib/i18n";
@@ -88,6 +89,8 @@ type LinhaParcela = {
   artistaNome: string;
   artistaColor: string;
   contratante: string;
+  /** Moeda da venda dona — a parcela herda (não tem moeda própria). */
+  moeda: Moeda;
 };
 
 /** Qual card está com o popup de resumo aberto. */
@@ -143,6 +146,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
           artistaNome: artista?.name ?? "—",
           artistaColor: artista?.color ?? "#888",
           contratante: v.contratanteNome,
+          moeda: v.moeda,
         });
       });
     }
@@ -156,17 +160,42 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
   );
 
   const totais = useMemo(() => {
-    let recebido = 0;
-    let aReceber = 0;
-    let atrasado = 0;
+    // Agrupa por moeda (a parcela herda a moeda da venda). Nunca soma moedas
+    // diferentes num R$ mentiroso. Os `*Num` são somas cruas (independem da
+    // moeda) usadas só como heurística nas barras/percentuais de progresso —
+    // no caso 1-moeda (o normal) equivalem exatamente ao total real.
+    const recArr: { valor: number; moeda: Moeda }[] = [];
+    const recvArr: { valor: number; moeda: Moeda }[] = [];
+    const atrArr: { valor: number; moeda: Moeda }[] = [];
+    let recebidoNum = 0;
+    let aReceberNum = 0;
+    let atrasadoNum = 0;
     for (const l of parcelasPeriodo) {
       const st = statusEfetivoParcela(l.parcela);
       if (st === "cancelado") continue; // baixada/isenta sai do a-receber
-      if (st === "pago") recebido += l.parcela.valor;
-      else if (st === "atrasado") atrasado += l.parcela.valor;
-      else aReceber += l.parcela.valor;
+      const item = { valor: l.parcela.valor, moeda: l.moeda };
+      if (st === "pago") {
+        recArr.push(item);
+        recebidoNum += l.parcela.valor;
+      } else if (st === "atrasado") {
+        atrArr.push(item);
+        atrasadoNum += l.parcela.valor;
+      } else {
+        recvArr.push(item);
+        aReceberNum += l.parcela.valor;
+      }
     }
-    return { recebido, aReceber, atrasado, total: recebido + aReceber + atrasado };
+    return {
+      recebido: totaisPorMoeda(recArr),
+      aReceber: totaisPorMoeda(recvArr),
+      atrasado: totaisPorMoeda(atrArr),
+      total: totaisPorMoeda([...recArr, ...recvArr, ...atrArr]),
+      falta: totaisPorMoeda([...recvArr, ...atrArr]),
+      recebidoNum,
+      aReceberNum,
+      atrasadoNum,
+      totalNum: recebidoNum + aReceberNum + atrasadoNum,
+    };
   }, [parcelasPeriodo]);
 
   // Próximos vencimentos (pendentes/atrasados, ordenado por data)
@@ -189,7 +218,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     id: `${l.vendaId}::${l.parcela.id}`,
     titulo: l.contratante,
     subtitulo: `${l.vendaNumero} · ${t("parc")} ${l.indice}/${l.total} · ${fmtData(l.parcela.dataVencimento)}`,
-    valor: formatBRL(l.parcela.valor),
+    valor: formatarMoeda(l.parcela.valor, l.moeda),
   });
   const itensRecebidos = useMemo(
     () =>
@@ -223,20 +252,26 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
   );
 
   // Faturamento por artista — soma as parcelas do período (exclui canceladas).
+  // `valor` (soma crua) só ordena e dimensiona a barra; a exibição usa `valorStr`
+  // agrupado por moeda (um artista pode ter vendas em moedas diferentes).
   const porArtista = useMemo(() => {
     return artistas.filter((d) => selectedArtistas.includes(d.id))
-      .map((artista) => ({
-        artista,
-        valor: parcelasPeriodo
-          .filter((l) => l.artistaId === artista.id && statusEfetivoParcela(l.parcela) !== "cancelado")
-          .reduce((acc, l) => acc + l.parcela.valor, 0),
-      }))
+      .map((artista) => {
+        const linhas = parcelasPeriodo.filter(
+          (l) => l.artistaId === artista.id && statusEfetivoParcela(l.parcela) !== "cancelado"
+        );
+        return {
+          artista,
+          valor: linhas.reduce((acc, l) => acc + l.parcela.valor, 0),
+          valorStr: totaisPorMoeda(linhas.map((l) => ({ valor: l.parcela.valor, moeda: l.moeda }))),
+        };
+      })
       .sort((a, b) => b.valor - a.valor);
   }, [parcelasPeriodo, selectedArtistas, artistas]);
 
   const maxArtista = Math.max(1, ...porArtista.map((p) => p.valor));
   const pctRecebido =
-    totais.total > 0 ? Math.round((totais.recebido / totais.total) * 100) : 0;
+    totais.totalNum > 0 ? Math.round((totais.recebidoNum / totais.totalNum) * 100) : 0;
 
   const vazio = (msg: string) => (
     <div className="text-sm text-muted text-center py-4">{msg}</div>
@@ -277,7 +312,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total em vendas")}>
           <StatCard
             title={t("Total em Vendas")}
-            value={formatBRL(totais.total)}
+            value={totais.total}
             icon={<DollarSign size={16} />}
             accentColor={accent}
             subtitle={t("Soma de todas as parcelas")}
@@ -286,7 +321,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <ClickableStat onClick={() => setResumo("recebido")} ariaLabel={t("Resumo do recebido")}>
           <StatCard
             title={t("Recebido")}
-            value={formatBRL(totais.recebido)}
+            value={totais.recebido}
             icon={<CheckCircle2 size={16} />}
             accentColor="var(--success)"
             subtitle={t("{pct}% do total", { pct: pctRecebido })}
@@ -295,7 +330,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <ClickableStat onClick={() => setResumo("areceber")} ariaLabel={t("Resumo do a receber")}>
           <StatCard
             title={t("A Receber")}
-            value={formatBRL(totais.aReceber)}
+            value={totais.aReceber}
             icon={<CalendarClock size={16} />}
             accentColor="var(--warning)"
             subtitle={t("Parcelas pendentes")}
@@ -304,7 +339,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <ClickableStat onClick={() => setResumo("atrasado")} ariaLabel={t("Resumo do atrasado")}>
           <StatCard
             title={t("Atrasado")}
-            value={formatBRL(totais.atrasado)}
+            value={totais.atrasado}
             icon={<AlertTriangle size={16} />}
             accentColor="var(--danger)"
             subtitle={t("Vencidas e não pagas")}
@@ -327,8 +362,8 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
           />
         </div>
         <div className="flex justify-between mt-2 text-xs text-muted">
-          <span>{t("Recebido")} {formatBRL(totais.recebido)}</span>
-          <span>{t("Falta")} {formatBRL(totais.aReceber + totais.atrasado)}</span>
+          <span>{t("Recebido")} {totais.recebido}</span>
+          <span>{t("Falta")} {totais.falta}</span>
         </div>
       </div>
 
@@ -376,7 +411,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
                       </div>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
-                      {formatBRL(l.parcela.valor)}
+                      {formatarMoeda(l.parcela.valor, l.moeda)}
                     </span>
                     <span className={`badge ${label.badge}`}>{t(label.label)}</span>
                   </button>
@@ -398,12 +433,12 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {porArtista.map(({ artista, valor }) => (
+              {porArtista.map(({ artista, valor, valorStr }) => (
                 <div key={artista.id}>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-primary">{artista.name}</span>
                     <span className="tabular-nums text-secondary">
-                      {formatBRL(valor)}
+                      {valorStr}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-elevated overflow-hidden">
@@ -422,7 +457,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         </div>
       </div>
 
-      {totais.atrasado > 0 && (
+      {totais.atrasadoNum > 0 && (
         <button
           onClick={() => setResumo("atrasado")}
           className="card mt-4 flex items-center gap-3 w-full text-left hover:border-border-strong transition-colors"
@@ -437,7 +472,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             style={{ color: "var(--danger)" }}
           />
           <div className="flex-1 text-sm text-secondary">
-            {t("Você tem")} <strong>{formatBRL(totais.atrasado)}</strong> {t("em parcelas atrasadas. Toque para resolver no Controle de Pagamentos.")}
+            {t("Você tem")} <strong>{totais.atrasado}</strong> {t("em parcelas atrasadas. Toque para resolver no Controle de Pagamentos.")}
           </div>
           <ChevronRight size={16} className="text-muted flex-shrink-0" />
         </button>
@@ -451,10 +486,10 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         subtitle={tituloPeriodo}
         accentColor={accent}
       >
-        <ResumoNumero valor={formatBRL(totais.total)} label={t("Soma de todas as parcelas")} accentColor={accent} />
-        <ResumoLinha label={t("Recebido")} valor={formatBRL(totais.recebido)} />
-        <ResumoLinha label={t("A Receber")} valor={formatBRL(totais.aReceber)} />
-        <ResumoLinha label={t("Atrasado")} valor={formatBRL(totais.atrasado)} />
+        <ResumoNumero valor={totais.total} label={t("Soma de todas as parcelas")} accentColor={accent} />
+        <ResumoLinha label={t("Recebido")} valor={totais.recebido} />
+        <ResumoLinha label={t("A Receber")} valor={totais.aReceber} />
+        <ResumoLinha label={t("Atrasado")} valor={totais.atrasado} />
         <ResumoLinha label={t("Progresso de recebimento")} valor={`${pctRecebido}%`} destaque />
         <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
@@ -466,7 +501,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         subtitle={tituloPeriodo}
         accentColor="var(--success)"
       >
-        <ResumoNumero valor={formatBRL(totais.recebido)} label={t("{pct}% do total", { pct: pctRecebido })} accentColor="var(--success)" />
+        <ResumoNumero valor={totais.recebido} label={t("{pct}% do total", { pct: pctRecebido })} accentColor="var(--success)" />
         {itensRecebidos.length > 0 ? (
           <ResumoLista itens={itensRecebidos} onItemClick={abrirVendaDoItem} />
         ) : (
@@ -482,7 +517,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         subtitle={tituloPeriodo}
         accentColor="var(--warning)"
       >
-        <ResumoNumero valor={formatBRL(totais.aReceber)} label={t("Parcelas pendentes")} accentColor="var(--warning)" />
+        <ResumoNumero valor={totais.aReceber} label={t("Parcelas pendentes")} accentColor="var(--warning)" />
         {itensAReceber.length > 0 ? (
           <ResumoLista itens={itensAReceber} onItemClick={abrirVendaDoItem} />
         ) : (
@@ -498,7 +533,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         subtitle={tituloPeriodo}
         accentColor="var(--danger)"
       >
-        <ResumoNumero valor={formatBRL(totais.atrasado)} label={t("Vencidas e não pagas")} accentColor="var(--danger)" />
+        <ResumoNumero valor={totais.atrasado} label={t("Vencidas e não pagas")} accentColor="var(--danger)" />
         {itensAtrasados.length > 0 ? (
           <ResumoLista itens={itensAtrasados} onItemClick={abrirVendaDoItem} />
         ) : (

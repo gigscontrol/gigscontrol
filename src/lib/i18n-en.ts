@@ -3774,4 +3774,6 @@ export const EN: Record<string, string> = {
   "Tempo de apresentação": "Performance duration",
   "Cachê por extenso": "Fee in words",
   "Plano de parcelas": "Payment schedule",
+  "Ticket médio indisponível com múltiplas moedas": "Average ticket unavailable with multiple currencies",
+  "Valor {simbolo}": "Amount {simbolo}",
 };

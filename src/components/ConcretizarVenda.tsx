@@ -1353,6 +1353,7 @@ export default function ConcretizarVenda({
           horario: horarioInicio,
           horarioFim,
           cache: cache ? parseValorBR(cache) : undefined,
+          moeda,
           lineUp,
           efeitos,
           camarim,
@@ -2330,6 +2331,7 @@ export default function ConcretizarVenda({
                 onModoChange={setModoParcela}
                 accent={accent}
                 error={errors.parcelas}
+                moeda={moeda}
               />
             </div>
           </>

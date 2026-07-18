@@ -2768,4 +2768,6 @@ export const DE: Record<string, string> = {
   "Tempo de apresentação": "Auftrittsdauer",
   "Cachê por extenso": "Gage in Worten",
   "Plano de parcelas": "Ratenplan",
+  "Ticket médio indisponível com múltiplas moedas": "Durchschnittlicher Ticket bei mehreren Währungen nicht verfügbar",
+  "Valor {simbolo}": "Betrag {simbolo}",
 };

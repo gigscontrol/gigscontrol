@@ -9,16 +9,23 @@ import {
   getCidadeStats,
   getCidadeNome,
   getCidadePrincipalContratante,
-  formatBRL,
+  formatarFaturamento,
 } from "@/lib/contatos-stats";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
+import { useVendas } from "@/lib/vendas-context";
 import { MODULE_THEMES } from "@/types";
 import { useT } from "@/lib/i18n";
-import { mascararCpfCnpj } from "@/lib/formatters";
+import { mascararCpfCnpj, formatarMoeda } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
 import { useState } from "react";
-import type { Contratante, Casa, Cidade, Show } from "@/types";
+import type { Contratante, Casa, Cidade, Show, Venda, Moeda } from "@/types";
+
+/** Moeda de um show herdada da venda que o gerou (show.vendaId → venda.moeda);
+ *  sem venda vinculada → BRL, mantendo a agência 100% BRL idêntica a hoje. */
+function moedaDoShow(show: Show, vendas: Venda[]): Moeda {
+  return (show.vendaId && vendas.find((v) => v.id === show.vendaId)?.moeda) || "BRL";
+}
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -77,6 +84,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
   const { cidades, contratantes } = useContatos();
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
+  const { vendas } = useVendas();
   // D8 — estado do modal "ver todos os shows" da casa. Mora aqui (no
   // componente-pai) porque CasaDetail é uma function declarada dentro deste
   // corpo e é recriada a cada render — um useState dentro dela reiniciaria
@@ -117,7 +125,15 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
     // Evita stale prop: `item` chega por valor e pode ficar velho depois que
     // o popup de divergência (WI-A) atualiza o contato com o detalhe aberto.
     const atual = contratantes.find((c) => c.id === item.id) ?? item;
-    const stats = getContratanteStats(atual.id, shows, orcamentos);
+    const stats = getContratanteStats(atual.id, shows, orcamentos, vendas);
+    // D-TICKET — ticket médio só faz sentido com uma moeda; com vendas em moedas
+    // diferentes o número seria aritmética falsa → mostra "—" com tooltip.
+    const ticketMedioLabel =
+      stats.moedaUnica === null
+        ? "—"
+        : stats.ticketMedio > 0
+        ? formatarMoeda(stats.ticketMedio, stats.moedaUnica, 0)
+        : "—";
     const showsContratante = shows.filter((s) => s.contratanteId === atual.id);
     // D6 — cidade "principal" exibida = cidade do último show REALIZADO,
     // com fallback pro cidade_id gravado. Só exibição — não mexe no
@@ -152,7 +168,12 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           <MetricTile label={t("Orçamentos")} value={stats.totalOrcamentos.toString()} accent={accent} icon={<FileText size={14} />} />
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label={t("Ticket médio")} value={stats.ticketMedio > 0 ? formatBRL(stats.ticketMedio) : "—"} icon={<Hash size={14} />} />
+          <MetricTile
+            label={t("Ticket médio")}
+            value={ticketMedioLabel}
+            hint={stats.moedaUnica === null ? t("Ticket médio indisponível com múltiplas moedas") : undefined}
+            icon={<Hash size={14} />}
+          />
           <MetricTile
             label={t("Último show")}
             value={
@@ -239,6 +260,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                     key={show.id}
                     show={show}
                     valorComLabel
+                    moeda={moedaDoShow(show, vendas)}
                     subtitulo={`${show.venue} · ${show.location} · ${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
                     onAbrirShow={onAbrirShow}
                   />
@@ -252,7 +274,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
   }
 
   function CasaDetail({ item, accent, onEdit }: { item: Casa; accent: string; onEdit: () => void }) {
-    const stats = getCasaStats(item.id, shows);
+    const stats = getCasaStats(item.id, shows, vendas);
     // Mais recente primeiro; shows sem data ficam por último.
     const showsCasa = [...shows.filter((s) => s.casaId === item.id)].sort((a, b) => {
       if (!a.data && !b.data) return 0;
@@ -294,7 +316,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} accent={accent} icon={<Banknote size={14} />} />
+          <MetricTile label={t("Faturamento")} value={formatarFaturamento(stats.faturamentoPorMoeda)} accent={accent} icon={<Banknote size={14} />} />
           <MetricTile label={t("Capacidade")} value={item.capacidade?.toLocaleString("pt-BR") ?? "—"} icon={<Users size={14} />} />
           <MetricTile label={t("Artistas que tocaram")} value={stats.artistasQueTocaram.length.toString()} icon={<Music size={14} />} />
         </div>
@@ -374,6 +396,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                   <LinhaShow
                     key={show.id}
                     show={show}
+                    moeda={moedaDoShow(show, vendas)}
                     subtitulo={`${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
                     onAbrirShow={onAbrirShow}
                   />
@@ -395,7 +418,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
               id: show.id,
               titulo: `${show.artistaNome} — ${t("Dia {n}", { n: show.dayId })}`,
               subtitulo: `${t(STATUS_BADGES[show.status]?.label ?? show.status)}${show.time ? ` · ${show.time}` : ""}`,
-              valor: show.valor ? formatBRL(show.valor) : undefined,
+              valor: show.valor ? formatarMoeda(show.valor, moedaDoShow(show, vendas), 0) : undefined,
             }))}
             maxItens={showsCasa.length}
             onItemClick={(id) => {
@@ -410,7 +433,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
 
   function CidadeDetail({ item, accent, onEdit }: { item: Cidade; accent: string; onEdit: () => void }) {
     const { casas } = useContatos();
-    const stats = getCidadeStats(item.id, shows, casas);
+    const stats = getCidadeStats(item.id, shows, casas, vendas);
     const casasAqui = casas.filter((c) => c.cidadeId === item.id);
     const showsCidade = shows.filter((s) => s.cidadeId === item.id);
 
@@ -435,7 +458,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
           <MetricTile label={t("Casas cadastradas")} value={stats.totalCasas.toString()} accent={accent} icon={<Building2 size={14} />} />
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
-          <MetricTile label={t("Faturamento")} value={formatBRL(stats.faturamento)} icon={<Banknote size={14} />} />
+          <MetricTile label={t("Faturamento")} value={formatarFaturamento(stats.faturamentoPorMoeda)} icon={<Banknote size={14} />} />
           <MetricTile
             label={t("Top artista")}
             value={stats.topArtista ? `${stats.topArtista.nome} (${stats.topArtista.shows})` : "—"}
@@ -479,6 +502,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                   <LinhaShow
                     key={show.id}
                     show={show}
+                    moeda={moedaDoShow(show, vendas)}
                     subtitulo={`${show.venue} · ${t("Dia {n}", { n: show.dayId })}`}
                     onAbrirShow={onAbrirShow}
                   />
@@ -500,12 +524,15 @@ function MetricTile({
   accent,
   icon,
   small,
+  hint,
 }: {
   label: string;
   value: string;
   accent?: string;
   icon: React.ReactNode;
   small?: boolean;
+  /** Tooltip no valor (ex.: explicar o "—" do ticket médio multi-moeda). */
+  hint?: string;
 }) {
   return (
     <div className="card">
@@ -521,7 +548,9 @@ function MetricTile({
           {icon}
         </div>
       </div>
-      <div className={small ? "text-base font-semibold" : "stat-value"}>{value}</div>
+      <div className={small ? "text-base font-semibold" : "stat-value"} title={hint}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -558,12 +587,15 @@ function LinhaShow({
   subtitulo,
   valorComLabel,
   onAbrirShow,
+  moeda = "BRL",
 }: {
   show: Show;
   subtitulo: React.ReactNode;
   /** "Valor" com rótulo acima (Histórico do contratante) vs. só o número (casa/cidade). */
   valorComLabel?: boolean;
   onAbrirShow?: (id: string) => void;
+  /** Moeda do valor do show (herdada da venda). Default BRL → agência legado igual. */
+  moeda?: Moeda;
 }) {
   const t = useT();
   const badge = STATUS_BADGES[show.status] ?? STATUS_BADGES.pendente;
@@ -583,10 +615,10 @@ function LinhaShow({
         valorComLabel ? (
           <div className="text-right flex-shrink-0">
             <div className="text-xs text-muted">{t("Valor")}</div>
-            <div className="text-sm font-semibold tabular-nums">{formatBRL(show.valor)}</div>
+            <div className="text-sm font-semibold tabular-nums">{formatarMoeda(show.valor, moeda, 0)}</div>
           </div>
         ) : (
-          <div className="text-sm font-semibold tabular-nums flex-shrink-0">{formatBRL(show.valor)}</div>
+          <div className="text-sm font-semibold tabular-nums flex-shrink-0">{formatarMoeda(show.valor, moeda, 0)}</div>
         )
       ) : null}
     </>
