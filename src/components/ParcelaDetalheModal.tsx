@@ -23,7 +23,7 @@ import { useAviso } from "./ConfirmarModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useAuth } from "@/lib/auth-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 import { useT } from "@/lib/i18n";
 
@@ -142,7 +142,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
         {/* ===== RESUMO ===== */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold text-primary tabular-nums">{formatBRL(parcela.valor)}</span>
+            <span className="text-2xl font-bold text-primary tabular-nums">{formatarMoeda(parcela.valor, venda.moeda)}</span>
             <span className="text-sm text-muted">({parcela.percentual.toFixed(0)}%)</span>
           </div>
           <span className={`badge ${st.badge}`}>

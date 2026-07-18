@@ -1,5 +1,5 @@
-import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao } from "@/types";
-import { formatBRL } from "./whatsapp";
+import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
+import { formatarMoeda } from "./formatters";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
  *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
@@ -8,6 +8,9 @@ export type DadosFechamento = {
   contratanteEmail?: string;
   contratanteTelefone?: string;
   contratanteDocumento?: string;
+  /** Razão social — só se o documento for CNPJ (D2). O modelo é gerado ANTES
+   *  de saber isso, então o rótulo já avisa "(se CNPJ)". */
+  contratanteRazaoSocial?: string;
   contratanteEndereco?: string;
   nomeEvento?: string;
   eventoInstagram?: string;
@@ -18,6 +21,8 @@ export type DadosFechamento = {
   horario?: string;
   horarioFim?: string;
   cache?: number;
+  /** Moeda da venda — o cachê é formatado nela. Ausente → BRL (caminho de ouro). */
+  moeda?: Moeda;
   lineUp?: string[];
   efeitos?: ItemQuantidade[];
   camarim?: ItemQuantidade[];
@@ -53,6 +58,9 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     campo("E-mail", v.contratanteEmail),
     campo("Telefone", v.contratanteTelefone ? `+${v.contratanteTelefone.replace(/\D/g, "")}` : ""),
     campo("CPF/CNPJ", v.contratanteDocumento),
+    // D4 — só faz sentido pra CNPJ; como o modelo é gerado antes de saber o
+    // documento, o próprio rótulo deixa isso claro pro contratante.
+    campo("Razão Social (se CNPJ)", v.contratanteRazaoSocial),
     campo("Endereço do contratante/empresa", v.contratanteEndereco),
   ];
 
@@ -64,7 +72,7 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     campo("Endereço", v.enderecoLocal),
     campo("Data", fmtData(v.dataShow)),
     campo("Horário da apresentação", v.horarioFim ? `${v.horario} — ${v.horarioFim}` : v.horario),
-    campo("Cachê", v.cache ? formatBRL(v.cache) : ""),
+    campo("Cachê", v.cache ? formatarMoeda(v.cache, v.moeda ?? "BRL") : ""),
     campo("Line-UP", v.lineUp && v.lineUp.length ? v.lineUp.join(", ") : ""),
   ];
 

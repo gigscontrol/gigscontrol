@@ -17,6 +17,7 @@ import type {
   Parcela,
   ItemQuantidade,
   LogisticaSelecao,
+  Moeda,
 } from "@/types";
 
 /**
@@ -36,6 +37,18 @@ export type NovaVendaInput = {
         emailNovo?: string;
         telefoneNovo?: string;
         documentoNovo?: string;
+        /**
+         * Razão social do documento (migração 91) — só quando ele é CNPJ. Segue
+         * a regra do documento: acumula/atualiza em silêncio (D6), nunca entra
+         * no popup de divergência.
+         */
+        razaoSocialNovo?: string;
+        /**
+         * Escolha manual PF/Empresa (B4) — só vem preenchida em país AMBÍGUO
+         * (sem regra automática). País com regra deriva o tipo do documento e
+         * ignora este campo com segurança. Persiste no item do jsonb `documentos`.
+         */
+        documentoTipo?: "pf" | "pj";
         paisNovo?: string;
         observacoesNovo?: string;
         /**
@@ -58,6 +71,8 @@ export type NovaVendaInput = {
           email: string;
           telefone: string;
           documento: string;
+          /** Vazio/ausente quando o documento não é CNPJ. */
+          razaoSocial?: string;
         };
       }
     | {
@@ -66,6 +81,10 @@ export type NovaVendaInput = {
         email: string;
         telefone: string;
         documento: string;
+        /** Só quando o documento é de empresa. */
+        razaoSocial?: string;
+        /** Escolha manual PF/Empresa (B4) — só em país ambíguo. Ver acima. */
+        documentoTipo?: "pf" | "pj";
         pais: string;
         cidadeId: string;
       };
@@ -89,6 +108,8 @@ export type NovaVendaInput = {
   artistaId: string; // UUID do artista (workspace.artistas)
   lineUp?: string[];
   cache: number;
+  /** Moeda da venda (migração 92). Default = moeda da agência. */
+  moeda: Moeda;
   duracaoHoras: number;
   duracaoMinutos?: number;
   camarim: ItemQuantidade[];
@@ -104,6 +125,15 @@ export type NovaVendaInput = {
 
   observacoes?: string;
   infoExtra?: string;
+};
+
+/** Os campos `contratante_*` que a venda GRAVA (snapshot do momento da venda). */
+type ContratanteSnapshot = {
+  nome: string;
+  email: string;
+  telefone: string;
+  documento: string;
+  razaoSocial: string;
 };
 
 type VendasContextValue = {
@@ -155,6 +185,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.contratanteEmail !== undefined) out.contratante_email = p.contratanteEmail;
   if (p.contratanteTelefone !== undefined) out.contratante_telefone = p.contratanteTelefone;
   if (p.contratanteDocumento !== undefined) out.contratante_documento = p.contratanteDocumento;
+  if (p.contratanteRazaoSocial !== undefined) out.contratante_razao_social = p.contratanteRazaoSocial || null;
   if (p.contratanteEndereco !== undefined) out.contratante_endereco = p.contratanteEndereco;
   if (p.nomeEvento !== undefined) out.nome_evento = p.nomeEvento;
   if (p.eventoInstagram !== undefined) out.evento_instagram = p.eventoInstagram;
@@ -169,6 +200,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.artistaId !== undefined) out.artist_id = p.artistaId || null;
   if (p.lineUp !== undefined) out.line_up = p.lineUp;
   if (p.cache !== undefined) out.cache = p.cache;
+  if (p.moeda !== undefined) out.moeda = p.moeda;
   if (p.duracaoHoras !== undefined) out.duracao_horas = p.duracaoHoras;
   if (p.duracaoMinutos !== undefined) out.duracao_minutos = p.duracaoMinutos;
   if (p.camarim !== undefined) out.camarim = p.camarim;
@@ -233,14 +265,15 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       input: NovaVendaInput
     ): Promise<{
       contratanteId: string;
-      contratanteSnapshot: { nome: string; email: string; telefone: string; documento: string };
+      contratanteSnapshot: ContratanteSnapshot;
     }> => {
       let contratanteId: string;
-      let contratanteSnapshot = {
+      let contratanteSnapshot: ContratanteSnapshot = {
         nome: "",
         email: "",
         telefone: "",
         documento: "",
+        razaoSocial: "",
       };
 
       if (input.contratante.tipo === "existente") {
@@ -250,11 +283,13 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         if (input.contratante.emailNovo !== undefined) patch.email = input.contratante.emailNovo;
         if (input.contratante.telefoneNovo !== undefined) patch.telefone = input.contratante.telefoneNovo;
         if (input.contratante.documentoNovo !== undefined) patch.documento = input.contratante.documentoNovo;
+        if (input.contratante.razaoSocialNovo !== undefined) patch.razaoSocial = input.contratante.razaoSocialNovo;
+        if (input.contratante.documentoTipo !== undefined) patch.documentoTipo = input.contratante.documentoTipo;
         if (input.contratante.paisNovo !== undefined) patch.pais = input.contratante.paisNovo;
         if (input.contratante.cidadeIdNovo !== undefined) patch.cidadeId = input.contratante.cidadeIdNovo;
         if (input.contratante.enderecoNovo !== undefined) patch.endereco = input.contratante.enderecoNovo;
         const snap = input.contratante.snapshot;
-        if (snap) contratanteSnapshot = { ...snap };
+        if (snap) contratanteSnapshot = { ...snap, razaoSocial: snap.razaoSocial ?? "" };
         if (Object.keys(patch).length > 0) {
           try {
             const atual = await updateContratante(contratanteId, patch);
@@ -264,6 +299,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
                 email: atual.email ?? "",
                 telefone: atual.telefone ?? "",
                 documento: atual.documento ?? "",
+                razaoSocial: atual.razaoSocial ?? "",
               };
             }
           } catch (e) {
@@ -288,6 +324,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
                 email: patch.email ?? "",
                 telefone: patch.telefone ?? "",
                 documento: patch.documento ?? "",
+                razaoSocial: patch.razaoSocial ?? "",
               };
             }
           }
@@ -298,15 +335,20 @@ export function VendasProvider({ children }: { children: ReactNode }) {
           email: input.contratante.email,
           telefone: input.contratante.telefone,
           documento: input.contratante.documento,
+          razaoSocial: input.contratante.razaoSocial,
+          documentoTipo: input.contratante.documentoTipo,
           pais: input.contratante.pais,
           cidadeId: input.contratante.cidadeId,
         });
         contratanteId = novo.id;
+        // Snapshot da razão social vem do RETORNO do servidor: é ele que decide
+        // se ela sobrevive (só quando CNPJ — migração 91).
         contratanteSnapshot = {
           nome: novo.nome,
           email: novo.email ?? "",
           telefone: novo.telefone,
           documento: novo.documento ?? "",
+          razaoSocial: novo.razaoSocial ?? "",
         };
       }
 
@@ -323,7 +365,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
     (
       input: NovaVendaInput,
       contratanteId: string,
-      contratanteSnapshot: { nome: string; email: string; telefone: string; documento: string }
+      contratanteSnapshot: ContratanteSnapshot
     ): Record<string, unknown> => {
       const payload: Record<string, unknown> = {
         contratante_id: contratanteId,
@@ -331,6 +373,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         contratante_email: contratanteSnapshot.email,
         contratante_telefone: contratanteSnapshot.telefone,
         contratante_documento: contratanteSnapshot.documento,
+        contratante_razao_social: contratanteSnapshot.razaoSocial || null,
         contratante_endereco: input.contratanteEndereco,
         nome_evento: input.nomeEvento,
         evento_instagram: input.eventoInstagram ?? null,
@@ -347,6 +390,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         artist_id: input.artistaId || null,
         line_up: input.lineUp ?? [],
         cache: input.cache,
+        moeda: input.moeda,
         duracao_horas: input.duracaoHoras,
         duracao_minutos: input.duracaoMinutos ?? null,
         camarim: input.camarim,

@@ -14,6 +14,10 @@ export type CamposFechamento = {
   contratanteNome?: string;
   contratanteEmail?: string;
   contratanteDocumento?: string;
+  /** Razão social — só faz sentido quando o documento é CNPJ (D2), mas o
+   *  parser não sabe disso: quem decide se aplica é quem consome o resultado
+   *  (o campo pertence ao DOCUMENTO, não à pessoa — D1). */
+  contratanteRazaoSocial?: string;
   contratanteEndereco?: string;
   nomeEvento?: string;
   eventoInstagram?: string;
@@ -47,6 +51,7 @@ const NOME_AMIGAVEL: Record<ChaveCampo, string> = {
   contratanteNome: "Nome",
   contratanteEmail: "E-mail",
   contratanteDocumento: "CPF/CNPJ",
+  contratanteRazaoSocial: "Razão Social",
   contratanteEndereco: "Endereço",
   nomeEvento: "Evento",
   eventoInstagram: "Instagram",
@@ -67,6 +72,9 @@ const ROTULOS: { key: ChaveCampo; nomes: string[] }[] = [
   { key: "contratanteNome", nomes: ["nome", "nome do contratante", "nome do contratante/empresa", "contratante"] },
   { key: "contratanteEmail", nomes: ["e-mail", "email"] },
   { key: "contratanteDocumento", nomes: ["cpf/cnpj", "cpf", "cnpj", "documento", "cpf ou cnpj"] },
+  // "(se cnpj)" é o rótulo que o texto modelo manda (D4) — o contratante pode
+  // devolver com ou sem o parêntese; acento já cai no norm().
+  { key: "contratanteRazaoSocial", nomes: ["razao social", "razao social (se cnpj)", "razao social/nome fantasia"] },
   { key: "contratanteEndereco", nomes: ["endereco do contratante/empresa", "endereco do contratante", "endereco da empresa"] },
   { key: "eventoInstagram", nomes: ["instagram", "insta"] },
   { key: "capacidadePublico", nomes: ["capacidade de publico", "capacidade", "publico", "lotacao"] },
@@ -101,9 +109,20 @@ type Rotulo =
   | { tipo: "setor"; nome: string; catalogo: readonly string[] | null; inline: string }
   | null;
 
+// Rótulos aceitos SEM dois-pontos (D4) — a linha inteira precisa ser só o
+// rótulo (senão viraria falso-positivo pegando texto solto). Hoje só "Razão
+// Social" precisa disso; os demais campos seguem exigindo ":" como sempre.
+const ROTULOS_SEM_DOIS_PONTOS = new Set(["razao social", "razao social (se cnpj)", "razao social/nome fantasia"]);
+
 function classificar(linha: string): Rotulo {
   const idx = linha.indexOf(":");
-  if (idx === -1) return null;
+  if (idx === -1) {
+    const linhaN = norm(linha);
+    if (ROTULOS_SEM_DOIS_PONTOS.has(linhaN)) {
+      return { tipo: "campo", key: "contratanteRazaoSocial", inline: "" };
+    }
+    return null;
+  }
   const rotuloN = norm(linha.slice(0, idx));
   const inline = linha.slice(idx + 1).trim();
   const campo = ROTULOS.find((e) => e.nomes.includes(rotuloN));
@@ -296,6 +315,9 @@ function aplicar(campos: CamposFechamento, key: ChaveCampo, valorBruto: string):
       campos.contratanteDocumento = d;
       return true;
     }
+    case "contratanteRazaoSocial":
+      campos.contratanteRazaoSocial = v;
+      return true;
     case "capacidadePublico": {
       const d = v.replace(/\D/g, "");
       if (!d) return false;

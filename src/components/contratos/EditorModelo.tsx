@@ -31,6 +31,7 @@ import type {
   SecaoModelo,
   ItemClausula,
   EstiloModelo,
+  IdiomaModelo,
 } from "@/lib/mappers/contratoModelo";
 import { estiloParaCorpo } from "@/lib/mappers/contratoModelo";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
@@ -49,6 +50,8 @@ type Props = {
   nomeInicial: string;
   secoesIniciais: SecaoModelo[];
   estiloInicial: EstiloModelo;
+  /** Idioma do modelo — persistido no JSON de `corpo` ao salvar (dirige o A4). */
+  idioma: IdiomaModelo;
   onVoltar: () => void;
   onSalvo: () => void;
 };
@@ -154,6 +157,7 @@ export default function EditorModelo({
   nomeInicial,
   secoesIniciais,
   estiloInicial,
+  idioma,
   onVoltar,
   onSalvo,
 }: Props) {
@@ -163,6 +167,10 @@ export default function EditorModelo({
 
   const [nome, setNome] = useState(nomeInicial);
   const [secoes, setSecoes] = useState<SecaoModelo[]>(secoesIniciais);
+  // Idioma do modelo (fallbacks "Não informado" + por-extenso na geração).
+  // Editável aqui — sem o seletor, modelo criado pelo usuário ficaria preso
+  // no "pt" (só os padrões BR/Global nascem marcados).
+  const [idiomaModelo, setIdiomaModelo] = useState<IdiomaModelo>(idioma);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState(false);
@@ -439,8 +447,8 @@ export default function EditorModelo({
         nome: nome.trim() || "Modelo sem nome",
         tipo: "editavel" as const,
         secoes,
-        // Cores do modelo serializadas na coluna `corpo` (sem migration).
-        corpo: estiloParaCorpo(estilo),
+        // Cores + idioma do modelo serializados na coluna `corpo` (sem migration).
+        corpo: estiloParaCorpo(estilo, idiomaModelo),
       };
       if (modeloId) {
         await atualizarModelo(modeloId, payload);
@@ -599,6 +607,23 @@ export default function EditorModelo({
           placeholder={t("Nome do modelo")}
           className="campo-input flex-1 min-w-[220px] max-w-md font-medium"
         />
+
+        {/* Idioma do contrato gerado (fallbacks + por-extenso). Nomes das
+            línguas ficam autonomeados de propósito — cada uma se identifica. */}
+        <select
+          value={idiomaModelo}
+          onChange={(e) => setIdiomaModelo(e.target.value as IdiomaModelo)}
+          title={t("Idioma do contrato")}
+          aria-label={t("Idioma do contrato")}
+          className="campo-input w-auto"
+        >
+          <option value="pt">Português</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="it">Italiano</option>
+        </select>
 
         <div className="flex items-center gap-2 ml-auto">
           <button

@@ -237,6 +237,20 @@ export type DocumentoContratante = {
   documento: string;
   /** País de origem do documento (ISO2). */
   pais?: string;
+  /**
+   * Razão social DESTE documento (migração 91) — só existe quando ele é CNPJ.
+   * A razão social pertence ao documento, não à pessoa: o mesmo contratante
+   * pode ter CPF (sem razão) + dois CNPJs com razões diferentes.
+   */
+  razao_social?: string;
+  /**
+   * PF/Empresa escolhido MANUALMENTE (migração-zero, no jsonb). Gravado SÓ
+   * quando o país é ambíguo (`detectarEmpresa` devolve `null` — ex.: US, GB) e
+   * o usuário marcou o seletor. Países com regra (BR, PT, AR…) derivam do
+   * próprio documento e NÃO gravam este campo. Na reedição o toggle reidrata
+   * daqui.
+   */
+  tipo?: "pf" | "pj";
   primeiro_uso: string;
   ultimo_uso: string;
 };
@@ -250,6 +264,12 @@ export type Contratante = {
    * (= último usado). Escrita SÓ no servidor — o cliente nunca manda este array.
    */
   documentos?: DocumentoContratante[];
+  /**
+   * Razão social do documento PRINCIPAL (migração 91) — preenchida só quando
+   * `documento` é de empresa (`ehDocumentoEmpresa`). A razão de cada documento
+   * do histórico vive em `documentos[].razao_social`.
+   */
+  razaoSocial?: string;
   /** País de origem (ISO2). Define o tipo de documento. Default 'BR'. */
   pais?: string;
   email?: string; // ✱ agora opcional
@@ -273,6 +293,15 @@ export type Contratante = {
 };
 
 export type TipoCasa = "club" | "festival" | "festa-privada" | "bar" | "arena" | "outro";
+
+/**
+ * Moeda do dinheiro no app (código ISO). Escolhida por venda/orçamento, com o
+ * padrão da agência (workspaces.moeda) pré-selecionado. NÃO se converte entre
+ * moedas — cada registro lembra a sua e os dashboards somam por moeda.
+ * (Distinto do `Moeda` de `./planos`, que é o do checkout do próprio SaaS.)
+ */
+export type Moeda = "BRL" | "USD" | "EUR";
+export const MOEDAS: readonly Moeda[] = ["BRL", "USD", "EUR"];
 
 export type Casa = {
   id: string;
@@ -397,6 +426,8 @@ export type Orcamento = {
   duracaoHoras: number;
   duracaoMinutos?: number;
   valorCache: number;
+  /** Moeda do orçamento (migração 92). Herdada pela venda na conversão. */
+  moeda: Moeda;
 
   // adicionais
   camarim: ItemQuantidade[];
@@ -564,6 +595,8 @@ export type Venda = {
   contratanteEmail: string;
   contratanteTelefone: string;
   contratanteDocumento: string; // CPF/CNPJ
+  /** Snapshot da razão social (migração 91) — só quando o documento é CNPJ. */
+  contratanteRazaoSocial?: string;
   contratanteEndereco: string;
 
   // 📌 Evento
@@ -584,6 +617,8 @@ export type Venda = {
   artistaId: string; // artista da agência (uuid quando vier do banco)
   lineUp?: string[]; // outros artistas do evento (não obrigatório)
   cache: number;
+  /** Moeda da venda (migração 92). Snapshot — as parcelas herdam. */
+  moeda: Moeda;
   duracaoHoras: number;
   duracaoMinutos?: number;
   camarim: ItemQuantidade[];

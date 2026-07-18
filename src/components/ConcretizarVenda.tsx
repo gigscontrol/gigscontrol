@@ -24,11 +24,22 @@ import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
 import InputDocumento from "./inputs/InputDocumento";
-import { normalizarDocumento, configDocumento } from "@/lib/data/documentos";
+import {
+  useRazaoSocialDoCnpj,
+  LabelRazaoSocial,
+  DicaRazaoSocial,
+} from "./inputs/RazaoSocialCnpj";
+import {
+  normalizarDocumento,
+  configDocumento,
+  detectarEmpresa,
+  ehDocumentoEmpresa,
+  rotuloEmpresa,
+} from "@/lib/data/documentos";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
-import { apenasDigitos } from "@/lib/formatters";
+import { apenasDigitos, SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
@@ -47,7 +58,8 @@ import { getPaisPadrao, getPaisPadraoCode } from "@/lib/preferencias";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
+import { moedaValida } from "@/lib/mappers/venda";
 import { useAuth } from "@/lib/auth-context";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
@@ -64,9 +76,11 @@ import {
   MODULE_THEMES,
   TIPO_CASA_POR_EVENTO,
   TIPO_EVENTO_POR_CASA,
+  MOEDAS,
   type Contratante,
   type ItemQuantidade,
   type LogisticaSelecao,
+  type Moeda,
   type Parcela,
   type TipoEvento,
   type Venda,
@@ -291,6 +305,23 @@ export default function ConcretizarVenda({
   const [contratanteDocumento, setContratanteDocumento] = useState(
     v?.contratanteDocumento ?? contratanteOrc?.documento ?? ""
   );
+  // Razão social do DOCUMENTO digitado (só existe quando ele é CNPJ). Reidrata
+  // do snapshot da venda e, quando ele é vazio (venda fechada antes da migração
+  // 91), do CADASTRO pela âncora — campo que não reidrata é APAGADO ao salvar.
+  // Usa `||` e não `??`: snapshot vazio tem que cair pro cadastro.
+  const [contratanteRazaoSocial, setContratanteRazaoSocial] = useState(
+    v?.contratanteRazaoSocial || contatoAncora?.razaoSocial || ""
+  );
+  // Escolha manual PF/Empresa — só entra em cena em país AMBÍGUO (sem regra).
+  // Reidrata (B4) do item do jsonb `documentos` do contato-âncora que casa com
+  // o documento; sem item (venda pura, contato oculto), heurística pela razão.
+  const [tipoManual, setTipoManual] = useState<"pf" | "pj">(() => {
+    const docNorm = normalizarDocumento(paisOrigem.code, contratanteDocumento);
+    return (
+      contatoAncora?.documentos?.find((d) => d.documento === docNorm)?.tipo ??
+      (contratanteRazaoSocial ? "pj" : "pf")
+    );
+  });
   // Pré-preenche do cadastro: sem isso o endereço digitado "divergiria" do
   // cadastro em toda conversão de orçamento.
   const [contratanteEndereco, setContratanteEndereco] = useState(
@@ -380,6 +411,19 @@ export default function ConcretizarVenda({
   const [cache, setCache] = useState<string>(
     v ? String(v.cache).replace(".", ",") : orc ? String(orc.valorCache) : ""
   );
+
+  // Moeda: reidrata da venda (edição) ou do orçamento; caso contrário nasce na
+  // moeda PADRÃO da agência. `moedaTocada` evita que o sync com a agência (que
+  // só chega quando as prefs carregam) sobrescreva a escolha do usuário.
+  const { preferencias } = useWorkspace();
+  const moedaAgencia = moedaValida(preferencias.moeda);
+  const [moeda, setMoeda] = useState<Moeda>(v?.moeda ?? orc?.moeda ?? moedaAgencia);
+  const moedaTocada = useRef(false);
+  useEffect(() => {
+    // Só numa venda NOVA (sem v/orc) e enquanto o usuário não escolheu: segue a
+    // agência quando as preferências terminam de carregar.
+    if (!v && !orc && !moedaTocada.current) setMoeda(moedaAgencia);
+  }, [moedaAgencia, v, orc]);
 
   // Duração — pode ser auto-calculada OU sobrescrita manualmente pelo usuário
   const [duracaoHorasManual, setDuracaoHorasManual] = useState<number>(
@@ -563,6 +607,7 @@ export default function ConcretizarVenda({
       if (contratanteOrc?.email) set.add("contratanteEmail");
       if (contratanteOrc?.telefone) set.add("contratanteTelefone");
       if (contratanteOrc?.documento) set.add("contratanteDocumento");
+      if (contratanteOrc?.razaoSocial) set.add("contratanteRazaoSocial");
       if (det?.nomeEvento) set.add("nomeEvento");
       if (det?.instagram) set.add("eventoInstagram");
       if (det?.nomeLocal || casaOrc?.nome) set.add("nomeLocal");
@@ -617,6 +662,31 @@ export default function ConcretizarVenda({
     setLineUp(lineUp.filter((_, i) => i !== idx));
   }
 
+  // Regra do país decide o tipo do documento. `detectEmpresa === null` = país
+  // AMBÍGUO (sem regra): aí quem manda é a escolha manual. No BR/países com regra
+  // o toggle nunca aparece e o fluxo segue idêntico ao de hoje.
+  const detectEmpresa = detectarEmpresa(paisOrigem.code, contratanteDocumento);
+  const docEhEmpresa = ehDocumentoEmpresa(
+    paisOrigem.code,
+    contratanteDocumento,
+    tipoManual === "pj"
+  );
+  const mostrarToggleEmpresa = !!contratanteDocumento.trim() && detectEmpresa === null;
+
+  // Fechou 14 dígitos → busca a razão social sozinha (nossos cadastros antes da
+  // Receita). Só preenche campo VAZIO — o que veio do snapshot/cadastro na
+  // edição, ou o que o vendedor colou, fica de pé. Falhar é não-evento.
+  const buscaRazao = useRazaoSocialDoCnpj({
+    pais: paisOrigem.code,
+    documento: contratanteDocumento,
+    valor: contratanteRazaoSocial,
+    onPreencher: (r) => {
+      setContratanteRazaoSocial(r);
+      // Não é `marcarEditado`: quem preencheu foi a busca, não o vendedor.
+      setErrors((p) => ({ ...p, contratanteRazaoSocial: "" }));
+    },
+  });
+
   // ------- Validação -------
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -626,6 +696,11 @@ export default function ConcretizarVenda({
     if (dig === 0) errs.contratanteTelefone = t("Telefone obrigatório");
     else if (dig < country.minDigits) errs.contratanteTelefone = t("Faltam dígitos");
     if (!contratanteDocumento.trim()) errs.contratanteDocumento = t("CPF/CNPJ obrigatório");
+    // Só na criação: venda antiga fechada no CNPJ não tem razão social gravada
+    // e exigi-la travaria uma edição que nada tem a ver com isso (mesma regra
+    // do tipo de evento, logo abaixo).
+    if (docEhEmpresa && !contratanteRazaoSocial.trim() && !emEdicao)
+      errs.contratanteRazaoSocial = t("Razão social obrigatória");
     if (!contratanteEndereco.trim()) errs.contratanteEndereco = t("Endereço obrigatório");
 
     // Só na criação: venda antiga cuja casa é bar/arena/outro reidrata sem
@@ -923,6 +998,17 @@ export default function ConcretizarVenda({
     // CUIT argentino como "BR" corrompe o documento principal e o histórico.
     const paisDoDoc = alvo?.pais || paisOrigem.code;
     const docNorm = normalizarDocumento(paisDoDoc, contratanteDocumento);
+    // A razão social pertence ao DOCUMENTO, não à pessoa: se o documento que
+    // está indo é de pessoa física, não existe razão social pra ele. Usa o MESMO
+    // país do `docNorm` — senão gravaríamos uma razão social num documento que o
+    // cadastro não lê como empresa.
+    const razaoSocialDoDoc = ehDocumentoEmpresa(paisDoDoc, contratanteDocumento, tipoManual === "pj")
+      ? contratanteRazaoSocial.trim()
+      : "";
+    // Escolha manual PF/Empresa: só viaja quando o país do CADASTRO é ambíguo
+    // (sem regra). País com regra deriva e o servidor ignora este campo.
+    const documentoTipoManual: "pf" | "pj" | undefined =
+      detectarEmpresa(paisDoDoc, contratanteDocumento) === null && docNorm ? tipoManual : undefined;
 
     let contratanteInput: NovaVendaInput["contratante"];
     if (alvo) {
@@ -988,6 +1074,7 @@ export default function ConcretizarVenda({
           email: contratanteEmail.trim(),
           telefone: telefoneE164,
           documento: docNorm,
+          razaoSocial: razaoSocialDoDoc,
         },
       };
       // Grava o campo se foi aceito no popup OU se o cadastro estava vazio
@@ -1000,6 +1087,16 @@ export default function ConcretizarVenda({
         existente.enderecoNovo = contratanteEndereco.trim();
       if (aceitos.includes("telefone") || ehBackfill(alvo.telefone, telefoneE164))
         existente.telefoneNovo = telefoneE164;
+      // Razão social anda colada no documento (D6): CNPJ já cadastrado com razão
+      // diferente = empresa renomeada/corrigida → atualiza calado, nunca vira
+      // divergência. Em BRANCO ela NÃO vai: o campo pode estar escondido (o país
+      // que a tela usa é o `paisOrigem`, o que grava é o do cadastro) e um branco
+      // invisível apagaria a razão do cadastro. Trocar CNPJ→CPF continua zerando
+      // pelo `documentoNovo` (o servidor deriva a razão do documento principal).
+      if (razaoSocialDoDoc) existente.razaoSocialNovo = razaoSocialDoDoc;
+      // Escolha manual PF/Empresa (país ambíguo): acompanha o documento (D6),
+      // fora do popup. Só vai quando houve escolha manual de fato.
+      if (documentoTipoManual) existente.documentoTipo = documentoTipoManual;
       // D5 — cidade só entra quando o cadastro NÃO tem (backfill-se-vazio):
       // o cidade_id alimenta geocode/mapa e não deve pular a cada venda.
       if (!alvo.cidadeId) existente.cidadeIdNovo = cidadeIdResolvido;
@@ -1016,6 +1113,8 @@ export default function ConcretizarVenda({
         email: contratanteEmail.trim(),
         telefone: telefoneE164,
         documento: docNorm,
+        razaoSocial: razaoSocialDoDoc,
+        documentoTipo: documentoTipoManual,
         pais: paisOrigem.code,
         cidadeId: cidadeIdResolvido,
       };
@@ -1043,6 +1142,7 @@ export default function ConcretizarVenda({
       artistaId,
       lineUp: lineUp.length > 0 ? lineUp : undefined,
       cache: cacheNum,
+      moeda,
       duracaoHoras,
       duracaoMinutos: duracaoMinutos > 0 ? duracaoMinutos : undefined,
       camarim,
@@ -1103,6 +1203,21 @@ export default function ConcretizarVenda({
     set(campos.contratanteNome, setContratanteNome, "Nome");
     set(campos.contratanteEmail, setContratanteEmail, "E-mail");
     set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
+    // Razão social só entra quando o documento é de empresa — senão o painel
+    // anunciaria um campo que a tela não mostra (e cujo valor o submit descarta).
+    // Reavalia com o documento COLADO agora: `docEhEmpresa` é do render anterior.
+    if (
+      ehDocumentoEmpresa(
+        paisOrigem.code,
+        campos.contratanteDocumento ?? contratanteDocumento,
+        tipoManual === "pj"
+      )
+    ) {
+      set(campos.contratanteRazaoSocial, setContratanteRazaoSocial, "Razão social");
+      // Veio do contratante, não da nossa busca: o microtexto de origem não
+      // pode reivindicar um valor que não preencheu.
+      if (campos.contratanteRazaoSocial) buscaRazao.aoEditarManualmente();
+    }
     set(campos.contratanteEndereco, setContratanteEndereco, "Endereço");
     set(campos.nomeEvento, setNomeEvento, "Evento");
     set(campos.eventoInstagram, setEventoInstagram, "Instagram");
@@ -1227,6 +1342,7 @@ export default function ConcretizarVenda({
             ? `${country.ddi}${telDigits.replace(/\D/g, "")}`
             : "",
           contratanteDocumento,
+          contratanteRazaoSocial,
           contratanteEndereco,
           nomeEvento,
           eventoInstagram,
@@ -1237,6 +1353,7 @@ export default function ConcretizarVenda({
           horario: horarioInicio,
           horarioFim,
           cache: cache ? parseValorBR(cache) : undefined,
+          moeda,
           lineUp,
           efeitos,
           camarim,
@@ -1368,6 +1485,8 @@ export default function ConcretizarVenda({
               onChange={(p) => {
                 setPaisOrigem(p);
                 setCountry(p);
+                // Cada país tem sua regra — a escolha manual do anterior não vale.
+                setTipoManual("pf");
               }}
             />
           </Field>
@@ -1401,9 +1520,90 @@ export default function ConcretizarVenda({
               onChange={(novo) => {
                 setContratanteDocumento(novo);
                 marcarEditado("contratanteDocumento");
+                // Limpou o documento → a escolha manual perde o sentido.
+                if (!novo.trim()) setTipoManual("pf");
               }}
             />
           </FieldWithAuto>
+
+          {/* País ambíguo (sem regra) com documento preenchido: o vendedor diz se
+              é pessoa física ou empresa. BR/países com regra nunca veem isto. */}
+          {mostrarToggleEmpresa && (
+            <div className="sm:col-span-2">
+              <span className="text-xs font-medium text-secondary mb-1.5 block">
+                {t("Tipo de documento")}
+              </span>
+              <div className="flex w-full overflow-hidden rounded-md border border-border bg-elevated">
+                {[
+                  { v: "pf" as const, label: "Pessoa física" },
+                  { v: "pj" as const, label: "Empresa" },
+                ].map((opt, i) => {
+                  const ativo = tipoManual === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setTipoManual(opt.v)}
+                      className={`flex-1 px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                        i === 1 ? "border-l border-border" : ""
+                      }`}
+                      style={
+                        ativo
+                          ? {
+                              color: accent,
+                              background: `color-mix(in srgb, ${accent} 20%, transparent)`,
+                            }
+                          : { color: "var(--text-muted)" }
+                      }
+                    >
+                      {t(opt.label)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {docEhEmpresa && (
+            <div className="sm:col-span-2">
+              {paisOrigem.code === "BR" ? (
+                <FieldWithAuto
+                  label={<LabelRazaoSocial busca={buscaRazao} />}
+                  required={!emEdicao}
+                  error={errors.contratanteRazaoSocial}
+                  showAuto={showAutoBadge("contratanteRazaoSocial")}
+                >
+                  <TextInput
+                    value={contratanteRazaoSocial}
+                    onChange={(e) => {
+                      setContratanteRazaoSocial(e.target.value);
+                      buscaRazao.aoEditarManualmente();
+                      marcarEditado("contratanteRazaoSocial");
+                    }}
+                    placeholder="Ex: Silva Produções Artísticas LTDA"
+                  />
+                  <DicaRazaoSocial busca={buscaRazao} valor={contratanteRazaoSocial} />
+                </FieldWithAuto>
+              ) : (
+                <FieldWithAuto
+                  label={t(rotuloEmpresa(paisOrigem.code))}
+                  required={!emEdicao}
+                  error={errors.contratanteRazaoSocial}
+                  showAuto={showAutoBadge("contratanteRazaoSocial")}
+                >
+                  <TextInput
+                    value={contratanteRazaoSocial}
+                    onChange={(e) => {
+                      setContratanteRazaoSocial(e.target.value);
+                      marcarEditado("contratanteRazaoSocial");
+                    }}
+                    placeholder={t(rotuloEmpresa(paisOrigem.code))}
+                  />
+                </FieldWithAuto>
+              )}
+            </div>
+          )}
 
           <div className="sm:col-span-2">
             <Field
@@ -1863,16 +2063,37 @@ export default function ConcretizarVenda({
             error={errors.cache}
             showAuto={showAutoBadge("cache")}
           >
-            <TextInput
-              type="text"
-              inputMode="decimal"
-              value={cache}
-              onChange={(e) => {
-                setCache(e.target.value.replace(/[^\d.,]/g, ""));
-                marcarEditado("cache");
-              }}
-              placeholder="15000"
-            />
+            <div className="flex items-stretch gap-2">
+              {/* Moeda da venda — o símbolo vem ANTES do valor e é o seletor. */}
+              <select
+                value={moeda}
+                onChange={(e) => {
+                  moedaTocada.current = true;
+                  setMoeda(e.target.value as Moeda);
+                }}
+                aria-label={t("Moeda")}
+                title={t("Moeda")}
+                className="campo-input w-auto font-semibold shrink-0"
+              >
+                {MOEDAS.map((m) => (
+                  <option key={m} value={m}>
+                    {SIMBOLO_MOEDA[m]}
+                  </option>
+                ))}
+              </select>
+              <div className="flex-1">
+                <TextInput
+                  type="text"
+                  inputMode="decimal"
+                  value={cache}
+                  onChange={(e) => {
+                    setCache(e.target.value.replace(/[^\d.,]/g, ""));
+                    marcarEditado("cache");
+                  }}
+                  placeholder="15000"
+                />
+              </div>
+            </div>
           </FieldWithAuto>
 
           {/* Horas + minutos numa célula só → sempre na mesma linha,
@@ -1919,7 +2140,7 @@ export default function ConcretizarVenda({
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm mt-4 mb-4">
             <span className="text-muted">{t("Cachê:")}</span>{" "}
             <span className="font-bold text-primary tabular-nums">
-              {formatBRL(parseValorBR(cache) || 0)}
+              {formatarMoeda(parseValorBR(cache) || 0, moeda)}
             </span>{" "}
             <span className="text-muted">
               {t("por")} {formatarDuracao(duracaoHoras, duracaoMinutos)}
@@ -2067,7 +2288,7 @@ export default function ConcretizarVenda({
               <>
                 <span className="text-muted">{t("Pagamento único de")} </span>
                 <span className="font-bold text-primary tabular-nums">
-                  {formatBRL(cacheNumAtual)}
+                  {formatarMoeda(cacheNumAtual, moeda)}
                 </span>
                 <span className="text-muted">
                   {" "}
@@ -2110,6 +2331,7 @@ export default function ConcretizarVenda({
                 onModoChange={setModoParcela}
                 accent={accent}
                 error={errors.parcelas}
+                moeda={moeda}
               />
             </div>
           </>

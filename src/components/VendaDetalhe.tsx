@@ -17,7 +17,8 @@ import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { mascararCpfCnpj } from "@/lib/formatters";
-import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
+import { formatarDuracao } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
 import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
@@ -96,6 +97,7 @@ export default function VendaDetalhe({
   }, [vendaId, isAdmin]);
 
   const venda = vendas.find((v) => v.id === vendaId);
+  const formatarMoeda2 = (val: number) => formatarMoeda(val, venda?.moeda ?? "BRL");
 
   if (!venda) {
     return (
@@ -256,6 +258,9 @@ export default function VendaDetalhe({
               value={venda.contratanteTelefone ? `+${venda.contratanteTelefone}` : "—"}
             />
             <InfoLine label={t("CPF/CNPJ")} value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
+            {venda.contratanteRazaoSocial && (
+              <InfoLine label={t("Razão Social")} value={venda.contratanteRazaoSocial} />
+            )}
             <InfoLine label={t("Endereço")} value={venda.contratanteEndereco || "—"} />
           </div>
 
@@ -369,7 +374,7 @@ export default function VendaDetalhe({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-semibold tabular-nums text-primary">
-                        {formatBRL(p.valor)}
+                        {formatarMoeda2(p.valor)}
                       </span>
                       <span className={`badge ${label.badge}`}>{t(label.label)}</span>
                     </div>
@@ -476,7 +481,7 @@ export default function VendaDetalhe({
               label={t("Cachê")}
               value={
                 <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
-                  {formatBRL(venda.cache)}
+                  {formatarMoeda2(venda.cache)}
                 </span>
               }
             />
@@ -484,13 +489,13 @@ export default function VendaDetalhe({
               <>
                 <InfoLine
                   label={t("Taxa de agência")}
-                  value={formatBRL(venda.taxaAgenciaValor)}
+                  value={formatarMoeda2(venda.taxaAgenciaValor)}
                 />
                 <InfoLine
                   label={t("Líquido do artista")}
                   value={
                     <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
-                      {formatBRL(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
+                      {formatarMoeda2(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
                     </span>
                   }
                 />

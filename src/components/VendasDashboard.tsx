@@ -26,9 +26,9 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/types";
-import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange } from "@/types";
+import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange, Moeda } from "@/types";
 
 type Props = {
   selectedArtistas: string[];
@@ -136,43 +136,65 @@ export default function VendasDashboard({
       aceito: 0,
       recusado: 0,
     };
-    let valorTotalOrc = 0;
-    let valorEmAberto = 0;
-    let valorNegociacao = 0;
-    let valorPerdidos = 0;
     for (const o of orcamentosVisiveis) {
       porStatus[o.status] = (porStatus[o.status] ?? 0) + 1;
-      valorTotalOrc += o.valorCache || 0;
-      if (o.status === "pendente" || o.status === "negociacao") {
-        valorEmAberto += o.valorCache || 0;
-      }
-      if (o.status === "negociacao") valorNegociacao += o.valorCache || 0;
-      if (o.status === "recusado") valorPerdidos += o.valorCache || 0;
     }
     const pendentes = porStatus.pendente + porStatus.negociacao;
 
+    // Totais de orçamento AGRUPADOS por moeda (nunca soma moedas diferentes num
+    // número só — não há câmbio no sistema). Com uma moeda só, idêntico a hoje.
+    const orcItem = (o: (typeof orcamentosVisiveis)[number]) => ({ valor: o.valorCache || 0, moeda: o.moeda });
+    const valorTotalOrc = totaisPorMoeda(orcamentosVisiveis.map(orcItem));
+    const valorEmAberto = totaisPorMoeda(
+      orcamentosVisiveis.filter((o) => o.status === "pendente" || o.status === "negociacao").map(orcItem)
+    );
+    const valorNegociacao = totaisPorMoeda(
+      orcamentosVisiveis.filter((o) => o.status === "negociacao").map(orcItem)
+    );
+    const valorPerdidos = totaisPorMoeda(
+      orcamentosVisiveis.filter((o) => o.status === "recusado").map(orcItem)
+    );
+
     // --- Vendas ---
     const totalVendas = vendasVisiveis.length;
-    const faturamento = vendasVisiveis.reduce((acc, v) => acc + (v.cache || 0), 0);
-    // Taxa de conversão: vendas / (orçamentos + vendas)
+    const faturamento = totaisPorMoeda(vendasVisiveis.map((v) => ({ valor: v.cache || 0, moeda: v.moeda })));
+    // Taxa de conversão: vendas / (orçamentos + vendas) — contagem, independe de moeda.
     const conversao =
       totalOrcamentos + totalVendas > 0
         ? Math.round((totalVendas / (totalOrcamentos + totalVendas)) * 100)
         : 0;
-    const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
 
-    // --- Pagamentos (parcelas): recebido x a receber x atrasado ---
-    let recebido = 0;
-    let atrasado = 0;
+    // Ticket médio (D-TICKET): média = soma/qtd só tem sentido dentro de UMA
+    // moeda. Todas as vendas na mesma moeda → média nela; mais de uma → "—".
+    const moedasVendas = new Set(vendasVisiveis.map((v) => v.moeda));
+    const ticketMultiMoeda = moedasVendas.size > 1;
+    const faturamentoNum = vendasVisiveis.reduce((acc, v) => acc + (v.cache || 0), 0);
+    // "—" fica RESERVADO ao caso multi-moeda (D-TICKET). Com uma moeda só,
+    // zero vendas volta a "R$ 0,00" — idêntico ao pré-branch (D-SEGURANCA).
+    const ticketMedio = ticketMultiMoeda
+      ? "—"
+      : formatarMoeda(totalVendas > 0 ? faturamentoNum / totalVendas : 0, [...moedasVendas][0] ?? "BRL");
+
+    // --- Pagamentos (parcelas): recebido x a receber x atrasado, por moeda ---
+    // A parcela herda a moeda da venda dona. "A receber" deriva do faturamento
+    // (cobre vendas sem parcelas lançadas), calculado por moeda.
+    const fatMap = new Map<Moeda, number>();
+    const recMap = new Map<Moeda, number>();
+    const atrMap = new Map<Moeda, number>();
     for (const v of vendasVisiveis) {
+      fatMap.set(v.moeda, (fatMap.get(v.moeda) ?? 0) + (v.cache || 0));
       for (const p of v.parcelas ?? []) {
         const st = statusEfetivoParcela(p);
-        if (st === "pago") recebido += p.valor || 0;
-        else if (st === "atrasado") atrasado += p.valor || 0;
+        if (st === "pago") recMap.set(v.moeda, (recMap.get(v.moeda) ?? 0) + (p.valor || 0));
+        else if (st === "atrasado") atrMap.set(v.moeda, (atrMap.get(v.moeda) ?? 0) + (p.valor || 0));
       }
     }
-    // A receber deriva do faturamento (cobre vendas sem parcelas lançadas).
-    const aReceber = Math.max(0, faturamento - recebido);
+    const mapToItens = (m: Map<Moeda, number>) => [...m].map(([moeda, valor]) => ({ valor, moeda }));
+    const recebido = totaisPorMoeda(mapToItens(recMap));
+    const atrasado = totaisPorMoeda(mapToItens(atrMap));
+    const aReceber = totaisPorMoeda(
+      [...fatMap].map(([moeda, fat]) => ({ moeda, valor: Math.max(0, fat - (recMap.get(moeda) ?? 0)) }))
+    );
 
     // --- Vendas próximas (a realizar) x já realizadas (por dataShow) ---
     const hojeISO = new Date().toISOString().slice(0, 10);
@@ -195,6 +217,7 @@ export default function VendasDashboard({
       faturamento,
       conversao,
       ticketMedio,
+      ticketMultiMoeda,
       recebido,
       aReceber,
       atrasado,
@@ -320,7 +343,7 @@ export default function VendasDashboard({
             value={stats.porStatus.negociacao}
             icon={<Handshake size={16} />}
             accentColor="var(--warning)"
-            subtitle={formatBRL(stats.valorNegociacao)}
+            subtitle={stats.valorNegociacao}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("perdidos")} ariaLabel={t("Orçamentos perdidos")}>
@@ -329,7 +352,7 @@ export default function VendasDashboard({
             value={stats.porStatus.recusado}
             icon={<XCircle size={16} />}
             accentColor="var(--danger)"
-            subtitle={formatBRL(stats.valorPerdidos)}
+            subtitle={stats.valorPerdidos}
           />
         </ClickableStat>
       </div>
@@ -373,7 +396,7 @@ export default function VendasDashboard({
                         {artista?.name}
                       </div>
                       <div className="text-xs text-muted tabular-nums">
-                        {formatBRL(o.valorCache)}
+                        {formatarMoeda(o.valorCache, o.moeda)}
                       </div>
                     </div>
                     <span className={`badge ${st.badge}`}>{t(st.label)}</span>
@@ -426,7 +449,7 @@ export default function VendasDashboard({
                       </div>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
-                      {formatBRL(v.cache)}
+                      {formatarMoeda(v.cache, v.moeda)}
                     </span>
                     <ChevronRight size={14} className="text-muted flex-shrink-0" />
                   </button>
@@ -448,8 +471,11 @@ export default function VendasDashboard({
           </div>
           <div>
             <div className="stat-label">{t("Ticket médio por venda")}</div>
-            <div className="text-xl font-bold tabular-nums text-primary">
-              {formatBRL(stats.ticketMedio)}
+            <div
+              className="text-xl font-bold tabular-nums text-primary"
+              title={stats.ticketMultiMoeda ? t("Ticket médio indisponível com múltiplas moedas") : undefined}
+            >
+              {stats.ticketMedio}
             </div>
           </div>
         </div>
@@ -493,8 +519,8 @@ export default function VendasDashboard({
             </div>
             <div className="flex flex-col gap-2">
               <div className="stat-label">{t("Valores")}</div>
-              <ResumoLinha label={t("Em aberto (pendentes + negociação)")} valor={formatBRL(stats.valorEmAberto)} />
-              <ResumoLinha label={t("Valor total")} valor={formatBRL(stats.valorTotalOrc)} />
+              <ResumoLinha label={t("Em aberto (pendentes + negociação)")} valor={stats.valorEmAberto} />
+              <ResumoLinha label={t("Valor total")} valor={stats.valorTotalOrc} />
               <ResumoLinha label={t("Taxa de conversão")} valor={`${stats.conversao}%`} destaque />
             </div>
             {orcamentosRecentes.length > 0 && (
@@ -505,7 +531,7 @@ export default function VendasDashboard({
                     id: o.id,
                     titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
                     subtitulo: o.numero,
-                    valor: formatBRL(o.valorCache),
+                    valor: formatarMoeda(o.valorCache, o.moeda),
                   }))}
                   onItemClick={(id) => {
                     setResumo(null);
@@ -528,16 +554,16 @@ export default function VendasDashboard({
           <>
             <div className="grid grid-cols-2 gap-3">
               <ResumoNumero label={t("Vendas fechadas")} valor={stats.totalVendas} />
-              <ResumoNumero label={t("Faturamento")} valor={formatBRL(stats.faturamento)} accentColor="var(--success)" />
+              <ResumoNumero label={t("Faturamento")} valor={stats.faturamento} accentColor="var(--success)" />
             </div>
             <div className="flex flex-col gap-2">
               <div className="stat-label">{t("Pagamentos")}</div>
-              <ResumoLinha label={t("Recebido")} valor={formatBRL(stats.recebido)} destaque />
-              <ResumoLinha label={t("A receber")} valor={formatBRL(stats.aReceber)} />
-              <ResumoLinha label={t("Em atraso")} valor={formatBRL(stats.atrasado)} />
+              <ResumoLinha label={t("Recebido")} valor={stats.recebido} destaque />
+              <ResumoLinha label={t("A receber")} valor={stats.aReceber} />
+              <ResumoLinha label={t("Em atraso")} valor={stats.atrasado} />
             </div>
             <div className="flex flex-col gap-2">
-              <ResumoLinha label={t("Ticket médio")} valor={formatBRL(stats.ticketMedio)} />
+              <ResumoLinha label={t("Ticket médio")} valor={stats.ticketMedio} />
               <ResumoLinha label={t("Próximas (a realizar)")} valor={stats.proximas} />
               <ResumoLinha label={t("Já realizadas")} valor={stats.realizadas} />
             </div>
@@ -549,7 +575,7 @@ export default function VendasDashboard({
                     id: v.id,
                     titulo: v.nomeEvento,
                     subtitulo: `${artistas.find((d) => d.id === v.artistaId)?.name ?? ""} · ${v.contratanteNome}`,
-                    valor: formatBRL(v.cache),
+                    valor: formatarMoeda(v.cache, v.moeda),
                   }))}
                   onItemClick={(id) => {
                     setResumo(null);
@@ -572,7 +598,7 @@ export default function VendasDashboard({
           <>
             <div className="grid grid-cols-2 gap-3">
               <ResumoNumero label={t("Em negociação")} valor={stats.porStatus.negociacao} accentColor="var(--warning)" />
-              <ResumoNumero label={t("Valor total")} valor={formatBRL(stats.valorNegociacao)} />
+              <ResumoNumero label={t("Valor total")} valor={stats.valorNegociacao} />
             </div>
             {negociacaoRecentes.length > 0 ? (
               <div className="flex flex-col gap-2">
@@ -582,7 +608,7 @@ export default function VendasDashboard({
                     id: o.id,
                     titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
                     subtitulo: o.numero,
-                    valor: formatBRL(o.valorCache),
+                    valor: formatarMoeda(o.valorCache, o.moeda),
                   }))}
                   onItemClick={(id) => {
                     setResumo(null);
@@ -609,7 +635,7 @@ export default function VendasDashboard({
           <>
             <div className="grid grid-cols-2 gap-3">
               <ResumoNumero label={t("Orçamentos perdidos")} valor={stats.porStatus.recusado} accentColor="var(--danger)" />
-              <ResumoNumero label={t("Valor total")} valor={formatBRL(stats.valorPerdidos)} />
+              <ResumoNumero label={t("Valor total")} valor={stats.valorPerdidos} />
             </div>
             {perdidosRecentes.length > 0 ? (
               <div className="flex flex-col gap-2">
@@ -619,7 +645,7 @@ export default function VendasDashboard({
                     id: o.id,
                     titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
                     subtitulo: o.numero,
-                    valor: formatBRL(o.valorCache),
+                    valor: formatarMoeda(o.valorCache, o.moeda),
                   }))}
                   onItemClick={(id) => {
                     setResumo(null);

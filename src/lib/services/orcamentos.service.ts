@@ -45,6 +45,7 @@ function entradaParaEscrita(
   if (input.artist_id !== undefined)
     out.artist_id = normalizarUuid(input.artist_id ?? null);
   if (input.valor_cache !== undefined) out.valor_cache = input.valor_cache;
+  if (input.moeda !== undefined) out.moeda = input.moeda;
   if (input.duracao_horas !== undefined) out.duracao_horas = input.duracao_horas;
   if (input.duracao_minutos !== undefined)
     out.duracao_minutos = input.duracao_minutos;

@@ -70,15 +70,19 @@ export async function POST(request: Request) {
 
   try {
     const admin = criarClienteAdmin();
-    const r = await setupWorkspaceParaNovoUsuario(admin, {
-      id: user.id,
-      email: user.email ?? "",
-      user_metadata: {
-        nome: nomeOriginal,
-        nome_agencia: parsed.data.nome_agencia,
-        plano_escolhido: parsed.data.plano,
+    const r = await setupWorkspaceParaNovoUsuario(
+      admin,
+      {
+        id: user.id,
+        email: user.email ?? "",
+        user_metadata: {
+          nome: nomeOriginal,
+          nome_agencia: parsed.data.nome_agencia,
+          plano_escolhido: parsed.data.plano,
+        },
       },
-    });
+      request.headers.get("x-vercel-ip-country")
+    );
     return NextResponse.json({ ok: true, workspaceId: r.workspaceId });
   } catch (e) {
     return NextResponse.json(

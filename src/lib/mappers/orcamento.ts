@@ -6,8 +6,10 @@ import type {
   LogisticaSelecao,
   TaxaAgenciaModo,
   DetalhesEvento,
+  Moeda,
 } from "@/types";
 import { LOGISTICA_VAZIA } from "@/types";
+import { moedaValida } from "./venda";
 
 /**
  * Linha bruta da tabela `orcamentos` no Supabase.
@@ -23,6 +25,7 @@ export type OrcamentoRow = {
   cidade_id: string | null;
   artist_id: string | null;
   valor_cache: number | string | null;
+  moeda: string | null;
   duracao_horas: number | null;
   duracao_minutos: number | null;
   camarim: ItemQuantidade[] | null;
@@ -93,6 +96,7 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     duracaoHoras: row.duracao_horas ?? 0,
     duracaoMinutos: row.duracao_minutos ?? undefined,
     valorCache: paraNumero(row.valor_cache),
+    moeda: moedaValida(row.moeda),
     camarim: Array.isArray(row.camarim) ? row.camarim : [],
     efeitos: Array.isArray(row.efeitos) ? row.efeitos : [],
     hotel: Array.isArray(row.hotel) ? row.hotel : [],
@@ -140,6 +144,7 @@ export type OrcamentoEscrita = {
   cidade_id?: string | null;
   artist_id?: string | null;
   valor_cache?: number | null;
+  moeda?: Moeda;
   duracao_horas?: number | null;
   duracao_minutos?: number | null;
   camarim?: ItemQuantidade[];

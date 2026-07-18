@@ -17,11 +17,13 @@ import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import { useModelos } from "@/lib/modelos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useContatos } from "@/lib/contatos-context";
 import { useAuth } from "@/lib/auth-context";
 import { useContratos, ExcedenteError } from "@/lib/contratos-context";
 import {
   valoresDeVenda,
   preencherSecoes,
+  aplicarFallbackVazios,
   dataBR,
   hojeBR,
 } from "@/lib/contratos/preencherSecoes";
@@ -53,6 +55,7 @@ export default function NovoContratoPage() {
   const { modelos } = useModelos();
   const { vendas } = useVendas();
   const { artistas } = useWorkspace();
+  const { contratantes } = useContatos();
   const { sessao, podeUI } = useAuth();
   const { contratos, criarContrato, atualizarContrato } = useContratos();
 
@@ -107,6 +110,10 @@ export default function NovoContratoPage() {
     [vendas, vendaId]
   );
 
+  // Idioma do modelo (do JSON de `corpo`) — dirige o A4 na geração: fallback
+  // "Não informado"/"Not provided" + data/cachê por extenso. Sem modelo → "pt".
+  const idioma = modelo?.idioma ?? "pt";
+
   // Permissão de criar contrato. Com venda escolhida, gate pelo artista dela;
   // sem venda (artista escolhido depois), habilita se PODE em qualquer artista.
   const podeCriar = venda
@@ -126,16 +133,24 @@ export default function NovoContratoPage() {
     base.data_hoje = hojeBR();
     if (venda) {
       const artista = artistas.find((a) => a.id === venda.artistaId) ?? null;
-      Object.assign(base, valoresDeVenda({ venda, artista, agencia, numero: "" }));
+      const contratante =
+        contratantes.find((c) => c.id === venda.contratanteId) ?? null;
+      Object.assign(
+        base,
+        valoresDeVenda({ venda, artista, agencia, numero: "", idioma, contratante })
+      );
     }
     setValores(base);
     setGerado(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modeloId, vendaId]);
 
+  // Preview e geração aplicam o A4 (valores vazios → "Não informado"/"Not
+  // provided", pelo idioma do modelo). O state `valores` fica CRU — os inputs
+  // editáveis nunca mostram o fallback (senão o usuário teria que apagá-lo).
   const secoesPreenchidas = useMemo(
-    () => (modelo ? preencherSecoes(modelo.secoes, valores) : []),
-    [modelo, valores]
+    () => (modelo ? preencherSecoes(modelo.secoes, aplicarFallbackVazios(valores, idioma)) : []),
+    [modelo, valores, idioma]
   );
 
   const grupos = useMemo(() => {
@@ -158,7 +173,7 @@ export default function NovoContratoPage() {
     setGerando(true);
     setErro(null);
     try {
-      const secoes = preencherSecoes(modelo.secoes, valores);
+      const secoes = preencherSecoes(modelo.secoes, aplicarFallbackVazios(valores, idioma));
       const contrato = await criarContrato({
         modeloId: modelo.id,
         vendaId: vendaId || null,
@@ -168,7 +183,10 @@ export default function NovoContratoPage() {
       });
       // Injeta o número real (CTR-XXXX) no snapshot e na tela.
       const valoresFinais = { ...valores, numero_contrato: contrato.numero };
-      const secoesFinais = preencherSecoes(modelo.secoes, valoresFinais);
+      const secoesFinais = preencherSecoes(
+        modelo.secoes,
+        aplicarFallbackVazios(valoresFinais, idioma)
+      );
       const atualizado = await atualizarContrato(contrato.id, {
         secoes: secoesFinais,
         estilo: modelo.estilo,

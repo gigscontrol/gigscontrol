@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
@@ -47,7 +47,9 @@ import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
 import { useContatos } from "@/lib/contatos-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
-import { useArtistas } from "@/lib/workspace-context";
+import { useArtistas, useWorkspace } from "@/lib/workspace-context";
+import { moedaValida } from "@/lib/mappers/venda";
+import { SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { montarTelefoneE164 } from "@/lib/data/countries";
@@ -59,12 +61,14 @@ import {
   LOGISTICA_VAZIA,
   MODULE_THEMES,
   TIPO_CASA_POR_EVENTO,
+  MOEDAS,
   type ItemQuantidade,
   type LogisticaSelecao,
   type TipoEvento,
   type Artista,
   type Contratante,
   type DetalhesEvento,
+  type Moeda,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 
@@ -140,6 +144,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     useContatos();
   const { criarOrcamentoComContatos } = useOrcamentos();
   const artistas = useArtistas();
+  const { preferencias } = useWorkspace();
+  // Moeda do orçamento (um evento = uma moeda). Nasce na moeda da agência.
+  const moedaAgencia = moedaValida(preferencias.moeda);
+  const [moeda, setMoeda] = useState<Moeda>(moedaAgencia);
+  const moedaTocada = useRef(false);
+  useEffect(() => {
+    // Segue a agência quando as prefs terminam de carregar, até o usuário escolher.
+    if (!moedaTocada.current) setMoeda(moedaAgencia);
+  }, [moedaAgencia]);
   const { podeUI } = useAuth();
   const { confirmar, confirmador } = useConfirmar();
   const { avisar, avisador } = useAviso();
@@ -684,6 +697,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         cidade: cidInput,
         artistaId: b.artistaId,
         valorCache: valor,
+        moeda,
         duracaoHoras: b.duracaoHoras,
         duracaoMinutos: b.duracaoMinutos > 0 ? b.duracaoMinutos : undefined,
         camarim: b.camarim,
@@ -1285,6 +1299,11 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               ufCidade={cidadeIbge?.uf}
               nomeCidade={cidadeIbge?.nome}
               tipoEvento={tipoEvento}
+              moeda={moeda}
+              onMoedaChange={(m) => {
+                moedaTocada.current = true;
+                setMoeda(m);
+              }}
             />
           ))}
 
@@ -1421,6 +1440,8 @@ function BlocoOrcamentoDj({
   ufCidade,
   nomeCidade,
   tipoEvento,
+  moeda,
+  onMoedaChange,
 }: {
   bloco: DjBlock;
   indice: number;
@@ -1429,6 +1450,8 @@ function BlocoOrcamentoDj({
   artistas: Artista[];
   onChange: (patch: Partial<DjBlock>) => void;
   onRemove: () => void;
+  moeda: Moeda;
+  onMoedaChange: (m: Moeda) => void;
   errors: Record<string, string>;
   ufCidade?: string;
   nomeCidade?: string;
@@ -1500,13 +1523,31 @@ function BlocoOrcamentoDj({
           </Field>
 
           <Field label="Valor do cachê" required error={errors[`valor-${indice}`]}>
-            <TextInput
-              type="text"
-              inputMode="decimal"
-              value={bloco.valorCache}
-              onChange={(e) => onChange({ valorCache: e.target.value.replace(/[^\d.,]/g, "") })}
-              placeholder="15000"
-            />
+            <div className="flex items-stretch gap-2">
+              {/* Moeda do orçamento — símbolo ANTES do valor e seletor (compartilhado). */}
+              <select
+                value={moeda}
+                onChange={(e) => onMoedaChange(e.target.value as Moeda)}
+                aria-label={t("Moeda")}
+                title={t("Moeda")}
+                className="campo-input w-auto font-semibold shrink-0"
+              >
+                {MOEDAS.map((m) => (
+                  <option key={m} value={m}>
+                    {SIMBOLO_MOEDA[m]}
+                  </option>
+                ))}
+              </select>
+              <div className="flex-1">
+                <TextInput
+                  type="text"
+                  inputMode="decimal"
+                  value={bloco.valorCache}
+                  onChange={(e) => onChange({ valorCache: e.target.value.replace(/[^\d.,]/g, "") })}
+                  placeholder="15000"
+                />
+              </div>
+            </div>
           </Field>
 
           <Field label="Duração">
@@ -1544,7 +1585,7 @@ function BlocoOrcamentoDj({
         {bloco.valorCache && !isNaN(valor) && (
           <div className="bg-elevated/40 border border-border rounded-md p-3 text-sm">
             <span className="text-muted">{t("Cachê:")}</span>{" "}
-            <span className="font-bold text-primary tabular-nums">{formatBRL(valor)}</span>{" "}
+            <span className="font-bold text-primary tabular-nums">{formatarMoeda(valor, moeda)}</span>{" "}
             <span className="text-muted">
               {t("por")} {formatarDuracao(bloco.duracaoHoras, bloco.duracaoMinutos)}
               {nomeCidade && (

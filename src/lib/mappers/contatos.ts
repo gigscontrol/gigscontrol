@@ -154,6 +154,7 @@ export type ContratanteRow = {
   nome: string;
   documento: string | null;
   documentos: unknown[] | null;
+  razao_social: string | null;
   pais: string | null;
   email: string | null;
   telefone: string | null;
@@ -177,6 +178,7 @@ export function rowParaContratante(row: ContratanteRow): Contratante {
     nome: row.nome,
     documento: row.documento ?? undefined,
     documentos: (row.documentos ?? []) as DocumentoContratante[],
+    razaoSocial: row.razao_social ?? undefined,
     pais: row.pais ?? "BR",
     email: row.email ?? undefined,
     telefone: row.telefone ?? "",
@@ -205,6 +207,8 @@ export type ContratanteEscrita = {
   documento?: string | null;
   /** Escrita SÓ pelo service (acumularDocumento) — nunca vem do cliente. */
   documentos?: unknown;
+  /** Razão social do documento principal (migração 91) — só quando CNPJ. */
+  razao_social?: string | null;
   pais?: string | null;
   email?: string | null;
   telefone?: string | null;

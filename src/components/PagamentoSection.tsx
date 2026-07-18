@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { Plus, Trash2, Percent, DollarSign, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { TextInput } from "./Field";
 import InputDataBR from "./inputs/InputDataBR";
-import { formatBRL } from "@/lib/whatsapp";
-import type { Parcela } from "@/types";
+import { formatarMoeda, SIMBOLO_MOEDA } from "@/lib/formatters";
+import type { Parcela, Moeda } from "@/types";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -25,6 +25,8 @@ type Props = {
   onModoChange: (m: ModoParcela) => void;
   accent: string;
   error?: string;
+  /** Moeda da venda/orçamento — só o símbolo dos valores fixos muda (default BRL). */
+  moeda?: Moeda;
 };
 
 let parcelaCounter = 0;
@@ -49,8 +51,10 @@ export default function PagamentoSection({
   onModoChange,
   accent,
   error,
+  moeda = "BRL",
 }: Props) {
   const t = useT();
+  const simbolo = SIMBOLO_MOEDA[moeda];
   const somaPercentual = useMemo(
     () => parcelas.reduce((acc, p) => acc + (p.percentual || 0), 0),
     [parcelas]
@@ -118,7 +122,7 @@ export default function PagamentoSection({
             onClick={() => onModoChange("valor")}
           >
             <DollarSign size={11} />
-            {t("Valor R$")}
+            {t("Valor {simbolo}", { simbolo })}
           </button>
         </div>
       </div>
@@ -158,12 +162,12 @@ export default function PagamentoSection({
                 />
                 <span className="text-xs text-muted">%</span>
                 <span className="text-xs text-secondary tabular-nums ml-1">
-                  = {formatBRL(p.valor)}
+                  = {formatarMoeda(p.valor, moeda)}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted">R$</span>
+                <span className="text-xs text-muted">{simbolo}</span>
                 <TextInput
                   type="number"
                   min={0}
@@ -221,7 +225,7 @@ export default function PagamentoSection({
         </span>
         <span className="flex items-center gap-2">
           <span className="tabular-nums font-semibold text-primary">
-            {somaPercentual.toFixed(0)}% · {formatBRL(somaValor)}
+            {somaPercentual.toFixed(0)}% · {formatarMoeda(somaValor, moeda)}
           </span>
           {tudoOk ? (
             <CheckCircle2 size={15} style={{ color: "var(--success)" }} />
@@ -235,7 +239,7 @@ export default function PagamentoSection({
         <p className="text-xs text-danger mt-1.5">
           {modo === "percentual"
             ? t("A soma das parcelas deve ser 100% (está {pct}%)", { pct: somaPercentual.toFixed(0) })
-            : t("A soma deve ser {total} (está {atual})", { total: formatBRL(cacheTotal), atual: formatBRL(somaValor) })}
+            : t("A soma deve ser {total} (está {atual})", { total: formatarMoeda(cacheTotal, moeda), atual: formatarMoeda(somaValor, moeda) })}
         </p>
       )}
       {error && <p className="text-xs text-danger mt-1">{error}</p>}

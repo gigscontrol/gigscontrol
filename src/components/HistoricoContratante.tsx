@@ -7,7 +7,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useContatos } from "@/lib/contatos-context";
-import { formatBRL } from "@/lib/whatsapp";
+import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_ORCAMENTO } from "@/types";
 
 /**
@@ -88,7 +88,7 @@ export default function HistoricoContratante({ contratanteId }: Props) {
                     </span>
                     <span className={`badge ${st.badge}`}>{t(st.label)}</span>
                     <span className="font-semibold tabular-nums text-primary ml-auto">
-                      {formatBRL(o.valorCache)}
+                      {formatarMoeda(o.valorCache, o.moeda)}
                     </span>
                   </div>
                   {linha && <div className="text-muted mt-1">{linha}</div>}
@@ -130,7 +130,7 @@ export default function HistoricoContratante({ contratanteId }: Props) {
                       {v.numero}
                     </span>
                     <span className="font-semibold tabular-nums text-primary ml-auto">
-                      {formatBRL(v.cache)}
+                      {formatarMoeda(v.cache, v.moeda)}
                     </span>
                   </div>
                   {linha && <div className="text-muted mt-1">{linha}</div>}

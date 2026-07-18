@@ -26,7 +26,14 @@ import { useAuth } from "./auth-context";
 
 // ---- Tipos de entrada (camelCase, como a UI consome) ----
 
-export type AddContratanteInput = Omit<Contratante, "id" | "criadoEm">;
+export type AddContratanteInput = Omit<Contratante, "id" | "criadoEm"> & {
+  /**
+   * Sinal TRANSITÓRIO da UI (país ambíguo): PF/Empresa marcado à mão. Não é
+   * campo persistido do contratante — vira `documento_tipo` no body e, no
+   * servidor, grava só no item do jsonb `documentos`. Países com regra ignoram.
+   */
+  documentoTipo?: "pf" | "pj";
+};
 export type UpdateContratanteInput = Partial<AddContratanteInput>;
 
 export type AddCasaInput = Omit<Casa, "id">;
@@ -69,12 +76,17 @@ function contratanteParaApi(
   const out: Record<string, unknown> = {};
   if (c.nome !== undefined) out.nome = c.nome;
   if (c.documento !== undefined) out.documento = c.documento || null;
+  // Razão social (migração 91) — o servidor só a mantém quando o documento
+  // principal é CNPJ; mandar vazio pra CPF é o certo (zera).
+  if (c.razaoSocial !== undefined) out.razao_social = c.razaoSocial || null;
   if (c.pais !== undefined) out.pais = c.pais || null;
   if (c.email !== undefined) out.email = c.email || null;
   if (c.telefone !== undefined) out.telefone = c.telefone || null;
   if (c.endereco !== undefined) out.endereco = c.endereco || null;
   if (c.cidadeId !== undefined) out.cidade_id = c.cidadeId || null;
   if (c.observacoes !== undefined) out.observacoes = c.observacoes || null;
+  // PF/Empresa manual (país ambíguo) → o servidor grava no jsonb `documentos`.
+  if (c.documentoTipo !== undefined) out.documento_tipo = c.documentoTipo ?? null;
   // Bloqueio (migração 83) — bloqueado_por/em são carimbados no servidor.
   if (c.bloqueado !== undefined) out.bloqueado = c.bloqueado;
   if (c.bloqueadoMotivo !== undefined) out.bloqueado_motivo = c.bloqueadoMotivo || null;

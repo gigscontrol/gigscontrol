@@ -82,6 +82,7 @@ function vendaInputParaEscrita(
   if (input.contratante_email !== undefined) out.contratante_email = input.contratante_email;
   if (input.contratante_telefone !== undefined) out.contratante_telefone = input.contratante_telefone;
   if (input.contratante_documento !== undefined) out.contratante_documento = input.contratante_documento;
+  if (input.contratante_razao_social !== undefined) out.contratante_razao_social = input.contratante_razao_social;
   if (input.contratante_endereco !== undefined) out.contratante_endereco = input.contratante_endereco;
   if (input.nome_evento !== undefined) out.nome_evento = input.nome_evento;
   if (input.evento_instagram !== undefined) out.evento_instagram = input.evento_instagram;
@@ -97,6 +98,7 @@ function vendaInputParaEscrita(
   if (input.artist_id !== undefined) out.artist_id = normalizarUuid(input.artist_id ?? null);
   if (input.line_up !== undefined) out.line_up = input.line_up;
   if (input.cache !== undefined) out.cache = input.cache;
+  if (input.moeda !== undefined) out.moeda = input.moeda;
   if (input.duracao_horas !== undefined) out.duracao_horas = input.duracao_horas;
   if (input.duracao_minutos !== undefined) out.duracao_minutos = input.duracao_minutos;
   if (input.camarim !== undefined) out.camarim = input.camarim;

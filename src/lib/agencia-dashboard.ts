@@ -6,8 +6,18 @@ import type {
   Casa,
   Cidade,
   AgendaDateRange,
+  Moeda,
 } from "@/types";
 import { statusEfetivoParcela } from "@/types";
+
+/** Acumula `valor` na moeda `m` de um mapa parcial (regra-mãe: por moeda). */
+function acumularMoeda(
+  acc: Partial<Record<Moeda, number>>,
+  m: Moeda,
+  valor: number
+): void {
+  acc[m] = (acc[m] ?? 0) + valor;
+}
 import type { Contrato } from "@/lib/mappers/contrato";
 import type { UsuarioEquipe } from "@/lib/mappers/usuario";
 
@@ -109,8 +119,12 @@ export function contarStatCards(
 // ---------------------------------------------------------------------------
 
 export type AlertasAgencia = {
-  /** Σ valor das parcelas atrasadas (vendas não-canceladas). */
+  /** Σ valor das parcelas atrasadas (vendas não-canceladas). Soma bruta —
+   *  só use pra ordenar/comparar; pra EXIBIR use `parcelasAtrasadasPorMoeda`. */
   parcelasAtrasadasValor: number;
+  /** Σ valor das parcelas atrasadas AGRUPADO por moeda (a parcela herda a moeda
+   *  da venda). Só-BRL → { BRL: x }; nunca soma moedas diferentes (regra-mãe). */
+  parcelasAtrasadasPorMoeda: Partial<Record<Moeda, number>>;
   /** Nº de parcelas atrasadas. */
   parcelasAtrasadasContagem: number;
   /** Contratos aguardando assinatura = status "enviado". */
@@ -129,14 +143,17 @@ export function calcularAlertas(
   contratos: Contrato[],
   hoje: Date = new Date()
 ): AlertasAgencia {
-  // (a) Parcelas atrasadas — só de vendas NÃO-canceladas.
+  // (a) Parcelas atrasadas — só de vendas NÃO-canceladas. A parcela herda a
+  // moeda da venda; agrupamos por moeda (nunca somamos moedas diferentes).
   let parcelasAtrasadasValor = 0;
   let parcelasAtrasadasContagem = 0;
+  const parcelasAtrasadasPorMoeda: Partial<Record<Moeda, number>> = {};
   for (const v of vendas) {
     if (v.status === "cancelada") continue;
     for (const p of v.parcelas) {
       if (statusEfetivoParcela(p, hoje) === "atrasado") {
         parcelasAtrasadasValor += p.valor;
+        acumularMoeda(parcelasAtrasadasPorMoeda, v.moeda, p.valor);
         parcelasAtrasadasContagem += 1;
       }
     }
@@ -168,6 +185,7 @@ export function calcularAlertas(
 
   return {
     parcelasAtrasadasValor,
+    parcelasAtrasadasPorMoeda,
     parcelasAtrasadasContagem,
     contratosAguardando,
     orcamentosParados,
@@ -191,6 +209,16 @@ export type RankingLinha = {
   cor?: string;
   a: number;
   b: number;
+  /**
+   * Quebra por moeda das métricas MONETÁRIAS (regra-mãe: nunca somar moedas
+   * diferentes). `moedasA`/`moedasB` só existem quando o campo correspondente é
+   * dinheiro; campos de contagem (nº de shows/vendas) ficam sem quebra. O
+   * RankingCard ordena/dimensiona a barra por `a`/`b` (soma bruta — D-RANKING:
+   * heurística, exata no caso 1-moeda) mas EXIBE via `totaisPorMoeda`. Agência
+   * 100% BRL → `{ BRL: x }`, idêntico ao número puro de hoje.
+   */
+  moedasA?: Partial<Record<Moeda, number>>;
+  moedasB?: Partial<Record<Moeda, number>>;
 };
 
 /** Vendas não-canceladas dentro do período (base dos rankings de vendas). */
@@ -209,15 +237,26 @@ export function rankingFaturamentoPorArtista(
   artistas: Artista[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { bruto: number; taxa: number }>();
+  const mapa = new Map<
+    string,
+    {
+      bruto: number;
+      taxa: number;
+      brutoM: Partial<Record<Moeda, number>>;
+      taxaM: Partial<Record<Moeda, number>>;
+    }
+  >();
   for (const v of vendasDoPeriodo(vendas, periodo)) {
-    const cur = mapa.get(v.artistaId) ?? { bruto: 0, taxa: 0 };
+    const cur =
+      mapa.get(v.artistaId) ?? { bruto: 0, taxa: 0, brutoM: {}, taxaM: {} };
     cur.bruto += v.cache || 0;
+    acumularMoeda(cur.brutoM, v.moeda, v.cache || 0);
     cur.taxa += v.taxaAgenciaValor ?? 0;
+    acumularMoeda(cur.taxaM, v.moeda, v.taxaAgenciaValor ?? 0);
     mapa.set(v.artistaId, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { bruto, taxa }] of mapa) {
+  for (const [id, { bruto, taxa, brutoM, taxaM }] of mapa) {
     const artista = artistas.find((a) => a.id === id);
     linhas.push({
       id,
@@ -225,6 +264,8 @@ export function rankingFaturamentoPorArtista(
       cor: artista?.color,
       a: bruto,
       b: taxa,
+      moedasA: brutoM,
+      moedasB: taxaM,
     });
   }
   return linhas;
@@ -239,18 +280,22 @@ export function rankingContratantes(
   contratantes: Contratante[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { valor: number; shows: number }>();
+  const mapa = new Map<
+    string,
+    { valor: number; shows: number; valorM: Partial<Record<Moeda, number>> }
+  >();
   for (const v of vendasDoPeriodo(vendas, periodo)) {
     if (!v.contratanteId) continue;
-    const cur = mapa.get(v.contratanteId) ?? { valor: 0, shows: 0 };
+    const cur = mapa.get(v.contratanteId) ?? { valor: 0, shows: 0, valorM: {} };
     cur.valor += v.cache || 0;
+    acumularMoeda(cur.valorM, v.moeda, v.cache || 0);
     cur.shows += 1;
     mapa.set(v.contratanteId, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { valor, shows }] of mapa) {
+  for (const [id, { valor, shows, valorM }] of mapa) {
     const c = contratantes.find((x) => x.id === id);
-    linhas.push({ id, nome: c?.nome ?? "—", a: valor, b: shows });
+    linhas.push({ id, nome: c?.nome ?? "—", a: valor, b: shows, moedasA: valorM });
   }
   return linhas;
 }
@@ -264,18 +309,22 @@ export function rankingCasas(
   casas: Casa[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { shows: number; valor: number }>();
+  const mapa = new Map<
+    string,
+    { shows: number; valor: number; valorM: Partial<Record<Moeda, number>> }
+  >();
   for (const v of vendasDoPeriodo(vendas, periodo)) {
     if (!v.casaId) continue;
-    const cur = mapa.get(v.casaId) ?? { shows: 0, valor: 0 };
+    const cur = mapa.get(v.casaId) ?? { shows: 0, valor: 0, valorM: {} };
     cur.shows += 1;
     cur.valor += v.cache || 0;
+    acumularMoeda(cur.valorM, v.moeda, v.cache || 0);
     mapa.set(v.casaId, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { shows, valor }] of mapa) {
+  for (const [id, { shows, valor, valorM }] of mapa) {
     const c = casas.find((x) => x.id === id);
-    linhas.push({ id, nome: c?.nome ?? "—", a: shows, b: valor });
+    linhas.push({ id, nome: c?.nome ?? "—", a: shows, b: valor, moedasB: valorM });
   }
   return linhas;
 }
@@ -289,23 +338,27 @@ export function rankingCidades(
   cidades: Cidade[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { valor: number; shows: number }>();
+  const mapa = new Map<
+    string,
+    { valor: number; shows: number; valorM: Partial<Record<Moeda, number>> }
+  >();
   for (const v of vendasDoPeriodo(vendas, periodo)) {
     if (!v.cidadeId) continue;
-    const cur = mapa.get(v.cidadeId) ?? { valor: 0, shows: 0 };
+    const cur = mapa.get(v.cidadeId) ?? { valor: 0, shows: 0, valorM: {} };
     cur.valor += v.cache || 0;
+    acumularMoeda(cur.valorM, v.moeda, v.cache || 0);
     cur.shows += 1;
     mapa.set(v.cidadeId, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { valor, shows }] of mapa) {
+  for (const [id, { valor, shows, valorM }] of mapa) {
     const c = cidades.find((x) => x.id === id);
     const nome = c
       ? c.estado
         ? `${c.nome} · ${c.estado}`
         : c.nome
       : "—";
-    linhas.push({ id, nome, a: valor, b: shows });
+    linhas.push({ id, nome, a: valor, b: shows, moedasA: valorM });
   }
   return linhas;
 }
@@ -320,17 +373,22 @@ export function rankingVendasPorUsuario(
   equipe: UsuarioEquipe[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { valor: number; qtd: number; nome: string }>();
+  const mapa = new Map<
+    string,
+    { valor: number; qtd: number; nome: string; valorM: Partial<Record<Moeda, number>> }
+  >();
   for (const v of vendasDoPeriodo(vendas, periodo)) {
     const id = v.criadoPor ?? "";
-    const cur = mapa.get(id) ?? { valor: 0, qtd: 0, nome: v.criadoPorNome ?? "" };
+    const cur =
+      mapa.get(id) ?? { valor: 0, qtd: 0, nome: v.criadoPorNome ?? "", valorM: {} };
     cur.valor += v.cache || 0;
+    acumularMoeda(cur.valorM, v.moeda, v.cache || 0);
     cur.qtd += 1;
     if (!cur.nome && v.criadoPorNome) cur.nome = v.criadoPorNome;
     mapa.set(id, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { valor, qtd, nome }] of mapa) {
+  for (const [id, { valor, qtd, nome, valorM }] of mapa) {
     const membro = equipe.find((u) => u.id === id);
     linhas.push({
       id: id || "—",
@@ -338,6 +396,7 @@ export function rankingVendasPorUsuario(
       cor: membro?.cor,
       a: valor,
       b: qtd,
+      moedasA: valorM,
     });
   }
   return linhas;
@@ -353,18 +412,23 @@ export function rankingOrcamentosPorUsuario(
   equipe: UsuarioEquipe[],
   periodo: Periodo
 ): RankingLinha[] {
-  const mapa = new Map<string, { valor: number; qtd: number; nome: string }>();
+  const mapa = new Map<
+    string,
+    { valor: number; qtd: number; nome: string; valorM: Partial<Record<Moeda, number>> }
+  >();
   for (const o of orcamentos) {
     if (!dataNoMes(o.criadoEm, periodo)) continue;
     const id = o.criadoPor ?? "";
-    const cur = mapa.get(id) ?? { valor: 0, qtd: 0, nome: o.criadoPorNome ?? "" };
+    const cur =
+      mapa.get(id) ?? { valor: 0, qtd: 0, nome: o.criadoPorNome ?? "", valorM: {} };
     cur.valor += o.valorCache || 0;
+    acumularMoeda(cur.valorM, o.moeda, o.valorCache || 0);
     cur.qtd += 1;
     if (!cur.nome && o.criadoPorNome) cur.nome = o.criadoPorNome;
     mapa.set(id, cur);
   }
   const linhas: RankingLinha[] = [];
-  for (const [id, { valor, qtd, nome }] of mapa) {
+  for (const [id, { valor, qtd, nome, valorM }] of mapa) {
     const membro = equipe.find((u) => u.id === id);
     linhas.push({
       id: id || "—",
@@ -372,6 +436,7 @@ export function rankingOrcamentosPorUsuario(
       cor: membro?.cor,
       a: valor,
       b: qtd,
+      moedasA: valorM,
     });
   }
   return linhas;

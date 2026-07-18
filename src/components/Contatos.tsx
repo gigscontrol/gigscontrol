@@ -17,7 +17,7 @@ import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
-import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatBRL } from "@/lib/contatos-stats";
+import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatarFaturamento } from "@/lib/contatos-stats";
 import { MODULE_THEMES } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange } from "@/types";
 
@@ -748,6 +748,7 @@ function TabelaCasas({
   const t = useT();
   const { cidades } = useContatos();
   const { shows } = useShows();
+  const { vendas } = useVendas();
   if (items.length === 0) return <EmptyTable label={t("Nenhuma casa encontrada")} />;
 
   return (
@@ -766,7 +767,7 @@ function TabelaCasas({
         </thead>
         <tbody>
           {items.map((c) => {
-            const stats = getCasaStats(c.id, shows);
+            const stats = getCasaStats(c.id, shows, vendas);
             return (
               <tr
                 key={c.id}
@@ -795,7 +796,7 @@ function TabelaCasas({
                 </Td>
                 <Td className="text-right tabular-nums">{stats.totalShows}</Td>
                 <Td className="text-right tabular-nums font-semibold">
-                  {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
+                  {stats.faturamento > 0 ? formatarFaturamento(stats.faturamentoPorMoeda) : "—"}
                 </Td>
                 <Td>
                   <RowActions
@@ -829,6 +830,7 @@ function TabelaCidades({
   const t = useT();
   const { shows } = useShows();
   const { casas } = useContatos();
+  const { vendas } = useVendas();
   if (items.length === 0) return <EmptyTable label={t("Nenhuma cidade encontrada")} />;
 
   return (
@@ -848,7 +850,7 @@ function TabelaCidades({
         </thead>
         <tbody>
           {items.map((c) => {
-            const stats = getCidadeStats(c.id, shows, casas);
+            const stats = getCidadeStats(c.id, shows, casas, vendas);
             return (
               <tr
                 key={c.id}
@@ -861,7 +863,7 @@ function TabelaCidades({
                 <Td className="text-right tabular-nums">{stats.totalCasas}</Td>
                 <Td className="text-right tabular-nums">{stats.totalShows}</Td>
                 <Td className="text-right tabular-nums font-semibold">
-                  {stats.faturamento > 0 ? formatBRL(stats.faturamento) : "—"}
+                  {stats.faturamento > 0 ? formatarFaturamento(stats.faturamentoPorMoeda) : "—"}
                 </Td>
                 <Td className="text-secondary">
                   {stats.topArtista ? (

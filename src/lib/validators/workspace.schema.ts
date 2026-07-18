@@ -24,5 +24,6 @@ export const workspaceUpdateSchema = z.object({
   // Fuso horário padrão da agência (IANA, ex.: "America/Sao_Paulo"). Display-only:
   // pré-preenche o seletor de fuso do evento; não afeta backend/cron (UTC).
   fuso_padrao: z.string().max(64).optional().nullable(),
+  moeda: z.enum(["BRL", "USD", "EUR"]).optional(),
 });
 export type WorkspaceUpdateInput = z.infer<typeof workspaceUpdateSchema>;
