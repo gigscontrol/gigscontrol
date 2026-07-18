@@ -230,6 +230,14 @@ export function EditorPermissoesVinculo({
                         <span className={cap.existe ? "text-secondary" : "text-muted"}>
                           {cap.label}
                           {!cap.existe && <span className="text-[0.6rem] text-disabled ml-1">(em breve)</span>}
+                          {/* Os setores da agenda dizem o que entregam — sem isto
+                              "Ver Detalhes do show" x "Ver Local do evento" vira
+                              adivinhação na hora de configurar. */}
+                          {cap.descricao && (
+                            <span className="block text-[0.65rem] text-muted font-normal leading-tight mt-0.5">
+                              {cap.descricao}
+                            </span>
+                          )}
                         </span>
                       </button>
 
