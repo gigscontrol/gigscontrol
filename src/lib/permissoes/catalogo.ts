@@ -20,6 +20,7 @@ export type ModuloPermissao =
   | "financeiro"
   | "contratos"
   | "contatos"
+  | "anotacoes"
   | "agencia";
 
 export type NivelPermissao = "artista" | "workspace";
@@ -38,6 +39,7 @@ export const MODULOS: { id: ModuloPermissao; label: string }[] = [
   { id: "financeiro", label: "Financeiro" },
   { id: "contratos", label: "Contratos" },
   { id: "contatos", label: "Contatos" },
+  { id: "anotacoes", label: "Anotações" },
   { id: "agencia", label: "Agência" },
 ];
 
@@ -110,6 +112,22 @@ export const CATALOGO: Permissao[] = [
   // Sem rota implementada ainda (achado só referência na página de Privacidade,
   // texto de política — não há endpoint de exportação real). Slot futuro.
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },
+
+  // ---------------- ANOTAÇÕES (por artista) ----------------
+  // A nota carrega `artist_id` (etiqueta de artista) — é esse campo que amarra
+  // a permissão ao vínculo. ZERO migration: as chaves moram no jsonb
+  // membros_artista.permissoes, como as dos outros módulos.
+  //
+  // COMPATIBILIDADE (importante): até aqui anotações eram governadas por um
+  // BOOLEANO GLOBAL (profiles.pode_criar_anotacoes → sessao.podeCriarAnotacoes)
+  // e a leitura ficava só com a RLS. As chaves abaixo NÃO revogam nada de quem
+  // já tinha acesso — o gate (src/lib/api/permissoes.ts) soma o legado em OU e
+  // só passa a filtrar por chave quando o admin de fato configurou alguma
+  // `anotacoes.*` no vínculo. Ver `governadoPorChavesAnotacoes`.
+  { chave: "anotacoes.ver", modulo: "anotacoes", nivel: "artista", label: "Ver anotações", existe: true },
+  { chave: "anotacoes.criar", modulo: "anotacoes", nivel: "artista", label: "Criar anotação", existe: true },
+  { chave: "anotacoes.editar", modulo: "anotacoes", nivel: "artista", label: "Editar as anotações (mesmo as de outros)", existe: true },
+  { chave: "anotacoes.excluir", modulo: "anotacoes", nivel: "artista", label: "Excluir as anotações (mesmo as de outros)", existe: true },
 
   // ---------------- AGÊNCIA (workspace — administrativo, NÃO por-artista) ----------------
   // Gestão da agência é ADMIN-ONLY ASSUMIDO — não delegável. Todas marcadas

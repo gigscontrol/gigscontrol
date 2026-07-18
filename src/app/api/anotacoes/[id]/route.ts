@@ -7,7 +7,7 @@ import {
 } from "@/lib/services/anotacoes.service";
 import { notaUpdateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarNota } from "@/lib/repositories/anotacoes.repo";
-import { podeMexerNaNota } from "@/lib/api/permissoes";
+import { podeMexerNaNota, podeCriarAnotacao } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
@@ -20,7 +20,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const row = await buscarNota(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Anotação não encontrada." }, { status: 404 });
-  if (!podeMexerNaNota(r.sessao, row.criado_por)) {
+  // Autor sempre pode (como antes); `anotacoes.editar` no artista da nota
+  // AMPLIA pra mexer na nota de outra pessoa.
+  if (!podeMexerNaNota(r.sessao, row.criado_por, row.artist_id, "editar")) {
     return NextResponse.json(
       { erro: "Você só pode editar as suas próprias anotações." },
       { status: 403 }
@@ -52,6 +54,19 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Re-etiquetar a nota para OUTRO artista exige permissão no artista de
+  // DESTINO também — senão a troca de etiqueta viraria uma porta lateral.
+  if (
+    parsed.data.artistId !== undefined &&
+    parsed.data.artistId !== row.artist_id &&
+    !podeCriarAnotacao(r.sessao, parsed.data.artistId ?? null)
+  ) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para mover a anotação para este artista." },
+      { status: 403 }
+    );
+  }
+
   // Nota de PASTA não pode ficar sem título (nota de show pode).
   if (row.pasta_id && parsed.data.titulo !== undefined && !parsed.data.titulo?.trim()) {
     return NextResponse.json({ erro: "Dê um título à anotação." }, { status: 400 });
@@ -78,7 +93,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const row = await buscarNota(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Anotação não encontrada." }, { status: 404 });
-  if (!podeMexerNaNota(r.sessao, row.criado_por)) {
+  if (!podeMexerNaNota(r.sessao, row.criado_por, row.artist_id, "excluir")) {
     return NextResponse.json(
       { erro: "Você só pode excluir as suas próprias anotações." },
       { status: 403 }

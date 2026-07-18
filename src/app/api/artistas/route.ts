@@ -9,6 +9,7 @@ import {
   ArtistaNaLixeiraError,
 } from "@/lib/services/artistas.service";
 import { redigirArtista } from "@/lib/mappers/artista";
+import { artistasVisiveis, ctxDaSessao } from "@/lib/permissoes/resolver";
 import { artistaCreateSchema } from "@/lib/validators/artistas.schema";
 import type { PlanoId } from "@/lib/planos";
 import { auditAndNotify } from "@/lib/services/historico.service";
@@ -19,17 +20,27 @@ export async function GET() {
   if ("response" in r) return r.response;
   try {
     const artistas = await listarArtistasDoWorkspace(r.sessao.supabase, r.sessao.workspaceId);
-    // Admin/super veem tudo. Demais (operacional/artista) recebem a lista
-    // REDIGIDA — sem PII pessoal/legal nem a taxa da agência. O artista vê o
-    // PRÓPRIO cadastro completo (precisa dos próprios dados).
-    const podeTudo = r.sessao.isSuperAdmin || r.sessao.papel === "admin";
-    const saida = podeTudo
-      ? artistas
-      : artistas.map((artista) =>
+    // Admin/super veem TUDO (inclusive super-admin em modo visitante, que não
+    // tem vínculo no workspace visitado). Demais só ALCANÇAM o que o motor
+    // libera: o artista vê o PRÓPRIO; o operacional, só os artistas a que está
+    // VINCULADO (membros_artista). Sem vínculo → lista vazia, que é resposta
+    // VÁLIDA (não é erro). O filtro é em memória sobre o array já carregado —
+    // não toca o repo/COLS.
+    const alcance = artistasVisiveis(ctxDaSessao(r.sessao));
+    const podeTudo = alcance === "todos";
+    let saida = artistas;
+    if (!podeTudo) {
+      const permitidos = new Set(alcance);
+      // A lista REDIGIDA não leva PII pessoal/legal nem a taxa da agência. O
+      // artista vê o próprio cadastro completo (precisa dos próprios dados).
+      saida = artistas
+        .filter((artista) => permitidos.has(artista.id))
+        .map((artista) =>
           r.sessao.papel === "artista" && artista.id === r.sessao.artistaId
             ? artista
             : redigirArtista(artista)
         );
+    }
     return NextResponse.json({ artistas: saida });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar artistas.");

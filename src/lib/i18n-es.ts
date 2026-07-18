@@ -2837,4 +2837,11 @@ export const ES: Record<string, string> = {
   "Ver equipe": "Ver equipo",
   "Ver membros bloqueados": "Ver miembros bloqueados",
   "{n} dia{s} de atraso": "{n} día{s} de atraso",
+  // Chaves novas — visibilidade por permissão (Sidebar por módulo) e renome de local na edição da venda (K1).
+  "Você ainda não tem acesso a nenhum módulo. Fale com o administrador da agência.": "Todavía no tienes acceso a ningún módulo. Habla con el administrador de la agencia.",
+  "Renomear o cadastro do local?": "¿Cambiar el nombre del local registrado?",
+  "O local desta venda está cadastrado como \"{atual}\" e você escreveu \"{novo}\".": "El local de esta venta está registrado como \"{atual}\" y escribiste \"{novo}\".",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também. Se preferir, o cadastro fica como está e o nome novo vale só para esta venda.": "Este local aparece en shows ya registrados — cambiar el nombre también actualiza el historial. Si prefieres, el registro queda como está y el nombre nuevo vale solo para esta venta.",
+  "Só nesta venda": "Solo en esta venta",
+  "Renomear o cadastro": "Cambiar el nombre del registro",
 };

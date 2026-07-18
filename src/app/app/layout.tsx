@@ -34,6 +34,8 @@ import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
 import { AnotacoesProvider } from "@/lib/anotacoes-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ctxDaSessao } from "@/lib/permissoes/resolver";
+import { podeVerModulo } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
@@ -377,16 +379,42 @@ function AppRoot() {
     [pathname]
   );
 
-  // Módulo "Agência" (roster de Artistas/Equipe) é admin-only. Defesa em
-  // profundidade contra a URL direta (/app/agencia/…): quem não é admin nem
-  // super-admin não monta as telas e é mandado de volta pra Agenda. O menu já
-  // esconde o módulo (Sidebar) e o servidor barra as mutações (403).
+  // Defesa em profundidade contra a URL DIRETA (link antigo, bookmark, histórico
+  // do navegador, aba aberta antes do deploy). A Sidebar esconde o módulo, mas
+  // a rota continuava montável: o usuário caía numa tela cujos fetches tomam
+  // 403 e, sem o item no menu, sem nada que explicasse onde ele está. Vale pra
+  // TODO módulo, não só "agencia" — mesma regra (`podeVerModulo`) do menu.
   const podeAgencia = isSuperAdmin || sessao?.usuario?.papel === "admin";
+  const ctxModulos = useMemo(
+    () =>
+      sessao
+        ? ctxDaSessao({
+            isSuperAdmin,
+            papel: sessao.usuario.papel,
+            artistaId:
+              (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+            privacidade: sessao.privacidade,
+            vinculos: sessao.vinculos,
+            podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+          })
+        : null,
+    [sessao, isSuperAdmin]
+  );
   useEffect(() => {
-    if (!configAberta && activeTab === "agencia" && sessao && !podeAgencia) {
-      irPara(urlDaTela("agenda", "dashboard"));
+    if (configAberta || !sessao || !ctxModulos) return;
+    // Vínculos que falharam ao carregar = UI falha ABERTO (o servidor barra).
+    if (sessao.vinculosErro) {
+      if (activeTab === "agencia" && !podeAgencia) irPara(urlDaTela("agenda", "dashboard"));
+      return;
     }
-  }, [activeTab, configAberta, sessao, podeAgencia, irPara]);
+    if (podeVerModulo(ctxModulos, activeTab)) return;
+    // Manda pro primeiro módulo ALCANÇÁVEL — mandar pra agenda cegamente
+    // criaria um loop de redirect pra quem não alcança nem a agenda.
+    const destino = (["agenda", "vendas", "financeiro", "contratos", "contatos", "agencia"] as ActiveTab[]).find(
+      (t) => podeVerModulo(ctxModulos, t)
+    );
+    if (destino && destino !== activeTab) irPara(urlDaTela(destino, "dashboard"));
+  }, [activeTab, configAberta, sessao, ctxModulos, podeAgencia, irPara]);
 
   // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
   // abaixo sincroniza com a lista real de artistas do workspace assim

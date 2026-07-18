@@ -53,6 +53,7 @@ import CasaParecidaModal, {
   type CasaCandidata,
   type EscolhaCasaParecida,
 } from "./CasaParecidaModal";
+import RenomearCasaModal, { type EscolhaRenomearCasa } from "./RenomearCasaModal";
 import { buscarPais } from "@/lib/data/countries";
 import { normalizar } from "@/lib/normalizar";
 import { exemploEndereco } from "@/lib/data/exemplos";
@@ -254,7 +255,9 @@ export default function ConcretizarVenda({
     erro?: string;
   } | null>(null);
   const artistas = useArtistas();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao, isSuperAdmin } = useAuth();
+  /** Enxerga o roster INTEIRO do workspace (a lista de artistas não é filtrada). */
+  const veRosterCompleto = isSuperAdmin || sessao?.usuario?.papel === "admin";
 
   const orc = orcamentoId ? orcamentos.find((o) => o.id === orcamentoId) : undefined;
   const contratanteOrc = orc ? contratantes.find((c) => c.id === orc.contratanteId) : undefined;
@@ -553,6 +556,33 @@ export default function ConcretizarVenda({
     setCasaParecida(null);
     const resolver = responderCasaParecida.current;
     responderCasaParecida.current = null;
+    resolver?.(r);
+  }
+
+  // ------- Popup de renome da casa (K1) -------
+  // Mesmo padrão promise+ref: o submit fica suspenso esperando a decisão.
+  const [renomearCasa, setRenomearCasa] = useState<{
+    nomeAtual: string;
+    nomeNovo: string;
+  } | null>(null);
+  const responderRenomearCasa = useRef<((r: EscolhaRenomearCasa) => void) | null>(null);
+
+  /** Abre o popup e resolve com a escolha (renomear o cadastro x só nesta venda). */
+  function perguntarRenomearCasa(
+    nomeAtual: string,
+    nomeNovo: string
+  ): Promise<EscolhaRenomearCasa> {
+    return new Promise((resolve) => {
+      responderRenomearCasa.current = resolve;
+      setRenomearCasa({ nomeAtual, nomeNovo });
+    });
+  }
+
+  /** Todo caminho de saída passa por aqui — senão o submit congela em `salvando`. */
+  function fecharRenomearCasa(r: EscolhaRenomearCasa) {
+    setRenomearCasa(null);
+    const resolver = responderRenomearCasa.current;
+    responderRenomearCasa.current = null;
     resolver?.(r);
   }
 
@@ -889,8 +919,47 @@ export default function ConcretizarVenda({
       casaAncora &&
       casaAncora.cidadeId === cidadeId &&
       normalizar(casaAncora.nome) === normalizar(nome)
-    )
+    ) {
+      // K1 — é a MESMA casa, mas a grafia mudou ("LVL CLUB" → "LVL Club").
+      // `normalizar` engole caixa/acento, então este early-return devolvia a casa
+      // e o renome sumia. A comparação aqui é LITERAL (sobre o `nome` já
+      // trimado, pra um espaço acidental não abrir popup nenhum).
+      //
+      // Só quando o usuário DE FATO editou o campo nesta sessão. Comparar o
+      // snapshot da venda com o cadastro não serve: o dedupe de criação casa
+      // por `normalizar`, então uma venda antiga pode ter nascido com
+      // "LVL CLUB" no texto enquanto o cadastro é "LVL Club" — a divergência
+      // fica gravada de fábrica e o popup dispararia em TODA edição, inclusive
+      // numa que só mexeu no cachê. Popup que reaparece depois de um "não"
+      // explícito treina o usuário a clicar no botão destacado sem ler — e o
+      // botão destacado aqui reescreve o nome do local em todo o histórico.
+      // `editado` também resolve a persistência do "só nesta venda": dentro da
+      // mesma sessão de edição a pergunta só existe se o campo foi tocado.
+      //
+      // Só na EDIÇÃO: no fluxo de criação o nome vem do próprio orçamento e
+      // ninguém "renomeou" nada. E só pra quem pode editar contatos — senão o
+      // PATCH seria barrado e a pergunta viraria promessa falsa.
+      if (
+        emEdicao &&
+        editado.has("nomeLocal") &&
+        nome &&
+        casaAncora.nome !== nome &&
+        podeUI(artistaId, "contatos.editar")
+      ) {
+        const escolha = await perguntarRenomearCasa(casaAncora.nome, nome);
+        if (escolha === "renomear") {
+          // Best-effort, como todo o resto daqui: o VÍNCULO vale mais que o
+          // nome. Se o PATCH falhar (casa oculta, permissão), a venda segue com
+          // o nome novo no texto dela e o cadastro intacto.
+          try {
+            await updateCasa(casaAncora.id, { nome });
+          } catch {
+            /* renome falhou → mantém o vínculo assim mesmo */
+          }
+        }
+      }
       return casaAncora.id;
+    }
     if (!nome || !cidadeId) return casaIdDegradado;
 
     try {
@@ -1313,15 +1382,21 @@ export default function ConcretizarVenda({
   // Resolve o DJ a ser usado quando vem de orçamento:
   //  1. orc.artistaId bate com um ativo → usa direto (caso comum)
   //  2. orc.artistaId está inválido (DJ original foi pra lixeira ou foi
-  //     recriado com outro id) E o workspace tem só 1 DJ ativo →
+  //     recriado com outro id) E o WORKSPACE tem só 1 DJ ativo →
   //     assume que é ele (auto-fix silencioso). Cobre o caso típico
   //     do plano Individual.
   //  3. Caso contrário → caller mostra grid / erro pra resolver.
+  //
+  // `artistas` agora é a lista FILTRADA POR VÍNCULO (K2b) — pra quem não é
+  // admin, `length === 1` significa "sou vinculado a um artista", não "o
+  // workspace tem um artista só". Sem a guarda, uma agência de 6 DJs gravaria
+  // a venda calada no único DJ do vendedor, que pode não ser o do orçamento.
+  // Só quem enxerga o roster inteiro pode inferir pelo tamanho da lista.
   const artistaDoOrcamento = orc?.artistaId
     ? artistas.find((d) => d.id === orc.artistaId)
     : null;
   const artistaAutoFallback =
-    !artistaDoOrcamento && orc?.artistaId && artistas.length === 1
+    !artistaDoOrcamento && orc?.artistaId && veRosterCompleto && artistas.length === 1
       ? artistas[0]
       : null;
   const artistaEfetivoOrc = artistaDoOrcamento ?? artistaAutoFallback;
@@ -2452,6 +2527,18 @@ export default function ConcretizarVenda({
           // Fechar/ESC/clique-fora = "É outro local": o caminho seguro é o de
           // hoje (cria nova). Nunca vincula sem clique explícito.
           onFechar={() => fecharCasaParecida({ tipo: "nova" })}
+        />
+      )}
+
+      {renomearCasa && (
+        <RenomearCasaModal
+          aberto
+          nomeAtual={renomearCasa.nomeAtual}
+          nomeNovo={renomearCasa.nomeNovo}
+          onEscolher={fecharRenomearCasa}
+          // Fechar/ESC/clique-fora = MANTER o cadastro: a casa é compartilhada e
+          // o caminho seguro é não reescrever o histórico de ninguém.
+          onFechar={() => fecharRenomearCasa("manter")}
         />
       )}
 

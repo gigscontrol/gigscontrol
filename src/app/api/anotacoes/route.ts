@@ -8,17 +8,28 @@ import {
 import { notaCreateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarPasta, contarNotasDoShow } from "@/lib/repositories/anotacoes.repo";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
-import { podeVerAgenda } from "@/lib/api/permissoes";
+import {
+  podeVerAgenda,
+  podeVerAnotacao,
+  podeCriarAnotacao,
+} from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 const MAX_NOTAS_POR_SHOW = 4;
 
-/** GET /api/anotacoes — notas das pastas que o usuário PODE ver (RLS filtra). */
+/**
+ * GET /api/anotacoes — notas das pastas que o usuário PODE ver (RLS filtra) e,
+ * por cima, o gate por artista (`anotacoes.ver`). O filtro é em memória sobre o
+ * array já lido — não mexe no COLS/select do repo. Para quem NÃO tem chave
+ * `anotacoes.*` nenhuma, `podeVerAnotacao` devolve true e a lista sai idêntica
+ * à de antes (compatibilidade).
+ */
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
-    const notas = await listarNotasDoWorkspace(r.sessao.supabase);
+    const todas = await listarNotasDoWorkspace(r.sessao.supabase);
+    const notas = todas.filter((n) => podeVerAnotacao(r.sessao, n.artistId ?? null));
     return NextResponse.json({ notas });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar anotações.");
@@ -51,6 +62,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { erro: "Artista inválido para este workspace." },
       { status: 400 }
+    );
+  }
+
+  // Gate por artista (`anotacoes.criar`). Quem está no regime legado passa —
+  // ver a doutrina de compatibilidade em lib/api/permissoes.ts.
+  if (!podeCriarAnotacao(r.sessao, parsed.data.artistId ?? null)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para criar anotações deste artista." },
+      { status: 403 }
     );
   }
 

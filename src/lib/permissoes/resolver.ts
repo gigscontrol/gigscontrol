@@ -36,6 +36,14 @@ export type CtxPermissao = {
    * negado em qualquer artista (sem fallback legado).
    */
   vinculos?: Record<string, string[]>;
+  /**
+   * Booleano LEGADO e GLOBAL de anotações (profiles.pode_criar_anotacoes).
+   * Não participa de `pode()` (que é por-artista) — existe só para o espelho de
+   * UI (`podeVerModulo`) saber que este usuário alcança Anotações mesmo sem
+   * chave `anotacoes.*` em vínculo nenhum. Sem ele, ligar o filtro da Sidebar
+   * TIRARIA a única porta pra /app/agenda/anotacoes de quem já trabalha lá.
+   */
+  podeCriarAnotacoes?: boolean;
 };
 
 /**
@@ -160,6 +168,7 @@ export function ctxDaSessao(sessao: {
   artistaId: string | null;
   vinculos?: Record<string, string[]>;
   privacidade?: PrivacidadeDj;
+  podeCriarAnotacoes?: boolean;
 }): CtxPermissao {
   return {
     isSuperAdmin: sessao.isSuperAdmin,
@@ -167,5 +176,6 @@ export function ctxDaSessao(sessao: {
     artistaId: sessao.artistaId,
     privacidade: sessao.privacidade,
     vinculos: sessao.vinculos,
+    podeCriarAnotacoes: sessao.podeCriarAnotacoes,
   };
 }

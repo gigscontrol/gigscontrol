@@ -120,6 +120,17 @@ export const CAPACIDADES: Capacidade[] = [
   { id: "contatos.criar", modulo: "contatos", label: "Criar contato", existe: true, chave: "contatos.criar" },
   { id: "contatos.editar", modulo: "contatos", label: "Editar contato", existe: true, chave: "contatos.editar" },
   { id: "contatos.excluir", modulo: "contatos", label: "Excluir contato", existe: true, chave: "contatos.excluir" },
+
+  // -------- ANOTAÇÕES --------
+  // Cada capacidade aqui PRECISA ter a chave gêmea no CATALOGO com
+  // nivel:"artista" — senão o editor mostra a caixa, o admin marca, e
+  // vinculo.schema.ts rejeita o payload INTEIRO (400). As 4 estão lá.
+  // O booleano legado (profiles.pode_criar_anotacoes) continua valendo em OU:
+  // marcar/desmarcar aqui NÃO revoga acesso de quem já tinha.
+  { id: "anotacoes.ver", modulo: "anotacoes", label: "Ver anotações", existe: true, chave: "anotacoes.ver" },
+  { id: "anotacoes.criar", modulo: "anotacoes", label: "Criar anotação", existe: true, chave: "anotacoes.criar" },
+  { id: "anotacoes.editar", modulo: "anotacoes", label: "Editar anotações (mesmo as de outros)", existe: true, chave: "anotacoes.editar" },
+  { id: "anotacoes.excluir", modulo: "anotacoes", label: "Excluir anotações (mesmo as de outros)", existe: true, chave: "anotacoes.excluir" },
 ];
 
 export function capacidadesDoModulo(modulo: ModuloPermissao): Capacidade[] {

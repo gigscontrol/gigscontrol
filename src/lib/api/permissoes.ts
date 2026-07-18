@@ -693,15 +693,59 @@ export function redigirOrcamentoParaSessao(
 }
 
 // ============================================================
-// ANOTAÇÕES (workspace-level, não por-artista).
-//  - Criar PASTA: permissão dedicada `podeCriarAnotacoes` (admin/super sempre).
-//  - Gerir a PASTA (renomear/visibilidade/excluir): o dono (criado_por) ou admin.
-//  - Editar/excluir uma NOTA: só o AUTOR (admin/super qualquer). Adicionar nota
-//    numa pasta que enxerga é liberado (a RLS de leitura da pasta é o gate).
+// ANOTAÇÕES — módulo de permissão POR ARTISTA (chaves `anotacoes.*` no
+// vínculo membros_artista.permissoes; ZERO migration). A amarração por artista
+// é a coluna `artist_id` da nota (a etiqueta de artista).
+//
+// REGRA DE COMPATIBILIDADE (não tirar acesso de quem já tem):
+//   As chaves nasceram AGORA — nenhum vínculo existente as tem. Se o gate
+//   passasse a exigi-las de cara, TODO MUNDO perderia anotações no mesmo
+//   instante. Então o enforcement é OPT-IN por usuário:
+//     - o BOOLEANO LEGADO (profiles.pode_criar_anotacoes → sessao.
+//       podeCriarAnotacoes) continua valendo em OU, pra sempre;
+//     - enquanto o usuário não tiver NENHUMA chave `anotacoes.*` em vínculo
+//       nenhum, ele fica no comportamento de antes (leitura pela RLS, nota
+//       livre na pasta que enxerga) — ver `governadoPorChavesAnotacoes`;
+//     - assim que o admin marcar QUALQUER `anotacoes.*` pra ele no editor da
+//       aba Equipe, o gate por artista passa a valer pra esse usuário.
+//   Admin/super-admin sempre podem. O papel `artista` nunca entra no regime de
+//   chaves (não tem vínculo operacional; é governado por privacidade/legado).
+//
+// Fora do regime de chaves, as regras antigas seguem intactas:
+//   - Gerir a PASTA (renomear/visibilidade/excluir): o dono (criado_por) ou admin.
+//   - Editar/excluir uma NOTA: o AUTOR. As chaves `anotacoes.editar`/`.excluir`
+//     AMPLIAM isso (mexer na nota de outro) — nunca reduzem.
 // ============================================================
 
+/**
+ * O usuário está no regime NOVO para ESTA AÇÃO (governado por `anotacoes.<acao>`)?
+ * false = regime legado (comportamento de antes, preservado). Admin/super e
+ * artista nunca são "governados" — passam pelos seus próprios caminhos.
+ *
+ * POR AÇÃO, não por módulo: se o regime ligasse com QUALQUER chave do prefixo,
+ * marcar só "Excluir anotações" para alguém passaria a EXIGIR `anotacoes.ver`
+ * que ninguém tem — e a base inteira sumiria da tela dela. Conceder permissão
+ * jamais pode revogar outra. Cada ação entra no regime novo sozinha, quando (e
+ * só quando) a chave dela aparece em algum vínculo.
+ */
+function governadoPorChavesAnotacoes(
+  sessao: SessaoAutenticada,
+  acao: "ver" | "criar" | "editar" | "excluir"
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return false;
+  if (sessao.papel === "artista") return false;
+  return temChaveEmAlgumVinculo(sessao, `anotacoes.${acao}`);
+}
+
+/**
+ * Criar PASTA é WORKSPACE-level (a pasta não tem artist_id) → união dos
+ * vínculos. Legado (`podeCriarAnotacoes`) somado em OU: quem já podia continua
+ * podendo, marque-se o que se marcar no editor.
+ */
 export function podeCriarPastaAnotacao(sessao: SessaoAutenticada): boolean {
-  return sessao.isSuperAdmin || sessao.papel === "admin" || sessao.podeCriarAnotacoes;
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  if (sessao.podeCriarAnotacoes) return true; // legado — nunca revogado
+  return temChaveEmAlgumVinculo(sessao, "anotacoes.criar");
 }
 
 export function podeGerirPasta(
@@ -712,10 +756,65 @@ export function podeGerirPasta(
   return !!criadoPor && criadoPor === sessao.userId;
 }
 
-export function podeMexerNaNota(
+/**
+ * A ETIQUETA DE ARTISTA É OPCIONAL POR DESIGN — ela só pode RESTRINGIR quando
+ * existe. Nota sem `artist_id` não é "linha legada rara": é o PADRÃO. O editor
+ * abre em "Sem artista" (NotaEditor.tsx), a nota de show nasce sem etiqueta
+ * (NotasDoShow.tsx) e o schema declara `artistId` nullable/optional.
+ *
+ * `podeNaSessao(sessao, null, ...)` cai no `if (!artistaId) return false` do
+ * motor (resolver.ts) — tratar nota sem etiqueta pelo motor faria uma
+ * permissão CONCEDIDA apagar a base de conhecimento inteira da tela de quem a
+ * recebeu. Sem etiqueta = fora do regime por artista: vale o gate anterior
+ * (RLS da pasta na leitura, `podeVerAgenda(show.artist_id)` na nota de show).
+ */
+function semEtiquetaDeArtista(artistId: string | null): boolean {
+  return artistId === null || artistId === undefined;
+}
+
+/**
+ * Pode VER a nota deste artista? Regime legado → true (a RLS da pasta segue
+ * sendo o gate, como antes). Regime de chaves → exige `anotacoes.ver` no
+ * artista da nota. Nota SEM etiqueta de artista fica fora do regime (ver acima).
+ */
+export function podeVerAnotacao(
   sessao: SessaoAutenticada,
-  criadoPor: string | null
+  artistId: string | null
 ): boolean {
   if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
-  return !!criadoPor && criadoPor === sessao.userId;
+  if (semEtiquetaDeArtista(artistId)) return true; // não-governado
+  if (!governadoPorChavesAnotacoes(sessao, "ver")) return true; // legado
+  return podeNaSessao(sessao, artistId, "anotacoes.ver");
+}
+
+/**
+ * Pode CRIAR uma nota etiquetada neste artista? Regime legado → true (antes
+ * bastava enxergar a pasta). Regime de chaves → exige `anotacoes.criar` no
+ * artista, ou o booleano legado. Sem etiqueta → não-governado.
+ */
+export function podeCriarAnotacao(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  if (sessao.podeCriarAnotacoes) return true; // legado — nunca revogado
+  if (semEtiquetaDeArtista(artistId)) return true; // não-governado
+  if (!governadoPorChavesAnotacoes(sessao, "criar")) return true; // legado
+  return podeNaSessao(sessao, artistId, "anotacoes.criar");
+}
+
+/**
+ * Pode editar/excluir ESTA nota? O AUTOR sempre pode (regra de antes, mantida);
+ * a chave `anotacoes.editar`/`.excluir` no artista da nota AMPLIA pra mexer na
+ * nota de outra pessoa. Admin/super passam.
+ */
+export function podeMexerNaNota(
+  sessao: SessaoAutenticada,
+  criadoPor: string | null,
+  artistId: string | null = null,
+  acao: "editar" | "excluir" = "editar"
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  if (criadoPor && criadoPor === sessao.userId) return true; // autor — como antes
+  return podeNaSessao(sessao, artistId, `anotacoes.${acao}`);
 }

@@ -3843,4 +3843,11 @@ export const EN: Record<string, string> = {
   "Ver equipe": "View team",
   "Ver membros bloqueados": "View blocked members",
   "{n} dia{s} de atraso": "{n} day{s} overdue",
+  // Chaves novas — visibilidade por permissão (Sidebar por módulo) e renome de local na edição da venda (K1).
+  "Você ainda não tem acesso a nenhum módulo. Fale com o administrador da agência.": "You don't have access to any module yet. Talk to the agency administrator.",
+  "Renomear o cadastro do local?": "Rename the venue record?",
+  "O local desta venda está cadastrado como \"{atual}\" e você escreveu \"{novo}\".": "This sale's venue is registered as \"{atual}\" and you typed \"{novo}\".",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também. Se preferir, o cadastro fica como está e o nome novo vale só para esta venda.": "This venue appears in shows already on file — changing the name updates the history too. If you prefer, the record stays as it is and the new name applies only to this sale.",
+  "Só nesta venda": "Only for this sale",
+  "Renomear o cadastro": "Rename the record",
 };

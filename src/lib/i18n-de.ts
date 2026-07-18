@@ -2837,4 +2837,11 @@ export const DE: Record<string, string> = {
   "Ver equipe": "Team anzeigen",
   "Ver membros bloqueados": "Gesperrte Mitglieder anzeigen",
   "{n} dia{s} de atraso": "{n} Tag{s} überfällig",
+  // Chaves novas — visibilidade por permissão (Sidebar por módulo) e renome de local na edição da venda (K1).
+  "Você ainda não tem acesso a nenhum módulo. Fale com o administrador da agência.": "Sie haben noch keinen Zugriff auf ein Modul. Wenden Sie sich an den Administrator der Agentur.",
+  "Renomear o cadastro do local?": "Den Eintrag des Veranstaltungsorts umbenennen?",
+  "O local desta venda está cadastrado como \"{atual}\" e você escreveu \"{novo}\".": "Der Veranstaltungsort dieses Verkaufs ist als \"{atual}\" registriert, und Sie haben \"{novo}\" eingegeben.",
+  "Esse local aparece em shows já cadastrados — trocar o nome atualiza o histórico também. Se preferir, o cadastro fica como está e o nome novo vale só para esta venda.": "Dieser Ort erscheint in bereits erfassten Shows — eine Namensänderung aktualisiert auch den Verlauf. Wenn Sie möchten, bleibt der Eintrag unverändert und der neue Name gilt nur für diesen Verkauf.",
+  "Só nesta venda": "Nur für diesen Verkauf",
+  "Renomear o cadastro": "Eintrag umbenennen",
 };
