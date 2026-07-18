@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
+import Avatar from "./Avatar";
 import {
   Building2,
   MapPin,
@@ -161,6 +162,11 @@ export default function ShowDetalheModal({
       podeUI(venda.artistaId || null, "vendas.editar_todos")
     : false;
 
+  // A barra de ações só existe se houver ALGUMA ação. Sem isto, quem só
+  // visualiza via um `mb-5` vazio no lugar dos botões escondidos.
+  const mostrarBarraAcoes =
+    podeCancelarShow || Boolean(onEditarVenda && venda && podeEditarVendaLigada);
+
   // Status contratual do show (Fase 3) — derivado da venda vinculada.
   const resumoContrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
   const rotuloContrato = rotuloContratoShow(resumoContrato, t);
@@ -248,16 +254,7 @@ export default function ShowDetalheModal({
         }}
       >
         <div className="flex items-center gap-3">
-          <div
-            className="h-12 w-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-            style={{
-              backgroundColor: artista?.color ?? "var(--bg-elevated)",
-              color: "#fff",
-              boxShadow: `0 0 0 3px ${artista?.color ?? "#888"}33`,
-            }}
-          >
-            {artista?.name.slice(0, 2).toUpperCase() ?? "—"}
-          </div>
+          <Avatar nome={artista?.name} cor={artista?.color} size="lg" anel />
           <div className="min-w-0 flex-1">
             <div className="text-base font-bold text-primary truncate">
               {artista?.name ?? t("Sem artista")}
@@ -314,16 +311,18 @@ export default function ShowDetalheModal({
             <span className="badge badge-danger inline-flex items-center gap-1">
               <AlertTriangle size={11} /> {t("Show cancelado")}
             </span>
-            <button
-              type="button"
-              onClick={reverterCancelamento}
-              disabled={processando || !podeCancelarShow}
-              title={!podeCancelarShow ? t("Você não tem permissão para isso.") : undefined}
-              className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ color: "var(--success)" }}
-            >
-              {processando ? t("Salvando…") : t("Reverter cancelamento")}
-            </button>
+            {/* Mesma regra do cancelar: quem só visualiza não vê a ação. */}
+            {podeCancelarShow && (
+              <button
+                type="button"
+                onClick={reverterCancelamento}
+                disabled={processando}
+                className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--success)" }}
+              >
+                {processando ? t("Salvando…") : t("Reverter cancelamento")}
+              </button>
+            )}
           </div>
           {show.cancelamento && (
             <div className="mt-2.5 flex flex-col gap-1 text-xs">
@@ -384,7 +383,7 @@ export default function ShowDetalheModal({
             </div>
           </div>
         </div>
-      ) : (
+      ) : mostrarBarraAcoes ? (
         <div className="flex justify-end items-center gap-4 mb-5">
           {/* D3 — editar a venda ligada fica ao lado do cancelar. Gate de
               VENDAS (o mesmo do VendaDetalhe), não de agenda. */}
@@ -402,18 +401,21 @@ export default function ShowDetalheModal({
               {t("Editar venda")}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setMostrarFormCancel(true)}
-            disabled={!podeCancelarShow}
-            title={!podeCancelarShow ? t("Você não tem permissão para isso.") : undefined}
-            className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            style={{ color: "var(--danger)" }}
-          >
-            {t("Cancelar show")}
-          </button>
+          {/* Quem só VISUALIZA não vê o botão — nem apagado. Cancelar show é
+              função de VENDAS; oferecer e negar no clique ensina que a pessoa
+              tem um poder que ela não tem. */}
+          {podeCancelarShow && (
+            <button
+              type="button"
+              onClick={() => setMostrarFormCancel(true)}
+              className="text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+              style={{ color: "var(--danger)" }}
+            >
+              {t("Cancelar show")}
+            </button>
+          )}
         </div>
-      )}
+      ) : null}
 
       <div className="flex flex-col gap-5">
         {/* ===== CONTRATANTE ===== */}

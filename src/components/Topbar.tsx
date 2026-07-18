@@ -22,7 +22,7 @@ import BotaoTema from "./BotaoTema";
 import Flag from "./Flag";
 import { useT, useLang } from "@/lib/i18n";
 import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
-import { iniciaisDoNome } from "@/lib/iniciais";
+import Avatar from "./Avatar";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -99,10 +99,6 @@ export default function Topbar({
     return Math.max(0, limiteContratos - usados);
   }, [contratos, limiteContratos]);
 
-  // Iniciais pelo helper único (src/lib/iniciais.ts): nome de UMA palavra rende
-  // DUAS letras ("Zé" → "ZÉ"), não uma.
-  const iniciais = (usuario ? iniciaisDoNome(usuario.nome) : "") || "—";
-
   const pillBase =
     "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap";
 
@@ -172,16 +168,7 @@ export default function Topbar({
             aria-expanded={menuOpen}
             className="flex h-9 items-center gap-1.5 rounded-md border border-border pl-1 pr-2 text-secondary transition-colors hover:border-border-strong hover:text-primary"
           >
-            <span
-              className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-primary"
-              style={{
-                background: corIdentidade
-                  ? `linear-gradient(135deg, ${corIdentidade}, ${corIdentidade}99)`
-                  : "var(--bg-elevated)",
-              }}
-            >
-              {iniciais}
-            </span>
+            <Avatar nome={usuario?.nome} cor={corIdentidade} size="sm" />
             <ChevronDown
               size={13}
               className={`text-muted transition-transform ${menuOpen ? "rotate-180" : ""}`}
@@ -196,16 +183,7 @@ export default function Topbar({
               {/* Cabeçalho */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center gap-3">
-                  <span
-                    className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-primary flex-shrink-0"
-                    style={{
-                      background: corIdentidade
-                        ? `linear-gradient(135deg, ${corIdentidade}, ${corIdentidade}99)`
-                        : "var(--bg-elevated)",
-                    }}
-                  >
-                    {iniciais}
-                  </span>
+                  <Avatar nome={usuario?.nome} cor={corIdentidade} size="md" />
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-primary truncate">
                       {usuario.nome}

@@ -22,6 +22,7 @@ import ParcelaDetalheModal from "./ParcelaDetalheModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
+import { calcularTotaisFinanceiro } from "@/lib/financeiro/totais";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
@@ -155,31 +156,25 @@ export default function ControlePagamentos({
     [todasParcelas, periodo]
   );
 
-  // Totais — CANCELADO (baixado/isentado) sai do a receber/atrasado. Agrupa por
-  // moeda (a parcela herda a moeda da venda); nunca soma moedas diferentes num
-  // R$ único. `atrasadoNum` é só a soma crua pro alerta de "tem X atrasado".
-  const totais = useMemo(() => {
-    const recArr: { valor: number; moeda: Moeda }[] = [];
-    const recvArr: { valor: number; moeda: Moeda }[] = [];
-    const atrArr: { valor: number; moeda: Moeda }[] = [];
-    let atrasadoNum = 0;
-    for (const l of parcelasPeriodo) {
-      if (l.status === "cancelado") continue;
-      const item = { valor: l.parcela.valor, moeda: l.moeda };
-      if (l.status === "pago") recArr.push(item);
-      else if (l.status === "atrasado") {
-        atrArr.push(item);
-        atrasadoNum += l.parcela.valor;
-      } else recvArr.push(item);
-    }
-    return {
-      recebido: totaisPorMoeda(recArr),
-      aReceber: totaisPorMoeda(recvArr),
-      atrasado: totaisPorMoeda(atrArr),
-      total: totaisPorMoeda([...recArr, ...recvArr, ...atrArr]),
-      atrasadoNum,
-    };
-  }, [parcelasPeriodo]);
+  // Totais dos cards — cada um com sua própria régua de data. A lógica mora
+  // em `@/lib/financeiro/totais` (pura, com bateria): foi justamente ela que
+  // já produziu três números errados de uma vez, então merece prova por
+  // execução em vez de conferência no olho.
+  const totais = useMemo(
+    () =>
+      calcularTotaisFinanceiro(
+        todasParcelas.map((l) => ({
+          status: l.status,
+          moeda: l.moeda,
+          valor: l.parcela.valor,
+          dataVencimento: l.parcela.dataVencimento,
+          dataPagamento: l.parcela.dataPagamento,
+        })),
+        periodo,
+        new Date()
+      ),
+    [todasParcelas, periodo]
+  );
 
   const lista = useMemo(() => {
     return parcelasPeriodo.filter((l) => {
@@ -262,10 +257,36 @@ export default function ControlePagamentos({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title={t("Total em vendas")} value={totais.total} icon={<DollarSign size={18} />} accentColor={accent} />
-        <StatCard title={t("Recebido")} value={totais.recebido} icon={<CheckCircle2 size={18} />} accentColor="var(--success)" />
-        <StatCard title={t("A receber")} value={totais.aReceber} icon={<CalendarClock size={18} />} accentColor="var(--warning)" />
-        <StatCard title={t("Atrasado")} value={totais.atrasado} icon={<AlertTriangle size={18} />} accentColor="var(--danger)" />
+        {/* Cada card diz por qual DATA ele recorta — era a ausência disso que
+            fazia "Total em vendas" parecer o total vendido (e não era). */}
+        <StatCard
+          title={t("Recebido")}
+          value={totais.recebido}
+          icon={<CheckCircle2 size={18} />}
+          accentColor="var(--success)"
+          subtitle={t("Pelo dia do pagamento")}
+        />
+        <StatCard
+          title={t("A receber")}
+          value={totais.aReceber}
+          icon={<CalendarClock size={18} />}
+          accentColor="var(--warning)"
+          subtitle={t("Vence no período")}
+        />
+        <StatCard
+          title={t("Atrasado")}
+          value={totais.atrasado}
+          icon={<AlertTriangle size={18} />}
+          accentColor="var(--danger)"
+          subtitle={t("Vencido, de todos os meses")}
+        />
+        <StatCard
+          title={t("Previsto (90 dias)")}
+          value={totais.previsto}
+          icon={<DollarSign size={18} />}
+          accentColor={accent}
+          subtitle={t("Vence a partir de hoje")}
+        />
       </div>
 
       {!ehCobrancas && (
