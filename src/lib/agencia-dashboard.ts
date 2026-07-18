@@ -1,6 +1,7 @@
 import type {
   Venda,
   Orcamento,
+  Show,
   Artista,
   Contratante,
   Casa,
@@ -137,11 +138,55 @@ export type AlertasAgencia = {
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * O show foi DISPENSADO de contrato ("ignorar" no alerta da Agência)?
+ *
+ * A marca vive em `shows.meta.contratoDispensado` (jsonb da mig 66 — ZERO
+ * migration nova), carimbada pelo SERVIDOR no PATCH /api/shows/:id com
+ * `{ em, por }`. Desfazer grava `null` na chave, que o mapper lê como ausente
+ * — logo, este helper volta a `false` sozinho. Fonte única da verdade: quem
+ * precisar da regra chama esta função, nunca olha `meta` na mão.
+ */
+export function showDispensadoDeContrato(show: Show): boolean {
+  return !!show.contratoDispensado;
+}
+
+/**
+ * Ids das VENDAS dispensadas de contrato, derivados dos shows.
+ *
+ * Casamos por `show.vendaId` (e não por `venda.showId`) de propósito: o vínculo
+ * é o mesmo, mas do lado do show ele sempre existe quando existe, enquanto
+ * `venda.showId` é opcional — a venda só ganha show quando tem data
+ * (vendas.service.ts). Ver a LIMITAÇÃO documentada em `calcularAlertas`.
+ */
+export function vendasDispensadasDeContrato(shows: Show[]): Set<string> {
+  const ids = new Set<string>();
+  for (const s of shows) {
+    if (s.vendaId && showDispensadoDeContrato(s)) ids.add(s.vendaId);
+  }
+  return ids;
+}
+
+/**
+ * @param shows Shows do workspace — usados SÓ pra excluir do alerta (d) as
+ *   vendas dispensadas de contrato. Parâmetro opcional no fim da lista (menor
+ *   mudança de assinatura possível): todo call-site antigo continua compilando
+ *   e se comportando igual, porque sem shows o conjunto de dispensados é vazio.
+ *
+ * LIMITAÇÃO CONHECIDA (sem coluna nova): a dispensa é ancorada no SHOW, então
+ * uma venda SEM show (criada sem data — `vendas.service.ts` só cria o show
+ * dentro de `if (input.data_show)`) não tem onde guardar a marca e NÃO pode ser
+ * ignorada. Ela continua aparecendo no alerta. Hoje o banco real está 19/19 com
+ * show_id, mas isso é coincidência dos dados, não garantia do código — a UI
+ * deve esconder/desabilitar o "Ignorar" quando não houver show correspondente,
+ * em vez de chamar o PATCH com id indefinido.
+ */
 export function calcularAlertas(
   vendas: Venda[],
   orcamentos: Orcamento[],
   contratos: Contrato[],
-  hoje: Date = new Date()
+  hoje: Date = new Date(),
+  shows: Show[] = []
 ): AlertasAgencia {
   // (a) Parcelas atrasadas — só de vendas NÃO-canceladas. A parcela herda a
   // moeda da venda; agrupamos por moeda (nunca somamos moedas diferentes).
@@ -175,12 +220,17 @@ export function calcularAlertas(
   // (d) Shows sem contrato — mesma definição do DashboardContratos (contratos
   // não-cancelados com venda vinculada cobrem a venda), porém sem o filtro de
   // período (a faixa de alertas é estado atual) e SEM vendas canceladas —
-  // venda cancelada não precisa de contrato.
+  // venda cancelada não precisa de contrato. Vendas DISPENSADAS de contrato
+  // (o "ignorar" persistido em shows.meta) também saem da conta.
   const comContrato = new Set(
     contratos.filter((c) => c.status !== "cancelado" && c.vendaId).map((c) => c.vendaId)
   );
+  const dispensadas = vendasDispensadasDeContrato(shows);
   const showsSemContrato = vendas.filter(
-    (v) => v.status !== "cancelada" && !comContrato.has(v.id)
+    (v) =>
+      v.status !== "cancelada" &&
+      !comContrato.has(v.id) &&
+      !dispensadas.has(v.id)
   ).length;
 
   return {

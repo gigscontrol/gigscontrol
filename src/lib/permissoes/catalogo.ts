@@ -20,6 +20,7 @@ export type ModuloPermissao =
   | "financeiro"
   | "contratos"
   | "contatos"
+  | "anotacoes"
   | "agencia";
 
 export type NivelPermissao = "artista" | "workspace";
@@ -38,18 +39,39 @@ export const MODULOS: { id: ModuloPermissao; label: string }[] = [
   { id: "financeiro", label: "Financeiro" },
   { id: "contratos", label: "Contratos" },
   { id: "contatos", label: "Contatos" },
+  { id: "anotacoes", label: "Anotações" },
   { id: "agencia", label: "Agência" },
 ];
 
 export const CATALOGO: Permissao[] = [
   // ---------------- AGENDA (por artista) ----------------
+  //
+  // ⚠️ MUDANÇA DE SIGNIFICADO — L5 (agenda vira SÓ VISUALIZAÇÃO de SHOW).
+  // Até aqui, `agenda.editar_todos` era a chave que cancelava e editava SHOW, e
+  // `agenda.criar` era a que criava SHOW. NÃO É MAIS:
+  //
+  //   criar show     → vendas.criar_venda
+  //   editar show    → vendas.editar_venda (próprios) | vendas.editar_todos
+  //   cancelar show  → vendas.cancelar_venda | vendas.editar_todos
+  //   excluir show   → vendas.excluir_venda | vendas.editar_todos
+  //
+  // As chaves de agenda abaixo continuam existindo e continuam sendo enforçadas,
+  // porém APENAS sobre os ITENS DE AGENDA (agenda_items: voo, transporte
+  // terrestre e evento personalizado) — que é justamente o que "Acesso total"
+  // na agenda passa a poder criar/editar/excluir.
+  //
+  // REVOGAÇÃO DELIBERADA: quem hoje tem `agenda.editar_todos` e NENHUMA chave de
+  // vendas PERDE cancelar/editar show; quem tem `agenda.criar` sem
+  // `vendas.criar_venda` PERDE "Novo Show". Presets afetados: ver perfis.ts
+  // (equipe/manager). Isto foi pedido pelo dono: mexer em show é papel de quem
+  // tem permissão de VENDAS.
   { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local e horário)", existe: true },
   { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — completo (todas as informações)", existe: true },
-  { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar evento", existe: true },
-  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os eventos que ele criou", existe: true },
-  { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer evento", existe: true },
-  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir os eventos que ele criou", existe: true },
-  { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer evento", existe: true },
+  { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar voo, transporte terrestre e evento personalizado", existe: true },
+  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os voos/transportes/eventos que ele criou", existe: true },
+  { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer voo/transporte/evento", existe: true },
+  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir os voos/transportes/eventos que ele criou", existe: true },
+  { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer voo/transporte/evento", existe: true },
 
   // ---------------- VENDAS (por artista) ----------------
   { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas", existe: true },
@@ -110,6 +132,22 @@ export const CATALOGO: Permissao[] = [
   // Sem rota implementada ainda (achado só referência na página de Privacidade,
   // texto de política — não há endpoint de exportação real). Slot futuro.
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },
+
+  // ---------------- ANOTAÇÕES (por artista) ----------------
+  // A nota carrega `artist_id` (etiqueta de artista) — é esse campo que amarra
+  // a permissão ao vínculo. ZERO migration: as chaves moram no jsonb
+  // membros_artista.permissoes, como as dos outros módulos.
+  //
+  // COMPATIBILIDADE (importante): até aqui anotações eram governadas por um
+  // BOOLEANO GLOBAL (profiles.pode_criar_anotacoes → sessao.podeCriarAnotacoes)
+  // e a leitura ficava só com a RLS. As chaves abaixo NÃO revogam nada de quem
+  // já tinha acesso — o gate (src/lib/api/permissoes.ts) soma o legado em OU e
+  // só passa a filtrar por chave quando o admin de fato configurou alguma
+  // `anotacoes.*` no vínculo. Ver `governadoPorChavesAnotacoes`.
+  { chave: "anotacoes.ver", modulo: "anotacoes", nivel: "artista", label: "Ver anotações", existe: true },
+  { chave: "anotacoes.criar", modulo: "anotacoes", nivel: "artista", label: "Criar anotação", existe: true },
+  { chave: "anotacoes.editar", modulo: "anotacoes", nivel: "artista", label: "Editar as anotações (mesmo as de outros)", existe: true },
+  { chave: "anotacoes.excluir", modulo: "anotacoes", nivel: "artista", label: "Excluir as anotações (mesmo as de outros)", existe: true },
 
   // ---------------- AGÊNCIA (workspace — administrativo, NÃO por-artista) ----------------
   // Gestão da agência é ADMIN-ONLY ASSUMIDO — não delegável. Todas marcadas

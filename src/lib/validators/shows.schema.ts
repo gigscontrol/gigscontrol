@@ -55,12 +55,16 @@ const bookingSchema = z.object({
 
 /**
  * Schema de atualização — todos os campos opcionais, mais `cancelamentoMotivo`
- * (transiente: o servidor carimba quem/quando do cancelamento) e `booking`
- * (mesclado em shows.meta.booking pelo servidor).
+ * (transiente: o servidor carimba quem/quando do cancelamento), `booking`
+ * (mesclado em shows.meta.booking pelo servidor) e `contratoDispensado`
+ * (booleano transiente: true = dispensar a venda deste show do alerta "sem
+ * contrato", false = desfazer. O servidor carimba {em, por} em
+ * shows.meta.contratoDispensado — o cliente NÃO forja a autoria).
  */
 export const showUpdateSchema = showCreateSchema.partial().extend({
   cancelamentoMotivo: z.string().trim().min(1).max(300).optional(),
   booking: bookingSchema.optional(),
+  contratoDispensado: z.boolean().optional(),
 });
 
 export type ShowUpdateInput = z.infer<typeof showUpdateSchema>;

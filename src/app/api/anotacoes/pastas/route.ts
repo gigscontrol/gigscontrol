@@ -13,12 +13,33 @@ import { respostaDeErro } from "@/lib/api/erros";
 
 const MAX_PASTAS = 8;
 
-/** GET /api/anotacoes/pastas — pastas que o usuário PODE ver (RLS filtra). */
+/**
+ * GET /api/anotacoes/pastas — pastas que o usuário PODE ver. A RLS filtra e, por
+ * cima, o gate explícito do L1: aberta ao workspace ("todos"), criada por ele,
+ * ou com ele na lista de membros ("selecionados"). Hoje isso é o mesmo conjunto
+ * que a RLS devolve — é redundância deliberada, pra que a regra viva também no
+ * código e não dependa só da policy.
+ */
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
-    const pastas = await listarPastasDoWorkspace(r.sessao.supabase);
+    const todas = await listarPastasDoWorkspace(r.sessao.supabase);
+    const ehAdmin = r.sessao.isSuperAdmin || r.sessao.papel === "admin";
+    const pastas = ehAdmin
+      ? todas
+      : todas.filter(
+          (p) =>
+            p.visibilidade === "todos" ||
+            (!!p.criadoPor && p.criadoPor === r.sessao.userId) ||
+            p.membros.some(
+              (m) =>
+                (m.tipo === "usuario" && m.id === r.sessao.userId) ||
+                (m.tipo === "artista" &&
+                  !!r.sessao.artistaId &&
+                  m.id === r.sessao.artistaId)
+            )
+        );
     // `podeCriar` viaja junto pra UI decidir mostrar o botão "Nova pasta".
     return NextResponse.json({ pastas, podeCriar: podeCriarPastaAnotacao(r.sessao) });
   } catch (e) {

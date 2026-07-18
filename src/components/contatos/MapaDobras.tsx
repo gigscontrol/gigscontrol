@@ -2,13 +2,22 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ChevronRight } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { useContatos } from "@/lib/contatos-context";
+import { useShows } from "@/lib/shows-context";
+import { useVendas } from "@/lib/vendas-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
+import { ResumoModal, ResumoNumero, ResumoLinha } from "@/components/DashboardResumo";
+import {
+  getContratanteStats,
+  getCasaStats,
+  getCidadeStats,
+  formatarFaturamento,
+} from "@/lib/contatos-stats";
 import type { Country } from "@/lib/data/countries";
-import type { Cidade, Casa, Contratante } from "@/types";
+import { MODULE_THEMES, LABELS_TIPO_CASA, type Cidade, type Casa, type Contratante, type Show, type Venda } from "@/types";
 import type { PontoMapa, FocoPais } from "@/components/contatos/MapaRaio";
 
 // Leaflet usa `window` — só carrega no cliente, quando a aba do mapa abre.
@@ -35,8 +44,9 @@ const FATOR_FORA_DO_RAIO = 2.5;
 
 /**
  * Busca por raio (tela 10 do redesign) — cidade de referência + raio; o mapa
- * mostra o círculo e os pontos, e a lista "No raio" (ao lado) agrupa
- * contratantes/casas/cidades ordenados por distância.
+ * mostra o círculo e os pontos, e os 3 boxes "No raio" (ABAIXO do mapa, J2)
+ * agrupam contratantes / casas ou eventos / cidades ordenados por distância —
+ * com contagem e itens clicáveis, que abrem o popup de informações do item.
  *
  * Contratantes/casas usam coordenada PRÓPRIA (lat/lng geocodificados no
  * cadastro — migração 51) e caem pro centroide da cidade quando não têm.
@@ -55,6 +65,13 @@ export default function MapaDobras({
   const cidades = cidadesProp ?? ctx.cidades;
   const casas = casasProp ?? ctx.casas;
   const contratantes = contratantesProp ?? ctx.contratantes;
+  // Só pras estatísticas do popup de detalhe (J2) — o mapa em si não usa.
+  const { shows } = useShows();
+  const { vendas } = useVendas();
+
+  // Item clicado nos 3 boxes "no raio" → abre o popup com as informações dele.
+  // (Estado no componente EXTERNO — os boxes/linhas são componentes filhos.)
+  const [detalhe, setDetalhe] = useState<PontoMapa | null>(null);
 
   // Padrão: primeira cidade com coordenadas
   const cidadesComCoord = useMemo(
@@ -281,66 +298,67 @@ export default function MapaDobras({
         </div>
       </div>
 
-      {/* Mapa (⅔) + lista "No raio" (⅓) — tela 10 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <MapaRaio
-          refCoords={refCoords}
-          refNome={refCidade?.nome}
-          raioKm={raioKm}
-          pontos={pontosMapa}
-          focoPais={focoPais}
-        />
+      {/* Mapa em largura cheia — as listas "no raio" vão ABAIXO dele (J2). */}
+      <MapaRaio
+        refCoords={refCoords}
+        refNome={refCidade?.nome}
+        raioKm={raioKm}
+        pontos={pontosMapa}
+        focoPais={focoPais}
+      />
 
-        <aside
-          className="flex flex-col overflow-hidden"
-          style={{
-            height: 440,
-            borderRadius: "var(--r-card)",
-            border: "1px solid var(--border)",
-            backgroundColor: "var(--bg)",
-          }}
-        >
-          <div
-            className="flex items-center justify-between px-4 py-3"
-            style={{ borderBottom: "1px solid var(--border)" }}
+      {/* J2 — 3 boxes com quem está DENTRO do raio, com contagem e lista
+          clicável (cada item abre o popup de informações). */}
+      <div className="mt-4">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-bold text-primary">{t("No raio")}</span>
+          <span
+            className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md"
+            style={{ backgroundColor: "var(--brand-weak)", color: "var(--brand-2)" }}
           >
-            <span className="text-sm font-bold text-primary">{t("No raio")}</span>
-            <span
-              className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md"
-              style={{ backgroundColor: "var(--brand-weak)", color: "var(--brand-2)" }}
-            >
-              {dentroDoRaio.length}
-            </span>
-          </div>
+            {dentroDoRaio.length}
+          </span>
+        </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-4">
-            {dentroDoRaio.length === 0 ? (
-              <div className="text-sm text-muted px-1 py-2">
-                {refCoords
-                  ? t("Nenhum contato no raio.")
-                  : t("Escolha uma cidade de referência.")}
-              </div>
-            ) : (
-              <>
-                <GrupoNoRaio
-                  titulo={t("Contratantes")}
-                  pontos={grupos.contratante}
-                  swatch={<SwatchTipo tipo="contratante" />}
-                />
-                <GrupoNoRaio
-                  titulo={t("Casas")}
-                  pontos={grupos.casa}
-                  swatch={<SwatchTipo tipo="casa" />}
-                />
-                <GrupoNoRaio
-                  titulo={t("Cidades")}
-                  pontos={grupos.cidade}
-                  swatch={<SwatchTipo tipo="cidade" />}
-                />
-              </>
-            )}
+        {/* Os 3 boxes existem SEMPRE (J2 pede as 3 contagens). Cada um já tem
+            a própria mensagem de vazio, então o estado zero mostra "0 / 0 / 0"
+            em vez de colapsar numa faixa única — o layout não salta a cada
+            busca sem resultado. Sem cidade de referência, o aviso vem acima. */}
+        {!refCoords && (
+          <div
+            className="text-sm text-muted px-4 py-3 mb-3"
+            style={{
+              borderRadius: "var(--r-card)",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg)",
+            }}
+          >
+            {t("Escolha uma cidade de referência.")}
           </div>
-        </aside>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <BoxNoRaio
+            titulo={t("Contratantes")}
+            pontos={grupos.contratante}
+            swatch={<SwatchTipo tipo="contratante" />}
+            onSelecionar={setDetalhe}
+            vazio={t("Nenhum contratante no raio.")}
+          />
+          <BoxNoRaio
+            titulo={t("Casas ou eventos")}
+            pontos={grupos.casa}
+            swatch={<SwatchTipo tipo="casa" />}
+            onSelecionar={setDetalhe}
+            vazio={t("Nenhuma casa no raio.")}
+          />
+          <BoxNoRaio
+            titulo={t("Cidades")}
+            pontos={grupos.cidade}
+            swatch={<SwatchTipo tipo="cidade" />}
+            onSelecionar={setDetalhe}
+            vazio={t("Nenhuma cidade no raio.")}
+          />
+        </div>
       </div>
 
       {cidadesSemCoord > 0 && (
@@ -348,49 +366,192 @@ export default function MapaDobras({
           {t("{n} cidade(s) sem coordenadas — fique de fora da busca.", { n: cidadesSemCoord })}
         </div>
       )}
+
+      <DetalhePontoModal
+        ponto={detalhe}
+        onClose={() => setDetalhe(null)}
+        cidades={cidades}
+        casas={casas}
+        contratantes={contratantes}
+        shows={shows}
+        vendas={vendas}
+      />
     </div>
   );
 }
 
 /* ============================================================
-   Grupo da lista "No raio" — label mono CAIXA ALTA + linhas
+   J2 — popup de informações do item clicado nos boxes "no raio".
+   Reusa o kit ResumoModal/ResumoNumero/ResumoLinha (F6) em vez de
+   inventar outro modal. Componente TOP-LEVEL (não aninhado) —
+   o estado de abertura mora no MapaDobras.
    ============================================================ */
-function GrupoNoRaio({
+function DetalhePontoModal({
+  ponto,
+  onClose,
+  cidades,
+  casas,
+  contratantes,
+  shows,
+  vendas,
+}: {
+  ponto: PontoMapa | null;
+  onClose: () => void;
+  cidades: Cidade[];
+  casas: Casa[];
+  contratantes: Contratante[];
+  shows: Show[];
+  vendas: Venda[];
+}) {
+  const t = useT();
+  if (!ponto) return null;
+
+  // Os ids dos pontos vêm PREFIXADOS pelo tipo ("casa-<uuid>") — fatia o prefixo.
+  const id = ponto.id.slice(ponto.tipo.length + 1);
+  const linhas: React.ReactNode[] = [];
+  let numero: { valor: string; label: string } | null = null;
+
+  if (ponto.tipo === "contratante") {
+    const ct = contratantes.find((c) => c.id === id);
+    const st = getContratanteStats(id, shows, [], vendas);
+    numero = { valor: String(st.totalShows), label: t("Shows realizados") };
+    linhas.push(
+      <ResumoLinha key="fat" label={t("Faturamento")} valor={formatarFaturamento(st.faturamentoPorMoeda)} destaque />
+    );
+    if (ct?.telefone) linhas.push(<ResumoLinha key="tel" label={t("Telefone")} valor={ct.telefone} />);
+    if (ct?.email) linhas.push(<ResumoLinha key="mail" label={t("E-mail")} valor={ct.email} />);
+    if (ct?.bloqueado) linhas.push(<ResumoLinha key="blq" label={t("Situação")} valor={t("Bloqueado")} />);
+  } else if (ponto.tipo === "casa") {
+    const casa = casas.find((c) => c.id === id);
+    const st = getCasaStats(id, shows, vendas);
+    numero = { valor: String(st.totalShows), label: t("Shows na casa") };
+    if (casa) linhas.push(<ResumoLinha key="tipo" label={t("Tipo")} valor={t(LABELS_TIPO_CASA[casa.tipo])} />);
+    linhas.push(
+      <ResumoLinha key="fat" label={t("Faturamento")} valor={formatarFaturamento(st.faturamentoPorMoeda)} destaque />
+    );
+    if (casa?.capacidade)
+      linhas.push(<ResumoLinha key="cap" label={t("Capacidade")} valor={casa.capacidade.toLocaleString("pt-BR")} />);
+    if (casa?.contatoResponsavel)
+      linhas.push(<ResumoLinha key="resp" label={t("Responsável")} valor={casa.contatoResponsavel} />);
+    if (casa?.telefone) linhas.push(<ResumoLinha key="tel" label={t("Telefone")} valor={casa.telefone} />);
+    if (st.artistasQueTocaram.length > 0)
+      linhas.push(
+        <ResumoLinha key="art" label={t("Artistas que tocaram")} valor={st.artistasQueTocaram.join(", ")} />
+      );
+  } else {
+    const cid = cidades.find((c) => c.id === id);
+    const st = getCidadeStats(id, shows, casas, vendas);
+    numero = { valor: String(st.totalShows), label: t("Shows na cidade") };
+    if (cid?.estado) linhas.push(<ResumoLinha key="uf" label={t("Estado")} valor={cid.estado} />);
+    linhas.push(
+      <ResumoLinha key="fat" label={t("Faturamento")} valor={formatarFaturamento(st.faturamentoPorMoeda)} destaque />
+    );
+    linhas.push(<ResumoLinha key="casas" label={t("Casas cadastradas")} valor={String(st.totalCasas)} />);
+    if (st.topArtista)
+      linhas.push(
+        <ResumoLinha
+          key="top"
+          label={t("Artista que mais tocou")}
+          valor={`${st.topArtista.nome} · ${st.topArtista.shows}`}
+        />
+      );
+  }
+
+  return (
+    <ResumoModal
+      isOpen
+      onClose={onClose}
+      title={ponto.nome}
+      subtitle={ponto.sub}
+      accentColor={MODULE_THEMES.contatos.color}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        {numero && <ResumoNumero valor={numero.valor} label={numero.label} />}
+        <ResumoNumero valor={formatarKm(ponto.km)} label={t("Distância")} />
+      </div>
+      {ponto.aproximado && (
+        <div className="text-xs text-muted">
+          ≈ {t("localização aproximada (cidade)")}
+        </div>
+      )}
+      <div className="flex flex-col gap-1.5">{linhas}</div>
+    </ResumoModal>
+  );
+}
+
+/* ============================================================
+   J2 — box "no raio": título + contagem no cabeçalho e a lista
+   de itens CLICÁVEIS (cada um abre o popup de informações).
+   ============================================================ */
+function BoxNoRaio({
   titulo,
   pontos,
   swatch,
+  onSelecionar,
+  vazio,
 }: {
   titulo: string;
   pontos: PontoMapa[];
   swatch: React.ReactNode;
+  onSelecionar: (p: PontoMapa) => void;
+  vazio: string;
 }) {
-  if (pontos.length === 0) return null;
   return (
-    <section>
-      <div className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-muted px-1 mb-1.5">
-        {titulo} · {pontos.length}
+    <section
+      className="flex flex-col overflow-hidden"
+      style={{
+        borderRadius: "var(--r-card)",
+        border: "1px solid var(--border)",
+        backgroundColor: "var(--bg)",
+      }}
+    >
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2.5"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="flex-shrink-0">{swatch}</span>
+          <span className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-muted truncate">
+            {titulo}
+          </span>
+        </span>
+        <span
+          className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md flex-shrink-0"
+          style={{ backgroundColor: "var(--brand-weak)", color: "var(--brand-2)" }}
+        >
+          {pontos.length}
+        </span>
       </div>
-      <ul className="flex flex-col gap-1.5">
-        {pontos.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center gap-2.5 bg-surface-2 border border-border rounded px-3 py-2"
-          >
-            <span className="flex-shrink-0">{swatch}</span>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-primary truncate">{p.nome}</div>
-              {p.sub && (
-                <div className="font-mono text-[0.6rem] uppercase tracking-[0.08em] text-muted truncate">
-                  {p.sub}
+
+      {pontos.length === 0 ? (
+        <div className="px-3 py-3 text-xs text-muted">{vazio}</div>
+      ) : (
+        <ul className="flex flex-col gap-1.5 px-3 py-3 overflow-y-auto" style={{ maxHeight: 300 }}>
+          {pontos.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => onSelecionar(p)}
+                className="w-full text-left flex items-center gap-2.5 bg-surface-2 border border-border rounded px-3 py-2 hover:border-border-strong transition-colors"
+              >
+                <span className="flex-shrink-0">{swatch}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-primary truncate">{p.nome}</div>
+                  {p.sub && (
+                    <div className="font-mono text-[0.6rem] uppercase tracking-[0.08em] text-muted truncate">
+                      {p.sub}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <span className="font-mono text-xs text-secondary tabular-nums flex-shrink-0">
-              {formatarKm(p.km)}
-            </span>
-          </li>
-        ))}
-      </ul>
+                <span className="font-mono text-xs text-secondary tabular-nums flex-shrink-0">
+                  {formatarKm(p.km)}
+                </span>
+                <ChevronRight size={14} className="text-muted flex-shrink-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

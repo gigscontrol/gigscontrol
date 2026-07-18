@@ -28,6 +28,11 @@ export type Capacidade = {
 
 export const CAPACIDADES: Capacidade[] = [
   // -------- AGENDA --------
+  // ATENÇÃO (L5): a agenda é SÓ VISUALIZAÇÃO de SHOWS. Nenhuma chave daqui
+  // cria, edita ou cancela show — isso migrou para o módulo VENDAS
+  // (vendas.criar_venda / editar_venda|editar_todos / cancelar_venda).
+  // As chaves de criar/editar/excluir abaixo governam SÓ os itens de agenda:
+  // voo, transporte terrestre e evento personalizado.
   {
     id: "agenda.ver", modulo: "agenda", label: "Ver agenda", existe: true,
     variantes: [
@@ -35,19 +40,19 @@ export const CAPACIDADES: Capacidade[] = [
       { chave: "agenda.ver_detalhado", label: "Detalhada — todas as informações" },
     ],
   },
-  { id: "agenda.criar", modulo: "agenda", label: "Criar evento", existe: true, chave: "agenda.criar" },
+  { id: "agenda.criar", modulo: "agenda", label: "Criar voo, transporte ou evento", existe: true, chave: "agenda.criar" },
   {
-    id: "agenda.editar", modulo: "agenda", label: "Editar eventos", existe: true,
+    id: "agenda.editar", modulo: "agenda", label: "Editar voos, transportes e eventos", existe: true,
     variantes: [
       { chave: "agenda.editar", label: "Só os que ele criou" },
-      { chave: "agenda.editar_todos", label: "Qualquer evento" },
+      { chave: "agenda.editar_todos", label: "Qualquer um" },
     ],
   },
   {
-    id: "agenda.excluir", modulo: "agenda", label: "Excluir eventos", existe: true,
+    id: "agenda.excluir", modulo: "agenda", label: "Excluir voos, transportes e eventos", existe: true,
     variantes: [
       { chave: "agenda.excluir", label: "Só os que ele criou" },
-      { chave: "agenda.excluir_todos", label: "Qualquer evento" },
+      { chave: "agenda.excluir_todos", label: "Qualquer um" },
     ],
   },
 
@@ -120,6 +125,17 @@ export const CAPACIDADES: Capacidade[] = [
   { id: "contatos.criar", modulo: "contatos", label: "Criar contato", existe: true, chave: "contatos.criar" },
   { id: "contatos.editar", modulo: "contatos", label: "Editar contato", existe: true, chave: "contatos.editar" },
   { id: "contatos.excluir", modulo: "contatos", label: "Excluir contato", existe: true, chave: "contatos.excluir" },
+
+  // -------- ANOTAÇÕES --------
+  // Cada capacidade aqui PRECISA ter a chave gêmea no CATALOGO com
+  // nivel:"artista" — senão o editor mostra a caixa, o admin marca, e
+  // vinculo.schema.ts rejeita o payload INTEIRO (400). As 4 estão lá.
+  // O booleano legado (profiles.pode_criar_anotacoes) continua valendo em OU:
+  // marcar/desmarcar aqui NÃO revoga acesso de quem já tinha.
+  { id: "anotacoes.ver", modulo: "anotacoes", label: "Ver anotações", existe: true, chave: "anotacoes.ver" },
+  { id: "anotacoes.criar", modulo: "anotacoes", label: "Criar anotação", existe: true, chave: "anotacoes.criar" },
+  { id: "anotacoes.editar", modulo: "anotacoes", label: "Editar anotações (mesmo as de outros)", existe: true, chave: "anotacoes.editar" },
+  { id: "anotacoes.excluir", modulo: "anotacoes", label: "Excluir anotações (mesmo as de outros)", existe: true, chave: "anotacoes.excluir" },
 ];
 
 export function capacidadesDoModulo(modulo: ModuloPermissao): Capacidade[] {
@@ -162,6 +178,84 @@ export function selecionarVariante(perms: Set<string>, cap: Capacidade, chave: s
   const next = new Set(perms);
   if (cap.variantes) for (const v of cap.variantes) next.delete(v.chave);
   next.add(chave);
+  return next;
+}
+
+// ============================================================
+// MODO DA AGENDA (L5a) — camada ACIMA da capacidade.
+//
+// O editor da agenda deixou de ser uma lista de checkboxes solta e virou um
+// seletor de 3 níveis. Como o armazenamento continua sendo o array plano de
+// chaves, o "modo" é DERIVADO do conjunto de chaves de agenda — não existe
+// campo novo em lugar nenhum (zero migration):
+//
+//   BÁSICO        → { agenda.ver }
+//                   vê dia, local e horário. Nada mais.
+//   ACESSO TOTAL  → { agenda.ver_detalhado, agenda.criar,
+//                     agenda.editar_todos, agenda.excluir_todos }
+//                   VISUALIZA tudo do show e é dono da logística própria da
+//                   agenda (voo/transporte/evento). NÃO cria, edita nem
+//                   cancela SHOW — isso é chave de VENDAS.
+//   PERSONALIZADO → qualquer outra combinação (inclusive NENHUMA chave de
+//                   agenda = sem acesso à agenda). O editor abre a lista
+//                   granular item a item.
+// ============================================================
+
+export type ModoAgenda = "basico" | "personalizado" | "total";
+
+export const CHAVES_AGENDA_BASICO: readonly string[] = ["agenda.ver"];
+
+export const CHAVES_AGENDA_TOTAL: readonly string[] = [
+  "agenda.ver_detalhado",
+  "agenda.criar",
+  "agenda.editar_todos",
+  "agenda.excluir_todos",
+];
+
+/** Só as chaves do módulo agenda presentes no set. */
+function chavesDeAgenda(perms: Set<string>): string[] {
+  return [...perms].filter((k) => k.startsWith("agenda."));
+}
+
+function mesmoConjunto(a: string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((k) => set.has(k));
+}
+
+/**
+ * NENHUMA chave de agenda no vínculo = SEM ACESSO à agenda.
+ *
+ * Não é um quarto `ModoAgenda` de propósito (os 3 níveis são o que o dono
+ * definiu e o que `aplicarModoAgenda` sabe gravar), mas o editor PRECISA
+ * distinguir: o conjunto vazio não bate com BÁSICO nem com TOTAL e cai no
+ * default "personalizado", fazendo o pill Personalizado aparecer SELECIONADO
+ * com a lista granular toda desmarcada. Num editor de permissão isso se lê
+ * como "tem acesso customizado" quando a verdade é "não tem agenda" — e
+ * ambiguidade aqui vira erro de configuração.
+ */
+export function semAcessoAgenda(perms: Set<string>): boolean {
+  return chavesDeAgenda(perms).length === 0;
+}
+
+/** Em qual dos 3 níveis este conjunto de permissões cai? */
+export function modoAgenda(perms: Set<string>): ModoAgenda {
+  const atuais = chavesDeAgenda(perms);
+  if (mesmoConjunto(atuais, CHAVES_AGENDA_BASICO)) return "basico";
+  if (mesmoConjunto(atuais, CHAVES_AGENDA_TOTAL)) return "total";
+  return "personalizado";
+}
+
+/**
+ * Troca o nível. "personalizado" NÃO mexe nas chaves (só abre a lista granular
+ * no editor) — trocar pra personalizado e voltar não perde a configuração.
+ */
+export function aplicarModoAgenda(perms: Set<string>, modo: ModoAgenda): Set<string> {
+  if (modo === "personalizado") return new Set(perms);
+  const next = new Set([...perms].filter((k) => !k.startsWith("agenda.")));
+  for (const k of modo === "basico" ? CHAVES_AGENDA_BASICO : CHAVES_AGENDA_TOTAL) {
+    next.add(k);
+  }
   return next;
 }
 

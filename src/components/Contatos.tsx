@@ -18,8 +18,8 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatarFaturamento } from "@/lib/contatos-stats";
-import { MODULE_THEMES } from "@/types";
-import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange } from "@/types";
+import { MODULE_THEMES, LABELS_TIPO_CASA } from "@/types";
+import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange, TipoCasa } from "@/types";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -34,15 +34,6 @@ type Aba = ContatoCategoria | "bloqueados";
 type AlvoBloqueio =
   | { tipo: "contratante"; item: Contratante }
   | { tipo: "casa"; item: Casa };
-
-const TIPO_CASA_LABEL: Record<string, string> = {
-  club: "Club",
-  festival: "Festival",
-  "festa-privada": "Festa privada",
-  bar: "Bar",
-  arena: "Arena",
-  outro: "Outro",
-};
 
 const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const ATALHOS_CONTATOS: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -118,6 +109,12 @@ export default function Contatos({
 
   const [categoria, setCategoria] = useState<Aba>(categoriaInicial);
   const [search, setSearch] = useState("");
+  // J1 — filtro por tipo (só casas)/cidade/estado no Gerenciar Contatos.
+  // Vazio = "" em todos → não esconde nada por padrão (mesma regra do
+  // período/busca; ver lição no comentário I11 abaixo).
+  const [filtroTipo, setFiltroTipo] = useState<TipoCasa | "">("");
+  const [filtroCidadeId, setFiltroCidadeId] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
   const { workspaceCriadoEm } = useWorkspace();
   const [range, setRange] = useState<AgendaDateRange>("Visão geral");
   const [customMonth, setCustomMonth] = useState<string | null>(null);
@@ -165,13 +162,40 @@ export default function Contatos({
     else await updateCasa(alvo.item.id, patch);
   };
 
+  // cidadeId → estado (UF). Contratante/Casa não têm UF própria; o filtro
+  // por estado resolve pela cidade vinculada.
+  const estadoPorCidadeId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const cid of cidades) m.set(cid.id, cid.estado);
+    return m;
+  }, [cidades]);
+
+  /** Algum filtro de tipo/cidade/estado ligado? (a busca e o período têm
+   *  controles próprios, sempre visíveis, e não entram aqui). */
+  const temFiltroAtivo = !!(filtroTipo || filtroCidadeId || filtroEstado);
+  const limparFiltros = () => {
+    setFiltroTipo("");
+    setFiltroCidadeId("");
+    setFiltroEstado("");
+  };
+
+  // Estados distintos presentes nas cidades cadastradas, pro select de UF.
+  const estadosDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    for (const cid of cidades) if (cid.estado) set.add(cid.estado);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [cidades]);
+
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
     // I11 — o Gerenciar é o CADASTRO: mostra tudo que o papel permite. O
     // toggle de DJ da sidebar filtra visualizações (agenda/vendas/dashboards),
     // não o registro — com ele aqui, desmarcar um DJ fazia o contratante
     // recém-criado "sumir" e parecia que a venda não tinha salvado o contato.
-    const base = contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
+    let base = contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
+    // J1 — filtro vazio ("") não filtra nada, nunca esconde por padrão.
+    if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
+    if (filtroEstado) base = base.filter((c) => estadoPorCidadeId.get(c.cidadeId ?? "") === filtroEstado);
     if (!search.trim()) return base;
     const q = search.toLowerCase();
     return base.filter(
@@ -181,25 +205,31 @@ export default function Contatos({
         c.telefone.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
     );
-  }, [contratantes, search, cidades, periodo]);
+  }, [contratantes, search, cidades, periodo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
 
   const casasFiltradas = useMemo(() => {
-    const base = casas.filter(
+    let base = casas.filter(
       (c) =>
         dataNoMes(c.criadoEm, periodo)
     );
+    // J1 — tipo/cidade/estado; "" = sem filtro (mostra tudo).
+    if (filtroTipo) base = base.filter((c) => c.tipo === filtroTipo);
+    if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
+    if (filtroEstado) base = base.filter((c) => estadoPorCidadeId.get(c.cidadeId ?? "") === filtroEstado);
     if (!search.trim()) return base;
     const q = search.toLowerCase();
     return base.filter(
       (c) =>
         c.nome.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
-        TIPO_CASA_LABEL[c.tipo]?.toLowerCase().includes(q)
+        LABELS_TIPO_CASA[c.tipo]?.toLowerCase().includes(q)
     );
-  }, [casas, search, cidades, periodo]);
+  }, [casas, search, cidades, periodo, filtroTipo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
 
   const cidadesFiltradas = useMemo(() => {
     // I11 — cadastro mostra tudo; só a busca filtra (cidade ignora período).
+    // J1 — cidade/estado do filtro não se aplicam aqui: a aba já É a lista
+    // de cidades (o próprio nome/UF já é filtrável pela busca acima).
     const base = cidades;
     if (!search.trim()) return base;
     const q = search.toLowerCase();
@@ -335,6 +365,89 @@ export default function Contatos({
           </button>
         )}
       </div>
+
+      {/* J1 — filtro por tipo (só casas) / cidade / estado. Só faz sentido
+          nas abas que têm cidade vinculada (contratantes e casas); cidades
+          e bloqueados não ganham a barra. Vazio = tudo (nunca esconde por padrão). */}
+      {(categoria === "contratantes" || categoria === "casas") && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {categoria === "casas" && (
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value as TipoCasa | "")}
+              className="campo-input w-auto min-w-[140px] flex-1 sm:flex-none"
+            >
+              <option value="">{t("Todos os tipos")}</option>
+              {(Object.keys(LABELS_TIPO_CASA) as TipoCasa[]).map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {t(LABELS_TIPO_CASA[tipo])}
+                </option>
+              ))}
+            </select>
+          )}
+          <select
+            value={filtroCidadeId}
+            onChange={(e) => setFiltroCidadeId(e.target.value)}
+            className="campo-input w-auto min-w-[160px] flex-1 sm:flex-none"
+          >
+            <option value="">{t("Todas as cidades")}</option>
+            {cidades
+              .slice()
+              .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+              .map((cid) => (
+                <option key={cid.id} value={cid.id}>
+                  {cid.nome} — {cid.estado}
+                </option>
+              ))}
+          </select>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="campo-input w-auto min-w-[120px] flex-1 sm:flex-none"
+          >
+            <option value="">{t("Todos os estados")}</option>
+            {estadosDisponiveis.map((uf) => (
+              <option key={uf} value={uf}>
+                {uf}
+              </option>
+            ))}
+          </select>
+          {temFiltroAtivo && (
+            <button
+              onClick={limparFiltros}
+              className="text-muted hover:text-primary text-xs whitespace-nowrap"
+            >
+              {t("Limpar filtros")}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Abas SEM a barra (Cidades / Bloqueados): os cards de resumo do topo
+          continuam contando contratantes e casas COM o filtro aplicado, então
+          o filtro não pode ficar invisível — senão parece que o cadastro
+          encolheu sozinho (a lição do filtro que "some" com registro). Mostra
+          o que está ativo e como limpar, sem precisar voltar de aba. */}
+      {categoria !== "contratantes" && categoria !== "casas" && temFiltroAtivo && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-muted">{t("Filtros ativos:")}</span>
+          {filtroTipo && (
+            <span className="badge badge-neutral">{t(LABELS_TIPO_CASA[filtroTipo])}</span>
+          )}
+          {filtroCidadeId && (
+            <span className="badge badge-neutral">
+              {getCidadeNome(filtroCidadeId, cidades)}
+            </span>
+          )}
+          {filtroEstado && <span className="badge badge-neutral">{filtroEstado}</span>}
+          <button
+            onClick={limparFiltros}
+            className="text-muted hover:text-primary text-xs whitespace-nowrap"
+          >
+            {t("Limpar filtros")}
+          </button>
+        </div>
+      )}
 
       {/* Tabela conforme categoria */}
       <div className="card p-0 overflow-hidden">
@@ -714,7 +827,7 @@ function TabelaCasas({
                   </div>
                 </Td>
                 <Td>
-                  <span className="badge badge-neutral">{t(TIPO_CASA_LABEL[c.tipo] ?? c.tipo)}</span>
+                  <span className="badge badge-neutral">{t(LABELS_TIPO_CASA[c.tipo] ?? c.tipo)}</span>
                 </Td>
                 <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
                 <Td className="text-right tabular-nums">

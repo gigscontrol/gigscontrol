@@ -55,6 +55,27 @@ export type Sessao = {
    */
   privacidade?: PrivacidadeDj;
   /**
+   * Booleano LEGADO e global de anotações (profiles.pode_criar_anotacoes).
+   * A UI precisa dele para não esconder a tab Agenda de quem alcança
+   * Anotações só por ele (ver src/lib/permissoes/modulos.ts).
+   */
+  podeCriarAnotacoes?: boolean;
+  /**
+   * É MEMBRO EXPLÍCITO de pelo menos uma pasta de anotações (regra (c) do
+   * dono). Sem este sinal a UI escondia a tab Agenda de quem o SERVIDOR deixa
+   * ler por compartilhamento — o pior tipo de divergência, porque a subpágina
+   * "Anotações" é a única porta pra /app/agenda/anotacoes.
+   */
+  temPastaCompartilhada?: boolean;
+  /**
+   * A carga dos VÍNCULOS falhou (rede/RLS instável) — `vinculos` está vazio por
+   * ERRO, não porque o usuário não tem acesso. Quem esconde UI por permissão
+   * DEVE falhar aberto neste caso: mostrar tudo e deixar o servidor barrar é
+   * recuperável; esconder o app inteiro por causa de um fetch que caiu manda o
+   * usuário ligar pro admin achando que perdeu o acesso.
+   */
+  vinculosErro?: boolean;
+  /**
    * Quando true, o super-admin está visualizando a dashboard de um cliente
    * em modo somente-leitura — nenhuma ação de escrita é permitida.
    */
@@ -117,6 +138,8 @@ type ProfileRow = {
   escopo_vendedor: Usuario["escopoVendedor"] | null;
   status: string;
   deletado_em: string | null;
+  /** Booleano LEGADO e global de anotações (mesmo campo lido em api/session.ts). */
+  pode_criar_anotacoes?: boolean | null;
 };
 
 type WorkspaceRow = {
@@ -281,23 +304,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Vínculos por artista (novo modelo de permissões). Só operacionais
       // precisam carregar — admin/artista/super são resolvidos pelo papel.
       const vinculos: Record<string, string[]> = {};
+      // REGRA (c) DO DONO — "anotações que quem tem acesso colocou ele nas
+      // permissões". O servidor (`podeVerAnotacao`) já libera a leitura pra
+      // quem é MEMBRO EXPLÍCITO de uma pasta, mas o cliente não tinha como
+      // saber disso: a tab Agenda sumia e o compartilhamento ficava
+      // inalcançável (servidor permite, UI esconde a porta). Um EXISTS barato,
+      // uma vez por sessão, resolve. Tabela conferida contra o schema real:
+      // anotacao_pasta_membros(id, pasta_id, usuario_id, artista_id) — sem
+      // coluna de soft-delete, por isso não há filtro de deletado_em.
+      let temPastaCompartilhada = false;
+      let vinculosErro = false;
       if (
         !profile.is_super_admin &&
         profile.workspace_id &&
         profile.papel !== "admin" &&
         profile.papel !== "artista"
       ) {
-        const { data: vinc } = await supabase
-          .from("membros_artista")
-          .select("artist_id, permissoes")
-          .eq("user_id", profile.id)
-          .is("deletado_em", null);
+        // FALHA ≠ ZERO LINHAS. Descartar o `error` fazia `vinculos = {}` calado;
+        // com a UI agora escondendo módulo por permissão, isso viraria "app sem
+        // nenhum módulo" numa instabilidade passageira. Tenta de novo e, se
+        // ainda assim falhar, marca o erro pra UI falhar ABERTO.
+        let vinc: unknown[] | null = null;
+        for (let tentativa = 0; tentativa < 2; tentativa++) {
+          const { data, error } = await supabase
+            .from("membros_artista")
+            .select("artist_id, permissoes")
+            .eq("user_id", profile.id)
+            .is("deletado_em", null);
+          if (!error) {
+            vinc = data ?? [];
+            break;
+          }
+          if (tentativa === 1) vinculosErro = true;
+        }
         for (const v of vinc ?? []) {
           const perms = (v as { permissoes?: unknown }).permissoes;
           vinculos[(v as { artist_id: string }).artist_id] = Array.isArray(perms)
             ? (perms.filter((x) => typeof x === "string") as string[])
             : [];
         }
+
+        // Falha aqui NÃO derruba a sessão: o pior caso é o item "Anotações"
+        // não aparecer pra quem só alcança por pasta compartilhada — o mesmo
+        // estado de antes desta correção, nunca um acesso a mais.
+        const { data: pm } = await supabase
+          .from("anotacao_pasta_membros")
+          .select("id")
+          .eq("usuario_id", profile.id)
+          .limit(1);
+        temPastaCompartilhada = (pm ?? []).length > 0;
       }
 
       // Privacidade do artista (config do admin em artists.privacidade). Só o
@@ -316,7 +371,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (art?.cor) usuario.cor = art.cor;
       }
 
-      return { tipo, usuario, workspace, vinculos, privacidade };
+      return {
+        tipo,
+        usuario,
+        workspace,
+        vinculos,
+        privacidade,
+        podeCriarAnotacoes: profile.pode_criar_anotacoes ?? false,
+        temPastaCompartilhada,
+        vinculosErro,
+      };
     },
     [supabase]
   );

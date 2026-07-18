@@ -19,9 +19,10 @@ import {
   rotuloEmpresa,
 } from "@/lib/data/documentos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
-import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
+import CidadeGlobalAutocomplete from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
-import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { resolverCidade } from "@/lib/cidade-helpers";
+import { useCidadeDoCatalogo } from "@/lib/useCidadeDoCatalogo";
 import { getPaisPadrao } from "@/lib/preferencias";
 import type { Contratante } from "@/types";
 
@@ -43,12 +44,10 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
   const t = useT();
   const { cidades, addContratante, updateContratante, registrarCidade } = useContatos();
 
-  const cidadeInicial = initial?.cidadeId
-    ? cidades.find((c) => c.id === initial.cidadeId)
-    : undefined;
-  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
-    cidadeParaEscolhida(cidadeInicial)
-  );
+  // Pré-popula a cidade salva na edição. O hook re-resolve quando a lista
+  // `cidades` do contexto chega depois do mount — sem isso o campo abria VAZIO
+  // e forçava o usuário a re-escolher uma cidade que já estava no banco.
+  const [cidadeSel, setCidadeSel] = useCidadeDoCatalogo(initial?.cidadeId, cidades);
 
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [pais, setPais] = useState<Country>(paisDe(initial?.pais));

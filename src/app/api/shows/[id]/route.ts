@@ -10,9 +10,10 @@ import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
 import {
   podeVerAgenda,
   podeVerAgendaDetalhado,
-  podeCriarAgenda,
-  podeEditarAgenda,
-  podeExcluirAgenda,
+  podeCriarShow,
+  podeEditarShow,
+  podeCancelarShow,
+  podeExcluirShow,
   stripShowDetalhado,
 } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
@@ -55,12 +56,12 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const row = await repoBuscarShow(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
-  if (!podeEditarAgenda(r.sessao, row.artist_id, row.criado_por)) {
-    return NextResponse.json(
-      { erro: "Você não tem permissão para editar este show." },
-      { status: 403 }
-    );
-  }
+  // ATENÇÃO (L5): o gate NÃO fica mais aqui. Esta rota serve DUAS operações
+  // distintas — editar o show e cancelar/reativar o show — e elas passaram a
+  // exigir chaves DIFERENTES (vendas.editar_venda × vendas.cancelar_venda).
+  // Só dá pra distinguir depois de ler o corpo, então o gate está logo abaixo
+  // do parse. Gatear a rota inteira com uma chave só daria acesso a mais (ou a
+  // menos) do que o dono pediu.
 
   let raw: unknown;
   try {
@@ -77,13 +78,48 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // ---- GATE (L5b): cancelar ≠ editar, chaves diferentes ----
+  // `estavaCancelado`/`querCancelar`/`querReativar` são reusados mais abaixo
+  // pela auditoria de cancelamento — calculados uma vez só, aqui.
+  const estavaCancelado = row.status === "cancelado";
+  const querCancelar = parsed.data.status === "cancelado" && !estavaCancelado;
+  const querReativar =
+    parsed.data.status !== undefined &&
+    parsed.data.status !== "cancelado" &&
+    estavaCancelado;
+  const ehCancelamento = querCancelar || querReativar;
+
+  // "Só cancelamento" = o corpo não traz NADA além de status + o motivo. Se
+  // vier qualquer outro campo junto, é edição TAMBÉM e as duas chaves são
+  // exigidas (nunca uma "carona": cancelar não pode virar porta pra editar).
+  const camposEnviados = Object.entries(parsed.data)
+    .filter(([, v]) => v !== undefined)
+    .map(([k]) => k);
+  const soCancelamento = camposEnviados.every(
+    (k) => k === "status" || k === "cancelamentoMotivo"
+  );
+  const exigeEdicao = !(ehCancelamento && soCancelamento);
+
+  if (ehCancelamento && !podeCancelarShow(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para cancelar este show." },
+      { status: 403 }
+    );
+  }
+  if (exigeEdicao && !podeEditarShow(r.sessao, row.artist_id, row.criado_por)) {
+    return NextResponse.json(
+      { erro: "Você não tem permissão para editar este show." },
+      { status: 403 }
+    );
+  }
+
   // IDOR de destino: se o PATCH move o show para OUTRO artista, exige permissão
-  // no DESTINO também — senão daria pra empurrar o evento pra dentro de um
-  // artista sem vínculo. Só checa quando o artist_id muda de fato.
+  // de CRIAR SHOW no DESTINO também — senão daria pra empurrar o show pra dentro
+  // de um artista sem vínculo. Só checa quando o artist_id muda de fato.
   if (
     parsed.data.artist_id !== undefined &&
     (parsed.data.artist_id ?? null) !== row.artist_id &&
-    !podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)
+    !podeCriarShow(r.sessao, parsed.data.artist_id ?? null)
   ) {
     return NextResponse.json(
       { erro: "Você não tem permissão para mover este evento para esse artista." },
@@ -100,15 +136,26 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Dispensar contrato é decisão de GOVERNANÇA (some com a venda do alerta
+  // "Shows sem contrato", que é admin-only na UI) — não é edição de agenda.
+  // Só admin/super, no mesmo espírito de "excluir contrato é admin-only" (D4).
+  // Sem este gate, quem tem `agenda.editar` num artista apagaria o alerta do
+  // admin por um PATCH direto.
+  if (
+    parsed.data.contratoDispensado !== undefined &&
+    !r.sessao.isSuperAdmin &&
+    r.sessao.papel !== "admin"
+  ) {
+    return NextResponse.json(
+      { erro: "Só um administrador pode dispensar a venda de contrato." },
+      { status: 403 }
+    );
+  }
+
   // Auditoria de cancelamento: o SERVIDOR carimba quem/quando (a partir da
   // sessão) em shows.meta — o cliente só manda o motivo, pra ninguém forjar a
   // autoria. Reverter empilha o cancelamento atual no histórico (nada se perde).
-  const estavaCancelado = row.status === "cancelado";
-  const querCancelar = parsed.data.status === "cancelado" && !estavaCancelado;
-  const querReativar =
-    parsed.data.status !== undefined &&
-    parsed.data.status !== "cancelado" &&
-    estavaCancelado;
+  // (querCancelar/querReativar já calculados no gate acima.)
   const metaAtual =
     row.meta && typeof row.meta === "object"
       ? (row.meta as Record<string, unknown>)
@@ -140,6 +187,21 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     metaPatch.cancelamentoHistorico = metaAtual.cancelamento
       ? [...hist, metaAtual.cancelamento]
       : hist;
+  }
+
+  // "Ignorar contrato" (alerta da Agência): o cliente manda só o booleano; o
+  // SERVIDOR carimba {em, por, porNome} — mesma regra do cancelamento, pra
+  // ninguém forjar a autoria. false → grava null na chave (DESFAZ; o mapper lê
+  // null como ausente). merge_show_meta é raso no topo, então a chave inteira é
+  // substituída de uma vez — nunca atualize sub-campos incrementalmente.
+  if (parsed.data.contratoDispensado !== undefined) {
+    metaPatch.contratoDispensado = parsed.data.contratoDispensado
+      ? {
+          em: new Date().toISOString(),
+          por: r.sessao.userId,
+          porNome: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+        }
+      : null;
   }
 
   // Booking/hospedagem: só o delta do sub-objeto (mesclado com || no banco).
@@ -204,7 +266,9 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const row = await repoBuscarShow(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
-  if (!podeExcluirAgenda(r.sessao, row.artist_id, row.criado_por)) {
+  // L5b: excluir SHOW é chave de VENDAS (agenda.excluir* governa só voo/
+  // transporte/evento).
+  if (!podeExcluirShow(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para remover este show." },
       { status: 403 }

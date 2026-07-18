@@ -93,8 +93,13 @@ function fmtData(iso?: string): string {
 
 export default function ControlePagamentos({
   modo = "completo",
+  buscaInicial = null,
 }: {
   modo?: "completo" | "cobrancas";
+  /** Busca já preenchida ao abrir (ex.: o número da venda, vindo do alerta
+   *  "Parcelas atrasadas" da Agência) — leva o admin direto à parcela em vez
+   *  de despejá-lo na lista inteira de cobranças. */
+  buscaInicial?: string | null;
 }) {
   const t = useT();
   const ehCobrancas = modo === "cobrancas";
@@ -103,7 +108,7 @@ export default function ControlePagamentos({
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(buscaInicial ?? "");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
   const [detalhe, setDetalhe] = useState<{ vendaId: string; parcelaId: string } | null>(null);
   // Seletor de período (padrão: Visão geral). Filtra por data de vencimento.

@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Field, TextInput, TextArea, Select } from "../Field";
 import InputCapacidade from "../inputs/InputCapacidade";
-import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
+import CidadeGlobalAutocomplete from "../CidadeGlobalAutocomplete";
 import { useContatos } from "@/lib/contatos-context";
-import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
+import { resolverCidade } from "@/lib/cidade-helpers";
+import { useCidadeDoCatalogo } from "@/lib/useCidadeDoCatalogo";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import type { Casa, TipoCasa } from "@/types";
 
@@ -29,15 +30,12 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
   const t = useT();
   const { cidades, addCasa, updateCasa, registrarCidade } = useContatos();
 
-  // Pré-popula a cidade IBGE a partir da cidade atual da casa (se ela
-  // tem ibgeId no banco). Cidades legadas sem ibge_id ficam vazias e o
-  // user precisa escolher uma do IBGE.
-  const cidadeInicial = initial?.cidadeId
-    ? cidades.find((c) => c.id === initial.cidadeId)
-    : undefined;
-  const [cidadeSel, setCidadeSel] = useState<CidadeEscolhida | null>(
-    cidadeParaEscolhida(cidadeInicial)
-  );
+  // Pré-popula a cidade a partir da cidade atual da casa. O hook resolve
+  // contra a lista `cidades` do contexto E re-resolve quando ela carrega
+  // depois do mount — sem isso a edição abria com o campo VAZIO e obrigava o
+  // usuário a re-escolher uma cidade que já estava salva. Cidades legadas (sem
+  // ibge_id/geoname_id) seguem vazias: não há como reidentificá-las.
+  const [cidadeSel, setCidadeSel] = useCidadeDoCatalogo(initial?.cidadeId, cidades);
 
   const [nome, setNome] = useState(initial?.nome ?? "");
   const [tipo, setTipo] = useState<TipoCasa>(initial?.tipo ?? "club");

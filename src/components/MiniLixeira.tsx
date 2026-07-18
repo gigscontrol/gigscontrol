@@ -6,6 +6,7 @@ import Toast from "./Toast";
 import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   /** Categoria que esta mini-lixeira mostra. Shows ficam só na AbaLixeira
@@ -83,7 +84,7 @@ export default function MiniLixeira({ tipo }: Props) {
             id: i.contratante.id,
             nome: i.contratante.nome,
             sub: i.contratante.email ?? null,
-            iniciais: i.contratante.nome.charAt(0).toUpperCase(),
+            iniciais: iniciaisDoNome(i.contratante.nome),
             corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
@@ -95,7 +96,7 @@ export default function MiniLixeira({ tipo }: Props) {
             id: i.casa.id,
             nome: i.casa.nome,
             sub: null,
-            iniciais: i.casa.nome.charAt(0).toUpperCase(),
+            iniciais: iniciaisDoNome(i.casa.nome),
             corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),
@@ -107,7 +108,7 @@ export default function MiniLixeira({ tipo }: Props) {
             id: i.cidade.id,
             nome: `${i.cidade.nome}, ${i.cidade.estado}`,
             sub: null,
-            iniciais: i.cidade.nome.charAt(0).toUpperCase(),
+            iniciais: iniciaisDoNome(i.cidade.nome),
             corAvatar: "var(--brand)",
             diasRestantes: i.diasRestantes,
           })),

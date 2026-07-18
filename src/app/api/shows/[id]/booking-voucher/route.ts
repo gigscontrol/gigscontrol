@@ -5,7 +5,7 @@ import {
   buscarShow as repoBuscarShow,
   contarBookingVouchersDesde,
 } from "@/lib/repositories/shows.repo";
-import { podeEditarAgenda, podeVerAgendaDetalhado } from "@/lib/api/permissoes";
+import { podeEditarShow, podeVerAgendaDetalhado } from "@/lib/api/permissoes";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
 import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
 import { getPlano, type PlanoId } from "@/lib/planos";
@@ -25,14 +25,16 @@ export async function POST(request: Request, { params }: RouteCtx) {
 
   const row = await repoBuscarShow(r.sessao.supabase, params.id);
   if (!row) return NextResponse.json({ erro: "Show não encontrado." }, { status: 404 });
-  if (!podeEditarAgenda(r.sessao, row.artist_id, row.criado_por)) {
+  // L5b: gravar o booking ALTERA O SHOW → chave de VENDAS (par de
+  // VendaDetalhe.tsx `podeEditarBooking`). Não é mais `agenda.editar*`.
+  if (!podeEditarShow(r.sessao, row.artist_id, row.criado_por)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para editar este show." },
       { status: 403 }
     );
   }
   // Booking tem PII de hospedagem → gerenciar o voucher exige ver_detalhado
-  // (mesma régua do download), não só agenda.editar.
+  // (mesma régua do download), ALÉM da chave de edição de venda.
   if (!podeVerAgendaDetalhado(r.sessao, row.artist_id)) {
     return NextResponse.json(
       { erro: "Você não tem permissão para gerenciar a hospedagem deste show." },

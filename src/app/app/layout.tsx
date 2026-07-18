@@ -34,6 +34,8 @@ import { ModelosProvider } from "@/lib/modelos-context";
 import { ContratosProvider } from "@/lib/contratos-context";
 import { AnotacoesProvider } from "@/lib/anotacoes-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ctxDaSessao } from "@/lib/permissoes/resolver";
+import { podeVerModulo } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
 import Configuracoes from "@/components/configuracoes/Configuracoes";
@@ -377,16 +379,43 @@ function AppRoot() {
     [pathname]
   );
 
-  // Módulo "Agência" (roster de Artistas/Equipe) é admin-only. Defesa em
-  // profundidade contra a URL direta (/app/agencia/…): quem não é admin nem
-  // super-admin não monta as telas e é mandado de volta pra Agenda. O menu já
-  // esconde o módulo (Sidebar) e o servidor barra as mutações (403).
+  // Defesa em profundidade contra a URL DIRETA (link antigo, bookmark, histórico
+  // do navegador, aba aberta antes do deploy). A Sidebar esconde o módulo, mas
+  // a rota continuava montável: o usuário caía numa tela cujos fetches tomam
+  // 403 e, sem o item no menu, sem nada que explicasse onde ele está. Vale pra
+  // TODO módulo, não só "agencia" — mesma regra (`podeVerModulo`) do menu.
   const podeAgencia = isSuperAdmin || sessao?.usuario?.papel === "admin";
+  const ctxModulos = useMemo(
+    () =>
+      sessao
+        ? ctxDaSessao({
+            isSuperAdmin,
+            papel: sessao.usuario.papel,
+            artistaId:
+              (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+            privacidade: sessao.privacidade,
+            vinculos: sessao.vinculos,
+            podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+            temPastaCompartilhada: sessao.temPastaCompartilhada,
+          })
+        : null,
+    [sessao, isSuperAdmin]
+  );
   useEffect(() => {
-    if (!configAberta && activeTab === "agencia" && sessao && !podeAgencia) {
-      irPara(urlDaTela("agenda", "dashboard"));
+    if (configAberta || !sessao || !ctxModulos) return;
+    // Vínculos que falharam ao carregar = UI falha ABERTO (o servidor barra).
+    if (sessao.vinculosErro) {
+      if (activeTab === "agencia" && !podeAgencia) irPara(urlDaTela("agenda", "dashboard"));
+      return;
     }
-  }, [activeTab, configAberta, sessao, podeAgencia, irPara]);
+    if (podeVerModulo(ctxModulos, activeTab)) return;
+    // Manda pro primeiro módulo ALCANÇÁVEL — mandar pra agenda cegamente
+    // criaria um loop de redirect pra quem não alcança nem a agenda.
+    const destino = (["agenda", "vendas", "financeiro", "contratos", "contatos", "agencia"] as ActiveTab[]).find(
+      (t) => podeVerModulo(ctxModulos, t)
+    );
+    if (destino && destino !== activeTab) irPara(urlDaTela(destino, "dashboard"));
+  }, [activeTab, configAberta, sessao, ctxModulos, podeAgencia, irPara]);
 
   // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
   // abaixo sincroniza com a lista real de artistas do workspace assim
@@ -449,6 +478,11 @@ function AppRoot() {
   // Passados à dashboard de Contratos → Histórico (filtro por status / abrir um contrato).
   const [contratoStatusFiltro, setContratoStatusFiltro] = useState<ContratoStatus | null>(null);
   const [contratoAbrirId, setContratoAbrirId] = useState<string | null>(null);
+  // Contexto levado pelos alertas da Agência ao "Resolver" (J5): a venda que
+  // originou o clique. Sem isto o botão jogava o admin num formulário em branco
+  // / na lista inteira, e ele tinha que reencontrar o item na mão.
+  const [contratoVendaInicialId, setContratoVendaInicialId] = useState<string | null>(null);
+  const [cobrancaBuscaInicial, setCobrancaBuscaInicial] = useState<string | null>(null);
   // Show aberto no modal (a partir de qualquer tela)
   const [showModalId, setShowModalId] = useState<string | null>(null);
 
@@ -467,6 +501,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(tab, "dashboard"));
   };
 
@@ -476,6 +512,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(activeTab, page));
   };
 
@@ -486,6 +524,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(tab, page));
   };
 
@@ -494,6 +534,24 @@ function AppRoot() {
     setContratoAbrirId(null);
     setContratoStatusFiltro(status);
     irPara(urlDaTela("contratos", "contratos-historico"));
+  };
+
+  /** Alerta "Shows sem contrato" → Novo Contrato com a venda JÁ selecionada. */
+  const fazerContratoDaVenda = (vendaId: string) => {
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
+    setCobrancaBuscaInicial(null);
+    setContratoVendaInicialId(vendaId);
+    irPara(urlDaTela("contratos", "contratos-novo"));
+  };
+
+  /** Alerta "Parcelas atrasadas" → Cobranças já filtradas por aquela venda. */
+  const verCobrancaDaVenda = (termo: string) => {
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(termo);
+    irPara(urlDaTela("financeiro", "financeiro-cobrancas"));
   };
 
   /** Linha de contrato recente → abre o contrato no Histórico. */
@@ -603,7 +661,7 @@ function AppRoot() {
             <ControlePagamentos />
           )}
           {activeTab === "financeiro" && activePage === "financeiro-cobrancas" && (
-            <ControlePagamentos modo="cobrancas" />
+            <ControlePagamentos modo="cobrancas" buscaInicial={cobrancaBuscaInicial} />
           )}
 
           {/* Vendas */}
@@ -735,7 +793,7 @@ function AppRoot() {
             />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
-            <NovoContratoPage />
+            <NovoContratoPage vendaInicialId={contratoVendaInicialId} />
           )}
           {activeTab === "contratos" && activePage === "contratos-modelos" && (
             <ModelosPage />
@@ -753,7 +811,11 @@ function AppRoot() {
           {/* Agência — admin-only (podeAgencia); URL direta de não-admin é
               redirecionada pelo useEffect acima e nunca monta estas telas. */}
           {podeAgencia && activeTab === "agencia" && activePage === "dashboard" && (
-            <AgenciaDashboard />
+            <AgenciaDashboard
+              onFazerContratoDaVenda={fazerContratoDaVenda}
+              onVerCobrancaDaVenda={verCobrancaDaVenda}
+              onAbrirContrato={abrirContrato}
+            />
           )}
           {podeAgencia && activeTab === "agencia" && activePage === "agencia-artistas" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">

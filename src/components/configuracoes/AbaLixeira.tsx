@@ -17,6 +17,7 @@ import {
 import Toast from "../Toast";
 import { useWorkspace, type TipoLixeira } from "@/lib/workspace-context";
 import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 /**
  * Aba "Lixeira".
@@ -162,7 +163,7 @@ export default function AbaLixeira() {
         null,
         i.diasRestantes,
         i.artista.color,
-        i.artista.name.charAt(0).toUpperCase()
+        iniciaisDoNome(i.artista.name)
       )
     ),
     usuario: lixeiraUsuarios.map((i) =>
@@ -176,7 +177,7 @@ export default function AbaLixeira() {
           : i.usuario.email,
         i.diasRestantes,
         "var(--brand)",
-        i.usuario.nome.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
+        iniciaisDoNome(i.usuario.nome)
       )
     ),
     orcamento: lixeiraOrcamentos.map((i) =>
@@ -212,7 +213,7 @@ export default function AbaLixeira() {
         i.contratante.email ?? null,
         i.diasRestantes,
         "var(--brand)",
-        i.contratante.nome.charAt(0).toUpperCase()
+        iniciaisDoNome(i.contratante.nome)
       )
     ),
     casa: lixeiraCasas.map((i) =>
@@ -224,7 +225,7 @@ export default function AbaLixeira() {
         null,
         i.diasRestantes,
         "var(--brand)",
-        i.casa.nome.charAt(0).toUpperCase()
+        iniciaisDoNome(i.casa.nome)
       )
     ),
     cidade: lixeiraCidades.map((i) =>
@@ -236,7 +237,7 @@ export default function AbaLixeira() {
         null,
         i.diasRestantes,
         "var(--brand)",
-        i.cidade.nome.charAt(0).toUpperCase()
+        iniciaisDoNome(i.cidade.nome)
       )
     ),
     show: lixeiraShows.map((i) =>

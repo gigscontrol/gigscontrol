@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History, AlertTriangle } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -119,10 +120,23 @@ export default function VendaDetalhe({
     podeUI(venda.artistaId || null, "vendas.editar_venda") ||
     podeUI(venda.artistaId || null, "vendas.editar_todos");
   const podeExcluirVenda = podeUI(venda.artistaId || null, "vendas.excluir_venda");
-  // Booking edita o SHOW → usa a permissão de editar agenda (o servidor exige a mesma).
-  const podeEditarBooking = podeUI(venda.artistaId || null, "agenda.editar_todos");
-  const semPermissao = t("Você não tem permissão para isso.");
+  // REGRA NOVA (L5b): mexer no SHOW é permissão de VENDAS, não de agenda.
+  // Booking edita o show → vendas.editar_venda|editar_todos (o servidor exige
+  // a mesma); cancelar/reativar o show → vendas.cancelar_venda. Quem tinha só
+  // agenda.editar_todos PERDE estes botões de propósito.
+  // `show` tem que ser resolvido ANTES dos gates: as chaves sem "_todos" são de
+  // escopo "próprios" e dependem de `show.criadoPor` (espelha podeMutar).
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
+  const donoDoShow = { criadoPor: show?.criadoPor, meuUserId: sessao?.usuario.id };
+  // Booking exige MAIS que editar o show: o servidor ([id]/route.ts) também
+  // pede `agenda.ver_detalhado`, porque hospedagem carrega PII. Sem esta
+  // segunda condição o preset "vendedor" (agenda.ver + vendas.editar_venda)
+  // via a seção Hotel editável, preenchia e tomava 403 no PATCH.
+  const podeEditarBooking =
+    podeEditarShowUI(podeUI, venda.artistaId || null, donoDoShow) &&
+    podeUI(venda.artistaId || null, "agenda.ver_detalhado");
+  const podeCancelarShow = podeCancelarShowUI(podeUI, venda.artistaId || null, donoDoShow);
+  const semPermissao = t("Você não tem permissão para isso.");
   const cancelado = show?.status === "cancelado";
   const showIdLigado = venda.showId;
 
@@ -231,8 +245,9 @@ export default function VendaDetalhe({
               <button
                 type="button"
                 onClick={cancelarOuReativarShow}
-                disabled={processandoShow}
-                className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+                disabled={processandoShow || !podeCancelarShow}
+                title={!podeCancelarShow ? semPermissao : undefined}
+                className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
               >
                 {processandoShow

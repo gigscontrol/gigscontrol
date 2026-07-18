@@ -5,9 +5,14 @@ import { softDelete, restaurarSoftDelete } from "./_softDelete";
 const COLS =
   "id, workspace_id, nome, email, username, papel, is_super_admin, artista_id, status, deletado_em, pode_criar_anotacoes, senha_padrao, senha_padrao_valor, cor, pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, data_nascimento, cidade_id";
 
-// COLS + a cidade embutida (join em cidades por cidade_id). Usado só no roster
-// da equipe, pra o editar já abrir com o seletor de cidade pré-preenchido
-// (nome/uf/país). O mapper rowParaUsuario lê `cidade` quando presente.
+// COLS + a cidade embutida (join em cidades por cidade_id). Usado no roster da
+// equipe E nas escritas que devolvem a linha pro cliente, pra o editar já abrir
+// com o seletor de cidade pré-preenchido (nome/uf/país). O mapper
+// rowParaUsuario lê `cidade` quando presente.
+//
+// PROVA CONTRA O SCHEMA REAL (regra do COLS): a FK `profiles_cidade_id_fkey`
+// (profiles.cidade_id → cidades.id) existe, e todas as 9 colunas do join
+// existem em `cidades` — verificado em information_schema no banco real.
 const COLS_COM_CIDADE = `${COLS}, cidade:cidades!cidade_id(id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id)`;
 
 /** Lista equipe ativa (papel != admin/artista, deletado_em is null). */
@@ -80,7 +85,10 @@ export async function criarProfile(
       is_super_admin: false,
       status: payload.status ?? "ativo",
     })
-    .select(COLS)
+    // COM_CIDADE: a linha volta pro cliente e entra direto na lista da equipe
+    // (workspace-context `setEquipe`). Com o COLS puro ela vinha SEM `cidade`,
+    // e o membro recém-criado aparecia sem cidade até dar F5.
+    .select(COLS_COM_CIDADE)
     .single();
   if (error) throw error;
   return data as unknown as ProfileRow;
@@ -95,7 +103,12 @@ export async function atualizarProfile(
     .from("profiles")
     .update(payload)
     .eq("id", id)
-    .select(COLS)
+    // COM_CIDADE: esta linha SUBSTITUI o item da lista da equipe no cliente
+    // (workspace-context:722 `setEquipe(prev.map(...))`). Com o COLS puro ela
+    // voltava com `cidade_id` mas SEM o objeto `cidade`, então a cidade sumia
+    // do card e o modal de editar reabria com o campo vazio logo depois de um
+    // save bem-sucedido — o "a cidade some da tela" relatado.
+    .select(COLS_COM_CIDADE)
     .single();
   if (error) throw error;
   return data as unknown as ProfileRow;

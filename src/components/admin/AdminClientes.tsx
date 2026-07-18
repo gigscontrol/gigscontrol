@@ -28,6 +28,7 @@ import {
   type StatusAssinatura,
 } from "@/lib/plataforma";
 import { LABELS_PAPEL } from "@/lib/permissoes";
+import { iniciaisDoNome } from "@/lib/iniciais";
 import { getPlano, precoPorMes, formatarPreco } from "@/lib/planos";
 import type { HistoricoPagamento } from "@/lib/services/plataforma.service";
 
@@ -489,12 +490,7 @@ function DetalheCliente({
                       background: `linear-gradient(135deg, ${papel.cor}, ${papel.cor}99)`,
                     }}
                   >
-                    {u.nome
-                      .split(" ")
-                      .map((p) => p[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase()}
+                    {iniciaisDoNome(u.nome)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-primary truncate">

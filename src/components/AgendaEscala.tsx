@@ -17,8 +17,10 @@ import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { podeCriarShowUI } from "@/lib/permissoes/gatesShow";
 import { useContratos } from "@/lib/contratos-context";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
+import { showNoDia } from "@/lib/agenda/showNoDia";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -76,24 +78,7 @@ function cellDeISO(iso: string): DayCell | null {
   };
 }
 
-/**
- * Um show pertence a esta célula do calendário?
- *
- * Casa pela DATA ISO completa (fonte da verdade). Isso conserta o bug em
- * que um show de 03/jun aparecia também no dia 3 de nov, dez etc. — o
- * match antigo era só por dia-do-mês (`dayId`), ignorando mês/ano.
- *
- * Shows legados sem `data` caem no match por dia-do-mês, válido apenas
- * dentro do mês exibido (nunca no padding de outro mês).
- */
-function showNoDia(s: Show, day: DayCell): boolean {
-  // Células de padding (dias de outro mês) nunca exibem shows: cada show
-  // aparece em exatamente um mês, evitando "duplicar" um show de borda ao
-  // virar o mês.
-  if (day.isOtherMonth) return false;
-  if (s.data && day.dataISO) return s.data === day.dataISO;
-  return s.dayId === day.id;
-}
+/** Casamento show↔célula: lógica pura em `@/lib/agenda/showNoDia` (com bateria). */
 
 const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: string }> = {
   confirmado: { bg: "rgba(34, 197, 94, 0.12)", color: "var(--success)", label: "Confirmado" },
@@ -192,7 +177,15 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   }, [recarregarShows]);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
+  // L5c — DUAS chaves distintas alimentam o "+":
+  //   podeCriarAlgum  → agenda.criar: voo, transporte terrestre e evento.
+  //   podeCriarShow   → vendas.criar_venda: "Novo Show" (agenda virou só
+  //                     visualização; criar show é permissão de VENDAS).
+  // O "+" aparece se ele pode criar QUALQUER uma das duas coisas — senão quem
+  // só tem vendas.criar_venda ficaria sem botão nenhum.
   const podeCriarAlgum = artistas.some((a) => podeUI(a.id, "agenda.criar"));
+  const podeCriarShow = artistas.some((a) => podeCriarShowUI(podeUI, a.id));
+  const podeAbrirNovoItem = podeCriarAlgum || podeCriarShow;
   const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
   // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
@@ -371,6 +364,19 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
 
+  // Meses que a grade renderiza com células PRÓPRIAS ("YYYY-MM"). Um show só
+  // é escondido de uma célula de padding se o mês dele já tiver lugar aqui —
+  // ver `showNoDia`. Derivado da grade em si, não da lógica que a montou.
+  const mesesNaGrade = useMemo(
+    () =>
+      new Set(
+        allDays
+          .filter((d) => !d.isOtherMonth && d.dataISO)
+          .map((d) => d.dataISO.slice(0, 7))
+      ),
+    [allDays]
+  );
+
   // Rótulo do período exibido (ex: "Junho 2026"). Derivado da 1ª célula
   // real do grid — assim acompanha os atalhos e o "Personalizado" sem
   // duplicar a lógica do resolver, e cobre a virada de ano sozinho.
@@ -431,11 +437,11 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
               <DayCellComponent
                 key={day.uniqueKey}
                 day={day}
-                shows={filteredShows.filter((s) => showNoDia(s, day))}
+                shows={filteredShows.filter((s) => showNoDia(s, day, mesesNaGrade))}
                 itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
                 accent={accent}
-                podeCriarAlgum={podeCriarAlgum}
+                podeAbrirNovoItem={podeAbrirNovoItem}
                 onShowClick={setShowSelecionado}
                 onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
@@ -461,7 +467,7 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
                 itens={itens}
                 artistas={artistas}
                 accent={accent}
-                podeCriarAlgum={podeCriarAlgum}
+                podeAbrirNovoItem={podeAbrirNovoItem}
                 onShowClick={setShowSelecionado}
                 onItemClick={setItemDetalhe}
                 onNovoItem={setNovoItemDia}
@@ -476,7 +482,7 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
       {/* FAB mobile: cria item em QUALQUER data (a lista mobile só mostra dias
           com conteúdo + hoje, então sem isto só dava pra criar em hoje). */}
       <FabNovoDia
-        podeCriar={podeCriarAlgum}
+        podeCriar={podeAbrirNovoItem}
         onClick={() => {
           setFabDataISO(isoHoje());
           setFabDataAberto(true);
@@ -536,6 +542,7 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
         <NovoItemModal
           day={novoItemDia}
           podeCriarItem={podeCriarAlgum}
+          podeCriarShow={podeCriarShow}
           onClose={() => setNovoItemDia(null)}
           onNovoShow={() => {
             const d = novoItemDia.dataISO;
@@ -673,7 +680,7 @@ function DayCellComponent({
   itens,
   artistas,
   accent,
-  podeCriarAlgum,
+  podeAbrirNovoItem,
   onShowClick,
   onItemClick,
   onNovoItem,
@@ -683,19 +690,23 @@ function DayCellComponent({
   itens: AgendaItem[];
   artistas: Artista[];
   accent: string;
-  podeCriarAlgum: boolean;
+  podeAbrirNovoItem: boolean;
   onShowClick: (id: string) => void;
   onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
+  // Dia de outro mês VAZIO continua bem apagado (é só moldura); com conteúdo
+  // sobe pra 60% — no 30% o card do show ficava ilegível, e o objetivo aqui é
+  // justamente conseguir LER o show da borda sem trocar de mês.
+  const temConteudo = shows.length > 0 || itens.length > 0;
   return (
     <div
       id={day.isToday ? "day-card-today" : undefined}
       className={`
         relative bg-surface border rounded-md p-2.5 flex flex-col overflow-hidden
         min-h-[280px] lg:min-h-[340px] transition-all
-        ${day.isOtherMonth ? "opacity-30" : ""}
+        ${day.isOtherMonth ? (temConteudo ? "opacity-60" : "opacity-30") : ""}
       `}
       style={{
         borderColor: day.isToday ? accent : day.isQuente ? "var(--border-strong)" : "var(--border-color)",
@@ -743,7 +754,7 @@ function DayCellComponent({
         ))}
         {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
         {!day.isOtherMonth && (
-          <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeCriarAlgum} />
+          <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeAbrirNovoItem} />
         )}
       </div>
     </div>
@@ -838,6 +849,7 @@ const ACOES_NOVO_ITEM: {
 function NovoItemModal({
   day,
   podeCriarItem,
+  podeCriarShow,
   onClose,
   onNovoShow,
   onNovoEvento,
@@ -845,7 +857,10 @@ function NovoItemModal({
   onNovoTransporte,
 }: {
   day: DayCell;
+  /** agenda.criar — voo, transporte terrestre e evento personalizado. */
   podeCriarItem: boolean;
+  /** vendas.criar_venda — "Novo Show" (não é mais permissão de agenda). */
+  podeCriarShow: boolean;
   onClose: () => void;
   onNovoShow: () => void;
   onNovoEvento: () => void;
@@ -862,17 +877,23 @@ function NovoItemModal({
       maxWidth={400}
     >
       <div className="flex flex-col gap-1">
-        {ACOES_NOVO_ITEM.map((a) => {
+        {ACOES_NOVO_ITEM.filter((a) =>
+          // L5c — gate POR CHAVE, não um só pra todos:
+          //   voo/transporte/evento → agenda.criar (item de agenda);
+          //   show                  → vendas.criar_venda (abre a Nova Venda
+          //                           Direta; agenda.criar NÃO serve mais).
+          // ESCONDE, não desabilita: o dono pediu que "Novo Show" só APAREÇA
+          // pra quem tem vendas.criar_venda. Diverge do grey-out usado no resto
+          // do app de propósito — aqui o pedido foi literal, e um item cinza
+          // vaza a existência da ação pra quem não pode executá-la.
+          a.key === "show" ? podeCriarShow : podeCriarItem
+        ).map((a) => {
           const Icone = a.icon;
-          // Voo/Transporte/Evento criam item de agenda → gate por agenda.criar.
-          // "show" abre a Nova Venda Direta (fora do escopo deste gate).
-          const gateItem = a.key !== "show" && !podeCriarItem;
           return (
             <button
               key={a.key}
               type="button"
-              disabled={a.emBreve || gateItem}
-              title={gateItem ? t("Você não tem permissão para isso.") : undefined}
+              disabled={a.emBreve}
               onClick={
                 a.key === "show"
                   ? onNovoShow
@@ -2426,7 +2447,7 @@ function MobileDayCard({
   itens,
   artistas,
   accent,
-  podeCriarAlgum,
+  podeAbrirNovoItem,
   onShowClick,
   onItemClick,
   onNovoItem,
@@ -2436,7 +2457,7 @@ function MobileDayCard({
   itens: AgendaItem[];
   artistas: Artista[];
   accent: string;
-  podeCriarAlgum: boolean;
+  podeAbrirNovoItem: boolean;
   onShowClick: (id: string) => void;
   onItemClick: (item: AgendaItem) => void;
   onNovoItem: (day: DayCell) => void;
@@ -2489,7 +2510,7 @@ function MobileDayCard({
         />
       ))}
       {shows.length === 0 && itens.length === 0 && <MobileDayEmptySlot />}
-      <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeCriarAlgum} />
+      <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeAbrirNovoItem} />
     </div>
   );
 }

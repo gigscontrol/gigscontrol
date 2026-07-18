@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   CalendarDays,
   ShoppingBag,
@@ -31,6 +31,8 @@ import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
 import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import { ctxDaSessao } from "@/lib/permissoes/resolver";
+import { podeVerModulo, subPaginasVisiveis } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import LogoGC from "./LogoGC";
 
@@ -156,14 +158,43 @@ export default function Sidebar({
   const ARTISTAS = useArtistas();
   const t = useT();
 
-  // Módulo "Agência" (roster de Artistas/Equipe, com o login de cada um) é
-  // administrativo: só admin (e super-admin em modo visitante) enxerga. Para
-  // artista/equipe ele nem aparece no menu. O servidor barra as mutações em
-  // paralelo (403) e o layout redireciona a URL direta (defesa em profundidade).
-  const podeAgencia = isSuperAdmin || sessao?.usuario?.papel === "admin";
-  const modulosVisiveis = podeAgencia
-    ? MODULES
-    : MODULES.filter((mod) => mod.tab !== "agencia");
+  // CADA módulo aparece só pra quem o ALCANÇA — mesma regra do servidor
+  // (podeVerModulo espelha gate a gate; ver src/lib/permissoes/modulos.ts).
+  // Antes só o módulo "Agência" era escondido, então um produtor só-agenda via
+  // Vendas/Financeiro/Contratos/Contatos no menu, clicava e tomava 403.
+  // Admin/super continuam vendo tudo. O servidor segue sendo a autoridade
+  // (403 nas rotas) e o layout redireciona a URL direta — isto aqui é a
+  // camada de UI, não o gate de segurança.
+  const modulosVisiveis = useMemo(() => {
+    if (!sessao) return [] as ModuleDef[];
+    // FALHA AO CARREGAR OS VÍNCULOS → falha ABERTO (menu completo, menos a
+    // Agência que é admin-only). `vinculos = {}` por erro de rede é
+    // indistinguível de "sem acesso" e esconderia o app inteiro; o servidor
+    // continua barrando de verdade (403), então mostrar demais aqui é o erro
+    // recuperável — esconder demais não é.
+    if (sessao.vinculosErro) {
+      const admin = isSuperAdmin || sessao.usuario.papel === "admin";
+      return MODULES.filter((mod) => admin || mod.tab !== "agencia");
+    }
+    const ctx = ctxDaSessao({
+      isSuperAdmin,
+      papel: sessao.usuario.papel,
+      artistaId:
+        (sessao.usuario.artistaId as unknown as string | undefined) ?? null,
+      privacidade: sessao.privacidade,
+      vinculos: sessao.vinculos,
+      podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+      temPastaCompartilhada: sessao.temPastaCompartilhada,
+    });
+    // Filtra o módulo E as subpáginas. A Agenda hospeda "Anotações", que tem
+    // gate próprio: quem não tem chave de agenda mas lê anotações continua
+    // com a porta (a tab aparece só com essa subpágina) em vez de perder o
+    // acesso que já tinha.
+    return MODULES.filter((mod) => podeVerModulo(ctx, mod.tab)).map((mod) => {
+      const subs = subPaginasVisiveis(ctx, mod.tab, mod.subPages);
+      return subs.length === mod.subPages.length ? mod : { ...mod, subPages: subs };
+    });
+  }, [sessao, isSuperAdmin]);
 
   // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
   // um drawer de 260px (w-[260px]) — o "recolhido" só vale no lg+ (classes lg:*).
@@ -310,6 +341,18 @@ export default function Sidebar({
         {/* Módulos com submenu inline (accordion) */}
         <div>
           <div className={`px-2 mb-2 stat-label ${collapsed ? "lg:invisible" : ""}`}>{t("Módulos")}</div>
+          {/* Sem NENHUM módulo alcançável (equipe sem vínculo, por exemplo) a
+              sidebar não pode quebrar nem ficar com um buraco mudo: explica o
+              porquê e manda falar com o admin. */}
+          {modulosVisiveis.length === 0 && (
+            <div
+              className={`px-3 py-2 text-[0.7rem] leading-relaxed text-muted ${
+                collapsed ? "lg:hidden" : ""
+              }`}
+            >
+              {t("Você ainda não tem acesso a nenhum módulo. Fale com o administrador da agência.")}
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             {modulosVisiveis.map((mod) => {
               // Com as Configurações abertas, nenhum módulo fica ativo
