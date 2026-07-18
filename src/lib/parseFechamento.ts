@@ -13,6 +13,10 @@ import { CATALOGO_CAMARIM, CATALOGO_EFEITOS, CATALOGO_HOTEL } from "@/types";
 export type CamposFechamento = {
   contratanteNome?: string;
   contratanteEmail?: string;
+  /** Telefone CRU como veio no texto (com traço/espaço/DDI). Quem consome
+   *  normaliza (canonicalizarTelefoneBR) — o parser só valida que tem dígitos
+   *  suficientes pra ser um telefone. */
+  contratanteTelefone?: string;
   contratanteDocumento?: string;
   /** Razão social — só faz sentido quando o documento é CNPJ (D2), mas o
    *  parser não sabe disso: quem decide se aplica é quem consome o resultado
@@ -50,6 +54,7 @@ function norm(s: string): string {
 const NOME_AMIGAVEL: Record<ChaveCampo, string> = {
   contratanteNome: "Nome",
   contratanteEmail: "E-mail",
+  contratanteTelefone: "Telefone",
   contratanteDocumento: "CPF/CNPJ",
   contratanteRazaoSocial: "Razão Social",
   contratanteEndereco: "Endereço",
@@ -71,6 +76,10 @@ const ROTULOS: { key: ChaveCampo; nomes: string[] }[] = [
   { key: "nomeLocal", nomes: ["nome do local", "local", "nome da casa", "casa", "balada"] },
   { key: "contratanteNome", nomes: ["nome", "nome do contratante", "nome do contratante/empresa", "contratante"] },
   { key: "contratanteEmail", nomes: ["e-mail", "email"] },
+  // Telefone era "confira manual" de propósito — mas a função da colagem é
+  // justamente não redigitar; com a normalização canônica (lib/telefone) o
+  // valor cru serve. Aceita qualquer formatação; o form normaliza.
+  { key: "contratanteTelefone", nomes: ["telefone", "tel", "celular", "whatsapp", "fone"] },
   { key: "contratanteDocumento", nomes: ["cpf/cnpj", "cpf", "cnpj", "documento", "cpf ou cnpj"] },
   // "(se cnpj)" é o rótulo que o texto modelo manda (D4) — o contratante pode
   // devolver com ou sem o parêntese; acento já cai no norm().
@@ -85,10 +94,9 @@ const ROTULOS: { key: ChaveCampo; nomes: string[] }[] = [
 ];
 
 // Reconhecidos mas NUNCA preenchidos automaticamente → sempre vão pro aviso
-// "confira manual" quando vierem com valor (ex.: telefone, complexo demais).
-const MANUAIS: { rotulo: string; nomes: string[] }[] = [
-  { rotulo: "Telefone", nomes: ["telefone", "tel", "celular", "whatsapp", "fone"] },
-];
+// "confira manual" quando vierem com valor. (Telefone saiu daqui: agora é
+// campo de verdade, normalizado pelo consumidor via lib/telefone.)
+const MANUAIS: { rotulo: string; nomes: string[] }[] = [];
 
 // Setores da agência — não são preenchidos pela colagem, só checados.
 const SETORES: { nome: string; nomes: string[]; catalogo: readonly string[] | null }[] = [
@@ -306,6 +314,14 @@ function aplicar(campos: CamposFechamento, key: ChaveCampo, valorBruto: string):
       if (!v.includes("@")) return false;
       campos.contratanteEmail = v.replace(/\s+/g, "");
       return true;
+    case "contratanteTelefone": {
+      // Cru mesmo — o form normaliza (DDI/nono dígito) via lib/telefone.
+      // 8 dígitos é o piso de um telefone real; menos que isso é lixo.
+      const digs = v.replace(/\D/g, "");
+      if (digs.length < 8) return false;
+      campos.contratanteTelefone = v;
+      return true;
+    }
     case "eventoInstagram":
       campos.eventoInstagram = v.replace(/^@/, "").replace(/\s+/g, "");
       return true;

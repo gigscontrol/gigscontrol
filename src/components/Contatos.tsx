@@ -165,83 +165,13 @@ export default function Contatos({
     else await updateCasa(alvo.item.id, patch);
   };
 
-  // ----------------------------------------------------------------
-  // Filtro por DJ selecionado (sidebar):
-  //  - "comHist" = aparece em show/orçamento/venda cujo artistaId pertence
-  //    a um DJ ATIVO (não está na lixeira). Registros vinculados a DJs
-  //    já excluídos são ignorados — assim, contato que era exclusivo
-  //    de um DJ deletado "vira manual" e passa a aparecer sempre.
-  //  - "ativos" = subset de comHist em que pelo menos 1 dos artistaIds está
-  //    em selectedArtistas (DJs marcados na sidebar).
-  // Regra final em passaFiltroDj: sem histórico → sempre visível;
-  // com histórico → só se algum DJ marcado é dono.
-  // ----------------------------------------------------------------
-  const filtrosPorDj = useMemo(() => {
-    const artistaSet = new Set(selectedArtistas);
-    const djsAtivosSet = new Set(artistasAtivos.map((a) => a.id));
-    const contratantesAtivos = new Set<string>();
-    const contratantesComHist = new Set<string>();
-    const casasAtivas = new Set<string>();
-    const casasComHist = new Set<string>();
-    const cidadesAtivas = new Set<string>();
-    const cidadesComHist = new Set<string>();
-
-    const marcar = (
-      artistaId: string | null | undefined,
-      contId: string | null | undefined,
-      casaId: string | null | undefined,
-      cidadeId: string | null | undefined
-    ) => {
-      // Ignora registros de DJs deletados/inexistentes — o contato passa
-      // a se comportar como manual.
-      if (!artistaId || !djsAtivosSet.has(artistaId)) return;
-      const artistaOk = artistaSet.has(artistaId);
-      if (contId) {
-        contratantesComHist.add(contId);
-        if (artistaOk) contratantesAtivos.add(contId);
-      }
-      if (casaId) {
-        casasComHist.add(casaId);
-        if (artistaOk) casasAtivas.add(casaId);
-      }
-      if (cidadeId) {
-        cidadesComHist.add(cidadeId);
-        if (artistaOk) cidadesAtivas.add(cidadeId);
-      }
-    };
-
-    for (const s of shows) marcar(s.artistaId, s.contratanteId, s.casaId ?? null, s.cidadeId);
-    for (const o of orcamentos) marcar(o.artistaId, o.contratanteId, o.casaId ?? null, o.cidadeId);
-    for (const v of vendas) marcar(v.artistaId, v.contratanteId, v.casaId ?? null, v.cidadeId);
-
-    return {
-      contratantesAtivos,
-      contratantesComHist,
-      casasAtivas,
-      casasComHist,
-      cidadesAtivas,
-      cidadesComHist,
-    };
-  }, [shows, orcamentos, vendas, selectedArtistas, artistasAtivos]);
-
-  function passaFiltroDj(
-    id: string,
-    ativos: Set<string>,
-    comHist: Set<string>
-  ): boolean {
-    // Sem histórico → contato manual, sempre visível
-    if (!comHist.has(id)) return true;
-    // Com histórico → só visível se algum DJ marcado tem ligação
-    return ativos.has(id);
-  }
-
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
-    const base = contratantes.filter(
-      (c) =>
-        passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist) &&
-        dataNoMes(c.criadoEm, periodo)
-    );
+    // I11 — o Gerenciar é o CADASTRO: mostra tudo que o papel permite. O
+    // toggle de DJ da sidebar filtra visualizações (agenda/vendas/dashboards),
+    // não o registro — com ele aqui, desmarcar um DJ fazia o contratante
+    // recém-criado "sumir" e parecia que a venda não tinha salvado o contato.
+    const base = contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
     if (!search.trim()) return base;
     const q = search.toLowerCase();
     return base.filter(
@@ -251,12 +181,11 @@ export default function Contatos({
         c.telefone.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
     );
-  }, [contratantes, search, cidades, filtrosPorDj, periodo]);
+  }, [contratantes, search, cidades, periodo]);
 
   const casasFiltradas = useMemo(() => {
     const base = casas.filter(
       (c) =>
-        passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist) &&
         dataNoMes(c.criadoEm, periodo)
     );
     if (!search.trim()) return base;
@@ -267,40 +196,37 @@ export default function Contatos({
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
         TIPO_CASA_LABEL[c.tipo]?.toLowerCase().includes(q)
     );
-  }, [casas, search, cidades, filtrosPorDj, periodo]);
+  }, [casas, search, cidades, periodo]);
 
   const cidadesFiltradas = useMemo(() => {
-    const base = cidades.filter((c) =>
-      passaFiltroDj(c.id, filtrosPorDj.cidadesAtivas, filtrosPorDj.cidadesComHist)
-    );
+    // I11 — cadastro mostra tudo; só a busca filtra (cidade ignora período).
+    const base = cidades;
     if (!search.trim()) return base;
     const q = search.toLowerCase();
     return base.filter(
       (c) => c.nome.toLowerCase().includes(q) || c.estado.toLowerCase().includes(q)
     );
-  }, [cidades, search, filtrosPorDj]);
+  }, [cidades, search]);
 
-  // Bloqueados: contratantes + casas bloqueados (respeitando o filtro por DJ e
-  // a busca). Cidades não têm bloqueio.
+  // Bloqueados: contratantes + casas bloqueados (respeitando a busca).
+  // Cidades não têm bloqueio.
   const contratantesBloqueados = useMemo(
     () =>
       contratantes.filter(
         (c) =>
           c.bloqueado &&
-          passaFiltroDj(c.id, filtrosPorDj.contratantesAtivos, filtrosPorDj.contratantesComHist) &&
           (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
       ),
-    [contratantes, filtrosPorDj, search]
+    [contratantes, search]
   );
   const casasBloqueadas = useMemo(
     () =>
       casas.filter(
         (c) =>
           c.bloqueado &&
-          passaFiltroDj(c.id, filtrosPorDj.casasAtivas, filtrosPorDj.casasComHist) &&
           (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
       ),
-    [casas, filtrosPorDj, search]
+    [casas, search]
   );
   const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
 

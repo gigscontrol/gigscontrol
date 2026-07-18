@@ -121,6 +121,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   // moeda só) mas EXIBE por moeda (faturamentoPorMoeda), sem somar moedas
   // diferentes num R$ mentiroso.
   const rankingContratantes = useMemo(() => {
+    const hojeYmd = new Date().toISOString().slice(0, 10);
     return contratantes
       .map((c) => {
         const vDo = vendasPeriodo.filter((v) => v.contratanteId === c.id);
@@ -130,9 +131,21 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         for (const v of vDo) {
           faturamentoPorMoeda[v.moeda] = (faturamentoPorMoeda[v.moeda] ?? 0) + v.cache;
         }
+        // I13 — realizado = já aconteceu e não foi cancelado; agendado =
+        // futuro não-cancelado; cancelado = status. Corte por data local (ymd).
+        const cancelados = sDo.filter((s) => s.status === "cancelado").length;
+        const realizados = sDo.filter(
+          (s) => s.status !== "cancelado" && s.data && s.data <= hojeYmd
+        ).length;
+        const agendados = sDo.filter(
+          (s) => s.status !== "cancelado" && s.data && s.data > hojeYmd
+        ).length;
         return {
           contratante: c,
           totalShows: sDo.length,
+          realizados,
+          agendados,
+          cancelados,
           totalVendas: vDo.length,
           faturamento,
           faturamentoPorMoeda,
@@ -153,7 +166,13 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
       rankingContratantes.slice(0, 5).map((r) => ({
         id: r.contratante.id,
         titulo: r.contratante.nome,
-        subtitulo: `${r.totalShows} ${r.totalShows === 1 ? t("show") : t("shows")}`,
+        // I13 — não um "N shows" genérico: realizados, agendados e cancelados
+        // com as quantidades (cancelados só aparece quando existe).
+        subtitulo: [
+          `${r.realizados} ${t("realizados")}`,
+          `${r.agendados} ${t("agendados")}`,
+          ...(r.cancelados > 0 ? [`${r.cancelados} ${t("cancelados")}`] : []),
+        ].join(" · "),
         // casas = 2 pra bater exatamente com o antigo formatBRL (whatsapp) daqui.
         valor: r.faturamento > 0 ? formatarFaturamento(r.faturamentoPorMoeda, 2) : "—",
       })),

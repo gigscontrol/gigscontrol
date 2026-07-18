@@ -25,7 +25,9 @@ export async function resolverCidade(c: CidadeEscolhida): Promise<Cidade> {
       ibgeId: c.ibgeId,
       geonameId: c.geonameId,
       nome: c.nome,
-      uf: c.uf,
+      // GeoNames pode não ter estado/província — nunca mande undefined
+      // (o JSON dropa a chave e o zod do lookup rejeitava a cidade inteira).
+      uf: c.uf ?? "",
       pais: c.pais,
       latitude: c.latitude,
       longitude: c.longitude,
@@ -50,7 +52,7 @@ export function cidadeParaEscolhida(
   if (!cidade.ibgeId && !cidade.geonameId) return null;
   const out: CidadeEscolhida = {
     nome: cidade.nome,
-    uf: cidade.estado,
+    uf: cidade.estado ?? "",
     pais: cidade.pais ?? "BR",
   };
   if (cidade.ibgeId) out.ibgeId = cidade.ibgeId;

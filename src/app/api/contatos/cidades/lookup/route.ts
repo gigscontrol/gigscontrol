@@ -19,7 +19,10 @@ const schema = z.object({
   ibgeId: z.string().min(1).max(20).optional(),
   geonameId: z.string().min(1).max(20).optional(),
   nome: z.string().min(1).max(120),
-  uf: z.string().max(120),
+  // Opcional com default: cidade do GeoNames pode vir SEM estado/província
+  // (adminName1 vazio) — exigir string derrubava a venda inteira do Paraguai
+  // com 400 "Dados inválidos" no resolverCidade.
+  uf: z.string().max(120).optional().default(""),
   pais: z.string().length(2),
   latitude: z.number().optional(),
   longitude: z.number().optional(),

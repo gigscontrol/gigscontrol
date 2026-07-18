@@ -149,7 +149,7 @@ export default function CidadeGlobalAutocomplete({
             cs.map((c) => ({
               geonameId: c.geonameId,
               nome: c.nome,
-              uf: c.estado,
+              uf: c.estado ?? "",
               pais: pais.code,
               paisNome: pais.name,
               latitude: c.latitude,

@@ -70,6 +70,11 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sugestaoParcial]);
 
+  // Data COMPLETA (10 chars) porém inválida (31/02, mês 19…): antes falhava em
+  // SILÊNCIO — o pai recebia "" e a pessoa via "não deixa cadastrar a data" sem
+  // nenhuma pista. Agora o campo sinaliza vermelho e explica no title.
+  const completaInvalida = displayed.length === 10 && parseDataBR(displayed) === null;
+
   return (
     <input
       ref={ref}
@@ -86,7 +91,9 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
         // Caso contrário, o pai recebe "" (estado "ainda incompleta").
         onChange(parseDataBR(masc) ?? "");
       }}
-      className={`${INPUT_BASE} ${className}`}
+      aria-invalid={completaInvalida || undefined}
+      title={completaInvalida ? t("Data inválida — confira dia e mês.") : undefined}
+      className={`${INPUT_BASE} ${completaInvalida ? "!border-danger" : ""} ${className}`}
       {...rest}
     />
   );
