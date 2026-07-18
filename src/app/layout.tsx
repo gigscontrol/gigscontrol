@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { LanguageProvider, type Lang } from "@/lib/i18n";
@@ -51,6 +51,14 @@ export const metadata: Metadata = {
     title: TITULO_PADRAO,
     description: DESCRICAO,
   },
+};
+
+// Sem esta meta o mobile renderiza num viewport virtual (~980px) e o app abre
+// "com zoom". NÃO setar maximumScale/userScalable: bloquear o pinch-zoom é
+// problema de acessibilidade — queremos só o enquadramento inicial correto.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 const LANGS: Lang[] = ["pt", "en", "es", "fr", "de", "it"];

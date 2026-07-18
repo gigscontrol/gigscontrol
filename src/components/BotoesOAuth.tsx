@@ -22,9 +22,19 @@ type Provider = "google" | "facebook";
 type Props = {
   /** Texto antes do nome do provider. Ex: "Continuar com" ou "Entrar com". */
   prefixo?: string;
+  /**
+   * "Manter conectado" (30 dias em vez de 7). O carimbo de idade do OAuth é
+   * criado pela graça no boot pós-callback, que só grava o timestamp — sem
+   * gravar a intenção AQUI, antes do redirect, quem entra por Google/Facebook
+   * ficaria sempre nos 7 dias, sem opção.
+   */
+  manter?: boolean;
 };
 
-export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
+export default function BotoesOAuth({
+  prefixo = "Continuar com",
+  manter = false,
+}: Props) {
   const t = useT();
   const [carregando, setCarregando] = useState<Provider | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -33,6 +43,13 @@ export default function BotoesOAuth({ prefixo = "Continuar com" }: Props) {
     setErro(null);
     setCarregando(provider);
     try {
+      // Intenção de "Manter conectado" gravada ANTES do redirect: na volta do
+      // callback a graça carimba o gc-login-ts e lê este gc-manter.
+      try {
+        localStorage.setItem("gc-manter", manter ? "1" : "0");
+      } catch {
+        // storage bloqueado — cai no padrão de 7 dias.
+      }
       const supabase = criarClienteBrowser();
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
