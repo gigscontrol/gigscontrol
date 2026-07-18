@@ -36,7 +36,7 @@ import {
   ehDocumentoEmpresa,
   rotuloEmpresa,
 } from "@/lib/data/documentos";
-import { canonicalizarTelefoneBR } from "@/lib/telefone";
+import { canonicalizarTelefoneBR, telefonesIguais } from "@/lib/telefone";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
@@ -46,6 +46,7 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
 import SeletorPais from "./SeletorPais";
 import DivergenciaContatoModal, { type Divergencia } from "./DivergenciaContatoModal";
+import ConfirmarVendaModal from "./ConfirmarVendaModal";
 import { useConfirmar } from "./ConfirmarModal";
 import { algumaParcelaTemHistorico } from "@/lib/parcelaHistorico";
 import CasaParecidaModal, {
@@ -781,10 +782,19 @@ export default function ConcretizarVenda({
     return Object.keys(errs).length === 0;
   }
 
+  // I5 — popup de confirmação antes de CONCRETIZAR (só na criação; a edição
+  // tem o próprio fluxo). O clique valida e abre o resumo; confirmar submete.
+  const [confirmandoVenda, setConfirmandoVenda] = useState(false);
+
   async function handleSubmit() {
     // Guard de reentrada: se já está salvando, ignora cliques extras.
     if (salvando) return;
     if (!validate() || !cidadeIbge || artistaId === null) return;
+
+    if (!emEdicao && !confirmandoVenda) {
+      setConfirmandoVenda(true);
+      return;
+    }
 
     setSalvando(true);
     try {
@@ -792,6 +802,7 @@ export default function ConcretizarVenda({
     } catch (e) {
       setErrors((p) => ({ ...p, geral: (e as Error).message }));
       setSalvando(false); // libera pra tentar de novo só em caso de erro
+      setConfirmandoVenda(false);
     }
   }
 
@@ -809,12 +820,14 @@ export default function ConcretizarVenda({
   ): Promise<ContatoAlvo | null> {
     const telefoneValido = contarDigitos(telDigits) >= country.minDigits;
 
-    if (contatoAncora && (!telefoneValido || contatoAncora.telefone === telefoneE164)) {
+    // telefonesIguais atravessa a formatação (com/sem 9, com/sem DDI) — o
+    // cache local tem números antigos sem o nono dígito (I1).
+    if (contatoAncora && (!telefoneValido || telefonesIguais(contatoAncora.telefone, telefoneE164))) {
       return alvoDeContratante(contatoAncora);
     }
     if (!telefoneValido) return null;
 
-    const local = contratantes.find((c) => c.telefone === telefoneE164);
+    const local = contratantes.find((c) => telefonesIguais(c.telefone, telefoneE164));
     if (local) return alvoDeContratante(local);
 
     try {
@@ -1475,6 +1488,99 @@ export default function ConcretizarVenda({
         );
       })()}
 
+      {/* ============ 🎵 ARTISTA — PRIMEIRO PASSO (I6) ============
+          Escolher o artista ANTES de tudo evita clicar errado no meio do form
+          e a venda ir pro artista errado. Na conversão o artista já vem do
+          orçamento (card travado); na edição, reidrata da venda. */}
+      <SectionCard icon={<Music size={16} />} title={t("Artista")} accent={accent}>
+        {artistaEfetivoOrc ? (
+          <FieldWithAuto
+            label="Artista da agência (quem vai se apresentar)"
+            required
+            error={errors.artista}
+            showAuto={showAutoBadge("artistaId")}
+          >
+            <div
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md border bg-elevated mt-1"
+              style={{
+                borderColor: accent,
+                boxShadow: `0 0 0 1px ${accent}`,
+              }}
+            >
+              <span
+                className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                style={{
+                  backgroundColor: artistaEfetivoOrc.color,
+                  color: "#fff",
+                }}
+              >
+                {artistaEfetivoOrc.name.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="text-sm font-semibold text-primary truncate flex-1">
+                {artistaEfetivoOrc.name}
+              </span>
+            </div>
+          </FieldWithAuto>
+        ) : (
+          <FieldWithAuto
+            label="Artista da agência (quem vai se apresentar)"
+            required
+            error={errors.artista}
+            showAuto={showAutoBadge("artistaId")}
+          >
+            {orc?.artistaId &&
+              !artistaDoOrcamento &&
+              !artistaAutoFallback &&
+              !(artistaId && artistas.some((a) => a.id === artistaId)) && (
+                <p
+                  className="text-xs mt-1 mb-2"
+                  style={{ color: "var(--danger)" }}
+                >
+                  {t("O artista original do orçamento não está mais ativo. Selecione um substituto abaixo.")}
+                </p>
+              )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+              {artistas.map((d) => {
+                const isActive = artistaId === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      setDjId(d.id);
+                      marcarEditado("artistaId");
+                      aplicarRiderVendaDireta(d.id);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
+                    style={{
+                      borderColor: isActive ? accent : "var(--border-color)",
+                      boxShadow: isActive
+                        ? `0 0 0 1px ${accent}`
+                        : undefined,
+                    }}
+                  >
+                    <span
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
+                      style={{
+                        backgroundColor: isActive
+                          ? d.color
+                          : "var(--bg-surface-2)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
+                      }}
+                    >
+                      {d.name.slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="text-sm font-semibold text-primary truncate">
+                      {d.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </FieldWithAuto>
+        )}
+      </SectionCard>
+
       {/* ============ 🖋️ INFORMAÇÕES DO CONTRATANTE ============ */}
       <SectionCard icon={<User size={16} />} title={t("Informações do Contratante")} accent={accent}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1935,102 +2041,10 @@ export default function ConcretizarVenda({
       </SectionCard>
 
       {/* ============ 🎵 SHOW ============ */}
+      {/* O seletor de artista subiu pra PRIMEIRA seção do form (I6). */}
       <SectionCard icon={<Music size={16} />} title={t("Informações do Show")} accent={accent}>
-        {/* Artista da agência:
-            (1) Vem de orçamento E artistaEfetivoOrc resolveu (bate direto
-                OU auto-fix de workspace 1-DJ) → card simples travado.
-            (2) Vem de orçamento, artistaEfetivoOrc não resolveu (multi-DJ
-                + DJ original deletado) → grid + aviso, força escolha.
-            (3) Sem orçamento → grid normal. */}
-        {artistaEfetivoOrc ? (
-          <FieldWithAuto
-            label="Artista da agência (quem vai se apresentar)"
-            required
-            error={errors.artista}
-            showAuto={showAutoBadge("artistaId")}
-          >
-            <div
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md border bg-elevated mt-1"
-              style={{
-                borderColor: accent,
-                boxShadow: `0 0 0 1px ${accent}`,
-              }}
-            >
-              <span
-                className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{
-                  backgroundColor: artistaEfetivoOrc.color,
-                  color: "#fff",
-                }}
-              >
-                {artistaEfetivoOrc.name.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="text-sm font-semibold text-primary truncate flex-1">
-                {artistaEfetivoOrc.name}
-              </span>
-            </div>
-          </FieldWithAuto>
-        ) : (
-          <FieldWithAuto
-            label="Artista da agência (quem vai se apresentar)"
-            required
-            error={errors.artista}
-            showAuto={showAutoBadge("artistaId")}
-          >
-            {orc?.artistaId &&
-              !artistaDoOrcamento &&
-              !artistaAutoFallback &&
-              !(artistaId && artistas.some((a) => a.id === artistaId)) && (
-                <p
-                  className="text-xs mt-1 mb-2"
-                  style={{ color: "var(--danger)" }}
-                >
-                  {t("O artista original do orçamento não está mais ativo. Selecione um substituto abaixo.")}
-                </p>
-              )}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-              {artistas.map((d) => {
-                const isActive = artistaId === d.id;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => {
-                      setDjId(d.id);
-                      marcarEditado("artistaId");
-                      aplicarRiderVendaDireta(d.id);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-md border bg-elevated transition-all text-left"
-                    style={{
-                      borderColor: isActive ? accent : "var(--border-color)",
-                      boxShadow: isActive
-                        ? `0 0 0 1px ${accent}`
-                        : undefined,
-                    }}
-                  >
-                    <span
-                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
-                      style={{
-                        backgroundColor: isActive
-                          ? d.color
-                          : "var(--bg-surface-2)",
-                        color: isActive ? "#fff" : "var(--text-muted)",
-                      }}
-                    >
-                      {d.name.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="text-sm font-semibold text-primary truncate">
-                      {d.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </FieldWithAuto>
-        )}
-
         {/* Line-Up — outros artistas do evento */}
-        <div className="mt-5">
+        <div className="mt-1">
           <Field
             label={
               <span className="inline-flex items-center gap-1.5">
@@ -2442,6 +2456,28 @@ export default function ConcretizarVenda({
       )}
 
       {confirmador}
+
+      {/* I5 — resumo final antes de concretizar (só criação). */}
+      {confirmandoVenda && !emEdicao && (
+        <ConfirmarVendaModal
+          resumo={{
+            artistaNome: artistas.find((d) => d.id === artistaId)?.name ?? "",
+            artistaCor: artistas.find((d) => d.id === artistaId)?.color ?? accent,
+            contratanteNome,
+            nomeEvento,
+            nomeLocal,
+            cidadeNome: cidadeIbge?.nome ?? "",
+            dataShow,
+            horario: horarioADefinir ? "" : horarioInicio,
+            cache: parseValorBR(cache) || 0,
+            moeda,
+            qtdParcelas: getParcelasEfetivas().length,
+          }}
+          salvando={salvando}
+          onConfirmar={() => void handleSubmit()}
+          onVoltar={() => setConfirmandoVenda(false)}
+        />
+      )}
     </div>
   );
 }
