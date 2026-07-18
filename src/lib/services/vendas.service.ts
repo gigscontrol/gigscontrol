@@ -104,6 +104,7 @@ function vendaInputParaEscrita(
   if (input.camarim !== undefined) out.camarim = input.camarim;
   if (input.efeitos !== undefined) out.efeitos = input.efeitos;
   if (input.hotel !== undefined) out.hotel = input.hotel;
+  if (input.tecnico !== undefined) out.tecnico = input.tecnico;
   if (input.logistica !== undefined) out.logistica = input.logistica;
   if (input.observacoes !== undefined) out.observacoes = input.observacoes;
   if (input.info_extra !== undefined) out.info_extra = input.info_extra;
@@ -372,6 +373,7 @@ function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
     camarim: v.camarim,
     efeitos: v.efeitos,
     hotel: v.hotel,
+    tecnico: v.tecnico,
     logistica: v.logistica,
   };
 }

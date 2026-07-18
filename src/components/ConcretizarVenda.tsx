@@ -74,6 +74,7 @@ import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
   CATALOGO_HOTEL,
+  CATALOGO_TECNICO,
   LABELS_TIPO_EVENTO,
   LOGISTICA_VAZIA,
   MODULE_THEMES,
@@ -483,6 +484,10 @@ export default function ConcretizarVenda({
   );
   const [hotel, setHotel] = useState<ItemQuantidade[]>(
     v?.hotel ?? orc?.hotel ?? CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 }))
+  );
+  // Rider tecnico herda do orcamento na conversao, como os irmaos.
+  const [tecnico, setTecnico] = useState<ItemQuantidade[]>(
+    v?.tecnico ?? orc?.tecnico ?? CATALOGO_TECNICO.map((n) => ({ nome: n, qtd: 0 }))
   );
   const [logistica, setLogistica] = useState<LogisticaSelecao>(
     v?.logistica ?? orc?.logistica ?? { ...LOGISTICA_VAZIA }
@@ -1253,6 +1258,7 @@ export default function ConcretizarVenda({
       camarim,
       efeitos,
       hotel,
+      tecnico,
       logistica,
       // D5 — com parcela com histórico, omite as parcelas: o servidor não toca
       // em nada.
@@ -2311,6 +2317,15 @@ export default function ConcretizarVenda({
             onChange={(c) => {
               setHotel(c);
               marcarEditado("hotel");
+            }}
+          />
+          <SubSection
+            title={t("Rider Técnico")}
+            autoBadge={showAutoBadge("tecnico")}
+            items={tecnico}
+            onChange={(c) => {
+              setTecnico(c);
+              marcarEditado("tecnico");
             }}
           />
 

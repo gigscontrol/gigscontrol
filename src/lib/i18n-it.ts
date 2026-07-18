@@ -2861,4 +2861,5 @@ export const IT: Record<string, string> = {
   "{n} orçamentos abertos": "{n} preventivi aperti",
   "Conversão": "Conversione",
   "{v} de {o} viraram venda": "{v} di {o} diventate vendita",
+  "Rider Técnico": "Rider Tecnico",
 };

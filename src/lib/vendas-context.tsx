@@ -115,6 +115,7 @@ export type NovaVendaInput = {
   camarim: ItemQuantidade[];
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
+  tecnico: ItemQuantidade[];
   logistica: LogisticaSelecao;
 
   /**
@@ -206,6 +207,7 @@ function vendaParaApiUpdate(p: Partial<Venda>): Record<string, unknown> {
   if (p.camarim !== undefined) out.camarim = p.camarim;
   if (p.efeitos !== undefined) out.efeitos = p.efeitos;
   if (p.hotel !== undefined) out.hotel = p.hotel;
+  if (p.tecnico !== undefined) out.tecnico = p.tecnico;
   if (p.logistica !== undefined) out.logistica = p.logistica;
   if (p.observacoes !== undefined) out.observacoes = p.observacoes;
   if (p.infoExtra !== undefined) out.info_extra = p.infoExtra || null;
@@ -396,6 +398,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         camarim: input.camarim,
         efeitos: input.efeitos,
         hotel: input.hotel,
+        tecnico: input.tecnico,
         logistica: input.logistica,
         observacoes: input.observacoes ?? null,
       };

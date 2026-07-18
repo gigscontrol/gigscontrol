@@ -56,6 +56,7 @@ export type NovoOrcamentoInput = {
   camarim: ItemQuantidade[];
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
+  tecnico: ItemQuantidade[];
   logistica: LogisticaSelecao;
   validade?: string;
   observacoes?: string;
@@ -110,6 +111,7 @@ function orcamentoParaApi(o: Partial<Orcamento>): Record<string, unknown> {
   if (o.camarim !== undefined) out.camarim = o.camarim;
   if (o.efeitos !== undefined) out.efeitos = o.efeitos;
   if (o.hotel !== undefined) out.hotel = o.hotel;
+  if (o.tecnico !== undefined) out.tecnico = o.tecnico;
   if (o.logistica !== undefined) out.logistica = o.logistica;
   if (o.observacoes !== undefined) out.observacoes = o.observacoes || null;
   if (o.infoExtra !== undefined) out.info_extra = o.infoExtra || null;
@@ -207,6 +209,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         camarim: input.camarim,
         efeitos: input.efeitos,
         hotel: input.hotel,
+        tecnico: input.tecnico,
         logistica: input.logistica,
         validade: input.validade ?? null,
         observacoes: input.observacoes ?? null,
@@ -308,6 +311,7 @@ export function OrcamentosProvider({ children }: { children: ReactNode }) {
         camarim: original.camarim,
         efeitos: original.efeitos,
         hotel: original.hotel,
+        tecnico: original.tecnico,
         logistica: original.logistica,
         validade: original.validade ?? null,
         observacoes: original.observacoes ?? null,

@@ -474,6 +474,8 @@ export type Orcamento = {
   camarim: ItemQuantidade[];
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
+  /** Rider tecnico combinado (migracao 93). Vem do riderTecnico do artista. */
+  tecnico: ItemQuantidade[];
   logistica: LogisticaSelecao;
 
   // taxa de agência (snapshot — não muda se o artista trocar o modo depois)
@@ -665,6 +667,8 @@ export type Venda = {
   camarim: ItemQuantidade[];
   efeitos: ItemQuantidade[];
   hotel: ItemQuantidade[];
+  /** Rider tecnico combinado (migracao 93). Vem do riderTecnico do artista. */
+  tecnico: ItemQuantidade[];
   logistica: LogisticaSelecao;
 
   // 💳 Pagamento

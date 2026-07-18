@@ -42,6 +42,7 @@ export const orcamentoCreateSchema = z.object({
   camarim: z.array(itemQtdSchema).optional(),
   efeitos: z.array(itemQtdSchema).optional(),
   hotel: z.array(itemQtdSchema).optional(),
+  tecnico: z.array(itemQtdSchema).optional(),
   logistica: logisticaSchema.optional(),
   observacoes: z.string().nullable().optional(),
   info_extra: z.string().nullable().optional(),
