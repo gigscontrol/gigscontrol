@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Plus, Minus, MapPin } from "lucide-react";
@@ -16,6 +16,22 @@ import { useT } from "@/lib/i18n";
  *   com ícone de prédio e borda azul · cidade = anel cinza.
  * - Chips flutuantes (raio, zoom, legenda) com fundo blur, como na tela 10.
  * - Popup escuro; pontos com precisão de cidade avisam "≈ aproximada".
+ *
+ * ZOOM POR SCROLL (J4) — decisão de UX documentada:
+ *   O mapa vive DENTRO de uma página que rola. `scrollWheelZoom:true` do Leaflet
+ *   dá `preventDefault()` INCONDICIONAL (leaflet 1.9.4) e sequestraria a rolagem
+ *   da página: o usuário passa o mouse por cima do mapa e a página trava. Por
+ *   isso o padrão da indústria (Google Maps embutido, Mapbox gesture-handling):
+ *   **scroll puro rola a página; Ctrl/⌘ + scroll dá zoom**. Sem modificador NÃO
+ *   damos preventDefault e mostramos a dica flutuante "Segure Ctrl (⌘)…".
+ *   Implementado à mão (listener `wheel` + `setZoomAround`) porque o Leaflet não
+ *   expõe modificador e não há plugin instalado — zero dependência nova.
+ *   MOBILE: `dragging` continua DESLIGADO de propósito — é o que faz o toque de
+ *   1 dedo cair pra rolagem da página (touch-pan preservado). Só o `touchZoom`
+ *   (pinça de 2 dedos) foi ligado, que não conflita com a rolagem.
+ *   Quem dá zoom manual (scroll, pinça ou botões +/−) passa a mandar no
+ *   enquadramento: o `fitBounds` do raio para de re-enquadrar até trocar a
+ *   cidade de referência (senão mexer no slider apagaria o zoom do usuário).
  *
  * Carregar SEMPRE via next/dynamic com ssr:false (Leaflet usa window).
  */
@@ -124,9 +140,17 @@ export default function MapaRaio({
   const circuloRef = useRef<L.Circle | null>(null);
   const marcadorRefRef = useRef<L.Marker | null>(null);
   const grupoRef = useRef<L.LayerGroup | null>(null);
+  /** O usuário já deu zoom manual? Então o fitBounds do raio para de mandar. */
+  const zoomManualRef = useRef(false);
+  /** Último raio enquadrado — distingue "mexeu no slider" de "só re-renderizou". */
+  const raioAnteriorRef = useRef(raioKm);
+  /** Dica "segure Ctrl" — aparece quando rolam sem modificador sobre o mapa. */
+  const [dicaZoom, setDicaZoom] = useState(false);
+  const dicaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Inicializa o mapa uma vez — VITRINE, não navegável: sem arrastar/scroll;
-  // quem controla é a UI de cima (país, cidade, raio) + botões de zoom.
+  // Inicializa o mapa uma vez. Navegação MÍNIMA de propósito: sem arrastar
+  // (preserva o touch-pan da página no mobile); zoom por Ctrl/⌘ + scroll,
+  // pinça e botões +/− — ver o bloco de decisão no topo do arquivo.
   useEffect(() => {
     const el = contRef.current;
     if (!el || mapaRef.current) return;
@@ -136,10 +160,14 @@ export default function MapaRaio({
       center: [-15.6, -52],
       zoom: 4,
       minZoom: 2,
+      // dragging OFF = toque de 1 dedo continua rolando a PÁGINA no mobile.
       dragging: false,
+      // scrollWheelZoom OFF: o handler nativo daria preventDefault sempre e
+      // sequestraria a rolagem. O zoom por scroll é feito à mão (Ctrl/⌘).
       scrollWheelZoom: false,
       doubleClickZoom: false,
-      touchZoom: false,
+      // Pinça de 2 dedos: não conflita com a rolagem de 1 dedo.
+      touchZoom: true,
       boxZoom: false,
       keyboard: false,
       // Trava o mundo numa cópia só (sem repetir ao dar zoom out).
@@ -161,7 +189,89 @@ export default function MapaRaio({
     }).addTo(mapa);
     grupoRef.current = L.layerGroup().addTo(mapa);
     mapaRef.current = mapa;
+
+    // --- Zoom por scroll COM modificador (J4) -------------------------------
+    // Acumulador: um "notch" de roda pode vir em vários eventos (trackpad),
+    // então só damos um passo de zoom a cada ~60px de delta.
+    let acumulado = 0;
+    const PASSO = 60;
+
+    const piscarDica = () => {
+      setDicaZoom(true);
+      if (dicaTimerRef.current) clearTimeout(dicaTimerRef.current);
+      dicaTimerRef.current = setTimeout(() => setDicaZoom(false), 1600);
+    };
+
+    // "Sessão de rolagem": eventos de wheel encadeados (< 400 ms entre si) são
+    // o MESMO gesto. Se o gesto COMEÇOU fora do mapa, o cursor só está passando
+    // por cima enquanto a página rola — não é intenção de dar zoom, então a
+    // dica não pisca. Só o gesto que NASCE sobre o mapa merece a dica.
+    let ultimoWheel = Number.NEGATIVE_INFINITY;
+    let sessaoNasceuNoMapa = false;
+    let dicaNestaSessao = false;
+    const SESSAO_MS = 400;
+
+    const aoRolarJanela = (e: WheelEvent) => {
+      // UM relógio só: `performance.now()` (mesma base do e.timeStamp, sem o
+      // risco de misturar tempo-desde-o-load com epoch e zerar a comparação).
+      const agora = performance.now();
+      if (agora - ultimoWheel > SESSAO_MS) {
+        // Gesto novo: registra ONDE começou e libera uma dica pra esta sessão.
+        const alvo = e.target as Node | null;
+        sessaoNasceuNoMapa = !!alvo && el.contains(alvo);
+        dicaNestaSessao = false;
+      }
+      ultimoWheel = agora;
+    };
+    // Capture: roda ANTES do handler do container, então quando `aoRolar`
+    // consultar as flags elas já refletem este evento.
+    window.addEventListener("wheel", aoRolarJanela, { passive: true, capture: true });
+
+    const aoRolar = (e: WheelEvent) => {
+      const m = mapaRef.current;
+      if (!m) return;
+      // SEM modificador: NÃO damos preventDefault — a página rola normalmente.
+      if (!e.ctrlKey && !e.metaKey) {
+        // Uma dica por gesto, e só se o gesto nasceu aqui dentro.
+        if (sessaoNasceuNoMapa && !dicaNestaSessao) {
+          dicaNestaSessao = true;
+          piscarDica();
+        }
+        return;
+      }
+      // COM Ctrl/⌘ (inclui a pinça de trackpad, que o browser manda como
+      // wheel + ctrlKey): o zoom é nosso e a página não rola.
+      e.preventDefault();
+      if (dicaTimerRef.current) clearTimeout(dicaTimerRef.current);
+      setDicaZoom(false);
+      // deltaMode 1 = linhas, 2 = páginas — normaliza pra pixels.
+      const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+      acumulado += delta;
+      if (Math.abs(acumulado) < PASSO) return;
+      const passos = acumulado > 0 ? -1 : 1;
+      acumulado = 0;
+      const alvo = Math.max(
+        m.getMinZoom(),
+        Math.min(m.getMaxZoom(), m.getZoom() + passos)
+      );
+      if (alvo === m.getZoom()) return;
+      zoomManualRef.current = true;
+      m.setZoomAround(m.mouseEventToContainerPoint(e), alvo, { animate: true });
+    };
+
+    // Pinça (2 dedos) também conta como zoom manual.
+    const aoTocar = (e: TouchEvent) => {
+      if (e.touches.length > 1) zoomManualRef.current = true;
+    };
+
+    el.addEventListener("wheel", aoRolar, { passive: false });
+    el.addEventListener("touchstart", aoTocar, { passive: true });
+
     return () => {
+      el.removeEventListener("wheel", aoRolar);
+      el.removeEventListener("touchstart", aoTocar);
+      window.removeEventListener("wheel", aoRolarJanela, { capture: true });
+      if (dicaTimerRef.current) clearTimeout(dicaTimerRef.current);
       mapa.remove();
       mapaRef.current = null;
       circuloRef.current = null;
@@ -197,6 +307,13 @@ export default function MapaRaio({
       mapa.setView(centro, 4, { animate: true });
     }
   }, [focoPais, refCoords]);
+
+  // Trocou a cidade de referência → o mapa volta a mandar no enquadramento.
+  // (Declarado ANTES do efeito do círculo: efeitos rodam na ordem de declaração,
+  // então o reset já valeu quando o fitBounds abaixo consulta a flag.)
+  useEffect(() => {
+    zoomManualRef.current = false;
+  }, [refCoords]);
 
   // Círculo + pin de referência — atualiza AO VIVO com o slider.
   useEffect(() => {
@@ -238,10 +355,24 @@ export default function MapaRaio({
       marcadorRefRef.current.setIcon(iconeReferencia(refNome ?? ""));
     }
 
-    mapa.fitBounds(circuloRef.current.getBounds(), {
-      padding: [28, 28],
-      animate: false,
-    });
+    // Enquadramento — DOIS casos distintos (não podem usar a mesma regra):
+    //  - o RAIO mudou: o usuário acabou de mexer no controle principal da tela
+    //    e espera ver o novo círculo. Re-enquadra SEMPRE, mesmo depois de zoom
+    //    manual. Sem isso, um Ctrl+scroll qualquer deixava o slider "morto":
+    //    o círculo crescia fora da viewport e, como `dragging` é false, não
+    //    havia como alcançá-lo de volta a não ser clicando no "−" várias vezes.
+    //  - só o rótulo/coords re-renderizaram: aí sim respeita o zoom manual,
+    //    senão o mapa saltaria sozinho embaixo do usuário.
+    const raioMudou = raioAnteriorRef.current !== raioKm;
+    raioAnteriorRef.current = raioKm;
+    if (raioMudou) zoomManualRef.current = false;
+
+    if (raioMudou || !zoomManualRef.current) {
+      mapa.fitBounds(circuloRef.current.getBounds(), {
+        padding: [28, 28],
+        animate: false,
+      });
+    }
   }, [refCoords, refNome, raioKm]);
 
   // Marcadores dos pontos no raio.
@@ -350,7 +481,10 @@ export default function MapaRaio({
           <button
             type="button"
             aria-label={t("Aproximar")}
-            onClick={() => mapaRef.current?.zoomIn()}
+            onClick={() => {
+              zoomManualRef.current = true;
+              mapaRef.current?.zoomIn();
+            }}
             className="flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
           >
             <Plus size={14} />
@@ -359,7 +493,10 @@ export default function MapaRaio({
           <button
             type="button"
             aria-label={t("Afastar")}
-            onClick={() => mapaRef.current?.zoomOut()}
+            onClick={() => {
+              zoomManualRef.current = true;
+              mapaRef.current?.zoomOut();
+            }}
             className="flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
           >
             <Minus size={14} />
@@ -397,6 +534,23 @@ export default function MapaRaio({
             {t("Cidade")}
           </span>
         </div>
+
+        {/* Dica de zoom (J4) — só aparece quando rolam sem o modificador. */}
+        {dicaZoom && (
+          <div className="absolute inset-x-0 bottom-14 flex justify-center">
+            <div
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium text-primary"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--bg-main) 88%, transparent)",
+                backdropFilter: "blur(8px)",
+                borderColor: "var(--border-strong)",
+              }}
+              role="status"
+            >
+              {t("Segure Ctrl (⌘ no Mac) e role para dar zoom")}
+            </div>
+          </div>
+        )}
 
         {/* Sem referência — estado vazio */}
         {!refCoords && (

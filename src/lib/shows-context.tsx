@@ -27,7 +27,15 @@ import { useAuth } from "./auth-context";
  * 5 e 6 migrarem essas entidades.
  */
 
-export type AddShowInput = Omit<Show, "id" | "dayId" | "artistaNome" | "location" | "venue"> & {
+// `contratoDispensado` sai do Omit de propósito: no Show ele é o CARIMBO do
+// servidor (`ContratoDispensadoInfo`), nunca entra na criação. Se ficasse aqui,
+// o `Partial<AddShowInput> & { contratoDispensado?: boolean }` do UpdateShowInput
+// viraria a interseção `ContratoDispensadoInfo & boolean` — tipo que nenhum
+// booleano satisfaz, forçando cast em todo call-site.
+export type AddShowInput = Omit<
+  Show,
+  "id" | "dayId" | "artistaNome" | "location" | "venue" | "contratoDispensado"
+> & {
   /** Permitido continuar passando `artistaNome` legado — ignorado pela API. */
   artistaNome?: string;
   /** Idem — ignorado. */
@@ -44,6 +52,10 @@ export type UpdateShowInput = Partial<AddShowInput> & {
   cancelamentoMotivo?: string;
   /** Booking/hospedagem — mesclado em shows.meta.booking pelo servidor. */
   booking?: BookingShow;
+  /** "Ignorar contrato": true dispensa a venda deste show do alerta da Agência,
+   *  false desfaz. Transiente — o servidor carimba {em, por} em
+   *  shows.meta.contratoDispensado e devolve o Show já com o campo. */
+  contratoDispensado?: boolean;
 };
 
 type ShowsContextValue = {
@@ -74,19 +86,28 @@ function camelParaApi(s: AddShowInput | UpdateShowInput): Record<string, unknown
   if (motivo !== undefined) out.cancelamentoMotivo = motivo;
   const booking = (s as UpdateShowInput).booking;
   if (booking !== undefined) out.booking = booking;
+  const dispensado = (s as UpdateShowInput).contratoDispensado;
+  if (dispensado !== undefined) out.contratoDispensado = dispensado;
   return out;
 }
 
 export function ShowsProvider({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
   const [shows, setShows] = useState<Show[]>([]);
-  const [carregando, setCarregando] = useState(false);
+  // Começa TRUE: o provider sempre dispara o fetch no mount, e entre o primeiro
+  // render e o `setCarregando(true)` de dentro do recarregar havia uma janela
+  // com `shows: []` + `carregando: false` — quem lê os dois via "0 shows" como
+  // resposta pronta (o alerta da Agência mostrava a contagem sem as dispensadas).
+  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
     // Sem workspace ativo (não logado ou super-admin no painel) não busca.
     if (!sessao?.workspace) {
       setShows([]);
+      // Sem workspace não há o que buscar — encerra o "carregando" inicial,
+      // senão ele ficaria travado em true pra sempre.
+      setCarregando(false);
       return;
     }
     setCarregando(true);

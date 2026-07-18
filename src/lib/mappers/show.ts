@@ -1,4 +1,10 @@
-import type { Show, ShowStatus, CancelamentoInfo, BookingShow } from "@/types";
+import type {
+  Show,
+  ShowStatus,
+  CancelamentoInfo,
+  BookingShow,
+  ContratoDispensadoInfo,
+} from "@/types";
 
 /**
  * Linha bruta da tabela `shows` no Supabase, já com os joins úteis
@@ -85,6 +91,19 @@ function bookingValido(raw: unknown): BookingShow | undefined {
   };
 }
 
+/** Valida o carimbo de "dispensado de contrato" vindo do jsonb `meta`.
+ *  Desfazer grava `null` na chave → cai no primeiro return e vira undefined. */
+function contratoDispensadoValido(raw: unknown): ContratoDispensadoInfo | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const d = raw as Record<string, unknown>;
+  if (typeof d.em !== "string" || !d.em) return undefined;
+  return {
+    em: d.em,
+    por: typeof d.por === "string" ? d.por : "",
+    porNome: typeof d.porNome === "string" ? d.porNome : undefined,
+  };
+}
+
 /**
  * Converte uma row do banco no objeto `Show` que a UI usa.
  * Os campos denormalizados (`artistaNome`, `location`, `venue`) são preenchidos
@@ -106,6 +125,7 @@ export function rowParaShow(row: ShowRow): Show {
     .map(cancelamentoValido)
     .filter((c): c is CancelamentoInfo => !!c);
   const booking = bookingValido(meta.booking);
+  const contratoDispensado = contratoDispensadoValido(meta.contratoDispensado);
 
   return {
     id: row.id,
@@ -126,6 +146,7 @@ export function rowParaShow(row: ShowRow): Show {
     cancelamento,
     cancelamentoHistorico: cancelamentoHistorico.length ? cancelamentoHistorico : undefined,
     booking,
+    contratoDispensado,
   };
 }
 

@@ -165,6 +165,24 @@ export type Show = {
   cancelamentoHistorico?: CancelamentoInfo[];
   /** Booking / hospedagem (Fases 4-5). */
   booking?: BookingShow;
+  /**
+   * "Ignorar contrato": a venda deste show foi dispensada de contrato pelo
+   * admin, então some do alerta "shows sem contrato" da Agência. Vive em
+   * `shows.meta.contratoDispensado` (jsonb, mig 66 — ZERO migration nova).
+   * O SERVIDOR carimba quem/quando; o cliente só liga/desliga o booleano.
+   * Ausente = não dispensado (desfazer grava null na chave).
+   */
+  contratoDispensado?: ContratoDispensadoInfo;
+};
+
+/** Carimbo de "dispensado de contrato" (shows.meta.contratoDispensado). */
+export type ContratoDispensadoInfo = {
+  /** ISO de quando foi dispensado. */
+  em: string;
+  /** userId de quem dispensou. */
+  por: string;
+  /** Nome/e-mail de quem dispensou (só pra exibir). */
+  porNome?: string;
 };
 
 export type AgendaItemTipo = "evento" | "voo" | "transporte";
@@ -355,6 +373,22 @@ export const LABELS_TIPO_EVENTO: Record<TipoEvento, string> = {
   social: "Evento social",
   "casa-noturna": "Casa Noturna",
   festival: "Festival",
+};
+
+/**
+ * Rótulo de exibição do tipo de casa — VOCABULÁRIO ÚNICO do produto.
+ * Fonte da verdade: os nomes que o dono usa (Casa noturna / Festival / Social).
+ * Vive aqui (e não em cada tela) porque já existiam TRÊS cópias divergentes
+ * — Contatos, ContatoDetail e o mapa — e a mesma casa aparecia com dois nomes
+ * de tipo em telas diferentes do mesmo módulo. É chave de i18n: passe por t().
+ */
+export const LABELS_TIPO_CASA: Record<TipoCasa, string> = {
+  club: "Casa noturna",
+  festival: "Festival",
+  "festa-privada": "Social / Festa privada",
+  bar: "Bar",
+  arena: "Arena",
+  outro: "Outro",
 };
 
 /** Categoria do evento → tipo da casa criada/backfillada junto (D1). */

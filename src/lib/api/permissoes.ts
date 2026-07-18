@@ -235,6 +235,9 @@ export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show 
     booking: undefined,
     cancelamento: undefined,
     cancelamentoHistorico: undefined,
+    // Mesma natureza do cancelamento: carrega AUTORIA (quem/quando dispensou,
+    // incluindo `porNome`). Quem só tem `agenda.ver` não vê quem decidiu o quê.
+    contratoDispensado: undefined,
   };
 }
 

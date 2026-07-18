@@ -449,6 +449,11 @@ function AppRoot() {
   // Passados à dashboard de Contratos → Histórico (filtro por status / abrir um contrato).
   const [contratoStatusFiltro, setContratoStatusFiltro] = useState<ContratoStatus | null>(null);
   const [contratoAbrirId, setContratoAbrirId] = useState<string | null>(null);
+  // Contexto levado pelos alertas da Agência ao "Resolver" (J5): a venda que
+  // originou o clique. Sem isto o botão jogava o admin num formulário em branco
+  // / na lista inteira, e ele tinha que reencontrar o item na mão.
+  const [contratoVendaInicialId, setContratoVendaInicialId] = useState<string | null>(null);
+  const [cobrancaBuscaInicial, setCobrancaBuscaInicial] = useState<string | null>(null);
   // Show aberto no modal (a partir de qualquer tela)
   const [showModalId, setShowModalId] = useState<string | null>(null);
 
@@ -467,6 +472,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(tab, "dashboard"));
   };
 
@@ -476,6 +483,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(activeTab, page));
   };
 
@@ -486,6 +495,8 @@ function AppRoot() {
     setDataShowInicial(null);
     setContratoStatusFiltro(null);
     setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(null);
     irPara(urlDaTela(tab, page));
   };
 
@@ -494,6 +505,24 @@ function AppRoot() {
     setContratoAbrirId(null);
     setContratoStatusFiltro(status);
     irPara(urlDaTela("contratos", "contratos-historico"));
+  };
+
+  /** Alerta "Shows sem contrato" → Novo Contrato com a venda JÁ selecionada. */
+  const fazerContratoDaVenda = (vendaId: string) => {
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
+    setCobrancaBuscaInicial(null);
+    setContratoVendaInicialId(vendaId);
+    irPara(urlDaTela("contratos", "contratos-novo"));
+  };
+
+  /** Alerta "Parcelas atrasadas" → Cobranças já filtradas por aquela venda. */
+  const verCobrancaDaVenda = (termo: string) => {
+    setContratoStatusFiltro(null);
+    setContratoAbrirId(null);
+    setContratoVendaInicialId(null);
+    setCobrancaBuscaInicial(termo);
+    irPara(urlDaTela("financeiro", "financeiro-cobrancas"));
   };
 
   /** Linha de contrato recente → abre o contrato no Histórico. */
@@ -603,7 +632,7 @@ function AppRoot() {
             <ControlePagamentos />
           )}
           {activeTab === "financeiro" && activePage === "financeiro-cobrancas" && (
-            <ControlePagamentos modo="cobrancas" />
+            <ControlePagamentos modo="cobrancas" buscaInicial={cobrancaBuscaInicial} />
           )}
 
           {/* Vendas */}
@@ -735,7 +764,7 @@ function AppRoot() {
             />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
-            <NovoContratoPage />
+            <NovoContratoPage vendaInicialId={contratoVendaInicialId} />
           )}
           {activeTab === "contratos" && activePage === "contratos-modelos" && (
             <ModelosPage />
@@ -753,7 +782,11 @@ function AppRoot() {
           {/* Agência — admin-only (podeAgencia); URL direta de não-admin é
               redirecionada pelo useEffect acima e nunca monta estas telas. */}
           {podeAgencia && activeTab === "agencia" && activePage === "dashboard" && (
-            <AgenciaDashboard />
+            <AgenciaDashboard
+              onFazerContratoDaVenda={fazerContratoDaVenda}
+              onVerCobrancaDaVenda={verCobrancaDaVenda}
+              onAbrirContrato={abrirContrato}
+            />
           )}
           {podeAgencia && activeTab === "agencia" && activePage === "agencia-artistas" && (
             <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">

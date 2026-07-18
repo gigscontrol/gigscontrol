@@ -50,7 +50,14 @@ const LONGOS = new Set([
 // Auto-preenchidos (não editáveis no form): número (no save) e data de hoje.
 const OCULTOS = new Set(["numero_contrato"]);
 
-export default function NovoContratoPage() {
+export default function NovoContratoPage({
+  vendaInicialId = null,
+}: {
+  /** Venda já selecionada ao abrir a tela — vem do alerta "Shows sem contrato"
+   *  da Agência ("Fazer contrato"), pro admin não ter que reencontrar a venda
+   *  no select. Só semeia o estado inicial; depois o usuário manda no campo. */
+  vendaInicialId?: string | null;
+} = {}) {
   const t = useT();
   const { modelos } = useModelos();
   const { vendas } = useVendas();
@@ -82,7 +89,7 @@ export default function NovoContratoPage() {
   const noLimite = !!plano && usadosMes >= limiteMes;
 
   const [modeloId, setModeloId] = useState<string>("");
-  const [vendaId, setVendaId] = useState<string>("");
+  const [vendaId, setVendaId] = useState<string>(vendaInicialId ?? "");
   const [valores, setValores] = useState<Record<string, string>>({});
   const [gerando, setGerando] = useState(false);
   const [baixando, setBaixando] = useState(false);

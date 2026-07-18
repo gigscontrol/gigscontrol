@@ -14,12 +14,13 @@ import {
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
-import { MODULE_THEMES } from "@/types";
+import { useArtistas } from "@/lib/workspace-context";
+import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, LABELS_TIPO_CASA } from "@/types";
 import { useT } from "@/lib/i18n";
 import { mascararCpfCnpj, formatarMoeda } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
 import { useEffect, useState } from "react";
-import type { Contratante, Casa, Cidade, Show, Venda, Moeda } from "@/types";
+import type { Contratante, Casa, Cidade, Show, Venda, Moeda, Orcamento } from "@/types";
 
 /** Moeda de um show herdada da venda que o gerou (show.vendaId → venda.moeda);
  *  sem venda vinculada → BRL, mantendo a agência 100% BRL idêntica a hoje. */
@@ -61,15 +62,6 @@ function getDocumentosHistorico(item: Contratante): DocumentoHistorico[] {
   const raw = (item as unknown as { documentos?: unknown }).documentos;
   return Array.isArray(raw) ? (raw as DocumentoHistorico[]) : [];
 }
-
-const TIPO_CASA_LABEL: Record<string, string> = {
-  club: "Club",
-  festival: "Festival",
-  "festa-privada": "Festa privada",
-  bar: "Bar",
-  arena: "Arena",
-  outro: "Outro",
-};
 
 /** Linha do histórico sanitizado (I12) — o shape que a rota /historico devolve. */
 type HistoricoSanitizadoItem = {
@@ -166,6 +158,17 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
     // o popup de divergência (WI-A) atualiza o contato com o detalhe aberto.
     const atual = contratantes.find((c) => c.id === item.id) ?? item;
     const stats = getContratanteStats(atual.id, shows, orcamentos, vendas);
+    const artistas = useArtistas();
+    // J3 — histórico de orçamentos deste contratante, mais recente primeiro.
+    // `orcamentos` (useOrcamentos, linha 98) já vem escopado no servidor pela
+    // sessão (aplicarFiltroOrcamentos): pro contratante de OUTRO artista o
+    // cache local vem vazio — degrada pro estado vazio abaixo, sem tentar
+    // buscar em outra rota (não existe endpoint sanitizado de orçamentos;
+    // diferente do histórico de shows, aqui nunca exibimos nada além do que
+    // o próprio cache já trouxe).
+    const orcamentosContratante = [...orcamentos]
+      .filter((o) => o.contratanteId === atual.id)
+      .sort((a, b) => (b.dataShow ?? b.criadoEm).localeCompare(a.dataShow ?? a.criadoEm));
     // D-TICKET — ticket médio só faz sentido com uma moeda; com vendas em moedas
     // diferentes o número seria aritmética falsa → mostra "—" com tooltip.
     const ticketMedioLabel =
@@ -286,6 +289,9 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             </div>
           </div>
 
+          {/* J3 — coluna direita: histórico de shows + histórico de orçamentos,
+              empilhados (mesma coluna 2fr), mesmo tratamento visual dos dois. */}
+          <div className="flex flex-col gap-4">
           {/* Histórico de shows */}
           <div className="card">
             <div className="section-title mb-4">{t("Histórico de shows")}</div>
@@ -348,6 +354,27 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
               </div>
             )}
           </div>
+
+          {/* J3 — Histórico de orçamentos */}
+          <div className="card">
+            <div className="section-title mb-4">{t("Histórico de orçamentos")}</div>
+            {orcamentosContratante.length === 0 ? (
+              <div className="text-sm text-muted py-6 text-center">
+                {t("Nenhum orçamento registrado para este contratante.")}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {orcamentosContratante.map((orcamento) => (
+                  <LinhaOrcamento
+                    key={orcamento.id}
+                    orcamento={orcamento}
+                    artistaNome={artistas.find((a) => a.id === orcamento.artistaId)?.name}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          </div>
         </div>
       </>
     );
@@ -381,7 +408,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           title={item.nome}
           subtitle={
             <span className="inline-flex items-center gap-2">
-              <Building2 size={12} /> {t(TIPO_CASA_LABEL[item.tipo])} ·{" "}
+              <Building2 size={12} /> {t(LABELS_TIPO_CASA[item.tipo])} ·{" "}
               {getCidadeNome(item.cidadeId, cidades)}
             </span>
           }
@@ -405,7 +432,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           <div className="card">
             <div className="section-title mb-4">{t("Informações")}</div>
             <div className="flex flex-col gap-3 text-sm">
-              <InfoRow icon={<Hash size={13} />} label={t("Tipo")} value={t(TIPO_CASA_LABEL[item.tipo])} />
+              <InfoRow icon={<Hash size={13} />} label={t("Tipo")} value={t(LABELS_TIPO_CASA[item.tipo])} />
               <InfoRow icon={<MapPin size={13} />} label={t("Cidade")} value={getCidadeNome(item.cidadeId, cidades)} />
               {item.endereco && <InfoRow icon={<MapPin size={13} />} label={t("Endereço")} value={item.endereco} />}
               {item.contatoResponsavel && (
@@ -558,7 +585,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                   <div key={c.id} className="bg-elevated border border-border rounded-md p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-medium text-primary">{c.nome}</div>
-                      <div className="text-xs text-muted">{t(TIPO_CASA_LABEL[c.tipo])}</div>
+                      <div className="text-xs text-muted">{t(LABELS_TIPO_CASA[c.tipo])}</div>
                     </div>
                     {c.capacidade && (
                       <div className="text-xs text-secondary flex items-center gap-1 flex-shrink-0">
@@ -720,5 +747,45 @@ function LinhaShow({
     >
       {conteudo}
     </button>
+  );
+}
+
+/** J3 — linha do histórico de orçamentos do contratante: número, status,
+ *  artista, data e valor (na moeda do orçamento). Mesmo tratamento visual de
+ *  LinhaShow, sem clique (não há tela de detalhe de orçamento navegável a
+ *  partir daqui — o histórico de shows já cobre o caminho clicável). */
+function LinhaOrcamento({
+  orcamento,
+  artistaNome,
+}: {
+  orcamento: Orcamento;
+  artistaNome?: string;
+}) {
+  const t = useT();
+  const badge = LABELS_STATUS_ORCAMENTO[orcamento.status];
+  return (
+    <div className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3">
+      <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
+        <FileText size={16} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-primary">{artistaNome ?? t("Artista")}</span>
+          <span className={`badge ${badge.badge}`}>{t(badge.label)}</span>
+        </div>
+        <div className="text-xs text-muted truncate">
+          {t("Orçamento nº {n}", { n: orcamento.numero })}
+          {orcamento.dataShow
+            ? ` · ${new Date(`${orcamento.dataShow}T12:00:00`).toLocaleDateString("pt-BR")}`
+            : ` · ${t("Sem data definida")}`}
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <div className="text-xs text-muted">{t("Valor")}</div>
+        <div className="text-sm font-semibold tabular-nums">
+          {formatarMoeda(orcamento.valorCache, orcamento.moeda, 0)}
+        </div>
+      </div>
+    </div>
   );
 }

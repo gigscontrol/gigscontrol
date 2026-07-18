@@ -100,6 +100,22 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Dispensar contrato é decisão de GOVERNANÇA (some com a venda do alerta
+  // "Shows sem contrato", que é admin-only na UI) — não é edição de agenda.
+  // Só admin/super, no mesmo espírito de "excluir contrato é admin-only" (D4).
+  // Sem este gate, quem tem `agenda.editar` num artista apagaria o alerta do
+  // admin por um PATCH direto.
+  if (
+    parsed.data.contratoDispensado !== undefined &&
+    !r.sessao.isSuperAdmin &&
+    r.sessao.papel !== "admin"
+  ) {
+    return NextResponse.json(
+      { erro: "Só um administrador pode dispensar a venda de contrato." },
+      { status: 403 }
+    );
+  }
+
   // Auditoria de cancelamento: o SERVIDOR carimba quem/quando (a partir da
   // sessão) em shows.meta — o cliente só manda o motivo, pra ninguém forjar a
   // autoria. Reverter empilha o cancelamento atual no histórico (nada se perde).
@@ -140,6 +156,21 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     metaPatch.cancelamentoHistorico = metaAtual.cancelamento
       ? [...hist, metaAtual.cancelamento]
       : hist;
+  }
+
+  // "Ignorar contrato" (alerta da Agência): o cliente manda só o booleano; o
+  // SERVIDOR carimba {em, por, porNome} — mesma regra do cancelamento, pra
+  // ninguém forjar a autoria. false → grava null na chave (DESFAZ; o mapper lê
+  // null como ausente). merge_show_meta é raso no topo, então a chave inteira é
+  // substituída de uma vez — nunca atualize sub-campos incrementalmente.
+  if (parsed.data.contratoDispensado !== undefined) {
+    metaPatch.contratoDispensado = parsed.data.contratoDispensado
+      ? {
+          em: new Date().toISOString(),
+          por: r.sessao.userId,
+          porNome: r.sessao.userNome ?? r.sessao.userEmail ?? "—",
+        }
+      : null;
   }
 
   // Booking/hospedagem: só o delta do sub-objeto (mesclado com || no banco).
