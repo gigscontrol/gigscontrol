@@ -36,6 +36,7 @@ import {
   ehDocumentoEmpresa,
   rotuloEmpresa,
 } from "@/lib/data/documentos";
+import { canonicalizarTelefoneBR } from "@/lib/telefone";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
@@ -973,7 +974,12 @@ export default function ConcretizarVenda({
     // type-checker não atravessa a fronteira de função).
     if (artistaId === null || !cidadeIbge) return;
     const cacheNum = parseValorBR(cache);
-    const telefoneE164 = `${country.ddi}${telDigits.replace(/\D/g, "")}`;
+    // Canônico: pro BR completa o nono dígito que falta (número antigo) — o
+    // que grava e o que o /existe busca ficam na mesma forma; as variantes do
+    // endpoint cobrem os registros antigos sem o 9.
+    const telefoneE164 = canonicalizarTelefoneBR(
+      `${country.ddi}${telDigits.replace(/\D/g, "")}`
+    );
 
     // Resolve a cidade IBGE → UUID local (cria se ainda não existe)
     let cidadeIdResolvido: string;
@@ -1202,6 +1208,15 @@ export default function ConcretizarVenda({
     };
     set(campos.contratanteNome, setContratanteNome, "Nome");
     set(campos.contratanteEmail, setContratanteEmail, "E-mail");
+    // Telefone: canonicaliza (remove DDI, formata, completa o nono dígito BR
+    // que falta nos números antigos) e separa país + dígitos pro campo.
+    if (campos.contratanteTelefone) {
+      const canon = canonicalizarTelefoneBR(campos.contratanteTelefone);
+      const tel = separarTelefoneE164(canon, paisOrigem.code);
+      setCountry(tel.country);
+      setTelDigits(tel.digits);
+      feitos.push("Telefone");
+    }
     set(campos.contratanteDocumento, setContratanteDocumento, "CPF/CNPJ");
     // Razão social só entra quando o documento é de empresa — senão o painel
     // anunciaria um campo que a tela não mostra (e cujo valor o submit descarta).

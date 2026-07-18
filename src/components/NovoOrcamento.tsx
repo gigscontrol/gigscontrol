@@ -53,6 +53,7 @@ import { SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { montarTelefoneE164 } from "@/lib/data/countries";
+import { canonicalizarTelefoneBR, telefonesIguais } from "@/lib/telefone";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
@@ -338,7 +339,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   }
 
   function getTelefoneSelecionadoE164(): string {
-    if (contratanteMode === "novo") return montarTelefoneE164(country, telDigits);
+    // Canônico: completa o nono dígito BR faltante — grava e compara na mesma forma.
+    if (contratanteMode === "novo")
+      return canonicalizarTelefoneBR(montarTelefoneE164(country, telDigits));
     const c = contratantes.find((x) => x.id === contratanteId);
     return c?.telefone ?? "";
   }
@@ -348,7 +351,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     if (contratanteMode !== "novo" || vinculadoId) return null;
     if (contarDigitos(telDigits) < country.minDigits) return null;
     const e164 = montarTelefoneE164(country, telDigits);
-    return contratantes.find((c) => c.telefone && c.telefone === e164) ?? null;
+    // telefonesIguais atravessa a formatação: com/sem 9, com/sem DDI —
+    // registro antigo sem o nono dígito continua sendo o MESMO contato.
+    return contratantes.find((c) => telefonesIguais(c.telefone, e164)) ?? null;
   }
 
   /** Usa o contato existente como está (passa pro modo "existente"). */
