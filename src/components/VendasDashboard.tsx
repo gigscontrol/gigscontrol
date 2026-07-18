@@ -319,31 +319,38 @@ export default function VendasDashboard({
 
       {/* Cards clicáveis — 4 cores fixas (azul/verde/âmbar/vermelho) */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => setResumo("orcamentos")} ariaLabel={t("Resumo de orçamentos")}>
-          <StatCard
-            title={t("Orçamentos")}
-            value={stats.totalOrcamentos}
-            icon={<FileText size={16} />}
-            accentColor={accent}
-            subtitle={t("{n} aguardando", { n: stats.pendentes })}
-          />
-        </ClickableStat>
+        {/* Os cards lideram com DINHEIRO, não com contagem. Antes "Vendas
+            fechadas" mostrava a QUANTIDADE e o valor vendido só aparecia
+            dentro do popup — daí a sensação de que o total vendido não
+            existia em lugar nenhum. A contagem virou subtítulo. */}
         <ClickableStat onClick={() => setResumo("vendas")} ariaLabel={t("Resumo de vendas")}>
           <StatCard
-            title={t("Vendas fechadas")}
-            value={stats.totalVendas}
+            title={t("Vendido")}
+            value={stats.faturamento}
             icon={<CalendarCheck2 size={16} />}
             accentColor="var(--success)"
-            subtitle={t("Fechadas no mês")}
+            subtitle={t("{n} fechadas no período", { n: stats.totalVendas })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("negociacao")} ariaLabel={t("Em negociação")}>
           <StatCard
             title={t("Em negociação")}
-            value={stats.porStatus.negociacao}
+            value={stats.valorNegociacao}
             icon={<Handshake size={16} />}
             accentColor="var(--warning)"
-            subtitle={stats.valorNegociacao}
+            subtitle={t("{n} orçamentos abertos", { n: stats.porStatus.negociacao })}
+          />
+        </ClickableStat>
+        <ClickableStat onClick={() => setResumo("orcamentos")} ariaLabel={t("Resumo de orçamentos")}>
+          <StatCard
+            title={t("Conversão")}
+            value={`${stats.conversao}%`}
+            icon={<FileText size={16} />}
+            accentColor={accent}
+            subtitle={t("{v} de {o} viraram venda", {
+              v: stats.totalVendas,
+              o: stats.totalOrcamentos + stats.totalVendas,
+            })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("perdidos")} ariaLabel={t("Orçamentos perdidos")}>
