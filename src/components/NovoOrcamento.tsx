@@ -184,7 +184,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const [evData, setEvData] = useState("");
   const [evInicio, setEvInicio] = useState("");
   const [evFim, setEvFim] = useState("");
-  const [evTerminoDiaSeguinte, setEvTerminoDiaSeguinte] = useState(false);
+  // Padrão = DIA SEGUINTE (pedido do dono): show que vira a madrugada é a
+  // regra do negócio, não a exceção. O usuário desmarca quando for mesmo-dia.
+  const [evTerminoDiaSeguinte, setEvTerminoDiaSeguinte] = useState(true);
 
   // ----- ETAPA 2 -----
   const [blocos, setBlocos] = useState<DjBlock[]>([novoBlocoDj("")]);

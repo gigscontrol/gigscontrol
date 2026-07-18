@@ -371,11 +371,18 @@ export default function ConcretizarVenda({
     v ? v.horario ?? "" : det?.horarioInicio ?? orc?.horario ?? ""
   );
   const [horarioFim, setHorarioFim] = useState(v ? v.horarioFim ?? "" : det?.horarioFim ?? "");
-  // Não persiste na venda — na edição nasce no padrão (o campo é derivado do
-  // orçamento detalhado, que a venda não guarda).
-  const [terminoDiaSeguinte, setTerminoDiaSeguinte] = useState(
-    v ? false : det?.terminoDiaSeguinte ?? false
-  );
+  // O campo não persiste na venda, mas é DERIVÁVEL dos horários salvos:
+  // fim <= início = a apresentação virou o dia (23:00 → 04:00). Na edição
+  // reidrata do dado real — antes nascia sempre "mesmo dia" e o usuário via o
+  // toggle "voltar" sozinho. Venda nova/conversão: padrão = DIA SEGUINTE
+  // (pedido do dono — show de madrugada é a regra do negócio, não a exceção).
+  const [terminoDiaSeguinte, setTerminoDiaSeguinte] = useState(() => {
+    if (v) {
+      if (v.horario && v.horarioFim) return v.horarioFim <= v.horario;
+      return true; // sem horários salvos: cai no padrão do negócio
+    }
+    return det?.terminoDiaSeguinte ?? true;
+  });
   // "Horário a definir" — nasce desmarcado (venda de orçamento com horário
   // continua com horário). Na edição, reflete a venda: sem horário = a definir.
   // Marcado: limpa/desabilita os dois inputs, pula a validação de
@@ -399,6 +406,16 @@ export default function ConcretizarVenda({
   const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(
     cidadeParaEscolhida(v ? cidades.find((c) => c.id === v.cidadeId) : cidadeOrc)
   );
+  // RACE DA EDIÇÃO: o useState roda UMA vez no mount — se a lista `cidades` do
+  // contexto ainda não carregou, o find volta vazio e a edição "pede a cidade
+  // de novo" mesmo com ela salva. Quando a lista chegar, re-resolve — só
+  // enquanto o campo segue vazio (não atropela escolha manual do usuário).
+  useEffect(() => {
+    if (cidadeIbge || !v?.cidadeId || cidades.length === 0) return;
+    const achada = cidadeParaEscolhida(cidades.find((c) => c.id === v.cidadeId));
+    if (achada) setCidadeIbge(achada);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cidades]);
 
   // Show — artistaId é uuid do artista (workspace.artistas).
   const [artistaId, setDjId] = useState<string | null>(v?.artistaId ?? orc?.artistaId ?? null);
