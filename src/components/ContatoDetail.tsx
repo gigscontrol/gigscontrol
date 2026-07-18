@@ -18,7 +18,7 @@ import { MODULE_THEMES } from "@/types";
 import { useT } from "@/lib/i18n";
 import { mascararCpfCnpj, formatarMoeda } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Contratante, Casa, Cidade, Show, Venda, Moeda } from "@/types";
 
 /** Moeda de um show herdada da venda que o gerou (show.vendaId → venda.moeda);
@@ -71,6 +71,18 @@ const TIPO_CASA_LABEL: Record<string, string> = {
   outro: "Outro",
 };
 
+/** Linha do histórico sanitizado (I12) — o shape que a rota /historico devolve. */
+type HistoricoSanitizadoItem = {
+  id: string;
+  data: string | null;
+  status: string;
+  cidadeNome: string;
+  cidadeUf: string;
+  casaNome: string;
+  artistaNome: string;
+  artistaCor: string | null;
+};
+
 const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
   confirmado: { label: "Confirmado", cls: "badge-success" },
   pendente: { label: "Pendente", cls: "badge-danger" },
@@ -90,6 +102,34 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
   // corpo e é recriada a cada render — um useState dentro dela reiniciaria
   // a cada re-render do pai.
   const [casaVerTodosAberto, setCasaVerTodosAberto] = useState(false);
+
+  // I12 — histórico SANITIZADO do servidor (data/cidade/casa/artista, nunca
+  // valores). Usado quando o cache local — escopado ao próprio artista — vem
+  // vazio pro contratante de OUTRO artista. Mora aqui pelo mesmo motivo acima.
+  const contratanteId = selecionado.tipo === "contratante" ? selecionado.item.id : null;
+  const temShowsLocais =
+    !!contratanteId && shows.some((s) => s.contratanteId === contratanteId);
+  const [historicoSanitizado, setHistoricoSanitizado] = useState<HistoricoSanitizadoItem[]>([]);
+  useEffect(() => {
+    setHistoricoSanitizado([]);
+    if (!contratanteId || temShowsLocais) return; // cache próprio cobre
+    let ativo = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/contatos/contratantes/${contratanteId}/historico`, {
+          credentials: "include",
+        });
+        if (!res.ok) return; // best-effort: sem histórico a tela segue inteira
+        const body = (await res.json()) as { historico?: HistoricoSanitizadoItem[] };
+        if (ativo) setHistoricoSanitizado(Array.isArray(body.historico) ? body.historico : []);
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [contratanteId, temShowsLocais]);
 
   return (
     <div className="max-w-[1200px] mx-auto w-full p-6 lg:p-8">
@@ -249,7 +289,47 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           {/* Histórico de shows */}
           <div className="card">
             <div className="section-title mb-4">{t("Histórico de shows")}</div>
-            {showsContratante.length === 0 ? (
+            {showsContratante.length === 0 && historicoSanitizado.length > 0 ? (
+              // I12 — contratante de OUTRO artista: o cache local é escopado ao
+              // próprio artista e vem vazio, mas quem tem acesso aos contatos
+              // VÊ o histórico sanitizado do servidor: data, cidade, casa e
+              // QUAL artista — nunca cachê/valores (a resposta não os carrega).
+              <div className="flex flex-col gap-2">
+                {historicoSanitizado.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-border bg-elevated"
+                  >
+                    <div className="min-w-0 flex items-center gap-2.5">
+                      <span
+                        className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
+                        style={{ backgroundColor: h.artistaCor ?? "var(--bg-surface-2)", color: "#fff" }}
+                      >
+                        {(h.artistaNome || "?").slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-primary truncate">
+                          {h.artistaNome || t("Artista")}
+                        </div>
+                        <div className="text-xs text-muted truncate">
+                          {[h.casaNome, [h.cidadeNome, h.cidadeUf].filter(Boolean).join("/")]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-xs">
+                      {h.status === "cancelado" && (
+                        <span className="badge badge-danger">{t("Cancelado")}</span>
+                      )}
+                      <span className="text-muted tabular-nums">
+                        {h.data ? new Date(`${h.data}T12:00:00`).toLocaleDateString("pt-BR") : "—"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : showsContratante.length === 0 ? (
               <div className="text-sm text-muted py-6 text-center">
                 {t("Este contratante ainda não fechou nenhum show.")}
               </div>
