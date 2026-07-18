@@ -33,6 +33,8 @@ function LoginInner() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
+  // "Manter conectado": 30 dias de sessão em vez dos 7 padrão. Default OFF.
+  const [manter, setManter] = useState(false);
 
   // ?next= só é aceito se for um path interno seguro (evita open-redirect)
   const next = searchParams.get("next");
@@ -40,6 +42,24 @@ function LoginInner() {
     typeof next === "string" && next.startsWith("/") && !next.startsWith("//")
       ? next
       : null;
+
+  // Voltou do /auth/callback barrado pelo lock de método: a conta existe, mas
+  // foi criada com outro provider. Explica qual método usar (?use=).
+  useEffect(() => {
+    if (searchParams.get("erro") !== "metodo") return;
+    const use = searchParams.get("use");
+    const metodo =
+      use === "google"
+        ? "Google"
+        : use === "facebook"
+          ? "Facebook"
+          : t("e-mail e senha");
+    setErro(
+      t("Esta conta foi criada com {metodo}. Entre com {metodo} para acessar.", {
+        metodo,
+      })
+    );
+  }, [searchParams, t]);
 
   // Se já está logado, vai direto pro destino certo
   useEffect(() => {
@@ -54,7 +74,7 @@ function LoginInner() {
     e.preventDefault();
     setErro("");
     setEnviando(true);
-    const res = await login(email, senha);
+    const res = await login(email, senha, manter);
     setEnviando(false);
     if (res.ok) {
       router.replace(
@@ -79,7 +99,9 @@ function LoginInner() {
       >
       {/* OAuth — Google + Facebook */}
       <div className="card mb-3">
-        <BotoesOAuth prefixo={t("Entrar com")} />
+        {/* `manter` compartilha o estado do checkbox abaixo: marcar antes de
+            clicar em Google/Facebook também dá 30 dias no fluxo OAuth. */}
+        <BotoesOAuth prefixo={t("Entrar com")} manter={manter} />
       </div>
 
           {/* Divisor */}
@@ -121,6 +143,21 @@ function LoginInner() {
               autoComplete="current-password"
               mostrarForca={false}
             />
+
+            {/* Manter conectado — estende a sessão de 7 para 30 dias */}
+            {/* py-2.5 -my-1: alvo de toque de ~44px (WCAG 2.5.5) sem inchar o
+                visual — o label envolve o input, então a área maior já alterna. */}
+            <label className="flex items-center gap-2 cursor-pointer select-none py-2.5 -my-1">
+              <input
+                type="checkbox"
+                checked={manter}
+                onChange={(e) => setManter(e.target.checked)}
+                className="h-4 w-4 flex-shrink-0 cursor-pointer accent-[var(--brand)]"
+              />
+              <span className="text-xs text-secondary">
+                {t("Manter conectado")}
+              </span>
+            </label>
 
             {/* Erro */}
             {erro && (

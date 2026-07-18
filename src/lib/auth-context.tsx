@@ -69,9 +69,14 @@ type AuthContextValue = {
   isSuperAdmin: boolean;
   /** true quando o super-admin está visualizando a dashboard de um cliente */
   modoVisitante: boolean;
+  /**
+   * @param manter "Manter conectado" — estende a idade máxima da sessão de
+   *               7 para 30 dias. Default `false`.
+   */
   login: (
     email: string,
-    senha: string
+    senha: string,
+    manter?: boolean
   ) => Promise<{ ok: boolean; erro?: string; tipo?: TipoConta }>;
   logout: () => Promise<void>;
   /** Super-admin entra na dashboard de um cliente em modo somente-leitura */
@@ -124,6 +129,87 @@ type WorkspaceRow = {
 
 /** Chave usada só para lembrar o modo-visitante entre navegações. */
 const STORAGE_VISITANTE = "gigscontrol.visitante";
+
+/* ------------------------------------------------------------------ *
+ * IDADE MÁXIMA DA SESSÃO (client-side)
+ *
+ * O @supabase/ssr persiste e auto-renova o token pra sempre — na prática
+ * a sessão nunca expirava. Aqui impomos uma IDADE MÁXIMA ABSOLUTA contada
+ * a partir do LOGIN explícito:
+ *   - padrão .................. 7 dias
+ *   - "Manter conectado" ..... 30 dias
+ *
+ * COMO NÃO RESETA NO REFRESH: o carimbo (`gc-login-ts`) só é gravado (a)
+ * num login explícito e (b) no boot quando está AUSENTE. Um TOKEN_REFRESHED
+ * do Supabase não mexe no localStorage, então o carimbo continua lá e a
+ * idade segue contando desde o login original. Nada no caminho de refresh
+ * regrava o timestamp.
+ *
+ * GRAÇA ANTI-DESLOGUE-EM-MASSA: sessão válida SEM carimbo (sessão legada,
+ * de antes desta feature, ou recém-chegada do callback OAuth server-side)
+ * NÃO desloga — carimbamos "agora" e a contagem passa a valer daqui.
+ * Isso também é o que captura o login OAuth sem precisar tocar o callback:
+ * o callback faz navegação de página inteira, e no boot dessa página não há
+ * carimbo → a graça carimba. (Não dá pra confiar no evento SIGNED_IN: o
+ * @supabase/ssr emite INITIAL_SESSION quando restaura sessão do cookie.)
+ * ------------------------------------------------------------------ */
+const LOGIN_TS_KEY = "gc-login-ts";
+const MANTER_KEY = "gc-manter";
+const DIA_MS = 24 * 60 * 60 * 1000;
+const MAX_IDADE_PADRAO_MS = 7 * DIA_MS;
+const MAX_IDADE_MANTER_MS = 30 * DIA_MS;
+
+/** Grava o carimbo de login. Só deve ser chamado em LOGIN EXPLÍCITO. */
+function carimbarLogin(manter: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LOGIN_TS_KEY, String(Date.now()));
+    localStorage.setItem(MANTER_KEY, manter ? "1" : "0");
+  } catch {
+    // modo privado / storage bloqueado — sem carimbo a sessão só não expira
+    // por idade (erra pro lado de deixar o usuário entrar).
+  }
+}
+
+/** Limpa o carimbo (logout / sessão encerrada). */
+function limparCarimboLogin() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LOGIN_TS_KEY);
+    localStorage.removeItem(MANTER_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Verifica a idade da sessão no boot.
+ * Retorna `true` quando a sessão passou da idade máxima (deve deslogar).
+ * Quando não há carimbo, aplica a GRAÇA: carimba agora e retorna `false`.
+ */
+function sessaoExpirouPorIdade(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const ts = localStorage.getItem(LOGIN_TS_KEY);
+    if (!ts) {
+      // Graça: sessão legada ou recém-vinda do OAuth → carimba, não desloga.
+      localStorage.setItem(LOGIN_TS_KEY, String(Date.now()));
+      return false;
+    }
+    const inicio = Number(ts);
+    // Carimbo corrompido → não expulsa ninguém; recarimba.
+    if (!Number.isFinite(inicio) || inicio <= 0) {
+      localStorage.setItem(LOGIN_TS_KEY, String(Date.now()));
+      return false;
+    }
+    const manter = localStorage.getItem(MANTER_KEY) === "1";
+    const max = manter ? MAX_IDADE_MANTER_MS : MAX_IDADE_PADRAO_MS;
+    return Date.now() - inicio > max;
+  } catch {
+    // storage indisponível → nunca expulsa.
+    return false;
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Sessao | null>(null);
@@ -245,6 +331,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getSession();
 
       if (ativo && session?.user) {
+        // Idade máxima da sessão (7d, ou 30d com "Manter conectado").
+        // Sem carimbo → graça: carimba e segue (ninguém é expulso no deploy).
+        // scope "local": a idade é contada POR DISPOSITIVO (o carimbo vive em
+        // localStorage). O padrão do supabase-js é "global", que revogaria o
+        // refresh token em TODOS os aparelhos — o celular expirando aos 7 dias
+        // derrubaria o desktop que tinha 30 contratados.
+        if (sessaoExpirouPorIdade()) {
+          await supabase.auth.signOut({ scope: "local" });
+          limparCarimboLogin();
+          if (ativo) {
+            setSessao(null);
+            setCarregando(false);
+          }
+          return;
+        }
         const s = await montarSessao(session.user.id);
         if (ativo) setSessao(s);
       }
@@ -257,6 +358,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_evt, session) => {
       if (!session?.user) {
         setSessao(null);
+        // Sessão encerrada (logout aqui ou em outra aba): zera o carimbo pra
+        // que o próximo login comece a contagem do zero.
+        limparCarimboLogin();
         try {
           sessionStorage.removeItem(STORAGE_VISITANTE);
         } catch {
@@ -265,8 +369,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // A idade só era avaliada no boot: uma aba deixada aberta (ou um PWA que
+    // não reinicia) nunca reavaliava, e a "idade máxima absoluta" não era
+    // absoluta. Reavalia quando a aba volta ao foco. Mesmo caminho de
+    // expiração (inclusive scope "local"), então continua sem derrubar
+    // os outros dispositivos.
+    const aoVoltarPraAba = async () => {
+      if (document.visibilityState !== "visible") return;
+      const {
+        data: { session: s },
+      } = await supabase.auth.getSession();
+      if (!s?.user) return;
+      if (!sessaoExpirouPorIdade()) return;
+      await supabase.auth.signOut({ scope: "local" });
+      limparCarimboLogin();
+      if (ativo) setSessao(null);
+    };
+    document.addEventListener("visibilitychange", aoVoltarPraAba);
+
     return () => {
       ativo = false;
+      document.removeEventListener("visibilitychange", aoVoltarPraAba);
       subscription.unsubscribe();
     };
   }, [supabase, montarSessao]);
@@ -289,7 +412,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin: sessao?.tipo === "super-admin",
       modoVisitante: !!sessao?.modoVisitante,
 
-      login: async (email, senha) => {
+      login: async (email, senha, manter = false) => {
         // Aceita handle (username) OU e-mail. Sem "@" → e-mail interno
         // determinístico (handle@interno.gigscontrol.app), o mesmo que o
         // backend gera pra artistas e equipe. Com "@" passa direto (login
@@ -329,13 +452,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     return { ok: false, erro: "Esta conta está desativada." };
                   }
                   if (s) {
+                    carimbarLogin(manter);
                     setSessao(s);
                     return { ok: true, tipo: s.tipo };
                   }
                 }
                 // Sessão não propagou pro cliente em memória — recarrega pra
-                // reinicializar a partir do cookie já gravado.
+                // reinicializar a partir do cookie já gravado. O carimbo TEM
+                // que ir antes do reload, senão o boot pós-reload cairia na
+                // graça e ignoraria o "Manter conectado".
                 if (typeof window !== "undefined") {
+                  carimbarLogin(manter);
                   window.location.reload();
                   return { ok: true, tipo: "cliente" };
                 }
@@ -381,6 +508,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, erro: "Esta conta está desativada." };
         }
 
+        carimbarLogin(manter);
         setSessao(s);
         return { ok: true, tipo: s.tipo };
       },
@@ -388,6 +516,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: async () => {
         await supabase.auth.signOut();
         setSessao(null);
+        limparCarimboLogin();
         try {
           sessionStorage.removeItem(STORAGE_VISITANTE);
         } catch {

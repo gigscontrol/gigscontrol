@@ -168,12 +168,41 @@ export default function Sidebar({
   // Recolher a sidebar no desktop (persiste em localStorage). No mobile ela é
   // um drawer de 260px (w-[260px]) — o "recolhido" só vale no lg+ (classes lg:*).
   const [collapsed, setCollapsed] = useState(false);
-  // Mobile (D3): módulo tocado expande o submenu inline SEM navegar.
-  // Guarda qual módulo (além do ativo) está expandido no drawer.
+  // Mobile (D4): accordion 1-por-vez. `mobileExpandedTab` é a ÚNICA fonte da
+  // verdade do submenu no mobile — o módulo ativo não força mais o submenu
+  // aberto, senão dava pra ter 2+ abertos ao mesmo tempo.
   const [mobileExpandedTab, setMobileExpandedTab] = useState<ActiveTab | null>(null);
+  // Detecção de mobile em estado (não no render) pra não quebrar a hidratação:
+  // no servidor não existe matchMedia, então o primeiro paint é sempre desktop
+  // e o efeito corrige logo em seguida.
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    if (!isOpenMobile) setMobileExpandedTab(null);
-  }, [isOpenMobile]);
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const sincronizar = () => setIsMobile(mq.matches);
+    sincronizar();
+    // `addEventListener` em MediaQueryList só existe a partir do Safari 14 e
+    // falta em WebViews Android antigas. Um TypeError aqui sobe de dentro do
+    // useEffect e o React desmonta a árvore — a Sidebar é layout, então o app
+    // ficaria EM BRANCO. Fallback pra API legada; o sincronizar() acima já
+    // cobre o caso estático se nem isso existir.
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", sincronizar);
+      return () => mq.removeEventListener("change", sincronizar);
+    }
+    const legado = mq as MediaQueryList & {
+      addListener?: (cb: () => void) => void;
+      removeListener?: (cb: () => void) => void;
+    };
+    legado.addListener?.(sincronizar);
+    return () => legado.removeListener?.(sincronizar);
+  }, []);
+  // Ao abrir o drawer, já vem expandido o módulo ativo (comportamento de antes,
+  // agora via mobileExpandedTab). Com as Configurações abertas nenhum módulo
+  // está ativo — abre fechado.
+  useEffect(() => {
+    if (isOpenMobile) setMobileExpandedTab(configAberta ? null : activeTab);
+    else setMobileExpandedTab(null);
+  }, [isOpenMobile, activeTab, configAberta]);
   useEffect(() => {
     if (localStorage.getItem("gc-sidebar-collapsed") === "1") setCollapsed(true);
   }, []);
@@ -298,13 +327,11 @@ export default function Sidebar({
                       if (collapsed) setColapsado(false);
                       const mobile = window.matchMedia("(max-width: 1023px)").matches;
                       if (mobile && mod.subPages.length > 0) {
-                        // D3: no mobile, tocar no módulo só abre/fecha o submenu —
-                        // não navega e não fecha o drawer.
-                        // Ativo de verdade (submenu já visível): nada a fazer.
-                        // NÃO usar `mod.tab === activeTab` aqui: com as
-                        // Configurações abertas o activeTab fica "agenda" mas
-                        // nenhum submenu renderiza — o toque precisa expandir.
-                        if (isActive) return;
+                        // D4: no mobile, tocar no módulo só abre/fecha o submenu —
+                        // não navega e não fecha o drawer. Accordion de verdade:
+                        // como só cabe um valor no estado, abrir um fecha o
+                        // anterior; tocar no já-expandido (inclusive o ativo)
+                        // fecha. Por isso NÃO há mais `if (isActive) return`.
                         setMobileExpandedTab((prev) => (prev === mod.tab ? null : mod.tab));
                         return;
                       }
@@ -341,9 +368,10 @@ export default function Sidebar({
                     )}
                   </button>
 
-                  {/* Submenu inline: aparece quando o módulo está ativo (desktop
-                      e mobile) ou apenas expandido no drawer mobile (D3). */}
-                  {(isActive || mobileExpandedTab === mod.tab) && mod.subPages.length > 0 && (
+                  {/* Submenu inline. DESKTOP: inalterado — segue o módulo ativo.
+                      MOBILE (D4): só o expandido, um por vez. */}
+                  {(isMobile ? mobileExpandedTab === mod.tab : isActive) &&
+                    mod.subPages.length > 0 && (
                     <div
                       className={`ml-3 mt-1 mb-2 pl-3 flex flex-col gap-0.5 border-l ${collapsed ? "lg:hidden" : ""}`}
                       style={{ borderColor: `${color}40` }}
