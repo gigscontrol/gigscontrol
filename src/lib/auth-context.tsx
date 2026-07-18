@@ -35,6 +35,30 @@ import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
 
 export type TipoConta = "cliente" | "super-admin";
 
+/**
+ * Dois mapas de vínculos concedem exatamente o mesmo? Compara por CONJUNTO de
+ * chaves (a ordem que o banco devolve não é garantida, e ordem diferente não é
+ * mudança de permissão — trocar a sessão à toa re-renderiza o app inteiro).
+ */
+export function mesmosVinculos(
+  a: Record<string, string[]> | undefined,
+  b: Record<string, string[]> | undefined
+): boolean {
+  const ma = a ?? {};
+  const mb = b ?? {};
+  const ka = Object.keys(ma);
+  const kb = Object.keys(mb);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) {
+    const va = ma[k];
+    const vb = mb[k];
+    if (!vb || va.length !== vb.length) return false;
+    const set = new Set(vb);
+    if (!va.every((x) => set.has(x))) return false;
+  }
+  return true;
+}
+
 export type Sessao = {
   tipo: TipoConta;
   /** Dados do usuário (sempre presente) */
@@ -457,6 +481,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [supabase, montarSessao]);
+
+  // ============================================================
+  // PERMISSÃO MUDA DO OUTRO LADO — relê os vínculos ao voltar pra aba.
+  //
+  // Os vínculos eram lidos UMA vez, na montagem do provider. Quem ficasse com
+  // a aba aberta seguia com o acesso antigo indefinidamente: o admin promovia
+  // a pessoa e "não acontecia nada". Aconteceu de verdade — permissão alterada
+  // 2h30 depois do login, sem efeito, e a única saída era o usuário recarregar
+  // sem saber por quê.
+  //
+  // O SERVIDOR sempre leu fresco (session.ts consulta membros_artista a cada
+  // request), então isto não afrouxa nada: só faz a UI parar de esconder o que
+  // o servidor já libera.
+  //
+  // NUNCA REBAIXA POR FALHA: erro de rede mantém o que já estava. Rebaixar aqui
+  // tiraria acesso de quem está trabalhando por causa de um fetch que caiu.
+  // ============================================================
+  const usuarioId = sessao?.usuario.id;
+  const papelSessao = sessao?.usuario.papel;
+  const ehVisitante = sessao?.tipo === "super-admin";
+  useEffect(() => {
+    // Só operacional tem vínculo; admin/artista/super saem pelo papel.
+    if (!usuarioId || ehVisitante) return;
+    if (papelSessao === "admin" || papelSessao === "artista") return;
+
+    let ativo = true;
+    let ultimaLeitura = 0;
+
+    const relerVinculos = async () => {
+      if (document.visibilityState !== "visible") return;
+      // Alternar abas não pode virar martelo no banco.
+      const agora = Date.now();
+      if (agora - ultimaLeitura < 15_000) return;
+      ultimaLeitura = agora;
+
+      const { data, error } = await supabase
+        .from("membros_artista")
+        .select("artist_id, permissoes")
+        .eq("user_id", usuarioId)
+        .is("deletado_em", null);
+      if (error || !ativo) return; // falhou → mantém o de antes
+
+      const novos: Record<string, string[]> = {};
+      for (const v of data ?? []) {
+        const perms = (v as { permissoes?: unknown }).permissoes;
+        novos[(v as { artist_id: string }).artist_id] = Array.isArray(perms)
+          ? (perms.filter((x) => typeof x === "string") as string[])
+          : [];
+      }
+
+      setSessao((s) => {
+        if (!s) return s;
+        // Só troca quando MUDOU — senão cada foco dispara re-render do app.
+        if (mesmosVinculos(s.vinculos, novos)) return s;
+        return { ...s, vinculos: novos, vinculosErro: false };
+      });
+    };
+
+    document.addEventListener("visibilitychange", relerVinculos);
+    window.addEventListener("focus", relerVinculos);
+    return () => {
+      ativo = false;
+      document.removeEventListener("visibilitychange", relerVinculos);
+      window.removeEventListener("focus", relerVinculos);
+    };
+  }, [supabase, usuarioId, papelSessao, ehVisitante]);
 
   const permissoes = useMemo<Permissoes | null>(() => {
     if (!sessao) return null;
