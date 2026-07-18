@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth-context";
 import { podeCriarShowUI } from "@/lib/permissoes/gatesShow";
 import { useContratos } from "@/lib/contratos-context";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
+import { showNoDia } from "@/lib/agenda/showNoDia";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -77,24 +78,7 @@ function cellDeISO(iso: string): DayCell | null {
   };
 }
 
-/**
- * Um show pertence a esta célula do calendário?
- *
- * Casa pela DATA ISO completa (fonte da verdade). Isso conserta o bug em
- * que um show de 03/jun aparecia também no dia 3 de nov, dez etc. — o
- * match antigo era só por dia-do-mês (`dayId`), ignorando mês/ano.
- *
- * Shows legados sem `data` caem no match por dia-do-mês, válido apenas
- * dentro do mês exibido (nunca no padding de outro mês).
- */
-function showNoDia(s: Show, day: DayCell): boolean {
-  // Células de padding (dias de outro mês) nunca exibem shows: cada show
-  // aparece em exatamente um mês, evitando "duplicar" um show de borda ao
-  // virar o mês.
-  if (day.isOtherMonth) return false;
-  if (s.data && day.dataISO) return s.data === day.dataISO;
-  return s.dayId === day.id;
-}
+/** Casamento show↔célula: lógica pura em `@/lib/agenda/showNoDia` (com bateria). */
 
 const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: string }> = {
   confirmado: { bg: "rgba(34, 197, 94, 0.12)", color: "var(--success)", label: "Confirmado" },
@@ -380,6 +364,19 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   // Dias planos para listagem mobile
   const allDays = monthWeeks.flat();
 
+  // Meses que a grade renderiza com células PRÓPRIAS ("YYYY-MM"). Um show só
+  // é escondido de uma célula de padding se o mês dele já tiver lugar aqui —
+  // ver `showNoDia`. Derivado da grade em si, não da lógica que a montou.
+  const mesesNaGrade = useMemo(
+    () =>
+      new Set(
+        allDays
+          .filter((d) => !d.isOtherMonth && d.dataISO)
+          .map((d) => d.dataISO.slice(0, 7))
+      ),
+    [allDays]
+  );
+
   // Rótulo do período exibido (ex: "Junho 2026"). Derivado da 1ª célula
   // real do grid — assim acompanha os atalhos e o "Personalizado" sem
   // duplicar a lógica do resolver, e cobre a virada de ano sozinho.
@@ -440,7 +437,7 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
               <DayCellComponent
                 key={day.uniqueKey}
                 day={day}
-                shows={filteredShows.filter((s) => showNoDia(s, day))}
+                shows={filteredShows.filter((s) => showNoDia(s, day, mesesNaGrade))}
                 itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
                 accent={accent}
@@ -699,13 +696,17 @@ function DayCellComponent({
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
+  // Dia de outro mês VAZIO continua bem apagado (é só moldura); com conteúdo
+  // sobe pra 60% — no 30% o card do show ficava ilegível, e o objetivo aqui é
+  // justamente conseguir LER o show da borda sem trocar de mês.
+  const temConteudo = shows.length > 0 || itens.length > 0;
   return (
     <div
       id={day.isToday ? "day-card-today" : undefined}
       className={`
         relative bg-surface border rounded-md p-2.5 flex flex-col overflow-hidden
         min-h-[280px] lg:min-h-[340px] transition-all
-        ${day.isOtherMonth ? "opacity-30" : ""}
+        ${day.isOtherMonth ? (temConteudo ? "opacity-60" : "opacity-30") : ""}
       `}
       style={{
         borderColor: day.isToday ? accent : day.isQuente ? "var(--border-strong)" : "var(--border-color)",
