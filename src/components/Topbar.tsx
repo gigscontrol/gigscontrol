@@ -22,6 +22,7 @@ import BotaoTema from "./BotaoTema";
 import Flag from "./Flag";
 import { useT, useLang } from "@/lib/i18n";
 import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -98,14 +99,9 @@ export default function Topbar({
     return Math.max(0, limiteContratos - usados);
   }, [contratos, limiteContratos]);
 
-  const iniciais = usuario
-    ? usuario.nome
-        .split(" ")
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "—";
+  // Iniciais pelo helper único (src/lib/iniciais.ts): nome de UMA palavra rende
+  // DUAS letras ("Zé" → "ZÉ"), não uma.
+  const iniciais = (usuario ? iniciaisDoNome(usuario.nome) : "") || "—";
 
   const pillBase =
     "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap";

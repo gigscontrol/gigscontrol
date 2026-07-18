@@ -116,6 +116,10 @@ function MeusDados({
   // Campos de pessoa.
   const [pais, setPais] = useState<string>("BR");
   const [cidade, setCidade] = useState<CidadeEscolhida | null>(null);
+  // O usuário mexeu no seletor de cidade nesta sessão do form? Sem isso não dá
+  // pra distinguir "limpei de propósito" de "nunca carregou / é legada", e o
+  // save apagava a cidade salva. Ver o cálculo do `cidade_id` em salvar().
+  const [cidadeTocada, setCidadeTocada] = useState(false);
   const [apelido, setApelido] = useState("");
   const [nomeLegal, setNomeLegal] = useState("");
   const [nascimento, setNascimento] = useState<string>("");
@@ -239,9 +243,20 @@ function MeusDados({
         pais === "BR" ? (docNorm.length > 11 ? "cnpj" : "cpf") : "doc";
 
       // Cidade (opcional): resolve a seleção pro UUID do catálogo (lookup-or-
-      // create no próprio workspace). Sem cidade = limpa (null). Falha ao
-      // resolver = não mexe no cidade_id atual (undefined → não vai no body).
-      let cidade_id: string | null | undefined = null;
+      // create no próprio workspace).
+      //
+      // PERDA DE DADO CORRIGIDA: isto começava em `null`, então QUALQUER save
+      // com o campo vazio mandava `cidade_id: null` e APAGAVA a cidade salva.
+      // E o campo nasce vazio sozinho, sem o usuário tocar nele, quando a
+      // cidade do banco é legada (sem ibge_id/geoname_id) — o carregamento
+      // acima faz `setCidade(null)` porque o autocomplete não consegue
+      // reidentificá-la. Resultado: quem tinha cidade legada perdia a cidade ao
+      // salvar o apelido ou o telefone.
+      //
+      // Agora `undefined` (= não mexe no cidade_id atual) é o padrão, e só
+      // vira `null` quando o usuário MEXEU no campo e o deixou vazio de
+      // propósito. Falha ao resolver também cai em `undefined`: preserva.
+      let cidade_id: string | null | undefined = cidadeTocada ? null : undefined;
       if (cidade) {
         try {
           cidade_id = (await resolverCidade(cidade)).id;
@@ -349,6 +364,10 @@ function MeusDados({
         <CidadeGlobalAutocomplete
           value={cidade}
           onChange={(c) => {
+            // Marca que o campo foi MEXIDO pelo usuário. É o que separa
+            // "limpei a cidade de propósito" (grava null) de "o campo nasceu
+            // vazio porque a cidade salva é legada" (preserva) — ver salvar().
+            setCidadeTocada(true);
             setCidade(c);
             if (c?.pais) sincronizarPais(c.pais);
           }}

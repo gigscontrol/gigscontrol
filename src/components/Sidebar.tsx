@@ -184,6 +184,7 @@ export default function Sidebar({
       privacidade: sessao.privacidade,
       vinculos: sessao.vinculos,
       podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+      temPastaCompartilhada: sessao.temPastaCompartilhada,
     });
     // Filtra o módulo E as subpáginas. A Agenda hospeda "Anotações", que tem
     // gate próprio: quem não tem chave de agenda mas lê anotações continua

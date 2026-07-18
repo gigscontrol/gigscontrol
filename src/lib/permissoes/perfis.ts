@@ -28,6 +28,54 @@ export type Perfil = {
   permissoes: string[];
 };
 
+/**
+ * ⚠️ REVISÃO L5 — o que mudou de significado nestes presets.
+ *
+ * A agenda virou SÓ VISUALIZAÇÃO de show: as chaves `agenda.criar` /
+ * `agenda.editar*` / `agenda.excluir*` passaram a governar SOMENTE os itens de
+ * agenda (voo, transporte terrestre, evento personalizado). Criar/editar/
+ * cancelar/excluir SHOW exige chave de VENDAS. Efeito, preset a preset:
+ *
+ *   manager   → INALTERADO na prática. Já tem criar_venda + editar_venda +
+ *               editar_todos + cancelar_venda, então continua fazendo tudo com
+ *               o show; `agenda.*` agora lhe dá voo/transporte/evento.
+ *   vendedor  → GANHA. Tem criar_venda/editar_venda/cancelar_venda, logo passa
+ *               a criar e gerenciar show pela agenda (antes o servidor exigia
+ *               `agenda.criar`, que ele não tem). Continua vendo a agenda no
+ *               nível Básico e NÃO mexe em voo/transporte/evento.
+ *   equipe    → PERDE, de propósito. Tem `agenda.criar`/`agenda.editar` e
+ *               nenhuma chave de mutação de vendas: deixa de ver "Novo Show" e
+ *               de editar/cancelar show. Segue dona da logística (voo,
+ *               transporte, evento) e vendo a agenda detalhada. É exatamente o
+ *               papel que o dono descreveu — mexer em show é de quem tem
+ *               permissão de vendas.
+ *   financeiro / juridico / artista → sem chave de agenda de mutação; nada muda.
+ *
+ * Quem tinha um vínculo PERSONALIZADO com `agenda.editar_todos` e nenhuma chave
+ * de vendas cai no mesmo caso do preset "equipe": perde cancelar/editar show.
+ * Para devolver, o admin marca a capacidade correspondente em VENDAS.
+ *
+ * ⚠️ REVISÃO L1 — por que `anotacoes.ver` entrou em TODOS os presets.
+ *
+ * L1 fechou a LEITURA de anotações contra a chave `anotacoes.ver`. Diferente do
+ * gate de CRIAR (que é opt-in via `governadoPorChavesAnotacoes`), o de LER
+ * fecha para todo mundo no instante do deploy. Como nenhum preset concedia
+ * chave `anotacoes.*`, a regra (a) do dono nascia INALCANÇÁVEL: toda nota
+ * ETIQUETADA num artista sumiria da tela de qualquer não-admin — manager,
+ * vendedor, equipe, financeiro e jurídico — e o único reparo seria o admin
+ * abrir vínculo por vínculo (O(usuários × artistas)). Isso não é "fechar por
+ * permissão", é apagar a base de conhecimento.
+ *
+ * `anotacoes.ver` é por VÍNCULO, então conceder no preset NÃO abre nada novo:
+ * o usuário só passa a ler as notas dos artistas a que ele já está ligado —
+ * exatamente "quem tem acesso ao artista vê as anotações do artista".
+ * `anotacoes.criar` fica só em quem opera a base (manager, vendedor, equipe);
+ * financeiro/jurídico leem e não escrevem.
+ *
+ * ATENÇÃO — PRESET É SEMENTE, NÃO BACKFILL: isto vale para vínculos NOVOS (e
+ * para quem reaplicar o perfil). Vínculos JÁ SALVOS não ganham a chave sozinhos
+ * e continuam sem ler nota etiquetada. Ver a nota de deploy no reporte.
+ */
 export const PERFIS: Perfil[] = [
   {
     id: "manager",
@@ -41,6 +89,7 @@ export const PERFIS: Perfil[] = [
       "financeiro.ver",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento",
       "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos", "contratos.cancelar",
+      "anotacoes.ver", "anotacoes.criar",
     ],
   },
   {
@@ -52,6 +101,7 @@ export const PERFIS: Perfil[] = [
       "vendas.ver", "vendas.ver_orcamentos",
       "financeiro.ver",
       "financeiro.registrar_pagamento", "financeiro.editar_pagamento", "financeiro.cancelar_pagamento",
+      "anotacoes.ver",
     ],
   },
   {
@@ -62,6 +112,7 @@ export const PERFIS: Perfil[] = [
     permissoes: [
       "vendas.ver", "vendas.ver_orcamentos",
       "contratos.ver", "contratos.criar", "contratos.editar", "contratos.editar_todos", "contratos.cancelar",
+      "anotacoes.ver",
     ],
   },
   {
@@ -73,6 +124,7 @@ export const PERFIS: Perfil[] = [
       "agenda.ver",
       "vendas.ver", "vendas.ver_orcamentos", "vendas.criar_orcamento", "vendas.editar_orcamento", "vendas.converter",
       "vendas.criar_venda", "vendas.editar_venda", "vendas.cancelar_venda",
+      "anotacoes.ver", "anotacoes.criar",
     ],
   },
   {
@@ -83,6 +135,7 @@ export const PERFIS: Perfil[] = [
     permissoes: [
       "agenda.ver", "agenda.ver_detalhado", "agenda.criar", "agenda.editar",
       "vendas.ver", "vendas.ver_orcamentos",
+      "anotacoes.ver", "anotacoes.criar",
     ],
   },
   {
@@ -92,6 +145,7 @@ export const PERFIS: Perfil[] = [
     cor: "#a855f7",
     permissoes: [
       "agenda.ver", "agenda.ver_detalhado", "vendas.ver", "vendas.ver_orcamentos", "financeiro.ver", "contratos.ver",
+      "anotacoes.ver",
     ],
   },
 ];

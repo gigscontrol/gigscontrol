@@ -11,8 +11,13 @@ import {
   toggleCapacidade,
   selecionarVariante,
   normalizarPerms,
+  modoAgenda,
+  aplicarModoAgenda,
+  semAcessoAgenda,
+  type ModoAgenda,
 } from "@/lib/permissoes/capacidades";
 import { PERFIS, permissoesDosPerfis, type PerfilId } from "@/lib/permissoes/perfis";
+import { useT } from "@/lib/i18n";
 
 type Membro = {
   userId: string;
@@ -72,6 +77,7 @@ export function EditorPermissoesVinculo({
   /** Rótulo do botão salvar (default: "Salvar permissões"). */
   rotuloSalvar?: string;
 }) {
+  const t = useT();
   const [perfis, setPerfis] = useState<PerfilId[]>(perfisIniciais ?? []);
   const [perms, setPerms] = useState<Set<string>>(() => normalizarPerms(new Set(permissoes)));
   const [salvando, setSalvando] = useState(false);
@@ -133,10 +139,73 @@ export function EditorPermissoesVinculo({
 
         {/* Checkboxes por módulo */}
         <div className="flex flex-col gap-3">
-          {MODULOS.filter((mod) => capacidadesDoModulo(mod.id).length > 0).map((mod) => (
+          {MODULOS.filter((mod) => capacidadesDoModulo(mod.id).length > 0).map((mod) => {
+            // AGENDA tem uma camada acima: o seletor de 3 níveis (L5a). O corpo
+            // granular só aparece no modo "Personalizado".
+            const ehAgenda = mod.id === "agenda";
+            const modo = ehAgenda ? modoAgenda(perms) : null;
+            // Conjunto vazio ≠ "personalizado": sem NENHUMA chave de agenda o
+            // membro não tem agenda. Nenhum pill fica marcado (ver semAcessoAgenda).
+            const agendaVazia = ehAgenda && semAcessoAgenda(perms);
+            return (
             <div key={mod.id} className="bg-surface-2 border border-border rounded-md p-3">
               <div className="stat-label mb-2">{mod.label}</div>
-              <div className="flex flex-col gap-1.5">
+
+              {ehAgenda && (
+                <div className="mb-3 flex flex-col gap-1.5">
+                  <div
+                    role="radiogroup"
+                    aria-label={t("Nível de acesso à agenda")}
+                    className="inline-flex gap-0.5 p-0.5 rounded-lg border self-start"
+                    style={{ backgroundColor: "var(--bg)", borderColor: "var(--border)" }}
+                  >
+                    {(
+                      [
+                        ["basico", "Básico"],
+                        ["personalizado", "Personalizado"],
+                        ["total", "Acesso total"],
+                      ] as [ModoAgenda, string][]
+                    ).map(([id, label]) => {
+                      const sel = !agendaVazia && modo === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={sel}
+                          onClick={() => setPerms((p) => aplicarModoAgenda(p, id))}
+                          className={`text-[0.7rem] font-medium px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+                            sel ? "" : "text-muted hover:text-secondary"
+                          }`}
+                          style={
+                            sel
+                              ? { backgroundColor: "var(--brand)", color: "#fff", boxShadow: "0 1px 2px var(--shadow-color)" }
+                              : undefined
+                          }
+                        >
+                          {t(label)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[0.65rem] text-muted">
+                    {agendaVazia
+                      ? t("Nenhum acesso à agenda. Escolha um nível acima.")
+                      : modo === "basico"
+                        ? t("Vê dia, local e horário dos shows.")
+                        : modo === "total"
+                          ? t("Visualiza tudo e gerencia voos, transportes e eventos.")
+                          : t("Escolha item a item o que ele pode ver e fazer.")}
+                  </span>
+                  <span className="text-[0.65rem] text-muted">
+                    {t(
+                      "A agenda é só visualização de shows. Criar, editar ou cancelar um show depende das permissões de Vendas."
+                    )}
+                  </span>
+                </div>
+              )}
+
+              <div className={`flex flex-col gap-1.5 ${ehAgenda && modo !== "personalizado" ? "hidden" : ""}`}>
                 {capacidadesDoModulo(mod.id).map((cap) => {
                   const ativa = capacidadeAtiva(perms, cap);
                   const varSel = varianteAtiva(perms, cap);
@@ -200,7 +269,8 @@ export function EditorPermissoesVinculo({
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex items-center justify-end gap-2">

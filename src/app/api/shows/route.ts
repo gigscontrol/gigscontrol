@@ -5,7 +5,7 @@ import {
   criarShowNoWorkspace,
 } from "@/lib/services/shows.service";
 import { showCreateSchema } from "@/lib/validators/shows.schema";
-import { podeCriarAgenda } from "@/lib/api/permissoes";
+import { podeCriarShow } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 /**
@@ -47,9 +47,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!podeCriarAgenda(r.sessao, parsed.data.artist_id ?? null)) {
+  // L5c: criar SHOW exige `vendas.criar_venda` (não mais `agenda.criar`, que
+  // agora só cria voo/transporte/evento). Par do botão "Novo Show" da agenda.
+  if (!podeCriarShow(r.sessao, parsed.data.artist_id ?? null)) {
     return NextResponse.json(
-      { erro: "Você não tem permissão para criar na agenda deste artista." },
+      { erro: "Você não tem permissão para criar show neste artista." },
       { status: 403 }
     );
   }

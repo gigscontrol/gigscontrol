@@ -175,7 +175,11 @@ export function podeVerAgendaDetalhado(
   return podeNaSessao(sessao, artistId, "agenda.ver_detalhado");
 }
 
-/** Pode CRIAR na agenda deste artista? */
+/**
+ * Pode CRIAR na agenda deste artista? (L5) — vale só para AGENDA_ITEMS:
+ * voo, transporte terrestre e evento personalizado. Criar SHOW NÃO passa mais
+ * por aqui: usa `podeCriarShow` (vendas.criar_venda).
+ */
 export function podeCriarAgenda(
   sessao: SessaoAutenticada,
   artistId: string | null
@@ -183,7 +187,10 @@ export function podeCriarAgenda(
   return podeNaSessao(sessao, artistId, "agenda.criar");
 }
 
-/** Pode EDITAR este item da agenda (respeitando próprios × todos)? */
+/**
+ * Pode EDITAR este item da agenda (respeitando próprios × todos)? (L5) — vale
+ * só para AGENDA_ITEMS. Editar SHOW usa `podeEditarShow` (chave de vendas).
+ */
 export function podeEditarAgenda(
   sessao: SessaoAutenticada,
   artistId: string | null,
@@ -198,7 +205,10 @@ export function podeEditarAgenda(
   );
 }
 
-/** Pode EXCLUIR este item da agenda (respeitando próprios × todos)? */
+/**
+ * Pode EXCLUIR este item da agenda (respeitando próprios × todos)? (L5) — vale
+ * só para AGENDA_ITEMS. Excluir SHOW usa `podeExcluirShow` (chave de vendas).
+ */
 export function podeExcluirAgenda(
   sessao: SessaoAutenticada,
   artistId: string | null,
@@ -210,6 +220,83 @@ export function podeExcluirAgenda(
     criadoPor,
     "agenda.excluir",
     "agenda.excluir_todos"
+  );
+}
+
+// ============================================================
+// SHOW — MUTAÇÃO POR CHAVE DE VENDAS (L5b/L5c).
+//
+// A AGENDA passou a ser SÓ VISUALIZAÇÃO de show: `agenda.ver`/`ver_detalhado`
+// continuam sendo o eixo de LEITURA (Básico × Acesso total), mas nenhuma chave
+// de agenda cria, edita, cancela ou exclui show. Um show é a materialização de
+// uma VENDA na agenda — logo mexer nele é permissão de VENDAS.
+//
+// Estas quatro funções são gêmeas das de venda (`podeEditarVenda`,
+// `podeCancelarVenda`, `podeExcluirVenda`, `verificarCriarVenda`), inclusive na
+// semântica próprios × todos. A diferença é a linha de referência: aqui
+// `criadoPor` é o `shows.criado_por` (quem lançou o show), não o da venda —
+// numa venda concretizada os dois são a mesma pessoa, e num show avulso
+// (criado direto na agenda) o dono é quem o criou. Sem `vendas.editar_todos`,
+// só mexe nos SEUS.
+//
+// ⚠️ REVOGAÇÃO DELIBERADA: quem tinha `agenda.editar_todos` (ou `agenda.criar`)
+// e nenhuma chave de vendas deixa de cancelar/editar/criar show. É o que o dono
+// pediu; ver o bloco de aviso em src/lib/permissoes/catalogo.ts (AGENDA).
+// ============================================================
+
+/** Pode CRIAR show neste artista? (`vendas.criar_venda`) */
+export function podeCriarShow(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  return podeNaSessao(sessao, artistId, "vendas.criar_venda");
+}
+
+/** Pode EDITAR este show? (`vendas.editar_venda` próprios × `editar_todos`) */
+export function podeEditarShow(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  return podeMutar(
+    sessao,
+    artistId,
+    criadoPor,
+    "vendas.editar_venda",
+    "vendas.editar_todos"
+  );
+}
+
+/**
+ * Pode CANCELAR (ou reativar) este show? (`vendas.cancelar_venda` próprios ×
+ * `vendas.editar_todos`). Reverter o cancelamento é a mesma decisão — mesma chave.
+ */
+export function podeCancelarShow(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  return podeMutar(
+    sessao,
+    artistId,
+    criadoPor,
+    "vendas.cancelar_venda",
+    "vendas.editar_todos"
+  );
+}
+
+/** Pode EXCLUIR este show? (`vendas.excluir_venda` próprios × `editar_todos`) */
+export function podeExcluirShow(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  return podeMutar(
+    sessao,
+    artistId,
+    criadoPor,
+    "vendas.excluir_venda",
+    "vendas.editar_todos"
   );
 }
 
@@ -704,8 +791,15 @@ export function redigirOrcamentoParaSessao(
 //     - o BOOLEANO LEGADO (profiles.pode_criar_anotacoes → sessao.
 //       podeCriarAnotacoes) continua valendo em OU, pra sempre;
 //     - enquanto o usuário não tiver NENHUMA chave `anotacoes.*` em vínculo
-//       nenhum, ele fica no comportamento de antes (leitura pela RLS, nota
-//       livre na pasta que enxerga) — ver `governadoPorChavesAnotacoes`;
+//       nenhum, ele fica no comportamento de antes (nota livre na pasta que
+//       enxerga) — ver `governadoPorChavesAnotacoes`;
+//
+//   ⚠️ EXCEÇÃO: a ação "ver" NÃO é mais opt-in. L1 (decisão do dono) fechou a
+//   LEITURA de vez — `podeVerAnotacao` não consulta `governadoPorChavesAnotacoes`
+//   e exige `anotacoes.ver` na regra (a) desde o primeiro deploy. Por isso os
+//   PRESETS passaram a semear `anotacoes.ver` (perfis.ts): sem isso a regra (a)
+//   nasceria inalcançável e toda nota etiquetada sumiria da tela de quem não é
+//   admin. `criar`/`editar`/`excluir` seguem opt-in como descrito acima.
 //     - assim que o admin marcar QUALQUER `anotacoes.*` pra ele no editor da
 //       aba Equipe, o gate por artista passa a valer pra esse usuário.
 //   Admin/super-admin sempre podem. O papel `artista` nunca entra no regime de
@@ -772,19 +866,115 @@ function semEtiquetaDeArtista(artistId: string | null): boolean {
   return artistId === null || artistId === undefined;
 }
 
+// ============================================================
+// LEITURA DE ANOTAÇÕES — FECHADA (decisão do dono, L1).
+//
+// MUDANÇA DE REGIME: até aqui a leitura era ABERTA (regime legado — a RLS da
+// pasta era o único gate e `podeVerAnotacao` devolvia true pra qualquer um do
+// workspace). O dono pediu explicitamente pra fechar. A regra dele:
+//
+//   "Se não tem permissão, só vê as anotações dos SHOWS que ele tem acesso, OU
+//    anotações que quem tem acesso colocou ele nas permissões."
+//
+// Traduzido, um usuário vê uma nota quando:
+//   (0) ele é o AUTOR dela (regra implícita — ver abaixo); OU
+//   (a) tem `anotacoes.ver` no ARTISTA etiquetado na nota; OU
+//   (b) a nota é de um SHOW cuja agenda ele já alcança (`podeVerAgenda` do
+//       artista do show) — o mesmo gate que o POST já exigia pra criar; OU
+//   (c) ele é MEMBRO EXPLÍCITO da pasta (visibilidade "selecionados"), ou dono
+//       dela.
+// Admin/super-admin sempre veem.
+//
+// UMA CONCESSÃO DELIBERADA: pasta com visibilidade "todos" (o dono da pasta
+// compartilhou com o workspace inteiro) continua legível — mas SÓ para as notas
+// SEM etiqueta de artista. Isso preserva a doutrina de que a etiqueta só pode
+// RESTRINGIR, e evita que a base de conhecimento geral (avisos, procedimentos)
+// suma da tela de todo mundo no mesmo instante. Nota etiquetada num artista
+// dentro de pasta aberta passa a exigir (a) ou (c).
+//
+// O booleano legado `pode_criar_anotacoes` NÃO libera leitura (ele só vale pra
+// CRIAR, ver `podeCriarAnotacao`); quem trabalha com anotações continua vendo
+// as pastas que criou por (c).
+//
+// REGRA (0) — AUTORIA. Sem ela o fechamento vira PERDA DE DADO: quem tem
+// `pode_criar_anotacoes` (legado) cria uma nota etiquetada num artista dentro de
+// uma pasta "todos", recebe 201, e a nota some no F5 — (a) falha (não tem
+// chave), (c) só libera nota SEM etiqueta em pasta aberta. Pior: `podeLerNota`
+// roda ANTES de `podeMexerNaNota` no PATCH/DELETE, então o autor nem apaga o
+// próprio registro (404). Quem escreveu sempre enxerga o que escreveu; isso não
+// amplia o alcance de ninguém (só devolve a própria linha).
+// ============================================================
+
 /**
- * Pode VER a nota deste artista? Regime legado → true (a RLS da pasta segue
- * sendo o gate, como antes). Regime de chaves → exige `anotacoes.ver` no
- * artista da nota. Nota SEM etiqueta de artista fica fora do regime (ver acima).
+ * O que a rota precisa carregar do banco pra decidir (b) e (c) — a permissão
+ * sozinha não tem como saber de show nem de pasta. Montado uma vez por request
+ * (ver `contextoDeAnotacoes` em services/anotacoes.service.ts).
+ */
+export type ContextoAnotacoes = {
+  /** show_id → artist_id do show (só dos shows que a sessão enxerga). */
+  artistaPorShow: Map<string, string | null>;
+  /** Pastas em que ele é membro explícito (usuário, ou artista dele). */
+  pastasComMembro: Set<string>;
+  /** Pastas criadas por ele. */
+  pastasProprias: Set<string>;
+  /** Pastas com visibilidade "todos" (compartilhadas com o workspace). */
+  pastasAbertas: Set<string>;
+};
+
+/** A parte da nota que o gate de leitura olha. */
+export type NotaParaGate = {
+  artistId?: string | null;
+  showId?: string | null;
+  pastaId?: string | null;
+  /** Autor da nota (regra 0). `criado_por` já vem no COLS_NOTA do repo. */
+  criadoPor?: string | null;
+};
+
+/**
+ * Pode VER esta nota? Ver a doutrina acima (regras a/b/c). Sem contexto
+ * carregado o gate NÃO adivinha: cai só na regra (a) — por isso toda rota de
+ * leitura deve passar o `ctx`.
  */
 export function podeVerAnotacao(
   sessao: SessaoAutenticada,
-  artistId: string | null
+  nota: NotaParaGate,
+  ctx?: ContextoAnotacoes
 ): boolean {
   if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
-  if (semEtiquetaDeArtista(artistId)) return true; // não-governado
-  if (!governadoPorChavesAnotacoes(sessao, "ver")) return true; // legado
-  return podeNaSessao(sessao, artistId, "anotacoes.ver");
+
+  // (0) AUTORIA — quem escreveu sempre enxerga o que escreveu. Tem que vir
+  // antes de tudo: sem isto o autor perde a nota no F5 e não consegue nem
+  // apagá-la (podeLerNota roda antes de podeMexerNaNota no PATCH/DELETE).
+  if (nota.criadoPor && nota.criadoPor === sessao.userId) return true;
+
+  const artistId = nota.artistId ?? null;
+  // (a) chave no artista etiquetado.
+  if (!semEtiquetaDeArtista(artistId) && podeNaSessao(sessao, artistId, "anotacoes.ver")) {
+    return true;
+  }
+
+  // (b) nota de SHOW: quem alcança a agenda do artista do show alcança a nota.
+  // Espelha o gate que o POST /api/anotacoes já faz na criação.
+  if (nota.showId) {
+    if (!ctx) return false;
+    const artistaDoShow = ctx.artistaPorShow.get(nota.showId);
+    // Show ausente do mapa = ele não enxerga o show → não enxerga a nota.
+    if (artistaDoShow === undefined) return false;
+    return podeVerAgenda(sessao, artistaDoShow);
+  }
+
+  // (c) nota de PASTA: dono ou membro explícito. Pasta aberta ("todos") libera
+  // só a nota SEM etiqueta de artista (concessão documentada acima).
+  if (nota.pastaId) {
+    if (!ctx) return false;
+    if (ctx.pastasProprias.has(nota.pastaId)) return true;
+    if (ctx.pastasComMembro.has(nota.pastaId)) return true;
+    return ctx.pastasAbertas.has(nota.pastaId) && semEtiquetaDeArtista(artistId);
+  }
+
+  // Nota solta (sem pasta e sem show) — linha legada rara. Sem etiqueta segue o
+  // comportamento antigo; etiquetada exige a chave (já testada em (a)).
+  return semEtiquetaDeArtista(artistId);
 }
 
 /**

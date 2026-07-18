@@ -4,6 +4,7 @@ import {
   listarNotasDoWorkspace,
   criarNotaNoWorkspace,
   artistasSaoDoWorkspace,
+  contextoDeAnotacoes,
 } from "@/lib/services/anotacoes.service";
 import { notaCreateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarPasta, contarNotasDoShow } from "@/lib/repositories/anotacoes.repo";
@@ -18,18 +19,24 @@ import { respostaDeErro } from "@/lib/api/erros";
 const MAX_NOTAS_POR_SHOW = 4;
 
 /**
- * GET /api/anotacoes — notas das pastas que o usuário PODE ver (RLS filtra) e,
- * por cima, o gate por artista (`anotacoes.ver`). O filtro é em memória sobre o
- * array já lido — não mexe no COLS/select do repo. Para quem NÃO tem chave
- * `anotacoes.*` nenhuma, `podeVerAnotacao` devolve true e a lista sai idêntica
- * à de antes (compatibilidade).
+ * GET /api/anotacoes — a RLS filtra por pasta e, POR CIMA, o gate de leitura
+ * fechado (L1): chave `anotacoes.ver` no artista da nota, OU nota de show cuja
+ * agenda ele alcança, OU pasta em que ele é dono/membro explícito (pasta aberta
+ * ao workspace libera só as notas sem etiqueta de artista). Ver a doutrina em
+ * lib/api/permissoes.ts. O filtro é em memória sobre o array já lido — não mexe
+ * no COLS/select do repo.
  */
 export async function GET() {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   try {
     const todas = await listarNotasDoWorkspace(r.sessao.supabase);
-    const notas = todas.filter((n) => podeVerAnotacao(r.sessao, n.artistId ?? null));
+    const ctx = await contextoDeAnotacoes(
+      r.sessao.supabase,
+      { userId: r.sessao.userId, artistaId: r.sessao.artistaId ?? null },
+      todas
+    );
+    const notas = todas.filter((n) => podeVerAnotacao(r.sessao, n, ctx));
     return NextResponse.json({ notas });
   } catch (e) {
     return respostaDeErro(e, "Falha ao listar anotações.");

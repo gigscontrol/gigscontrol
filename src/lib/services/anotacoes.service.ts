@@ -16,6 +16,7 @@ import type {
   NotaUpdateInput,
 } from "@/lib/validators/anotacoes.schema";
 import * as repo from "@/lib/repositories/anotacoes.repo";
+import type { ContextoAnotacoes } from "@/lib/api/permissoes";
 
 // ---- Leitura (a RLS já filtra por visibilidade) ----
 
@@ -40,6 +41,46 @@ export async function listarNotasDoWorkspace(
 ): Promise<Anotacao[]> {
   const rows = await repo.listarNotas(supabase);
   return rows.map(rowParaAnotacao);
+}
+
+// ---- Contexto do gate de leitura (L1) ----
+
+/**
+ * Carrega, em 3 queries, o que `podeVerAnotacao` precisa pra decidir as regras
+ * (b) nota de show e (c) pasta compartilhada:
+ *   - artista de cada show citado pelas notas (RLS filtra os que ele não vê);
+ *   - pastas onde ele é MEMBRO explícito — como membro-usuário (usuario_id) ou,
+ *     no papel artista, como membro-artista (artista_id);
+ *   - pastas que ele criou e pastas abertas ao workspace ("todos").
+ *
+ * Tudo vem pelo cliente da SESSÃO — a RLS continua sendo o primeiro filtro; este
+ * gate só APERTA por cima dela.
+ */
+export async function contextoDeAnotacoes(
+  supabase: SupabaseClient,
+  quem: { userId: string; artistaId: string | null },
+  notas: Array<{ showId?: string | null }>
+): Promise<ContextoAnotacoes> {
+  const showIds = notas.map((n) => n.showId).filter((s): s is string => !!s);
+  const [pastas, membros, artistaPorShow] = await Promise.all([
+    repo.listarPastas(supabase),
+    repo.listarMembros(supabase),
+    repo.artistasDosShows(supabase, showIds),
+  ]);
+  const pastasComMembro = new Set<string>();
+  for (const m of membros) {
+    const ehDele =
+      (m.membro.tipo === "usuario" && m.membro.id === quem.userId) ||
+      (m.membro.tipo === "artista" && !!quem.artistaId && m.membro.id === quem.artistaId);
+    if (ehDele) pastasComMembro.add(m.pasta_id);
+  }
+  const pastasProprias = new Set<string>();
+  const pastasAbertas = new Set<string>();
+  for (const p of pastas) {
+    if (p.criado_por && p.criado_por === quem.userId) pastasProprias.add(p.id);
+    if (p.visibilidade === "todos") pastasAbertas.add(p.id);
+  }
+  return { artistaPorShow, pastasComMembro, pastasProprias, pastasAbertas };
 }
 
 // ---- Validação de escopo ----

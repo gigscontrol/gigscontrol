@@ -3077,8 +3077,15 @@ const LANDING13_REDESIGN: Record<string, string> = {
 // ---- Config: Meus dados, e-mail de acesso, Permissões (artista/equipe), Últimas ações (2026-07-11) ----
 const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Acesso bloqueado — o artista não consegue entrar.": "Access blocked — the artist can't log in.",
+  "Nível de acesso à agenda": "Schedule access level",
+  "Nenhum acesso à agenda. Escolha um nível acima.": "No schedule access. Choose a level above.",
+  "Vê dia, local e horário dos shows.": "Sees the date, location and time of shows.",
+  "Visualiza tudo e gerencia voos, transportes e eventos.": "Views everything and manages flights, transport and events.",
+  "Escolha item a item o que ele pode ver e fazer.": "Choose item by item what they can see and do.",
+  "A agenda é só visualização de shows. Criar, editar ou cancelar um show depende das permissões de Vendas.": "The schedule is view-only for shows. Creating, editing or cancelling a show depends on Sales permissions.",
   "Acesso total": "Full access",
   "Apelido": "Nickname",
+  "Básico": "Basic",
   "Cadastrar e confirmar": "Register and confirm",
   "Cadastrar e-mail de acesso": "Register access email",
   "Cadastre ou troque seu e-mail no bloco de acesso abaixo.": "Register or change your email in the access block below.",

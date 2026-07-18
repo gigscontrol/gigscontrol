@@ -62,6 +62,7 @@ import { PERFIS } from "@/lib/permissoes/perfis";
 import { formatEndereco } from "@/lib/endereco";
 import { useAuth } from "@/lib/auth-context";
 import { getPlano } from "@/lib/planos";
+import { iniciaisDoNome } from "@/lib/iniciais";
 import {
   LABELS_TAXA_MODO,
   CATALOGO_CAMARIM,
@@ -487,7 +488,7 @@ export default function AbaArtistas() {
                           : undefined,
                       }}
                     >
-                      {a.name.charAt(0).toUpperCase()}
+                      {iniciaisDoNome(a.name)}
                     </span>
                     {suspenso && (
                       <PauseCircle
@@ -658,7 +659,7 @@ export default function AbaArtistas() {
                     : `linear-gradient(135deg, ${artistaSelecionado.color}, ${artistaSelecionado.color}99)`,
                 }}
               >
-                {artistaSelecionado.name.charAt(0).toUpperCase()}
+                {iniciaisDoNome(artistaSelecionado.name)}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1083,7 +1084,7 @@ export default function AbaArtistas() {
                             className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold text-white flex-shrink-0"
                             style={{ background: "var(--border-strong)" }}
                           >
-                            {m.nome.charAt(0).toUpperCase()}
+                            {iniciaisDoNome(m.nome)}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-primary truncate">{m.nome}</div>
@@ -1249,7 +1250,7 @@ export default function AbaArtistas() {
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                     style={{ background: item.artista.color, opacity: 0.6 }}
                   >
-                    {item.artista.name.charAt(0).toUpperCase()}
+                    {iniciaisDoNome(item.artista.name)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-primary truncate">
@@ -2430,7 +2431,7 @@ function ModalEditarArtista({
                 background: `linear-gradient(135deg, ${cor}, ${cor}99)`,
               }}
             >
-              {(nome.trim().charAt(0) || "?").toUpperCase()}
+              {iniciaisDoNome(nome) || "?"}
             </span>
             <div className="flex-1 min-w-0">
               <input

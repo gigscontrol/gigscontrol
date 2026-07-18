@@ -153,6 +153,32 @@ export async function artistasDoWorkspace(
   return new Set((data ?? []).map((r) => (r as { id: string }).id));
 }
 
+/**
+ * show_id → artist_id dos shows pedidos, pelo cliente da SESSÃO (a RLS filtra:
+ * show que ele não enxerga simplesmente não volta, e a nota dele fica invisível
+ * — fail-closed). Usado pelo gate de leitura de anotações (regra (b)).
+ *
+ * COLS conferido contra o schema real: `shows` tem `id` e `artist_id` (as mesmas
+ * colunas que shows.repo já lê). Nenhuma coluna nova.
+ */
+export async function artistasDosShows(
+  supabase: SupabaseClient,
+  showIds: string[]
+): Promise<Map<string, string | null>> {
+  const mapa = new Map<string, string | null>();
+  const unicos = [...new Set(showIds)];
+  if (unicos.length === 0) return mapa;
+  const { data, error } = await supabase
+    .from("shows")
+    .select("id, artist_id")
+    .in("id", unicos);
+  if (error) throw error;
+  for (const r of (data ?? []) as Array<{ id: string; artist_id: string | null }>) {
+    mapa.set(r.id, r.artist_id ?? null);
+  }
+  return mapa;
+}
+
 // ============================================================
 // Notas
 // ============================================================

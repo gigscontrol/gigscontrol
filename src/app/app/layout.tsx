@@ -396,6 +396,7 @@ function AppRoot() {
             privacidade: sessao.privacidade,
             vinculos: sessao.vinculos,
             podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+            temPastaCompartilhada: sessao.temPastaCompartilhada,
           })
         : null,
     [sessao, isSuperAdmin]

@@ -79,20 +79,25 @@ function podeVerAgendaShows(ctx: CtxPermissao): boolean {
 }
 
 /**
- * Alcança ANOTAÇÕES. Espelha `podeVerAnotacao` (api/permissoes.ts): no regime
- * LEGADO — sem nenhuma chave `anotacoes.*` concedida no workspace — a leitura
- * é aberta (a RLS da pasta é o gate), então devolve true. Assim ninguém perde
- * a base de conhecimento que já lia. Quando o admin começar a usar as chaves
- * novas, o regime aperta pra quem tiver vínculo.
+ * Alcança ANOTAÇÕES. O dono mandou FECHAR a leitura (L1) — este era o "único
+ * ponto a mexer" e é agora. Espelha `podeVerAnotacao` (api/permissoes.ts), mas
+ * sempre pelo lado MAIS PERMISSIVO: o cliente não sabe de pasta nem de show, e
+ * esconder a subpágina de quem o servidor deixaria entrar fecharia a única
+ * porta pra /app/agenda/anotacoes. Então mostra a porta quando ele PODE ter
+ * conteúdo:
+ *   - `anotacoes.*` em algum vínculo (regra (a), e também criar/editar);
+ *   - agenda de shows (regra (b): notas dos shows que ele alcança);
+ *   - MEMBRO EXPLÍCITO de alguma pasta (regra (c)) — via o flag
+ *     `temPastaCompartilhada`, carregado uma vez na sessão (auth-context);
+ *   - booleano legado `pode_criar_anotacoes` (quem já trabalha na base).
+ * O servidor filtra a lista de verdade — a tela pode aparecer vazia, o que é
+ * aceitável; o inverso (sumir a porta de quem tem acesso) não é.
  */
-function podeVerAnotacoesUI(_ctx: CtxPermissao): boolean {
-  // HOJE é sempre true, e isso é INTENCIONAL: `podeVerAnotacao` no servidor
-  // devolve true no regime legado (RLS da pasta é o gate) e, no regime de
-  // chaves, quem tem a chave também passa. Esconder a subpágina aqui revogaria
-  // em silêncio a base de conhecimento de quem já a lia — pior que o bug que
-  // esta tarefa conserta. É o ÚNICO ponto a mexer se o dono decidir fechar
-  // Anotações por permissão (a chave `anotacoes.ver` já existe para isso).
-  return true;
+function podeVerAnotacoesUI(ctx: CtxPermissao): boolean {
+  if (ctx.podeCriarAnotacoes) return true; // legado — nunca revogado
+  if (temPrefixoEmAlgumVinculo(ctx, "anotacoes.")) return true;
+  if (ctx.temPastaCompartilhada) return true; // regra (c) — compartilhamento explícito
+  return podeVerAgendaShows(ctx) || ctx.papel === "artista";
 }
 
 /**
@@ -127,11 +132,9 @@ export function podeVerModulo(ctx: CtxPermissao, tab: TabModulo): boolean {
       // ANOTAÇÕES NÃO É MÓDULO PRÓPRIO: é a subpágina `agenda-anotacoes` DENTRO
       // da tab Agenda (Sidebar.tsx). Esconder a tab por falta de `agenda.ver`
       // fecharia a ÚNICA porta pra uma tela que o servidor libera por outro
-      // gate (`podeVerAnotacao` + RLS da pasta) — e no regime LEGADO (o de 100%
-      // dos usuários hoje, já que as chaves acabaram de nascer) esse gate
-      // devolve `true` pra qualquer um do workspace. Por isso a tab aparece
-      // sempre que QUALQUER subpágina for alcançável; quem não tem chave de
-      // agenda vê a tab só com "Anotações" (ver `subPaginasVisiveis`).
+      // gate (`podeVerAnotacao` + RLS da pasta). Por isso a tab aparece sempre
+      // que QUALQUER subpágina for alcançável; quem não tem chave de agenda mas
+      // alcança anotações vê a tab só com "Anotações" (ver `subPaginasVisiveis`).
       return podeVerAgendaShows(ctx) || podeVerAnotacoesUI(ctx);
 
     case "vendas":

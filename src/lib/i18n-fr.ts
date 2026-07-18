@@ -162,8 +162,15 @@ const LANDING13_REDESIGN: Record<string, string> = {
 // ---- Config: Meus dados, e-mail de acesso, Permissões (artista/equipe), Últimas ações (2026-07-11) ----
 const CONFIG_EQUIPE_JUL11: Record<string, string> = {
   "Acesso bloqueado — o artista não consegue entrar.": "Accès bloqué — l'artiste ne peut pas se connecter.",
+  "Nível de acesso à agenda": "Niveau d'accès à l'agenda",
+  "Nenhum acesso à agenda. Escolha um nível acima.": "Aucun accès à l'agenda. Choisissez un niveau ci-dessus.",
+  "Vê dia, local e horário dos shows.": "Voit la date, le lieu et l'heure des shows.",
+  "Visualiza tudo e gerencia voos, transportes e eventos.": "Visualise tout et gère les vols, transports et événements.",
+  "Escolha item a item o que ele pode ver e fazer.": "Choisissez point par point ce qu'il peut voir et faire.",
+  "A agenda é só visualização de shows. Criar, editar ou cancelar um show depende das permissões de Vendas.": "L'agenda est en lecture seule pour les shows. Créer, modifier ou annuler un show dépend des permissions Ventes.",
   "Acesso total": "Accès total",
   "Apelido": "Surnom",
+  "Básico": "De base",
   "Cadastrar e confirmar": "Enregistrer et confirmer",
   "Cadastrar e-mail de acesso": "Enregistrer l'e-mail d'accès",
   "Cadastre ou troque seu e-mail no bloco de acesso abaixo.": "Enregistrez ou modifiez votre e-mail dans le bloc d'accès ci-dessous.",

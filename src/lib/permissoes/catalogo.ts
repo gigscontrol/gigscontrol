@@ -45,13 +45,33 @@ export const MODULOS: { id: ModuloPermissao; label: string }[] = [
 
 export const CATALOGO: Permissao[] = [
   // ---------------- AGENDA (por artista) ----------------
+  //
+  // ⚠️ MUDANÇA DE SIGNIFICADO — L5 (agenda vira SÓ VISUALIZAÇÃO de SHOW).
+  // Até aqui, `agenda.editar_todos` era a chave que cancelava e editava SHOW, e
+  // `agenda.criar` era a que criava SHOW. NÃO É MAIS:
+  //
+  //   criar show     → vendas.criar_venda
+  //   editar show    → vendas.editar_venda (próprios) | vendas.editar_todos
+  //   cancelar show  → vendas.cancelar_venda | vendas.editar_todos
+  //   excluir show   → vendas.excluir_venda | vendas.editar_todos
+  //
+  // As chaves de agenda abaixo continuam existindo e continuam sendo enforçadas,
+  // porém APENAS sobre os ITENS DE AGENDA (agenda_items: voo, transporte
+  // terrestre e evento personalizado) — que é justamente o que "Acesso total"
+  // na agenda passa a poder criar/editar/excluir.
+  //
+  // REVOGAÇÃO DELIBERADA: quem hoje tem `agenda.editar_todos` e NENHUMA chave de
+  // vendas PERDE cancelar/editar show; quem tem `agenda.criar` sem
+  // `vendas.criar_venda` PERDE "Novo Show". Presets afetados: ver perfis.ts
+  // (equipe/manager). Isto foi pedido pelo dono: mexer em show é papel de quem
+  // tem permissão de VENDAS.
   { chave: "agenda.ver", modulo: "agenda", nivel: "artista", label: "Ver agenda — básico (dia, local e horário)", existe: true },
   { chave: "agenda.ver_detalhado", modulo: "agenda", nivel: "artista", label: "Ver agenda — completo (todas as informações)", existe: true },
-  { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar evento", existe: true },
-  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os eventos que ele criou", existe: true },
-  { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer evento", existe: true },
-  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir os eventos que ele criou", existe: true },
-  { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer evento", existe: true },
+  { chave: "agenda.criar", modulo: "agenda", nivel: "artista", label: "Criar voo, transporte terrestre e evento personalizado", existe: true },
+  { chave: "agenda.editar", modulo: "agenda", nivel: "artista", label: "Editar os voos/transportes/eventos que ele criou", existe: true },
+  { chave: "agenda.editar_todos", modulo: "agenda", nivel: "artista", label: "Editar qualquer voo/transporte/evento", existe: true },
+  { chave: "agenda.excluir", modulo: "agenda", nivel: "artista", label: "Excluir os voos/transportes/eventos que ele criou", existe: true },
+  { chave: "agenda.excluir_todos", modulo: "agenda", nivel: "artista", label: "Excluir qualquer voo/transporte/evento", existe: true },
 
   // ---------------- VENDAS (por artista) ----------------
   { chave: "vendas.ver", modulo: "vendas", nivel: "artista", label: "Ver vendas", existe: true },

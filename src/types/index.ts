@@ -173,6 +173,13 @@ export type Show = {
    * Ausente = não dispensado (desfazer grava null na chave).
    */
   contratoDispensado?: ContratoDispensadoInfo;
+  /**
+   * userId de quem lançou o show (`shows.criado_por`). O cliente precisa dele
+   * para espelhar o escopo "próprios × todos" do servidor (`podeMutar`): quem
+   * só tem `vendas.editar_venda`/`vendas.cancelar_venda` mexe apenas no show
+   * que ELE criou. Sem isso o botão aparecia habilitado e a rota devolvia 403.
+   */
+  criadoPor?: string;
 };
 
 /** Carimbo de "dispensado de contrato" (shows.meta.contratoDispensado). */

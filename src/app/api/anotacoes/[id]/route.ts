@@ -4,13 +4,55 @@ import {
   atualizarNotaPorId,
   removerNotaPorId,
   artistasSaoDoWorkspace,
+  contextoDeAnotacoes,
 } from "@/lib/services/anotacoes.service";
 import { notaUpdateSchema } from "@/lib/validators/anotacoes.schema";
 import { buscarNota } from "@/lib/repositories/anotacoes.repo";
-import { podeMexerNaNota, podeCriarAnotacao } from "@/lib/api/permissoes";
+import {
+  podeMexerNaNota,
+  podeCriarAnotacao,
+  podeVerAnotacao,
+} from "@/lib/api/permissoes";
+import type { SessaoAutenticada } from "@/lib/api/session";
 import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
+
+/**
+ * Gate de LEITURA antes de qualquer mutação (L1). Enquanto a leitura era aberta
+ * isso não vazava nada; com ela fechada, sem esta checagem sobraria um
+ * vazamento por ID — um PATCH/DELETE numa nota que o usuário não deveria nem
+ * enxergar (a autoria de `podeMexerNaNota` não cobre o caso da chave que AMPLIA).
+ */
+async function podeLerNota(
+  sessao: SessaoAutenticada,
+  row: {
+    artist_id: string | null;
+    show_id: string | null;
+    pasta_id: string | null;
+    criado_por: string | null;
+  }
+): Promise<boolean> {
+  // `criadoPor` é obrigatório aqui: sem ele o AUTOR levaria 404 ao tentar
+  // editar/excluir a própria nota (regra 0 de podeVerAnotacao).
+  const nota = {
+    artistId: row.artist_id,
+    showId: row.show_id,
+    pastaId: row.pasta_id,
+    criadoPor: row.criado_por,
+  };
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ctx = await contextoDeAnotacoes(
+    sessao.supabase,
+    { userId: sessao.userId, artistaId: sessao.artistaId ?? null },
+    [nota]
+  );
+  return podeVerAnotacao(sessao, nota, ctx);
+}
+
+/** 404 (e não 403) de propósito: quem não pode ler a nota não sabe que existe. */
+const negadoLeitura = () =>
+  NextResponse.json({ erro: "Anotação não encontrada." }, { status: 404 });
 
 /** PATCH /api/anotacoes/:id — editar a nota (SÓ o autor; admin qualquer). */
 export async function PATCH(request: Request, { params }: RouteCtx) {
@@ -20,6 +62,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const row = await buscarNota(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Anotação não encontrada." }, { status: 404 });
+  if (!(await podeLerNota(r.sessao, row))) return negadoLeitura();
   // Autor sempre pode (como antes); `anotacoes.editar` no artista da nota
   // AMPLIA pra mexer na nota de outra pessoa.
   if (!podeMexerNaNota(r.sessao, row.criado_por, row.artist_id, "editar")) {
@@ -93,6 +136,7 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const row = await buscarNota(r.sessao.supabase, params.id);
   if (!row)
     return NextResponse.json({ erro: "Anotação não encontrada." }, { status: 404 });
+  if (!(await podeLerNota(r.sessao, row))) return negadoLeitura();
   if (!podeMexerNaNota(r.sessao, row.criado_por, row.artist_id, "excluir")) {
     return NextResponse.json(
       { erro: "Você só pode excluir as suas próprias anotações." },

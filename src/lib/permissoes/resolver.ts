@@ -44,6 +44,14 @@ export type CtxPermissao = {
    * TIRARIA a única porta pra /app/agenda/anotacoes de quem já trabalha lá.
    */
   podeCriarAnotacoes?: boolean;
+  /**
+   * É MEMBRO EXPLÍCITO de alguma pasta de anotações (regra (c) do dono:
+   * "anotações que quem tem acesso colocou ele nas permissões"). Como o
+   * booleano legado acima, não participa de `pode()` — serve só pro espelho de
+   * UI (`podeVerAnotacoesUI`) não esconder a porta de quem o servidor
+   * (`podeVerAnotacao`, regra c) deixa entrar.
+   */
+  temPastaCompartilhada?: boolean;
 };
 
 /**
@@ -77,6 +85,20 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
       // Mutação: "orcamento" → orcamentosCriar; as demais (criar_venda,
       // editar_venda, converter, cancelar_venda, excluir_venda, editar_todos)
       // → vendasCriar.
+      //
+      // ⚠️ EFEITO COLATERAL DE L5b, NÃO PEDIDO PELO DONO — decisão pendente.
+      // Ao mover a mutação de SHOW de `agenda.*` para `vendas.*`, o switch que
+      // governa "o ARTISTA mexe no próprio show" mudou de `priv.agendaTotal`
+      // para `priv.vendasCriar` sem que ninguém decidisse. Corta dos dois
+      // lados: quem tem agendaTotal+vendasCriar=false PERDE cancelar/editar o
+      // próprio show; quem tem vendasCriar+agendaTotal=false GANHA criar/
+      // editar/cancelar/excluir. O dono falou de EQUIPE ("esse papel é apenas
+      // pra quem tem permissão de vendas"), não de privacidade de artista.
+      // Medido em 2026-07-18 contra o banco real: 0 artistas de 6 caem em
+      // qualquer um dos dois lados — blast radius ZERO hoje, por isso a
+      // correção não foi aplicada às cegas. Se o dono quiser preservar o eixo
+      // antigo, `podeArtista` precisa de um caso explícito (mutação de SHOW
+      // pelo artista continua em `priv.agendaTotal`).
       return ehOrcamento ? priv.orcamentosCriar : priv.vendasCriar;
     }
     case "financeiro":
@@ -169,6 +191,7 @@ export function ctxDaSessao(sessao: {
   vinculos?: Record<string, string[]>;
   privacidade?: PrivacidadeDj;
   podeCriarAnotacoes?: boolean;
+  temPastaCompartilhada?: boolean;
 }): CtxPermissao {
   return {
     isSuperAdmin: sessao.isSuperAdmin,
@@ -177,5 +200,6 @@ export function ctxDaSessao(sessao: {
     privacidade: sessao.privacidade,
     vinculos: sessao.vinculos,
     podeCriarAnotacoes: sessao.podeCriarAnotacoes,
+    temPastaCompartilhada: sessao.temPastaCompartilhada,
   };
 }

@@ -147,6 +147,10 @@ export function rowParaShow(row: ShowRow): Show {
     cancelamentoHistorico: cancelamentoHistorico.length ? cancelamentoHistorico : undefined,
     booking,
     contratoDispensado,
+    // Dono do show — alimenta o escopo "próprios" no grey-out do cliente
+    // (gatesShow.ts). `criado_por` já vinha no SELECT do repo; só não era
+    // exposto pro cliente.
+    criadoPor: row.criado_por ?? undefined,
   };
 }
 

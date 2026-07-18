@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import {
   Building2,
   MapPin,
@@ -80,7 +81,7 @@ export default function ShowDetalheModal({
   const { vendas } = useVendas();
   const { contratos, assinantesPorContrato } = useContratos();
   const artistas = useArtistas();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
   const { notas } = useAnotacoes();
   const [processando, setProcessando] = useState(false);
   const [mostrarFormCancel, setMostrarFormCancel] = useState(false);
@@ -106,9 +107,16 @@ export default function ShowDetalheModal({
   const artista = artistas.find((d) => d.id === show.artistaId);
   const notasDoShow = notas.filter((n) => n.showId === show.id);
   const cancelado = show.status === "cancelado";
-  // Grey-out (UX; servidor é a autoridade). Cancelar/reativar = alterar evento
-  // → agenda.editar_todos. podeUI já libera legado/admin.
-  const podeGerenciarShow = podeUI(show.artistaId || null, "agenda.editar_todos");
+  // Grey-out (UX; servidor é a autoridade). REGRA NOVA (L5b): mexer no SHOW é
+  // permissão de VENDAS, não de agenda — a agenda virou só visualização.
+  // Cancelar/reativar → vendas.cancelar_venda; editar (booking) →
+  // vendas.editar_venda|editar_todos. Quem tinha só agenda.editar_todos PERDE
+  // estes botões de propósito. Ver src/lib/permissoes/gatesShow.ts.
+  // O DONO do show entra no cálculo: as chaves sem "_todos" são de escopo
+  // "próprios", e o servidor (podeMutar) já negava o show de outra pessoa.
+  const donoDoShow = { criadoPor: show.criadoPor, meuUserId: sessao?.usuario.id };
+  const podeCancelarShow = podeCancelarShowUI(podeUI, show.artistaId || null, donoDoShow);
+  const podeEditarShow = podeEditarShowUI(podeUI, show.artistaId || null, donoDoShow);
 
   async function confirmarCancelamento() {
     const m = motivoCancel.trim();
@@ -309,8 +317,8 @@ export default function ShowDetalheModal({
             <button
               type="button"
               onClick={reverterCancelamento}
-              disabled={processando || !podeGerenciarShow}
-              title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+              disabled={processando || !podeCancelarShow}
+              title={!podeCancelarShow ? t("Você não tem permissão para isso.") : undefined}
               className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               style={{ color: "var(--success)" }}
             >
@@ -397,8 +405,8 @@ export default function ShowDetalheModal({
           <button
             type="button"
             onClick={() => setMostrarFormCancel(true)}
-            disabled={!podeGerenciarShow}
-            title={!podeGerenciarShow ? t("Você não tem permissão para isso.") : undefined}
+            disabled={!podeCancelarShow}
+            title={!podeCancelarShow ? t("Você não tem permissão para isso.") : undefined}
             className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             style={{ color: "var(--danger)" }}
           >
@@ -520,7 +528,7 @@ export default function ShowDetalheModal({
 
         {/* ===== HOTEL — rider (chips) + hospedagem/booking, bloco único.
             Só aparece se o rider pede hotel OU já existe booking; a EDIÇÃO
-            continua gated por podeGerenciarShow (visão básica não chega aqui:
+            é gated por podeEditarShow — chave de VENDAS (visão básica não chega aqui:
             venda/orçamento/booking vêm redigidos → hotelItens=[] e sem booking). ===== */}
         {(hotelItens.length > 0 || show.booking) && (
           <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
@@ -529,7 +537,7 @@ export default function ShowDetalheModal({
               <BookingSection
                 showId={show.id}
                 booking={show.booking}
-                podeEditar={podeGerenciarShow}
+                podeEditar={podeEditarShow}
                 onSave={async (booking) => {
                   await updateShow(show.id, { booking });
                 }}

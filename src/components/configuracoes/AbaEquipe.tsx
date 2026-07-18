@@ -23,6 +23,7 @@ import {
   Users,
   Ban,
   AtSign,
+  MapPin,
   SlidersHorizontal,
 } from "lucide-react";
 import Modal from "../Modal";
@@ -46,6 +47,8 @@ import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
+import ChipsPessoa from "./ChipsPessoa";
+import { iniciaisDoNome } from "@/lib/iniciais";
 import type { DocumentoTipo } from "@/types";
 
 /** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
@@ -419,7 +422,7 @@ export default function AbaEquipe() {
                           : undefined,
                       }}
                     >
-                      {u.nome.charAt(0).toUpperCase()}
+                      {iniciaisDoNome(u.nome)}
                     </span>
                     {bloqueado && (
                       <Ban
@@ -543,7 +546,7 @@ export default function AbaEquipe() {
                     : `linear-gradient(135deg, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
                 }}
               >
-                {selecionado.nome.charAt(0).toUpperCase()}
+                {iniciaisDoNome(selecionado.nome)}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -586,7 +589,43 @@ export default function AbaEquipe() {
                       <span className="break-all">{selecionado.email}</span>
                     </span>
                   )}
+                  {/* Cidade — vem do JOIN (usuarios.repo COLS_COM_CIDADE), tanto
+                      na LISTAGEM quanto no retorno de `criarProfile`/
+                      `atualizarProfile`: a cidade NÃO some mais depois de salvar.
+                      Só `buscarProfile` segue no COLS puro (lookup interno do
+                      service, não vai pro cliente). O fallback silencioso abaixo
+                      cobre apenas o caso legítimo de usuário SEM cidade — não é
+                      workaround de dado ausente; não reintroduza refetch. */}
+                  {selecionado.cidade && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin size={11} />
+                      {selecionado.cidade.nome}
+                      {selecionado.cidade.estado ? `/${selecionado.cidade.estado}` : ""}
+                    </span>
+                  )}
+                  {selecionado.cor && (
+                    <span className="inline-flex items-center gap-1">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: selecionado.cor }}
+                      />
+                      <span className="font-mono uppercase">{selecionado.cor}</span>
+                    </span>
+                  )}
                 </div>
+                {/* Dados para contrato — MESMO bloco do cabeçalho do artista
+                    (ChipsPessoa): nome civil · razão social · documento ·
+                    endereço · telefone. Só aparece pra admin, porque
+                    `redigirUsuario` (mappers/usuario.ts) zera essa PII para os
+                    demais — e a aba Equipe é admin-only. */}
+                <ChipsPessoa
+                  nomeLegal={selecionado.nomeLegal}
+                  razaoSocial={selecionado.razaoSocial}
+                  documentoTipo={selecionado.documentoTipo}
+                  documento={selecionado.documento}
+                  endereco={selecionado.endereco}
+                  telefone={selecionado.telefone}
+                />
                 {/* Perfis e DJs do membro (fonte: vínculos do modelo novo) */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(() => {
@@ -990,12 +1029,7 @@ export default function AbaEquipe() {
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: "var(--border-strong)", opacity: 0.6 }}
                   >
-                    {item.usuario.nome
-                      .split(" ")
-                      .map((p) => p[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase()}
+                    {iniciaisDoNome(item.usuario.nome)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-primary truncate">
