@@ -35,6 +35,7 @@ import { ctxDaSessao } from "@/lib/permissoes/resolver";
 import { podeVerModulo, subPaginasVisiveis } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import LogoGC from "./LogoGC";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   activeTab: ActiveTab;
@@ -516,7 +517,7 @@ export default function Sidebar({
                         boxShadow: isActiveDj ? `0 0 0 2px ${artista.color}33` : "none",
                       }}
                     >
-                      {artista.name.slice(0, 2).toUpperCase()}
+                      {iniciaisDoNome(artista.name)}
                     </span>
                     <span className={`flex-1 text-left truncate ${collapsed ? "lg:hidden" : ""}`}>{artista.name}</span>
                     {isActiveDj && !planoIndividual && (
