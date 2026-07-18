@@ -27,7 +27,9 @@ export type ArtistaRow = {
   endereco: string | null;
   telefone: string | null;
   data_nascimento: string | null;
-  email: string | null;
+  /** NÃO existe como coluna em `artists` (mora no profile do usuário vinculado)
+   *  — por isso é opcional e nunca entra no COLS do repo. Ver artistas.repo.ts. */
+  email?: string | null;
   // Chave PIX (migração 89) — só artista brasileiro; texto livre (tel/email/CPF/CNPJ/aleatória).
   pix: string | null;
   taxa_modo: TaxaAgenciaModo | null;

@@ -9,8 +9,12 @@ const COLS =
   "id, workspace_id, nome, cor, acesso_suspenso, deletado_em, criado_em, " +
   "cidade_ibge_id, cidade_nome, cidade_uf, cidade_id, taxa_modo, taxa_valor, " +
   "rider_camarim, rider_efeitos, rider_tecnico, posicao, privacidade, " +
+  // ATENÇÃO: `artists` NÃO tem coluna `email` — o e-mail do artista mora no
+  // profile do usuário vinculado. Pedir `email` aqui derruba TODO select de
+  // artista com 42703 (a lista volta vazia e some tudo que depende de artista).
+  // Já aconteceu em produção: não recoloque.
   "pais, nome_legal, documento_tipo, documento, razao_social, endereco, telefone, " +
-  "data_nascimento, email, " +
+  "data_nascimento, " +
   "cidade:cidades!cidade_id(id, workspace_id, nome, estado, latitude, longitude, ibge_id, pais, geoname_id)";
 
 /** Lista só ativos (deletado_em IS NULL), ordenados por posição manual. */
