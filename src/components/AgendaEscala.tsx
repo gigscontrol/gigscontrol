@@ -184,8 +184,12 @@ type Props = {
 
 export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
   const t = useT();
-  const { shows } = useShows();
+  const { shows, recarregar: recarregarShows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
+  // Chegou na Agenda = refetch (I7) — ver AgendaDashboard.
+  useEffect(() => {
+    void recarregarShows();
+  }, [recarregarShows]);
   const artistas = useArtistas();
   const { podeUI } = useAuth();
   const podeCriarAlgum = artistas.some((a) => podeUI(a.id, "agenda.criar"));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Music,
   ChevronRight,
@@ -89,9 +89,14 @@ function resolverMes(
 export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirShow }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.agenda.color;
-  const { shows } = useShows();
+  const { shows, recarregar: recarregarShows } = useShows();
   const { cidades, casas } = useContatos();
   const artistas = useArtistas();
+  // Chegou na Agenda = refetch (I7): se algum sync anterior falhou em
+  // silêncio, trocar de página passa a bastar — nada de Ctrl+R.
+  useEffect(() => {
+    void recarregarShows();
+  }, [recarregarShows]);
   const { workspaceCriadoEm } = useWorkspace();
   const { vendas } = useVendas();
 

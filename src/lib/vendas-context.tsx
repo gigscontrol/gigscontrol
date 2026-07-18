@@ -446,8 +446,11 @@ export function VendasProvider({ children }: { children: ReactNode }) {
       const comDj: Venda = { ...criada, artistaId: input.artistaId };
 
       setVendas((prev) => [comDj, ...prev]);
-      // O show foi criado/atualizado no servidor — sincroniza a agenda local
-      void recarregarShows();
+      // O show foi criado no servidor — sincroniza a agenda local ANTES de
+      // devolver (era fire-and-forget: uma falha transitória deixava a agenda
+      // velha até Ctrl+R, e trocar de página não refazia nada). Falha aqui não
+      // pode derrubar a venda já criada — o refetch do mount da Agenda cobre.
+      await recarregarShows().catch(() => {});
       return comDj;
     },
     [resolverContratanteDoInput, montarPayloadVenda, recarregarShows]
@@ -480,7 +483,7 @@ export function VendasProvider({ children }: { children: ReactNode }) {
         prev.map((v) => (v.id === id ? { ...v, ...atual, artistaId: input.artistaId } : v))
       );
       // O servidor sincronizou o show — a agenda local precisa acompanhar.
-      void recarregarShows();
+      await recarregarShows().catch(() => {});
 
       return { venda: atual, parcelasPreservadas: body.parcelasPreservadas === true };
     },
