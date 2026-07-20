@@ -3867,4 +3867,5 @@ export const EN: Record<string, string> = {
   "{n} orçamentos abertos": "{n} open quotes",
   "Conversão": "Conversion",
   "{v} de {o} viraram venda": "{v} of {o} became sales",
+  "Rider Técnico": "Technical Rider",
 };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace, type SessaoAutenticada } from "@/lib/api/session";
 import { verificarAcessoContatos, aplicarFiltroShows } from "@/lib/api/permissoes";
+import { CHAVES_SETORES_AGENDA } from "@/lib/permissoes/setoresAgenda";
 import { artistasVisiveisNaSessao } from "@/lib/api/permissao";
 import { respostaDeErro } from "@/lib/api/erros";
 import { normalizar } from "@/lib/normalizar";
@@ -160,9 +161,11 @@ async function contarShows(
   sessao: SessaoAutenticada,
   casaIds: string[]
 ): Promise<Map<string, number> | null> {
-  const alcancaTudo =
-    artistasVisiveisNaSessao(sessao, "agenda.ver") === "todos" ||
-    artistasVisiveisNaSessao(sessao, "agenda.ver_detalhado") === "todos";
+  // Setores, não as chaves legadas de 2 níveis (que agora são expandidas na
+  // leitura da sessão e nunca chegam aqui). Basta alcançar QUALQUER setor.
+  const alcancaTudo = CHAVES_SETORES_AGENDA.some(
+    (c) => artistasVisiveisNaSessao(sessao, c) === "todos"
+  );
   if (!alcancaTudo) return null;
   const mapa = new Map<string, number>();
   if (casaIds.length === 0) return mapa;

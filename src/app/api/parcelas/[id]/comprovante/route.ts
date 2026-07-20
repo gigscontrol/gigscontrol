@@ -4,7 +4,7 @@ import type { ParcelaMeta } from "@/types";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { podeInformarPagamentoParcela, podeVerFinanceiro } from "@/lib/api/permissoes";
-import { buscarParcela, atualizarParcelaRow } from "@/lib/repositories/parcelas.repo";
+import { buscarParcela } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
 import { vendaVisivelParaSessao } from "@/lib/services/vendas.service";
 
@@ -77,14 +77,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
     await admin.storage.from(BUCKET).remove([anterior]).catch(() => undefined);
   }
 
-  // Grava o path na meta (merge no pagamento existente).
+  // Grava o path via a MESMA RPC atômica do PATCH (merge_parcela_meta): o
+  // `||` no banco troca só a chave top-level `pagamento`, preservando
+  // `cobrancas`/`cancelamento` que um PATCH concorrente tenha adicionado. Antes
+  // esta rota fazia read-modify-write do meta INTEIRO e clobberava a alteração
+  // concorrente. (RLS security-invoker → escopo do tenant continua valendo.)
   const metaAtual: ParcelaMeta = c.parcela.meta ?? {};
-  const meta: ParcelaMeta = {
-    ...metaAtual,
-    pagamento: { ...(metaAtual.pagamento ?? {}), comprovantePath: path },
-  };
   try {
-    await atualizarParcelaRow(r.sessao.supabase, params.id, { meta });
+    const { error } = await r.sessao.supabase.rpc("merge_parcela_meta", {
+      p_id: params.id,
+      p_patch: {
+        pagamento: { ...(metaAtual.pagamento ?? {}), comprovantePath: path },
+      },
+      p_remove: null,
+      p_cobranca: null,
+    });
+    if (error) throw error;
   } catch (e) {
     // Se gravar o path na parcela falhar, apaga o objeto recém-subido pra não
     // deixar comprovante (PII bancária) órfão no bucket privado.

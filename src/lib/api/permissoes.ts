@@ -7,6 +7,10 @@ import {
   podeMutar,
 } from "./permissao";
 import { redigirVendaFinanceiro } from "@/lib/mappers/venda";
+import {
+  CHAVES_SETORES_AGENDA,
+  chaveDoSetor,
+} from "@/lib/permissoes/setoresAgenda";
 
 /**
  * Camada de permissões server-side.
@@ -150,29 +154,55 @@ export function aplicarFiltroShows<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
-  return filtrarPorArtistasVisiveis(query, sessao, [
-    "agenda.ver",
-    "agenda.ver_detalhado",
-  ]);
+  // QUALQUER setor da ficha basta pra o show APARECER no calendário — o que
+  // cada um vê dentro dele é a redação por setor que decide. Antes eram as
+  // duas chaves do modelo de 2 níveis; listar só elas aqui apagaria a agenda
+  // inteira de quem foi migrado pros setores.
+  return filtrarPorArtistasVisiveis(query, sessao, [...CHAVES_SETORES_AGENDA]);
 }
 
-/** Pode VER a agenda deste artista (básico OU detalhado)? */
+/** Pode VER a agenda deste artista (qualquer setor da ficha)? */
 export function podeVerAgenda(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): boolean {
-  return (
-    podeNaSessao(sessao, artistId, "agenda.ver") ||
-    podeNaSessao(sessao, artistId, "agenda.ver_detalhado")
-  );
+  return podeVerAlgumSetorAgenda(sessao, artistId);
 }
 
-/** Pode ver os detalhes COMPLETOS (não só dia/local/horário)? */
+/**
+ * Pode ver o setor HOTEL (hospedagem/booking/voucher)?
+ *
+ * Era `agenda.ver_detalhado` — a chave "vê tudo" do modelo de 2 níveis. Com a
+ * visibilidade por SETOR, o que estes chamadores realmente protegem é o dado
+ * de hospedagem (nome do hóspede, check-in/out, voucher), então a chave certa
+ * é a do setor Hotel. Nome mantido nos call-sites pra não espalhar renomeação.
+ */
 export function podeVerAgendaDetalhado(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): boolean {
-  return podeNaSessao(sessao, artistId, "agenda.ver_detalhado");
+  return podeNaSessao(sessao, artistId, chaveDoSetor("hotel"));
+}
+
+/** Pode ver ALGUM setor da ficha do show deste artista? */
+export function podeVerAlgumSetorAgenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  return CHAVES_SETORES_AGENDA.some((c) => podeNaSessao(sessao, artistId, c));
+}
+
+/**
+ * Pode ver o dado detalhado de VOO/TRANSPORTE (voucher de voo, blob `dados` do
+ * agenda_item: passageiros, DOB, localizador, motorista)? É o setor LOGÍSTICA —
+ * NÃO o hotel. Antes tudo isso caía em `podeVerAgendaDetalhado` (=hotel), que
+ * over-restringia quem só tinha logística e over-expunha a quem só tinha hotel.
+ */
+export function podeVerAgendaLogistica(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  return podeNaSessao(sessao, artistId, chaveDoSetor("logistica"));
 }
 
 /**
@@ -307,24 +337,41 @@ export function podeExcluirShow(
  * Admin/artista(dono) passam por `podeVerAgendaDetalhado` → sem redação.
  */
 export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show {
-  if (podeVerAgendaDetalhado(sessao, show.artistaId || null)) return show;
-  // Nível básico (agenda.ver sem ver_detalhado): esconde cachê/vínculos E os
-  // blocos detalhados novos — booking (PII de hospedagem) e a autoria/motivo do
-  // cancelamento. Mantém dia/local/horário/status. Espelha stripAgendaItemDetalhado.
+  // REDAÇÃO POR SETOR. Antes era tudo-ou-nada: `agenda.ver_detalhado` liberava
+  // o show inteiro e a falta dele apagava tudo. Com a visibilidade por setor,
+  // cada campo do SHOW responde ao setor que o exibe — senão "Personalizado com
+  // tudo menos Hotel" apagaria cachê, contratante e documentos junto.
+  const art = show.artistaId || null;
+  const ve = (setor: Parameters<typeof chaveDoSetor>[0]) =>
+    podeNaSessao(sessao, art, chaveDoSetor(setor));
+
   return {
     ...show,
-    valor: undefined,
-    // Básico não vê o CONTATO do contratante (o nome vem por join que ele não
-    // alcança, mas escondemos o id explicitamente pra não vazar o vínculo).
-    contratanteId: undefined,
-    orcamentoId: undefined,
-    vendaId: undefined,
-    booking: undefined,
-    cancelamento: undefined,
-    cancelamentoHistorico: undefined,
-    // Mesma natureza do cancelamento: carrega AUTORIA (quem/quando dispensou,
-    // incluindo `porNome`). Quem só tem `agenda.ver` não vê quem decidiu o quê.
-    contratoDispensado: undefined,
+    // LOCAL — nome do local, cidade e a casa/cidade por id. `data`/`dayId`/
+    // `status` NÃO entram aqui: são o que posiciona o show na grade; apagá-los
+    // sumiria o show do calendário. Só os RÓTULOS de onde são gateados.
+    venue: ve("local") ? show.venue : "",
+    location: ve("local") ? show.location : "",
+    casaId: ve("local") ? show.casaId : undefined,
+    cidadeId: ve("local") ? show.cidadeId : undefined,
+    // DETALHES — o horário de apresentação. A data fica (posiciona a célula).
+    time: ve("detalhes") ? show.time : "",
+    // PAGAMENTO — o cachê mora no show; parcelas vêm da venda.
+    valor: ve("pagamento") ? show.valor : undefined,
+    // CONTRATANTE — o nome vem por join; o id é o vínculo, escondido explícito
+    // pra não vazar a ligação com o contato.
+    contratanteId: ve("contratante") ? show.contratanteId : undefined,
+    // DOCUMENTOS VINCULADOS — os ids são o que permite abrir venda/orçamento.
+    // Sem o setor, some o link (e com ele o join da ficha no cliente).
+    orcamentoId: ve("documentos") ? show.orcamentoId : undefined,
+    vendaId: ve("documentos") ? show.vendaId : undefined,
+    // HOTEL — booking carrega PII do hóspede.
+    booking: ve("hotel") ? show.booking : undefined,
+    // Cancelamento e dispensa de contrato carregam AUTORIA (quem/quando/motivo).
+    // Ficam com "Detalhes do show", que é onde o status do show é lido.
+    cancelamento: ve("detalhes") ? show.cancelamento : undefined,
+    cancelamentoHistorico: ve("detalhes") ? show.cancelamentoHistorico : undefined,
+    contratoDispensado: ve("documentos") ? show.contratoDispensado : undefined,
   };
 }
 
@@ -339,7 +386,8 @@ export function stripAgendaItemDetalhado(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): AgendaItem {
-  if (podeVerAgendaDetalhado(sessao, artistId)) return item;
+  // Agenda_item = voo/transporte/evento → domínio LOGÍSTICA, não hotel.
+  if (podeVerAgendaLogistica(sessao, artistId)) return item;
   return { ...item, dados: undefined, observacoes: undefined };
 }
 

@@ -11,6 +11,11 @@
  */
 
 import type { ModuloPermissao } from "./catalogo";
+import {
+  CHAVES_SETORES_AGENDA,
+  CHAVES_SETORES_BASICO,
+  SETORES_AGENDA,
+} from "./setoresAgenda";
 
 export type Variante = { chave: string; label: string; existe?: boolean };
 
@@ -20,6 +25,8 @@ export type Capacidade = {
   label: string;
   /** Base existe/enforça hoje? (slots futuros = false). */
   existe: boolean;
+  /** Uma linha sobre o que a capacidade entrega (usada nos setores da agenda). */
+  descricao?: string;
   /** Capacidade simples → esta é a chave guardada. */
   chave?: string;
   /** Capacidade com escopo → radio; guarda UMA das chaves. Ordem = menor→maior. */
@@ -33,13 +40,19 @@ export const CAPACIDADES: Capacidade[] = [
   // (vendas.criar_venda / editar_venda|editar_todos / cancelar_venda).
   // As chaves de criar/editar/excluir abaixo governam SÓ os itens de agenda:
   // voo, transporte terrestre e evento personalizado.
-  {
-    id: "agenda.ver", modulo: "agenda", label: "Ver agenda", existe: true,
-    variantes: [
-      { chave: "agenda.ver", label: "Básica — dia, local e horário" },
-      { chave: "agenda.ver_detalhado", label: "Detalhada — todas as informações" },
-    ],
-  },
+  // VISIBILIDADE POR SETOR: era um radio de 2 níveis (básica × detalhada).
+  // Agora cada setor da ficha do show é um liga/desliga próprio — desligado, o
+  // setor não aparece na agenda; ligado, aparece inteiro. A lista sai de
+  // `setoresAgenda.ts` pra que editor, redação no servidor e modal não possam
+  // discordar sobre o que existe.
+  ...SETORES_AGENDA.map((s) => ({
+    id: s.chave,
+    modulo: "agenda" as const,
+    label: `Ver ${s.label}`,
+    descricao: s.descricao,
+    existe: true,
+    chave: s.chave,
+  })),
   { id: "agenda.criar", modulo: "agenda", label: "Criar voo, transporte ou evento", existe: true, chave: "agenda.criar" },
   {
     id: "agenda.editar", modulo: "agenda", label: "Editar voos, transportes e eventos", existe: true,
@@ -203,10 +216,19 @@ export function selecionarVariante(perms: Set<string>, cap: Capacidade, chave: s
 
 export type ModoAgenda = "basico" | "personalizado" | "total";
 
-export const CHAVES_AGENDA_BASICO: readonly string[] = ["agenda.ver"];
+/**
+ * Os dois presets DERIVAM dos setores (`setoresAgenda.ts`) — nunca uma lista
+ * escrita à mão, senão setor novo entraria no editor e ficaria fora do
+ * "Acesso total" sem ninguém perceber.
+ */
+export const CHAVES_AGENDA_BASICO: readonly string[] = [
+  ...CHAVES_SETORES_BASICO,
+];
 
 export const CHAVES_AGENDA_TOTAL: readonly string[] = [
-  "agenda.ver_detalhado",
+  ...CHAVES_SETORES_AGENDA,
+  // Acesso total também CRIA item de agenda (voo, transporte, evento) — nunca
+  // show, que é chave de vendas. Regra do dono, mantida da L5.
   "agenda.criar",
   "agenda.editar_todos",
   "agenda.excluir_todos",

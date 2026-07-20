@@ -69,11 +69,13 @@ import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import { parseFechamento } from "@/lib/parseFechamento";
 import { parseValorBR } from "@/lib/valor";
 import { itensDoRider } from "@/lib/rider";
+import { iniciaisDoNome } from "@/lib/iniciais";
 import { TIPOS_EVENTO } from "./NovoOrcamento";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
   CATALOGO_HOTEL,
+  CATALOGO_TECNICO,
   LABELS_TIPO_EVENTO,
   LOGISTICA_VAZIA,
   MODULE_THEMES,
@@ -484,6 +486,10 @@ export default function ConcretizarVenda({
   const [hotel, setHotel] = useState<ItemQuantidade[]>(
     v?.hotel ?? orc?.hotel ?? CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 }))
   );
+  // Rider tecnico herda do orcamento na conversao, como os irmaos.
+  const [tecnico, setTecnico] = useState<ItemQuantidade[]>(
+    v?.tecnico ?? orc?.tecnico ?? CATALOGO_TECNICO.map((n) => ({ nome: n, qtd: 0 }))
+  );
   const [logistica, setLogistica] = useState<LogisticaSelecao>(
     v?.logistica ?? orc?.logistica ?? { ...LOGISTICA_VAZIA }
   );
@@ -861,9 +867,11 @@ export default function ConcretizarVenda({
     if (local) return alvoDeContratante(local);
 
     try {
-      const resp = await fetch(
-        `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(telefoneE164)}`
-      );
+      const resp = await fetch("/api/contatos/contratantes/existe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone: telefoneE164 }),
+      });
       // Sem a resposta do endpoint não existe dedupe possível (o contexto local
       // é cego pra contato fora da visibilidade derivada). Cair no ramo "novo"
       // aqui duplicaria o telefone, que é justamente o que D1 proíbe — então
@@ -1253,6 +1261,7 @@ export default function ConcretizarVenda({
       camarim,
       efeitos,
       hotel,
+      tecnico,
       logistica,
       // D5 — com parcela com histórico, omite as parcelas: o servidor não toca
       // em nada.
@@ -1589,7 +1598,7 @@ export default function ConcretizarVenda({
                   color: "#fff",
                 }}
               >
-                {artistaEfetivoOrc.name.slice(0, 2).toUpperCase()}
+                {iniciaisDoNome(artistaEfetivoOrc.name)}
               </span>
               <span className="text-sm font-semibold text-primary truncate flex-1">
                 {artistaEfetivoOrc.name}
@@ -1643,7 +1652,7 @@ export default function ConcretizarVenda({
                         color: isActive ? "#fff" : "var(--text-muted)",
                       }}
                     >
-                      {d.name.slice(0, 2).toUpperCase()}
+                      {iniciaisDoNome(d.name)}
                     </span>
                     <span className="text-sm font-semibold text-primary truncate">
                       {d.name}
@@ -2311,6 +2320,15 @@ export default function ConcretizarVenda({
             onChange={(c) => {
               setHotel(c);
               marcarEditado("hotel");
+            }}
+          />
+          <SubSection
+            title={t("Rider Técnico")}
+            autoBadge={showAutoBadge("tecnico")}
+            items={tecnico}
+            onChange={(c) => {
+              setTecnico(c);
+              marcarEditado("tecnico");
             }}
           />
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { podeVerAgendaDetalhado } from "@/lib/api/permissoes";
+import { podeVerAgendaLogistica } from "@/lib/api/permissoes";
 import { uploadVoucher, urlVoucher } from "@/lib/db/storage-vouchers";
 import { contarVouchersDesde } from "@/lib/repositories/agendaItems.repo";
 import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
@@ -87,7 +87,8 @@ export async function GET(request: Request) {
     .eq("dados->>voucherPath", path)
     .is("deletado_em", null)
     .maybeSingle<{ artist_id: string | null }>();
-  if (!item || !podeVerAgendaDetalhado(r.sessao, item.artist_id)) {
+  // Voucher de VOO = logística, não hotel.
+  if (!item || !podeVerAgendaLogistica(r.sessao, item.artist_id)) {
     return NextResponse.json({ erro: "Voucher não encontrado." }, { status: 404 });
   }
   try {

@@ -51,6 +51,7 @@ export type VendaRow = {
   camarim: ItemQuantidade[] | null;
   efeitos: ItemQuantidade[] | null;
   hotel: ItemQuantidade[] | null;
+  tecnico: ItemQuantidade[] | null;
   logistica: LogisticaSelecao | Record<string, never> | null;
   observacoes: string | null;
   info_extra: string | null;
@@ -119,6 +120,7 @@ export function rowParaVenda(row: VendaRow, parcelas: Parcela[]): Venda {
     camarim: Array.isArray(row.camarim) ? row.camarim : [],
     efeitos: Array.isArray(row.efeitos) ? row.efeitos : [],
     hotel: Array.isArray(row.hotel) ? row.hotel : [],
+    tecnico: Array.isArray(row.tecnico) ? row.tecnico : [],
     logistica: logisticaValida(row.logistica),
 
     parcelas,
@@ -196,6 +198,7 @@ export type VendaEscrita = {
   camarim?: ItemQuantidade[];
   efeitos?: ItemQuantidade[];
   hotel?: ItemQuantidade[];
+  tecnico?: ItemQuantidade[];
   logistica?: LogisticaSelecao;
   observacoes?: string | null;
   info_extra?: string | null;

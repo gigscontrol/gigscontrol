@@ -57,6 +57,7 @@ import { canonicalizarTelefoneBR, telefonesIguais } from "@/lib/telefone";
 import {
   CATALOGO_CAMARIM,
   CATALOGO_EFEITOS,
+  CATALOGO_TECNICO,
   CATALOGO_HOTEL,
   LABELS_TIPO_EVENTO,
   LOGISTICA_VAZIA,
@@ -72,6 +73,7 @@ import {
   type Moeda,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   onSaved: (orcamentoIds: string[]) => void;
@@ -98,6 +100,7 @@ type DjBlock = {
   duracaoMinutos: number;
   camarim: ItemQuantidade[];
   efeitos: ItemQuantidade[];
+  tecnico: ItemQuantidade[];
   hotel: ItemQuantidade[];
   logistica: LogisticaSelecao;
   /** Texto livre opcional anexado ao fim do orçamento deste artista. */
@@ -112,6 +115,7 @@ function novoBlocoDj(artistaId: string): DjBlock {
     duracaoMinutos: 0,
     camarim: CATALOGO_CAMARIM.map((n) => ({ nome: n, qtd: 0 })),
     efeitos: CATALOGO_EFEITOS.map((n) => ({ nome: n, qtd: 0 })),
+    tecnico: CATALOGO_TECNICO.map((n) => ({ nome: n, qtd: 0 })),
     hotel: CATALOGO_HOTEL.map((n) => ({ nome: n, qtd: 0 })),
     logistica: { ...LOGISTICA_VAZIA },
     infoExtra: "",
@@ -124,6 +128,9 @@ function patchDoArtista(artista: Artista | undefined, artistaId: string): Partia
     artistaId,
     camarim: itensDoRider(artista?.riderCamarim, CATALOGO_CAMARIM),
     efeitos: itensDoRider(artista?.riderEfeitos, CATALOGO_EFEITOS),
+    // O rider TECNICO ja existia no cadastro do artista e morria ali: nao era
+    // lido aqui nem tinha coluna pra guardar (migracao 93 criou).
+    tecnico: itensDoRider(artista?.riderTecnico, CATALOGO_TECNICO),
   };
 }
 
@@ -568,9 +575,11 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         // retentável, em vez de sujeira silenciosa no cadastro.
         let checou = false;
         try {
-          const resp = await fetch(
-            `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(e164)}`
-          );
+          const resp = await fetch("/api/contatos/contratantes/existe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefone: e164 }),
+          });
           if (resp.ok) {
             const j = await resp.json();
             checou = true;
@@ -709,6 +718,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         duracaoMinutos: b.duracaoMinutos > 0 ? b.duracaoMinutos : undefined,
         camarim: b.camarim,
         efeitos: b.efeitos,
+        tecnico: b.tecnico,
         hotel: b.hotel,
         logistica: b.logistica,
         infoExtra: b.infoExtra.trim() || undefined,
@@ -1353,7 +1363,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       boxShadow: `0 0 0 2px ${d.color}33`,
                     }}
                   >
-                    {d.name.slice(0, 2).toUpperCase()}
+                    {iniciaisDoNome(d.name)}
                   </span>
                   <span className="flex-1 text-sm font-semibold text-primary">
                     {d.name}
@@ -1614,6 +1624,7 @@ function BlocoOrcamentoDj({
 
         <SectionItens title={t("Camarim / Consumação")} items={bloco.camarim} onChange={(camarim) => onChange({ camarim })} />
         <SectionItens title={t("Efeitos")} items={bloco.efeitos} onChange={(efeitos) => onChange({ efeitos })} />
+        <SectionItens title={t("Rider Técnico")} items={bloco.tecnico} onChange={(tecnico) => onChange({ tecnico })} />
         <SectionItens title={t("Hotel")} items={bloco.hotel} onChange={(hotel) => onChange({ hotel })} />
 
         {/* Logística - multi-seleção */}

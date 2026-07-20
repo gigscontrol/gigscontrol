@@ -82,8 +82,19 @@ export function EditorPermissoesVinculo({
   const [perms, setPerms] = useState<Set<string>>(() => normalizarPerms(new Set(permissoes)));
   const [salvando, setSalvando] = useState(false);
 
+  // MODO DA AGENDA COMO ESCOLHA, não como dedução. "Personalizado" não muda as
+  // chaves (só abre a lista granular), então derivá-lo apenas do conjunto de
+  // chaves tinha um beco sem saída: clicar em Básico gravava exatamente o
+  // conjunto básico, e clicar em Personalizado depois não mexia em nada — o
+  // conjunto continuava batendo "básico" e o pill nunca voltava. Guardar a
+  // escolha resolve. `null` = ainda não escolheu nesta sessão → deriva do que
+  // está salvo (um membro com o conjunto básico abre mostrando "Básico").
+  // Reseta sozinho ao trocar de membro: o editor é remontado por `key`.
+  const [modoAgendaManual, setModoAgendaManual] = useState<ModoAgenda | null>(null);
+
   // Selecionar/desmarcar perfil RE-SEMEIA os checkboxes com a união dos perfis.
   function togglePerfil(id: PerfilId) {
+    setModoAgendaManual(null); // o perfil redefine a agenda → volta a derivar
     setPerfis((atual) => {
       const proximo = atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id];
       setPerms(normalizarPerms(new Set(permissoesDosPerfis(proximo))));
@@ -143,7 +154,9 @@ export function EditorPermissoesVinculo({
             // AGENDA tem uma camada acima: o seletor de 3 níveis (L5a). O corpo
             // granular só aparece no modo "Personalizado".
             const ehAgenda = mod.id === "agenda";
-            const modo = ehAgenda ? modoAgenda(perms) : null;
+            // A escolha manual GANHA da dedução — é ela que faz "Personalizado"
+            // continuar selecionável mesmo quando as chaves batem com um preset.
+            const modo = ehAgenda ? (modoAgendaManual ?? modoAgenda(perms)) : null;
             // Conjunto vazio ≠ "personalizado": sem NENHUMA chave de agenda o
             // membro não tem agenda. Nenhum pill fica marcado (ver semAcessoAgenda).
             const agendaVazia = ehAgenda && semAcessoAgenda(perms);
@@ -173,7 +186,10 @@ export function EditorPermissoesVinculo({
                           type="button"
                           role="radio"
                           aria-checked={sel}
-                          onClick={() => setPerms((p) => aplicarModoAgenda(p, id))}
+                          onClick={() => {
+                            setModoAgendaManual(id);
+                            setPerms((p) => aplicarModoAgenda(p, id));
+                          }}
                           className={`text-[0.7rem] font-medium px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
                             sel ? "" : "text-muted hover:text-secondary"
                           }`}
@@ -213,7 +229,12 @@ export function EditorPermissoesVinculo({
                     <div key={cap.id}>
                       <button
                         type="button"
-                        onClick={() => setPerms((p) => toggleCapacidade(p, cap))}
+                        onClick={() => {
+                          // Mexer item a item É personalizar — fixa o modo pra a
+                          // lista não fechar caso a seleção iguale um preset.
+                          if (ehAgenda) setModoAgendaManual("personalizado");
+                          setPerms((p) => toggleCapacidade(p, cap));
+                        }}
                         className="flex items-center gap-2 text-left text-xs py-1 w-full rounded hover:bg-elevated transition-colors"
                       >
                         <span
@@ -230,6 +251,14 @@ export function EditorPermissoesVinculo({
                         <span className={cap.existe ? "text-secondary" : "text-muted"}>
                           {cap.label}
                           {!cap.existe && <span className="text-[0.6rem] text-disabled ml-1">(em breve)</span>}
+                          {/* Os setores da agenda dizem o que entregam — sem isto
+                              "Ver Detalhes do show" x "Ver Local do evento" vira
+                              adivinhação na hora de configurar. */}
+                          {cap.descricao && (
+                            <span className="block text-[0.65rem] text-muted font-normal leading-tight mt-0.5">
+                              {cap.descricao}
+                            </span>
+                          )}
                         </span>
                       </button>
 
@@ -248,7 +277,10 @@ export function EditorPermissoesVinculo({
                                 type="button"
                                 role="radio"
                                 aria-checked={sel}
-                                onClick={() => setPerms((p) => selecionarVariante(p, cap, v.chave))}
+                                onClick={() => {
+                                  if (ehAgenda) setModoAgendaManual("personalizado");
+                                  setPerms((p) => selecionarVariante(p, cap, v.chave));
+                                }}
                                 className={`text-[0.7rem] font-medium px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
                                   sel ? "" : "text-muted hover:text-secondary"
                                 }`}

@@ -7,6 +7,7 @@ import {
 import {
   listarShows as repoListar,
   buscarShow as repoBuscar,
+  buscarShowPorOrcamento as repoBuscarPorOrcamento,
   criarShow as repoCriar,
   atualizarShow as repoAtualizar,
   removerShow as repoRemover,
@@ -69,6 +70,15 @@ export async function buscarShowPorId(
   id: string
 ): Promise<Show | null> {
   const row = await repoBuscar(supabase, id);
+  return row ? rowParaShow(row) : null;
+}
+
+/** Show ativo vinculado a um orçamento — anti-duplicação da aceitação. */
+export async function buscarShowExistentePorOrcamento(
+  supabase: SupabaseClient,
+  orcamentoId: string
+): Promise<Show | null> {
+  const row = await repoBuscarPorOrcamento(supabase, orcamentoId);
   return row ? rowParaShow(row) : null;
 }
 

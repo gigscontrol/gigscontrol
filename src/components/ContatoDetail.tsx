@@ -21,6 +21,7 @@ import { mascararCpfCnpj, formatarMoeda } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
 import { useEffect, useState } from "react";
 import type { Contratante, Casa, Cidade, Show, Venda, Moeda, Orcamento } from "@/types";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 /** Moeda de um show herdada da venda que o gerou (show.vendaId → venda.moeda);
  *  sem venda vinculada → BRL, mantendo a agência 100% BRL idêntica a hoje. */
@@ -311,7 +312,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                         className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
                         style={{ backgroundColor: h.artistaCor ?? "var(--bg-surface-2)", color: "#fff" }}
                       >
-                        {(h.artistaNome || "?").slice(0, 2).toUpperCase()}
+                        {iniciaisDoNome((h.artistaNome || "?"))}
                       </span>
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-primary truncate">

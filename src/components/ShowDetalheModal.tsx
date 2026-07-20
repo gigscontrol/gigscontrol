@@ -5,6 +5,8 @@ import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import Avatar from "./Avatar";
+import type { FichaShow } from "@/lib/agenda/ficha";
+import { chaveDoSetor, type SetorAgenda } from "@/lib/permissoes/setoresAgenda";
 import {
   Building2,
   MapPin,
@@ -97,6 +99,24 @@ export default function ShowDetalheModal({
   }, [showId]);
 
   const show = showId !== null ? shows.find((s) => s.id === showId) : null;
+  const [ficha, setFicha] = useState<FichaShow | null>(null);
+  useEffect(() => {
+    let ativo = true;
+    setFicha(null);
+    if (!show?.id) return;
+    fetch(`/api/shows/${show.id}/ficha`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (ativo && body?.ficha) setFicha(body.ficha as FichaShow);
+      })
+      .catch(() => {
+        /* silencioso: sem ficha, cai no que a venda do contexto oferecer */
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [show?.id]);
+
   if (!show) {
     return (
       <Modal isOpen={false} onClose={onClose} title="">
@@ -191,30 +211,58 @@ export default function ShowDetalheModal({
     duracao = formatarDuracao(orcamento.duracaoHoras, orcamento.duracaoMinutos ?? 0);
   }
 
-  const cache = venda?.cache ?? orcamento?.valorCache ?? show.valor;
-  const moedaShow = venda?.moeda ?? orcamento?.moeda ?? "BRL";
+  const cache = ficha?.pagamento?.cache ?? venda?.cache ?? orcamento?.valorCache ?? show.valor;
+  const moedaShow = ficha?.pagamento?.moeda ?? venda?.moeda ?? orcamento?.moeda ?? "BRL";
+  // Parcelas do bloco Pagamento: a VENDA do contexto (admin/vendedor) manda;
+  // pra quem só tem agenda (venda=undefined, /api/vendas dá 403) caímos na
+  // ficha — que o servidor já redigiu por setor/financeiro. Sem isto, o setor
+  // `pagamento` mostrava só o cachê e nunca as parcelas.
+  const parcelasPag = venda?.parcelas ?? ficha?.pagamento?.parcelas ?? [];
   const fmtM = (val: number) => formatarMoeda(val, moedaShow);
-  const lineUp = venda?.lineUp;
   const tipoEvento = venda
     ? undefined
     : orcamento
     ? orcamento.tipoEvento
     : undefined;
 
-  // Contratante — snapshot da venda (mais completo) ou registro de contatos
-  const contNome = venda?.contratanteNome || contratante?.nome || "";
-  const contEmail = venda?.contratanteEmail || contratante?.email || "";
-  const contTelefone = venda?.contratanteTelefone || contratante?.telefone || "";
-  const contDocumento = venda?.contratanteDocumento || contratante?.documento || "";
-  const contEndereco = venda?.contratanteEndereco || "";
+  // FICHA SERVIDA PELO SERVIDOR, redigida setor a setor.
+  //
+  // A ficha era montada AQUI, juntando a venda do contexto (`vendas.find`). Só
+  // que /api/vendas responde 403 pra quem não tem chave de VENDAS: quem tinha
+  // "Acesso total" na AGENDA recebia lista vazia e via Contratante, Pagamento,
+  // Camarim, Efeitos, Logística e Documentos em branco — não por permissão de
+  // agenda, mas porque o dado nunca chegava. A ficha resolve isso e ainda tira
+  // do cliente a decisão do que esconder (redigir na pintura é teatro: o valor
+  // viaja no JSON).
+  //
+  // A venda do contexto continua sendo usada quando existe (admin/vendedor):
+  // as AÇÕES (editar venda, salvar booking) precisam do objeto inteiro.
 
-  // Itens (venda > orçamento)
-  const camarim = (venda?.camarim || orcamento?.camarim || []).filter((i) => i.qtd > 0);
-  const efeitos = (venda?.efeitos || orcamento?.efeitos || []).filter((i) => i.qtd > 0);
-  const hotelItens = (venda?.hotel || orcamento?.hotel || []).filter((i) => i.qtd > 0);
-  const logistica: LogisticaSelecao | undefined = venda?.logistica || orcamento?.logistica;
 
-  const observacoes = venda?.observacoes || orcamento?.observacoes;
+  /** Este setor é visível pra este usuário? Enquanto a ficha não chega, o
+   *  espelho do cliente decide — nunca mostra mais que o servidor mandaria. */
+  const verSetor = (setor: SetorAgenda): boolean =>
+    ficha
+      ? ficha.setoresVisiveis.includes(setor)
+      : podeUI(show.artistaId || null, chaveDoSetor(setor));
+
+  // Contratante — ficha (servidor) > snapshot da venda > registro de contatos
+  const contNome = ficha?.contratante?.nome || venda?.contratanteNome || contratante?.nome || "";
+  const contEmail = ficha?.contratante?.email || venda?.contratanteEmail || contratante?.email || "";
+  const contTelefone = ficha?.contratante?.telefone || venda?.contratanteTelefone || contratante?.telefone || "";
+  const contDocumento = ficha?.contratante?.documento || venda?.contratanteDocumento || contratante?.documento || "";
+  const contEndereco = ficha?.contratante?.endereco || venda?.contratanteEndereco || "";
+
+  // Itens — ficha > venda > orçamento. A ficha já vem filtrada (qtd > 0).
+  const camarim = ficha?.camarim ?? (venda?.camarim || orcamento?.camarim || []).filter((i) => i.qtd > 0);
+  const efeitos = ficha?.efeitos ?? (venda?.efeitos || orcamento?.efeitos || []).filter((i) => i.qtd > 0);
+  const hotelItens = ficha?.hotel?.itens ?? (venda?.hotel || orcamento?.hotel || []).filter((i) => i.qtd > 0);
+  const tecnico = ficha?.tecnico ?? (venda?.tecnico || orcamento?.tecnico || []).filter((i) => i.qtd > 0);
+  const logistica: LogisticaSelecao | undefined =
+    ficha?.logistica ?? venda?.logistica ?? orcamento?.logistica;
+
+  const observacoes = ficha?.observacoes ?? (venda?.observacoes || orcamento?.observacoes);
+  const lineUp = ficha?.lineup ?? venda?.lineUp;
 
   // Data legível — usa a data real do show (ISO completo) antes de recorrer
   // ao dia-do-mês, senão um show de dezembro aberto em julho mostrava "julho".
@@ -419,7 +467,7 @@ export default function ShowDetalheModal({
 
       <div className="flex flex-col gap-5">
         {/* ===== CONTRATANTE ===== */}
-        {(contNome || contTelefone) && (
+        {verSetor("contratante") && (contNome || contTelefone) && (
           <Bloco icon={<User size={14} />} title={t("Contratante")}>
             {contNome && (
               <Linha icon={<User size={13} />} bold>
@@ -444,7 +492,7 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== LOCAL / EVENTO ===== */}
-        {(nomeLocal || cidadeNome || enderecoLocal) && (
+        {verSetor("local") && (nomeLocal || cidadeNome || enderecoLocal) && (
           <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
             {nomeLocal && (
               <Linha icon={<Building2 size={13} />} bold>
@@ -471,7 +519,10 @@ export default function ShowDetalheModal({
           </Bloco>
         )}
 
-        {/* ===== SHOW: horário, duração, cachê ===== */}
+        {/* ===== SHOW: horário e duração. O CACHÊ mudou pra Pagamento —
+            é lá que valor mora, e isso libera 'Detalhes do show' inteiro
+            pro nível Básico sem vazar dinheiro. ===== */}
+        {verSetor("detalhes") && (
         <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
           {horarioInicio ? (
             <Linha icon={<Clock size={13} />} bold>
@@ -490,16 +541,11 @@ export default function ShowDetalheModal({
               )}
             </Linha>
           )}
-          {cache !== undefined && cache > 0 && (
-            <Linha icon={<DollarSign size={13} />} bold>
-              <span className="tabular-nums">{fmtM(cache)}</span>
-              <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
-            </Linha>
-          )}
         </Bloco>
+        )}
 
         {/* ===== LINE-UP ===== */}
-        {lineUp && lineUp.length > 0 && (
+        {verSetor("lineup") && lineUp && lineUp.length > 0 && (
           <Bloco icon={<Music size={14} />} title={t("Line-Up (outros artistas)")}>
             <div className="flex flex-wrap gap-1.5">
               {lineUp.map((nome, idx) => (
@@ -515,16 +561,24 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== CAMARIM ===== */}
-        {camarim.length > 0 && (
+        {verSetor("camarim") && camarim.length > 0 && (
           <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
             <ItensGrid items={camarim} />
           </Bloco>
         )}
 
         {/* ===== EFEITOS ===== */}
-        {efeitos.length > 0 && (
+        {verSetor("efeitos") && efeitos.length > 0 && (
           <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
             <ItensGrid items={efeitos} />
+          </Bloco>
+        )}
+
+        {/* ===== RIDER TÉCNICO (migração 93) — vinha do cadastro do artista e
+            morria ali: nao era lido no orcamento nem tinha onde ser guardado. ===== */}
+        {verSetor("tecnico") && tecnico.length > 0 && (
+          <Bloco icon={<Music size={14} />} title={t("Rider Técnico")}>
+            <ItensGrid items={tecnico} />
           </Bloco>
         )}
 
@@ -532,7 +586,7 @@ export default function ShowDetalheModal({
             Só aparece se o rider pede hotel OU já existe booking; a EDIÇÃO
             é gated por podeEditarShow — chave de VENDAS (visão básica não chega aqui:
             venda/orçamento/booking vêm redigidos → hotelItens=[] e sem booking). ===== */}
-        {(hotelItens.length > 0 || show.booking) && (
+        {verSetor("hotel") && (hotelItens.length > 0 || show.booking) && (
           <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
             {hotelItens.length > 0 && <ItensGrid items={hotelItens} />}
             <div className={hotelItens.length > 0 ? "mt-2" : undefined}>
@@ -549,7 +603,7 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== LOGÍSTICA ===== */}
-        {logistica && (
+        {verSetor("logistica") && logistica && (
           <Bloco icon={<Plane size={14} />} title={t("Logística")}>
             {logistica.aereaQtd === 0 && !logistica.transladoTerrestre && (
               <Linha icon={<Plane size={13} />} subtle>
@@ -568,15 +622,25 @@ export default function ShowDetalheModal({
         )}
 
 
-        {/* ===== PAGAMENTO ===== */}
-        {venda && venda.parcelas.length > 0 && (
+        {/* ===== PAGAMENTO — o CACHÊ mora aqui (veio de "Detalhes do show").
+            O bloco aparece com cachê OU com parcelas: um show sem parcelas
+            lançadas ainda tem valor combinado, e escondê-lo era perder o
+            número mais consultado da ficha. ===== */}
+        {((cache !== undefined && cache > 0) ||
+          parcelasPag.length > 0) && (
           <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
-            {(() => {
-              const total = venda.parcelas.reduce((a, p) => a + p.valor, 0);
-              const pago = venda.parcelas
+            {cache !== undefined && cache > 0 && (
+              <Linha icon={<DollarSign size={13} />} bold>
+                <span className="tabular-nums">{fmtM(cache)}</span>
+                <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
+              </Linha>
+            )}
+            {parcelasPag.length > 0 && (() => {
+              const total = parcelasPag.reduce((a, p) => a + p.valor, 0);
+              const pago = parcelasPag
                 .filter((p) => statusEfetivoParcela(p) === "pago")
                 .reduce((a, p) => a + p.valor, 0);
-              const atrasado = venda.parcelas
+              const atrasado = parcelasPag
                 .filter((p) => statusEfetivoParcela(p) === "atrasado")
                 .reduce((a, p) => a + p.valor, 0);
               const restante = total - pago;
@@ -607,7 +671,7 @@ export default function ShowDetalheModal({
                   </div>
 
                   {/* Lista de parcelas */}
-                  {venda.parcelas.map((p, idx) => {
+                  {parcelasPag.map((p, idx) => {
                     const st = statusEfetivoParcela(p);
                     const label = LABELS_STATUS_PARCELA[st];
                     return (
@@ -617,7 +681,7 @@ export default function ShowDetalheModal({
                       >
                         <div className="min-w-0">
                           <span className="text-primary font-medium">
-                            {t("Parcela")} {idx + 1}/{venda.parcelas.length}
+                            {t("Parcela")} {idx + 1}/{parcelasPag.length}
                           </span>
                           <span className="text-muted text-xs ml-1.5">
                             ({p.percentual.toFixed(0)}%)
@@ -659,7 +723,7 @@ export default function ShowDetalheModal({
         )}
 
         {/* ===== OBSERVAÇÕES ===== */}
-        {observacoes && (
+        {verSetor("observacoes") && observacoes && (
           <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
             <p className="text-sm text-secondary whitespace-pre-wrap">{observacoes}</p>
           </Bloco>
@@ -667,6 +731,7 @@ export default function ShowDetalheModal({
 
         {/* ===== ANOTAÇÕES DO SHOW — linha-resumo (estética dos Documentos
             vinculados); a escrita/thread abre num modal próprio. ===== */}
+        {verSetor("anotacoes") && (
         <Bloco icon={<StickyNote size={14} />} title={t("Anotações")}>
           <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
             <div className="flex items-center gap-2 min-w-0">
@@ -697,6 +762,7 @@ export default function ShowDetalheModal({
             </button>
           </div>
         </Bloco>
+        )}
 
         {/* Modal — thread de anotações do show (campo de texto vive aqui) */}
         <Modal
@@ -712,7 +778,7 @@ export default function ShowDetalheModal({
         </Modal>
 
         {/* ===== ORIGEM (links) ===== */}
-        {(orcamento || venda || resumoContrato.contrato) && (
+        {verSetor("documentos") && (orcamento || venda || resumoContrato.contrato) && (
           <Bloco icon={<Hash size={14} />} title={t("Documentos vinculados")}>
             {resumoContrato.contrato && (
               <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border mb-2">

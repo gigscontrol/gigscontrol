@@ -32,6 +32,7 @@ import { useConfirmar, useAviso } from "../ConfirmarModal";
 import NotaEditor, { type NotaEditorDados } from "./NotaEditor";
 import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const MAX_PASTAS = 8;
@@ -331,7 +332,7 @@ export default function AnotacoesPage() {
                             style={{ backgroundColor: corDe(uid), color: "#fff", borderColor: "var(--surface)" }}
                             title={nomeDe(uid)}
                           >
-                            {nomeDe(uid).slice(0, 2).toUpperCase()}
+                            {iniciaisDoNome(nomeDe(uid))}
                           </span>
                         ))}
                       </div>
@@ -950,7 +951,7 @@ function PastaFormModal({
                           className="h-4 w-4 rounded-full flex items-center justify-center text-[0.5rem] font-bold flex-shrink-0"
                           style={{ backgroundColor: a.color, color: "#fff" }}
                         >
-                          {a.name.slice(0, 2).toUpperCase()}
+                          {iniciaisDoNome(a.name)}
                         </span>
                         {a.name}
                         {on && <Check size={12} style={{ color: ACCENT }} />}

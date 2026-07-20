@@ -11,6 +11,7 @@ import { Search, Check } from "lucide-react";
 import Modal from "./Modal";
 import { useT } from "@/lib/i18n";
 import type { Contratante, Cidade } from "@/types";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 export default function ContratanteBuscaModal({
   isOpen,
@@ -95,7 +96,7 @@ export default function ContratanteBuscaModal({
                     className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ background: "var(--brand)" }}
                   >
-                    {c.nome.slice(0, 2).toUpperCase()}
+                    {iniciaisDoNome(c.nome)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-primary">

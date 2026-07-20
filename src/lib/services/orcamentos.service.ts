@@ -16,7 +16,10 @@ import type {
   OrcamentoCreateInput,
   OrcamentoUpdateInput,
 } from "@/lib/validators/orcamentos.schema";
-import { criarShowNoWorkspace } from "@/lib/services/shows.service";
+import {
+  criarShowNoWorkspace,
+  buscarShowExistentePorOrcamento,
+} from "@/lib/services/shows.service";
 import { resolverTaxaAgencia } from "@/lib/services/taxaAgencia.service";
 import { buscarFusoPadrao } from "@/lib/services/workspacePrefs.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
@@ -52,6 +55,7 @@ function entradaParaEscrita(
   if (input.camarim !== undefined) out.camarim = input.camarim;
   if (input.efeitos !== undefined) out.efeitos = input.efeitos;
   if (input.hotel !== undefined) out.hotel = input.hotel;
+  if (input.tecnico !== undefined) out.tecnico = input.tecnico;
   if (input.logistica !== undefined) out.logistica = input.logistica;
   if (input.observacoes !== undefined) out.observacoes = input.observacoes;
   if (input.info_extra !== undefined) out.info_extra = input.info_extra;
@@ -205,18 +209,42 @@ export async function aceitarOrcamentoPorId(
     return { orcamento: rowParaOrcamento(row), show: null, faltamDados: false };
   }
 
-  // Cria show + atualiza orçamento.
-  const show = await criarShowNoWorkspace(supabase, workspaceId, {
-    artist_id: normalizarUuid(atual.artistaId),
-    contratante_id: normalizarUuid(atual.contratanteId),
-    casa_id: normalizarUuid(atual.casaId ?? null),
-    cidade_id: normalizarUuid(atual.cidadeId),
-    data: atual.dataShow,
-    horario: atual.horario ?? null,
-    status: "confirmado",
-    valor: atual.valorCache,
-    orcamento_id: atual.id,
-  });
+  // ANTI-DUPLICAÇÃO: double-click (ou dois membros aceitando junto) fazia as
+  // duas requisições lerem showId=null e criarem DOIS shows. Re-checa por
+  // orcamento_id logo antes de criar (fecha a maior parte da corrida) e, no
+  // caso raro de as duas passarem o re-check, o índice único parcial (mig 95)
+  // faz a 2a inserção falhar com 23505 — capturamos e reusamos o show que
+  // venceu, em vez de propagar 500 e deixar um show órfão.
+  const jaExiste = await buscarShowExistentePorOrcamento(supabase, atual.id);
+  if (jaExiste) {
+    const row = await repoAtualizar(supabase, id, { status: "aceito", show_id: jaExiste.id });
+    return { orcamento: rowParaOrcamento(row), show: jaExiste, faltamDados: false };
+  }
+
+  let show: Awaited<ReturnType<typeof criarShowNoWorkspace>>;
+  try {
+    show = await criarShowNoWorkspace(supabase, workspaceId, {
+      artist_id: normalizarUuid(atual.artistaId),
+      contratante_id: normalizarUuid(atual.contratanteId),
+      casa_id: normalizarUuid(atual.casaId ?? null),
+      cidade_id: normalizarUuid(atual.cidadeId),
+      data: atual.dataShow,
+      horario: atual.horario ?? null,
+      status: "confirmado",
+      valor: atual.valorCache,
+      orcamento_id: atual.id,
+    });
+  } catch (e) {
+    // 23505 = o índice único parcial barrou a 2a criação concorrente.
+    if ((e as { code?: string })?.code === "23505") {
+      const existente = await buscarShowExistentePorOrcamento(supabase, atual.id);
+      if (existente) {
+        const row = await repoAtualizar(supabase, id, { status: "aceito", show_id: existente.id });
+        return { orcamento: rowParaOrcamento(row), show: existente, faltamDados: false };
+      }
+    }
+    throw e;
+  }
 
   const row = await repoAtualizar(supabase, id, {
     status: "aceito",

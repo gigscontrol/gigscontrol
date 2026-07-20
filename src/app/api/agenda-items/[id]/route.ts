@@ -13,6 +13,7 @@ import {
   stripAgendaItemDetalhado,
 } from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
+import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
 type RouteCtx = { params: { id: string } };
 
@@ -58,12 +59,33 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
   }
 
+  // Troca de voucher: se o PATCH aponta pra um voucherPath NOVO, o antigo some
+  // do banco e o PDF (nomes de passageiro, localizador/PNR) ficaria pra sempre
+  // no bucket privado — o purge só enfileira o path ATUAL no hard-delete. Guarda
+  // o path antigo pra enfileirar em storage_orfaos após o update.
+  const pathAntigo = (row.dados as { voucherPath?: string } | null)?.voucherPath;
+  const pathNovo = (parsed.data.dados as { voucherPath?: string } | undefined)
+    ?.voucherPath;
+  const voucherTrocado =
+    parsed.data.dados !== undefined &&
+    !!pathAntigo &&
+    pathAntigo !== pathNovo;
+
   try {
     const item = await atualizarAgendaItemNoWorkspace(
       r.sessao.supabase,
       params.id,
       parsed.data
     );
+    // Enfileira o voucher substituído (admin: storage_orfaos é deny-all no RLS).
+    // Best-effort — falhar aqui não desfaz o PATCH; o pior caso é um órfão que
+    // um cron de reconciliação pega depois.
+    if (voucherTrocado && pathAntigo) {
+      await criarClienteAdmin()
+        .from("storage_orfaos")
+        .insert({ bucket: "vouchers", path: pathAntigo })
+        .then(() => undefined, () => undefined);
+    }
     // Redige voo/observações na resposta pra quem tem editar mas não
     // ver_detalhado (senão o PATCH vaza o que a lista/GET escondem). O artist_id
     // de destino pode ter mudado — usa o do payload quando presente.

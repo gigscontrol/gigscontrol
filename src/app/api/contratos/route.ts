@@ -85,17 +85,25 @@ export async function POST(request: Request) {
     // atomicamente e cria o contrato pulando o limite. Senão, devolve 402 com
     // `checkoutNecessario` pra o front abrir o /api/contratos/excedente-checkout.
     const admin = criarClienteAdmin();
-    const consumido = await consumirCreditoExcedente(admin, r.sessao.workspaceId);
-    if (consumido) {
-      const contrato = await criarContratoNoWorkspace(
-        r.sessao.supabase,
-        r.sessao.workspaceId,
-        ws.plano as PlanoId,
-        parsed.data,
-        r.sessao.userId,
-        true // pularLimite: o excedente pago já foi consumido acima
-      );
-      return NextResponse.json({ contrato }, { status: 201 });
+    const creditoId = await consumirCreditoExcedente(admin, r.sessao.workspaceId);
+    if (creditoId) {
+      try {
+        const contrato = await criarContratoNoWorkspace(
+          r.sessao.supabase,
+          r.sessao.workspaceId,
+          ws.plano as PlanoId,
+          parsed.data,
+          r.sessao.userId,
+          true // pularLimite: o excedente pago já foi consumido acima
+        );
+        return NextResponse.json({ contrato }, { status: 201 });
+      } catch (falha) {
+        // A criação falhou APÓS consumir o crédito (banco, corrida no número,
+        // Storage). Devolve o crédito antes de propagar, senão o admin pagou e
+        // ficou sem contrato e sem crédito.
+        await reverterCreditoExcedente(admin, creditoId);
+        return respostaDeErro(falha, "Falha ao criar contrato.");
+      }
     }
 
     const moeda = moedaDaRegiao();
@@ -122,7 +130,7 @@ export async function POST(request: Request) {
 async function consumirCreditoExcedente(
   admin: ReturnType<typeof criarClienteAdmin>,
   workspaceId: string
-): Promise<boolean> {
+): Promise<string | null> {
   const { data: cred } = await admin
     .from("pagamentos")
     .select("id")
@@ -131,7 +139,7 @@ async function consumirCreditoExcedente(
     .order("criado_em", { ascending: true })
     .limit(1)
     .maybeSingle<{ id: string }>();
-  if (!cred) return false;
+  if (!cred) return null;
 
   const { data: upd, error } = await admin
     .from("pagamentos")
@@ -139,8 +147,24 @@ async function consumirCreditoExcedente(
     .eq("id", cred.id)
     .eq("status", "excedente_disponivel") // guard: só consome se ainda disponível
     .select("id");
-  if (error) return false;
-  return (upd?.length ?? 0) > 0;
+  if (error) return null;
+  return (upd?.length ?? 0) > 0 ? cred.id : null;
+}
+
+/**
+ * Devolve um crédito consumido pra 'excedente_disponivel' — usado quando a
+ * criação do contrato falha DEPOIS de consumir. Sem isto o admin pagava o
+ * avulso, tomava 500 e ficava sem contrato E sem crédito.
+ */
+async function reverterCreditoExcedente(
+  admin: ReturnType<typeof criarClienteAdmin>,
+  creditoId: string
+): Promise<void> {
+  await admin
+    .from("pagamentos")
+    .update({ status: "excedente_disponivel" })
+    .eq("id", creditoId)
+    .eq("status", "excedente_usado");
 }
 
 /** Moeda de cobrança pela região (BR → BRL, exterior → USD). */

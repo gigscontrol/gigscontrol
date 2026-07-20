@@ -113,18 +113,30 @@ export async function buscarParaAssinar(
  * Forma PÚBLICA de uma assinatura para o relatório no link /assinar/{token}:
  * só os campos visíveis do relatório, SEM foto/selfie/arquivos KYC nem facial
  * (evidência sensível que nunca sai pela rota pública).
+ *
+ * PII FORENSE REDIGIDA ENTRE CONTRAPARTES: a rota é pública (o token é a
+ * credencial e o link se repassa), então quem detém o link de B via, cru, o
+ * CPF integral, o GPS com 6 casas (~11 cm = endereço residencial), o IP e o
+ * e-mail de A. Aqui só sai o mínimo do relatório (quem assinou, quando, com
+ * qual assinatura, documento mascarado). Os dados forenses completos ficam na
+ * folha A4 que a AGÊNCIA dona imprime pelo caminho autenticado.
  */
 export type AssinaturaPublica = {
   nome: string;
   papel: string | null;
+  /** Mascarado: só os últimos dígitos (•••• 12). */
   documento: string | null;
-  email: string | null;
-  ip: string | null;
-  geolocalizacao: string | null;
   dispositivo: string | null;
   assinadoEm: string | null;
   assinatura: string | null;
 };
+
+/** CPF/CNPJ → só os últimos 2 dígitos, o resto vira ponto. Vazio → null. */
+function mascararDocumento(doc: string | null): string | null {
+  const d = (doc ?? "").replace(/\D/g, "");
+  if (d.length < 3) return doc ? "••••" : null;
+  return `•••• ${d.slice(-2)}`;
+}
 
 /**
  * Signatários do MESMO contrato que já assinaram — pro relatório visível no
@@ -138,13 +150,11 @@ export async function assinantesPublicosDoContrato(
   return rows.map(rowParaSignatario).map((s) => ({
     nome: s.nome,
     papel: s.papel,
-    documento: s.documento,
-    email: s.email,
-    ip: s.ip,
-    geolocalizacao: s.geolocalizacao,
+    documento: mascararDocumento(s.documento),
     dispositivo: s.dispositivo,
     assinadoEm: s.assinadoEm,
     assinatura: s.assinatura,
+    // ip, email e geolocalizacao NÃO saem entre contrapartes (ver o tipo).
   }));
 }
 

@@ -103,6 +103,23 @@ export async function buscarShow(
   return (data as unknown as ShowRow) ?? null;
 }
 
+/** Show ATIVO vinculado a um orçamento (anti-duplicação da aceitação). */
+export async function buscarShowPorOrcamento(
+  supabase: SupabaseClient,
+  orcamentoId: string
+): Promise<ShowRow | null> {
+  const { data, error } = await supabase
+    .from("shows")
+    .select(SELECT_COM_JOINS)
+    .eq("orcamento_id", orcamentoId)
+    .is("deletado_em", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as unknown as ShowRow) ?? null;
+}
+
 export async function criarShow(
   supabase: SupabaseClient,
   workspaceId: string,

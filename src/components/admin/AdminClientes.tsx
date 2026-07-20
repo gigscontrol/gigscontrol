@@ -126,7 +126,7 @@ export default function AdminClientes() {
                           className="h-9 w-9 rounded-md flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                           style={{ backgroundColor: "var(--brand)" }}
                         >
-                          {assinatura.nomeWorkspace.slice(0, 2).toUpperCase()}
+                          {iniciaisDoNome(assinatura.nomeWorkspace)}
                         </span>
                         <div className="min-w-0">
                           <div className="font-medium text-primary truncate">
@@ -282,7 +282,7 @@ function DetalheCliente({
               className="h-14 w-14 rounded-lg flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
               style={{ backgroundColor: "var(--brand)" }}
             >
-              {assinatura.nomeWorkspace.slice(0, 2).toUpperCase()}
+              {iniciaisDoNome(assinatura.nomeWorkspace)}
             </span>
             <div>
               <div className="flex items-center gap-2">

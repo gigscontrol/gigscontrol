@@ -31,6 +31,7 @@ export type OrcamentoRow = {
   camarim: ItemQuantidade[] | null;
   efeitos: ItemQuantidade[] | null;
   hotel: ItemQuantidade[] | null;
+  tecnico: ItemQuantidade[] | null;
   logistica: LogisticaSelecao | Record<string, never> | null;
   observacoes: string | null;
   data_show: string | null;
@@ -100,6 +101,7 @@ export function rowParaOrcamento(row: OrcamentoRow): Orcamento {
     camarim: Array.isArray(row.camarim) ? row.camarim : [],
     efeitos: Array.isArray(row.efeitos) ? row.efeitos : [],
     hotel: Array.isArray(row.hotel) ? row.hotel : [],
+    tecnico: Array.isArray(row.tecnico) ? row.tecnico : [],
     logistica: logisticaValida(row.logistica),
     validade: row.validade ?? undefined,
     observacoes: row.observacoes ?? undefined,
@@ -150,6 +152,7 @@ export type OrcamentoEscrita = {
   camarim?: ItemQuantidade[];
   efeitos?: ItemQuantidade[];
   hotel?: ItemQuantidade[];
+  tecnico?: ItemQuantidade[];
   logistica?: LogisticaSelecao;
   observacoes?: string | null;
   data_show?: string | null;
