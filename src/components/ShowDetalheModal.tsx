@@ -211,8 +211,13 @@ export default function ShowDetalheModal({
     duracao = formatarDuracao(orcamento.duracaoHoras, orcamento.duracaoMinutos ?? 0);
   }
 
-  const cache = venda?.cache ?? orcamento?.valorCache ?? show.valor;
-  const moedaShow = venda?.moeda ?? orcamento?.moeda ?? "BRL";
+  const cache = ficha?.pagamento?.cache ?? venda?.cache ?? orcamento?.valorCache ?? show.valor;
+  const moedaShow = ficha?.pagamento?.moeda ?? venda?.moeda ?? orcamento?.moeda ?? "BRL";
+  // Parcelas do bloco Pagamento: a VENDA do contexto (admin/vendedor) manda;
+  // pra quem só tem agenda (venda=undefined, /api/vendas dá 403) caímos na
+  // ficha — que o servidor já redigiu por setor/financeiro. Sem isto, o setor
+  // `pagamento` mostrava só o cachê e nunca as parcelas.
+  const parcelasPag = venda?.parcelas ?? ficha?.pagamento?.parcelas ?? [];
   const fmtM = (val: number) => formatarMoeda(val, moedaShow);
   const tipoEvento = venda
     ? undefined
@@ -622,7 +627,7 @@ export default function ShowDetalheModal({
             lançadas ainda tem valor combinado, e escondê-lo era perder o
             número mais consultado da ficha. ===== */}
         {((cache !== undefined && cache > 0) ||
-          (venda && venda.parcelas.length > 0)) && (
+          parcelasPag.length > 0) && (
           <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
             {cache !== undefined && cache > 0 && (
               <Linha icon={<DollarSign size={13} />} bold>
@@ -630,12 +635,12 @@ export default function ShowDetalheModal({
                 <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
               </Linha>
             )}
-            {venda && venda.parcelas.length > 0 && (() => {
-              const total = venda.parcelas.reduce((a, p) => a + p.valor, 0);
-              const pago = venda.parcelas
+            {parcelasPag.length > 0 && (() => {
+              const total = parcelasPag.reduce((a, p) => a + p.valor, 0);
+              const pago = parcelasPag
                 .filter((p) => statusEfetivoParcela(p) === "pago")
                 .reduce((a, p) => a + p.valor, 0);
-              const atrasado = venda.parcelas
+              const atrasado = parcelasPag
                 .filter((p) => statusEfetivoParcela(p) === "atrasado")
                 .reduce((a, p) => a + p.valor, 0);
               const restante = total - pago;
@@ -666,7 +671,7 @@ export default function ShowDetalheModal({
                   </div>
 
                   {/* Lista de parcelas */}
-                  {venda.parcelas.map((p, idx) => {
+                  {parcelasPag.map((p, idx) => {
                     const st = statusEfetivoParcela(p);
                     const label = LABELS_STATUS_PARCELA[st];
                     return (
@@ -676,7 +681,7 @@ export default function ShowDetalheModal({
                       >
                         <div className="min-w-0">
                           <span className="text-primary font-medium">
-                            {t("Parcela")} {idx + 1}/{venda.parcelas.length}
+                            {t("Parcela")} {idx + 1}/{parcelasPag.length}
                           </span>
                           <span className="text-muted text-xs ml-1.5">
                             ({p.percentual.toFixed(0)}%)

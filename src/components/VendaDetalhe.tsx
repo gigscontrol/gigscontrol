@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
+import { chaveDoSetor } from "@/lib/permissoes/setoresAgenda";
 import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History, AlertTriangle } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -129,12 +130,13 @@ export default function VendaDetalhe({
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const donoDoShow = { criadoPor: show?.criadoPor, meuUserId: sessao?.usuario.id };
   // Booking exige MAIS que editar o show: o servidor ([id]/route.ts) também
-  // pede `agenda.ver_detalhado`, porque hospedagem carrega PII. Sem esta
-  // segunda condição o preset "vendedor" (agenda.ver + vendas.editar_venda)
-  // via a seção Hotel editável, preenchia e tomava 403 no PATCH.
+  // pede o setor HOTEL, porque hospedagem carrega PII. A chave era
+  // `agenda.ver_detalhado`, mas ela virou LEGADO — `expandirLegadoAgenda` a
+  // apaga de TODA sessão no cliente, então checá-la aqui era sempre `false` e
+  // o Hotel virava só-leitura pra qualquer não-admin. A chave viva é o setor.
   const podeEditarBooking =
     podeEditarShowUI(podeUI, venda.artistaId || null, donoDoShow) &&
-    podeUI(venda.artistaId || null, "agenda.ver_detalhado");
+    podeUI(venda.artistaId || null, chaveDoSetor("hotel"));
   const podeCancelarShow = podeCancelarShowUI(podeUI, venda.artistaId || null, donoDoShow);
   const semPermissao = t("Você não tem permissão para isso.");
   const cancelado = show?.status === "cancelado";

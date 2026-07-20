@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { autenticarComWorkspace } from "@/lib/api/session";
-import { podeVerAgenda } from "@/lib/api/permissoes";
+import { podeVerAgenda, redigirVendaParaSessao } from "@/lib/api/permissoes";
 import { podeNaSessao } from "@/lib/api/permissao";
 import { respostaDeErro } from "@/lib/api/erros";
 import { buscarShowPorId } from "@/lib/services/shows.service";
@@ -69,10 +69,17 @@ export async function GET(
       ] as SetorAgenda[]
     ).some(podeVer);
 
-    const venda =
+    const vendaCrua =
       precisaDaVenda && show.vendaId
         ? await buscarVendaPorId(r.sessao.supabase, show.vendaId).catch(() => null)
         : null;
+    // REDAÇÃO FINANCEIRA — o setor `agenda.ver.pagamento` mostra cachê, valores
+    // e vencimentos, mas NÃO o rastro de pagamento (parcela.meta: comprovante,
+    // quem informou, log de cobrança) nem a taxa da agência: isso é gate de
+    // FINANCEIRO, não de agenda. Sem esta linha, quem tinha só o setor de
+    // pagamento recebia o meta e a margem crus no JSON. `redigirVendaParaSessao`
+    // devolve a venda intacta pra quem tem financeiro.ver; senão tira meta+taxa.
+    const venda = vendaCrua ? redigirVendaParaSessao(r.sessao, vendaCrua) : null;
     const orcamento =
       precisaDaVenda && !venda && show.orcamentoId
         ? await buscarOrcamentoPorId(r.sessao.supabase, show.orcamentoId).catch(

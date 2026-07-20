@@ -193,6 +193,19 @@ export function podeVerAlgumSetorAgenda(
 }
 
 /**
+ * Pode ver o dado detalhado de VOO/TRANSPORTE (voucher de voo, blob `dados` do
+ * agenda_item: passageiros, DOB, localizador, motorista)? É o setor LOGÍSTICA —
+ * NÃO o hotel. Antes tudo isso caía em `podeVerAgendaDetalhado` (=hotel), que
+ * over-restringia quem só tinha logística e over-expunha a quem só tinha hotel.
+ */
+export function podeVerAgendaLogistica(
+  sessao: SessaoAutenticada,
+  artistId: string | null
+): boolean {
+  return podeNaSessao(sessao, artistId, chaveDoSetor("logistica"));
+}
+
+/**
  * Pode CRIAR na agenda deste artista? (L5) — vale só para AGENDA_ITEMS:
  * voo, transporte terrestre e evento personalizado. Criar SHOW NÃO passa mais
  * por aqui: usa `podeCriarShow` (vendas.criar_venda).
@@ -334,6 +347,15 @@ export function stripShowDetalhado(show: Show, sessao: SessaoAutenticada): Show 
 
   return {
     ...show,
+    // LOCAL — nome do local, cidade e a casa/cidade por id. `data`/`dayId`/
+    // `status` NÃO entram aqui: são o que posiciona o show na grade; apagá-los
+    // sumiria o show do calendário. Só os RÓTULOS de onde são gateados.
+    venue: ve("local") ? show.venue : "",
+    location: ve("local") ? show.location : "",
+    casaId: ve("local") ? show.casaId : undefined,
+    cidadeId: ve("local") ? show.cidadeId : undefined,
+    // DETALHES — o horário de apresentação. A data fica (posiciona a célula).
+    time: ve("detalhes") ? show.time : "",
     // PAGAMENTO — o cachê mora no show; parcelas vêm da venda.
     valor: ve("pagamento") ? show.valor : undefined,
     // CONTRATANTE — o nome vem por join; o id é o vínculo, escondido explícito
@@ -364,7 +386,8 @@ export function stripAgendaItemDetalhado(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): AgendaItem {
-  if (podeVerAgendaDetalhado(sessao, artistId)) return item;
+  // Agenda_item = voo/transporte/evento → domínio LOGÍSTICA, não hotel.
+  if (podeVerAgendaLogistica(sessao, artistId)) return item;
   return { ...item, dados: undefined, observacoes: undefined };
 }
 
