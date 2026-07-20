@@ -107,6 +107,14 @@ export async function POST(request: Request) {
     const res = await resgatarCupom(admin, { codigo, workspaceId, plano, ciclo });
     if (!res.ok) return respostaErroCupom(res.erro);
 
+    // RECONCILIA workspaces.plano com o plano concedido — como o Stripe/MP.
+    // Sem isto, os limites (que leem workspaces.plano) ficavam no tier semeado
+    // no signup, não no que o cupom liberou. O cupom já validou plano_alvo.
+    await admin
+      .from("workspaces")
+      .update({ plano, ciclo, status: "ativa" })
+      .eq("id", workspaceId);
+
     return NextResponse.json({
       ok: true,
       diasConcedidos: res.diasConcedidos,

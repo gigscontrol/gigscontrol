@@ -43,8 +43,16 @@ export type TotaisFinanceiro = {
   atrasado: string;
   /** Em aberto vencendo nos próximos 90 dias a partir de hoje. */
   previsto: string;
-  /** Soma crua do atrasado, pro alerta "tem X atrasado". */
+  /** Soma dos três (recebido + a receber + atrasado) do período, por moeda. */
+  total: string;
+  /** A receber + atrasado (o que falta entrar), por moeda. */
+  falta: string;
+  /** Somas cruas (independem da moeda) — heurística de barras/percentuais. */
+  recebidoNum: number;
+  aReceberNum: number;
   atrasadoNum: number;
+  /** recebido + a receber + atrasado, cru. */
+  totalNum: number;
 };
 
 export function calcularTotaisFinanceiro(
@@ -56,6 +64,8 @@ export function calcularTotaisFinanceiro(
   const recv: { valor: number; moeda: Moeda }[] = [];
   const atr: { valor: number; moeda: Moeda }[] = [];
   const prev: { valor: number; moeda: Moeda }[] = [];
+  let recebidoNum = 0;
+  let aReceberNum = 0;
   let atrasadoNum = 0;
 
   const hoje = new Date(hojeRef);
@@ -72,7 +82,10 @@ export function calcularTotaisFinanceiro(
       // Parcela antiga marcada paga SEM data de pagamento cai no vencimento —
       // sem esse fallback o dinheiro dela sumiria do painel.
       const quandoEntrou = l.dataPagamento || l.dataVencimento;
-      if (dataNoMes(quandoEntrou, periodo)) rec.push(item);
+      if (dataNoMes(quandoEntrou, periodo)) {
+        rec.push(item);
+        recebidoNum += l.valor;
+      }
       continue;
     }
 
@@ -84,7 +97,10 @@ export function calcularTotaisFinanceiro(
       continue;
     }
 
-    if (dataNoMes(l.dataVencimento, periodo)) recv.push(item);
+    if (dataNoMes(l.dataVencimento, periodo)) {
+      recv.push(item);
+      aReceberNum += l.valor;
+    }
 
     const venc = new Date(`${l.dataVencimento}T12:00:00`);
     if (!Number.isNaN(venc.getTime()) && venc >= hoje && venc <= limite90) {
@@ -97,6 +113,11 @@ export function calcularTotaisFinanceiro(
     aReceber: totaisPorMoeda(recv),
     atrasado: totaisPorMoeda(atr),
     previsto: totaisPorMoeda(prev),
+    total: totaisPorMoeda([...rec, ...recv, ...atr]),
+    falta: totaisPorMoeda([...recv, ...atr]),
+    recebidoNum,
+    aReceberNum,
     atrasadoNum,
+    totalNum: recebidoNum + aReceberNum + atrasadoNum,
   };
 }

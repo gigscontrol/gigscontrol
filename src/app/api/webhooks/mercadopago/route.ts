@@ -150,7 +150,7 @@ export async function POST(request: Request) {
         });
         if (error && error.code !== "23505") throw error;
       } else {
-        await registrarPagamentoEEstenderAcesso({
+        const res = await registrarPagamentoEEstenderAcesso({
           workspaceId: pag.externalReference,
           provider: "mercadopago",
           providerPaymentId: String(pag.id),
@@ -160,6 +160,18 @@ export async function POST(request: Request) {
           moeda: "brl",
           metodo: normalizarMetodo(pag.tipo),
         });
+        // RECONCILIA workspaces.plano com o plano PAGO — como o Stripe já faz
+        // (webhooks/stripe/route.ts:116). Sem isto, os limites de cadastro
+        // (que leem workspaces.plano, semeado no signup pelo cliente) ficavam no
+        // tier ESCOLHIDO no signup mesmo pagando um plano menor pelo MP. Só no
+        // primeiro processamento e só com plano conhecido (não apaga em reentrega
+        // nem em pagamento antigo sem metadata).
+        if (!res?.jaProcessado && md.plano) {
+          await admin
+            .from("workspaces")
+            .update({ plano: md.plano, ciclo: md.ciclo ?? null, status: "ativa" })
+            .eq("id", pag.externalReference);
+        }
       }
     }
 

@@ -26,6 +26,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { gradienteSutil } from "@/lib/gradiente";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
+import { calcularTotaisFinanceiro } from "@/lib/financeiro/totais";
 import {
   LABELS_STATUS_PARCELA,
   statusEfetivoParcela,
@@ -159,44 +160,27 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     [parcelas, periodo]
   );
 
-  const totais = useMemo(() => {
-    // Agrupa por moeda (a parcela herda a moeda da venda). Nunca soma moedas
-    // diferentes num R$ mentiroso. Os `*Num` são somas cruas (independem da
-    // moeda) usadas só como heurística nas barras/percentuais de progresso —
-    // no caso 1-moeda (o normal) equivalem exatamente ao total real.
-    const recArr: { valor: number; moeda: Moeda }[] = [];
-    const recvArr: { valor: number; moeda: Moeda }[] = [];
-    const atrArr: { valor: number; moeda: Moeda }[] = [];
-    let recebidoNum = 0;
-    let aReceberNum = 0;
-    let atrasadoNum = 0;
-    for (const l of parcelasPeriodo) {
-      const st = statusEfetivoParcela(l.parcela);
-      if (st === "cancelado") continue; // baixada/isenta sai do a-receber
-      const item = { valor: l.parcela.valor, moeda: l.moeda };
-      if (st === "pago") {
-        recArr.push(item);
-        recebidoNum += l.parcela.valor;
-      } else if (st === "atrasado") {
-        atrArr.push(item);
-        atrasadoNum += l.parcela.valor;
-      } else {
-        recvArr.push(item);
-        aReceberNum += l.parcela.valor;
-      }
-    }
-    return {
-      recebido: totaisPorMoeda(recArr),
-      aReceber: totaisPorMoeda(recvArr),
-      atrasado: totaisPorMoeda(atrArr),
-      total: totaisPorMoeda([...recArr, ...recvArr, ...atrArr]),
-      falta: totaisPorMoeda([...recvArr, ...atrArr]),
-      recebidoNum,
-      aReceberNum,
-      atrasadoNum,
-      totalNum: recebidoNum + aReceberNum + atrasadoNum,
-    };
-  }, [parcelasPeriodo]);
+  // Totais pela MESMA lógica pura do Controle de Pagamentos (lib/financeiro/
+  // totais.ts, com bateria). Antes esta tela tinha um cálculo inline por
+  // VENCIMENTO que a auditoria pegou: "Recebido" contava a parcela no mês em
+  // que ela vencia (não no que o dinheiro entrou) e "Atrasado" escondia o
+  // vencido de meses anteriores. Agora Recebido vai pela data de pagamento e
+  // Atrasado agrega todos os meses — percorre `parcelas` (tudo), não o recorte.
+  const totais = useMemo(
+    () =>
+      calcularTotaisFinanceiro(
+        parcelas.map((l) => ({
+          status: statusEfetivoParcela(l.parcela),
+          moeda: l.moeda,
+          valor: l.parcela.valor,
+          dataVencimento: l.parcela.dataVencimento,
+          dataPagamento: l.parcela.dataPagamento,
+        })),
+        periodo,
+        new Date()
+      ),
+    [parcelas, periodo]
+  );
 
   // Próximos vencimentos (pendentes/atrasados, ordenado por data)
   const proximosVencimentos = useMemo(() => {
