@@ -2,7 +2,7 @@ import { z } from "zod";
 import { uuidLike } from "./uuid";
 
 const itemQtdSchema = z.object({
-  nome: z.string().min(1),
+  nome: z.string().min(1).max(120),
   qtd: z.number().int().nonnegative(),
 });
 
@@ -37,17 +37,17 @@ export type ParcelaInput = z.infer<typeof parcelaSchema>;
 export const vendaCreateSchema = z.object({
   orcamento_id: uuidLike.nullable().optional(),
   contratante_id: uuidLike.nullable().optional(),
-  contratante_nome: z.string().nullable().optional(),
-  contratante_email: z.string().nullable().optional(),
-  contratante_telefone: z.string().nullable().optional(),
-  contratante_documento: z.string().nullable().optional(),
+  contratante_nome: z.string().max(160).nullable().optional(),
+  contratante_email: z.string().max(160).nullable().optional(),
+  contratante_telefone: z.string().max(40).nullable().optional(),
+  contratante_documento: z.string().max(60).nullable().optional(),
   // Snapshot da razão social (migração 91) — só faz sentido quando o documento
   // é CNPJ; o cliente já manda vazio pra CPF.
   contratante_razao_social: z.string().max(140).nullable().optional(),
-  contratante_endereco: z.string().nullable().optional(),
-  nome_evento: z.string().nullable().optional(),
-  evento_instagram: z.string().nullable().optional(),
-  nome_local: z.string().nullable().optional(),
+  contratante_endereco: z.string().max(200).nullable().optional(),
+  nome_evento: z.string().max(160).nullable().optional(),
+  evento_instagram: z.string().max(120).nullable().optional(),
+  nome_local: z.string().max(160).nullable().optional(),
   // Aceita number direto OU string (que vira number via coerção). O
   // cliente envia number, mas integrações externas (n8n, zapier etc)
   // tendem a mandar string. Trunca pra inteiro >= 0; vazio/NaN viram null.
@@ -60,7 +60,7 @@ export const vendaCreateSchema = z.object({
         typeof v === "number" ? v : Number(String(v).replace(/\D/g, ""));
       return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
     }),
-  endereco_local: z.string().nullable().optional(),
+  endereco_local: z.string().max(200).nullable().optional(),
   data_show: dataYmd.nullable().optional(),
   horario: horaHm.nullable().optional(),
   horario_fim: horaHm.nullable().optional(),
@@ -69,21 +69,21 @@ export const vendaCreateSchema = z.object({
   cidade_id: uuidLike.nullable().optional(),
   casa_id: uuidLike.nullable().optional(),
   artist_id: uuidLike.nullable().optional(),
-  line_up: z.array(z.string()).optional(),
+  line_up: z.array(z.string().max(120)).max(50).optional(),
   cache: z.number().nonnegative(),
   moeda: z.enum(["BRL", "USD", "EUR"]).optional(),
   // Taxa da agência digitada (modos VARIÁVEIS). Fixos: servidor calcula do config.
   taxa_digitada: z.number().nonnegative().nullable().optional(),
   duracao_horas: z.number().int().nonnegative().nullable().optional(),
   duracao_minutos: z.number().int().nonnegative().nullable().optional(),
-  camarim: z.array(itemQtdSchema).optional(),
-  efeitos: z.array(itemQtdSchema).optional(),
-  hotel: z.array(itemQtdSchema).optional(),
-  tecnico: z.array(itemQtdSchema).optional(),
+  camarim: z.array(itemQtdSchema).max(50).optional(),
+  efeitos: z.array(itemQtdSchema).max(50).optional(),
+  hotel: z.array(itemQtdSchema).max(50).optional(),
+  tecnico: z.array(itemQtdSchema).max(50).optional(),
   logistica: logisticaSchema.optional(),
-  observacoes: z.string().nullable().optional(),
-  info_extra: z.string().nullable().optional(),
-  parcelas: z.array(parcelaSchema).optional(),
+  observacoes: z.string().max(4000).nullable().optional(),
+  info_extra: z.string().max(4000).nullable().optional(),
+  parcelas: z.array(parcelaSchema).max(60).optional(),
 });
 export type VendaCreateInput = z.infer<typeof vendaCreateSchema>;
 

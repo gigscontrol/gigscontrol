@@ -73,6 +73,7 @@ import {
   type Moeda,
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   onSaved: (orcamentoIds: string[]) => void;
@@ -1362,7 +1363,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       boxShadow: `0 0 0 2px ${d.color}33`,
                     }}
                   >
-                    {d.name.slice(0, 2).toUpperCase()}
+                    {iniciaisDoNome(d.name)}
                   </span>
                   <span className="flex-1 text-sm font-semibold text-primary">
                     {d.name}

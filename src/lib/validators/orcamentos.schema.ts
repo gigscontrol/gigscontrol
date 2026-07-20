@@ -5,7 +5,7 @@ const statusSchema = z.enum(["pendente", "negociacao", "aceito", "recusado"]);
 const tipoEventoSchema = z.enum(["social", "casa-noturna", "festival"]);
 
 const itemQtdSchema = z.object({
-  nome: z.string().min(1),
+  nome: z.string().min(1).max(120),
   qtd: z.number().int().nonnegative(),
 });
 
@@ -39,13 +39,13 @@ export const orcamentoCreateSchema = z.object({
   moeda: z.enum(["BRL", "USD", "EUR"]).optional(),
   duracao_horas: z.number().int().nonnegative().nullable().optional(),
   duracao_minutos: z.number().int().nonnegative().nullable().optional(),
-  camarim: z.array(itemQtdSchema).optional(),
-  efeitos: z.array(itemQtdSchema).optional(),
-  hotel: z.array(itemQtdSchema).optional(),
-  tecnico: z.array(itemQtdSchema).optional(),
+  camarim: z.array(itemQtdSchema).max(50).optional(),
+  efeitos: z.array(itemQtdSchema).max(50).optional(),
+  hotel: z.array(itemQtdSchema).max(50).optional(),
+  tecnico: z.array(itemQtdSchema).max(50).optional(),
   logistica: logisticaSchema.optional(),
-  observacoes: z.string().nullable().optional(),
-  info_extra: z.string().nullable().optional(),
+  observacoes: z.string().max(4000).nullable().optional(),
+  info_extra: z.string().max(4000).nullable().optional(),
   detalhes_evento: detalhesEventoSchema.nullable().optional(),
   data_show: z
     .string()

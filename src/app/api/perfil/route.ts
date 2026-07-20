@@ -3,6 +3,7 @@ import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { pertenceAoWorkspace } from "@/lib/api/pertence";
+import { respostaDeErro } from "@/lib/api/erros";
 import { atualizarArtista } from "@/lib/repositories/artistas.repo";
 import type { ArtistaEscrita } from "@/lib/mappers/artista";
 
@@ -140,7 +141,7 @@ export async function GET() {
       .eq("workspace_id", r.sessao.workspaceId)
       .maybeSingle<LinhaPerfil & { cor: string | null }>();
     if (error) {
-      return NextResponse.json({ erro: error.message }, { status: 500 });
+      return respostaDeErro(error, "Falha ao carregar o perfil.");
     }
     // O apelido mora no profile (não em artists).
     return NextResponse.json({
@@ -157,7 +158,7 @@ export async function GET() {
     .eq("id", r.sessao.userId)
     .maybeSingle<LinhaPerfil & { cor: string | null }>();
   if (error) {
-    return NextResponse.json({ erro: error.message }, { status: 500 });
+    return respostaDeErro(error, "Falha ao carregar o perfil.");
   }
   return NextResponse.json({
     perfil: montarPerfil(
@@ -264,10 +265,7 @@ export async function PATCH(request: Request) {
       try {
         await atualizarArtista(admin, artistaId, escrita);
       } catch (e) {
-        return NextResponse.json(
-          { erro: (e as Error).message ?? "Falha ao salvar." },
-          { status: 500 }
-        );
+        return respostaDeErro(e, "Falha ao salvar o perfil.");
       }
     }
 
@@ -278,7 +276,7 @@ export async function PATCH(request: Request) {
         .update({ nome: patch.nome })
         .eq("id", r.sessao.userId);
       if (error) {
-        return NextResponse.json({ erro: error.message }, { status: 500 });
+        return respostaDeErro(error, "Falha ao salvar o perfil.");
       }
     }
 
@@ -291,7 +289,7 @@ export async function PATCH(request: Request) {
     .update(patch)
     .eq("id", r.sessao.userId);
   if (error) {
-    return NextResponse.json({ erro: error.message }, { status: 500 });
+    return respostaDeErro(error, "Falha ao salvar o perfil.");
   }
   return NextResponse.json({ ok: true });
 }

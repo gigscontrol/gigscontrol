@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import { formatarMoeda, formatarDataBR } from "@/lib/formatters";
 import type { Moeda } from "@/types";
 import { CalendarCheck2 } from "lucide-react";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 export type ResumoVenda = {
   artistaNome: string;
@@ -59,7 +60,7 @@ export default function ConfirmarVendaModal({
           className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
           style={{ backgroundColor: resumo.artistaCor, color: "#fff" }}
         >
-          {resumo.artistaNome.slice(0, 2).toUpperCase()}
+          {iniciaisDoNome(resumo.artistaNome)}
         </span>
         <div className="min-w-0">
           <div className="text-[0.65rem] text-muted uppercase tracking-wide">{t("Artista")}</div>

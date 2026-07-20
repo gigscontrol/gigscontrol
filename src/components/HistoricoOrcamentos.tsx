@@ -29,6 +29,7 @@ import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
 import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   selectedArtistas: string[];
@@ -296,7 +297,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
                     boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
                   }}
                 >
-                  {d.name.slice(0, 2).toUpperCase()}
+                  {iniciaisDoNome(d.name)}
                 </span>
                 <span className="flex-1 text-sm font-semibold text-primary">
                   {d.name}

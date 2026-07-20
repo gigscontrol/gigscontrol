@@ -69,6 +69,7 @@ import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import { parseFechamento } from "@/lib/parseFechamento";
 import { parseValorBR } from "@/lib/valor";
 import { itensDoRider } from "@/lib/rider";
+import { iniciaisDoNome } from "@/lib/iniciais";
 import { TIPOS_EVENTO } from "./NovoOrcamento";
 import {
   CATALOGO_CAMARIM,
@@ -1597,7 +1598,7 @@ export default function ConcretizarVenda({
                   color: "#fff",
                 }}
               >
-                {artistaEfetivoOrc.name.slice(0, 2).toUpperCase()}
+                {iniciaisDoNome(artistaEfetivoOrc.name)}
               </span>
               <span className="text-sm font-semibold text-primary truncate flex-1">
                 {artistaEfetivoOrc.name}
@@ -1651,7 +1652,7 @@ export default function ConcretizarVenda({
                         color: isActive ? "#fff" : "var(--text-muted)",
                       }}
                     >
-                      {d.name.slice(0, 2).toUpperCase()}
+                      {iniciaisDoNome(d.name)}
                     </span>
                     <span className="text-sm font-semibold text-primary truncate">
                       {d.name}

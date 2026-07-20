@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { VendaCreateInput } from "@/lib/validators/vendas.schema";
 import { accessTokenValido } from "./conexao";
+import { formatarMoeda } from "@/lib/formatters";
 
 /**
  * Criação do evento do show no Google Calendar do artista conectado.
@@ -27,10 +28,6 @@ function addDias(iso: string, n: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-}
-
-function moeda(n: number): string {
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function listaItens(itens?: ItemQtd[]): string {
@@ -74,7 +71,8 @@ function montarDescricao(input: VendaCreateInput, artistaNome: string | null): s
     linhas.push(`🕐 Horário de apresentação: ${hora}`);
   }
 
-  if (input.cache != null) linhas.push(`💰 Cachê: ${moeda(input.cache)}`);
+  if (input.cache != null)
+    linhas.push(`💰 Cachê: ${formatarMoeda(input.cache, input.moeda ?? "BRL")}`);
 
   const camarim = listaItens(input.camarim);
   if (camarim) linhas.push(`🥂 Rider de camarim: ${camarim}`);

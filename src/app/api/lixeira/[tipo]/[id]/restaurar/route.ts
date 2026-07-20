@@ -32,7 +32,7 @@ const TIPOS_VALIDOS: TipoLixeira[] = [
 
 /** Tabela e coluna de nome usadas pra montar o snapshot da auditoria. */
 const META_POR_TIPO: Record<TipoLixeira, { tabela: string; colNome: string }> = {
-  artista:     { tabela: "artists",      colNome: "name" },
+  artista:     { tabela: "artists",      colNome: "nome" },
   usuario:     { tabela: "profiles",     colNome: "nome" },
   orcamento:   { tabela: "orcamentos",   colNome: "numero" },
   venda:       { tabela: "vendas",       colNome: "numero" },

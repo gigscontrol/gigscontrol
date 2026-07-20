@@ -25,6 +25,7 @@ import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 import { useT } from "@/lib/i18n";
+import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   selectedArtistas: string[];
@@ -396,7 +397,7 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
           style={{ backgroundColor: artista?.color ?? "#888", color: "#fff" }}
         >
-          {artista?.name.slice(0, 2).toUpperCase()}
+          {iniciaisDoNome(artista?.name)}
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-primary truncate">

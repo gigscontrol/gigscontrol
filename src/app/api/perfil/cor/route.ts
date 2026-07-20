@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { respostaDeErro } from "@/lib/api/erros";
 
 /**
  * PATCH /api/perfil/cor — cor de identificação do PRÓPRIO avatar.
@@ -60,7 +61,7 @@ export async function PATCH(request: Request) {
         .update({ cor: parsed.data.cor })
         .eq("id", r.sessao.userId);
   if (error) {
-    return NextResponse.json({ erro: error.message }, { status: 500 });
+    return respostaDeErro(error, "Falha ao salvar a cor.");
   }
   return NextResponse.json({ ok: true, cor: parsed.data.cor });
 }
