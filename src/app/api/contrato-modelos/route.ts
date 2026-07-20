@@ -6,7 +6,7 @@ import {
   LimiteModelosError,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloCreateSchema } from "@/lib/validators/contratoModelos.schema";
-import { podeLerModelos, exigirAdminModelos } from "@/lib/api/permissoes";
+import { podeLerModelos, verificarCriarModelo } from "@/lib/api/permissoes";
 import type { PlanoId } from "@/lib/planos";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -32,8 +32,9 @@ export async function POST(request: Request) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  // Gerenciar modelos (D3) = ADMIN-ONLY explícito (super-admin passa).
-  const gate = exigirAdminModelos(r.sessao);
+  // CRIAR modelo (v2) = admin/super OU `contratos.criar_modelo` em algum vínculo
+  // (workspace-level — o modelo não tem artist_id). Editar segue admin-only.
+  const gate = verificarCriarModelo(r.sessao);
   if (gate) return gate;
 
   let raw: unknown;

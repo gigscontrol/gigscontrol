@@ -22,6 +22,10 @@ import Modal from "./Modal";
 import { useAviso } from "./ConfirmarModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useAuth } from "@/lib/auth-context";
+import {
+  podeInformarPagamentoUI,
+  podeCancelarPagamentoUI,
+} from "@/lib/permissoes/gatesEquipeUI";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
@@ -49,7 +53,8 @@ type Props = {
 export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Props) {
   const t = useT();
   const { vendas, acaoParcela } = useVendas();
-  const { podeUI, modoVisitante } = useAuth();
+  const { podeUI, modoVisitante, sessao } = useAuth();
+  const userId = sessao?.usuario.id;
   const artistas = useArtistas();
   const { avisar, avisador } = useAviso();
 
@@ -76,8 +81,21 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
   const st = LABELS_STATUS_PARCELA[status];
   const meta = parcela.meta;
   const cobrancas = meta?.cobrancas ?? [];
-  const podeRegistrar = podeUI(venda.artistaId || null, "financeiro.registrar_pagamento");
-  const podeCancelar = podeUI(venda.artistaId || null, "financeiro.cancelar_pagamento");
+  // Autoria via VENDA-mãe: informar pagamento e cancelar/editar pagamento seguem
+  // o criado_por da venda (parcela não tem autor próprio) — espelha
+  // verificarMutacaoParcela ("informar"/"editar") no servidor.
+  const podeRegistrar = podeInformarPagamentoUI(
+    podeUI,
+    venda.artistaId || null,
+    venda.criadoPor,
+    userId
+  );
+  const podeCancelar = podeCancelarPagamentoUI(
+    podeUI,
+    venda.artistaId || null,
+    venda.criadoPor,
+    userId
+  );
 
   function reset() {
     setModo("info");

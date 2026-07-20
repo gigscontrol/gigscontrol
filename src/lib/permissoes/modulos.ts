@@ -60,12 +60,14 @@ function temPrefixoEmAlgumVinculo(ctx: CtxPermissao, prefixo: string): boolean {
  *                  por agenda.ver/agenda.ver_detalhado. Zero artistas nas duas
  *                  chaves = agenda vazia por construção.
  *  - vendas      → verificarAcessoVendas + verificarAcessoOrcamentos (403).
+ *                  Ambos exigem QUALQUER das 7 chaves v2 de vendas no artista
+ *                  (VENDAS_CHAVES_MODULO) — a autoria só filtra o que aparece.
  *                  ATENÇÃO: o servidor devolve `null` (libera) pro papel
  *                  artista ANTES de olhar chave — então aqui o artista também
  *                  passa direto, senão a Sidebar esconderia mais que o servidor.
  *  - financeiro  → não há gate de módulo; `podeVerFinanceiro` é a autoridade
- *                  (mesma tripla de chaves). Sem nenhuma delas, todo dado
- *                  financeiro vem redigido.
+ *                  (QUALQUER das 8 chaves v2 no artista). Sem nenhuma delas,
+ *                  todo dado financeiro vem redigido.
  *  - contratos   → sem gate na rota; `podeVerContrato` filtra a lista e
  *                  `podeLerModelos` libera modelos com QUALQUER chave
  *                  "contratos." — daí a checagem por prefixo.
@@ -143,31 +145,43 @@ export function podeVerModulo(ctx: CtxPermissao, tab: TabModulo): boolean {
 
     case "vendas":
       if (ctx.papel === "artista") return true; // servidor libera o artista
+      // Espelha VENDAS_CHAVES_MODULO (api/permissoes.ts) — as 7 chaves v2 do
+      // módulo. Qualquer uma no artista abre a tab; a autoria filtra a lista.
       return alcancaAlguma(ctx, [
-        "vendas.ver",
-        "vendas.ver_proprios",
-        "vendas.ver_orcamentos",
+        "vendas.criar",
+        "vendas.editar_proprios",
+        "vendas.cancelar_proprios",
+        "vendas.ver_outros",
+        "vendas.editar_outros",
+        "vendas.converter_outros",
+        "vendas.cancelar_outros",
       ]);
 
     case "financeiro":
+      // Espelha `podeVerFinanceiro` (FIN_CHAVES_MODULO) — as 8 chaves v2.
       return alcancaAlguma(ctx, [
-        "financeiro.ver",
-        "financeiro.registrar_pagamento",
-        "financeiro.editar_pagamento",
+        "financeiro.ver_proprios",
+        "financeiro.editar_proprios",
+        "financeiro.informar_proprios",
+        "financeiro.fixar_proprios",
+        "financeiro.ver_outros",
+        "financeiro.editar_outros",
+        "financeiro.informar_outros",
+        "financeiro.fixar_outros",
       ]);
 
     case "contratos":
       // Artista: governado pela privacidade. `contratosVer` e `contratosCriar`
-      // são flags INDEPENDENTES (PrivacidadeDj) e o servidor autoriza a
-      // mutação só com `contratosCriar` — então "ver desligado + gerar ligado"
-      // é config alcançável, e exigir só `contratos.ver` esconderia um módulo
-      // que o servidor deixa usar. Mesma lógica do financeiro (inclui mutação).
+      // são flags INDEPENDENTES (PrivacidadeDj, resolvidas por `podeArtista`) e
+      // o servidor autoriza a mutação só com `contratosCriar` — então "ver
+      // desligado + gerar ligado" é config alcançável, e exigir só
+      // `contratos.ver` esconderia um módulo que o servidor deixa usar.
       if (ctx.papel === "artista")
         return alcancaAlguma(ctx, ["contratos.ver", "contratos.criar"]);
-      return (
-        alcancaAlguma(ctx, ["contratos.ver"]) ||
-        temPrefixoEmAlgumVinculo(ctx, "contratos.")
-      );
+      // Equipe: espelha `podeLerModelos` — QUALQUER chave "contratos." em algum
+      // vínculo (workspace-level, união). Cobre as chaves v2 novas (criar,
+      // cancelar_proprios/_outros, ver_outros, criar_modelo, excluir_modelo).
+      return temPrefixoEmAlgumVinculo(ctx, "contratos.");
 
     case "contatos":
       if (ctx.papel === "artista") return false; // servidor devolve 403

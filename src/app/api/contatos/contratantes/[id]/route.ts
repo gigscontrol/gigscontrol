@@ -47,10 +47,6 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  // D2: editar contato exige `contatos.editar` em algum vínculo (+ o alvo
-  // precisa estar no escopo do usuário — checado abaixo por visibilidade).
-  const g = verificarMutacaoContato(r.sessao, "editar");
-  if (g) return g;
 
   let raw: unknown;
   try {
@@ -68,7 +64,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   }
 
   try {
-    // Confirma escopo (dono) antes de mutar — mesma regra da lista.
+    // Confirma escopo (visibilidade) antes de mutar — mesma regra da lista.
     const atual = await buscarContratantePorId(r.sessao.supabase, params.id);
     if (
       !atual ||
@@ -80,6 +76,11 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       ))
     )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
+    // v2: editar contato distingue "criado por ele" (contatos.editar_proprios) ×
+    // "por outros" (contatos.editar_outros), pela autoria da LINHA. `criado_por`
+    // nulo = de outros. Gate DEPOIS de resolver a linha (a autoria vem dela).
+    const g = verificarMutacaoContato(r.sessao, "editar", atual.criadoPor ?? null);
+    if (g) return g;
     const contratante = await atualizarContratantePorId(
       r.sessao.supabase,
       params.id,
@@ -95,10 +96,6 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  // D2: excluir contato exige `contatos.excluir` em algum vínculo (+ o alvo
-  // precisa estar no escopo do usuário — checado abaixo por visibilidade).
-  const g = verificarMutacaoContato(r.sessao, "excluir");
-  if (g) return g;
   try {
     const atual = await buscarContratantePorId(r.sessao.supabase, params.id);
     if (
@@ -111,6 +108,10 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
       ))
     )
       return NextResponse.json({ erro: "Contratante não encontrado." }, { status: 404 });
+    // v2: excluir contato distingue "criado por ele" × "por outros" pela autoria
+    // da LINHA (contatos.excluir_proprios × contatos.excluir_outros); nulo = de outros.
+    const g = verificarMutacaoContato(r.sessao, "excluir", atual.criadoPor ?? null);
+    if (g) return g;
     await removerContratantePorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {

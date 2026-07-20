@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
+  podeConverterOrcamentoUI,
+  podeEditarOrcamentoUI,
+} from "@/lib/permissoes/gatesEquipeUI";
+import {
   Plus,
   Search,
   MessageCircle,
@@ -48,7 +52,8 @@ const STATUS_FILTROS: { value: OrcamentoStatus | "todos"; label: string }[] = [
 
 export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir, onTransformarEmVenda }: Props) {
   const t = useT();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
+  const userId = sessao?.usuario.id;
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
   const { contratantes, cidades, casas } = useContatos();
@@ -57,7 +62,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
 
   // Botão "Novo orçamento" não tem artista fixo (escolhido no wizard) →
   // habilita se o usuário puder criar orçamento em ALGUM artista.
-  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar_orcamento"));
+  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar"));
 
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -400,8 +405,18 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
                           onDelete={() => handleRemover(o.id)}
                           onTransformar={() => onTransformarEmVenda(o.id)}
                           status={o.status}
-                          podeEditar={podeUI(o.artistaId || null, "vendas.editar_orcamento")}
-                          podeConverter={podeUI(o.artistaId || null, "vendas.converter")}
+                          podeEditar={podeEditarOrcamentoUI(
+                            podeUI,
+                            o.artistaId || null,
+                            o.criadoPor,
+                            userId
+                          )}
+                          podeConverter={podeConverterOrcamentoUI(
+                            podeUI,
+                            o.artistaId || null,
+                            o.criadoPor,
+                            userId
+                          )}
                           podeExcluir={podeUI(o.artistaId || null, "vendas.excluir_orcamento")}
                         />
                       </Td>

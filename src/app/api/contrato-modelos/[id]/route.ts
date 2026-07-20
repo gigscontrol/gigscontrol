@@ -6,7 +6,11 @@ import {
   removerModeloPorId,
 } from "@/lib/services/contratoModelos.service";
 import { contratoModeloUpdateSchema } from "@/lib/validators/contratoModelos.schema";
-import { podeLerModelos, exigirAdminModelos } from "@/lib/api/permissoes";
+import {
+  podeLerModelos,
+  exigirAdminModelos,
+  verificarExcluirModelo,
+} from "@/lib/api/permissoes";
 import { respostaDeErro } from "@/lib/api/erros";
 
 type RouteCtx = { params: { id: string } };
@@ -72,8 +76,9 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
 
-  // Gerenciar modelos (D3) = ADMIN-ONLY explícito (super-admin passa).
-  const gate = exigirAdminModelos(r.sessao);
+  // EXCLUIR modelo (v2) = admin/super OU `contratos.excluir_modelo` em algum
+  // vínculo (workspace-level). ≠ excluir um contrato GERADO (esse é admin-only).
+  const gate = verificarExcluirModelo(r.sessao);
   if (gate) return gate;
 
   try {
