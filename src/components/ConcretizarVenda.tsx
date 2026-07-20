@@ -866,9 +866,11 @@ export default function ConcretizarVenda({
     if (local) return alvoDeContratante(local);
 
     try {
-      const resp = await fetch(
-        `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(telefoneE164)}`
-      );
+      const resp = await fetch("/api/contatos/contratantes/existe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone: telefoneE164 }),
+      });
       // Sem a resposta do endpoint não existe dedupe possível (o contexto local
       // é cego pra contato fora da visibilidade derivada). Cair no ramo "novo"
       // aqui duplicaria o telefone, que é justamente o que D1 proíbe — então

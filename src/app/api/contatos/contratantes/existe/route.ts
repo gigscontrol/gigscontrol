@@ -14,7 +14,7 @@ import { variantesTelefone } from "@/lib/telefone";
  * — pra oferecer "já existe, quer usar?" em vez de criar um contato duplicado.
  * Não é um browse: sem documento/nome, não devolve nada.
  */
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
   // Artista NÃO é barrado aqui — espelha o GET de listagem (contratantes/route.ts:20).
@@ -27,10 +27,18 @@ export async function GET(request: Request) {
     if (g) return g;
   }
 
-  const url = new URL(request.url);
-  const documento = url.searchParams.get("documento")?.trim() || "";
-  const telefone = url.searchParams.get("telefone")?.trim() || "";
-  const nome = url.searchParams.get("nome")?.trim() || "";
+  // POST (não GET): documento/telefone são PII de terceiro e não podem trafegar
+  // em query string — ela entra em logs de acesso do servidor/Vercel e no
+  // Referer. O corpo JSON não. Lookup continua idempotente/somente-leitura.
+  let body: { documento?: string; telefone?: string; nome?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ existe: false, contratante: null });
+  }
+  const documento = (body.documento ?? "").trim();
+  const telefone = (body.telefone ?? "").trim();
+  const nome = (body.nome ?? "").trim();
   if (!documento && !telefone && !nome) {
     return NextResponse.json({ existe: false, contratante: null });
   }

@@ -34,16 +34,24 @@ export const definirSignatariosSchema = z.object({
     .max(MAX_SIGNATARIOS, `Máximo de ${MAX_SIGNATARIOS} signatários.`),
 });
 
+// Teto dos blobs base64 da rota PÚBLICA (sem login — o token é a credencial).
+// A assinatura é um PNG de traço (pequeno); as fotos já vêm reduzidas no
+// cliente. Sem teto, um signatário grava um blob enorme (assinatura vai pro
+// TEXT do banco, fotos pro bucket sem file_size_limit) e toda abertura pública
+// do link passa a carregá-lo. ~1,5 MB de base64 cobre com folga um PNG legítimo.
+const MAX_ASSINATURA = 1_500_000; // ~1,1 MB de bytes decodificados
+const MAX_FOTO = 4_000_000; // ~3 MB — foto de documento reduzida
+
 /** Submissão da assinatura (página pública). */
 export const assinarSchema = z.object({
-  assinatura: z.string().min(1, "Assinatura obrigatória."),
+  assinatura: z.string().min(1, "Assinatura obrigatória.").max(MAX_ASSINATURA),
   documento: z.string().max(40).optional().or(z.literal("")),
   geolocalizacao: z.string().max(160).optional().or(z.literal("")),
   // Fotos (data URLs base64, já reduzidas no cliente) — só quando exigidas.
-  fotoCpf: z.string().optional().or(z.literal("")),
-  fotoDocumento: z.string().optional().or(z.literal("")),
-  fotoDocumentoVerso: z.string().optional().or(z.literal("")),
-  selfie: z.string().optional().or(z.literal("")),
+  fotoCpf: z.string().max(MAX_FOTO).optional().or(z.literal("")),
+  fotoDocumento: z.string().max(MAX_FOTO).optional().or(z.literal("")),
+  fotoDocumentoVerso: z.string().max(MAX_FOTO).optional().or(z.literal("")),
+  selfie: z.string().max(MAX_FOTO).optional().or(z.literal("")),
 });
 
 export type DefinirSignatariosInput = z.infer<typeof definirSignatariosSchema>;

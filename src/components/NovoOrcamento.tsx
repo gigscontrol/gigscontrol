@@ -574,9 +574,11 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         // retentável, em vez de sujeira silenciosa no cadastro.
         let checou = false;
         try {
-          const resp = await fetch(
-            `/api/contatos/contratantes/existe?telefone=${encodeURIComponent(e164)}`
-          );
+          const resp = await fetch("/api/contatos/contratantes/existe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefone: e164 }),
+          });
           if (resp.ok) {
             const j = await resp.json();
             checou = true;
