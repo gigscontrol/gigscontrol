@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { VendaCreateInput } from "@/lib/validators/vendas.schema";
+import type { LogisticaSelecao } from "@/types";
 import { accessTokenValido } from "./conexao";
 import { formatarMoeda } from "@/lib/formatters";
 
@@ -38,10 +39,12 @@ function listaItens(itens?: ItemQtd[]): string {
     .join(", ");
 }
 
-function montarLogistica(l?: { aereaQtd: number; transladoTerrestre: boolean }): string {
+function montarLogistica(l?: LogisticaSelecao): string {
   if (!l) return "";
   const partes: string[] = [];
-  if (l.aereaQtd > 0) partes.push(`Aéreo x${l.aereaQtd}`);
+  // v2: soma ida+volta; compat: aereaQtd (ida+volta combinada) dos antigos.
+  const aereo = (l.aereaIdaQtd ?? 0) + (l.aereaVoltaQtd ?? 0) || (l.aereaQtd ?? 0);
+  if (aereo > 0) partes.push(`Aéreo x${aereo}`);
   if (l.transladoTerrestre) partes.push("Translado terrestre");
   return partes.join(" · ");
 }

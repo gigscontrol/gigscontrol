@@ -9,9 +9,22 @@ const itemQtdSchema = z.object({
   qtd: z.number().int().nonnegative(),
 });
 
+// Código IATA: até 3 letras (vazio = não informado). O cliente já envia maiúsculo.
+const iataSchema = z.string().regex(/^[A-Za-z]{0,3}$/).optional();
+
 const logisticaSchema = z.object({
-  aereaQtd: z.number().int().nonnegative(),
+  aereaQtd: z.number().int().nonnegative(), // LEGADO (ida+volta combinada)
   transladoTerrestre: z.boolean(),
+  // v2: aéreas separadas ida/volta + aeroportos
+  aereaIdaQtd: z.number().int().nonnegative().optional(),
+  aereaIdaOrigem: iataSchema,
+  aereaIdaDestino: iataSchema,
+  aereaVoltaQtd: z.number().int().nonnegative().optional(),
+  aereaVoltaOrigem: iataSchema,
+  aereaVoltaDestino: iataSchema,
+  // v2: bagagens extras
+  bagagemDespachadaQtd: z.number().int().nonnegative().optional(),
+  bagagemEspecialQtd: z.number().int().nonnegative().optional(),
 });
 
 const detalhesEventoSchema = z

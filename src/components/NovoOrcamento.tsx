@@ -39,6 +39,7 @@ import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./Phon
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
+import LogisticaEditor from "./LogisticaEditor";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { normalizar } from "@/lib/normalizar";
 import { itensDoRider } from "@/lib/rider";
@@ -1633,95 +1634,11 @@ function BlocoOrcamentoDj({
           <p className="text-xs text-muted mb-3">
             {t("Não marque nenhuma se a logística estiver inclusa no cachê.")}
           </p>
-          <div className="flex flex-col gap-2">
-            {/* Aérea com quantidade */}
-            <div
-              className={`flex items-center gap-3 py-2 px-3 rounded-md border transition-colors ${
-                bloco.logistica.aereaQtd > 0
-                  ? "border-border-strong bg-elevated"
-                  : "border-border"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={bloco.logistica.aereaQtd > 0}
-                onChange={(e) =>
-                  onChange({
-                    logistica: {
-                      ...bloco.logistica,
-                      aereaQtd: e.target.checked ? Math.max(1, bloco.logistica.aereaQtd) : 0,
-                    },
-                  })
-                }
-                style={{ accentColor: accent }}
-              />
-              <span className="text-sm flex-1">{t("Logística Aérea (Ida e Volta)")}</span>
-              {bloco.logistica.aereaQtd > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        logistica: {
-                          ...bloco.logistica,
-                          aereaQtd: Math.max(1, bloco.logistica.aereaQtd - 1),
-                        },
-                      })
-                    }
-                    className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center hover:border-border-strong"
-                  >
-                    −
-                  </button>
-                  <span className="text-sm font-bold tabular-nums w-6 text-center">
-                    {bloco.logistica.aereaQtd}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        logistica: {
-                          ...bloco.logistica,
-                          aereaQtd: Math.min(20, bloco.logistica.aereaQtd + 1),
-                        },
-                      })
-                    }
-                    className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center hover:border-border-strong"
-                  >
-                    +
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Translado simples */}
-            <label
-              className={`flex items-center gap-3 py-2 px-3 rounded-md border cursor-pointer transition-colors text-sm ${
-                bloco.logistica.transladoTerrestre
-                  ? "border-border-strong bg-elevated"
-                  : "border-border hover:border-border-hover"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={bloco.logistica.transladoTerrestre}
-                onChange={(e) =>
-                  onChange({
-                    logistica: {
-                      ...bloco.logistica,
-                      transladoTerrestre: e.target.checked,
-                    },
-                  })
-                }
-                style={{ accentColor: accent }}
-              />
-              <span className="flex-1">
-                <span className="font-medium">{t("Translado Terrestre")}</span>
-                <span className="block text-xs text-muted mt-0.5">
-                  {t("Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto")}
-                </span>
-              </span>
-            </label>
-          </div>
+          <LogisticaEditor
+            value={bloco.logistica}
+            onChange={(logistica) => onChange({ logistica })}
+            accent={accent}
+          />
         </div>
 
         {/* Informações extras — texto livre que vai pro fim do orçamento

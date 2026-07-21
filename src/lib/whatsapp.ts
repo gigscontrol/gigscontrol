@@ -1,6 +1,6 @@
 import type { Orcamento, Contratante, Casa, Cidade, Artista } from "@/types";
-import { TEXTO_TRANSLADO } from "@/types";
 import { formatarMoeda } from "./formatters";
+import { linhasLogistica } from "./logisticaTexto";
 
 export function formatarDuracao(horas: number, minutos: number): string {
   const h = Math.max(0, horas);
@@ -53,6 +53,13 @@ export function gerarTextoWhatsApp(
     efeitos.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
   }
 
+  const tecnico = orc.tecnico.filter((i) => i.qtd > 0);
+  if (tecnico.length > 0) {
+    linhas.push("");
+    linhas.push("*Rider Técnico (não incluso no cachê)*");
+    tecnico.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
+  }
+
   const hotel = orc.hotel.filter((i) => i.qtd > 0);
   if (hotel.length > 0) {
     linhas.push("");
@@ -60,11 +67,9 @@ export function gerarTextoWhatsApp(
     hotel.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
   }
 
-  // ----- Logística -----
-  const temAerea = (orc.logistica.aereaQtd ?? 0) > 0;
-  const temTranslado = !!orc.logistica.transladoTerrestre;
-
-  if (!temAerea && !temTranslado) {
+  // ----- Logística ----- (aéreas ida/volta + aeroportos + bagagens + translado)
+  const logistica = linhasLogistica(orc.logistica);
+  if (logistica.length === 0) {
     // Nada selecionado = inclusa no cachê
     linhas.push("");
     linhas.push("*Logistica*");
@@ -72,12 +77,7 @@ export function gerarTextoWhatsApp(
   } else {
     linhas.push("");
     linhas.push("*Logistica (não incluso no cachê)*");
-    if (temAerea) {
-      linhas.push(`${orc.logistica.aereaQtd}x Logística Aérea (Ida e Volta)`);
-    }
-    if (temTranslado) {
-      linhas.push(TEXTO_TRANSLADO);
-    }
+    logistica.forEach((l) => linhas.push(l));
   }
 
   // Informações extras opcionais — texto livre do admin. Vai antes do
