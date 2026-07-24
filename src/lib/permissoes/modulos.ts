@@ -71,9 +71,12 @@ function temPrefixoEmAlgumVinculo(ctx: CtxPermissao, prefixo: string): boolean {
  *  - contratos   → sem gate na rota; `podeVerContrato` filtra a lista e
  *                  `podeLerModelos` libera modelos com QUALQUER chave
  *                  "contratos." — daí a checagem por prefixo.
- *  - contatos    → verificarAcessoContatos barra o papel ARTISTA (403). Equipe
- *                  entra, mas `escopoContatosEquipe` devolve "nenhum" sem
- *                  chave de contatos → lista vazia por construção.
+ *  - contatos    → ARTISTA: a LISTA (GET de contratantes/casas) NÃO barra o
+ *                  artista — serve filtrado por `privacidade.contatos`
+ *                  (verificarAcessoContatos só 403 os OUTROS papéis e as
+ *                  MUTAÇÕES). Então mostra a aba quando `priv.contatos !=
+ *                  "nenhum"`. EQUIPE: entra, mas `escopoContatosEquipe` devolve
+ *                  "nenhum" sem chave → lista vazia por construção.
  *  - agencia     → verificarAdminDoWorkspace: admin/super e mais ninguém.
  */
 /** Alcança a AGENDA de shows (dashboard + calendário) por chave de agenda. */
@@ -184,7 +187,13 @@ export function podeVerModulo(ctx: CtxPermissao, tab: TabModulo): boolean {
       return temPrefixoEmAlgumVinculo(ctx, "contratos.");
 
     case "contatos":
-      if (ctx.papel === "artista") return false; // servidor devolve 403
+      // ARTISTA: a lista (GET) é servida e filtrada por `privacidade.contatos`
+      // (o 403 do verificarAcessoContatos vale só pros OUTROS papéis e pras
+      // MUTAÇÕES). `podeArtista` resolve "contatos.ver*" como `priv.contatos !=
+      // "nenhum"` — então a aba aparece exatamente quando ele pode ler contato.
+      // Esconder aqui feria a regra de ouro (a lista existe pra ele no servidor).
+      if (ctx.papel === "artista")
+        return alcancaAlguma(ctx, ["contatos.ver", "contatos.ver_proprios"]);
       return temPrefixoEmAlgumVinculo(ctx, "contatos.");
 
     default:
