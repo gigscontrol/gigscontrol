@@ -38,11 +38,6 @@ export async function GET(_request: Request, { params }: RouteCtx) {
 export async function PATCH(request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  // D2: editar casa exige `contatos.editar` em algum vínculo (checagem que hoje
-  // NÃO existia neste [id]). O escopo de casa é catálogo — a visibilidade é
-  // confirmada abaixo (casaVisivelParaSessao).
-  const g = verificarMutacaoContato(r.sessao, "editar");
-  if (g) return g;
 
   let raw: unknown;
   try {
@@ -64,6 +59,12 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     const atual = await buscarCasaPorId(r.sessao.supabase, params.id);
     if (!atual || !(await casaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
+    // v2: editar casa distingue "criada por ele" (contatos.editar_proprios) ×
+    // "por outros" (contatos.editar_outros), pela autoria da LINHA. `criado_por`
+    // nulo (catálogo antigo sem dono) = de outros. Casa é catálogo compartilhado:
+    // a visibilidade acima é ampla, mas a EDIÇÃO respeita a autoria.
+    const g = verificarMutacaoContato(r.sessao, "editar", atual.criadoPor ?? null);
+    if (g) return g;
     const casa = await atualizarCasaPorId(
       r.sessao.supabase,
       params.id,
@@ -79,15 +80,15 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
 export async function DELETE(_request: Request, { params }: RouteCtx) {
   const r = await autenticarComWorkspace({ exigirAcesso: true });
   if ("response" in r) return r.response;
-  // D2: excluir casa exige `contatos.excluir` em algum vínculo (checagem que
-  // hoje NÃO existia neste [id]).
-  const g = verificarMutacaoContato(r.sessao, "excluir");
-  if (g) return g;
   try {
     // Confirma escopo antes de mutar — 404 (não 403) fora do escopo.
     const atual = await buscarCasaPorId(r.sessao.supabase, params.id);
     if (!atual || !(await casaVisivelParaSessao(r.sessao.supabase, r.sessao, params.id)))
       return NextResponse.json({ erro: "Casa não encontrada." }, { status: 404 });
+    // v2: excluir casa distingue "criada por ele" × "por outros" pela autoria da
+    // LINHA (contatos.excluir_proprios × contatos.excluir_outros); nulo = de outros.
+    const g = verificarMutacaoContato(r.sessao, "excluir", atual.criadoPor ?? null);
+    if (g) return g;
     await removerCasaPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {

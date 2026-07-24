@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ParcelaMeta } from "@/types";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
-import { podeInformarPagamentoParcela, podeVerFinanceiro } from "@/lib/api/permissoes";
+import { verificarMutacaoParcela, podeVerFinanceiroVenda } from "@/lib/api/permissoes";
 import { buscarParcela } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
 import { vendaVisivelParaSessao } from "@/lib/services/vendas.service";
@@ -37,7 +37,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const c = await carregar(r.sessao.supabase, params.id);
   if ("erro" in c)
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
-  const bloqueio = podeInformarPagamentoParcela(r.sessao, c.venda.artist_id, "registrar");
+  // Subir comprovante = registrar info de pagamento → "informar" (autoria via
+  // venda-mãe: artist_id + criado_por da venda).
+  const bloqueio = verificarMutacaoParcela(
+    r.sessao,
+    c.venda.artist_id,
+    c.venda.criado_por,
+    "informar"
+  );
   if (bloqueio) return bloqueio;
 
   let form: FormData;
@@ -117,10 +124,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   if (!(await vendaVisivelParaSessao(r.sessao.supabase, r.sessao, c.venda.id)))
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
   // Comprovante = documento bancário sensível: além de enxergar a venda, exige
-  // autorização de VER o financeiro deste artista (privacidade/financeiro.ver).
-  if (!podeVerFinanceiro(r.sessao, c.venda.artist_id))
+  // autorização de VER o financeiro DESTA venda por autoria (venda-mãe: artist_id
+  // + criado_por). ver_proprios só alcança o financeiro das vendas que ELE criou;
+  // ver_outros alcança todas — senão um vendedor com ver_proprios veria o
+  // comprovante de venda de outro no mesmo artista.
+  if (!podeVerFinanceiroVenda(r.sessao, c.venda.artist_id, c.venda.criado_por))
     return NextResponse.json(
-      { erro: "Sem permissão para ver o financeiro deste artista." },
+      { erro: "Sem permissão para ver o financeiro desta venda." },
       { status: 403 }
     );
 

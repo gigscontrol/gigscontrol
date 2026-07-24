@@ -4,7 +4,7 @@ import { autenticarComWorkspace } from "@/lib/api/session";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { atualizarParcelaPorId } from "@/lib/services/vendas.service";
 import { parcelaUpdateSchema } from "@/lib/validators/vendas.schema";
-import { podeInformarPagamentoParcela } from "@/lib/api/permissoes";
+import { verificarMutacaoParcela } from "@/lib/api/permissoes";
 import { buscarParcela } from "@/lib/repositories/parcelas.repo";
 import { buscarVenda } from "@/lib/repositories/vendas.repo";
 import { rowParaParcela } from "@/lib/mappers/venda";
@@ -51,24 +51,25 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   const venda = await buscarVenda(r.sessao.supabase, parcelaRow.venda_id);
   if (!venda)
     return NextResponse.json({ erro: "Parcela não encontrada." }, { status: 404 });
-  // As 3 chaves financeiras são INDEPENDENTES. O body pode disparar VÁRIOS
-  // efeitos ao mesmo tempo, então derivamos o CONJUNTO de ações exigidas e
-  // checamos CADA uma — senão uma combinação de flags escala entre as chaves
-  // (ex.: quem só registra mandar status_base:'pendente' desfazia o pagamento).
+  // As 4 ações financeiras (informar/editar/cancelar/fixar) são INDEPENDENTES. O
+  // body pode disparar VÁRIOS efeitos ao mesmo tempo, então derivamos o CONJUNTO
+  // de ações exigidas e checamos CADA uma — senão uma combinação de flags escala
+  // entre as chaves (ex.: quem só informa mandar `fixar` fixava sem chave de fixar).
+  // Autoria/artista vêm da VENDA-mãe (parcela não tem artist_id/criado_por).
   const editaEstrutura =
     parsed.data.percentual !== undefined ||
     parsed.data.valor !== undefined ||
     parsed.data.data_vencimento !== undefined ||
     // observacao/data_pagamento explícitos também são "editar" — senão viajavam
-    // junto de uma flag de cancelar/registrar sem exigir financeiro.editar_pagamento.
+    // junto de uma flag de cancelar/informar sem exigir financeiro.editar.
     parsed.data.observacao !== undefined ||
     parsed.data.data_pagamento !== undefined;
-  const requeridas = new Set<"registrar" | "cancelar" | "editar">();
-  if (parsed.data.status_base === "pago") requeridas.add("registrar");
-  if (parsed.data.status_base === "pendente") requeridas.add("cancelar"); // desfazer
-  if (parsed.data.cancelar !== undefined) requeridas.add("cancelar"); // cancelar/reativar
-  if (parsed.data.registrar_cobranca === true) requeridas.add("registrar");
-  if (parsed.data.fixar !== undefined) requeridas.add("editar");
+  const requeridas = new Set<"informar" | "editar" | "cancelar" | "fixar">();
+  if (parsed.data.status_base === "pago") requeridas.add("informar");
+  if (parsed.data.status_base === "pendente") requeridas.add("informar"); // desfazer pagamento
+  if (parsed.data.cancelar !== undefined) requeridas.add("cancelar"); // cancelar/reativar cachê (→ editar)
+  if (parsed.data.registrar_cobranca === true) requeridas.add("informar");
+  if (parsed.data.fixar !== undefined) requeridas.add("fixar");
   if (editaEstrutura) requeridas.add("editar");
   if (
     parsed.data.nota_pagamento !== undefined &&
@@ -78,7 +79,12 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     requeridas.add("editar"); // só nota, sem mudar status → edição
   if (requeridas.size === 0) requeridas.add("editar");
   for (const acao of requeridas) {
-    const bloqueio = podeInformarPagamentoParcela(r.sessao, venda.artist_id, acao);
+    const bloqueio = verificarMutacaoParcela(
+      r.sessao,
+      venda.artist_id,
+      venda.criado_por,
+      acao
+    );
     if (bloqueio) return bloqueio;
   }
 

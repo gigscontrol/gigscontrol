@@ -95,8 +95,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   // Definir/editar signatários = editar o contrato.
   const artistaId = vendas.find((v) => v.id === contrato.vendaId)?.artistaId || null;
   const podeEditarSignatarios =
-    podeUI(artistaId, "contratos.editar") ||
-    podeUI(artistaId, "contratos.editar_todos");
+    podeUI(artistaId, "contratos.criar");
 
   const [signatarios, setSignatarios] = useState<Signatario[]>([]);
   const [carregando, setCarregando] = useState(true);

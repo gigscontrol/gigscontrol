@@ -92,7 +92,7 @@ export default function VendasDashboard({
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
   const { podeUI } = useAuth();
-  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar_orcamento"));
+  const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar"));
   const [resumo, setResumo] = useState<ResumoTipo>(null);
 
   // ---- Seletor de mês (igual à Agenda) ----

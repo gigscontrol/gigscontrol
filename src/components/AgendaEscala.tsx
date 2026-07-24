@@ -179,10 +179,10 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   const { podeUI } = useAuth();
   // L5c — DUAS chaves distintas alimentam o "+":
   //   podeCriarAlgum  → agenda.criar: voo, transporte terrestre e evento.
-  //   podeCriarShow   → vendas.criar_venda: "Novo Show" (agenda virou só
+  //   podeCriarShow   → vendas.criar: "Novo Show" (agenda virou só
   //                     visualização; criar show é permissão de VENDAS).
   // O "+" aparece se ele pode criar QUALQUER uma das duas coisas — senão quem
-  // só tem vendas.criar_venda ficaria sem botão nenhum.
+  // só tem vendas.criar ficaria sem botão nenhum.
   const podeCriarAlgum = artistas.some((a) => podeUI(a.id, "agenda.criar"));
   const podeCriarShow = artistas.some((a) => podeCriarShowUI(podeUI, a.id));
   const podeAbrirNovoItem = podeCriarAlgum || podeCriarShow;
@@ -859,7 +859,7 @@ function NovoItemModal({
   day: DayCell;
   /** agenda.criar — voo, transporte terrestre e evento personalizado. */
   podeCriarItem: boolean;
-  /** vendas.criar_venda — "Novo Show" (não é mais permissão de agenda). */
+  /** vendas.criar — "Novo Show" (não é mais permissão de agenda). */
   podeCriarShow: boolean;
   onClose: () => void;
   onNovoShow: () => void;
@@ -880,10 +880,10 @@ function NovoItemModal({
         {ACOES_NOVO_ITEM.filter((a) =>
           // L5c — gate POR CHAVE, não um só pra todos:
           //   voo/transporte/evento → agenda.criar (item de agenda);
-          //   show                  → vendas.criar_venda (abre a Nova Venda
+          //   show                  → vendas.criar (abre a Nova Venda
           //                           Direta; agenda.criar NÃO serve mais).
           // ESCONDE, não desabilita: o dono pediu que "Novo Show" só APAREÇA
-          // pra quem tem vendas.criar_venda. Diverge do grey-out usado no resto
+          // pra quem tem vendas.criar. Diverge do grey-out usado no resto
           // do app de propósito — aqui o pedido foi literal, e um item cinza
           // vaza a existência da ação pra quem não pode executá-la.
           a.key === "show" ? podeCriarShow : podeCriarItem
