@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     const casa = await criarCasaNoWorkspace(
       r.sessao.supabase,
       r.sessao.workspaceId,
+      r.sessao.userId,
       parsed.data
     );
     return NextResponse.json({ casa }, { status: 201 });

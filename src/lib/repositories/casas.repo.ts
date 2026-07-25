@@ -3,7 +3,7 @@ import type { CasaRow, CasaEscrita } from "@/lib/mappers/contatos";
 import { softDelete, restaurarSoftDelete } from "./_softDelete";
 
 const COLS =
-  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em, bloqueado, bloqueado_motivo, bloqueado_por, bloqueado_em";
+  "id, workspace_id, nome, tipo, cidade_id, capacidade, endereco, contato_responsavel, telefone, lat, lng, geo_precision, criado_em, criado_por, bloqueado, bloqueado_motivo, bloqueado_por, bloqueado_em";
 
 export async function listarCasas(
   supabase: SupabaseClient,
@@ -65,11 +65,16 @@ export async function buscarCasa(
 export async function criarCasa(
   supabase: SupabaseClient,
   workspaceId: string,
+  criadoPor: string | undefined,
   payload: CasaEscrita
 ): Promise<CasaRow> {
   const { data, error } = await supabase
     .from("casas")
-    .insert({ ...payload, workspace_id: workspaceId })
+    .insert({
+      ...payload,
+      workspace_id: workspaceId,
+      ...(criadoPor ? { criado_por: criadoPor } : {}),
+    })
     .select(COLS)
     .single();
   if (error) throw error;

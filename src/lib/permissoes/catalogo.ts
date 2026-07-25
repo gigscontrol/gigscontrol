@@ -101,7 +101,17 @@ export const CATALOGO: Permissao[] = [
   { chave: "vendas.editar_venda", modulo: "vendas", nivel: "artista", label: "Editar venda", existe: true },
   { chave: "vendas.cancelar_venda", modulo: "vendas", nivel: "artista", label: "Cancelar venda", existe: true },
   { chave: "vendas.excluir_venda", modulo: "vendas", nivel: "artista", label: "Excluir venda", existe: true },
-  { chave: "vendas.editar_todos", modulo: "vendas", nivel: "artista", label: "Editar todas as vendas (não só as que ele criou)", existe: true },
+  { chave: "vendas.editar_todos", modulo: "vendas", nivel: "artista", label: "Editar todas as vendas (não só as que ele criou) — legado", existe: true },
+  // --- VENDAS v2 (autoria: criado por ele × criado por outros). As chaves acima
+  // viram LEGADO: seguem no catálogo (válidas) mas os presets/gates usam estas.
+  // `expandirLegadoEquipe` traduz as antigas nestas na leitura. ---
+  { chave: "vendas.criar", modulo: "vendas", nivel: "artista", label: "Criar orçamento e venda (converte os próprios, vê o que criou)", existe: true },
+  { chave: "vendas.editar_proprios", modulo: "vendas", nivel: "artista", label: "Editar venda criada por ele", existe: true },
+  { chave: "vendas.cancelar_proprios", modulo: "vendas", nivel: "artista", label: "Cancelar venda criada por ele", existe: true },
+  { chave: "vendas.ver_outros", modulo: "vendas", nivel: "artista", label: "Ver orçamento e venda criada por outros", existe: true },
+  { chave: "vendas.editar_outros", modulo: "vendas", nivel: "artista", label: "Editar venda criada por outros", existe: true },
+  { chave: "vendas.converter_outros", modulo: "vendas", nivel: "artista", label: "Converter orçamento criado por outros em venda", existe: true },
+  { chave: "vendas.cancelar_outros", modulo: "vendas", nivel: "artista", label: "Cancelar venda criada por outros", existe: true },
 
   // ---------------- FINANCEIRO (por artista) ----------------
   // Hoje o app controla parcelas/pagamentos das vendas. Receita/despesa/
@@ -123,26 +133,57 @@ export const CATALOGO: Permissao[] = [
   { chave: "financeiro.excluir_lancamento", modulo: "financeiro", nivel: "artista", label: "Excluir lançamento", existe: false },
   { chave: "financeiro.aprovar_pagamento", modulo: "financeiro", nivel: "artista", label: "Aprovar pagamento", existe: false },
   { chave: "financeiro.aprovar_recebimento", modulo: "financeiro", nivel: "artista", label: "Aprovar recebimento", existe: false },
+  // --- FINANCEIRO v2 (autoria via VENDA-mãe: parcela.venda_id → vendas.criado_por/
+  // artist_id). "Editar o financeiro" INCLUI cancelar/baixar parcela. Taxa da
+  // agência FORA. As chaves antigas (ver/registrar/editar/cancelar_pagamento)
+  // viram legado e são expandidas nestas na leitura. ---
+  { chave: "financeiro.ver_proprios", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro da venda criada por ele", existe: true },
+  { chave: "financeiro.editar_proprios", modulo: "financeiro", nivel: "artista", label: "Editar o financeiro da venda criada por ele (inclui cancelar/baixar parcela)", existe: true },
+  { chave: "financeiro.informar_proprios", modulo: "financeiro", nivel: "artista", label: "Informar o pagamento da venda criada por ele", existe: true },
+  { chave: "financeiro.fixar_proprios", modulo: "financeiro", nivel: "artista", label: "Fixar a cobrança da venda criada por ele", existe: true },
+  { chave: "financeiro.ver_outros", modulo: "financeiro", nivel: "artista", label: "Ver o financeiro da venda criada por outros", existe: true },
+  { chave: "financeiro.editar_outros", modulo: "financeiro", nivel: "artista", label: "Editar o financeiro da venda criada por outros (inclui cancelar/baixar parcela)", existe: true },
+  { chave: "financeiro.informar_outros", modulo: "financeiro", nivel: "artista", label: "Informar o pagamento da venda criada por outros", existe: true },
+  { chave: "financeiro.fixar_outros", modulo: "financeiro", nivel: "artista", label: "Fixar a cobrança da venda criada por outros", existe: true },
 
   // ---------------- CONTRATOS (por artista) — sem "assinar" ----------------
   // Assinar é feito pelo contratante via link gerado (fluxo /assinar/[token]),
   // não é ação de membro da equipe.
-  { chave: "contratos.ver", modulo: "contratos", nivel: "artista", label: "Ver contratos", existe: true },
-  { chave: "contratos.criar", modulo: "contratos", nivel: "artista", label: "Criar contrato", existe: true },
-  { chave: "contratos.editar", modulo: "contratos", nivel: "artista", label: "Editar contrato", existe: true },
-  { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato", existe: true },
+  { chave: "contratos.ver", modulo: "contratos", nivel: "artista", label: "Ver contratos — legado", existe: true },
+  // contratos.criar sobrevive como chave v2 (EMBUTE ver os que ele criou +
+  // gerar a partir de modelo). Serve de própria-autoria pra ver/editar o próprio.
+  { chave: "contratos.criar", modulo: "contratos", nivel: "artista", label: "Criar contrato (inclui ver os que criou e gerar de modelo)", existe: true },
+  { chave: "contratos.editar", modulo: "contratos", nivel: "artista", label: "Editar contrato — legado", existe: true },
+  { chave: "contratos.cancelar", modulo: "contratos", nivel: "artista", label: "Cancelar contrato — legado", existe: true },
   // contratos.excluir REMOVIDO do catálogo: excluir contrato = admin-only
   // assumido, não delegável (some do editor e do pacote do artista). O
   // enforcement de exclusão trata admin direto, sem passar por chave.
-  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos (não só os das vendas que criou)", existe: true },
+  { chave: "contratos.editar_todos", modulo: "contratos", nivel: "artista", label: "Editar todos os contratos — legado", existe: true },
+  // --- CONTRATOS v2 (autoria = contratos.criado_por; artista via venda_id →
+  // vendas.artist_id). Excluir contrato gerado segue admin-only. ---
+  { chave: "contratos.cancelar_proprios", modulo: "contratos", nivel: "artista", label: "Cancelar contrato criado por ele", existe: true },
+  { chave: "contratos.ver_outros", modulo: "contratos", nivel: "artista", label: "Ver contrato criado por outros", existe: true },
+  { chave: "contratos.cancelar_outros", modulo: "contratos", nivel: "artista", label: "Cancelar contrato criado por outros", existe: true },
+  // Modelo de contrato = molde reutilizável (workspace-level; a chave mora no
+  // vínculo e o gate usa a UNIÃO dos vínculos). ≠ excluir um contrato gerado.
+  { chave: "contratos.criar_modelo", modulo: "contratos", nivel: "artista", label: "Criar modelo de contrato", existe: true },
+  { chave: "contratos.excluir_modelo", modulo: "contratos", nivel: "artista", label: "Excluir modelo de contrato", existe: true },
 
   // ---------------- CONTATOS (por artista) ----------------
   // Escopo de visualização: todos OU só os que o próprio criou.
-  { chave: "contatos.ver", modulo: "contatos", nivel: "artista", label: "Ver todos os contatos", existe: true },
-  { chave: "contatos.ver_proprios", modulo: "contatos", nivel: "artista", label: "Ver só os contatos que ele criou", existe: true },
+  { chave: "contatos.ver", modulo: "contatos", nivel: "artista", label: "Ver todos os contatos — legado", existe: true },
+  // contatos.ver_proprios e contatos.criar sobrevivem como chaves v2.
+  { chave: "contatos.ver_proprios", modulo: "contatos", nivel: "artista", label: "Ver contato criado por ele", existe: true },
   { chave: "contatos.criar", modulo: "contatos", nivel: "artista", label: "Criar contato", existe: true },
-  { chave: "contatos.editar", modulo: "contatos", nivel: "artista", label: "Editar contato", existe: true },
-  { chave: "contatos.excluir", modulo: "contatos", nivel: "artista", label: "Excluir contato", existe: true },
+  { chave: "contatos.editar", modulo: "contatos", nivel: "artista", label: "Editar contato — legado", existe: true },
+  { chave: "contatos.excluir", modulo: "contatos", nivel: "artista", label: "Excluir contato — legado", existe: true },
+  // --- CONTATOS v2 (contratantes E casas; workspace-level → gate por UNIÃO dos
+  // vínculos; autoria = criado_por, nulo = "de outros"). "Editar" cobre atualizar. ---
+  { chave: "contatos.editar_proprios", modulo: "contatos", nivel: "artista", label: "Editar contato criado por ele", existe: true },
+  { chave: "contatos.excluir_proprios", modulo: "contatos", nivel: "artista", label: "Excluir contato criado por ele", existe: true },
+  { chave: "contatos.ver_outros", modulo: "contatos", nivel: "artista", label: "Ver contato criado por outros", existe: true },
+  { chave: "contatos.editar_outros", modulo: "contatos", nivel: "artista", label: "Editar contato criado por outros", existe: true },
+  { chave: "contatos.excluir_outros", modulo: "contatos", nivel: "artista", label: "Excluir contato criado por outros", existe: true },
   // Sem rota implementada ainda (achado só referência na página de Privacidade,
   // texto de política — não há endpoint de exportação real). Slot futuro.
   { chave: "contatos.exportar", modulo: "contatos", nivel: "artista", label: "Exportar contatos", existe: false },

@@ -21,7 +21,7 @@ import { privacidadeValida } from "./mappers/artista";
 import { DEFAULT_SELECTED_ARTISTA_IDS } from "./artistas-fallback";
 import { criarClienteBrowser } from "./db/supabase-browser";
 import { pode as motorPode, type CtxPermissao } from "./permissoes/resolver";
-import { expandirLegadoAgenda } from "./permissoes/setoresAgenda";
+import { expandirLegadoVinculo } from "./permissoes/legadoEquipe";
 
 /**
  * Camada de autenticação do GIGS CONTROL — ligada ao Supabase Auth.
@@ -365,9 +365,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         for (const v of vinc ?? []) {
           const perms = (v as { permissoes?: unknown }).permissoes;
           // Espelha `mapaDeVinculos` do servidor: expande as chaves legadas de
-          // leitura da agenda nos setores. Se um lado expandir e o outro não,
+          // leitura — agenda (setores) + os 4 módulos da equipe v2 (vendas/
+          // financeiro/contratos/contatos). Se um lado expandir e o outro não,
           // a UI e o servidor discordam sobre o que a pessoa vê.
-          vinculos[(v as { artist_id: string }).artist_id] = expandirLegadoAgenda(
+          vinculos[(v as { artist_id: string }).artist_id] = expandirLegadoVinculo(
             Array.isArray(perms)
               ? (perms.filter((x) => typeof x === "string") as string[])
               : []
@@ -532,7 +533,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const novos: Record<string, string[]> = {};
       for (const v of data ?? []) {
         const perms = (v as { permissoes?: unknown }).permissoes;
-        novos[(v as { artist_id: string }).artist_id] = expandirLegadoAgenda(
+        novos[(v as { artist_id: string }).artist_id] = expandirLegadoVinculo(
           Array.isArray(perms)
             ? (perms.filter((x) => typeof x === "string") as string[])
             : []

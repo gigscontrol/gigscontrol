@@ -12,8 +12,9 @@ type RouteCtx = { params: { id: string } };
 /**
  * POST /api/vendas/:id/cancelar — CANCELA a venda (D5).
  *
- * Gated por `podeCancelarVenda` (chave `vendas.cancelar_venda`, próprios × todos;
- * artista dentro de `vendasCriar`; admin sempre). Efeitos:
+ * Gated por `podeCancelarVenda` (autoria v2: `vendas.cancelar_proprios` para a
+ * venda criada por ele × `vendas.cancelar_outros` para a de outros; admin
+ * sempre). Cancelar ≠ excluir — excluir venda é admin-only. Efeitos:
  *   1) vendas.status = 'cancelada' — a venda some dos dashboards e do "a receber",
  *      mas continua no histórico com badge;
  *   2) as parcelas NÃO pagas são canceladas usando o MESMO mecanismo do

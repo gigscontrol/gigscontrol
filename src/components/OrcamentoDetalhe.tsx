@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import {
+  podeConverterOrcamentoUI,
+  podeEditarOrcamentoUI,
+} from "@/lib/permissoes/gatesEquipeUI";
 import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2, Pencil, Check, X } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
@@ -33,7 +37,8 @@ type Props = {
 
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
   const t = useT();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
+  const userId = sessao?.usuario.id;
   const { confirmar, confirmador } = useConfirmar();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
@@ -79,8 +84,18 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const st = LABELS_STATUS_ORCAMENTO[orc.status];
 
   // Permissões por artista (podeUI já libera admin/legado).
-  const podeConverter = podeUI(orc.artistaId || null, "vendas.converter");
-  const podeEditarOrc = podeUI(orc.artistaId || null, "vendas.editar_orcamento");
+  const podeConverter = podeConverterOrcamentoUI(
+    podeUI,
+    orc.artistaId || null,
+    orc.criadoPor,
+    userId
+  );
+  const podeEditarOrc = podeEditarOrcamentoUI(
+    podeUI,
+    orc.artistaId || null,
+    orc.criadoPor,
+    userId
+  );
   const podeExcluirOrc = podeUI(orc.artistaId || null, "vendas.excluir_orcamento");
   const semPermissao = t("Você não tem permissão para isso.");
 

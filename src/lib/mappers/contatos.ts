@@ -91,6 +91,7 @@ export type CasaRow = {
   contato_responsavel: string | null;
   telefone: string | null;
   criado_em: string | null;
+  criado_por: string | null;
   lat: number | string | null;
   lng: number | string | null;
   geo_precision: string | null;
@@ -113,6 +114,7 @@ export function rowParaCasa(row: CasaRow): Casa {
     criadoEm: row.criado_em ?? undefined,
     bloqueado: row.bloqueado ?? false,
   };
+  if (row.criado_por) casa.criadoPor = row.criado_por;
   const lat = paraNumero(row.lat);
   const lng = paraNumero(row.lng);
   if (lat !== undefined) casa.lat = lat;
@@ -127,6 +129,7 @@ export function rowParaCasa(row: CasaRow): Casa {
 
 export type CasaEscrita = {
   workspace_id?: string;
+  criado_por?: string | null;
   nome?: string;
   tipo?: TipoCasa;
   cidade_id?: string | null;

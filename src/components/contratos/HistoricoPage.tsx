@@ -124,13 +124,15 @@ export default function HistoricoPage({
   // do artista — checa o papel direto (não uma chave).
   const ehAdmin = isSuperAdmin || sessao?.usuario.papel === "admin";
   const podeExcluir = (_c: Contrato) => ehAdmin;
-  const podeEditar = (c: Contrato) =>
-    podeUI(artistaDoContrato(c), "contratos.editar") ||
-    podeUI(artistaDoContrato(c), "contratos.editar_todos");
-  // Cancelar contrato é permissão PRÓPRIA (D4): delegável à equipe
-  // (contratos.cancelar) e liberada ao artista dentro de contratosCriar.
+  // Editar contrato = quem PODE CRIAR contrato edita (espelha podeEditarContrato
+  // no servidor: chave contratos.criar, sem eixo de autoria).
+  const podeEditar = (c: Contrato) => podeUI(artistaDoContrato(c), "contratos.criar");
+  // Cancelar contrato distingue autoria no servidor (cancelar_proprios/_outros).
+  // Sem o criado_por do contrato aqui, o espelho mostra o botão se pode cancelar
+  // EM QUALQUER caso — o servidor barra o caso específico (nunca esconde a mais).
   const podeCancelar = (c: Contrato) =>
-    podeUI(artistaDoContrato(c), "contratos.cancelar");
+    podeUI(artistaDoContrato(c), "contratos.cancelar_proprios") ||
+    podeUI(artistaDoContrato(c), "contratos.cancelar_outros");
 
   const [selecionadoId, setSelecionadoId] = useState<string | null>(abrirId);
   const [filtro, setFiltro] = useState<ContratoStatus | "todos">(
