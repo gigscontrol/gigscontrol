@@ -1,5 +1,6 @@
-import { TEXTO_TRANSLADO, type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
+import { type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
 import { formatarMoeda } from "./formatters";
+import { linhasLogistica } from "./logisticaTexto";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
  *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
@@ -26,6 +27,7 @@ export type DadosFechamento = {
   lineUp?: string[];
   efeitos?: ItemQuantidade[];
   camarim?: ItemQuantidade[];
+  tecnico?: ItemQuantidade[];
   hotel?: ItemQuantidade[];
   logistica?: LogisticaSelecao;
 };
@@ -78,13 +80,7 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
 
   // Hotel e Logística: SÓ aparecem se tiverem opção selecionada.
   const blocoHotel = blocoItens("Hotel", v.hotel, false);
-  const logLinhas: string[] = [];
-  if (v.logistica) {
-    if ((v.logistica.aereaQtd ?? 0) > 0) {
-      logLinhas.push(`${v.logistica.aereaQtd}x Logística Aérea (Ida e Volta)`);
-    }
-    if (v.logistica.transladoTerrestre) logLinhas.push(TEXTO_TRANSLADO);
-  }
+  const logLinhas = v.logistica ? linhasLogistica(v.logistica) : [];
   const blocoLogistica = logLinhas.length ? ["*Logística:*", ...logLinhas].join("\n") : null;
 
   // Cada item = um "parágrafo" separado por LINHA EM BRANCO (join "\n\n").
@@ -95,6 +91,7 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
     ...evento,
     blocoItens("Efeitos", v.efeitos),
     blocoItens("Consumação/Camarim", v.camarim),
+    blocoItens("Rider Técnico", v.tecnico, false),
     blocoHotel,
     blocoLogistica,
     "Após o preenchimento dessas informações a sua data será agendada e em seguida você receberá todos os materiais e vídeo chamada do artista.",

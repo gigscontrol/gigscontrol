@@ -67,6 +67,7 @@ import { useAuth } from "@/lib/auth-context";
 import { podeEditarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
+import LogisticaEditor from "./LogisticaEditor";
 import { parseFechamento } from "@/lib/parseFechamento";
 import { parseValorBR } from "@/lib/valor";
 import { itensDoRider } from "@/lib/rider";
@@ -1500,6 +1501,7 @@ export default function ConcretizarVenda({
           lineUp,
           efeitos,
           camarim,
+          tecnico,
           hotel,
           logistica,
         };
@@ -2723,68 +2725,7 @@ function LogisticaBlock({
       <p className="text-xs text-muted mb-3">
         {t("Não marque nada se a logística estiver inclusa no cachê.")}
       </p>
-      <div className="flex flex-col gap-2">
-        <div
-          className={`flex items-center gap-3 py-2 px-3 rounded-md border transition-colors ${
-            value.aereaQtd > 0 ? "border-border-strong bg-elevated" : "border-border"
-          }`}
-        >
-          <input
-            type="checkbox"
-            checked={value.aereaQtd > 0}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                aereaQtd: e.target.checked ? Math.max(1, value.aereaQtd) : 0,
-              })
-            }
-            style={{ accentColor: accent }}
-          />
-          <span className="text-sm flex-1">{t("Logística Aérea (Ida e Volta)")}</span>
-          {value.aereaQtd > 0 && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onChange({ ...value, aereaQtd: Math.max(1, value.aereaQtd - 1) })}
-                className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center hover:border-border-strong"
-              >
-                <Minus size={13} />
-              </button>
-              <span className="text-sm font-bold tabular-nums w-6 text-center">
-                {value.aereaQtd}
-              </span>
-              <button
-                type="button"
-                onClick={() => onChange({ ...value, aereaQtd: Math.min(20, value.aereaQtd + 1) })}
-                className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center hover:border-border-strong"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <label
-          className={`flex items-center gap-3 py-2 px-3 rounded-md border cursor-pointer transition-colors text-sm ${
-            value.transladoTerrestre
-              ? "border-border-strong bg-elevated"
-              : "border-border hover:border-border-hover"
-          }`}
-        >
-          <input
-            type="checkbox"
-            checked={value.transladoTerrestre}
-            onChange={(e) => onChange({ ...value, transladoTerrestre: e.target.checked })}
-            style={{ accentColor: accent }}
-          />
-          <span className="flex-1">
-            <span className="font-medium">{t("Translado Terrestre")}</span>
-            <span className="block text-xs text-muted mt-0.5">
-              {t("Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto")}
-            </span>
-          </span>
-        </label>
-      </div>
+      <LogisticaEditor value={value} onChange={onChange} accent={accent} />
     </div>
   );
 }

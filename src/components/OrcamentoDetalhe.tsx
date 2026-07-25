@@ -15,6 +15,7 @@ import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
+import { linhasLogistica } from "@/lib/logisticaTexto";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatarDuracao } from "@/lib/whatsapp";
 import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
@@ -104,7 +105,9 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
 
   const itensCamarim = orc.camarim.filter((i) => i.qtd > 0);
   const itensEfeitos = orc.efeitos.filter((i) => i.qtd > 0);
+  const itensTecnico = orc.tecnico.filter((i) => i.qtd > 0);
   const itensHotel = orc.hotel.filter((i) => i.qtd > 0);
+  const linhasLog = linhasLogistica(orc.logistica);
 
   // Quais dados faltam para virar venda?
   const camposFaltantes: string[] = [];
@@ -439,21 +442,17 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             <div className="flex flex-col gap-4 text-sm">
               <ItemsBlock title={t("Camarim / Consumação")} items={itensCamarim} />
               <ItemsBlock title={t("Efeitos")} items={itensEfeitos} />
+              <ItemsBlock title={t("Rider Técnico")} items={itensTecnico} />
               <ItemsBlock title={t("Hotel")} items={itensHotel} />
               <div>
                 <div className="stat-label mb-1">{t("Logística")}</div>
                 <div className="text-primary text-sm space-y-1">
-                  {orc.logistica.aereaQtd === 0 && !orc.logistica.transladoTerrestre && (
-                    <div>{t("Já inclusa do cachê")}</div>
-                  )}
-                  {orc.logistica.aereaQtd > 0 && (
-                    <div>
-                      {t("{n}× Logística Aérea (Ida e Volta)", { n: orc.logistica.aereaQtd })}
+                  {linhasLog.length === 0 && <div>{t("Já inclusa do cachê")}</div>}
+                  {linhasLog.map((l, i) => (
+                    <div key={i} className={l === TEXTO_TRANSLADO ? "text-secondary" : undefined}>
+                      {l}
                     </div>
-                  )}
-                  {orc.logistica.transladoTerrestre && (
-                    <div className="text-secondary">{t(TEXTO_TRANSLADO)}</div>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>

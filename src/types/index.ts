@@ -423,13 +423,40 @@ export type ItemQuantidade = {
  * Logística — múltipla escolha. Se nada marcado, é "Já inclusa do cachê".
  */
 export type LogisticaSelecao = {
-  aereaQtd: number; // 0 = não usa; N = quantidade de ida-volta
+  /** LEGADO: aérea ida+volta combinada. Mantido só p/ ler orçamentos antigos. */
+  aereaQtd: number;
   transladoTerrestre: boolean; // toggle simples
+  // ── v2: aéreas SEPARADAS ida/volta, com aeroportos (IATA 3 letras, opcionais) ──
+  /** Passagens de IDA (0 = não usa). */
+  aereaIdaQtd?: number;
+  /** Aeroporto de partida da IDA (código IATA, ex.: "GRU"). */
+  aereaIdaOrigem?: string;
+  /** Aeroporto de destino da IDA (código IATA, ex.: "CWB"). */
+  aereaIdaDestino?: string;
+  /** Passagens de VOLTA (0 = não usa). */
+  aereaVoltaQtd?: number;
+  /** Aeroporto de partida da VOLTA. */
+  aereaVoltaOrigem?: string;
+  /** Aeroporto de destino da VOLTA. */
+  aereaVoltaDestino?: string;
+  // ── v2: bagagens extras (quantidade) ──
+  /** Bagagem despachada extra (0 = não usa). */
+  bagagemDespachadaQtd?: number;
+  /** Bagagem especial extra (0 = não usa). */
+  bagagemEspecialQtd?: number;
 };
 
 export const LOGISTICA_VAZIA: LogisticaSelecao = {
   aereaQtd: 0,
   transladoTerrestre: false,
+  aereaIdaQtd: 0,
+  aereaIdaOrigem: "",
+  aereaIdaDestino: "",
+  aereaVoltaQtd: 0,
+  aereaVoltaOrigem: "",
+  aereaVoltaDestino: "",
+  bagagemDespachadaQtd: 0,
+  bagagemEspecialQtd: 0,
 };
 
 export const TEXTO_TRANSLADO =

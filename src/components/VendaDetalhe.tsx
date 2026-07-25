@@ -21,6 +21,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { formatarDuracao } from "@/lib/whatsapp";
+import { linhasLogistica } from "@/lib/logisticaTexto";
 import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
@@ -181,7 +182,9 @@ export default function VendaDetalhe({
   const orc = venda.orcamentoId ? orcamentos.find((o) => o.id === venda.orcamentoId) : null;
   const itensCamarim = venda.camarim.filter((i) => i.qtd > 0);
   const itensEfeitos = venda.efeitos.filter((i) => i.qtd > 0);
+  const itensTecnico = venda.tecnico.filter((i) => i.qtd > 0);
   const itensHotel = venda.hotel.filter((i) => i.qtd > 0);
+  const linhasLog = linhasLogistica(venda.logistica);
 
   return (
     <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
@@ -559,19 +562,17 @@ export default function VendaDetalhe({
             <div className="section-title mb-3">{t("Adicionais")}</div>
             <ItemsList title={t("Camarim / Consumação")} items={itensCamarim} />
             <ItemsList title={t("Efeitos")} items={itensEfeitos} />
+            <ItemsList title={t("Rider Técnico")} items={itensTecnico} />
             <ItemsList title={t("Hotel")} items={itensHotel} />
             <div className="mt-3">
               <div className="stat-label mb-1">{t("Logística")}</div>
               <div className="text-sm text-primary space-y-1">
-                {venda.logistica.aereaQtd === 0 && !venda.logistica.transladoTerrestre && (
-                  <div>{t("Já inclusa do cachê")}</div>
-                )}
-                {venda.logistica.aereaQtd > 0 && (
-                  <div>{t("{n}× Logística Aérea (Ida e Volta)", { n: venda.logistica.aereaQtd })}</div>
-                )}
-                {venda.logistica.transladoTerrestre && (
-                  <div className="text-secondary">{t(TEXTO_TRANSLADO)}</div>
-                )}
+                {linhasLog.length === 0 && <div>{t("Já inclusa do cachê")}</div>}
+                {linhasLog.map((l, i) => (
+                  <div key={i} className={l === TEXTO_TRANSLADO ? "text-secondary" : undefined}>
+                    {l}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
