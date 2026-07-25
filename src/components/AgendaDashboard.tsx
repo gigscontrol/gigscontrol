@@ -375,6 +375,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
     const artista = artistaDoShow(show);
     const cid = cidadeDoShow(show);
     const diaMes = show.data ? Number(show.data.slice(8, 10)) : show.dayId;
+    // Mês do PRÓPRIO show (ISO "YYYY-MM-DD"), não o mês do seletor — senão a
+    // "Visão geral" (all-time) rotula TODAS as linhas com o mês corrente.
+    // Sem data concreta (só dayId), cai no mês do seletor.
+    const mesShow = show.data ? Number(show.data.slice(5, 7)) - 1 : mes;
     const balada = localDoEvento(show);
     const cidadeTxt = cid ? `${cid.nome}/${cid.estado}` : show.location || "";
     const headline = balada || cidadeTxt || "Local a definir";
@@ -391,7 +395,7 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
           <div className="text-lg font-bold tabular-nums leading-none text-primary">
             {diaMes}
           </div>
-          <div className="text-[0.6rem] uppercase text-muted">{t(MESES_CURTO[mes])}</div>
+          <div className="text-[0.6rem] uppercase text-muted">{t(MESES_CURTO[mesShow])}</div>
         </div>
         <span
           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
