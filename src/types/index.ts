@@ -340,6 +340,8 @@ export type Casa = {
   observacoes?: string;
   /** Data de cadastro (ISO) — exposta p/ filtro de período no Gerenciar. */
   criadoEm?: string;
+  /** userId de quem cadastrou (autoria v2 — escopo próprios × outros). */
+  criadoPor?: string;
   /** Coordenadas próprias (migração 51) — geocodificadas no cadastro. */
   lat?: number;
   lng?: number;

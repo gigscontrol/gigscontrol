@@ -12,6 +12,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
+import { podeEditarVendaUI, podeCancelarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import { MODULE_THEMES } from "@/types";
 
@@ -29,7 +30,8 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   const { orcamentos } = useOrcamentos();
   const { cidades } = useContatos();
   const artistas = useArtistas();
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
+  const userId = sessao?.usuario.id;
 
   const [search, setSearch] = useState("");
   const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
@@ -229,15 +231,19 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
                     : null;
                   const cancelada = v.status === "cancelada";
                   const podeCancelar =
-                    !cancelada && podeUI(v.artistaId || null, "vendas.cancelar_venda");
+                    !cancelada &&
+                    podeCancelarVendaUI(podeUI, v.artistaId || null, v.criadoPor, userId);
                   // Mesmo gate do VendaDetalhe.tsx:62-65 — permissão de VENDAS,
                   // não de agenda. Sem `!cancelada`: nem o VendaDetalhe nem o
                   // PATCH do servidor travam a edição de venda cancelada, e
                   // esconder só o atalho aqui daria a impressão falsa de trava
                   // (o ícone "Ver" ao lado leva à mesma edição).
-                  const podeEditar =
-                    podeUI(v.artistaId || null, "vendas.editar_venda") ||
-                    podeUI(v.artistaId || null, "vendas.editar_todos");
+                  const podeEditar = podeEditarVendaUI(
+                    podeUI,
+                    v.artistaId || null,
+                    v.criadoPor,
+                    userId
+                  );
                   return (
                     <tr
                       key={v.id}

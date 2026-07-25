@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { podeEditarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import Avatar from "./Avatar";
 import type { FichaShow } from "@/lib/agenda/ficha";
@@ -130,11 +131,11 @@ export default function ShowDetalheModal({
   const cancelado = show.status === "cancelado";
   // Grey-out (UX; servidor é a autoridade). REGRA NOVA (L5b): mexer no SHOW é
   // permissão de VENDAS, não de agenda — a agenda virou só visualização.
-  // Cancelar/reativar → vendas.cancelar_venda; editar (booking) →
-  // vendas.editar_venda|editar_todos. Quem tinha só agenda.editar_todos PERDE
-  // estes botões de propósito. Ver src/lib/permissoes/gatesShow.ts.
-  // O DONO do show entra no cálculo: as chaves sem "_todos" são de escopo
-  // "próprios", e o servidor (podeMutar) já negava o show de outra pessoa.
+  // Cancelar/reativar → vendas.cancelar_proprios|cancelar_outros; editar
+  // (booking) → vendas.editar_proprios|editar_outros. Quem tinha só
+  // agenda.editar_todos PERDE estes botões. Ver src/lib/permissoes/gatesShow.ts.
+  // O DONO do show entra no cálculo: o eixo de autoria (próprios × outros)
+  // segue `show.criadoPor`, e o servidor (podePorAutoria) nega o de outra pessoa.
   const donoDoShow = { criadoPor: show.criadoPor, meuUserId: sessao?.usuario.id };
   const podeCancelarShow = podeCancelarShowUI(podeUI, show.artistaId || null, donoDoShow);
   const podeEditarShow = podeEditarShowUI(podeUI, show.artistaId || null, donoDoShow);
@@ -178,8 +179,7 @@ export default function ShowDetalheModal({
   const venda = show.vendaId ? vendas.find((v) => String(v.id) === show.vendaId) : null;
   // Mesmo gate do VendaDetalhe.tsx:62-65 — permissão de VENDAS (não agenda.*).
   const podeEditarVendaLigada = venda
-    ? podeUI(venda.artistaId || null, "vendas.editar_venda") ||
-      podeUI(venda.artistaId || null, "vendas.editar_todos")
+    ? podeEditarVendaUI(podeUI, venda.artistaId || null, venda.criadoPor, sessao?.usuario.id)
     : false;
 
   // A barra de ações só existe se houver ALGUMA ação. Sem isto, quem só

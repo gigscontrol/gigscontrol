@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
+import { podeEditarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import { chaveDoSetor } from "@/lib/permissoes/setoresAgenda";
 import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History, AlertTriangle } from "lucide-react";
@@ -119,15 +120,14 @@ export default function VendaDetalhe({
   const artista = artistas.find((d) => d.id === venda.artistaId);
   // Permissões por artista (podeUI já libera admin/legado).
   const podeEditarVenda =
-    podeUI(venda.artistaId || null, "vendas.editar_venda") ||
-    podeUI(venda.artistaId || null, "vendas.editar_todos");
+    podeEditarVendaUI(podeUI, venda.artistaId || null, venda.criadoPor, sessao?.usuario.id);
   const podeExcluirVenda = podeUI(venda.artistaId || null, "vendas.excluir_venda");
   // REGRA NOVA (L5b): mexer no SHOW é permissão de VENDAS, não de agenda.
-  // Booking edita o show → vendas.editar_venda|editar_todos (o servidor exige
-  // a mesma); cancelar/reativar o show → vendas.cancelar_venda. Quem tinha só
-  // agenda.editar_todos PERDE estes botões de propósito.
-  // `show` tem que ser resolvido ANTES dos gates: as chaves sem "_todos" são de
-  // escopo "próprios" e dependem de `show.criadoPor` (espelha podeMutar).
+  // Booking edita o show → vendas.editar_proprios|editar_outros (o servidor
+  // exige a mesma); cancelar/reativar o show → vendas.cancelar_proprios|
+  // cancelar_outros. Quem tinha só agenda.editar_todos PERDE estes botões.
+  // `show` tem que ser resolvido ANTES dos gates: o eixo de autoria (próprios ×
+  // outros) depende de `show.criadoPor` (espelha podePorAutoria).
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const donoDoShow = { criadoPor: show?.criadoPor, meuUserId: sessao?.usuario.id };
   // Booking exige MAIS que editar o show: o servidor ([id]/route.ts) também

@@ -27,7 +27,7 @@ export async function GET(
     if (!contrato)
       return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
     const { artistId } = await resolverEscopoContrato(r.sessao.supabase, contrato.vendaId);
-    if (!podeVerContrato(r.sessao, artistId))
+    if (!podeVerContrato(r.sessao, artistId, contrato.criadoPor))
       return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
     const signatarios = await listarSignatariosDoContrato(
       r.sessao.supabase,

@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       );
     // Gate por artista (via venda). 404 fora do escopo — não vaza existência.
     const { artistId } = await resolverEscopoContrato(r.sessao.supabase, contrato.vendaId);
-    if (!podeVerContrato(r.sessao, artistId))
+    if (!podeVerContrato(r.sessao, artistId, contrato.criadoPor))
       return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
     return NextResponse.json({ contrato });
   } catch (e) {

@@ -87,9 +87,34 @@ export function temChaveEmAlgumVinculo(
 export function escopoContatosEquipe(
   sessao: SessaoAutenticada
 ): "todos" | "proprios" | "nenhum" {
-  if (temChaveEmAlgumVinculo(sessao, "contatos.ver")) return "todos";
-  if (temChaveEmAlgumVinculo(sessao, "contatos.ver_proprios")) return "proprios";
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return "todos";
+  // v2: `contatos.ver_outros` = vê TODOS; qualquer chave de escopo PRÓPRIO
+  // (ver/editar/excluir_proprios ou criar) = vê só os que ele criou.
+  if (temChaveEmAlgumVinculo(sessao, "contatos.ver_outros")) return "todos";
+  const proprios = [
+    "contatos.ver_proprios",
+    "contatos.criar",
+    "contatos.editar_proprios",
+    "contatos.excluir_proprios",
+  ];
+  if (proprios.some((c) => temChaveEmAlgumVinculo(sessao, c))) return "proprios";
   return "nenhum";
+}
+
+/**
+ * Pode VER ESTE contato (workspace-level; autoria = `criado_por`)?
+ *   - escopo "todos"    → sempre;
+ *   - escopo "proprios" → só se `criadoPor === userId`;
+ *   - escopo "nenhum"   → nunca. `criado_por` nulo conta como "de outros".
+ */
+export function podeVerContato(
+  sessao: SessaoAutenticada,
+  criadoPor: string | null
+): boolean {
+  const escopo = escopoContatosEquipe(sessao);
+  if (escopo === "todos") return true;
+  if (escopo === "nenhum") return false;
+  return !!criadoPor && criadoPor === sessao.userId;
 }
 
 /**
@@ -120,6 +145,131 @@ function filtrarEscopoArtista<Q extends QueryBuilder>(
   }
   return query.eq("artist_id", ZERO_RESULTS) as Q; // sem acesso → zero
 }
+
+// ============================================================
+// AUTORIA v2 — "criado por ele" × "criado por outros".
+//
+// O modelo v2 não tem uma chave "ver os próprios" separada: ver/mexer no que é
+// DELE vem embutido nas chaves de ação próprias (criar/editar_proprios/…). Os
+// helpers abaixo resolvem o eixo de autoria em cima do MOTOR (podeNaSessao),
+// por artista, e por UNIÃO dos vínculos (workspace-level, p/ contatos/modelos).
+// ============================================================
+
+/**
+ * Gate ESTRITO por autoria (por artista): registro do PRÓPRIO usuário
+ * (criadoPor === userId) exige `chaveProprios`; de outro (ou criadoPor NULO)
+ * exige `chaveOutros`. Admin/super são resolvidos dentro de `podeNaSessao`.
+ *
+ * Regra: `criado_por` NULO conta como "de outros" (usa `chaveOutros`) — linha
+ * sem dono nunca passa pela chave própria.
+ */
+export function podePorAutoria(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null | undefined,
+  chaveProprios: string,
+  chaveOutros: string
+): boolean {
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  return podeNaSessao(sessao, artistId, ehProprio ? chaveProprios : chaveOutros);
+}
+
+/**
+ * Autoria por UNIÃO DOS VÍNCULOS (workspace-level: contatos e modelos de
+ * contrato, que não têm artist_id). Próprio → `chaveProprios` em ALGUM vínculo;
+ * de outros (ou criado_por nulo) → `chaveOutros`. Admin/super passam.
+ */
+export function podePorAutoriaWorkspace(
+  sessao: SessaoAutenticada,
+  criadoPor: string | null | undefined,
+  chaveProprios: string,
+  chaveOutros: string
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  return temChaveEmAlgumVinculo(sessao, ehProprio ? chaveProprios : chaveOutros);
+}
+
+/** Alcança algum artista com QUALQUER uma das chaves da lista? (por vínculo). */
+function alcancaAlgumaChave(
+  sessao: SessaoAutenticada,
+  chaves: readonly string[]
+): boolean {
+  return alcancaAlgum(sessao, [...chaves]);
+}
+
+/**
+ * Filtra uma query por artista + AUTORIA v2 (para vendas/orçamentos/financeiro):
+ *   - artistas com `chaveTodos` (ver_outros)          → TUDO;
+ *   - artistas com QUALQUER `chavesProprios` (mas sem  → só as linhas do próprio
+ *     ver_outros)                                        (criado_por === userId).
+ * Requer colunas `artist_id` e `criado_por` na tabela.
+ */
+function filtrarEscopoAutoria<Q extends QueryBuilder>(
+  query: Q,
+  sessao: SessaoAutenticada,
+  chaveTodos: string,
+  chavesProprios: readonly string[]
+): Q {
+  const todosRaw = artistasVisiveisNaSessao(sessao, chaveTodos);
+  if (todosRaw === "todos") return query; // admin/super → tudo
+  const todos = todosRaw;
+  const todosSet = new Set(todos);
+  const propriosSet = new Set<string>();
+  for (const chave of chavesProprios) {
+    const v = artistasVisiveisNaSessao(sessao, chave);
+    if (v === "todos") return query; // admin/super (defensivo)
+    for (const a of v) if (!todosSet.has(a)) propriosSet.add(a);
+  }
+  const proprios = [...propriosSet];
+  if (todos.length > 0 && proprios.length > 0) {
+    return query.or(
+      `artist_id.in.(${todos.join(",")}),and(artist_id.in.(${proprios.join(
+        ","
+      )}),criado_por.eq.${sessao.userId})`
+    ) as Q;
+  }
+  if (todos.length > 0) return query.in("artist_id", todos) as Q;
+  if (proprios.length > 0) {
+    return query.in("artist_id", proprios).eq("criado_por", sessao.userId) as Q;
+  }
+  return query.eq("artist_id", ZERO_RESULTS) as Q; // sem acesso → zero
+}
+
+/** Chaves "próprias" (autoria dele) de VENDAS/ORÇAMENTOS na v2. */
+const VENDAS_CHAVES_PROPRIOS = [
+  "vendas.criar",
+  "vendas.editar_proprios",
+  "vendas.cancelar_proprios",
+] as const;
+
+/** Todas as chaves v2 do módulo VENDAS (gate de MÓDULO por união). */
+const VENDAS_CHAVES_MODULO = [
+  "vendas.criar",
+  "vendas.editar_proprios",
+  "vendas.cancelar_proprios",
+  "vendas.ver_outros",
+  "vendas.editar_outros",
+  "vendas.converter_outros",
+  "vendas.cancelar_outros",
+] as const;
+
+/** Chaves "próprias" (autoria dele) do FINANCEIRO na v2. */
+const FIN_CHAVES_PROPRIOS = [
+  "financeiro.ver_proprios",
+  "financeiro.editar_proprios",
+  "financeiro.informar_proprios",
+  "financeiro.fixar_proprios",
+] as const;
+
+/** Todas as chaves v2 do módulo FINANCEIRO. */
+const FIN_CHAVES_MODULO = [
+  ...FIN_CHAVES_PROPRIOS,
+  "financeiro.ver_outros",
+  "financeiro.editar_outros",
+  "financeiro.informar_outros",
+  "financeiro.fixar_outros",
+] as const;
 
 /**
  * Filtra por artistas visíveis pela UNIÃO de várias chaves de visualização
@@ -274,60 +424,54 @@ export function podeExcluirAgenda(
 // pediu; ver o bloco de aviso em src/lib/permissoes/catalogo.ts (AGENDA).
 // ============================================================
 
-/** Pode CRIAR show neste artista? (`vendas.criar_venda`) */
+/** Pode CRIAR show neste artista? (`vendas.criar`) */
 export function podeCriarShow(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): boolean {
-  return podeNaSessao(sessao, artistId, "vendas.criar_venda");
+  return podeNaSessao(sessao, artistId, "vendas.criar");
 }
 
-/** Pode EDITAR este show? (`vendas.editar_venda` próprios × `editar_todos`) */
+/** Pode EDITAR este show? (autoria: `editar_proprios` × `editar_outros`) */
 export function podeEditarShow(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "vendas.editar_venda",
-    "vendas.editar_todos"
+    "vendas.editar_proprios",
+    "vendas.editar_outros"
   );
 }
 
 /**
- * Pode CANCELAR (ou reativar) este show? (`vendas.cancelar_venda` próprios ×
- * `vendas.editar_todos`). Reverter o cancelamento é a mesma decisão — mesma chave.
+ * Pode CANCELAR (ou reativar) este show? Autoria: `cancelar_proprios` ×
+ * `cancelar_outros`. Reverter o cancelamento é a mesma decisão — mesma chave.
  */
 export function podeCancelarShow(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "vendas.cancelar_venda",
-    "vendas.editar_todos"
+    "vendas.cancelar_proprios",
+    "vendas.cancelar_outros"
   );
 }
 
-/** Pode EXCLUIR este show? (`vendas.excluir_venda` próprios × `editar_todos`) */
+/** Pode EXCLUIR este show? ADMIN-ONLY (excluir venda/show = só admin). */
 export function podeExcluirShow(
   sessao: SessaoAutenticada,
-  artistId: string | null,
-  criadoPor: string | null
+  _artistId?: string | null,
+  _criadoPor?: string | null
 ): boolean {
-  return podeMutar(
-    sessao,
-    artistId,
-    criadoPor,
-    "vendas.excluir_venda",
-    "vendas.editar_todos"
-  );
+  return sessao.isSuperAdmin || sessao.papel === "admin";
 }
 
 /**
@@ -400,7 +544,9 @@ export function verificarAcessoOrcamentos(
   sessao: SessaoAutenticada
 ): NextResponse | null {
   if (sessao.papel === "artista") return null; // artista lê os próprios (filtro)
-  if (!alcancaAlgum(sessao, ["vendas.ver_orcamentos", "vendas.ver_proprios"])) {
+  // Orçamento e venda andam JUNTOS (mesmo módulo). Qualquer chave v2 de vendas
+  // dá acesso à lista — a autoria filtra o que aparece.
+  if (!alcancaAlgumaChave(sessao, VENDAS_CHAVES_MODULO)) {
     return NextResponse.json(
       { erro: "Você não tem acesso a orçamentos." },
       { status: 403 }
@@ -409,12 +555,12 @@ export function verificarAcessoOrcamentos(
   return null;
 }
 
-/** Pode CRIAR orçamento no artista? (precisa do artist_id do body). */
+/** Pode CRIAR orçamento no artista? Embutido em `vendas.criar`. */
 export function verificarCriarOrcamento(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): NextResponse | null {
-  if (!podeNaSessao(sessao, artistId, "vendas.criar_orcamento")) {
+  if (!podeNaSessao(sessao, artistId, "vendas.criar")) {
     return NextResponse.json(
       { erro: "Você não tem permissão para criar orçamento neste artista." },
       { status: 403 }
@@ -427,13 +573,25 @@ export function aplicarFiltroOrcamentos<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
-  // Leitura de ORÇAMENTOS = chave própria (vendas.ver_orcamentos), separada
-  // da de vendas. "Próprios" reaproveita vendas.ver_proprios.
-  return filtrarEscopoArtista(
+  // PAPEL ARTISTA: os orçamentos são governados por `orcamentosVer` (privacidade),
+  // NÃO pela visão de vendas. A chave `vendas.ver_orcamentos` é a única que faz
+  // `podeArtista` consultar `orcamentosVer` (as chaves v2 sem "orcamento" caem em
+  // vendasVer||orcamentosVer e superexpunham o artista). Regressão corrigida.
+  if (sessao.papel === "artista") {
+    return filtrarEscopoArtista(
+      query,
+      sessao,
+      "vendas.ver_orcamentos",
+      "vendas.ver_orcamentos"
+    );
+  }
+  // EQUIPE: mesma autoria das vendas — `vendas.ver_outros` vê tudo do artista;
+  // quem só tem chave própria (criar/editar_proprios/…) vê só os que criou.
+  return filtrarEscopoAutoria(
     query,
     sessao,
-    "vendas.ver_orcamentos",
-    "vendas.ver_proprios"
+    "vendas.ver_outros",
+    VENDAS_CHAVES_PROPRIOS
   );
 }
 
@@ -442,37 +600,49 @@ export function podeEditarOrcamento(
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  // Respeita próprios × todos (igual editar_venda): sem `editar_todos`, só
-  // edita os PRÓPRIOS orçamentos (fecha editar por id o de um colega).
-  return podeMutar(
+  // Editar orçamento = editar venda (mesmo eixo de autoria): próprio →
+  // editar_proprios; de outros → editar_outros.
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "vendas.editar_orcamento",
-    "vendas.editar_todos"
+    "vendas.editar_proprios",
+    "vendas.editar_outros"
   );
 }
 
+/**
+ * Excluir ORÇAMENTO: o autor descarta o próprio rascunho (`vendas.criar` já
+ * embute mexer no que é dele); de outros = ADMIN-ONLY (não há chave delegável —
+ * espelha a regra de "excluir venda só admin").
+ */
 export function podeExcluirOrcamento(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
-    sessao,
-    artistId,
-    criadoPor,
-    "vendas.excluir_orcamento",
-    "vendas.editar_todos"
-  );
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  if (ehProprio) return podeNaSessao(sessao, artistId, "vendas.criar");
+  return false;
 }
 
+/**
+ * Converter ORÇAMENTO em venda: converter o PRÓPRIO está embutido em
+ * `vendas.criar`; converter o de OUTROS exige `vendas.converter_outros`.
+ */
 export function podeConverterOrcamento(
   sessao: SessaoAutenticada,
   artistId: string | null,
-  _criadoPor: string | null
+  criadoPor: string | null
 ): boolean {
-  return podeNaSessao(sessao, artistId, "vendas.converter");
+  return podePorAutoria(
+    sessao,
+    artistId,
+    criadoPor,
+    "vendas.criar",
+    "vendas.converter_outros"
+  );
 }
 
 // ============================================================
@@ -484,7 +654,7 @@ export function verificarAcessoVendas(
   sessao: SessaoAutenticada
 ): NextResponse | null {
   if (sessao.papel === "artista") return null; // artista lê as próprias (filtro)
-  if (!alcancaAlgum(sessao, ["vendas.ver", "vendas.ver_proprios"])) {
+  if (!alcancaAlgumaChave(sessao, VENDAS_CHAVES_MODULO)) {
     return NextResponse.json(
       { erro: "Você não tem acesso a vendas." },
       { status: 403 }
@@ -497,7 +667,7 @@ export function verificarCriarVenda(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): NextResponse | null {
-  if (!podeNaSessao(sessao, artistId, "vendas.criar_venda")) {
+  if (!podeNaSessao(sessao, artistId, "vendas.criar")) {
     return NextResponse.json(
       { erro: "Você não tem permissão para criar venda neste artista." },
       { status: 403 }
@@ -510,57 +680,76 @@ export function aplicarFiltroVendas<Q extends QueryBuilder>(
   query: Q,
   sessao: SessaoAutenticada
 ): Q {
-  return filtrarEscopoArtista(query, sessao, "vendas.ver", "vendas.ver_proprios");
+  return filtrarEscopoAutoria(
+    query,
+    sessao,
+    "vendas.ver_outros",
+    VENDAS_CHAVES_PROPRIOS
+  );
 }
 
+/**
+ * Pode VER esta venda/orçamento específica (GET [id])? Próprio → qualquer chave
+ * própria (criou/edita/cancela → enxerga o que é dele); de outros → `ver_outros`.
+ */
+export function podeVerVendaItem(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  if (ehProprio) {
+    return (
+      VENDAS_CHAVES_PROPRIOS.some((c) => podeNaSessao(sessao, artistId, c)) ||
+      podeNaSessao(sessao, artistId, "vendas.ver_outros")
+    );
+  }
+  return podeNaSessao(sessao, artistId, "vendas.ver_outros");
+}
+
+/** Editar venda: próprio → editar_proprios; de outros → editar_outros. */
 export function podeEditarVenda(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "vendas.editar_venda",
-    "vendas.editar_todos"
-  );
-}
-
-export function podeExcluirVenda(
-  sessao: SessaoAutenticada,
-  artistId: string | null,
-  criadoPor: string | null
-): boolean {
-  // Próprios × todos (consistente com editar_venda): sem `editar_todos`, só
-  // exclui as PRÓPRIAS vendas.
-  return podeMutar(
-    sessao,
-    artistId,
-    criadoPor,
-    "vendas.excluir_venda",
-    "vendas.editar_todos"
+    "vendas.editar_proprios",
+    "vendas.editar_outros"
   );
 }
 
 /**
- * Pode CANCELAR esta venda (D5)? Chave própria `vendas.cancelar_venda`,
- * com semântica próprios × todos igual às demais mutações: quem tem
- * `vendas.editar_todos` cancela qualquer venda; o dono (criado_por) cancela
- * a própria com `vendas.cancelar_venda`. Artista: dentro de vendasCriar
- * (resolvido no motor).
+ * Excluir venda: ADMIN-ONLY (contrato — "Excluir venda continua só com o
+ * admin"). Nenhuma chave de equipe exclui venda; o dono cancela, não exclui.
+ */
+export function podeExcluirVenda(
+  sessao: SessaoAutenticada,
+  _artistId?: string | null,
+  _criadoPor?: string | null
+): boolean {
+  return sessao.isSuperAdmin || sessao.papel === "admin";
+}
+
+/**
+ * Pode CANCELAR esta venda? Próprio → `vendas.cancelar_proprios`; de outros →
+ * `vendas.cancelar_outros`. (Cancelar ≠ excluir; excluir é só admin.)
  */
 export function podeCancelarVenda(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "vendas.cancelar_venda",
-    "vendas.editar_todos"
+    "vendas.cancelar_proprios",
+    "vendas.cancelar_outros"
   );
 }
 
@@ -590,14 +779,19 @@ export function verificarAcessoContatos(
 }
 
 /**
- * Gate de MUTAÇÃO de contato (D2): exige `contatos.<acao>` em ALGUM vínculo.
+ * Gate de MUTAÇÃO de contato (v2 — autoria por `criado_por`, união dos vínculos).
  *   - admin/super → passa;
  *   - artista     → 403 (nunca muta contatos — comportamento atual mantido);
- *   - equipe      → só se algum vínculo concede a chave da ação.
+ *   - equipe:
+ *       criar  → `contatos.criar` em algum vínculo (sem eixo de autoria);
+ *       editar → `contatos.editar_proprios` (dele) × `contatos.editar_outros`;
+ *       excluir→ `contatos.excluir_proprios` (dele) × `contatos.excluir_outros`.
+ * `criadoPor` NULO conta como "de outros". Para `criar`, `criadoPor` é ignorado.
  */
 export function verificarMutacaoContato(
   sessao: SessaoAutenticada,
-  acao: "criar" | "editar" | "excluir"
+  acao: "criar" | "editar" | "excluir",
+  criadoPor?: string | null
 ): NextResponse | null {
   if (sessao.isSuperAdmin || sessao.papel === "admin") return null;
   if (sessao.papel === "artista") {
@@ -606,7 +800,16 @@ export function verificarMutacaoContato(
       { status: 403 }
     );
   }
-  if (!temChaveEmAlgumVinculo(sessao, `contatos.${acao}`)) {
+  const permitido =
+    acao === "criar"
+      ? temChaveEmAlgumVinculo(sessao, "contatos.criar")
+      : podePorAutoriaWorkspace(
+          sessao,
+          criadoPor,
+          `contatos.${acao}_proprios`,
+          `contatos.${acao}_outros`
+        );
+  if (!permitido) {
     return NextResponse.json(
       { erro: "Você não tem permissão para esta ação em contatos." },
       { status: 403 }
@@ -630,12 +833,23 @@ export function verTodosContratos(sessao: SessaoAutenticada): boolean {
   return sessao.isSuperAdmin || sessao.papel === "admin";
 }
 
-/** Pode VER um contrato deste artista? (artistId vem da venda; null = avulso). */
+/**
+ * Pode VER um contrato deste artista (artistId vem da venda; null = avulso)?
+ * Autoria = `contratos.criado_por`: próprio embutido em `contratos.criar`;
+ * de outros → `contratos.ver_outros`.
+ */
 export function podeVerContrato(
   sessao: SessaoAutenticada,
-  artistId: string | null
+  artistId: string | null,
+  criadoPor: string | null
 ): boolean {
-  return podeNaSessao(sessao, artistId, "contratos.ver");
+  return podePorAutoria(
+    sessao,
+    artistId,
+    criadoPor,
+    "contratos.criar",
+    "contratos.ver_outros"
+  );
 }
 
 /** Pode CRIAR contrato no artista? (artistId resolvido do venda_id do body). */
@@ -652,39 +866,38 @@ export function verificarCriarContrato(
   return null;
 }
 
-/** Pode EDITAR o contrato (próprios × todos, dono = contratos.criado_por)? */
+/**
+ * Pode EDITAR o contrato (autoria = contratos.criado_por)? O autor edita o
+ * próprio via `contratos.criar` (que embute mexer no que é dele); editar o de
+ * OUTROS = ADMIN-ONLY (não há chave delegável de "editar_outros" na v2 — só
+ * cancelar_outros). O nível "Acesso total" cancela o de outros, não reedita.
+ */
 export function podeEditarContrato(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
-    sessao,
-    artistId,
-    criadoPor,
-    "contratos.editar",
-    "contratos.editar_todos"
-  );
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  if (ehProprio) return podeNaSessao(sessao, artistId, "contratos.criar");
+  return false;
 }
 
 /**
- * Pode CANCELAR o contrato (D4)? Chave própria `contratos.cancelar`, com a
- * MESMA semântica de próprios × todos do editar: quem tem `contratos.editar_todos`
- * cancela qualquer um; o dono (criado_por) cancela o próprio com
- * `contratos.cancelar`. (Decisão: reusa `contratos.editar_todos` como chave-todos
- * — não existe `contratos.cancelar_todos`; mantém coerência com o editar.)
+ * Pode CANCELAR o contrato? Autoria: `contratos.cancelar_proprios` (dele) ×
+ * `contratos.cancelar_outros` (de outros).
  */
 export function podeCancelarContrato(
   sessao: SessaoAutenticada,
   artistId: string | null,
   criadoPor: string | null
 ): boolean {
-  return podeMutar(
+  return podePorAutoria(
     sessao,
     artistId,
     criadoPor,
-    "contratos.cancelar",
-    "contratos.editar_todos"
+    "contratos.cancelar_proprios",
+    "contratos.cancelar_outros"
   );
 }
 
@@ -733,6 +946,35 @@ export function exigirAdminModelos(
   );
 }
 
+/**
+ * Gate para CRIAR modelo de contrato (v2): admin/super OU `contratos.criar_modelo`
+ * em ALGUM vínculo (workspace-level — o modelo não tem artist_id). 403 senão.
+ */
+export function verificarCriarModelo(
+  sessao: SessaoAutenticada
+): NextResponse | null {
+  if (temChaveEmAlgumVinculo(sessao, "contratos.criar_modelo")) return null;
+  return NextResponse.json(
+    { erro: "Você não tem permissão para criar modelo de contrato." },
+    { status: 403 }
+  );
+}
+
+/**
+ * Gate para EXCLUIR modelo de contrato (v2): admin/super OU
+ * `contratos.excluir_modelo` em ALGUM vínculo. ≠ excluir um contrato GERADO
+ * (esse continua admin-only, `podeExcluirContrato`).
+ */
+export function verificarExcluirModelo(
+  sessao: SessaoAutenticada
+): NextResponse | null {
+  if (temChaveEmAlgumVinculo(sessao, "contratos.excluir_modelo")) return null;
+  return NextResponse.json(
+    { erro: "Você não tem permissão para excluir modelo de contrato." },
+    { status: 403 }
+  );
+}
+
 // ============================================================
 // AGÊNCIA / ADMIN — mutações administrativas do workspace (cadastro de
 // artistas, gestão de equipe, identidade/config da agência). Escopo é
@@ -759,23 +1001,40 @@ export function verificarAdminDoWorkspace(
 // ============================================================
 
 /**
- * Gate financeiro por artista para PATCH de parcela (informar/desfazer
- * pagamento e ajustes). Mapeia a ação → chave e exige a permissão no artista.
+ * Gate financeiro por artista + AUTORIA (via venda-mãe) para PATCH de parcela.
+ * A parcela não tem artist_id nem criado_por: a rota resolve pela venda
+ * (parcela.venda_id → vendas.artist_id / vendas.criado_por) e passa os dois.
+ *
+ * Ação → chave (própria × outros):
+ *   - "informar"          → financeiro.informar_{proprios,outros}
+ *   - "editar" | "cancelar" → financeiro.editar_{proprios,outros}
+ *       (editar o financeiro INCLUI cancelar/baixar parcela — contrato)
+ *   - "fixar"             → financeiro.fixar_{proprios,outros}
+ *
+ * `criadoPorVenda` NULO conta como "de outros".
  */
-export function podeInformarPagamentoParcela(
+export function verificarMutacaoParcela(
   sessao: SessaoAutenticada,
   artistId: string | null,
-  acao: "registrar" | "cancelar" | "editar"
+  criadoPorVenda: string | null,
+  acao: "informar" | "editar" | "cancelar" | "fixar"
 ): NextResponse | null {
-  const chave =
-    acao === "registrar"
-      ? "financeiro.registrar_pagamento"
-      : acao === "cancelar"
-        ? "financeiro.cancelar_pagamento"
-        : "financeiro.editar_pagamento";
-  if (!podeNaSessao(sessao, artistId, chave)) {
+  const base =
+    acao === "informar"
+      ? "informar"
+      : acao === "fixar"
+        ? "fixar"
+        : "editar"; // editar/cancelar → editar (inclui baixar/cancelar parcela)
+  const ok = podePorAutoria(
+    sessao,
+    artistId,
+    criadoPorVenda,
+    `financeiro.${base}_proprios`,
+    `financeiro.${base}_outros`
+  );
+  if (!ok) {
     return NextResponse.json(
-      { erro: "Você não tem permissão para alterar pagamentos deste artista." },
+      { erro: "Você não tem permissão para alterar pagamentos desta venda." },
       { status: 403 }
     );
   }
@@ -783,35 +1042,65 @@ export function podeInformarPagamentoParcela(
 }
 
 /**
- * Pode VER dados financeiros sensíveis deste artista (comprovante bancário)?
- * Qualquer chave financeira de leitura (financeiro.ver, fundida = cachês +
- * pagamentos) OU de mutação de pagamento no artista. Gate do comprovante além
- * do "enxerga a venda". Admin/super passam.
+ * Pode ver ALGUM dado financeiro deste artista (gate de MÓDULO, sem uma venda
+ * específica em mãos)? Qualquer uma das 8 chaves v2 no artista. Admin/super passam.
  */
 export function podeVerFinanceiro(
   sessao: SessaoAutenticada,
   artistId: string | null
 ): boolean {
   if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
-  return (
-    podeNaSessao(sessao, artistId, "financeiro.ver") ||
-    podeNaSessao(sessao, artistId, "financeiro.registrar_pagamento") ||
-    podeNaSessao(sessao, artistId, "financeiro.editar_pagamento")
+  return FIN_CHAVES_MODULO.some((c) => podeNaSessao(sessao, artistId, c));
+}
+
+/**
+ * Pode ver o FINANCEIRO desta VENDA (autoria via venda-mãe: artistId + criadoPor
+ * da venda)? Comprovante bancário, taxa/líquido e rastro de pagamento. Próprio →
+ * qualquer chave própria (ver/editar/informar/fixar_proprios); de outros →
+ * qualquer chave de outros. `criadoPor` nulo = "de outros". Admin/super passam.
+ */
+export function podeVerFinanceiroVenda(
+  sessao: SessaoAutenticada,
+  artistId: string | null,
+  criadoPor: string | null
+): boolean {
+  if (sessao.isSuperAdmin || sessao.papel === "admin") return true;
+  const ehProprio = !!criadoPor && criadoPor === sessao.userId;
+  const chaves = ehProprio ? FIN_CHAVES_PROPRIOS : ["financeiro.ver_outros", "financeiro.editar_outros", "financeiro.informar_outros", "financeiro.fixar_outros"];
+  return chaves.some((c) => podeNaSessao(sessao, artistId, c));
+}
+
+/**
+ * Filtra a lista do FINANCEIRO (vendas/parcelas com artist_id + criado_por) por
+ * artista + autoria: `financeiro.ver_outros` vê todo o financeiro do artista;
+ * quem só tem chave própria vê o das vendas que ELE criou.
+ */
+export function aplicarFiltroFinanceiro<Q extends QueryBuilder>(
+  query: Q,
+  sessao: SessaoAutenticada
+): Q {
+  return filtrarEscopoAutoria(
+    query,
+    sessao,
+    "financeiro.ver_outros",
+    FIN_CHAVES_PROPRIOS
   );
 }
 
 /**
- * Redige uma VENDA conforme o que a sessão pode ver do financeiro do artista:
- *   - sem `financeiro.ver` → redigirVendaFinanceiro (tira meta + taxa/líquido);
- *   - vê o financeiro      → a venda intacta. A taxa/líquido acompanha o acesso
- *                            aos valores; não é mais um gate separado.
+ * Redige uma VENDA conforme o que a sessão pode ver do financeiro DELA (autoria
+ * via venda-mãe): sem acesso → redigirVendaFinanceiro (tira meta + taxa/líquido);
+ * com acesso → intacta. A taxa/líquido acompanha o acesso aos valores.
  */
 export function redigirVendaParaSessao(
   sessao: SessaoAutenticada,
   v: Venda
 ): Venda {
   const artistId = v.artistaId || null;
-  if (!podeVerFinanceiro(sessao, artistId)) return redigirVendaFinanceiro(v);
+  const criadoPor = v.criadoPor ?? null;
+  if (!podeVerFinanceiroVenda(sessao, artistId, criadoPor)) {
+    return redigirVendaFinanceiro(v);
+  }
   return v;
 }
 

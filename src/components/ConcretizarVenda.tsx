@@ -64,6 +64,7 @@ import { useVendas, type NovaVendaInput } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { moedaValida } from "@/lib/mappers/venda";
 import { useAuth } from "@/lib/auth-context";
+import { podeEditarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { formatBRL, formatarDuracao } from "@/lib/whatsapp";
 import { textoFechamentoVenda } from "@/lib/fechamentoVenda";
 import LogisticaEditor from "./LogisticaEditor";
@@ -953,7 +954,8 @@ export default function ConcretizarVenda({
         editado.has("nomeLocal") &&
         nome &&
         casaAncora.nome !== nome &&
-        podeUI(artistaId, "contatos.editar")
+        (podeUI(artistaId, "contatos.editar_proprios") ||
+          podeUI(artistaId, "contatos.editar_outros"))
       ) {
         const escolha = await perguntarRenomearCasa(casaAncora.nome, nome);
         if (escolha === "renomear") {
@@ -1162,7 +1164,9 @@ export default function ConcretizarVenda({
       // Só pergunta o que dá pra gravar: o PATCH exige `contatos.editar`
       // (verificarMutacaoContato). Sem a permissão, o popup prometeria uma
       // atualização que o servidor 403a — a venda segue com o snapshot digitado.
-      const podeEditarContato = podeUI(artistaId, "contatos.editar");
+      const podeEditarContato =
+        podeUI(artistaId, "contatos.editar_proprios") ||
+        podeUI(artistaId, "contatos.editar_outros");
       // Contato oculto: o próprio NOME do cadastro é PII que este usuário não
       // pode ver — o popup se identifica pelo nome digitado.
       const aceitos =
@@ -1377,13 +1381,23 @@ export default function ConcretizarVenda({
    *    criar no DESTINO (route.ts:76-82 — IDOR de destino).
    */
   const podeSalvar = (() => {
-    if (!v) return podeUI(artistaId, orcamentoId ? "vendas.converter" : "vendas.criar_venda");
-    const podeEditar =
-      podeUI(v.artistaId || null, "vendas.editar_venda") ||
-      podeUI(v.artistaId || null, "vendas.editar_todos");
+    if (!v)
+      // Criar = vendas.criar. Converter = próprio (vendas.criar) OU de terceiro
+      // (vendas.converter_outros); sem o autor do orçamento aqui, mostra se pode
+      // em QUALQUER caso — o servidor barra o caso específico.
+      return orcamentoId
+        ? podeUI(artistaId, "vendas.criar") ||
+            podeUI(artistaId, "vendas.converter_outros")
+        : podeUI(artistaId, "vendas.criar");
+    const podeEditar = podeEditarVendaUI(
+      podeUI,
+      v.artistaId || null,
+      v.criadoPor,
+      sessao?.usuario.id
+    );
     if (!podeEditar) return false;
     if (artistaId !== null && artistaId !== v.artistaId)
-      return podeUI(artistaId, "vendas.criar_venda");
+      return podeUI(artistaId, "vendas.criar");
     return true;
   })();
 
@@ -2542,7 +2556,10 @@ export default function ConcretizarVenda({
           aberto
           nomeDigitado={casaParecida.nomeDigitado}
           candidatas={casaParecida.candidatas}
-          podeRenomear={podeUI(artistaId, "contatos.editar")}
+          podeRenomear={
+            podeUI(artistaId, "contatos.editar_proprios") ||
+            podeUI(artistaId, "contatos.editar_outros")
+          }
           onEscolher={fecharCasaParecida}
           // Fechar/ESC/clique-fora = "É outro local": o caminho seguro é o de
           // hoje (cria nova). Nunca vincula sem clique explícito.

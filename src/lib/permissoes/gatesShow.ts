@@ -2,12 +2,12 @@
  * GATES DE SHOW NO CLIENTE (grey-out) — espelho fiel do servidor.
  *
  * REGRA NOVA (decisão do dono, L5b): a AGENDA virou SÓ VISUALIZAÇÃO.
- * Mexer num SHOW não é mais uma capacidade de agenda — é de VENDAS:
+ * Mexer num SHOW não é mais uma capacidade de agenda — é de VENDAS. Nas chaves
+ * v2 (autoria "criado por ele" × "criado por outros"):
  *
- *   criar show    → vendas.criar_venda        (antes: agenda.criar)
- *   editar show   → vendas.editar_venda | vendas.editar_todos
- *                                              (antes: agenda.editar_todos)
- *   cancelar show → vendas.cancelar_venda      (antes: agenda.editar_todos)
+ *   criar show    → vendas.criar
+ *   editar show   → dele: vendas.editar_proprios | de outros: vendas.editar_outros
+ *   cancelar show → dele: vendas.cancelar_proprios | de outros: vendas.cancelar_outros
  *
  * ISTO REVOGA ACESSO DE PROPÓSITO: quem hoje tem `agenda.editar_todos` (ou
  * `agenda.criar`) e NENHUMA chave de vendas PERDE criar/editar/cancelar show.
@@ -19,8 +19,8 @@
  *
  * Estes helpers são a ÚNICA fonte de verdade do cliente. O par no servidor
  * vive em `src/lib/api/permissoes.ts` (podeCriarShow/podeEditarShow/
- * podeCancelarShow) — cliente e servidor têm que dizer a MESMA coisa; o
- * cliente nunca pode ser mais permissivo que a rota.
+ * podeCancelarShow, que usam `podePorAutoria`) — cliente e servidor têm que
+ * dizer a MESMA coisa; o cliente nunca pode ser mais permissivo que a rota.
  */
 
 /** Assinatura do `podeUI` do auth-context. */
@@ -38,72 +38,65 @@ export type DonoDoShow = {
 };
 
 /**
- * Espelho EXATO de `podeMutar` (src/lib/api/permissao.ts:43):
+ * Espelho EXATO de `podePorAutoria` (src/lib/api/permissoes.ts): o eixo v2 é
+ * "criado por ele" × "criado por outros" — NÃO "próprios OU escopo total".
  *
- *   chaveTodos                          → passa em qualquer show;
- *   criadoPor === userId && chaveProprio → passa só no show que ELE lançou;
- *   caso contrário                       → nega.
+ *   criadoPor === userId → exige chaveProprios (a chave "dele");
+ *   caso contrário        → exige chaveOutros  (a chave "de outros").
  *
  * O `criadoPor &&` do servidor é reproduzido de propósito: show com
- * `criado_por` NULO (linha antiga) não passa pela chave "próprios" nem lá nem
- * aqui. Sem esta função o cliente ficava MAIS PERMISSIVO que a rota — o
- * vendedor via "Cancelar show" habilitado no show de outro vendedor e tomava
- * 403 no clique.
+ * `criado_por` NULO (linha antiga) conta como "de outros" → cai em chaveOutros.
+ * Sem esta função o cliente ficava MAIS PERMISSIVO que a rota — o vendedor via
+ * "Cancelar show" habilitado no show de outro vendedor e tomava 403 no clique.
  */
-function podeMutarShowUI(
+function podePorAutoriaShowUI(
   podeUI: PodeUI,
   artistaId: string | null,
   dono: DonoDoShow,
-  chaveProprio: string,
-  chaveTodos: string
+  chaveProprios: string,
+  chaveOutros: string
 ): boolean {
-  if (podeUI(artistaId, chaveTodos)) return true;
-  if (dono.criadoPor && dono.criadoPor === dono.meuUserId) {
-    return podeUI(artistaId, chaveProprio);
-  }
-  return false;
+  const ehProprio = !!dono.criadoPor && dono.criadoPor === dono.meuUserId;
+  return podeUI(artistaId, ehProprio ? chaveProprios : chaveOutros);
 }
 
 /**
  * Criar show (Novo Show na agenda, nova venda direta). Não há escopo
- * "próprios" na criação — o show ainda não tem dono.
+ * "próprios" na criação — o show ainda não tem dono. Espelha `podeCriarShow`.
  */
 export function podeCriarShowUI(podeUI: PodeUI, artistaId: string | null): boolean {
-  return podeUI(artistaId, "vendas.criar_venda");
+  return podeUI(artistaId, "vendas.criar");
 }
 
-/** Editar show (dados do evento, booking/hospedagem). */
+/** Editar show (dados do evento, booking/hospedagem). Espelha `podeEditarShow`. */
 export function podeEditarShowUI(
   podeUI: PodeUI,
   artistaId: string | null,
   dono: DonoDoShow = {}
 ): boolean {
-  return podeMutarShowUI(
+  return podePorAutoriaShowUI(
     podeUI,
     artistaId,
     dono,
-    "vendas.editar_venda",
-    "vendas.editar_todos"
+    "vendas.editar_proprios",
+    "vendas.editar_outros"
   );
 }
 
 /**
- * Cancelar / reativar show.
- *
- * `vendas.editar_todos` é a chave de ESCOPO TOTAL porque o servidor
- * (`podeCancelarShow`) usa `podeMutar(..., "vendas.cancelar_venda",
- * "vendas.editar_todos")` — quem tem editar_todos cancela qualquer show.
+ * Cancelar / reativar show. Espelha `podeCancelarShow` (autoria:
+ * `cancelar_proprios` × `cancelar_outros`).
  */
 export function podeCancelarShowUI(
   podeUI: PodeUI,
   artistaId: string | null,
   dono: DonoDoShow = {}
 ): boolean {
-  return podeMutarShowUI(
+  return podePorAutoriaShowUI(
     podeUI,
     artistaId,
     dono,
-    "vendas.cancelar_venda",
-    "vendas.editar_todos"
+    "vendas.cancelar_proprios",
+    "vendas.cancelar_outros"
   );
 }

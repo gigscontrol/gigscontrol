@@ -86,7 +86,9 @@ export async function listarContratosDoWorkspace(
   const escopos = await escoposDeVendas(supabase, vendaIds);
   const visiveis = rows.filter((r) => {
     const artistId = r.venda_id ? escopos.get(r.venda_id)?.artistId ?? null : null;
-    return podeVerContrato(sessao, artistId);
+    // Autoria = criador REAL do contrato (contratos.criado_por), não o vendedor
+    // da venda vinculada: próprio embute em contratos.criar, de outros pede ver_outros.
+    return podeVerContrato(sessao, artistId, r.criado_por ?? null);
   });
   return visiveis.map(rowParaContrato);
 }

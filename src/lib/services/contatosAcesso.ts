@@ -18,12 +18,13 @@ import { escopoContatosEquipe } from "@/lib/api/permissoes";
  * ("nenhum" | "proprios" | "todos"). "proprios" deriva os contatos ligados aos
  * SHOWS/vendas/orçamentos do PRÓPRIO artista (via artist_id).
  *
- * NOTA sobre CASAS: a tabela `casas` NÃO tem coluna `criado_por` (é catálogo
- * compartilhado de locais). Por isso, para a equipe, casas não têm escopo
- * "proprios" real: qualquer permissão de leitura de contatos (ver OU
- * ver_proprios) mostra o catálogo inteiro; só "nenhum" esconde tudo. Para o
- * artista, casas seguem privacidade.contatos com "proprios" derivado dos
- * eventos dele.
+ * NOTA sobre CASAS: a tabela `casas` TEM `criado_por` (usado na MUTAÇÃO, por
+ * autoria — ver o gate de casas). Mas a VISIBILIDADE é DE PROPÓSITO de catálogo:
+ * locais são um diretório compartilhado da equipe (o mesmo clube atende vários
+ * artistas), então qualquer permissão de leitura de contatos (ver OU
+ * ver_proprios) mostra o catálogo inteiro; só "nenhum" esconde tudo. A assimetria
+ * é intencional — leitura ampla, escrita por autoria. Para o artista, casas
+ * seguem privacidade.contatos com "proprios" derivado dos eventos dele.
  */
 
 /**
@@ -136,10 +137,12 @@ export async function contratanteVisivelParaSessao(
 }
 
 // ============================================================
-// CASAS — catálogo compartilhado do workspace (SEM coluna criado_por). O
-// ARTISTA é filtrado por privacidade.contatos ("proprios" = casas dos eventos
-// dele). Para a EQUIPE, como não há dono, "ver" e "ver_proprios" mostram o
-// catálogo inteiro; só "nenhum" (sem permissão de contatos) esconde tudo.
+// CASAS — diretório de locais compartilhado do workspace. `casas.criado_por`
+// EXISTE e governa a MUTAÇÃO (por autoria), mas a VISIBILIDADE é ampla DE
+// PROPÓSITO: o mesmo clube atende vários artistas. O ARTISTA é filtrado por
+// privacidade.contatos ("proprios" = casas dos eventos dele). Para a EQUIPE,
+// "ver" e "ver_proprios" mostram o catálogo inteiro; só "nenhum" (sem permissão
+// de contatos) esconde tudo. Assimetria intencional: leitura ampla, escrita por autoria.
 // ============================================================
 
 /** Conjunto de casa_ids visíveis, ou "todos". Usado pela LISTA de casas. */
@@ -153,8 +156,9 @@ export async function casaIdsVisiveis(
     if (escopo === "nenhum" || !sessao.artistaId) return new Set<string>();
     return idsPorArtistaEmFontes(supabase, "casa_id", sessao.artistaId);
   }
-  // Equipe/admin: catálogo. Sem coluna criado_por → sem escopo "proprios" real:
-  // qualquer leitura de contatos mostra tudo; só "nenhum" esconde.
+  // Equipe/admin: diretório compartilhado. Visibilidade ampla de propósito
+  // (não filtra por criado_por): qualquer leitura de contatos mostra tudo; só
+  // "nenhum" esconde. A autoria de casas vale só na escrita (gate de mutação).
   return escopoContatosEquipe(sessao) === "nenhum" ? new Set<string>() : "todos";
 }
 

@@ -1394,10 +1394,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             onClick={handleSubmit}
             disabled={
               salvando ||
-              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))
+              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar"))
             }
             title={
-              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar_orcamento"))
+              blocos.every((b) => !podeUI(b.artistaId || null, "vendas.criar"))
                 ? "Você não tem permissão para isso."
                 : undefined
             }
@@ -1433,7 +1433,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           candidatas={casaParecida.candidatas}
           // O rename é best-effort e o enforcement real é do servidor; gateia
           // pelo artista do 1º bloco (o evento é o mesmo pra todos).
-          podeRenomear={podeUI(blocos[0]?.artistaId || null, "contatos.editar")}
+          podeRenomear={
+            podeUI(blocos[0]?.artistaId || null, "contatos.editar_proprios") ||
+            podeUI(blocos[0]?.artistaId || null, "contatos.editar_outros")
+          }
           onEscolher={fecharCasaParecida}
           // Fechar/ESC/clique-fora = "É outro local": o caminho seguro é o de
           // hoje (cria nova). Nunca vincula sem clique explícito.

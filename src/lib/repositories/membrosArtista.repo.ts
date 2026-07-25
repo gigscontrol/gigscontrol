@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { expandirLegadoAgenda } from "@/lib/permissoes/setoresAgenda";
+import { expandirLegadoVinculo } from "@/lib/permissoes/legadoEquipe";
 
 /**
  * Acesso a `membros_artista` — o vínculo (usuário × artista) que carrega os
@@ -66,11 +66,12 @@ export async function listarVinculosDoArtista(
 /** Mapa artist_id → permissões concedidas (formato consumido pelo motor). */
 export function mapaDeVinculos(rows: VinculoRow[]): Record<string, string[]> {
   const mapa: Record<string, string[]> = {};
-  // Expande as chaves LEGADAS de leitura (`agenda.ver`/`agenda.ver_detalhado`)
-  // nos setores equivalentes. Sem isto, todo vínculo gravado antes da mudança
-  // perderia a ficha do show no primeiro deploy — o banco fica intacto, a
-  // tradução acontece na leitura.
-  for (const v of rows) mapa[v.artist_id] = expandirLegadoAgenda(v.permissoes);
+  // Expande as chaves LEGADAS na leitura: agenda (setores) + os 4 módulos da
+  // equipe v2 (vendas/financeiro/contratos/contatos). Sem isto, todo vínculo
+  // gravado antes da mudança perderia acesso no primeiro deploy — o banco fica
+  // intacto, a tradução acontece na leitura. O cliente (auth-context) chama a
+  // MESMA função (`expandirLegadoVinculo`) para não divergir.
+  for (const v of rows) mapa[v.artist_id] = expandirLegadoVinculo(v.permissoes);
   return mapa;
 }
 

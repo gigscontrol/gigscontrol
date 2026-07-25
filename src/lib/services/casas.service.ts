@@ -90,6 +90,7 @@ export async function buscarCasaPorId(
 export async function criarCasaNoWorkspace(
   supabase: SupabaseClient,
   workspaceId: string,
+  criadoPor: string,
   input: CasaCreateInput
 ): Promise<Casa> {
   const escrita = entradaParaEscrita(input);
@@ -99,7 +100,8 @@ export async function criarCasaNoWorkspace(
     endereco: escrita.endereco,
     cidadeId: escrita.cidade_id,
   });
-  const row = await repoCriar(supabase, workspaceId, { ...escrita, ...geo });
+  // Carimba a autoria (v2) — habilita o escopo "criado por ele" na edição/exclusão.
+  const row = await repoCriar(supabase, workspaceId, criadoPor, { ...escrita, ...geo });
   return rowParaCasa(row);
 }
 
