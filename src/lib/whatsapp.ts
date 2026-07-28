@@ -49,7 +49,7 @@ export function gerarTextoWhatsApp(
   const efeitos = orc.efeitos.filter((i) => i.qtd > 0);
   if (efeitos.length > 0) {
     linhas.push("");
-    linhas.push("*Efeitos*");
+    linhas.push("*Efeitos (não incluso no cachê)*");
     efeitos.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
   }
 
