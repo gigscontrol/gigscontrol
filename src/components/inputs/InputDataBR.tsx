@@ -41,7 +41,9 @@ type Props = Omit<
  *   completa e é válida; enquanto digita parcial, chama onChange("")).
  */
 const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
-  { value, onChange, className = "", placeholder, sugestaoParcial, ...rest },
+  // `onBlur` sai do `rest` de propósito: o spread `{...rest}` vem por último no
+  // JSX e sobrescreveria o handler interno que marca o campo como "tocado".
+  { value, onChange, className = "", placeholder, sugestaoParcial, onBlur, ...rest },
   ref
 ) {
   // Display string interno — segue sendo digitado letra a letra,
@@ -75,6 +77,16 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
   // nenhuma pista. Agora o campo sinaliza vermelho e explica no title.
   const completaInvalida = displayed.length === 10 && parseDataBR(displayed) === null;
 
+  // INCOMPLETA (ex.: "01/08" — sem o ano): `parseDataBR` exige DD/MM/AAAA, então
+  // o pai recebe "" e a data é DESCARTADA — mas o campo continua exibindo o que
+  // foi digitado. A pessoa vê a data na tela, salva, e o registro nasce sem
+  // data: no orçamento isso significa nenhum show na agenda. Sinaliza só depois
+  // que o campo perde o foco (senão piscaria vermelho a cada tecla).
+  const [tocado, setTocado] = useState(false);
+  const incompleta =
+    tocado && displayed.length > 0 && displayed.length < 10 && !value;
+  const problema = completaInvalida || incompleta;
+
   return (
     <input
       ref={ref}
@@ -87,13 +99,25 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
       onChange={(e) => {
         const masc = mascararDataBR(e.target.value);
         setDisplayed(masc);
+        // Volta a confiar enquanto digita: o aviso só reaparece ao sair do campo.
+        setTocado(false);
         // Só consolida no ISO quando a data está completa E é válida.
         // Caso contrário, o pai recebe "" (estado "ainda incompleta").
         onChange(parseDataBR(masc) ?? "");
       }}
-      aria-invalid={completaInvalida || undefined}
-      title={completaInvalida ? t("Data inválida — confira dia e mês.") : undefined}
-      className={`${INPUT_BASE} ${completaInvalida ? "!border-danger" : ""} ${className}`}
+      onBlur={(e) => {
+        setTocado(true);
+        onBlur?.(e);
+      }}
+      aria-invalid={problema || undefined}
+      title={
+        completaInvalida
+          ? t("Data inválida — confira dia e mês.")
+          : incompleta
+          ? t("Data incompleta — informe o ano (dd/mm/aaaa).")
+          : undefined
+      }
+      className={`${INPUT_BASE} ${problema ? "!border-danger" : ""} ${className}`}
       {...rest}
     />
   );
