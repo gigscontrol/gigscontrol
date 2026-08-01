@@ -38,7 +38,7 @@ import HistoricoContratante from "./HistoricoContratante";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
-import InputDataBR from "./inputs/InputDataBR";
+import InputDataBR, { haDataPendente } from "./inputs/InputDataBR";
 import LogisticaEditor from "./LogisticaEditor";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { normalizar } from "@/lib/normalizar";
@@ -525,6 +525,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // (divergência / local parecido). Sem o guard, um 2º clique sobrescreve o
     // ref de resposta — Promise pendurada + orçamento duplicado.
     if (salvando) return;
+    // TRAVA: data digitada pela metade ("01/08" sem o ano) não vira ISO e some
+    // em silêncio — o orçamento nasceria sem data e NENHUM show iria pra agenda.
+    // Barra o salvar até completar (o campo já está marcado em vermelho).
+    if (haDataPendente()) {
+      avisar(t("Complete a data (dd/mm/aaaa) antes de salvar — o campo em vermelho está incompleto."));
+      return;
+    }
     setSalvando(true);
     try {
       await submeter();
@@ -723,6 +730,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         hotel: b.hotel,
         logistica: b.logistica,
         infoExtra: b.infoExtra.trim() || undefined,
+        // A data/horário do evento precisam ir também para as COLUNAS
+        // `data_show`/`horario` — não só para o JSON de detalhes. É a coluna que
+        // manda: `aceitarOrcamentoPorId` só cria o show na agenda quando
+        // `dataShow` existe (orcamentos.service.ts). Antes disto, a data digitada
+        // ficava só em `detalhes_evento.dataShow` e o orçamento nascia "sem
+        // data": nada aparecia na agenda e o alerta pedia "Data do show".
+        // Derivado do MESMO objeto do JSON pra os dois nunca divergirem.
+        dataShow: detalhesEvento?.dataShow,
+        horario: detalhesEvento?.horarioInicio,
         detalhesEvento,
       });
 

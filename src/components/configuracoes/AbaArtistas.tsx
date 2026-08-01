@@ -49,7 +49,7 @@ import InputDocumento from "../inputs/InputDocumento";
 import PhoneInput from "../PhoneInput";
 import { configDocumento } from "@/lib/data/documentos";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
-import InputDataBR from "@/components/inputs/InputDataBR";
+import InputDataBR, { haDataPendente } from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
 import Modal from "../Modal";
@@ -1576,6 +1576,11 @@ export function ModalNovoArtista({
 
   async function salvar() {
     setErroGeral(null);
+    // TRAVA: data digitada pela metade não vira ISO e sumiria em silêncio.
+    if (haDataPendente()) {
+      setErroGeral(t("Complete a data (dd/mm/aaaa) antes de salvar — o campo em vermelho está incompleto."));
+      return;
+    }
     const faltando = validarTudo();
     // Regra extra: % fixa não pode passar de 100% — mantém a mensagem
     // específica de antes (via erroGeral), marcando o campo em vermelho.
@@ -2266,6 +2271,11 @@ function ModalEditarArtista({
 
   async function salvar(): Promise<boolean> {
     setErro(null);
+    // TRAVA: data digitada pela metade não vira ISO e sumiria em silêncio.
+    if (haDataPendente()) {
+      setErro(t("Complete a data (dd/mm/aaaa) antes de salvar — o campo em vermelho está incompleto."));
+      return false;
+    }
     const v = validar();
     if (v) {
       setErro(v);
