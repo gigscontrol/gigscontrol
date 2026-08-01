@@ -87,6 +87,12 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
     tocado && displayed.length > 0 && displayed.length < 10 && !value;
   const problema = completaInvalida || incompleta;
 
+  // PENDENTE = tem texto digitado que NÃO virou data (incompleta ou inválida),
+  // tenha o campo perdido o foco ou não. É o que o guard global procura no DOM
+  // (`haDataPendente`) pra BARRAR o salvar — sinalizar em vermelho não basta:
+  // sem trava, dá pra salvar assim mesmo e a data se perde em silêncio.
+  const pendente = displayed.length > 0 && !value;
+
   return (
     <input
       ref={ref}
@@ -109,6 +115,7 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
         setTocado(true);
         onBlur?.(e);
       }}
+      data-data-pendente={pendente ? "true" : undefined}
       aria-invalid={problema || undefined}
       title={
         completaInvalida
@@ -122,5 +129,24 @@ const InputDataBR = forwardRef<HTMLInputElement, Props>(function InputDataBR(
     />
   );
 });
+
+/**
+ * Existe, NA TELA, alguma data digitada pela metade (ou inválida) que o sistema
+ * NÃO capturou? Guard para os formulários BARRAREM o salvar — a data some em
+ * silêncio quando o texto não vira ISO, e um registro sem data significa, por
+ * exemplo, nenhum show na agenda.
+ *
+ * Lê o DOM (`data-data-pendente`) em vez de um registry global de propósito: o
+ * que está renderizado é exatamente o que a pessoa vê, sem risco de um campo
+ * desmontado continuar registrado e travar o salvar sem motivo visível.
+ *
+ * @param raiz limita a busca a um container (ex.: o modal aberto). Padrão: documento.
+ */
+export function haDataPendente(raiz?: HTMLElement | null): boolean {
+  const escopo: ParentNode | null =
+    raiz ?? (typeof document !== "undefined" ? document : null);
+  if (!escopo) return false; // SSR
+  return escopo.querySelector('[data-data-pendente="true"]') !== null;
+}
 
 export default InputDataBR;

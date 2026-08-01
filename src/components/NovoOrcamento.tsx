@@ -38,7 +38,7 @@ import HistoricoContratante from "./HistoricoContratante";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
-import InputDataBR from "./inputs/InputDataBR";
+import InputDataBR, { haDataPendente } from "./inputs/InputDataBR";
 import LogisticaEditor from "./LogisticaEditor";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { normalizar } from "@/lib/normalizar";
@@ -525,6 +525,13 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // (divergência / local parecido). Sem o guard, um 2º clique sobrescreve o
     // ref de resposta — Promise pendurada + orçamento duplicado.
     if (salvando) return;
+    // TRAVA: data digitada pela metade ("01/08" sem o ano) não vira ISO e some
+    // em silêncio — o orçamento nasceria sem data e NENHUM show iria pra agenda.
+    // Barra o salvar até completar (o campo já está marcado em vermelho).
+    if (haDataPendente()) {
+      avisar(t("Complete a data (dd/mm/aaaa) antes de salvar — o campo em vermelho está incompleto."));
+      return;
+    }
     setSalvando(true);
     try {
       await submeter();

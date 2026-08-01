@@ -38,7 +38,7 @@ import {
 } from "@/lib/data/documentos";
 import { canonicalizarTelefoneBR, telefonesIguais } from "@/lib/telefone";
 import InputCapacidade from "./inputs/InputCapacidade";
-import InputDataBR from "./inputs/InputDataBR";
+import InputDataBR, { haDataPendente } from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
 import { apenasDigitos, SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
@@ -827,6 +827,15 @@ export default function ConcretizarVenda({
   async function handleSubmit() {
     // Guard de reentrada: se já está salvando, ignora cliques extras.
     if (salvando) return;
+    // TRAVA: data digitada pela metade ("01/08" sem o ano) não vira ISO e some
+    // em silêncio — a venda/show nasceria sem data. Barra até completar.
+    if (haDataPendente()) {
+      setErrors((p) => ({
+        ...p,
+        geral: t("Complete a data (dd/mm/aaaa) antes de salvar — o campo em vermelho está incompleto."),
+      }));
+      return;
+    }
     if (!validate() || !cidadeIbge || artistaId === null) return;
 
     if (!emEdicao && !confirmandoVenda) {
