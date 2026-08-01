@@ -723,6 +723,15 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         hotel: b.hotel,
         logistica: b.logistica,
         infoExtra: b.infoExtra.trim() || undefined,
+        // A data/horário do evento precisam ir também para as COLUNAS
+        // `data_show`/`horario` — não só para o JSON de detalhes. É a coluna que
+        // manda: `aceitarOrcamentoPorId` só cria o show na agenda quando
+        // `dataShow` existe (orcamentos.service.ts). Antes disto, a data digitada
+        // ficava só em `detalhes_evento.dataShow` e o orçamento nascia "sem
+        // data": nada aparecia na agenda e o alerta pedia "Data do show".
+        // Derivado do MESMO objeto do JSON pra os dois nunca divergirem.
+        dataShow: detalhesEvento?.dataShow,
+        horario: detalhesEvento?.horarioInicio,
         detalhesEvento,
       });
 
