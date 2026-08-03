@@ -409,8 +409,9 @@ export default function ConcretizarVenda({
     });
   }
 
-  // Cidade — pré-popula a partir do orçamento (ou da venda, na edição) se
-  // houver ibge_id. Cidade legada resolve `null` e o validate força re-escolha.
+  // Cidade — pré-popula a partir do orçamento (ou da venda, na edição).
+  // Cidade LEGADA (sem ibge_id/geoname_id) também pré-popula: antes resolvia
+  // `null` e a edição pedia a cidade de novo toda vez, mesmo com ela salva.
   const [cidadeIbge, setCidadeIbge] = useState<CidadeEscolhida | null>(
     cidadeParaEscolhida(v ? cidades.find((c) => c.id === v.cidadeId) : cidadeOrc)
   );

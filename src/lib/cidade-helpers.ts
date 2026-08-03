@@ -42,14 +42,22 @@ export async function resolverCidade(c: CidadeEscolhida): Promise<Cidade> {
 
 /**
  * Converte uma `Cidade` do banco na shape do `CidadeGlobalAutocomplete`
- * pra pré-popular forms de edição. null se for cidade legada (sem
- * ibgeId nem geonameId).
+ * pra pré-popular forms de edição. null só quando não há cidade (ou nome).
+ *
+ * ANTES devolvia null pra cidade LEGADA (sem ibgeId nem geonameId), forçando
+ * o usuário a re-escolher pra "promover" o cadastro. Na prática isso apagava a
+ * cidade toda vez que se abria a venda/artista pra EDITAR — o campo nascia
+ * vazio mesmo com a cidade salva, e era preciso preencher de novo (e o
+ * `validate` ainda barrava o salvar com "Cidade obrigatória").
+ *
+ * Exibir é seguro: o autocomplete mostra `value.nome` (não exige id externo) e
+ * `lookupOuCriarCidade` ADOTA a cidade legada por nome+UF ao salvar — devolve a
+ * MESMA cidade (não duplica) e ainda grava o id externo quando ele existir.
  */
 export function cidadeParaEscolhida(
   cidade: Cidade | null | undefined
 ): CidadeEscolhida | null {
-  if (!cidade) return null;
-  if (!cidade.ibgeId && !cidade.geonameId) return null;
+  if (!cidade || !cidade.nome) return null;
   const out: CidadeEscolhida = {
     nome: cidade.nome,
     uf: cidade.estado ?? "",
