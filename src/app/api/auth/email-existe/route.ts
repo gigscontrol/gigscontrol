@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ipDe, rateLimit } from "@/lib/api/rate-limit";
 import { z } from "zod";
 
 /**
@@ -23,6 +24,12 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Freio anti-enumeração (auditoria 27/08/2026): a rota é oráculo intencional
+  // de UX ("este e-mail tem conta?"), mas sem limite virava enumeração em
+  // massa via Admin API. 15/min por IP cobre o uso legítimo do formulário.
+  const limitado = rateLimit("email-existe", ipDe(request), 15, 60_000);
+  if (limitado) return limitado;
+
   let raw: unknown;
   try {
     raw = await request.json();

@@ -37,7 +37,11 @@ import type { DadosPixBrick } from "./MercadoPagoBrick";
  * `onIndisponivel()` — o pai degrada pro Stripe.
  */
 
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+// Alias do nome legado sem underscore (env da Vercel de produção) — ver
+// comentário equivalente no MercadoPagoBrick.
+const PUBLIC_KEY =
+  process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ??
+  process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
 
 type Props = {
   plano: string;

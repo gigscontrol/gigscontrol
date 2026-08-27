@@ -23,7 +23,12 @@ import { useT } from "@/lib/i18n";
  * `onIndisponivel()` e não monta nada.
  */
 
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY;
+// Aceita também o nome legado sem underscore — é o que a Vercel de produção
+// ainda tem (env "Sensitive", não recriável). Ambas as expressões são inlined
+// no build, então o fallback resolve em build time.
+const PUBLIC_KEY =
+  process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY ??
+  process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
 
 /** QR Code PIX devolvido pro pai (repassado ao PixPendente). */
 export type DadosPixBrick = {

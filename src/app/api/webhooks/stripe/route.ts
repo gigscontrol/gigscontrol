@@ -6,8 +6,18 @@ import {
   getStripe,
   valorCobranca,
 } from "@/lib/services/stripe.service";
-import { registrarPagamentoEEstenderAcesso } from "@/lib/services/pagamentos.service";
-import { PLANOS, type PlanoId, type CicloCobranca, type Moeda } from "@/lib/planos";
+import {
+  registrarPagamentoEEstenderAcesso,
+  suspenderWorkspace,
+} from "@/lib/services/pagamentos.service";
+import {
+  PLANOS,
+  ehUpgrade,
+  creditoDiasUpgrade,
+  type PlanoId,
+  type CicloCobranca,
+  type Moeda,
+} from "@/lib/planos";
 
 /**
  * POST /api/webhooks/stripe
@@ -57,22 +67,15 @@ function planoValido(v: unknown): v is PlanoId {
 }
 
 /**
- * Crédito de upgrade em DIAS vindo do metadata — tratado como ENTRADA NÃO
- * CONFIÁVEL: aceita só inteiro não-negativo, com teto de 1 ano corrido pra que
- * um metadata adulterado não conceda validade infinita. (O W6 recalcula a
- * origem do crédito; aqui a postura é sanear, nunca confiar no valor cru.)
- */
-function creditoDiasSeguro(v: unknown): number {
-  const n = typeof v === "string" ? parseInt(v, 10) : typeof v === "number" ? v : NaN;
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.min(Math.floor(n), 365);
-}
-
-/**
  * Estende a validade a partir de um pagamento de PLANO aprovado. Os dias saem
- * do CICLO (server-side via planos.ts), o valor é recalculado server-side —
- * nada de confiar no metadata cru além de identificar plano/ciclo. Best-effort
- * de salvar customer/valor/mirror do plano no workspace (não bloqueia a RPC).
+ * do CICLO (server-side via planos.ts), o valor é recalculado server-side.
+ *
+ * UPGRADE (fix auditoria 27/08/2026, achados A1/M2): a decisão de reinício +
+ * crédito é tomada AQUI, no momento do pagamento, comparando o plano PAGO com o
+ * plano VIGENTE da subscription — nunca por campo vindo do client/metadata.
+ * Antes, um POST direto ao checkout sem `creditoDias` caía no ramo GREATEST e
+ * empilhava dias do plano barato 1:1 no plano caro; e o crédito era congelado
+ * na CRIAÇÃO do checkout, apagando dias ganhos entre criação e pagamento.
  */
 async function estenderPorPlano(
   admin: Admin,
@@ -84,9 +87,38 @@ async function estenderPorPlano(
     moeda: Moeda;
     metodo?: string | null;
     customerId?: string | null;
-    diasExtras?: number;
   }
 ) {
+  // Plano vigente + validade restante AGORA (momento do pagamento).
+  const { data: subAtual } = await admin
+    .from("subscriptions")
+    .select("plano, acesso_ate")
+    .eq("workspace_id", params.workspaceId)
+    .maybeSingle<{ plano: string | null; acesso_ate: string | null }>();
+
+  let diasExtras = 0;
+  const planoAtual = subAtual?.plano;
+  if (
+    planoAtual &&
+    PLANOS.some((p) => p.id === planoAtual) &&
+    ehUpgrade(planoAtual as PlanoId, params.plano)
+  ) {
+    const ms = subAtual?.acesso_ate
+      ? new Date(subAtual.acesso_ate).getTime() - Date.now()
+      : 0;
+    const diasRestantes = ms > 0 ? Math.ceil(ms / 86_400_000) : 0;
+    diasExtras = creditoDiasUpgrade({
+      atual: planoAtual as PlanoId,
+      novo: params.plano,
+      ciclo: params.ciclo,
+      moeda: params.moeda,
+      diasRestantes,
+    });
+    // Upgrade sempre REINICIA a validade (diasExtras>0 liga o reinício no
+    // service; com 0 dias restantes o GREATEST de validade vencida dá o mesmo
+    // resultado — agora + dias do ciclo).
+  }
+
   const valorReais = valorCobranca(params.plano, params.ciclo, params.moeda);
   const res = await registrarPagamentoEEstenderAcesso({
     workspaceId: params.workspaceId,
@@ -97,40 +129,20 @@ async function estenderPorPlano(
     valor: Math.round(valorReais * 100), // centavos (coluna integer)
     moeda: params.moeda,
     metodo: params.metodo ?? "credit_card",
-    diasExtras: params.diasExtras ?? 0,
+    diasExtras,
   });
 
   // Reprocessamento do mesmo pagamento → a RPC já barrou. Não mexe em nada.
   if (res.jaProcessado) return;
 
-  // Best-effort: a RPC não grava customer ref, valor cache nem espelha o
-  // workspaces.plano. Faz aqui (falha silenciosa não impede a extensão).
+  // Best-effort: customer ref + valor cache na subscription (o espelho de
+  // workspaces.plano agora vive no service, comum a todos os gateways).
   const patchSub: Record<string, unknown> = { valor: valorReais };
   if (params.customerId) patchSub.mp_payment_id = params.customerId;
   await admin
     .from("subscriptions")
     .update(patchSub)
     .eq("workspace_id", params.workspaceId);
-  await admin
-    .from("workspaces")
-    .update({ plano: params.plano, ciclo: params.ciclo, status: "ativa" })
-    .eq("id", params.workspaceId);
-}
-
-/**
- * Suspende o acesso do workspace NA HORA (chargeback / alerta de fraude).
- * Barra sempre via estadoAcessoDe (status suspended → bloqueado mesmo com
- * validade futura). Espelha no workspace.
- */
-async function suspenderWorkspace(admin: Admin, workspaceId: string) {
-  await admin
-    .from("subscriptions")
-    .update({ status: "suspended" })
-    .eq("workspace_id", workspaceId);
-  await admin
-    .from("workspaces")
-    .update({ status: "suspended" })
-    .eq("id", workspaceId);
 }
 
 export async function POST(request: Request) {
@@ -201,9 +213,25 @@ export async function POST(request: Request) {
           null;
         if (!workspaceId) break;
 
-        const paymentIntentId = idDe(session.payment_intent);
-        // Fallback: o id do PI é a chave de idempotência ideal; sem ele, cai no
-        // id da própria sessão (também estável e único por compra).
+        let paymentIntentId = idDe(session.payment_intent);
+        // Sem o PI no payload (varia por versão da API), busca a session com
+        // expand — usar session.id como chave criaria uma SEGUNDA chave de
+        // idempotência pro mesmo pagamento e o payment_intent.succeeded
+        // concederia dias em dobro (fix auditoria 27/08/2026, achado M3).
+        if (!paymentIntentId) {
+          try {
+            const cheia = await getStripe().checkout.sessions.retrieve(
+              session.id,
+              { expand: ["payment_intent"] }
+            );
+            paymentIntentId = idDe(
+              cheia.payment_intent as string | { id: string } | null
+            );
+          } catch {
+            // segue com o fallback abaixo — melhor estender com chave da
+            // session do que perder a extensão de um pagamento real
+          }
+        }
         const providerPaymentId = paymentIntentId ?? session.id;
         const customerId = idDe(session.customer);
 
@@ -231,12 +259,12 @@ export async function POST(request: Request) {
         }
 
         // COMPRA DE PLANO: plano/ciclo vêm do metadata (validados server-side);
-        // dias derivam do ciclo e valor é recalculado — metadata cru não decide
-        // quanto de acesso é concedido.
+        // dias derivam do ciclo, valor é recalculado e o crédito de upgrade é
+        // decidido DENTRO de estenderPorPlano comparando com o plano vigente —
+        // metadata cru não decide quanto de acesso é concedido.
         if (!planoValido(meta.plano)) break;
         const ciclo: CicloCobranca = meta.ciclo === "anual" ? "anual" : "mensal";
         const moeda: Moeda = (session.currency === "usd" ? "usd" : "brl") as Moeda;
-        const diasExtras = creditoDiasSeguro(meta.credito_dias);
 
         await estenderPorPlano(admin, {
           workspaceId,
@@ -246,7 +274,6 @@ export async function POST(request: Request) {
           moeda,
           metodo: "credit_card",
           customerId,
-          diasExtras,
         });
         break;
       }
@@ -286,12 +313,12 @@ export async function POST(request: Request) {
         }
 
         // COMPRA DE PLANO: plano/ciclo do metadata (validados); dias derivam do
-        // ciclo e valor é recalculado. A idempotência por pi.id garante que, se
-        // este PI também chegar via checkout.session.completed (fluxo hosted), a
-        // RPC não conceda dias em dobro.
+        // ciclo, valor é recalculado e o crédito de upgrade é decidido dentro de
+        // estenderPorPlano. A idempotência por pi.id garante que, se este PI
+        // também chegar via checkout.session.completed (fluxo hosted), a RPC
+        // não conceda dias em dobro.
         if (!planoValido(meta.plano)) break;
         const ciclo: CicloCobranca = meta.ciclo === "anual" ? "anual" : "mensal";
-        const diasExtras = creditoDiasSeguro(meta.credito_dias);
 
         await estenderPorPlano(admin, {
           workspaceId,
@@ -301,7 +328,6 @@ export async function POST(request: Request) {
           moeda,
           metodo: "credit_card",
           customerId,
-          diasExtras,
         });
         break;
       }
@@ -358,7 +384,40 @@ export async function POST(request: Request) {
           console.warn(
             `[webhook stripe] ${event.type} charge=${chargeId} ws=${row.workspace_id} — suspendendo por disputa/fraude.`
           );
-          await suspenderWorkspace(admin, row.workspace_id);
+          await suspenderWorkspace(row.workspace_id);
+        }
+        break;
+      }
+
+      case "charge.refunded": {
+        // Reembolso TOTAL emitido no painel (fix auditoria 27/08/2026, achado
+        // M4 — antes um refund deixava acesso e ledger intactos). Marca o
+        // pagamento no ledger e suspende o workspace. Reembolso PARCIAL não
+        // suspende (decisão comercial pontual do admin), só é logado no evento.
+        const charge = event.data.object as Stripe.Charge;
+        if (!charge.refunded) break; // parcial — charge.refunded só é true no total
+
+        const piId = idDe(charge.payment_intent);
+        if (piId) {
+          await admin
+            .from("pagamentos")
+            .update({ status: "reembolsado" })
+            .eq("provider", "stripe")
+            .eq("provider_payment_id", piId);
+        }
+
+        const customerId = idDe(charge.customer);
+        if (!customerId) break;
+        const { data: row } = await admin
+          .from("subscriptions")
+          .select("workspace_id")
+          .eq("mp_payment_id", customerId)
+          .maybeSingle<{ workspace_id: string | null }>();
+        if (row?.workspace_id) {
+          console.warn(
+            `[webhook stripe] charge.refunded charge=${charge.id} ws=${row.workspace_id} — suspendendo por reembolso total.`
+          );
+          await suspenderWorkspace(row.workspace_id);
         }
         break;
       }

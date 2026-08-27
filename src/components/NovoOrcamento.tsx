@@ -25,6 +25,7 @@ import {
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Stepper from "./Stepper";
+import { useNavegacaoOpcional } from "./NavOverlay";
 import QuantitySelector from "./QuantitySelector";
 import ExistenteOuNovo from "./ExistenteOuNovo";
 import ContratanteBuscaModal from "./ContratanteBuscaModal";
@@ -282,6 +283,26 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     linkWA: string;
   }> | null>(null);
   const [copiadoIdx, setCopiadoIdx] = useState<number | null>(null);
+
+  // Guarda de saída (auditoria 27/08/2026): o wizard não tinha proteção —
+  // navegar embora no meio descartava tudo sem aviso. "Sujo" = fez progresso
+  // real e ainda não salvou; salvar:null porque não existe rascunho de
+  // orçamento persistível (o popup oferece só Descartar / Continuar editando).
+  const nav = useNavegacaoOpcional();
+  const sujoRef = useRef(false);
+  sujoRef.current =
+    !salvos &&
+    (step > 1 ||
+      tipoEvento !== null ||
+      contratanteId !== null ||
+      novoNome.trim() !== "" ||
+      evNome.trim() !== "" ||
+      evData !== "");
+  useEffect(() => {
+    if (!nav) return;
+    nav.registrarGuarda(() => ({ sujo: sujoRef.current, salvar: null }));
+    return () => nav.limparGuarda();
+  }, [nav]);
 
   function validateStep1(): boolean {
     const errs: Record<string, string> = {};

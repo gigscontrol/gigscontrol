@@ -1,20 +1,25 @@
+import { randomInt } from "node:crypto";
+
 /**
  * Gerador de senha aleatória "amigável" — usada quando o admin cria
  * um artista no GIGS CONTROL.
  *
- * Formato: `Palavra1-Palavra2-NNNN`
- * Exemplo: `Lyra-Bravo-7421` (15 chars, mix de case + número + símbolo)
+ * Formato: `Palavra1-Palavra2-Palavra3-NNNN`
+ * Exemplo: `Lyra-Bravo-Onix-7421` (≥18 chars, mix de case + número + símbolo)
  *
- * Por que não Math.random() de 12 chars aleatórios?
+ * Por que palavras e não 12 chars aleatórios?
  *   - Senha aparece UMA vez pro admin copiar e mandar pro artista.
  *   - Dígitos+letras puros tipo "K7gQp2nXw1aZ" são fáceis de errar
  *     ao digitar/ditar. Palavras + número são mais à prova de erro
- *     e ainda passam folgado na política do avaliarSenha (NIST):
- *     ≥12 chars, 3 tipos de char, não está em SENHAS_COMUNS.
- *   - Aleatoriedade: ~25 palavras × 25 palavras × 10000 números =
- *     6.25 milhões de combinações. Não é Fort Knox, mas pra senha
- *     INICIAL (que o artista vai trocar no primeiro login) é mais
- *     que suficiente.
+ *     e ainda passam folgado na política do avaliarSenha (NIST).
+ *
+ * Endurecido na auditoria de 27/08/2026:
+ *   - `crypto.randomInt` (CSPRNG) no lugar de Math.random(), que é
+ *     previsível e não serve pra material de credencial.
+ *   - 3 palavras de uma lista de 48 + número: 48×47×46×9000 ≈ 934
+ *     MILHÕES de combinações (~30 bits) — vs ~5,4M (~22 bits) do
+ *     formato antigo de 2 palavras. Pra senha INICIAL (trocada no
+ *     primeiro login) com rate limit no login, é folga confortável.
  */
 
 const PALAVRAS = [
@@ -43,24 +48,42 @@ const PALAVRAS = [
   "Hawk",
   "Lynx",
   "Sage",
-];
+  "Norte",
+  "Sul",
+  "Leste",
+  "Oeste",
+  "Cedro",
+  "Pinho",
+  "Coral",
+  "Perola",
+  "Ambar",
+  "Cobre",
+  "Ferro",
+  "Prata",
+  "Ouro",
+  "Trigo",
+  "Cacau",
+  "Manga",
+  "Kiwi",
+  "Figo",
+  "Uva",
+  "Brisa",
+  "Rocha",
+  "Vento",
+  "Chuva",
+] as const;
 
-/** Sorteia um item de um array. */
+/** Sorteia um item de um array com CSPRNG. */
 function sortear<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-/** Inteiro entre min (inclusivo) e max (inclusivo). */
-function inteiroEntre(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return arr[randomInt(arr.length)];
 }
 
 /**
  * Gera uma senha aleatória legível.
  *
  * Garante passar em `avaliarSenha()`:
- *  - ≥ 12 chars (Lyra-Bravo-7421 tem 15)
- *  - Tem maiúscula (P primeira letra)
+ *  - ≥ 12 chars (Sol-Lua-Mar-1000 tem 16; o comum passa de 18)
+ *  - Tem maiúscula (primeira letra de cada palavra)
  *  - Tem minúscula
  *  - Tem dígito
  *  - Tem símbolo (-)
@@ -69,8 +92,9 @@ function inteiroEntre(min: number, max: number): number {
 export function gerarSenhaAleatoria(): string {
   const a = sortear(PALAVRAS);
   let b = sortear(PALAVRAS);
-  // Evita repetir a mesma palavra duas vezes (estético)
   while (b === a) b = sortear(PALAVRAS);
-  const numero = inteiroEntre(1000, 9999);
-  return `${a}-${b}-${numero}`;
+  let c = sortear(PALAVRAS);
+  while (c === a || c === b) c = sortear(PALAVRAS);
+  const numero = randomInt(1000, 10000); // [1000, 9999]
+  return `${a}-${b}-${c}-${numero}`;
 }

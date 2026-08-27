@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ipDe, rateLimit } from "@/lib/api/rate-limit";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 
@@ -21,6 +22,12 @@ import { criarClienteAdmin } from "@/lib/db/supabase-admin";
  * falha (credenciais, handle inexistente, conta desativada usa 403).
  */
 export async function POST(request: Request) {
+  // Freio anti brute-force (auditoria 27/08/2026): 10 tentativas/min por IP —
+  // combina com a senha inicial de artista, que agora tem espaço maior, mas
+  // continua sendo o alvo natural de tentativa por handle.
+  const limitado = rateLimit("login-handle", ipDe(request), 10, 60_000);
+  if (limitado) return limitado;
+
   let body: { handle?: unknown; senha?: unknown };
   try {
     body = await request.json();

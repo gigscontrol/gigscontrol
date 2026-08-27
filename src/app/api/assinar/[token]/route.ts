@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ipDe, rateLimit } from "@/lib/api/rate-limit";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   buscarParaAssinar,
@@ -72,6 +73,11 @@ export async function POST(
   request: Request,
   { params }: { params: { token: string } }
 ) {
+  // Rota PÚBLICA por token (auditoria 27/08/2026): sem freio, um link vazado
+  // permitia gravar blobs de foto indefinidamente. 10/min por IP.
+  const limitado = rateLimit("assinar", ipDe(request), 10, 60_000);
+  if (limitado) return limitado;
+
   let raw: unknown;
   try {
     raw = await request.json();

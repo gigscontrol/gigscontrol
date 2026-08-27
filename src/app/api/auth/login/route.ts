@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ipDe, rateLimit } from "@/lib/api/rate-limit";
 import { criarClienteServidor } from "@/lib/db/supabase-server";
 
 /**
@@ -10,6 +11,10 @@ import { criarClienteServidor } from "@/lib/db/supabase-server";
  * de sessão é gravado automaticamente pelo cliente do servidor.
  */
 export async function POST(request: Request) {
+  // Freio anti brute-force (auditoria 27/08/2026): 10 tentativas/min por IP.
+  const limitado = rateLimit("login", ipDe(request), 10, 60_000);
+  if (limitado) return limitado;
+
   let body: { email?: unknown; senha?: unknown };
   try {
     body = await request.json();

@@ -1,115 +1,60 @@
-# flow.book
+# GIGS CONTROL
 
-CRM e gestão para DJs, cantores, MCs e agências musicais. SaaS multi-tenant
-com landing page, planos, autenticação, dashboard de cliente e painel de
-administração da plataforma.
+SaaS multi-tenant de gestão para agências de artistas e DJs: agenda de shows,
+orçamentos, vendas, financeiro (parcelas), contratos com assinatura digital,
+contatos e equipe — com landing page, planos pagos e painel super-admin.
 
-Stack: **Next.js 14 (App Router) · React 18 · TypeScript · Tailwind CSS**.
+**Produção:** https://gigscontrol.com (Vercel) · **Banco:** Supabase (sa-east-1)
 
----
+## Stack
 
-## Como rodar
+- **Next.js 14** (App Router) · React 18 · TypeScript `strict` · Tailwind CSS
+- **Supabase**: Postgres 17 + Auth + Storage, RLS por workspace em todas as tabelas
+- **Pagamentos**: Stripe (mundo, cartão) + Mercado Pago (BR: PIX + cartão via
+  Payment Brick) — modelo **pré-pago por validade** (`subscriptions.acesso_ate`)
+- **Sentry** nos 3 runtimes · **Vitest** + CI (GitHub Actions)
+
+## Rodar localmente
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env.local   # e preencha — ver comentários no próprio arquivo
+npm run dev                  # http://localhost:3000
 ```
 
-Abre em `http://localhost:3000`.
+Scripts úteis: `npm test` (vitest) · `npm run typecheck` · `npm run lint`.
 
-> Ao trocar a versão dos arquivos, apague a pasta `.next` antes de rodar de
-> novo, para o Next.js não servir build em cache.
+> As variáveis essenciais são as do Supabase; as demais (Stripe, Mercado Pago,
+> Google Calendar, etc.) só afetam a própria feature — o app roda sem elas.
 
-### Contas de demonstração
-
-| Login             | Tipo              | Onde cai         |
-|-------------------|-------------------|------------------|
-| `two` / `two`     | Cliente (agência) | Dashboard `/app` |
-| `admin` / `admin` | Super-admin       | Painel `/admin`  |
-
----
-
-## Rotas (`src/app`)
-
-| Rota      | Arquivo            | Descrição                                   |
-|-----------|--------------------|---------------------------------------------|
-| `/`       | `page.tsx`         | Landing page pública                        |
-| `/planos` | `planos/page.tsx`  | Página de planos (carrossel + mensal/anual) |
-| `/login`  | `login/page.tsx`   | Tela de login                               |
-| `/app`    | `app/page.tsx`     | Dashboard do cliente (protegida)            |
-| `/admin`  | `admin/page.tsx`   | Painel da plataforma (só super-admin)       |
-
----
-
-## Estrutura de pastas
+## Arquitetura (src/)
 
 ```
-src/
-├── app/                  Rotas (Next.js App Router)
-│   ├── page.tsx              landing
-│   ├── planos/               página de planos
-│   ├── login/                login
-│   ├── app/                  dashboard do cliente
-│   ├── admin/                painel da plataforma
-│   ├── layout.tsx            layout raiz + metadata
-│   └── globals.css           design tokens + classes utilitárias
-│
-├── components/           Componentes da DASHBOARD DO CLIENTE
-│   ├── admin/                Componentes do PAINEL DA PLATAFORMA
-│   │   ├── AdminDashboard.tsx    KPIs do negócio
-│   │   ├── AdminClientes.tsx     lista de clientes + detalhe
-│   │   ├── AdminAssinaturas.tsx  gestão de assinaturas
-│   │   └── AdminPlanos.tsx       edição de planos
-│   ├── forms/                Formulários de cadastro
-│   └── *.tsx                 Telas e widgets da dashboard
-│
-├── lib/                  Lógica, estado e dados
-│   ├── *-context.tsx         React Contexts (estado em memória)
-│   ├── permissoes.ts         papéis e cálculo de permissões
-│   ├── planos.ts             definição dos planos
-│   ├── plataforma.ts         dados da plataforma (super-admin)
-│   ├── mock-*.ts             dados de exemplo
-│   ├── data/                 catálogos (países, cidades BR)
-│   └── *.ts                  helpers (whatsapp, stats...)
-│
-└── types/index.ts        Tipos compartilhados do domínio
+app/            rotas (App Router) — app autenticado em app/, APIs em api/ (~108 rotas)
+components/     telas e widgets (client) — dashboard, wizards, admin/
+lib/
+  api/          sessão (autenticarComWorkspace), permissões, erros, rate-limit
+  services/     regra de negócio (31 módulos) — billing, contratos, artistas...
+  repositories/ acesso a dados (projeção COLS explícita)
+  mappers/      linha do banco ⇄ tipo do domínio
+  validators/   schemas zod por domínio
+  i18n*.ts      PT (fonte) + EN/ES/FR/DE/IT carregados por chunk sob demanda
+supabase/       scripts SQL numerados (01–96+) aplicados via SQL Editor — LEIA-ME.md
 ```
 
----
+Padrão das rotas de API: `autenticar → permissão → zod → service → audit log`.
+Toda mutação passa pelo paywall server-side (`exigirAcesso`) e vira histórico +
+soft-delete com lixeira de 30 dias.
 
-## Conceitos
+## Documentos vivos
 
-### Papéis (`lib/permissoes.ts`)
+- [PLANO.md](PLANO.md) — roadmap com checkboxes (fonte da verdade do que falta)
+- [PLANO-BACKEND.md](PLANO-BACKEND.md) — arquitetura do backend em detalhe
+- [GUIA-CLAUDE-CODE.md](GUIA-CLAUDE-CODE.md) — como trabalhar no projeto com o Claude
 
-`admin` · `artista` · `vendedor` · `produtor` · `financeiro`.
-A função `calcularPermissoes(papel, opts)` devolve o objeto `Permissoes`
-que a UI consulta para mostrar/esconder/filtrar.
+## Billing em uma linha
 
-> A FUNDAÇÃO de permissões está pronta, mas ainda **não está aplicada**
-> dentro da dashboard do cliente — esse é o próximo grande passo.
-
-### Planos (`lib/planos.ts`)
-
-5 planos: Individual, Equipe, Agência, Agência Plus, Agência Max.
-Cada um com preço mensal e anual, limite de artistas e de usuários.
-
-### Autenticação (`lib/auth-context.tsx`)
-
-Dois tipos de conta: **cliente** (dono de um workspace) e **super-admin**
-(administrador da plataforma). O super-admin pode visualizar a dashboard de
-qualquer cliente em **modo somente-leitura** (`modoVisitante`).
-
-### Estado
-
-Todo o estado é mantido em memória via React Context — **não há banco de
-dados ainda**. Os dados se perdem ao recarregar a página. A estrutura está
-desenhada para uma migração futura para **Supabase**.
-
----
-
-## Próximos passos sugeridos
-
-1. Aplicar as permissões dentro da dashboard (filtrar dados por papel).
-2. Tela de gerenciar usuários e configurar permissões (dentro do workspace).
-3. Login individual por usuário (hoje só existem 2 contas demo).
-4. Integração com Supabase (auth + persistência).
+Todo pagamento aprovado (Stripe/MP/cortesia/cupom) passa pela RPC idempotente
+`registrar_pagamento_estender` (UNIQUE por provider+payment id) que estende a
+validade; o acesso deriva de `acesso_ate` em tempo real (1 dia de graça), sem
+cron. Upgrade reinicia a validade com crédito convertido, decidido no webhook.

@@ -20,6 +20,7 @@ import {
   Lock,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import { useNavegacaoOpcional } from "./NavOverlay";
 import QuantitySelector from "./QuantitySelector";
 import PagamentoSection, { novaParcela, type ModoParcela } from "./PagamentoSection";
 import { Field, TextInput, TextArea } from "./Field";
@@ -252,6 +253,22 @@ export default function ConcretizarVenda({
   const temParcelaComHistorico = v ? algumaParcelaTemHistorico(v.parcelas) : false;
   const [copiadoWA, setCopiadoWA] = useState(false);
   const [previewWA, setPreviewWA] = useState(false);
+
+  // Guarda de saída (auditoria 27/08/2026): o form vinha pré-preenchido do
+  // orçamento e qualquer navegação descartava as edições sem aviso. "Sujo" =
+  // o usuário mexeu em algum input (onChangeCapture na raiz) e ainda não
+  // salvou; salvar:null (não há rascunho de venda persistível).
+  const nav = useNavegacaoOpcional();
+  const tocouRef = useRef(false);
+  const salvouRef = useRef(false);
+  useEffect(() => {
+    if (!nav) return;
+    nav.registrarGuarda(() => ({
+      sujo: tocouRef.current && !salvouRef.current,
+      salvar: null,
+    }));
+    return () => nav.limparGuarda();
+  }, [nav]);
   const [resultadoColagem, setResultadoColagem] = useState<{
     preenchidos: string[];
     naoPreenchidos: string[];
@@ -1290,11 +1307,13 @@ export default function ConcretizarVenda({
       // este form desmonta no mesmo commit (auto-batching) — um Toast local
       // nunca chegaria a renderizar. Sobe a flag pro destino, que é justamente
       // onde o "revise no Financeiro" pode ser agido.
+      salvouRef.current = true; // baixa a guarda ANTES da navegação do onSaved
       onSaved(v.id, { parcelasPreservadas: r.parcelasPreservadas });
       return;
     }
 
     const venda = await criarVenda(input);
+    salvouRef.current = true; // baixa a guarda ANTES da navegação do onSaved
     onSaved(venda.id);
   }
 
@@ -1445,7 +1464,14 @@ export default function ConcretizarVenda({
   }, [artistaEfetivoOrc?.id]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8 pb-32">
+    <div
+      className="max-w-[1400px] mx-auto w-full p-6 lg:p-8 pb-32"
+      // Guarda de saída (auditoria 27/08/2026): qualquer edição em qualquer
+      // input do form marca "sujo" — sem listar os ~50 estados um a um.
+      onChangeCapture={() => {
+        tocouRef.current = true;
+      }}
+    >
       <button
         onClick={onCancel}
         className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm"
