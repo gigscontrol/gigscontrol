@@ -10,6 +10,13 @@
  * idioma/moeda iniciais vêm do layout (cookie da escolha do usuário ou, na
  * falta dele, o padrão da região por IP). `useMoeda()` devolve a moeda da
  * região (brl no Brasil, usd fora).
+ *
+ * DICIONÁRIOS SOB DEMANDA (auditoria 27/08/2026): os 5 dicionários somavam
+ * ~15 mil linhas (~1 MB de fonte) importados estaticamente — todo usuário
+ * baixava os 5 idiomas mesmo usando só PT. Agora cada um vira um chunk próprio
+ * carregado via import() quando o idioma é selecionado. Enquanto o chunk chega
+ * (uma vez por sessão; fica em cache), `t` devolve o PT — o mesmo fallback que
+ * já existia pra chave não traduzida, então nada quebra nem some.
  */
 
 import {
@@ -20,23 +27,44 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { EN } from "./i18n-en";
-import { ES } from "./i18n-es";
-import { FR } from "./i18n-fr";
-import { DE } from "./i18n-de";
-import { IT } from "./i18n-it";
 import type { Moeda } from "./planos";
 
 export type Lang = "pt" | "en" | "es" | "fr" | "de" | "it";
 
-const DICTS: Record<Lang, Record<string, string>> = {
-  pt: {},
-  en: EN,
-  es: ES,
-  fr: FR,
-  de: DE,
-  it: IT,
-};
+const LANGS: readonly Lang[] = ["pt", "en", "es", "fr", "de", "it"];
+
+type Dict = Record<string, string>;
+
+/** Cache por sessão: cada idioma é buscado 1x e reusado nas trocas seguintes. */
+const cache: Partial<Record<Lang, Dict>> = { pt: {} };
+
+/** Carrega o dicionário do idioma como chunk separado (code-splitting). */
+async function carregarDict(lang: Lang): Promise<Dict> {
+  const pronto = cache[lang];
+  if (pronto) return pronto;
+  let dict: Dict = {};
+  switch (lang) {
+    case "en":
+      dict = (await import("./i18n-en")).EN;
+      break;
+    case "es":
+      dict = (await import("./i18n-es")).ES;
+      break;
+    case "fr":
+      dict = (await import("./i18n-fr")).FR;
+      break;
+    case "de":
+      dict = (await import("./i18n-de")).DE;
+      break;
+    case "it":
+      dict = (await import("./i18n-it")).IT;
+      break;
+    default:
+      dict = {};
+  }
+  cache[lang] = dict;
+  return dict;
+}
 
 type TParams = Record<string, string | number>;
 export type Traduzir = (pt: string, params?: TParams) => string;
@@ -59,13 +87,31 @@ export function LanguageProvider({
   // Moeda é definida pela região (IP) no servidor; não muda no client.
   const moeda = initialMoeda;
 
+  // Dicionário ATIVO. PT = {} (a chave já é o texto). Não-PT começa vazio e é
+  // preenchido quando o chunk chega — até lá o t devolve PT (fallback padrão).
+  const [dict, setDict] = useState<Dict>(() => cache[initialLang] ?? {});
+
+  useEffect(() => {
+    let vivo = true;
+    if (lang === "pt") {
+      setDict({});
+      return;
+    }
+    void carregarDict(lang).then((d) => {
+      if (vivo) setDict(d);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [lang]);
+
   // Migração: usuários antigos guardavam a escolha no localStorage. Se ainda
   // não há cookie (fonte nova), adota o localStorage e grava o cookie 1×.
   useEffect(() => {
     try {
       if (document.cookie.includes("gc-lang=")) return;
       const ls = localStorage.getItem("gc-lang");
-      if (ls && ls in DICTS && ls !== lang) {
+      if (ls && LANGS.includes(ls as Lang) && ls !== lang) {
         setLangState(ls as Lang);
         document.cookie = `gc-lang=${ls};path=/;max-age=31536000;samesite=lax`;
       }
@@ -90,7 +136,7 @@ export function LanguageProvider({
 
   const t = useCallback<Traduzir>(
     (pt, params) => {
-      let s = lang === "pt" ? pt : DICTS[lang][pt] ?? pt;
+      let s = lang === "pt" ? pt : dict[pt] ?? pt;
       if (params) {
         for (const k of Object.keys(params)) {
           // split/join troca TODAS as ocorrências (idiomas pluralizam mais de
@@ -100,7 +146,7 @@ export function LanguageProvider({
       }
       return s;
     },
-    [lang]
+    [lang, dict]
   );
 
   return (
