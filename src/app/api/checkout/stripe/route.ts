@@ -11,6 +11,7 @@ import {
   valorCobranca,
 } from "@/lib/services/stripe.service";
 import { PLANOS, PLANO_IDS, ehUpgrade, creditoDiasUpgrade, type PlanoId } from "@/lib/planos";
+import { workspaceOnboardingIncompleto } from "@/lib/acesso";
 
 /**
  * POST /api/checkout/stripe
@@ -185,7 +186,10 @@ export async function POST(request: Request) {
           mp_payment_id: customerId,
         })
         .eq("id", subExistente.id);
-    } else {
+    } else if (await workspaceOnboardingIncompleto(workspaceId)) {
+      // Onboarding em curso: o stub (trial sem validade → deriva "bloqueado")
+      // fecha o furo do "trial eterno" — abrir o checkout e abandonar não
+      // libera o app, e o gate isenta quem ainda está no onboarding.
       await admin.from("subscriptions").insert({
         workspace_id: workspaceId,
         plano,
@@ -198,6 +202,12 @@ export async function POST(request: Request) {
         inicio_em: new Date().toISOString().slice(0, 10),
       });
     }
+    // Workspace LEGADO (onboarding completo SEM subscription — grandfathering
+    // da migração 25): NÃO insere o stub. Fix auditoria 27/08/2026, achado A3:
+    // o stub derivava "bloqueado" e barrava o workspace INTEIRO só por abrir o
+    // checkout e fechar sem pagar. Se o legado pagar, a RPC cria a linha de
+    // subscription sozinha (mig 86 — ramo INSERT); o custo é só recriar o
+    // customer da Stripe num próximo checkout.
 
     // embedded/payment_element → clientSecret (o front monta o iframe/Element);
     // hosted → url (redirect).

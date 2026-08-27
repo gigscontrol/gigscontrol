@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   buscarPagamento,
+  mpWebhookSecret,
   normalizarMetodo,
   validarAssinaturaWebhook,
 } from "@/lib/services/mercadopago.service";
-import { registrarPagamentoEEstenderAcesso } from "@/lib/services/pagamentos.service";
+import {
+  registrarPagamentoEEstenderAcesso,
+  suspenderWorkspace,
+} from "@/lib/services/pagamentos.service";
 
 /**
  * POST /api/webhooks/mercadopago
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
 
   // Validação de assinatura. O manifest usa o data.id da QUERY (padrão MP).
   const queryDataId = url.searchParams.get("data.id") ?? url.searchParams.get("id");
-  const temSecret = !!process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  const temSecret = !!mpWebhookSecret();
   const ehProd = process.env.NODE_ENV === "production";
   if (temSecret || ehProd) {
     // Em prod sem secret → não dá pra validar → 401 (fecha o furo).
@@ -150,7 +154,12 @@ export async function POST(request: Request) {
         });
         if (error && error.code !== "23505") throw error;
       } else {
-        const res = await registrarPagamentoEEstenderAcesso({
+        // O espelho de workspaces.plano acontece DENTRO do service (comum aos
+        // 3 caminhos — síncrono, webhook, polling — e a todos os gateways), com
+        // validação de plano conhecido. Fix auditoria 27/08/2026, achado M1:
+        // antes o espelho só rodava aqui e só quando o webhook processava
+        // primeiro — como o síncrono/polling quase sempre vence, era pulado.
+        await registrarPagamentoEEstenderAcesso({
           workspaceId: pag.externalReference,
           provider: "mercadopago",
           providerPaymentId: String(pag.id),
@@ -160,19 +169,25 @@ export async function POST(request: Request) {
           moeda: "brl",
           metodo: normalizarMetodo(pag.tipo),
         });
-        // RECONCILIA workspaces.plano com o plano PAGO — como o Stripe já faz
-        // (webhooks/stripe/route.ts:116). Sem isto, os limites de cadastro
-        // (que leem workspaces.plano, semeado no signup pelo cliente) ficavam no
-        // tier ESCOLHIDO no signup mesmo pagando um plano menor pelo MP. Só no
-        // primeiro processamento e só com plano conhecido (não apaga em reentrega
-        // nem em pagamento antigo sem metadata).
-        if (!res?.jaProcessado && md.plano) {
-          await admin
-            .from("workspaces")
-            .update({ plano: md.plano, ciclo: md.ciclo ?? null, status: "ativa" })
-            .eq("id", pag.externalReference);
-        }
       }
+    } else if (
+      (pag.status === "refunded" || pag.status === "charged_back") &&
+      pag.externalReference
+    ) {
+      // Reembolso/chargeback no MP (fix auditoria 27/08/2026, achado A2 —
+      // antes esses status eram só logados e o cliente mantinha o acesso até o
+      // fim da validade). Espelha o comportamento do Stripe: marca o ledger e
+      // suspende o workspace na hora. `cancelled` NÃO suspende — é o status de
+      // pagamento que nunca foi aprovado (ex.: PIX expirado sem pagar).
+      await admin
+        .from("pagamentos")
+        .update({ status: "reembolsado" })
+        .eq("provider", "mercadopago")
+        .eq("provider_payment_id", String(pag.id));
+      console.warn(
+        `[webhook mp] payment=${pag.id} status=${pag.status} ws=${pag.externalReference} — suspendendo por reembolso/chargeback.`
+      );
+      await suspenderWorkspace(pag.externalReference);
     }
 
     // Anexa o workspace + status ao evento registrado (auditoria).

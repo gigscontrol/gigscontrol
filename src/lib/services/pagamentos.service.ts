@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
+import { PLANOS } from "@/lib/planos";
 
 /**
  * Service central do modelo PRÉ-PAGO por validade.
@@ -81,7 +82,45 @@ export async function registrarPagamentoEEstenderAcesso(params: {
 
   const res = data as { ja_processado: boolean; acesso_ate?: string };
   if (res.ja_processado) return { jaProcessado: true };
+
+  // ESPELHO no workspace (fix auditoria 27/08/2026, achado M1): a RPC atualiza
+  // subscriptions.plano/ciclo, mas os LIMITES de cadastro leem workspaces.plano.
+  // Antes o espelho vivia só nos webhooks e só no primeiro processamento — como
+  // o caminho síncrono/polling do MP quase sempre vence o webhook, o espelho era
+  // pulado e o workspace ficava com os limites do plano ERRADO. Centralizado
+  // aqui, roda em TODOS os caminhos, exatamente quando a extensão acontece.
+  // Best-effort (falha não desfaz a extensão) e só com plano CONHECIDO —
+  // md.plano cru de gateway nunca vira tier mágico (fix do achado B2).
+  if (
+    provider !== "cortesia" &&
+    typeof plano === "string" &&
+    PLANOS.some((p) => p.id === plano)
+  ) {
+    await admin
+      .from("workspaces")
+      .update({ plano, ciclo: ciclo ?? null, status: "ativa" })
+      .eq("id", workspaceId);
+  }
+
   return { jaProcessado: false, acessoAte: res.acesso_ate as string };
+}
+
+/**
+ * Suspende o acesso do workspace NA HORA (chargeback, reembolso, alerta de
+ * fraude). `estadoAcessoDe` trata status 'suspended' como bloqueado SEMPRE,
+ * mesmo com validade futura. Compartilhado pelos webhooks Stripe e Mercado
+ * Pago (fix auditoria 27/08/2026, achados A2/M4 — antes só o Stripe suspendia).
+ */
+export async function suspenderWorkspace(workspaceId: string): Promise<void> {
+  const admin = criarClienteAdmin();
+  await admin
+    .from("subscriptions")
+    .update({ status: "suspended" })
+    .eq("workspace_id", workspaceId);
+  await admin
+    .from("workspaces")
+    .update({ status: "suspended" })
+    .eq("id", workspaceId);
 }
 
 /**

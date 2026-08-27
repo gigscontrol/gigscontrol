@@ -36,3 +36,4 @@ _i18n_tmp/
 Gigs Control - Redesign (standalone).html
 public/onboarding-navegavel.html
 src/app/dev/
+.env*

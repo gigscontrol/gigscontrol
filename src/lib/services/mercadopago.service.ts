@@ -27,10 +27,30 @@ import type { PaymentResponse } from "mercadopago/dist/clients/payment/commonTyp
 
 let _client: MercadoPagoConfig | null = null;
 
+/**
+ * Access Token do MP. Aceita o nome novo (MERCADO_PAGO_*, o canônico do código
+ * desde ad5174d) E o legado sem underscore (MERCADOPAGO_*) — a Vercel de
+ * produção ainda guarda as envs com o nome legado, e como são "Sensitive" não
+ * dá pra lê-las pra recriar; sem este alias o MP fica 503 em produção.
+ */
+function mpAccessToken(): string | undefined {
+  return (
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ?? process.env.MERCADOPAGO_ACCESS_TOKEN
+  );
+}
+
+/** Secret do webhook, com o mesmo alias legado do access token. */
+export function mpWebhookSecret(): string | undefined {
+  return (
+    process.env.MERCADO_PAGO_WEBHOOK_SECRET ??
+    process.env.MERCADOPAGO_WEBHOOK_SECRET
+  );
+}
+
 /** Cliente MP (lazy). Lança erro claro se MERCADO_PAGO_ACCESS_TOKEN faltar. */
 export function getMercadoPago(): MercadoPagoConfig {
   if (_client) return _client;
-  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const token = mpAccessToken();
   if (!token) {
     throw new Error("MERCADO_PAGO_ACCESS_TOKEN não configurado no ambiente.");
   }
@@ -40,7 +60,7 @@ export function getMercadoPago(): MercadoPagoConfig {
 
 /** true se o Mercado Pago está configurado (token presente). */
 export function mercadoPagoConfigurado(): boolean {
-  return !!process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  return !!mpAccessToken();
 }
 
 /** Minutos de validade do QR Code PIX antes de expirar. */
@@ -203,7 +223,7 @@ export function validarAssinaturaWebhook(
   headers: Headers,
   queryDataId: string | null
 ): boolean {
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  const secret = mpWebhookSecret();
   if (!secret) return false;
 
   const xSignature = headers.get("x-signature");
