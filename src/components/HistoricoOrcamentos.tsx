@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import { EstadoCarga } from "./EstadoCarga";
 import Modal from "./Modal";
 import MiniLixeira from "./MiniLixeira";
 import { useConfirmar } from "./ConfirmarModal";
@@ -55,7 +56,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   const { podeUI, sessao } = useAuth();
   const userId = sessao?.usuario.id;
   const accent = MODULE_THEMES.vendas.color;
-  const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento } = useOrcamentos();
+  const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, carregando: carregandoOrcs, erro: erroOrcs, recarregar: recarregarOrcs } = useOrcamentos();
   const { contratantes, cidades, casas } = useContatos();
   const artistas = useArtistas();
   const { confirmar, confirmador } = useConfirmar();
@@ -177,6 +178,16 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
           </button>
         }
       />
+
+      {/* Falha de API deixa de parecer histórico vazio (auditoria 27/08/2026). */}
+      <div className="mb-6 empty:hidden">
+        <EstadoCarga
+          carregando={carregandoOrcs && orcamentos.length === 0}
+          erro={erroOrcs}
+          aoTentar={recarregarOrcs}
+          rotulo={t("orçamentos")}
+        />
+      </div>
 
       {/* Cards de status */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

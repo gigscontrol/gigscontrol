@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import { EstadoCarga } from "./EstadoCarga";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import {
@@ -76,7 +77,7 @@ type ResumoAberto = "contratantes" | "casas" | "cidades" | "bloqueados" | null;
 
 export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const t = useT();
-  const { contratantes, casas, cidades } = useContatos();
+  const { contratantes, casas, cidades, carregando: carregandoContatos, erro: erroContatos, recarregar: recarregarContatos } = useContatos();
   const { shows } = useShows();
   const { vendas } = useVendas();
   const { workspaceCriadoEm } = useWorkspace();
@@ -252,6 +253,16 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           </div>
         }
       />
+
+      {/* Falha de API deixa de parecer lista vazia (auditoria 27/08/2026). */}
+      <div className="mb-6 empty:hidden">
+        <EstadoCarga
+          carregando={carregandoContatos && contratantes.length === 0 && casas.length === 0}
+          erro={erroContatos}
+          aoTentar={recarregarContatos}
+          rotulo={t("contatos")}
+        />
+      </div>
 
       {/* 4 cards — um de cada cor. Clicar abre o modal-resumo (mesma página);
           o rodapé do modal navega para a lista via onAbrirCategoria. */}

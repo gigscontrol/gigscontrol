@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import { EstadoCarga } from "./EstadoCarga";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import ParcelaDetalheModal from "./ParcelaDetalheModal";
@@ -105,7 +106,7 @@ export default function ControlePagamentos({
   const t = useT();
   const ehCobrancas = modo === "cobrancas";
   const accent = "var(--brand)";
-  const { vendas, acaoParcela } = useVendas();
+  const { vendas, acaoParcela, carregando: carregandoVendas, erro: erroVendas, recarregar: recarregarVendas } = useVendas();
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
 
@@ -255,6 +256,16 @@ export default function ControlePagamentos({
           )
         }
       />
+
+      {/* Falha de API deixa de parecer financeiro zerado (auditoria 27/08/2026). */}
+      <div className="mb-6 empty:hidden">
+        <EstadoCarga
+          carregando={carregandoVendas && vendas.length === 0}
+          erro={erroVendas}
+          aoTentar={recarregarVendas}
+          rotulo={t("parcelas")}
+        />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Cada card diz por qual DATA ele recorta — era a ausência disso que

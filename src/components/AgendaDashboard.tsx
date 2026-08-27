@@ -14,6 +14,7 @@ import {
   Copy,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
+import { EstadoCarga } from "./EstadoCarga";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import Modal from "./Modal";
@@ -90,7 +91,7 @@ function resolverMes(
 export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirShow }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.agenda.color;
-  const { shows, recarregar: recarregarShows } = useShows();
+  const { shows, carregando: carregandoShows, erro: erroShows, recarregar: recarregarShows } = useShows();
   const { cidades, casas } = useContatos();
   const artistas = useArtistas();
   // Chegou na Agenda = refetch (I7): se algum sync anterior falhou em
@@ -454,6 +455,16 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
           />
         }
       />
+
+      {/* Falha de API deixa de parecer agenda vazia (auditoria 27/08/2026). */}
+      <div className="mb-6 empty:hidden">
+        <EstadoCarga
+          carregando={carregandoShows && shows.length === 0}
+          erro={erroShows}
+          aoTentar={recarregarShows}
+          rotulo={t("shows")}
+        />
+      </div>
 
       {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
           geral" contam a agenda inteira; senão, só o mês selecionado. */}

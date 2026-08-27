@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import StatCard from "./StatCard";
+import { EstadoCarga } from "./EstadoCarga";
 import DateRangeSelector from "./DateRangeSelector";
 import {
   ClickableStat,
@@ -88,7 +89,7 @@ export default function VendasDashboard({
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos } = useOrcamentos();
-  const { vendas } = useVendas();
+  const { vendas, carregando: carregandoVendas, erro: erroVendas, recarregar: recarregarVendas } = useVendas();
   const artistas = useArtistas();
   const { workspaceCriadoEm } = useWorkspace();
   const { podeUI } = useAuth();
@@ -316,6 +317,17 @@ export default function VendasDashboard({
           </div>
         }
       />
+
+      {/* Falha de API deixa de parecer conta vazia (auditoria 27/08/2026):
+          banner de erro com retry / spinner no cold load, logo sob o header. */}
+      <div className="mb-6 empty:hidden">
+        <EstadoCarga
+          carregando={carregandoVendas && vendas.length === 0}
+          erro={erroVendas}
+          aoTentar={recarregarVendas}
+          rotulo={t("vendas")}
+        />
+      </div>
 
       {/* Cards clicáveis — 4 cores fixas (azul/verde/âmbar/vermelho) */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

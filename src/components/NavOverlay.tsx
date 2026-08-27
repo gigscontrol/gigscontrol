@@ -32,7 +32,11 @@ import ConfirmarSaidaModal from "./ConfirmarSaidaModal";
  * sucesso). Enquanto NÃO houver guarda registrada — 99% das telas —, a
  * navegação continua idêntica ao de antes (router.push direto).
  */
-type Guarda = () => { sujo: boolean; salvar: () => Promise<boolean> };
+/**
+ * `salvar: null` = tela sem "salvar e sair" (ex.: wizards de orçamento/venda,
+ * onde não existe rascunho persistível) — o popup oferece só Descartar/ficar.
+ */
+type Guarda = () => { sujo: boolean; salvar: (() => Promise<boolean>) | null };
 
 type NavCtx = {
   /** true quando uma navegação está "lenta" (> limiar) e ainda em andamento. */
@@ -64,7 +68,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
   // com mudanças pendentes (dispara o popup). Só existe UMA guarda por vez
   // (só uma tela de edição fica montada por vez).
   const guardaRef = useRef<Guarda | null>(null);
-  const [saida, setSaida] = useState<{ href: string; salvar: () => Promise<boolean> } | null>(null);
+  const [saida, setSaida] = useState<{ href: string; salvar: (() => Promise<boolean>) | null } | null>(null);
   const [salvandoSaida, setSalvandoSaida] = useState(false);
 
   const registrarGuarda = useCallback((g: Guarda) => {
@@ -132,7 +136,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
 
   // Popup: "Salvar e sair" — salva; só sai se o salvar reportar sucesso.
   const salvarESair = async () => {
-    if (!saida || salvandoSaida) return;
+    if (!saida?.salvar || salvandoSaida) return;
     setSalvandoSaida(true);
     let ok = false;
     try {
@@ -158,6 +162,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       {saida && (
         <ConfirmarSaidaModal
           salvando={salvandoSaida}
+          podeSalvar={!!saida.salvar}
           onCancelar={() => setSaida(null)}
           onDescartar={descartarESair}
           onSalvarESair={salvarESair}

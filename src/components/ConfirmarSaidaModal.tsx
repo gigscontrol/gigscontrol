@@ -15,12 +15,15 @@ import { useT } from "@/lib/i18n";
  */
 export default function ConfirmarSaidaModal({
   salvando,
+  podeSalvar = true,
   onCancelar,
   onDescartar,
   onSalvarESair,
 }: {
   /** Trava os botões enquanto o "Salvar e sair" está em andamento. */
   salvando: boolean;
+  /** false em telas sem rascunho persistível (wizards) — esconde "Salvar e sair". */
+  podeSalvar?: boolean;
   /** Fechar sem sair (X, clique-fora, ESC). */
   onCancelar: () => void;
   /** Sair perdendo as alterações. */
@@ -58,13 +61,22 @@ export default function ConfirmarSaidaModal({
         >
           {t("Descartar")}
         </button>
-        <button
-          onClick={onSalvarESair}
-          disabled={salvando}
-          className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {salvando ? t("Salvando...") : t("Salvar e sair")}
-        </button>
+        {podeSalvar ? (
+          <button
+            onClick={onSalvarESair}
+            disabled={salvando}
+            className="btn btn-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {salvando ? t("Salvando...") : t("Salvar e sair")}
+          </button>
+        ) : (
+          <button
+            onClick={onCancelar}
+            className="btn btn-primary text-sm"
+          >
+            {t("Continuar editando")}
+          </button>
+        )}
       </div>
     </Modal>
   );

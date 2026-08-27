@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
@@ -13,6 +13,10 @@ type Props = {
   children: ReactNode;
   maxWidth?: number;
 };
+
+/** Seletor dos elementos que participam do ciclo de Tab dentro do dialog. */
+const FOCAVEIS =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function Modal({
   isOpen,
@@ -29,17 +33,57 @@ export default function Modal({
     setMounted(true);
   }, []);
 
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+
+    // FOCUS TRAP (auditoria 27/08/2026): antes o Tab escapava pro fundo da
+    // página. Ao abrir: foca o 1º elemento focável do dialog; Tab/Shift+Tab
+    // circulam DENTRO dele; ao fechar: devolve o foco pra quem abriu.
+    const focoAnterior = document.activeElement as HTMLElement | null;
+    const focarPrimeiro = () => {
+      const raiz = dialogRef.current;
+      if (!raiz) return;
+      const alvo = raiz.querySelector<HTMLElement>(FOCAVEIS);
+      (alvo ?? raiz).focus();
+    };
+    // Depois do paint — o portal precisa existir no DOM.
+    const id = requestAnimationFrame(focarPrimeiro);
+
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const raiz = dialogRef.current;
+      if (!raiz) return;
+      const focaveis = Array.from(raiz.querySelectorAll<HTMLElement>(FOCAVEIS));
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      const ativo = document.activeElement;
+      // Foco fora do dialog (ou nas pontas) → circula pra dentro.
+      if (e.shiftKey) {
+        if (ativo === primeiro || !raiz.contains(ativo)) {
+          e.preventDefault();
+          ultimo.focus();
+        }
+      } else if (ativo === ultimo || !raiz.contains(ativo)) {
+        e.preventDefault();
+        primeiro.focus();
+      }
     };
     document.addEventListener("keydown", handler);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      cancelAnimationFrame(id);
       document.removeEventListener("keydown", handler);
       document.body.style.overflow = prevOverflow;
+      // Restaura o foco pra quem abriu o modal (se ainda está na página).
+      if (focoAnterior && document.contains(focoAnterior)) focoAnterior.focus();
     };
   }, [isOpen, onClose]);
 
@@ -53,11 +97,14 @@ export default function Modal({
       <button
         aria-label={t("Fechar")}
         onClick={onClose}
+        tabIndex={-1}
         className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         className="relative w-full bg-surface border border-border rounded-lg overflow-hidden animate-modal"
         style={{ maxWidth, boxShadow: "0 24px 60px var(--shadow-color)" }}
         onClick={(e) => e.stopPropagation()}
