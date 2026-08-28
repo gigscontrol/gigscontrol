@@ -6,10 +6,39 @@ import { useAuth } from "@/lib/auth-context";
 import { podeEditarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
 import { podeCancelarShowUI, podeEditarShowUI } from "@/lib/permissoes/gatesShow";
 import { chaveDoSetor } from "@/lib/permissoes/setoresAgenda";
-import { ArrowLeft, User, MapPin, Music, Trash2, Instagram, CalendarCheck2, CreditCard, Pencil, Check, X, Hotel, History, AlertTriangle } from "lucide-react";
-import PageHeader from "./PageHeader";
+import {
+  ArrowLeft,
+  User,
+  Phone,
+  Mail,
+  Hash,
+  MapPin,
+  Building2,
+  Music,
+  Trash2,
+  Instagram,
+  CalendarCheck2,
+  CreditCard,
+  DollarSign,
+  Users,
+  Clock,
+  Pencil,
+  Check,
+  CheckCircle2,
+  X,
+  Hotel,
+  Plane,
+  Car,
+  GlassWater,
+  Sparkles,
+  StickyNote,
+  History,
+  AlertTriangle,
+  FileText,
+} from "lucide-react";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import { FichaHero, Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
 import { useConfirmar } from "./ConfirmarModal";
 import AlteracoesModal, { temDetalhe } from "./AlteracoesModal";
 import type { HistoricoAcao } from "@/lib/mappers/historico";
@@ -25,7 +54,12 @@ import { linhasLogistica } from "@/lib/logisticaTexto";
 import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
-import { MODULE_THEMES, TEXTO_TRANSLADO, LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
+import {
+  MODULE_THEMES,
+  TEXTO_TRANSLADO,
+  LABELS_STATUS_PARCELA,
+  statusEfetivoParcela,
+} from "@/types";
 
 type Props = {
   vendaId: string;
@@ -36,6 +70,12 @@ type Props = {
   onDispensarAvisoParcelas?: () => void;
 };
 
+/**
+ * Detalhe da venda na LINGUAGEM DA FICHA (redesign 28/08/2026): mesma
+ * gramática visual do popup do show na agenda (FichaUI) — card único centrado,
+ * cabeçalho com a cor do artista, blocos com ícone e linhas compactas. Toda
+ * ação/permissão (editar, cancelar show, booking, rastro D6, remover) mantida.
+ */
 export default function VendaDetalhe({
   vendaId,
   onBack,
@@ -62,8 +102,7 @@ export default function VendaDetalhe({
   const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
 
   // ---- Rastro de alterações (D6 — antifraude) ----
-  // /api/historico é admin-only (403 pros outros) — mesmo gate do
-  // AgenciaDashboard.tsx:102. Pra não-admin a seção nem existe.
+  // /api/historico é admin-only (403 pros outros). Pra não-admin a seção nem existe.
   const isAdmin = sessao?.usuario.papel === "admin";
   const [acoes, setAcoes] = useState<HistoricoAcao[]>([]);
 
@@ -76,10 +115,8 @@ export default function VendaDetalhe({
     (async () => {
       try {
         // limit no teto da rota (clampInt 1..200): o rastro vem em ordem
-        // DECRESCENTE, então a ação `criar` — o "Vendida por", o dado que D4
-        // nomeia primeiro — é sempre a PRIMEIRA a cair fora da página. Como não
-        // há paginação aqui, cortar em 20 sumiria com ela numa venda muito
-        // editada. É rastro de UMA venda, não a trilha do workspace: cabe.
+        // DECRESCENTE, então a ação `criar` — o "Vendida por" — é sempre a
+        // PRIMEIRA a cair fora da página; sem paginação aqui, 200 cabe.
         const res = await fetch(
           `/api/historico?modulo=venda&entidade=${encodeURIComponent(vendaId)}&limit=200`,
           { credentials: "include" }
@@ -122,19 +159,11 @@ export default function VendaDetalhe({
   const podeEditarVenda =
     podeEditarVendaUI(podeUI, venda.artistaId || null, venda.criadoPor, sessao?.usuario.id);
   const podeExcluirVenda = podeUI(venda.artistaId || null, "vendas.excluir_venda");
-  // REGRA NOVA (L5b): mexer no SHOW é permissão de VENDAS, não de agenda.
-  // Booking edita o show → vendas.editar_proprios|editar_outros (o servidor
-  // exige a mesma); cancelar/reativar o show → vendas.cancelar_proprios|
-  // cancelar_outros. Quem tinha só agenda.editar_todos PERDE estes botões.
-  // `show` tem que ser resolvido ANTES dos gates: o eixo de autoria (próprios ×
-  // outros) depende de `show.criadoPor` (espelha podePorAutoria).
+  // REGRA L5b: mexer no SHOW é permissão de VENDAS, não de agenda. `show`
+  // resolvido ANTES dos gates: o eixo de autoria depende de show.criadoPor.
   const show = venda.showId ? shows.find((s) => s.id === venda.showId) : null;
   const donoDoShow = { criadoPor: show?.criadoPor, meuUserId: sessao?.usuario.id };
-  // Booking exige MAIS que editar o show: o servidor ([id]/route.ts) também
-  // pede o setor HOTEL, porque hospedagem carrega PII. A chave era
-  // `agenda.ver_detalhado`, mas ela virou LEGADO — `expandirLegadoAgenda` a
-  // apaga de TODA sessão no cliente, então checá-la aqui era sempre `false` e
-  // o Hotel virava só-leitura pra qualquer não-admin. A chave viva é o setor.
+  // Booking exige TAMBÉM o setor HOTEL (PII) — a chave viva é o setor.
   const podeEditarBooking =
     podeEditarShowUI(podeUI, venda.artistaId || null, donoDoShow) &&
     podeUI(venda.artistaId || null, chaveDoSetor("hotel"));
@@ -186,170 +215,191 @@ export default function VendaDetalhe({
   const itensHotel = venda.hotel.filter((i) => i.qtd > 0);
   const linhasLog = linhasLogistica(venda.logistica);
 
+  const dataLegivel = new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  // Resumo do pagamento (mesma matemática do popup do show).
+  const totalParcelas = venda.parcelas.reduce((a, p) => a + p.valor, 0);
+  const pagoParcelas = venda.parcelas
+    .filter((p) => statusEfetivoParcela(p) === "pago")
+    .reduce((a, p) => a + p.valor, 0);
+  const atrasadoParcelas = venda.parcelas
+    .filter((p) => statusEfetivoParcela(p) === "atrasado")
+    .reduce((a, p) => a + p.valor, 0);
+
   return (
-    <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
-      <button onClick={onBack} className="btn-ghost mb-6 inline-flex items-center gap-1.5 text-sm">
+    <div className="max-w-[720px] mx-auto w-full p-6 lg:p-8">
+      <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
         {t("Voltar para Vendas")}
       </button>
 
-      <PageHeader
-        title={`Venda ${venda.numero}`}
-        subtitle={
-          <span className="inline-flex items-center gap-2 flex-wrap">
-            <span className="badge badge-success">
-              <CalendarCheck2 size={11} />
-              {t("Concretizada")}
-            </span>
-            {orc && (
-              <>
-                <span className="text-muted">·</span>
-                <span className="text-secondary">
-                  {t("Originada do orçamento")}{" "}
-                  <span className="font-mono" style={{ color: accent }}>
-                    {orc.numero}
-                  </span>
+      <div className="card">
+        {/* ===== Cabeçalho (linguagem do popup do show) ===== */}
+        <FichaHero
+          artistaNome={artista?.name}
+          artistaCor={artista?.color}
+          linhaSuperior={dataLegivel}
+          titulo={
+            <>
+              {venda.nomeEvento}
+              <span className="text-secondary font-normal">
+                {" "}· {t("Venda")}{" "}
+                <span className="font-mono tabular-nums" style={{ color: accent }}>
+                  {venda.numero}
                 </span>
-              </>
-            )}
-            <span className="text-muted">·</span>
-            <span>{new Date(venda.criadoEm).toLocaleDateString("pt-BR")}</span>
-          </span>
-        }
-        accentColor={accent}
-      />
+              </span>
+            </>
+          }
+          badges={
+            <>
+              <span className="badge badge-success">
+                <CalendarCheck2 size={11} />
+                {t("Concretizada")}
+              </span>
+              {cancelado && <span className="badge badge-danger">{t("Show cancelado")}</span>}
+              {orc && (
+                <span className="badge badge-neutral">
+                  <FileText size={11} />
+                  {t("Origem")} {orc.numero}
+                </span>
+              )}
+              <span className="text-xs text-muted">
+                {new Date(venda.criadoEm).toLocaleDateString("pt-BR")}
+              </span>
+            </>
+          }
+        />
 
-      {/* Editar a venda + cancelar/reativar o show ligado (D3: os dois lado a
-          lado). A barra também aparece na venda SEM show, só com o editar. */}
-      {(venda.showId || podeEditarVenda) && (
-        <div className="bg-surface border border-border rounded flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Music size={14} style={{ color: cancelado ? "var(--danger)" : accent }} />
-            <span className="text-sm text-secondary">
+        {/* ===== Ações: editar venda + cancelar/reativar show (D3) ===== */}
+        {(venda.showId || podeEditarVenda) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2 text-sm text-secondary">
+              <Music size={14} style={{ color: cancelado ? "var(--danger)" : accent }} />
               {venda.showId
                 ? cancelado
                   ? t("Show cancelado")
                   : t("Show na agenda")
                 : t("Venda sem show na agenda")}
-            </span>
-            {cancelado && <span className="badge badge-danger">{t("Cancelado")}</span>}
+            </div>
+            <div className="flex items-center gap-4">
+              {podeEditarVenda && (
+                <button
+                  type="button"
+                  onClick={() => onEditar(venda.id)}
+                  className="text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                  style={{ color: accent }}
+                >
+                  <Pencil size={12} />
+                  {t("Editar venda")}
+                </button>
+              )}
+              {venda.showId && (
+                <button
+                  type="button"
+                  onClick={cancelarOuReativarShow}
+                  disabled={processandoShow || !podeCancelarShow}
+                  title={!podeCancelarShow ? semPermissao : undefined}
+                  className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+                >
+                  {processandoShow
+                    ? t("Salvando…")
+                    : cancelado
+                    ? t("Reativar show")
+                    : t("Cancelar show")}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            {podeEditarVenda && (
-              <button
-                type="button"
-                onClick={() => onEditar(venda.id)}
-                className="text-sm font-semibold inline-flex items-center gap-1.5"
-                style={{ color: accent }}
-              >
-                <Pencil size={14} />
-                {t("Editar venda")}
-              </button>
-            )}
-            {venda.showId && (
-              <button
-                type="button"
-                onClick={cancelarOuReativarShow}
-                disabled={processandoShow || !podeCancelarShow}
-                title={!podeCancelarShow ? semPermissao : undefined}
-                className="text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
-              >
-                {processandoShow
-                  ? t("Salvando…")
-                  : cancelado
-                  ? t("Reativar show")
-                  : t("Cancelar show")}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
-        {/* Coluna 1 */}
-        <div className="flex flex-col gap-4">
-          <div className="card">
-            <SectionTitle icon={<User size={14} />} title={t("Contratante")} accent={accent} />
-            <InfoLine label={t("Nome")} value={venda.contratanteNome} />
-            <InfoLine label={t("E-mail")} value={venda.contratanteEmail || "—"} />
-            <InfoLine
-              label={t("Telefone")}
-              value={venda.contratanteTelefone ? `+${venda.contratanteTelefone}` : "—"}
-            />
-            <InfoLine label={t("CPF/CNPJ")} value={mascararCpfCnpj(venda.contratanteDocumento) || "—"} />
+        <div className="flex flex-col gap-5">
+          {/* ===== CONTRATANTE ===== */}
+          <Bloco icon={<User size={14} />} title={t("Contratante")}>
+            <Linha icon={<User size={13} />} bold>{venda.contratanteNome}</Linha>
             {venda.contratanteRazaoSocial && (
-              <InfoLine label={t("Razão Social")} value={venda.contratanteRazaoSocial} />
+              <Linha icon={<Building2 size={13} />}>{venda.contratanteRazaoSocial}</Linha>
             )}
-            <InfoLine label={t("Endereço")} value={venda.contratanteEndereco || "—"} />
-          </div>
+            {venda.contratanteTelefone && (
+              <Linha icon={<Phone size={13} />}>+{venda.contratanteTelefone.replace(/\D/g, "")}</Linha>
+            )}
+            {venda.contratanteEmail && (
+              <Linha icon={<Mail size={13} />}>{venda.contratanteEmail}</Linha>
+            )}
+            {venda.contratanteDocumento && (
+              <Linha icon={<Hash size={13} />}>{mascararCpfCnpj(venda.contratanteDocumento)}</Linha>
+            )}
+            {venda.contratanteEndereco && (
+              <Linha icon={<MapPin size={13} />}>{venda.contratanteEndereco}</Linha>
+            )}
+          </Bloco>
 
-          <div className="card">
-            <SectionTitle icon={<MapPin size={14} />} title={t("Evento")} accent={accent} />
-            <InfoLine label={t("Nome")} value={venda.nomeEvento} bold />
+          {/* ===== LOCAL DO EVENTO ===== */}
+          <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
+            <Linha icon={<Building2 size={13} />} bold>{venda.nomeLocal}</Linha>
             {venda.eventoInstagram && (
-              <InfoLine
-                label={t("Instagram")}
-                value={
-                  <span className="inline-flex items-center gap-1">
-                    <Instagram size={11} />
-                    {venda.eventoInstagram}
-                  </span>
-                }
-              />
+              <Linha icon={<Instagram size={13} />}>{venda.eventoInstagram}</Linha>
             )}
-            <InfoLine label={t("Local")} value={venda.nomeLocal} />
+            {venda.enderecoLocal && (
+              <Linha icon={<MapPin size={13} />}>{venda.enderecoLocal}</Linha>
+            )}
             {venda.capacidadePublico && (
-              <InfoLine
-                label={t("Capacidade")}
-                value={`${venda.capacidadePublico.toLocaleString("pt-BR")} ${t("pessoas")}`}
-              />
+              <Linha icon={<Users size={13} />}>
+                {t("Capacidade:")} {venda.capacidadePublico.toLocaleString("pt-BR")} {t("pessoas")}
+              </Linha>
             )}
-            <InfoLine label={t("Endereço")} value={venda.enderecoLocal} />
-            <InfoLine
-              label={t("Data")}
-              value={new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              })}
-              bold
-            />
-            <InfoLine
-              label={t("Horário")}
-              value={
-                (venda.horario
-                  ? venda.horarioFim
-                    ? `${venda.horario} — ${venda.horarioFim}`
-                    : venda.horario
-                  : t("A definir")) +
-                (venda.fusoHorario ? ` · ${nomeCidadeFuso(venda.fusoHorario)}` : "")
-              }
-              bold
-            />
-          </div>
+          </Bloco>
 
-          {/* Pagamento / Parcelas */}
-          <div className="card">
-            <SectionTitle icon={<CreditCard size={14} />} title={t("Pagamento")} accent={accent} />
+          {/* ===== DETALHES DO SHOW ===== */}
+          <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
+            {venda.horario ? (
+              <Linha icon={<Clock size={13} />} bold>
+                {venda.horarioFim ? `${venda.horario} — ${venda.horarioFim}` : venda.horario}
+                {venda.fusoHorario && (
+                  <span className="text-xs text-muted font-normal"> · {nomeCidadeFuso(venda.fusoHorario)}</span>
+                )}
+                <span className="ml-2 text-xs text-muted font-normal">
+                  ({formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)})
+                </span>
+              </Linha>
+            ) : (
+              <Linha icon={<Clock size={13} />}>
+                <span className="text-warning font-medium">{t("A definir")}</span>
+                <span className="ml-2 text-xs text-muted font-normal">
+                  · {t("Duração:")} {formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
+                </span>
+              </Linha>
+            )}
+            {venda.lineUp && venda.lineUp.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {venda.lineUp.map((nome, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center bg-elevated border border-border rounded-md px-2.5 py-1 text-sm text-primary"
+                  >
+                    {nome}
+                  </span>
+                ))}
+              </div>
+            )}
+          </Bloco>
+
+          {/* ===== PAGAMENTO — cachê em destaque + resumo + parcelas ===== */}
+          <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
             {/* D5 — a edição que acabou de salvar NÃO recalculou as parcelas.
                 Banner (e não Toast no form) porque o form desmonta ao navegar
-                pra cá: o aviso tem que sobreviver e ficar onde dá pra agir. Só
-                o usuário dispensa — some sozinho seria o bug de novo. */}
+                pra cá. Só o usuário dispensa. */}
             {avisoParcelasPreservadas && (
               <div
-                className="mb-3 flex items-start gap-3 rounded-md p-3"
-                style={{
-                  border: "1px solid var(--warning)",
-                  backgroundColor: "var(--warning-weak)",
-                }}
+                className="mb-2 flex items-start gap-3 rounded-md p-3"
+                style={{ border: "1px solid var(--warning)", backgroundColor: "var(--warning-weak)" }}
               >
-                <AlertTriangle
-                  size={16}
-                  className="flex-shrink-0 mt-0.5"
-                  style={{ color: "var(--warning)" }}
-                />
+                <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
                 <div className="text-sm text-secondary">
                   {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.")}
                 </div>
@@ -362,63 +412,161 @@ export default function VendaDetalhe({
                 </button>
               </div>
             )}
-            <div className="flex flex-col gap-2">
-              {venda.parcelas.map((p, idx) => {
-                const st = statusEfetivoParcela(p);
-                const label = LABELS_STATUS_PARCELA[st];
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-primary">
-                        {t("Parcela")} {idx + 1}/{venda.parcelas.length}
-                        <span className="text-muted text-xs ml-1.5">
-                          ({p.percentual.toFixed(0)}%)
+
+            <Linha icon={<DollarSign size={13} />} bold>
+              <span className="tabular-nums">{formatarMoeda2(venda.cache)}</span>
+              <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
+            </Linha>
+            {venda.taxaAgenciaValor !== undefined && venda.taxaAgenciaValor > 0 && (
+              <>
+                <Linha icon={<DollarSign size={13} />}>
+                  {t("Taxa de agência")}:{" "}
+                  <span className="tabular-nums">{formatarMoeda2(venda.taxaAgenciaValor)}</span>
+                </Linha>
+                <Linha icon={<DollarSign size={13} />}>
+                  {t("Líquido do artista")}:{" "}
+                  <span className="font-semibold text-primary tabular-nums">
+                    {formatarMoeda2(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
+                  </span>
+                </Linha>
+              </>
+            )}
+
+            {venda.parcelas.length > 0 && (
+              <>
+                {/* Resumo — igual ao popup do show */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 mb-1 text-sm">
+                  <span className="text-secondary">
+                    {t("Recebido:")}{" "}
+                    <span className="font-semibold" style={{ color: "var(--success)" }}>
+                      {formatarMoeda2(pagoParcelas)}
+                    </span>
+                  </span>
+                  <span className="text-secondary">
+                    {t("A receber:")}{" "}
+                    <span className="font-semibold text-primary">
+                      {formatarMoeda2(totalParcelas - pagoParcelas)}
+                    </span>
+                  </span>
+                  {atrasadoParcelas > 0 && (
+                    <span className="text-secondary">
+                      {t("Atrasado:")}{" "}
+                      <span className="font-semibold" style={{ color: "var(--danger)" }}>
+                        {formatarMoeda2(atrasadoParcelas)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                {venda.parcelas.map((p, idx) => {
+                  const st = statusEfetivoParcela(p);
+                  const label = LABELS_STATUS_PARCELA[st];
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-3 py-1.5 text-sm border-b border-border/50 last:border-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-primary font-medium">
+                          {t("Parcela")} {idx + 1}/{venda.parcelas.length}
+                        </span>
+                        <span className="text-muted text-xs ml-1.5">({p.percentual.toFixed(0)}%)</span>
+                        <div className="text-xs text-muted">
+                          {t("Vence")}{" "}
+                          {new Date(p.dataVencimento + "T12:00:00").toLocaleDateString("pt-BR")}
+                          {p.dataPagamento && (
+                            <span style={{ color: "var(--success)" }}>
+                              {" "}· {t("pago em")}{" "}
+                              {new Date(p.dataPagamento + "T12:00:00").toLocaleDateString("pt-BR")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="font-semibold tabular-nums text-primary">
+                          {formatarMoeda2(p.valor)}
+                        </span>
+                        <span className={`badge ${label.badge}`}>
+                          {st === "pago" && <CheckCircle2 size={10} />}
+                          {st === "pendente" && <Clock size={10} />}
+                          {st === "atrasado" && <AlertTriangle size={10} />}
+                          {t(label.label)}
                         </span>
                       </div>
-                      <div className="text-xs text-muted">
-                        {t("Vence")}{" "}
-                        {new Date(p.dataVencimento + "T12:00:00").toLocaleDateString("pt-BR")}
-                        {p.dataPagamento && (
-                          <span className="text-success">
-                            {" "}
-                            · {t("pago em")}{" "}
-                            {new Date(
-                              p.dataPagamento + "T12:00:00"
-                            ).toLocaleDateString("pt-BR")}
-                          </span>
-                        )}
-                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm font-semibold tabular-nums text-primary">
-                        {formatarMoeda2(p.valor)}
-                      </span>
-                      <span className={`badge ${label.badge}`}>{t(label.label)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted mt-3">
-              {t("Gerencie os pagamentos em Financeiro → Controle de Pagamentos.")}
-            </p>
-          </div>
+                  );
+                })}
+                <p className="text-xs text-muted mt-1">
+                  {t("Gerencie os pagamentos em Financeiro → Controle de Pagamentos.")}
+                </p>
+              </>
+            )}
+          </Bloco>
 
-          {venda.observacoes && (
-            <div className="card">
-              <div className="section-title mb-2">{t("Observações internas")}</div>
-              <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
-            </div>
+          {/* ===== HOSPEDAGEM / BOOKING ===== */}
+          {show && (podeEditarBooking || show.booking) && (
+            <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
+              <BookingSection
+                showId={show.id}
+                booking={show.booking}
+                podeEditar={podeEditarBooking}
+                onSave={async (booking) => {
+                  await updateShow(show.id, { booking });
+                }}
+              />
+            </Bloco>
           )}
 
-          {/* Informações extras — herdadas do orçamento + editáveis */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-2">
-              <div className="section-title">{t("Informações extras")}</div>
-              {!editandoInfoExtra && (
+          {/* ===== ADICIONAIS — um bloco por categoria, igual ao popup ===== */}
+          {itensCamarim.length > 0 && (
+            <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
+              <ItensGrid items={itensCamarim} />
+            </Bloco>
+          )}
+          {itensEfeitos.length > 0 && (
+            <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
+              <ItensGrid items={itensEfeitos} />
+            </Bloco>
+          )}
+          {itensTecnico.length > 0 && (
+            <Bloco icon={<Music size={14} />} title={t("Rider Técnico")}>
+              <ItensGrid items={itensTecnico} />
+            </Bloco>
+          )}
+          {itensHotel.length > 0 && (
+            <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
+              <ItensGrid items={itensHotel} />
+            </Bloco>
+          )}
+
+          {/* ===== LOGÍSTICA ===== */}
+          <Bloco icon={<Plane size={14} />} title={t("Logística")}>
+            {linhasLog.length === 0 && (
+              <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
+            )}
+            {linhasLog.map((l, i) => (
+              <Linha
+                key={i}
+                icon={l === TEXTO_TRANSLADO ? <Car size={13} /> : <Plane size={13} />}
+                subtle={l === TEXTO_TRANSLADO}
+              >
+                {l}
+              </Linha>
+            ))}
+          </Bloco>
+
+          {/* ===== OBSERVAÇÕES ===== */}
+          {venda.observacoes && (
+            <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
+              <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
+            </Bloco>
+          )}
+
+          {/* ===== INFORMAÇÕES EXTRAS — herdadas do orçamento + editáveis ===== */}
+          <Bloco icon={<StickyNote size={14} />} title={t("Informações extras")}>
+            {!editandoInfoExtra && (
+              <div className="flex items-start justify-between gap-3 -mt-1">
+                <span />
                 <button
                   type="button"
                   onClick={() => {
@@ -427,13 +575,13 @@ export default function VendaDetalhe({
                   }}
                   disabled={!podeEditarVenda}
                   title={!podeEditarVenda ? semPermissao : undefined}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Pencil size={12} />
                   {t("Editar")}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
             {editandoInfoExtra ? (
               <div className="flex flex-col gap-2">
                 <textarea
@@ -489,123 +637,33 @@ export default function VendaDetalhe({
                 {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
               </p>
             )}
-          </div>
-        </div>
+          </Bloco>
 
-        {/* Coluna 2 */}
-        <div className="flex flex-col gap-4">
-          <div className="card">
-            <SectionTitle icon={<Music size={14} />} title={t("Show")} accent={accent} />
-            <InfoLine label={t("Artista da agência")} value={artista?.name ?? "—"} bold />
-            <InfoLine
-              label={t("Cachê")}
-              value={
-                <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
-                  {formatarMoeda2(venda.cache)}
-                </span>
-              }
-            />
-            {venda.taxaAgenciaValor !== undefined && venda.taxaAgenciaValor > 0 && (
-              <>
-                <InfoLine
-                  label={t("Taxa de agência")}
-                  value={formatarMoeda2(venda.taxaAgenciaValor)}
-                />
-                <InfoLine
-                  label={t("Líquido do artista")}
-                  value={
-                    <span className="font-bold text-base tabular-nums" style={{ color: accent }}>
-                      {formatarMoeda2(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
-                    </span>
-                  }
-                />
-              </>
-            )}
-            <InfoLine
-              label={t("Duração")}
-              value={formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
-            />
-            {venda.lineUp && venda.lineUp.length > 0 && (
-              <InfoLine
-                label={t("Line-Up")}
-                value={
-                  <div className="flex flex-wrap gap-1">
-                    {venda.lineUp.map((nome, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center bg-elevated border border-border rounded-md px-2 py-0.5 text-xs"
-                      >
-                        {nome}
-                      </span>
-                    ))}
-                  </div>
-                }
-              />
-            )}
-          </div>
-
-          {show && (podeEditarBooking || show.booking) && (
-            <div className="card">
-              <SectionTitle icon={<Hotel size={14} />} title={t("Hospedagem / Booking")} accent={accent} />
-              <BookingSection
-                showId={show.id}
-                booking={show.booking}
-                podeEditar={podeEditarBooking}
-                onSave={async (booking) => {
-                  await updateShow(show.id, { booking });
-                }}
-              />
-            </div>
-          )}
-
-          <div className="card">
-            <div className="section-title mb-3">{t("Adicionais")}</div>
-            <ItemsList title={t("Camarim / Consumação")} items={itensCamarim} />
-            <ItemsList title={t("Efeitos")} items={itensEfeitos} />
-            <ItemsList title={t("Rider Técnico")} items={itensTecnico} />
-            <ItemsList title={t("Hotel")} items={itensHotel} />
-            <div className="mt-3">
-              <div className="stat-label mb-1">{t("Logística")}</div>
-              <div className="text-sm text-primary space-y-1">
-                {linhasLog.length === 0 && <div>{t("Já inclusa do cachê")}</div>}
-                {linhasLog.map((l, i) => (
-                  <div key={i} className={l === TEXTO_TRANSLADO ? "text-secondary" : undefined}>
-                    {l}
-                  </div>
+          {/* ===== RASTRO (D6) — admin-only, best-effort ===== */}
+          {isAdmin && acoes.length > 0 && (
+            <Bloco icon={<History size={14} />} title={t("Histórico de alterações")}>
+              <div className="flex flex-col gap-3">
+                {acoes.map((a) => (
+                  <RastroItem key={a.id} acao={a} />
                 ))}
               </div>
-            </div>
+            </Bloco>
+          )}
+
+          {/* ===== REMOVER ===== */}
+          <div className="flex justify-end pt-1 border-t border-border/50">
+            <button
+              onClick={() => setConfirmaRemover(true)}
+              disabled={!podeExcluirVenda}
+              title={!podeExcluirVenda ? semPermissao : undefined}
+              className="mt-2 text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ color: "var(--danger)" }}
+            >
+              <Trash2 size={12} />
+              {t("Remover venda")}
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Rastro de alterações (D6) — admin-only, best-effort: sem dados, some. */}
-      {isAdmin && acoes.length > 0 && (
-        <div className="card mt-4">
-          <SectionTitle
-            icon={<History size={14} />}
-            title={t("Histórico de alterações")}
-            accent={accent}
-          />
-          <div className="flex flex-col gap-3">
-            {acoes.map((a) => (
-              <RastroItem key={a.id} acao={a} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={() => setConfirmaRemover(true)}
-          disabled={!podeExcluirVenda}
-          title={!podeExcluirVenda ? semPermissao : undefined}
-          className="btn btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ color: "var(--danger)" }}
-        >
-          <Trash2 size={14} />
-          {t("Remover venda")}
-        </button>
       </div>
 
       {/* Confirmação de remover */}
@@ -679,10 +737,8 @@ function RastroItem({ acao }: { acao: HistoricoAcao }) {
   const quando = new Date(acao.criadoEm);
   const verbo = VERBO_RASTRO[acao.tipo] ?? "Ação de";
   const nome = acao.actorNome ?? acao.actorEmail ?? t("Alguém");
-  // Cargo é derivado do profile ATUAL (cargo de HOJE, não o da época). Sair da
-  // equipe é SOFT delete, então ex-membro CONTINUA aparecendo com cargo: o
-  // segmento só some depois do purge físico do profile (ou se a RLS esconder) —
-  // e aí é nome+data sem "—" órfão.
+  // Cargo derivado do profile ATUAL (cargo de HOJE). Ex-membro (soft delete)
+  // continua aparecendo com cargo até o purge físico do profile.
   const cargo = acao.actorPapel ? LABELS_PAPEL[acao.actorPapel]?.nome : null;
   const data = `${quando.toLocaleDateString("pt-BR")} ${t("às")} ${quando.toLocaleTimeString(
     "pt-BR",
@@ -715,67 +771,6 @@ function RastroItem({ acao }: { acao: HistoricoAcao }) {
       {verDetalhe && (
         <AlteracoesModal aberto onFechar={() => setVerDetalhe(false)} acao={acao} />
       )}
-    </div>
-  );
-}
-
-function SectionTitle({
-  icon,
-  title,
-  accent,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  accent: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <div
-        className="h-6 w-6 rounded-md flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${accent}20`, color: accent }}
-      >
-        {icon}
-      </div>
-      <div className="section-title">{title}</div>
-    </div>
-  );
-}
-
-function InfoLine({
-  label,
-  value,
-  bold,
-}: {
-  label: string;
-  value: React.ReactNode;
-  bold?: boolean;
-}) {
-  return (
-    <div className="flex flex-col py-1.5 sm:flex-row sm:gap-3">
-      <div className="stat-label sm:w-28 flex-shrink-0">{label}</div>
-      <div className={`text-sm flex-1 min-w-0 ${bold ? "font-semibold text-primary" : "text-primary"}`}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function ItemsList({ title, items }: { title: string; items: { nome: string; qtd: number }[] }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="mb-3">
-      <div className="stat-label mb-1.5">{title}</div>
-      <ul className="flex flex-col gap-1">
-        {items.map((i) => (
-          <li
-            key={i.nome}
-            className="flex items-center justify-between py-1.5 px-3 rounded-md bg-elevated border border-border text-sm"
-          >
-            <span className="text-primary truncate">{i.nome}</span>
-            <span className="font-bold tabular-nums text-secondary">{i.qtd}×</span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
