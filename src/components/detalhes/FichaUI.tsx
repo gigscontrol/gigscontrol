@@ -64,6 +64,75 @@ export function FichaHero({
   );
 }
 
+/**
+ * Herói de PÁGINA da ficha — a versão larga do FichaHero para as telas de
+ * detalhe (orçamento/venda), que ocupam o grid de 1400px como as demais
+ * páginas. Mesmo DNA (gradiente na cor do artista, avatar, badges), mas em
+ * card próprio, tipografia maior e uma linha inferior para status + ações.
+ */
+export function FichaHeroPagina({
+  artistaNome,
+  artistaCor,
+  linhaSuperior,
+  titulo,
+  badges,
+  acoes,
+  rodape,
+}: {
+  artistaNome?: string;
+  artistaCor?: string;
+  /** Texto sob o nome do artista (ex.: a data legível do show). */
+  linhaSuperior?: ReactNode;
+  /** Título do documento (ex.: nome do evento + número). */
+  titulo?: ReactNode;
+  badges?: ReactNode;
+  /** Ações principais à direita (ex.: WhatsApp, Editar venda). */
+  acoes?: ReactNode;
+  /** Linha inferior opcional (ex.: "Show na agenda" + cancelar). */
+  rodape?: ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-lg border border-border overflow-hidden mb-4"
+      style={{
+        background: artistaCor
+          ? `linear-gradient(120deg, ${artistaCor}2e 0%, ${artistaCor}10 35%, var(--surface) 78%)`
+          : "var(--surface)",
+      }}
+    >
+      <div className="px-5 py-5 lg:px-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 min-w-0">
+            <Avatar nome={artistaNome} cor={artistaCor} size="lg" anel />
+            <div className="min-w-0">
+              <div className="text-lg font-bold text-primary truncate leading-tight">
+                {artistaNome ?? "—"}
+              </div>
+              {linhaSuperior && (
+                <div className="text-xs text-secondary capitalize mt-0.5">{linhaSuperior}</div>
+              )}
+              {titulo && (
+                <div className="mt-2 text-base font-semibold text-primary">{titulo}</div>
+              )}
+              {badges && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">{badges}</div>
+              )}
+            </div>
+          </div>
+          {acoes && (
+            <div className="flex items-center gap-2 flex-wrap flex-shrink-0">{acoes}</div>
+          )}
+        </div>
+      </div>
+      {rodape && (
+        <div className="px-5 lg:px-6 py-2.5 border-t border-border/60 bg-surface/60">
+          {rodape}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Bloco de seção: ícone na cor da marca + título em negrito. */
 export function Bloco({
   icon,
