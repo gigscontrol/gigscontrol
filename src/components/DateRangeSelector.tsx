@@ -16,10 +16,14 @@ type Props<T extends string> = {
   selectedCustomYear: number | null;
   setSelectedCustomYear: (y: number | null) => void;
   /**
-   * ISO timestamp da criação da conta/workspace. Define o piso absoluto
-   * dos filtros — anos anteriores não aparecem, e no ano de criação só
-   * são liberados meses ≥ mês de criação. Se null, usa mai/2026 (data
-   * de criação do próprio GIGS CONTROL).
+   * ISO timestamp da criação da conta/workspace.
+   *
+   * DEPRECATED como piso (fix 28/08/2026): a regra antiga desabilitava os
+   * meses anteriores à criação da conta, mas dados legítimos moram ali
+   * (shows/vendas importados, histórico anterior ao cadastro) — na prática
+   * o "Personalizado" aparecia com os meses bloqueados sem motivo. O piso
+   * agora é só a base do app (mai/2026 — antes disso não existe dado
+   * possível). O prop continua aceito pra não quebrar os 9 call sites.
    */
   accountCreatedAt?: string | null;
 };
@@ -30,21 +34,14 @@ const ANO_BASE_APP = 2026;
 const MES_BASE_APP = 4; // Maio (0-based)
 
 /**
- * Resolve o {ano, mês} mínimo permitido, considerando:
- *  - base do app: mai/2026 (criação do GIGS CONTROL)
- *  - data de criação da conta: se for mais nova, vira o piso
+ * Piso do seletor: a BASE DO APP (mai/2026 — criação do GIGS CONTROL).
  *
- * Retorna o mais restritivo entre os dois.
+ * A versão antiga elevava o piso pra data de criação da conta, o que
+ * bloqueava meses com dados legítimos (histórico importado, shows lançados
+ * retroativamente). Escolher um mês vazio é inofensivo; bloquear um mês com
+ * dado era o bug. Fix 28/08/2026.
  */
-function resolverPiso(accountCreatedAt: string | null | undefined): { ano: number; mes: number } {
-  if (!accountCreatedAt) return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
-  const d = new Date(accountCreatedAt);
-  if (isNaN(d.getTime())) return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
-  const a = d.getFullYear();
-  const m = d.getMonth();
-  if (a > ANO_BASE_APP || (a === ANO_BASE_APP && m > MES_BASE_APP)) {
-    return { ano: a, mes: m };
-  }
+function resolverPiso(_accountCreatedAt: string | null | undefined): { ano: number; mes: number } {
   return { ano: ANO_BASE_APP, mes: MES_BASE_APP };
 }
 
@@ -274,7 +271,7 @@ export default function DateRangeSelector<T extends string>({
                           : "bg-elevated text-secondary border border-border hover:border-border-strong hover:text-primary"
                         }
                       `}
-                      title={isDisabled ? t("Mês anterior à criação da conta") : undefined}
+                      title={isDisabled ? t("Anterior ao início do GIGS CONTROL (mai/2026)") : undefined}
                     >
                       {month}
                     </button>
