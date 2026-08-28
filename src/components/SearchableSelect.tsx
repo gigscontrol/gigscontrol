@@ -35,12 +35,8 @@ export default function SearchableSelect({
 
   useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    }
+    // Clique-fora agora é BACKDROP (fix 28/08/2026): a lista cobre os campos
+    // abaixo e o mousedown-fora deixava o clique acertar o campo coberto.
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setOpen(false);
@@ -48,10 +44,8 @@ export default function SearchableSelect({
         inputRef.current?.blur();
       }
     }
-    document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
@@ -74,8 +68,22 @@ export default function SearchableSelect({
   }
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
-      <div className="campo-input flex items-center gap-2">
+    <div ref={ref} className={`relative ${open ? "z-50" : ""} ${className}`}>
+      {/* Backdrop transparente: primeiro clique fora só FECHA a lista — nada
+          por baixo recebe o clique (contrato de <select> nativo). */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40"
+          aria-hidden
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setOpen(false);
+            setQuery("");
+            inputRef.current?.blur();
+          }}
+        />
+      )}
+      <div className="campo-input flex items-center gap-2 relative z-50">
         <Search size={14} className="flex-shrink-0 text-muted" />
         <input
           ref={inputRef}

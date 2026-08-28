@@ -87,14 +87,16 @@ export default function TimezoneSelect({ value, onChange, disabled }: Props) {
     return base.slice(0, 80);
   }, [comOffset, busca]);
 
-  // Fecha ao clicar fora.
+  // Fecha ao clicar fora — via BACKDROP (fix 28/08/2026): o painel cobre os
+  // campos abaixo dele; o mousedown-fora antigo deixava o clique acertar o
+  // campo coberto. O backdrop engole o primeiro clique (só fecha). Escape idem.
   useEffect(() => {
     if (!aberto) return;
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setAberto(false);
     }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [aberto]);
 
   const rotuloAtual = value
@@ -113,6 +115,16 @@ export default function TimezoneSelect({ value, onChange, disabled }: Props) {
         <span className="flex-1 text-primary truncate">{rotuloAtual}</span>
       </button>
 
+      {aberto && (
+        <div
+          className="fixed inset-0 z-40"
+          aria-hidden
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setAberto(false);
+          }}
+        />
+      )}
       {aberto && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-elevated shadow-lg overflow-hidden">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
