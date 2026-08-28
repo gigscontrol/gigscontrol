@@ -51,21 +51,26 @@ export type PontoMapa = {
   foraDoRaio?: boolean;
 };
 
-/** Tile CARTO sem rótulos — escuro ou claro conforme o tema ativo no mount
- *  (`data-theme` no <html>). Mesmo contrato de URL nos dois; troca só a string.
- *  Limitação aceita: o tile não retematiza ao vivo se o usuário alternar o
- *  tema com o mapa já montado (mínimo aceitável do spec de tema). */
+/** Tile Esri Canvas (Gray Base, sem rótulos) — escuro ou claro conforme o tema
+ *  ativo no mount (`data-theme` no <html>).
+ *
+ *  TROCA DE PROVEDOR (fix 28/08/2026): os basemaps do CARTO passaram a exigir
+ *  API key e os tiles vinham com a marca-d'água "API KEY REQUIRED". O Canvas
+ *  da Esri é gratuito com atribuição, sem chave, e tem o mesmo espírito
+ *  (base cinza escura/clara SEM rótulos — os nomes seguem vindo dos pins).
+ *  Atenção ao contrato da URL: {z}/{y}/{x} (y antes do x), sem {s}/{r}.
+ *  Limitação aceita (herdada): não retematiza ao vivo ao alternar o tema. */
 function tilesDoTema(): string {
   const tema =
     typeof document !== "undefined"
       ? document.documentElement.getAttribute("data-theme")
       : null;
   return tema === "light"
-    ? "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
+    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 }
 const ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  '&copy; <a href="https://www.esri.com/">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 const BRAND = "#3D7BFF";
 
@@ -179,7 +184,9 @@ export default function MapaRaio({
     });
     L.tileLayer(tilesDoTema(), {
       attribution: ATTR,
-      subdomains: "abcd",
+      // Esri Canvas serve tiles até o zoom 16; acima disso o Leaflet faz
+      // upscale do 16 (maxNativeZoom) em vez de mostrar quadrados vazios.
+      maxNativeZoom: 16,
       maxZoom: 19,
       noWrap: true,
       bounds: [
