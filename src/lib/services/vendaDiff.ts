@@ -197,8 +197,8 @@ export async function diffVenda(
     duracao(depois.duracaoHoras, depois.duracaoMinutos)
   );
   add("line_up", "Line-up", lineUp(antes.lineUp), lineUp(depois.lineUp));
-  add("camarim", "Camarim", itens(antes.camarim), itens(depois.camarim));
-  add("efeitos", "Efeitos", itens(antes.efeitos), itens(depois.efeitos));
+  add("camarim", "Rider de Camarim", itens(antes.camarim), itens(depois.camarim));
+  add("efeitos", "Rider de Efeitos", itens(antes.efeitos), itens(depois.efeitos));
   add("hotel", "Hotel", itens(antes.hotel), itens(depois.hotel));
   add("logistica", "Logística", logistica(antes.logistica), logistica(depois.logistica));
   add("observacoes", "Observações", truncar(antes.observacoes), truncar(depois.observacoes));

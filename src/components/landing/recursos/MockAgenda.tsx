@@ -326,7 +326,7 @@ export default function MockAgenda() {
                 </>
               }
             >
-              Camarim / Consumação
+              Rider de Camarim
             </SecLabel>
             <ItemQtd nome="Red Label" qtd="×6" />
             <ItemQtd nome="Jack Daniels" qtd="×1" />

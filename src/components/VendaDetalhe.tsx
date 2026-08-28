@@ -538,12 +538,12 @@ export default function VendaDetalhe({
           <div className="card">
             <div className="flex flex-col gap-5">
               {itensCamarim.length > 0 && (
-                <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
+                <Bloco icon={<GlassWater size={14} />} title={t("Rider de Camarim")}>
                   <ItensGrid items={itensCamarim} />
                 </Bloco>
               )}
               {itensEfeitos.length > 0 && (
-                <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
+                <Bloco icon={<Sparkles size={14} />} title={t("Rider de Efeitos")}>
                   <ItensGrid items={itensEfeitos} />
                 </Bloco>
               )}

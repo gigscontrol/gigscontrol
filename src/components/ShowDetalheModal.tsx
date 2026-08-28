@@ -563,14 +563,14 @@ export default function ShowDetalheModal({
 
         {/* ===== CAMARIM ===== */}
         {verSetor("camarim") && camarim.length > 0 && (
-          <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
+          <Bloco icon={<GlassWater size={14} />} title={t("Rider de Camarim")}>
             <ItensGrid items={camarim} />
           </Bloco>
         )}
 
         {/* ===== EFEITOS ===== */}
         {verSetor("efeitos") && efeitos.length > 0 && (
-          <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
+          <Bloco icon={<Sparkles size={14} />} title={t("Rider de Efeitos")}>
             <ItensGrid items={efeitos} />
           </Bloco>
         )}

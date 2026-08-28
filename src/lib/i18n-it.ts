@@ -1418,6 +1418,8 @@ export const IT: Record<string, string> = {
   "Novo artista": "Nuovo artista",
   "Editar {nome}": "Modifica {nome}",
   "Rider de camarim": "Rider camerino",
+  "Rider de Camarim": "Rider camerino",
+  "Rider de Efeitos": "Rider effetti",
   "Rider de efeitos": "Rider effetti",
   "Rider técnico": "Rider tecnico",
   "Cadastrando...": "Registrazione in corso...",

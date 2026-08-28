@@ -42,14 +42,14 @@ export function gerarTextoWhatsApp(
   const camarim = orc.camarim.filter((i) => i.qtd > 0);
   if (camarim.length > 0) {
     linhas.push("");
-    linhas.push("*Camarim/Consumação (não incluso no cachê)*");
+    linhas.push("*Rider de Camarim (não incluso no cachê)*");
     camarim.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
   }
 
   const efeitos = orc.efeitos.filter((i) => i.qtd > 0);
   if (efeitos.length > 0) {
     linhas.push("");
-    linhas.push("*Efeitos (não incluso no cachê)*");
+    linhas.push("*Rider de Efeitos (não incluso no cachê)*");
     efeitos.forEach((i) => linhas.push(`${i.qtd}x ${i.nome}`));
   }
 
