@@ -998,8 +998,9 @@ function CampoForm({ label, children }: { label: string; children: ReactNode }) 
 }
 
 /** Seleção múltipla de artistas em chips (cor do artista quando ativo). Reusado por
- *  Evento (label "Artistas") e Voo (label "Passageiros"). */
-function SeletorArtistas({
+ *  Evento (label "Artistas") e Voo (label "Passageiros"). Exportado pra bancada
+ *  dev (src/app/dev) e reuso futuro. */
+export function SeletorArtistas({
   artistas,
   value,
   onChange,
@@ -1062,11 +1063,14 @@ function SeletorArtistas({
           placeholder={t("Buscar artista…")}
           className="campo-input w-full"
         />
+        {/* Lista NO FLUXO, não em overlay (fix 28/08/2026): este seletor vive
+            dentro de Modal, cuja área de conteúdo tem overflow-y-auto — um
+            dropdown absoluto era CORTADO pela rolagem do modal e "comia" o
+            formulário. Expandindo no fluxo, o modal cresce/rola naturalmente
+            e a lista tem o próprio scroll. Vale pros 3 forms (Evento, Voo,
+            Transporte), que reusam este componente. */}
         {aberto && (
-          <div
-            className="absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-surface border border-border rounded-lg"
-            style={{ boxShadow: "0 12px 30px var(--shadow-color)" }}
-          >
+          <div className="mt-1 max-h-52 overflow-y-auto bg-elevated border border-border rounded-lg">
             {filtrados.length === 0 ? (
               <div className="px-3 py-2 text-xs text-muted">{t("Nenhum artista")}</div>
             ) : (
@@ -1077,7 +1081,7 @@ function SeletorArtistas({
                     key={a.id}
                     type="button"
                     onClick={() => toggle(a.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-elevated transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-surface transition-colors"
                   >
                     <span
                       className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0"
