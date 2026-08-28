@@ -7,10 +7,39 @@ import {
   podeConverterOrcamentoUI,
   podeEditarOrcamentoUI,
 } from "@/lib/permissoes/gatesEquipeUI";
-import { ArrowLeft, MessageCircle, CheckCircle2, XCircle, Clock, Trash2, Copy, AlertCircle, CalendarCheck2, Pencil, Check, X } from "lucide-react";
-import PageHeader from "./PageHeader";
+import {
+  ArrowLeft,
+  MessageCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Trash2,
+  Copy,
+  AlertCircle,
+  CalendarCheck2,
+  Pencil,
+  Check,
+  X,
+  User,
+  Phone,
+  Mail,
+  Hash,
+  Building2,
+  MapPin,
+  Music,
+  CreditCard,
+  DollarSign,
+  GlassWater,
+  Sparkles,
+  Hotel,
+  Plane,
+  Car,
+  StickyNote,
+  Eye,
+} from "lucide-react";
 import Modal from "./Modal";
 import Toast from "./Toast";
+import { FichaHeroPagina, Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
 import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
@@ -36,6 +65,12 @@ type Props = {
   onAbrir?: (orcamentoId: string) => void;
 };
 
+/**
+ * Detalhe do orçamento na LINGUAGEM DA FICHA, em escala de PÁGINA (redesign
+ * 28/08/2026): herói largo (FichaHeroPagina) + MALHA ALINHADA — um único grid
+ * de 2 colunas onde cada linha de cards compartilha a altura (bordas "em #").
+ * Toda ação/permissão preservada.
+ */
 export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmVenda, onAbrir }: Props) {
   const t = useT();
   const { podeUI, sessao } = useAuth();
@@ -46,15 +81,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const { contratantes, casas, cidades } = useContatos();
   const artistas = useArtistas();
 
-  // Estado dos diálogos de feedback (duplicar)
   const [confirmaDuplicar, setConfirmaDuplicar] = useState(false);
   const [duplicando, setDuplicando] = useState(false);
-  // Edição inline do campo "Informações extras". Aberta sob demanda
-  // pra não poluir o detalhe — admin clica em "Editar" pra revelar
-  // o textarea.
+  // Edição inline do campo "Informações extras" (aberta sob demanda).
   const [editandoInfoExtra, setEditandoInfoExtra] = useState(false);
   const [infoExtraDraft, setInfoExtraDraft] = useState("");
   const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
+  const [previewAberto, setPreviewAberto] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
     tipo: "sucesso" | "erro";
@@ -85,18 +118,8 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const st = LABELS_STATUS_ORCAMENTO[orc.status];
 
   // Permissões por artista (podeUI já libera admin/legado).
-  const podeConverter = podeConverterOrcamentoUI(
-    podeUI,
-    orc.artistaId || null,
-    orc.criadoPor,
-    userId
-  );
-  const podeEditarOrc = podeEditarOrcamentoUI(
-    podeUI,
-    orc.artistaId || null,
-    orc.criadoPor,
-    userId
-  );
+  const podeConverter = podeConverterOrcamentoUI(podeUI, orc.artistaId || null, orc.criadoPor, userId);
+  const podeEditarOrc = podeEditarOrcamentoUI(podeUI, orc.artistaId || null, orc.criadoPor, userId);
   const podeExcluirOrc = podeUI(orc.artistaId || null, "vendas.excluir_orcamento");
   const semPermissao = t("Você não tem permissão para isso.");
 
@@ -108,6 +131,11 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const itensTecnico = orc.tecnico.filter((i) => i.qtd > 0);
   const itensHotel = orc.hotel.filter((i) => i.qtd > 0);
   const linhasLog = linhasLogistica(orc.logistica);
+  const temAdicionais =
+    itensCamarim.length > 0 ||
+    itensEfeitos.length > 0 ||
+    itensTecnico.length > 0 ||
+    itensHotel.length > 0;
 
   // Quais dados faltam para virar venda?
   const camposFaltantes: string[] = [];
@@ -117,247 +145,314 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   if (!cont?.email) camposFaltantes.push(t("E-mail do contratante"));
   if (!cont?.documento) camposFaltantes.push(t("CPF / CNPJ do contratante"));
 
+  const dataLegivel = orc.dataShow
+    ? new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+  /** "●" âmbar da ficha: campo que falta pra conversão em venda. */
+  const Falta = () => (
+    <span className="text-warning" title={t("Será necessário para conversão em venda")}>●</span>
+  );
+
   return (
-    <div className="max-w-[1100px] mx-auto w-full p-6 lg:p-8">
-      <button onClick={onBack} className="btn-ghost mb-6 inline-flex items-center gap-1.5 text-sm">
+    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+      <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
         {t("Voltar para Histórico")}
       </button>
 
-      <PageHeader
-        title={`Orçamento ${orc.numero}`}
-        subtitle={
-          <span className="inline-flex items-center gap-2 flex-wrap">
+      {/* ===== Herói de página ===== */}
+      <FichaHeroPagina
+        artistaNome={artista?.name}
+        artistaCor={artista?.color}
+        linhaSuperior={
+          dataLegivel || (
+            <span className="text-warning normal-case">{t("Data não definida")}</span>
+          )
+        }
+        titulo={
+          <>
+            {cs?.nome ?? (cid ? `${cid.nome}, ${cid.estado}` : t("Orçamento"))}
+            <span className="text-secondary font-normal">
+              {" "}· {t("Orçamento")}{" "}
+              <span className="font-mono tabular-nums" style={{ color: accent }}>
+                {orc.numero}
+              </span>
+            </span>
+          </>
+        }
+        badges={
+          <>
             <span className={`badge ${st.badge}`}>{t(st.label)}</span>
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[orc.tipoEvento])}</span>
-            <span className="text-muted">·</span>
-            <span>{t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}</span>
-          </span>
+            <span className="text-xs text-muted">
+              {t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}
+            </span>
+          </>
         }
-        accentColor={accent}
-        actions={
-          <a
-            href={linkWA}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary"
-            style={{ backgroundColor: "#25D366", color: "#fff" }}
-          >
-            <MessageCircle size={14} />
-            {t("Enviar pelo WhatsApp")}
-          </a>
+        acoes={
+          <>
+            {orc.status !== "recusado" && (
+              <button
+                onClick={() => onTransformarEmVenda(orc.id)}
+                disabled={!podeConverter}
+                title={!podeConverter ? semPermissao : undefined}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: accent, color: "#fff" }}
+              >
+                <CalendarCheck2 size={14} />
+                {t("Transformar em Venda")}
+              </button>
+            )}
+            <a
+              href={linkWA}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+              style={{ backgroundColor: "#25D366", color: "#fff" }}
+            >
+              <MessageCircle size={14} />
+              {t("Enviar pelo WhatsApp")}
+            </a>
+          </>
+        }
+        rodape={
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {orc.status !== "aceito" && (
+              <button
+                onClick={async () => {
+                  const msg = !orc.dataShow
+                    ? t("Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso.")
+                    : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
+                  if (await confirmar({ titulo: t("Aceitar orçamento"), mensagem: msg })) aceitarOrcamento(orc.id);
+                }}
+                disabled={!podeEditarOrc}
+                title={!podeEditarOrc ? semPermissao : undefined}
+                className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--success)" }}
+              >
+                <CheckCircle2 size={12} />
+                {t("Marcar aceito")}
+              </button>
+            )}
+            {orc.status !== "negociacao" && orc.status !== "aceito" && (
+              <button
+                onClick={() => marcarStatus(orc.id, "negociacao")}
+                disabled={!podeEditarOrc}
+                title={!podeEditarOrc ? semPermissao : undefined}
+                className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--warning)" }}
+              >
+                <Clock size={12} />
+                {t("Em negociação")}
+              </button>
+            )}
+            {orc.status !== "recusado" && orc.status !== "aceito" && (
+              <button
+                onClick={() => marcarStatus(orc.id, "recusado")}
+                disabled={!podeEditarOrc}
+                title={!podeEditarOrc ? semPermissao : undefined}
+                className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ color: "var(--danger)" }}
+              >
+                <XCircle size={12} />
+                {t("Recusar")}
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmaDuplicar(true)}
+              disabled={!podeEditarOrc}
+              title={!podeEditarOrc ? semPermissao : undefined}
+              className="text-xs font-semibold inline-flex items-center gap-1.5 text-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Copy size={12} />
+              {t("Duplicar")}
+            </button>
+            <button
+              onClick={async () => {
+                const ok = await confirmar({
+                  titulo: t("Remover orçamento"),
+                  mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
+                  perigo: true,
+                });
+                if (ok) {
+                  removeOrcamento(orc.id);
+                  onBack();
+                }
+              }}
+              disabled={!podeExcluirOrc}
+              title={!podeExcluirOrc ? semPermissao : undefined}
+              className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ color: "var(--danger)" }}
+            >
+              <Trash2 size={12} />
+              {t("Remover")}
+            </button>
+          </div>
         }
       />
 
       {/* Alerta de dados faltando — só se status NÃO for recusado */}
       {orc.status !== "recusado" && camposFaltantes.length > 0 && (
         <div
-          className="card mb-6 flex items-start gap-3"
+          className="mb-4 flex items-start gap-3 rounded-md border p-3"
           style={{ borderColor: "var(--warning)", backgroundColor: "rgba(245,158,11,0.06)" }}
         >
-          <AlertCircle size={18} className="text-warning flex-shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold text-primary text-sm mb-1">
+          <AlertCircle size={16} className="text-warning flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1 text-xs">
+            <span className="font-semibold text-primary text-sm block mb-0.5">
               {t("Dados pendentes para converter em venda")}
-            </div>
-            <div className="text-xs text-secondary">
-              {camposFaltantes.join(" · ")}
-            </div>
-            <div className="text-xs text-muted mt-1">
+            </span>
+            <span className="text-secondary">{camposFaltantes.join(" · ")}</span>
+            <span className="block text-muted mt-1">
               {t("Você pode aceitar e enviar pelo WhatsApp normalmente; esses dados serão necessários quando o orçamento virar venda fechada.")}
-            </div>
+            </span>
           </div>
         </div>
       )}
 
-      {/* Ações rápidas */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {orc.status !== "recusado" && (
-          <button
-            onClick={() => onTransformarEmVenda(orc.id)}
-            disabled={!podeConverter}
-            title={!podeConverter ? semPermissao : undefined}
-            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: accent, color: "#fff" }}
-          >
-            <CalendarCheck2 size={14} />
-            {t("Transformar em Venda")}
-          </button>
-        )}
-        {orc.status !== "aceito" && (
-          <button
-            onClick={async () => {
-              const msg = !orc.dataShow
-                ? t("Aceitar este orçamento? Como não há data definida, nenhum show será criado na agenda automaticamente — adicione a data depois para isso.")
-                : t("Aceitar este orçamento? Um show será criado automaticamente na agenda.");
-              if (await confirmar({ titulo: t("Aceitar orçamento"), mensagem: msg })) aceitarOrcamento(orc.id);
-            }}
-            disabled={!podeEditarOrc}
-            title={!podeEditarOrc ? semPermissao : undefined}
-            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--success)" }}
-          >
-            <CheckCircle2 size={14} />
-            {t("Marcar aceito")}
-          </button>
-        )}
-        {orc.status !== "negociacao" && orc.status !== "aceito" && (
-          <button
-            onClick={() => marcarStatus(orc.id, "negociacao")}
-            disabled={!podeEditarOrc}
-            title={!podeEditarOrc ? semPermissao : undefined}
-            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--warning)" }}
-          >
-            <Clock size={14} />
-            {t("Em negociação")}
-          </button>
-        )}
-        {orc.status !== "recusado" && orc.status !== "aceito" && (
-          <button
-            onClick={() => marcarStatus(orc.id, "recusado")}
-            disabled={!podeEditarOrc}
-            title={!podeEditarOrc ? semPermissao : undefined}
-            className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--danger)" }}
-          >
-            <XCircle size={14} />
-            {t("Recusar")}
-          </button>
-        )}
-        <button
-          onClick={() => setConfirmaDuplicar(true)}
-          disabled={!podeEditarOrc}
-          title={!podeEditarOrc ? semPermissao : undefined}
-          className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Copy size={14} />
-          {t("Duplicar")}
-        </button>
-        <button
-          onClick={async () => {
-            const ok = await confirmar({
-              titulo: t("Remover orçamento"),
-              mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
-              perigo: true,
-            });
-            if (ok) {
-              removeOrcamento(orc.id);
-              onBack();
-            }
-          }}
-          disabled={!podeExcluirOrc}
-          title={!podeExcluirOrc ? semPermissao : undefined}
-          className="btn btn-ghost ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ color: "var(--danger)" }}
-        >
-          <Trash2 size={14} />
-          {t("Remover")}
-        </button>
-      </div>
+      {/* ===== MALHA ALINHADA: um grid só, 2 colunas — cada linha de cards
+          compartilha a altura (bordas "em #"), cards intercalados. ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card">
+          <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
+            {orc.horario ? (
+              <Linha icon={<Clock size={13} />} bold>
+                {orc.horario}
+                {orc.fusoHorario && (
+                  <span className="text-xs text-muted font-normal"> · {nomeCidadeFuso(orc.fusoHorario)}</span>
+                )}
+                <span className="ml-2 text-xs text-muted font-normal">
+                  ({formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)})
+                </span>
+              </Linha>
+            ) : (
+              <Linha icon={<Clock size={13} />}>
+                <span className="text-warning font-medium">{t("A definir")}</span> <Falta />
+                <span className="ml-2 text-xs text-muted font-normal">
+                  · {t("Duração:")} {formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)}
+                </span>
+              </Linha>
+            )}
+            <Linha icon={<CalendarCheck2 size={13} />} subtle={!orc.validade}>
+              {t("Validade")}:{" "}
+              {orc.validade
+                ? new Date(orc.validade + "T12:00:00").toLocaleDateString("pt-BR")
+                : <>— <Falta /></>}
+            </Linha>
+          </Bloco>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
-        {/* Coluna 1: Informações */}
-        <div className="flex flex-col gap-4">
+        <div className="card">
+          <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
+            <Linha icon={<DollarSign size={13} />} bold>
+              <span className="tabular-nums">{fmtM(orc.valorCache)}</span>
+              <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
+            </Linha>
+            {orc.taxaAgenciaValor !== undefined && orc.taxaAgenciaValor > 0 && (
+              <>
+                <Linha icon={<DollarSign size={13} />}>
+                  {t("Taxa de agência")}: <span className="tabular-nums">{fmtM(orc.taxaAgenciaValor)}</span>
+                </Linha>
+                <Linha icon={<DollarSign size={13} />}>
+                  {t("Líquido do artista")}:{" "}
+                  <span className="font-semibold text-primary tabular-nums">
+                    {fmtM(liquidoArtista(orc.valorCache ?? 0, orc.taxaAgenciaValor))}
+                  </span>
+                </Linha>
+              </>
+            )}
+          </Bloco>
+        </div>
+
+        <div className="card">
+          <Bloco icon={<User size={14} />} title={t("Contratante")}>
+            <Linha icon={<User size={13} />} bold>{cont?.nome ?? "—"}</Linha>
+            {cont?.telefone && <Linha icon={<Phone size={13} />}>+{cont.telefone.replace(/\D/g, "")}</Linha>}
+            <Linha icon={<Mail size={13} />} subtle={!cont?.email}>
+              {cont?.email || <>— <Falta /></>}
+            </Linha>
+            <Linha icon={<Hash size={13} />} subtle={!cont?.documento}>
+              {mascararCpfCnpj(cont?.documento) || <>— <Falta /></>}
+            </Linha>
+          </Bloco>
+        </div>
+
+        {temAdicionais ? (
           <div className="card">
-            <div className="section-title mb-4">{t("Dados do show")}</div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <InfoItem label={t("Artista")} value={artista?.name ?? "—"} />
-              <InfoItem
-                label={t("Valor do cachê")}
-                value={fmtM(orc.valorCache)}
-                bold
-                accent={accent}
-              />
-              {orc.taxaAgenciaValor !== undefined && orc.taxaAgenciaValor > 0 && (
-                <>
-                  <InfoItem
-                    label={t("Taxa de agência")}
-                    value={fmtM(orc.taxaAgenciaValor)}
-                  />
-                  <InfoItem
-                    label={t("Líquido do artista")}
-                    value={fmtM(liquidoArtista(orc.valorCache ?? 0, orc.taxaAgenciaValor))}
-                    bold
-                    accent={accent}
-                  />
-                </>
+            <div className="flex flex-col gap-5">
+              {itensCamarim.length > 0 && (
+                <Bloco icon={<GlassWater size={14} />} title={t("Camarim / Consumação")}>
+                  <ItensGrid items={itensCamarim} />
+                </Bloco>
               )}
-              <InfoItem
-                label={t("Data")}
-                value={
-                  orc.dataShow
-                    ? new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                      })
-                    : "—"
-                }
-                missing={!orc.dataShow}
-              />
-              <InfoItem
-                label={t("Horário")}
-                value={
-                  orc.horario
-                    ? `${orc.horario}${orc.fusoHorario ? ` · ${nomeCidadeFuso(orc.fusoHorario)}` : ""}`
-                    : "—"
-                }
-                missing={!orc.horario}
-              />
-              <InfoItem label={t("Duração")} value={formatarDuracao(orc.duracaoHoras, orc.duracaoMinutos ?? 0)} />
-              <InfoItem
-                label={t("Validade")}
-                value={
-                  orc.validade
-                    ? new Date(orc.validade + "T12:00:00").toLocaleDateString("pt-BR")
-                    : "—"
-                }
-                missing={!orc.validade}
-              />
+              {itensEfeitos.length > 0 && (
+                <Bloco icon={<Sparkles size={14} />} title={t("Efeitos")}>
+                  <ItensGrid items={itensEfeitos} />
+                </Bloco>
+              )}
+              {itensTecnico.length > 0 && (
+                <Bloco icon={<Music size={14} />} title={t("Rider Técnico")}>
+                  <ItensGrid items={itensTecnico} />
+                </Bloco>
+              )}
+              {itensHotel.length > 0 && (
+                <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
+                  <ItensGrid items={itensHotel} />
+                </Bloco>
+              )}
             </div>
           </div>
+        ) : null}
 
+        <div className="card">
+          <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
+            <Linha icon={<Building2 size={13} />} bold subtle={!cs}>
+              {cs?.nome ?? <>— <Falta /></>}
+            </Linha>
+            {cid && (
+              <Linha icon={<MapPin size={13} />}>
+                {cid.nome}, {cid.estado}
+                {cid.regiao && <span className="text-muted"> · {cid.regiao}</span>}
+              </Linha>
+            )}
+          </Bloco>
+        </div>
+
+        <div className="card">
+          <Bloco icon={<Plane size={14} />} title={t("Logística")}>
+            {linhasLog.length === 0 && (
+              <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
+            )}
+            {linhasLog.map((l, i) => (
+              <Linha
+                key={i}
+                icon={l === TEXTO_TRANSLADO ? <Car size={13} /> : <Plane size={13} />}
+                subtle={l === TEXTO_TRANSLADO}
+              >
+                {l}
+              </Linha>
+            ))}
+          </Bloco>
+        </div>
+
+        {orc.observacoes && (
           <div className="card">
-            <div className="section-title mb-4">{t("Contratante")}</div>
-            <div className="flex flex-col gap-2 text-sm">
-              <InfoItem label={t("Nome")} value={cont?.nome ?? "—"} />
-              <InfoItem label={t("Telefone")} value={cont?.telefone ?? "—"} />
-              <InfoItem label={t("E-mail")} value={cont?.email || "—"} missing={!cont?.email} />
-              <InfoItem label={t("Documento")} value={mascararCpfCnpj(cont?.documento) || "—"} missing={!cont?.documento} />
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="section-title mb-4">{t("Local")}</div>
-            <div className="flex flex-col gap-2 text-sm">
-              <InfoItem label={t("Tipo de evento")} value={t(LABELS_TIPO_EVENTO[orc.tipoEvento])} />
-              <InfoItem
-                label={t("Casa / Evento")}
-                value={cs?.nome ?? "—"}
-                missing={!cs}
-              />
-              <InfoItem label={t("Cidade")} value={cid ? `${cid.nome} — ${cid.estado}` : "—"} />
-            </div>
-          </div>
-
-          {orc.observacoes && (
-            <div className="card">
-              <div className="section-title mb-3">{t("Observações internas")}</div>
+            <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
               <p className="text-sm text-secondary whitespace-pre-wrap">{orc.observacoes}</p>
-            </div>
-          )}
+            </Bloco>
+          </div>
+        )}
 
-          {/* Informações extras — texto que vai pro fim do orçamento.
-              Sempre exibido (mesmo se vazio) com botão de editar. */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="section-title">{t("Informações extras")}</div>
-                <div className="text-xs text-muted mt-0.5">
-                  {t("Aparece no fim do texto enviado pelo WhatsApp.")}
-                </div>
+        <div className="card">
+          <Bloco icon={<StickyNote size={14} />} title={t("Informações extras")}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-xs text-muted -mt-1 mb-1">
+                {t("Aparece no fim do texto enviado pelo WhatsApp.")}
               </div>
               {!editandoInfoExtra && (
                 <button
@@ -368,7 +463,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                   }}
                   disabled={!podeEditarOrc}
                   title={!podeEditarOrc ? semPermissao : undefined}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Pencil size={12} />
                   {t("Editar")}
@@ -424,49 +519,38 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 </div>
               </div>
             ) : orc.infoExtra ? (
-              <p className="text-sm text-secondary whitespace-pre-wrap">
-                {orc.infoExtra}
-              </p>
+              <p className="text-sm text-secondary whitespace-pre-wrap">{orc.infoExtra}</p>
             ) : (
               <p className="text-sm text-muted italic">
                 {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
               </p>
             )}
-          </div>
+          </Bloco>
         </div>
 
-        {/* Coluna 2: Itens + preview */}
-        <div className="flex flex-col gap-4">
-          <div className="card">
-            <div className="section-title mb-4">{t("Adicionais")}</div>
-            <div className="flex flex-col gap-4 text-sm">
-              <ItemsBlock title={t("Camarim / Consumação")} items={itensCamarim} />
-              <ItemsBlock title={t("Efeitos")} items={itensEfeitos} />
-              <ItemsBlock title={t("Rider Técnico")} items={itensTecnico} />
-              <ItemsBlock title={t("Hotel")} items={itensHotel} />
-              <div>
-                <div className="stat-label mb-1">{t("Logística")}</div>
-                <div className="text-primary text-sm space-y-1">
-                  {linhasLog.length === 0 && <div>{t("Já inclusa do cachê")}</div>}
-                  {linhasLog.map((l, i) => (
-                    <div key={i} className={l === TEXTO_TRANSLADO ? "text-secondary" : undefined}>
-                      {l}
-                    </div>
-                  ))}
+        {/* Preview do WhatsApp ocupa a linha inteira — o texto é longo. */}
+        <div className="card lg:col-span-2">
+          <Bloco icon={<MessageCircle size={14} />} title={t("Pré-visualização do WhatsApp")}>
+            {previewAberto ? (
+              <>
+                <pre className="bg-elevated border border-border rounded-md p-3 text-xs text-primary whitespace-pre-wrap font-sans">
+                  {texto}
+                </pre>
+                <div className="text-xs text-muted mt-1">
+                  * {t("Asteriscos viram")} <strong>{t("negrito")}</strong> {t("no WhatsApp.")}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="section-title mb-3">{t("Pré-visualização do WhatsApp")}</div>
-            <pre className="bg-elevated border border-border rounded-md p-3 text-xs text-primary whitespace-pre-wrap font-sans">
-              {texto}
-            </pre>
-            <div className="text-xs text-muted mt-2">
-              * {t("Asteriscos viram")} <strong>{t("negrito")}</strong> {t("no WhatsApp.")}
-            </div>
-          </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setPreviewAberto(true)}
+                className="btn-ghost text-xs inline-flex items-center gap-1.5 self-start"
+              >
+                <Eye size={12} />
+                {t("Ver a mensagem que será enviada")}
+              </button>
+            )}
+          </Bloco>
         </div>
       </div>
 
@@ -536,70 +620,6 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
       />
 
       {confirmador}
-    </div>
-  );
-}
-
-function InfoItem({
-  label,
-  value,
-  bold,
-  accent,
-  missing,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  accent?: string;
-  missing?: boolean;
-}) {
-  const t = useT();
-  return (
-    <div>
-      <div className="stat-label mb-0.5 flex items-center gap-1">
-        {label}
-        {missing && (
-          <span className="text-warning" title={t("Será necessário para conversão em venda")}>
-            ●
-          </span>
-        )}
-      </div>
-      <div
-        className={`text-sm ${bold ? "font-bold text-base tabular-nums" : ""} ${missing ? "text-muted italic" : ""}`}
-        style={bold && accent ? { color: accent } : undefined}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function ItemsBlock({
-  title,
-  items,
-}: {
-  title: string;
-  items: { nome: string; qtd: number }[];
-}) {
-  const t = useT();
-  return (
-    <div>
-      <div className="stat-label mb-2">{title}</div>
-      {items.length === 0 ? (
-        <div className="text-xs text-muted italic">{t("Nenhum item selecionado")}</div>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {items.map((i) => (
-            <li
-              key={i.nome}
-              className="flex items-center justify-between py-1.5 px-3 rounded-md bg-elevated border border-border text-sm"
-            >
-              <span className="text-primary truncate">{i.nome}</span>
-              <span className="font-bold tabular-nums text-secondary">{i.qtd}×</span>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

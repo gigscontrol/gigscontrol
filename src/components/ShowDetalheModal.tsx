@@ -36,6 +36,7 @@ import {
   Pencil,
 } from "lucide-react";
 import Modal from "./Modal";
+import { Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
 import { useConfirmar, useAviso } from "./ConfirmarModal";
 import BookingSection from "./agenda/BookingSection";
 import NotasDoShow from "./anotacoes/NotasDoShow";
@@ -891,63 +892,5 @@ function formatarDataHora(iso: string): string {
   });
 }
 
-function Bloco({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
-        <span style={{ color: "var(--brand)" }}>{icon}</span>
-        {title}
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
-}
-
-function Linha({
-  icon,
-  bold,
-  subtle,
-  children,
-}: {
-  icon?: React.ReactNode;
-  bold?: boolean;
-  subtle?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`flex items-start gap-2 text-sm ${
-        bold ? "text-primary font-semibold" : subtle ? "text-muted" : "text-secondary"
-      }`}
-    >
-      {icon && <span className="mt-0.5 text-muted flex-shrink-0">{icon}</span>}
-      <span className="min-w-0">{children}</span>
-    </div>
-  );
-}
-
-function ItensGrid({ items }: { items: ItemQuantidade[] }) {
-  return (
-    <div className="flex flex-col">
-      {items.map((i) => (
-        <div
-          key={i.nome}
-          className="flex items-center justify-between gap-3 py-1.5 text-sm border-b border-border/50 last:border-0"
-        >
-          <span className="text-secondary truncate">{i.nome}</span>
-          <span className="font-semibold tabular-nums text-primary flex-shrink-0">
-            {i.qtd}×
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+// Bloco/Linha/ItensGrid moraram aqui até 28/08/2026 — hoje vivem em
+// detalhes/FichaUI.tsx, compartilhados com OrcamentoDetalhe e VendaDetalhe.
