@@ -44,6 +44,8 @@ import LogisticaEditor from "./LogisticaEditor";
 import { resolverCidade } from "@/lib/cidade-helpers";
 import { normalizar } from "@/lib/normalizar";
 import { itensDoRider } from "@/lib/rider";
+import { presetsDoArtista, type PresetRider } from "@/lib/presetsRider";
+import PresetChips from "./PresetChips";
 import { parseValorBR } from "@/lib/valor";
 import { exemploEndereco } from "@/lib/data/exemplos";
 import { Field, TextInput, TextArea, Select } from "./Field";
@@ -1663,9 +1665,26 @@ function BlocoOrcamentoDj({
           </div>
         )}
 
-        <SectionItens title={t("Camarim / Consumação")} items={bloco.camarim} onChange={(camarim) => onChange({ camarim })} />
-        <SectionItens title={t("Efeitos")} items={bloco.efeitos} onChange={(efeitos) => onChange({ efeitos })} />
-        <SectionItens title={t("Rider Técnico")} items={bloco.tecnico} onChange={(tecnico) => onChange({ tecnico })} />
+        {/* Presets do ARTISTA deste bloco (mig 97): um clique aplica o
+            conjunto; editar qualquer quantidade cai pra "Personalizado". */}
+        <SectionItens
+          title={t("Camarim / Consumação")}
+          items={bloco.camarim}
+          onChange={(camarim) => onChange({ camarim })}
+          presets={presetsDoArtista(artista, "camarim")}
+        />
+        <SectionItens
+          title={t("Efeitos")}
+          items={bloco.efeitos}
+          onChange={(efeitos) => onChange({ efeitos })}
+          presets={presetsDoArtista(artista, "efeitos")}
+        />
+        <SectionItens
+          title={t("Rider Técnico")}
+          items={bloco.tecnico}
+          onChange={(tecnico) => onChange({ tecnico })}
+          presets={presetsDoArtista(artista, "tecnico")}
+        />
         <SectionItens title={t("Hotel")} items={bloco.hotel} onChange={(hotel) => onChange({ hotel })} />
 
         {/* Logística - multi-seleção */}
@@ -1704,14 +1723,18 @@ function SectionItens({
   title,
   items,
   onChange,
+  presets = [],
 }: {
   title: string;
   items: ItemQuantidade[];
   onChange: (next: ItemQuantidade[]) => void;
+  /** Presets do artista pra esta categoria (mig 97). Vazio = sem chips. */
+  presets?: PresetRider[];
 }) {
   return (
     <div>
       <div className="section-title mb-2">{title}</div>
+      <PresetChips presets={presets} items={items} onChange={onChange} />
       <div className="flex flex-col gap-2">
         {items.map((item, idx) => (
           <QuantitySelector

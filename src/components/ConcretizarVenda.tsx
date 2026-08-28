@@ -72,6 +72,8 @@ import LogisticaEditor from "./LogisticaEditor";
 import { parseFechamento } from "@/lib/parseFechamento";
 import { parseValorBR } from "@/lib/valor";
 import { itensDoRider } from "@/lib/rider";
+import { presetsDoArtista, type PresetRider } from "@/lib/presetsRider";
+import PresetChips from "./PresetChips";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { TIPOS_EVENTO } from "./NovoOrcamento";
 import {
@@ -2347,10 +2349,13 @@ export default function ConcretizarVenda({
           </p>
         ) : (
         <div className="flex flex-col gap-4 mt-4">
+          {/* Presets do artista (mig 97): um clique aplica o conjunto;
+              editar qualquer quantidade cai pra "Personalizado". */}
           <SubSection
             title={t("Camarim / Consumação")}
             autoBadge={showAutoBadge("camarim")}
             items={camarim}
+            presets={presetsDoArtista(artistaSelecionado, "camarim")}
             onChange={(c) => {
               setCamarim(c);
               marcarEditado("camarim");
@@ -2360,6 +2365,7 @@ export default function ConcretizarVenda({
             title={t("Efeitos")}
             autoBadge={showAutoBadge("efeitos")}
             items={efeitos}
+            presets={presetsDoArtista(artistaSelecionado, "efeitos")}
             onChange={(c) => {
               setEfeitos(c);
               marcarEditado("efeitos");
@@ -2378,6 +2384,7 @@ export default function ConcretizarVenda({
             title={t("Rider Técnico")}
             autoBadge={showAutoBadge("tecnico")}
             items={tecnico}
+            presets={presetsDoArtista(artistaSelecionado, "tecnico")}
             onChange={(c) => {
               setTecnico(c);
               marcarEditado("tecnico");
@@ -2711,11 +2718,14 @@ function SubSection({
   autoBadge,
   items,
   onChange,
+  presets = [],
 }: {
   title: string;
   autoBadge?: boolean;
   items: ItemQuantidade[];
   onChange: (next: ItemQuantidade[]) => void;
+  /** Presets do artista pra esta categoria (mig 97). Vazio = sem chips. */
+  presets?: PresetRider[];
 }) {
   const t = useT();
   return (
@@ -2724,6 +2734,7 @@ function SubSection({
         <span className="stat-label">{t(title)}</span>
         {autoBadge && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
       </div>
+      <PresetChips presets={presets} items={items} onChange={onChange} />
       <div className="flex flex-col gap-2">
         {items.map((item, idx) => (
           <QuantitySelector

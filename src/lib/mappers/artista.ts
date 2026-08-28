@@ -1,5 +1,6 @@
 import type { Artista, TaxaAgenciaModo, Cidade } from "@/types";
 import { PRIVACIDADE_DJ_PADRAO, type PrivacidadeDj } from "@/lib/permissoes";
+import { normalizarPresets } from "@/lib/presetsRider";
 import { rowParaCidade, type CidadeRow } from "@/lib/mappers/contatos";
 
 export type ArtistaRow = {
@@ -37,6 +38,8 @@ export type ArtistaRow = {
   rider_camarim: unknown; // jsonb — pode ser string[] ou formato legado {nome,qtdSugerida}
   rider_efeitos: unknown;
   rider_tecnico: unknown;
+  /** Presets de rider (mig 97) — jsonb {camarim/efeitos/tecnico: PresetRider[]}. */
+  rider_presets?: unknown;
   // Privacidade do DJ (migração 33) — jsonb. Default '{}' no banco;
   // o objeto completo vem do merge em privacidadeValida.
   privacidade?: unknown;
@@ -110,6 +113,8 @@ export function rowParaArtista(row: ArtistaRow): Artista {
     riderCamarim: normalizarRider(row.rider_camarim),
     riderEfeitos: normalizarRider(row.rider_efeitos),
     riderTecnico: normalizarRider(row.rider_tecnico),
+    // Presets de rider (mig 97) — normalização defensiva: jsonb lixo vira {}.
+    presets: normalizarPresets(row.rider_presets),
     privacidade: privacidadeValida(row.privacidade),
   };
   if (row.cidade_ibge_id) artista.cidadeIbgeId = row.cidade_ibge_id;
@@ -185,6 +190,8 @@ export type ArtistaEscrita = {
   rider_camarim?: string[];
   rider_efeitos?: string[];
   rider_tecnico?: string[];
+  /** Presets de rider (mig 97) — jsonb já normalizado pelo service. */
+  rider_presets?: unknown;
   posicao?: number;
   // Aceita parcial: o que o admin manda é gravado direto no jsonb; o
   // objeto completo é reconstruído na leitura por privacidadeValida
