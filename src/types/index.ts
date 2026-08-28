@@ -87,6 +87,17 @@ export type Artista = {
   riderEfeitos?: string[];
   riderTecnico?: string[];
   /**
+   * Presets de rider (mig 97): até 3 por categoria, cada um {nome, itens
+   * COM quantidade}. Aplicáveis com um clique no orçamento/venda; qualquer
+   * edição manual derruba a seleção pra "Personalizado". Ver lib/presetsRider.
+   * Tipado estruturalmente pra evitar import circular com lib/.
+   */
+  presets?: {
+    camarim: { nome: string; itens: ItemQuantidade[] }[];
+    efeitos: { nome: string; itens: ItemQuantidade[] }[];
+    tecnico: { nome: string; itens: ItemQuantidade[] }[];
+  };
+  /**
    * Privacidade do DJ — o que este artista pode ver/fazer. Configurado
    * pelo admin, persistido em artists.privacidade. Sempre vem completo
    * do mapper (merge sobre o padrão).

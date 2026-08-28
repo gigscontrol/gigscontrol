@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Artista, TaxaAgenciaModo, DocumentoTipo, Moeda } from "@/types";
+import type { PresetsRider } from "./presetsRider";
 import { moedaValida } from "./mappers/venda";
 import type { Papel, PrivacidadeDj } from "./permissoes";
 import type { HistoricoAcao } from "./mappers/historico";
@@ -78,6 +79,9 @@ export type NovoArtistaInput = {
   riderCamarim?: string[];
   riderEfeitos?: string[];
   riderTecnico?: string[];
+  /** Presets de rider (mig 97): até 3 conjuntos nomeados por categoria,
+   *  itens COM quantidade. Enviado como rider_presets no PATCH. */
+  presets?: PresetsRider;
   /** Privacidade do artista — gravada direto no jsonb artists.privacidade. */
   privacidade?: PrivacidadeDj;
   /** Só usado em PATCH — admin pode sobrescrever o email da conta auth. */
@@ -538,6 +542,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (patch.riderCamarim !== undefined) payload.rider_camarim = patch.riderCamarim;
       if (patch.riderEfeitos !== undefined) payload.rider_efeitos = patch.riderEfeitos;
       if (patch.riderTecnico !== undefined) payload.rider_tecnico = patch.riderTecnico;
+      if (patch.presets !== undefined) payload.rider_presets = patch.presets;
       if (patch.privacidade !== undefined) payload.privacidade = patch.privacidade;
       if (patch.acesso_suspenso !== undefined)
         payload.acesso_suspenso = patch.acesso_suspenso;

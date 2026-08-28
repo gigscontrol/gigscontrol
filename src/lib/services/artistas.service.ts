@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Artista, TaxaAgenciaModo } from "@/types";
 import { rowParaArtista, type ArtistaEscrita } from "@/lib/mappers/artista";
+import { normalizarPresets } from "@/lib/presetsRider";
 import {
   listarArtistas as repoListar,
   buscarArtista as repoBuscar,
@@ -165,6 +166,11 @@ function entradaUpdateParaEscrita(input: ArtistaUpdateInput): ArtistaEscrita {
   if (input.rider_camarim !== undefined) out.rider_camarim = input.rider_camarim;
   if (input.rider_efeitos !== undefined) out.rider_efeitos = input.rider_efeitos;
   if (input.rider_tecnico !== undefined) out.rider_tecnico = input.rider_tecnico;
+  // Presets de rider (mig 97): normaliza SEMPRE antes de gravar — o zod já
+  // validou o shape, mas a normalização garante limites (3/categoria, itens
+  // com qtd≥1) e descarta slot vazio, então o jsonb no banco nunca tem lixo.
+  if (input.rider_presets !== undefined)
+    out.rider_presets = normalizarPresets(input.rider_presets);
   if (input.privacidade !== undefined) out.privacidade = input.privacidade;
   return out;
 }
@@ -280,6 +286,8 @@ export async function criarArtistaCompleto(
     if (input.rider_camarim) escrita.rider_camarim = input.rider_camarim;
     if (input.rider_efeitos) escrita.rider_efeitos = input.rider_efeitos;
     if (input.rider_tecnico) escrita.rider_tecnico = input.rider_tecnico;
+    if (input.rider_presets !== undefined)
+      escrita.rider_presets = normalizarPresets(input.rider_presets);
     if (input.privacidade !== undefined) escrita.privacidade = input.privacidade;
     // Novo artista vai pro FIM da lista — admin reordena depois se quiser
     escrita.posicao = await proximaPosicaoArtista(admin, workspaceId);

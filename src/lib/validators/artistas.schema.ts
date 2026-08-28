@@ -14,6 +14,19 @@ const itemRiderSchema = z
   .min(1, "Nome do item obrigatório.")
   .max(80, "Nome do item muito longo.");
 
+/** Um preset de rider (mig 97): nome + itens com quantidade. */
+const presetRiderSchema = z.object({
+  nome: z.string().min(1, "Nome do preset obrigatório.").max(40),
+  itens: z
+    .array(
+      z.object({
+        nome: z.string().min(1).max(120),
+        qtd: z.number().int().min(0).max(9999),
+      })
+    )
+    .max(40, "Máximo 40 itens por preset."),
+});
+
 const taxaModoSchema = z.enum([
   "sem-taxa",
   "perc-fixa",
@@ -93,6 +106,16 @@ export const artistaCreateSchema = z.object({
       LIMITE_RIDER_TECNICO,
       `Máximo ${LIMITE_RIDER_TECNICO} itens no rider técnico.`
     )
+    .optional(),
+  // Presets de rider (mig 97): até 3 conjuntos nomeados por categoria, cada
+  // item COM quantidade. O service ainda roda normalizarPresets antes de
+  // gravar (defesa em profundidade — descarta slot vazio/qtd 0).
+  rider_presets: z
+    .object({
+      camarim: z.array(presetRiderSchema).max(3).optional(),
+      efeitos: z.array(presetRiderSchema).max(3).optional(),
+      tecnico: z.array(presetRiderSchema).max(3).optional(),
+    })
     .optional(),
   // Privacidade do DJ — cada campo é opcional; o merge com o padrão é
   // feito no mapper (privacidadeValida). Persistido em artists.privacidade.

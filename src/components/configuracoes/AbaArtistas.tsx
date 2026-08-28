@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
+import PresetsRiderEditor from "@/components/artistas/PresetsRiderEditor";
 import { gradienteSutil } from "@/lib/gradiente";
 import {
   Music,
@@ -150,6 +151,7 @@ export default function AbaArtistas() {
   const {
     artistas,
     adicionarArtista,
+    atualizarArtista,
     removerArtista,
     resetarSenhaArtista,
     reordenarArtistas,
@@ -1185,6 +1187,16 @@ export default function AbaArtistas() {
                 </div>
               )}
             </div>
+
+            {/* Presets de rider (mig 97) — combinações prontas com quantidade,
+                aplicáveis com 1 clique no Novo Orçamento / Concretizar Venda. */}
+            <PresetsRiderEditor
+              artista={artistaSelecionado}
+              podeEditar
+              onSalvar={async (presets) => {
+                await atualizarArtista(artistaSelecionado.id, { presets });
+              }}
+            />
 
             {/* Taxa de agência */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
