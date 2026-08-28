@@ -91,18 +91,32 @@ export default function CidadeGlobalAutocomplete({
     setInput(value ? value.nome : "");
   }, [value]);
 
+  // FECHAMENTO POR BACKDROP (fix 28/08/2026): os dois dropdowns abrem POR
+  // CIMA de outros campos (na vertical, o painel de país cobre o campo de
+  // cidade). O fechamento antigo por mousedown-fora deixava o clique do
+  // usuário ACERTAR o que estava sob o cursor — mirava no campo de cidade e
+  // "clicava" numa linha de país do painel aberto, trocando o país sem
+  // querer. Agora um backdrop transparente engole o clique-fora: primeiro
+  // clique só FECHA, nada embaixo é ativado (mesmo contrato de um <select>
+  // nativo). Escape continua fechando.
   useEffect(() => {
     if (!open && !openPais) return;
-    const h = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-      if (paisRef.current && !paisRef.current.contains(e.target as Node)) {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
         setOpenPais(false);
         setBuscaPais("");
       }
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
   }, [open, openPais]);
+
+  const fecharTudo = () => {
+    setOpen(false);
+    setOpenPais(false);
+    setBuscaPais("");
+  };
 
   // Busca cidade (debounce 300ms). BR = IBGE; outros = GeoNames.
   useEffect(() => {
@@ -211,8 +225,24 @@ export default function CidadeGlobalAutocomplete({
 
   return (
     <div className={horizontal ? "flex gap-2 items-start" : "flex flex-col gap-2"}>
+      {/* Backdrop transparente: engole o clique-fora enquanto QUALQUER um dos
+          dois dropdowns está aberto — nada por baixo recebe o clique. */}
+      {(open || openPais) && (
+        <div
+          className="fixed inset-0 z-40"
+          aria-hidden
+          onMouseDown={(e) => {
+            e.preventDefault();
+            fecharTudo();
+          }}
+        />
+      )}
+
       {/* Seletor de país */}
-      <div ref={paisRef} className={`relative ${horizontal ? "basis-[45%] shrink-0 min-w-0" : ""}`}>
+      <div
+        ref={paisRef}
+        className={`relative ${openPais ? "z-50" : ""} ${horizontal ? "basis-[45%] shrink-0 min-w-0" : ""}`}
+      >
         <button
           type="button"
           onClick={() => setOpenPais((v) => !v)}
@@ -232,8 +262,13 @@ export default function CidadeGlobalAutocomplete({
 
         {openPais && (
           <div
-            className={`absolute top-full mt-1 z-50 bg-surface border border-border rounded-md flex flex-col ${
-              horizontal ? "left-0 w-64 max-w-[80vw]" : "left-0 right-0"
+            className={`bg-surface border border-border rounded-md flex flex-col ${
+              horizontal
+                ? "absolute top-full mt-1 z-50 left-0 w-64 max-w-[80vw]"
+                : // Vertical: painel NO FLUXO — empurra o campo de cidade pra
+                  // baixo em vez de COBRI-LO (era a raiz do "cliquei na cidade
+                  // e trocou o país"). Mesmo padrão do SeletorArtistas.
+                  "mt-1"
             }`}
             style={{ boxShadow: "0 12px 30px var(--shadow-color)", maxHeight: 320 }}
           >
@@ -277,8 +312,12 @@ export default function CidadeGlobalAutocomplete({
         )}
       </div>
 
-      {/* Cidade */}
-      <div ref={wrapRef} className={`relative ${horizontal ? "flex-1 min-w-0" : ""}`}>
+      {/* Cidade — z-50 enquanto as sugestões estão abertas: o campo e a lista
+          flutuam ACIMA do backdrop (digitar/reposicionar cursor segue vivo). */}
+      <div
+        ref={wrapRef}
+        className={`relative ${open ? "z-50" : ""} ${horizontal ? "flex-1 min-w-0" : ""}`}
+      >
         <div
           className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
           style={erro ? { borderColor: "var(--danger)" } : undefined}
