@@ -131,12 +131,28 @@ export default function DateRangeSelector<T extends string>({
 
   const yearsVisiveis = showMoreYears ? [...yearsDestaque, ...yearsOcultos] : yearsDestaque;
 
+  /**
+   * Entrou no Personalizado sem ano escolhido → pré-seleciona o ANO ATUAL
+   * (fix 28/08/2026, pedido do Bruno): sem isso o painel abria "morto" — o
+   * clique no mês não valia nada até a pessoa perceber que faltava o ano.
+   * Com o ano padrão, clicar num mês já muda o período na hora.
+   */
+  function garantirAnoPadrao() {
+    if (selectedCustomYear !== null) return;
+    const atual = new Date().getFullYear();
+    setSelectedCustomYear(
+      Math.min(Math.max(atual, piso.ano), ANO_LIMITE_SUPERIOR)
+    );
+  }
+
   // Abre o popover já na visão coerente com o valor atual
   function toggleOpen() {
     if (isOpen) {
       setIsOpen(false);
     } else {
-      setView(value === customLabel ? "custom" : "list");
+      const custom = value === customLabel;
+      setView(custom ? "custom" : "list");
+      if (custom) garantirAnoPadrao();
       setIsOpen(true);
     }
   }
@@ -184,6 +200,7 @@ export default function DateRangeSelector<T extends string>({
                     onClick={() => {
                       if (opcao === customLabel) {
                         onChange(customLabel);
+                        garantirAnoPadrao();
                         setView("custom");
                       } else {
                         onChange(opcao);
