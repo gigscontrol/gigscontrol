@@ -2352,7 +2352,7 @@ export default function ConcretizarVenda({
           {/* Presets do artista (mig 97): um clique aplica o conjunto;
               editar qualquer quantidade cai pra "Personalizado". */}
           <SubSection
-            title={t("Camarim / Consumação")}
+            title={t("Rider de Camarim")}
             autoBadge={showAutoBadge("camarim")}
             items={camarim}
             presets={presetsDoArtista(artistaSelecionado, "camarim")}
@@ -2362,7 +2362,7 @@ export default function ConcretizarVenda({
             }}
           />
           <SubSection
-            title={t("Efeitos")}
+            title={t("Rider de Efeitos")}
             autoBadge={showAutoBadge("efeitos")}
             items={efeitos}
             presets={presetsDoArtista(artistaSelecionado, "efeitos")}

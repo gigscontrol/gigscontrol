@@ -100,8 +100,10 @@ const MANUAIS: { rotulo: string; nomes: string[] }[] = [];
 
 // Setores da agência — não são preenchidos pela colagem, só checados.
 const SETORES: { nome: string; nomes: string[]; catalogo: readonly string[] | null }[] = [
-  { nome: "Efeitos", nomes: ["efeitos"], catalogo: CATALOGO_EFEITOS },
-  { nome: "Consumação/Camarim", nomes: ["consumacao/camarim", "camarim", "consumacao"], catalogo: CATALOGO_CAMARIM },
+  // Aliases novos + legados (renomeação 28/08/2026): a lista que o contratante
+  // devolve pode ter sido gerada ANTES da troca de nomes — o parser aceita os dois.
+  { nome: "Rider de Efeitos", nomes: ["rider de efeitos", "efeitos"], catalogo: CATALOGO_EFEITOS },
+  { nome: "Rider de Camarim", nomes: ["rider de camarim", "consumacao/camarim", "camarim", "consumacao"], catalogo: CATALOGO_CAMARIM },
   { nome: "Hotel", nomes: ["hotel"], catalogo: CATALOGO_HOTEL },
   { nome: "Logística", nomes: ["logistica"], catalogo: null },
 ];

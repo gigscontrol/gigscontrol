@@ -85,14 +85,14 @@ export const SETORES_AGENDA: readonly DefSetorAgenda[] = [
   {
     setor: "camarim",
     chave: "agenda.ver.camarim",
-    label: "Camarim / Consumação",
+    label: "Rider de Camarim",
     descricao: "Itens de camarim e consumação",
     noBasico: false,
   },
   {
     setor: "efeitos",
     chave: "agenda.ver.efeitos",
-    label: "Efeitos",
+    label: "Rider de Efeitos",
     descricao: "Efeitos contratados para o show",
     noBasico: false,
   },

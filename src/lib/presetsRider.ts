@@ -39,7 +39,7 @@ export const CATEGORIAS_PRESET: readonly CategoriaPreset[] = [
 ];
 
 export const LABELS_CATEGORIA_PRESET: Record<CategoriaPreset, string> = {
-  camarim: "Camarim / Consumação",
+  camarim: "Rider de Camarim",
   efeitos: "Rider de Efeitos",
   tecnico: "Rider Técnico",
 };

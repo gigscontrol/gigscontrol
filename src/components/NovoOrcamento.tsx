@@ -1668,13 +1668,13 @@ function BlocoOrcamentoDj({
         {/* Presets do ARTISTA deste bloco (mig 97): um clique aplica o
             conjunto; editar qualquer quantidade cai pra "Personalizado". */}
         <SectionItens
-          title={t("Camarim / Consumação")}
+          title={t("Rider de Camarim")}
           items={bloco.camarim}
           onChange={(camarim) => onChange({ camarim })}
           presets={presetsDoArtista(artista, "camarim")}
         />
         <SectionItens
-          title={t("Efeitos")}
+          title={t("Rider de Efeitos")}
           items={bloco.efeitos}
           onChange={(efeitos) => onChange({ efeitos })}
           presets={presetsDoArtista(artista, "efeitos")}

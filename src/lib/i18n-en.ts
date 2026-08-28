@@ -865,6 +865,8 @@ const CONTATOS_CFG: Record<string, string> = {
   "Novo artista": "New artist",
   "Editar {nome}": "Edit {nome}",
   "Rider de camarim": "Dressing room rider",
+  "Rider de Camarim": "Dressing Room Rider",
+  "Rider de Efeitos": "Effects Rider",
   "Rider de efeitos": "Effects rider",
   "Rider técnico": "Technical rider",
   "Cadastrando...": "Registering...",

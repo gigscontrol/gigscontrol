@@ -64,17 +64,17 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   // Riders/Hospedagem
   {
     token: "rider de camarim",
-    label: "Rider de camarim",
+    label: "Rider de Camarim",
     grupo: "Riders/Hospedagem",
   },
   {
     token: "rider de efeitos",
-    label: "Rider de efeitos",
+    label: "Rider de Efeitos",
     grupo: "Riders/Hospedagem",
   },
   {
     token: "rider tecnico",
-    label: "Rider técnico",
+    label: "Rider Técnico",
     grupo: "Riders/Hospedagem",
   },
   { token: "hospedagem", label: "Hospedagem", grupo: "Riders/Hospedagem" },

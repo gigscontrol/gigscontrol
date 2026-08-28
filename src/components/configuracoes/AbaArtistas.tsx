@@ -1125,7 +1125,7 @@ export default function AbaArtistas() {
             {/* Rider de camarim */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("Rider de camarim")} ({(artistaSelecionado.riderCamarim ?? []).length}/
+                {t("Rider de Camarim")} ({(artistaSelecionado.riderCamarim ?? []).length}/
                 {LIMITE_RIDER_CAMARIM})
               </div>
               {(artistaSelecionado.riderCamarim ?? []).length === 0 ? (
@@ -1147,7 +1147,7 @@ export default function AbaArtistas() {
             {/* Rider de efeitos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("Rider de efeitos")} ({(artistaSelecionado.riderEfeitos ?? []).length}/
+                {t("Rider de Efeitos")} ({(artistaSelecionado.riderEfeitos ?? []).length}/
                 {LIMITE_RIDER_EFEITOS})
               </div>
               {(artistaSelecionado.riderEfeitos ?? []).length === 0 ? (
@@ -1975,7 +1975,7 @@ export function ModalNovoArtista({
           </Secao>
 
           {/* Seção 4 — Rider de camarim */}
-          <Secao titulo={`${t("Rider de camarim")} (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}>
+          <Secao titulo={`${t("Rider de Camarim")} (${riderCamarim.length}/${LIMITE_RIDER_CAMARIM})`}>
             <ListaRider
               itens={riderCamarim}
               onChange={setRiderCamarim}
@@ -1986,7 +1986,7 @@ export function ModalNovoArtista({
           </Secao>
 
           {/* Seção 5 — Rider de efeitos */}
-          <Secao titulo={`${t("Rider de efeitos")} (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}>
+          <Secao titulo={`${t("Rider de Efeitos")} (${riderEfeitos.length}/${LIMITE_RIDER_EFEITOS})`}>
             <ListaRider
               itens={riderEfeitos}
               onChange={setRiderEfeitos}
