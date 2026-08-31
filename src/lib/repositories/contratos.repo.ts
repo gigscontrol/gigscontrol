@@ -6,7 +6,9 @@ const COLS = `
   id, workspace_id, venda_id, modelo_id,
   numero, status, corpo_preenchido, arquivo_url,
   local_assinatura, data_emissao, data_assinatura, observacoes,
-  pasta_id, criado_por, criado_em, atualizado_em
+  pasta_id, criado_por, criado_em, atualizado_em,
+  conteudo_hash, conteudo_versao, finalizado_em, verificacao_id,
+  pdf_final_hash, pdf_final_path
 `;
 
 export async function listarContratos(
@@ -50,6 +52,21 @@ export async function buscarContrato(
     .from("contratos")
     .select(COLS)
     .eq("id", id)
+    .is("deletado_em", null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as ContratoRow) ?? null;
+}
+
+/** Busca pelo ID PÚBLICO de verificação (GC-XXXX-XXXX) — página /verificar. */
+export async function buscarPorVerificacaoId(
+  admin: SupabaseClient,
+  verificacaoId: string
+): Promise<ContratoRow | null> {
+  const { data, error } = await admin
+    .from("contratos")
+    .select(COLS)
+    .eq("verificacao_id", verificacaoId)
     .is("deletado_em", null)
     .maybeSingle();
   if (error) throw error;

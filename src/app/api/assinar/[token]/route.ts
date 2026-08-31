@@ -33,7 +33,7 @@ export async function GET(
     if (!r) {
       return NextResponse.json({ erro: "Link inválido." }, { status: 404 });
     }
-    const { signatario, contrato } = r;
+    const { signatario, contrato, workspaceId } = r;
     // Contrato CANCELADO pela agência (D4): quem ainda NÃO assinou é barrado —
     // nem exibe o documento. Quem já assinou continua podendo visualizar o que
     // assinou (a assinatura dele permanece válida).
@@ -43,9 +43,13 @@ export async function GET(
         { status: 409 }
       );
     }
-    // Conta a abertura do link (visualização) — só se ainda não assinou.
-    // Fire-and-forget pra não atrasar a resposta.
-    void registrarAbertura(admin, signatario).catch(() => {});
+    // Conta a abertura do link (visualização + trilha) — só se ainda não
+    // assinou. Fire-and-forget pra não atrasar a resposta.
+    void registrarAbertura(admin, signatario, {
+      workspaceId,
+      ip: ipDaRequest(_request),
+      dispositivo: _request.headers.get("user-agent"),
+    }).catch(() => {});
     // Quem já assinou (do MESMO contrato) → relatório de assinaturas visível
     // no link, padrão ZapSign. Sem KYC (foto/selfie/facial) — só o relatório.
     const assinaturas = await assinantesPublicosDoContrato(admin, contrato.id);
@@ -59,8 +63,14 @@ export async function GET(
         assinatura: signatario.assinatura,
         documento: signatario.documento,
         assinadoEm: signatario.assinadoEm,
+        /** OTP de e-mail já confirmado neste link (gate do botão Assinar). */
+        otpVerificado: !!signatario.otpVerificadoEm,
       },
-      contrato: { numero: contrato.numero, conteudo: contrato.conteudo },
+      contrato: {
+        numero: contrato.numero,
+        conteudo: contrato.conteudo,
+        verificacaoId: contrato.verificacaoId,
+      },
       assinaturas,
       jaAssinou: signatario.status === "assinado",
     });
@@ -117,6 +127,7 @@ export async function POST(
       ip: ipDaRequest(request),
       dispositivo: request.headers.get("user-agent"),
       geolocalizacao: parsed.data.geolocalizacao || null,
+      fusoHorario: parsed.data.fusoHorario || null,
       fotoCpf: parsed.data.fotoCpf || null,
       fotoDocumento: parsed.data.fotoDocumento || null,
       fotoDocumentoVerso: parsed.data.fotoDocumentoVerso || null,

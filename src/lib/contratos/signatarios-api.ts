@@ -12,6 +12,7 @@ import type { AssinaturaInfo } from "@/components/contratos/folhaA4";
 export type EntradaSignatarioUI = {
   nome: string;
   email: string;
+  telefone?: string;
   papel: string;
   exige: ExigenciasSignatario;
 };

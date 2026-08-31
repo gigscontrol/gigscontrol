@@ -86,6 +86,7 @@ export async function POST(
       parsed.data.signatarios.map((s) => ({
         nome: s.nome,
         email: s.email || null,
+        telefone: s.telefone || null,
         papel: s.papel ?? null,
         exige: s.exige,
       }))

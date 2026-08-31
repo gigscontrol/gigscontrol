@@ -89,7 +89,8 @@ function dataHojeBr(): string {
 async function anexarRelatorio(
   doc: PDFDocument,
   signatarios: SignatarioCarimbo[],
-  numero: string | undefined
+  numero: string | undefined,
+  verificacaoId?: string
 ): Promise<void> {
   const fonte = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -138,6 +139,17 @@ async function anexarRelatorio(
     .join("   ·   ");
   texto(sub, MX, 9.5, fonte, corMuted);
   y -= 14;
+  // ID público de verificação (mig 98) — qualquer parte confere autenticidade.
+  if (verificacaoId) {
+    texto(
+      `Verificação de autenticidade: ${verificacaoId} · gigscontrol.com/verificar`,
+      MX,
+      9.5,
+      fonte,
+      corMuted
+    );
+    y -= 14;
+  }
   divisor(1);
   y -= 24;
 
@@ -217,7 +229,7 @@ export async function carimbarPdf(
   original: ArrayBuffer,
   layout: ContratoPdfLayout,
   signatarios: SignatarioCarimbo[],
-  opts?: { numero?: string }
+  opts?: { numero?: string; verificacaoId?: string }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.load(original, { ignoreEncryption: true });
   const pages = doc.getPages();
@@ -249,7 +261,7 @@ export async function carimbarPdf(
 
   // Relatório de assinaturas ao final — só quando alguém já assinou.
   if (signatarios.some((s) => s.status === "assinado")) {
-    await anexarRelatorio(doc, signatarios, opts?.numero);
+    await anexarRelatorio(doc, signatarios, opts?.numero, opts?.verificacaoId);
   }
 
   return doc.save();

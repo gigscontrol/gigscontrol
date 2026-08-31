@@ -30,6 +30,12 @@ import {
   atualizarContrato,
 } from "@/lib/repositories/contratos.repo";
 import { rowParaContrato, type Contrato } from "@/lib/mappers/contrato";
+import {
+  hashConteudoContrato,
+  gerarVerificacaoId,
+} from "@/lib/contratos/integridade";
+import { registrarEventoContrato } from "@/lib/services/contratoEventos.service";
+import { selarPdfFinal } from "@/lib/services/contratoPdfFinal.service";
 
 /** Token do link público — 24 bytes aleatórios, URL-safe (impossível de adivinhar). */
 function gerarToken(): string {
@@ -39,6 +45,7 @@ function gerarToken(): string {
 export type EntradaSignatario = {
   nome: string;
   email?: string | null;
+  telefone?: string | null;
   papel?: string | null;
   exige?: Partial<ExigenciasSignatario>;
 };
@@ -63,19 +70,56 @@ export async function definirSignatarios(
   entradas: EntradaSignatario[]
 ): Promise<Signatario[]> {
   await removerPendentes(supabase, contratoId);
-  const payloads: SignatarioEscrita[] = entradas.map((e, i) => ({
-    contrato_id: contratoId,
-    workspace_id: workspaceId,
-    nome: e.nome,
-    email: e.email ?? null,
-    papel: e.papel ?? null,
-    ordem: i,
-    token: gerarToken(),
-    exige: exigeValido(e.exige),
-    status: "pendente",
-  }));
+  const payloads: SignatarioEscrita[] = entradas.map((e, i) => {
+    const exige = exigeValido(e.exige);
+    return {
+      contrato_id: contratoId,
+      workspace_id: workspaceId,
+      nome: e.nome,
+      email: e.email ?? null,
+      telefone: e.telefone ?? null,
+      papel: e.papel ?? null,
+      ordem: i,
+      token: gerarToken(),
+      exige,
+      status: "pendente",
+      metodo_autenticacao: exige.otpEmail ? "email_otp" : "link",
+    };
+  });
   const rows = await criarVarios(supabase, payloads);
-  await atualizarContrato(supabase, contratoId, { status: "enviado" });
+
+  // SELA o conteúdo no envio (mig 98): o hash SHA-256 do corpo é O número que
+  // identifica juridicamente "o que foi enviado pra assinar". Se o corpo mudou
+  // desde o último envio, a versão sobe e a trilha registra a alteração.
+  const contratoRow = await buscarContrato(supabase, contratoId);
+  const corpo = contratoRow?.corpo_preenchido ?? "";
+  const hash = hashConteudoContrato(corpo);
+  let versao = contratoRow?.conteudo_versao ?? 1;
+  if (contratoRow?.conteudo_hash && contratoRow.conteudo_hash !== hash) {
+    versao += 1;
+    await registrarEventoContrato({
+      contratoId,
+      workspaceId,
+      tipo: "conteudo_alterado",
+      detalhes: { hashAnterior: contratoRow.conteudo_hash, hash, versao },
+    });
+  }
+  await atualizarContrato(supabase, contratoId, {
+    status: "enviado",
+    conteudo_hash: hash,
+    conteudo_versao: versao,
+  });
+  await registrarEventoContrato({
+    contratoId,
+    workspaceId,
+    tipo: "enviado",
+    detalhes: {
+      hash,
+      versao,
+      signatarios: rows.length,
+      exigencias: payloads.map((p) => p.exige),
+    },
+  });
   return rows.map(rowParaSignatario);
 }
 
@@ -98,7 +142,12 @@ export class ExigenciaNaoAtendidaError extends Error {
 export async function buscarParaAssinar(
   admin: SupabaseClient,
   token: string
-): Promise<{ signatario: Signatario; contrato: Contrato } | null> {
+): Promise<{
+  signatario: Signatario;
+  contrato: Contrato;
+  /** Pra trilha de auditoria (contrato_eventos exige workspace). */
+  workspaceId: string;
+} | null> {
   const sigRow = await buscarPorToken(admin, token);
   if (!sigRow) return null;
   const contratoRow = await buscarContrato(admin, sigRow.contrato_id);
@@ -106,6 +155,7 @@ export async function buscarParaAssinar(
   return {
     signatario: rowParaSignatario(sigRow),
     contrato: rowParaContrato(contratoRow),
+    workspaceId: sigRow.workspace_id,
   };
 }
 
@@ -172,6 +222,8 @@ export async function registrarAssinatura(
     ip: string | null;
     geolocalizacao: string | null;
     dispositivo: string | null;
+    /** Fuso IANA do navegador (Intl…timeZone) — evidência da mig 98. */
+    fusoHorario?: string | null;
     fotoCpf?: string | null;
     fotoDocumento?: string | null;
     fotoDocumentoVerso?: string | null;
@@ -186,6 +238,11 @@ export async function registrarAssinatura(
   // O cliente também valida (UX), mas o servidor é a autoridade — um POST cru
   // não pode assinar pulando selfie/facial/documento nem mandar CPF inválido.
   const exige = exigeValido(sigRow.exige);
+  if (exige.otpEmail && !sigRow.otp_verificado_em) {
+    throw new ExigenciaNaoAtendidaError(
+      "Confirme o código enviado ao seu e-mail antes de assinar."
+    );
+  }
   if (exige.cpfCnpj && !documentoValido(dados.documento ?? "")) {
     throw new ExigenciaNaoAtendidaError("CPF/CNPJ inválido ou não informado.");
   }
@@ -247,15 +304,101 @@ export async function registrarAssinatura(
     ip: dados.ip,
     geolocalizacao: dados.geolocalizacao,
     dispositivo: dados.dispositivo,
+    fuso_horario: dados.fusoHorario ?? null,
+    metodo_autenticacao: exige.otpEmail ? "email_otp" : "link",
     arquivos,
   });
   if (!row) return null;
+
+  // Evento OBRIGATÓRIO na cadeia (mig 98): a assinatura é o ponto crítico da
+  // trilha — se a auditoria falhar aqui, a operação inteira falha (a linha do
+  // signatário fica gravada, mas o erro sobe e fica visível; o mesmo banco que
+  // acabou de aceitar o UPDATE praticamente não falha na RPC).
+  const contratoRow = await buscarContrato(admin, row.contrato_id);
+  await registrarEventoContrato(
+    {
+      contratoId: row.contrato_id,
+      workspaceId: row.workspace_id,
+      signatarioId: row.id,
+      tipo: "assinado",
+      detalhes: {
+        conteudoHash: contratoRow?.conteudo_hash ?? null,
+        conteudoVersao: contratoRow?.conteudo_versao ?? 1,
+        metodo: exige.otpEmail ? "email_otp" : "link",
+        documento: dados.documento
+          ? `****${dados.documento.replace(/\D/g, "").slice(-2)}`
+          : null,
+        geolocalizacao: !!dados.geolocalizacao,
+        ...(arquivos.facialSimilaridade !== undefined
+          ? {
+              facialSimilaridade: arquivos.facialSimilaridade,
+              facialMatch: arquivos.facialMatch ?? false,
+            }
+          : {}),
+      },
+      ip: dados.ip,
+      dispositivo: dados.dispositivo,
+      fusoHorario: dados.fusoHorario ?? null,
+    },
+    true
+  );
+
   const todos = await listarPorContratoAdmin(admin, row.contrato_id);
   const todosAssinados =
     todos.length > 0 && todos.every((s) => s.status === "assinado");
-  await atualizarContrato(admin, row.contrato_id, {
-    status: todosAssinados ? "assinado" : "enviado",
-  });
+
+  if (!todosAssinados) {
+    await atualizarContrato(admin, row.contrato_id, { status: "enviado" });
+    return rowParaSignatario(row);
+  }
+
+  // FINALIZAÇÃO: todos assinaram → contrato imutável. Gera o ID público de
+  // verificação (GC-XXXX-XXXX, único — retry em colisão) e sela na trilha.
+  let verificacaoId = contratoRow?.verificacao_id ?? null;
+  const finalizadoEm = contratoRow?.finalizado_em ?? new Date().toISOString();
+  if (!verificacaoId) {
+    for (let tentativa = 0; tentativa < 5; tentativa++) {
+      const candidato = gerarVerificacaoId();
+      try {
+        await atualizarContrato(admin, row.contrato_id, {
+          status: "assinado",
+          verificacao_id: candidato,
+          finalizado_em: finalizadoEm,
+        });
+        verificacaoId = candidato;
+        break;
+      } catch (e) {
+        // 23505 = colisão do índice único de verificacao_id → tenta outro.
+        if ((e as { code?: string })?.code !== "23505") throw e;
+      }
+    }
+  } else {
+    await atualizarContrato(admin, row.contrato_id, {
+      status: "assinado",
+      finalizado_em: finalizadoEm,
+    });
+  }
+  await registrarEventoContrato(
+    {
+      contratoId: row.contrato_id,
+      workspaceId: row.workspace_id,
+      tipo: "finalizado",
+      detalhes: {
+        verificacaoId,
+        conteudoHash: contratoRow?.conteudo_hash ?? null,
+        conteudoVersao: contratoRow?.conteudo_versao ?? 1,
+        signatarios: todos.length,
+      },
+    },
+    true
+  );
+  // PDF final selado (só contratos por UPLOAD): carimba, hasheia e congela.
+  // Best-effort — se falhar, a rota do PDF assinado sela na primeira abertura.
+  try {
+    await selarPdfFinal(admin, row.contrato_id);
+  } catch (e) {
+    console.warn("[contrato] falha ao selar PDF final:", (e as Error).message);
+  }
   return rowParaSignatario(row);
 }
 
@@ -307,13 +450,28 @@ export async function resumoAssinantesDoWorkspace(
 }
 
 /**
- * Registra uma ABERTURA do link (visualização sem assinar): +1 no contador.
- * No-op se já assinou. Chamado na rota pública GET /api/assinar/[token].
+ * Registra uma ABERTURA do link (visualização sem assinar): +1 no contador e
+ * evento 'aberto' na trilha (best-effort). No-op se já assinou. Chamado na
+ * rota pública GET /api/assinar/[token].
  */
 export async function registrarAbertura(
   admin: SupabaseClient,
-  signatario: { id: string; status: string; aberturas: number }
+  signatario: { id: string; status: string; aberturas: number; contratoId: string },
+  contexto: {
+    workspaceId: string;
+    ip?: string | null;
+    dispositivo?: string | null;
+  }
 ): Promise<void> {
   if (signatario.status === "assinado") return;
   await incrementarAberturas(admin, signatario.id, (signatario.aberturas ?? 0) + 1);
+  await registrarEventoContrato({
+    contratoId: signatario.contratoId,
+    workspaceId: contexto.workspaceId,
+    signatarioId: signatario.id,
+    tipo: "aberto",
+    detalhes: { abertura: (signatario.aberturas ?? 0) + 1 },
+    ip: contexto.ip ?? null,
+    dispositivo: contexto.dispositivo ?? null,
+  });
 }

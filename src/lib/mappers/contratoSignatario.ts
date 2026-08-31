@@ -18,6 +18,8 @@ export type ExigenciasSignatario = {
   selfie: boolean;
   /** Reconhecimento facial (Fase 3 — serviço de biometria). */
   facial: boolean;
+  /** Verificar posse do e-mail via código OTP antes de assinar (mig 98). */
+  otpEmail: boolean;
 };
 
 export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
@@ -27,6 +29,7 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
   fotoDocumento: false,
   selfie: false,
   facial: false,
+  otpEmail: false,
 };
 
 /** Teto de signatários por contrato (vale pros dois fluxos: modelo e PDF). */
@@ -86,6 +89,14 @@ export type SignatarioRow = {
   /** Nº de vezes que o link foi ABERTO sem assinar (tracking de visualização). */
   aberturas: number | null;
   criado_em: string | null;
+  // Evidências + OTP (mig 98 — validade jurídica)
+  telefone?: string | null;
+  fuso_horario?: string | null;
+  metodo_autenticacao?: string | null;
+  otp_hash?: string | null;
+  otp_expira_em?: string | null;
+  otp_tentativas?: number | null;
+  otp_verificado_em?: string | null;
 };
 
 export type Signatario = {
@@ -110,6 +121,13 @@ export type Signatario = {
   /** Nº de aberturas do link sem assinar. */
   aberturas: number;
   criadoEm: string;
+  // Evidências (mig 98)
+  telefone: string | null;
+  fusoHorario: string | null;
+  /** email_otp | link (legado — só posse do token). */
+  metodoAutenticacao: string | null;
+  /** Quando o OTP foi verificado (null = nunca). */
+  otpVerificadoEm: string | null;
 };
 
 function bool(v: unknown, d: boolean): boolean {
@@ -126,6 +144,7 @@ export function exigeValido(raw: unknown): ExigenciasSignatario {
     fotoDocumento: bool(o.fotoDocumento, EXIGENCIAS_PADRAO.fotoDocumento),
     selfie: bool(o.selfie, EXIGENCIAS_PADRAO.selfie),
     facial: bool(o.facial, EXIGENCIAS_PADRAO.facial),
+    otpEmail: bool(o.otpEmail, EXIGENCIAS_PADRAO.otpEmail),
   };
 }
 
@@ -153,6 +172,10 @@ export function rowParaSignatario(row: SignatarioRow): Signatario {
     assinadoEm: row.assinado_em ?? null,
     aberturas: row.aberturas ?? 0,
     criadoEm: row.criado_em ?? "",
+    telefone: row.telefone ?? null,
+    fusoHorario: row.fuso_horario ?? null,
+    metodoAutenticacao: row.metodo_autenticacao ?? null,
+    otpVerificadoEm: row.otp_verificado_em ?? null,
   };
 }
 
@@ -173,4 +196,12 @@ export type SignatarioEscrita = {
   geolocalizacao?: string | null;
   dispositivo?: string | null;
   assinado_em?: string | null;
+  // Evidências + OTP (mig 98)
+  telefone?: string | null;
+  fuso_horario?: string | null;
+  metodo_autenticacao?: string | null;
+  otp_hash?: string | null;
+  otp_expira_em?: string | null;
+  otp_tentativas?: number;
+  otp_verificado_em?: string | null;
 };

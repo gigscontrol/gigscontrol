@@ -148,6 +148,13 @@ export type ContratoRow = {
   criado_por: string | null;
   criado_em: string | null;
   atualizado_em: string | null;
+  // Integridade / verificação (mig 98 — validade jurídica)
+  conteudo_hash?: string | null;
+  conteudo_versao?: number | null;
+  finalizado_em?: string | null;
+  verificacao_id?: string | null;
+  pdf_final_hash?: string | null;
+  pdf_final_path?: string | null;
 };
 
 export type Contrato = {
@@ -168,6 +175,17 @@ export type Contrato = {
   criadoPor: string | null;
   criadoEm: string;
   atualizadoEm: string;
+  // Integridade / verificação (mig 98)
+  /** SHA-256 do conteúdo no envio p/ assinatura (null = nunca enviado pós-mig). */
+  conteudoHash: string | null;
+  /** Versão do conteúdo (incrementa a cada alteração pré-assinatura). */
+  conteudoVersao: number;
+  /** Quando TODOS assinaram (contrato imutável a partir daqui). */
+  finalizadoEm: string | null;
+  /** ID público da página /verificar (gerado na finalização). */
+  verificacaoId: string | null;
+  /** SHA-256 do PDF final carimbado (selado na trilha). */
+  pdfFinalHash: string | null;
 };
 
 export function statusValido(s: string | null | undefined): ContratoStatus {
@@ -227,6 +245,11 @@ export function rowParaContrato(row: ContratoRow): Contrato {
     criadoPor: row.criado_por ?? null,
     criadoEm: row.criado_em ?? "",
     atualizadoEm: row.atualizado_em ?? row.criado_em ?? "",
+    conteudoHash: row.conteudo_hash ?? null,
+    conteudoVersao: row.conteudo_versao ?? 1,
+    finalizadoEm: row.finalizado_em ?? null,
+    verificacaoId: row.verificacao_id ?? null,
+    pdfFinalHash: row.pdf_final_hash ?? null,
   };
 }
 
@@ -245,4 +268,11 @@ export type ContratoEscrita = {
   pasta_id?: string | null;
   criado_por?: string | null;
   atualizado_em?: string;
+  // Integridade / verificação (mig 98)
+  conteudo_hash?: string | null;
+  conteudo_versao?: number;
+  finalizado_em?: string | null;
+  verificacao_id?: string | null;
+  pdf_final_hash?: string | null;
+  pdf_final_path?: string | null;
 };

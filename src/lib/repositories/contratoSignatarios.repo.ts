@@ -8,7 +8,9 @@ import type {
 const COLS = `
   id, contrato_id, workspace_id, nome, email, papel, ordem, token,
   exige, arquivos, status, assinatura, documento, ip, geolocalizacao,
-  dispositivo, assinado_em, aberturas, criado_em
+  dispositivo, assinado_em, aberturas, criado_em,
+  telefone, fuso_horario, metodo_autenticacao,
+  otp_hash, otp_expira_em, otp_tentativas, otp_verificado_em
 `;
 
 /** Signatários de um contrato (uso da agência — RLS por workspace). */
@@ -130,6 +132,8 @@ export async function registrarAssinaturaPorToken(
     ip: string | null;
     geolocalizacao: string | null;
     dispositivo: string | null;
+    fuso_horario: string | null;
+    metodo_autenticacao: string | null;
     arquivos: ArquivosSignatario;
   }
 ): Promise<SignatarioRow | null> {
@@ -142,9 +146,32 @@ export async function registrarAssinaturaPorToken(
       ip: dados.ip,
       geolocalizacao: dados.geolocalizacao,
       dispositivo: dados.dispositivo,
+      fuso_horario: dados.fuso_horario,
+      metodo_autenticacao: dados.metodo_autenticacao,
       arquivos: dados.arquivos,
       assinado_em: new Date().toISOString(),
     })
+    .eq("token", token)
+    .eq("status", "pendente")
+    .select(COLS)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as SignatarioRow) ?? null;
+}
+
+/**
+ * Atualiza campos de um signatário PENDENTE pelo token (fluxo público de OTP:
+ * gravar hash do código, incrementar tentativas, marcar verificado). Devolve a
+ * linha atualizada ou null se o token não existe / já assinou.
+ */
+export async function atualizarPorToken(
+  admin: SupabaseClient,
+  token: string,
+  patch: SignatarioEscrita
+): Promise<SignatarioRow | null> {
+  const { data, error } = await admin
+    .from("contrato_signatarios")
+    .update(patch)
     .eq("token", token)
     .eq("status", "pendente")
     .select(COLS)
