@@ -9,6 +9,7 @@ import {
   PenLine,
   ShieldCheck,
   ScanFace,
+  MailCheck,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
@@ -29,10 +30,14 @@ type Dados = {
     assinatura: string | null;
     documento: string | null;
     assinadoEm: string | null;
+    /** OTP de e-mail já confirmado (exigência otpEmail). */
+    otpVerificado?: boolean;
   };
   contrato: {
     numero: string;
     conteudo: { secoes: SecaoModelo[]; estilo: EstiloModelo };
+    /** Código público GC-XXXX-XXXX (só quando finalizado). */
+    verificacaoId?: string | null;
   };
   /** Signatários do mesmo contrato que já assinaram (relatório, sem KYC). */
   assinaturas: AssinaturaInfo[];
@@ -69,6 +74,13 @@ export default function AssinarPage({
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
 
+  // OTP por e-mail (exigência otpEmail): estado local do fluxo de verificação.
+  const [otpOk, setOtpOk] = useState(false);
+  const [otpEnviado, setOtpEnviado] = useState(false);
+  const [otpCodigo, setOtpCodigo] = useState("");
+  const [otpOcupado, setOtpOcupado] = useState(false);
+  const [otpMsg, setOtpMsg] = useState<string | null>(null);
+
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +97,7 @@ export default function AssinarPage({
       }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
       setDados(body as Dados);
+      if ((body as Dados).signatario.otpVerificado) setOtpOk(true);
       if ((body as Dados).signatario.documento)
         setDocumento(
           mascararCpfCnpj((body as Dados).signatario.documento ?? "")
@@ -143,9 +156,58 @@ export default function AssinarPage({
    * câmera ao vivo (o envio acontece depois, quando a selfie é capturada).
    * Caso contrário, envia direto.
    */
+  // ---- OTP por e-mail ----
+
+  async function enviarOtp() {
+    setOtpOcupado(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch(`/api/assinar/${params.token}/otp`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      setOtpEnviado(true);
+      setOtpMsg("Código enviado! Confira sua caixa de entrada (e o spam).");
+    } catch (e) {
+      setOtpMsg((e as Error).message);
+    } finally {
+      setOtpOcupado(false);
+    }
+  }
+
+  async function verificarOtp() {
+    if (!/^\d{6}$/.test(otpCodigo.trim())) {
+      setOtpMsg("Digite o código de 6 dígitos.");
+      return;
+    }
+    setOtpOcupado(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch(`/api/assinar/${params.token}/otp/verificar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo: otpCodigo.trim() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      setOtpOk(true);
+      setOtpMsg(null);
+      setErro(null);
+    } catch (e) {
+      setOtpMsg((e as Error).message);
+    } finally {
+      setOtpOcupado(false);
+    }
+  }
+
   function assinar() {
     if (!dados) return;
     const ex = dados.signatario.exige;
+    if (ex.otpEmail && !otpOk) {
+      setErro("Confirme o código enviado ao seu e-mail antes de assinar.");
+      return;
+    }
     if (ex.cpfCnpj && !documento.trim()) {
       setErro("Informe seu CPF ou CNPJ.");
       return;
@@ -182,6 +244,13 @@ export default function AssinarPage({
     setErro(null);
     try {
       const geolocalizacao = await pegarGeo();
+      // Fuso do navegador — evidência registrada junto com data/hora e IP.
+      let fusoHorario = "";
+      try {
+        fusoHorario = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+      } catch {
+        /* navegador sem Intl completo — segue sem fuso */
+      }
       const res = await fetch(`/api/assinar/${params.token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,6 +258,7 @@ export default function AssinarPage({
           assinatura: assinatura ?? "",
           documento,
           geolocalizacao,
+          fusoHorario,
           fotoDocumento: fotoDocumento ?? "",
           fotoDocumentoVerso: fotoDocumentoVerso ?? "",
           selfie: selfie ?? "",
@@ -322,6 +392,7 @@ export default function AssinarPage({
           conteudoRef={conteudoRef}
           assinaturas={dados.assinaturas}
           numeroContrato={contrato.numero}
+          verificacaoId={contrato.verificacaoId}
         />
 
         {/* Form de assinatura (só se ainda não assinou) */}
@@ -353,6 +424,90 @@ export default function AssinarPage({
                   className="campo-input font-mono"
                 />
               </label>
+            )}
+
+            {signatario.exige.otpEmail && (
+              <div
+                className="flex flex-col gap-2.5 rounded-lg border border-border p-3"
+                style={
+                  otpOk ? { backgroundColor: "rgba(34,197,94,0.08)" } : undefined
+                }
+              >
+                <div className="flex items-center gap-2 text-sm font-medium text-secondary">
+                  <MailCheck
+                    size={16}
+                    style={{ color: otpOk ? "var(--success)" : "var(--brand)" }}
+                  />
+                  Verificação de e-mail
+                </div>
+                {otpOk ? (
+                  <div
+                    className="flex items-center gap-2 text-sm"
+                    style={{ color: "var(--success)" }}
+                  >
+                    <CheckCircle2 size={15} />
+                    E-mail verificado com sucesso.
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Para assinar, confirme que este e-mail é seu:{" "}
+                      <strong>{signatario.email ?? "—"}</strong>. Enviaremos um
+                      código de 6 dígitos.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void enviarOtp()}
+                        disabled={otpOcupado}
+                        className="btn btn-secondary text-sm"
+                      >
+                        {otpOcupado && !otpEnviado ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <MailCheck size={14} />
+                        )}
+                        {otpEnviado ? "Reenviar código" : "Enviar código"}
+                      </button>
+                      {otpEnviado && (
+                        <>
+                          <input
+                            value={otpCodigo}
+                            onChange={(e) =>
+                              setOtpCodigo(
+                                e.target.value.replace(/\D/g, "").slice(0, 6)
+                              )
+                            }
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="000000"
+                            className="campo-input font-mono w-28 text-center tracking-widest"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void verificarOtp()}
+                            disabled={otpOcupado || otpCodigo.length !== 6}
+                            className="btn text-sm disabled:opacity-50"
+                            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                          >
+                            {otpOcupado ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+                            Confirmar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {otpMsg && (
+                      <p className="text-xs" style={{ color: "var(--muted)" }}>
+                        {otpMsg}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
 
             {signatario.exige.assinaturaTela && (

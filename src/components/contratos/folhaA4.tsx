@@ -243,7 +243,8 @@ function renderRelatorio(
   assinaturas: AssinaturaInfo[],
   estilo: EstiloModelo,
   tr: (s: string) => string,
-  numeroContrato?: string
+  numeroContrato?: string,
+  verificacaoId?: string | null
 ) {
   const [r, g, b] = hexParaRgb(estilo.corTexto);
   const borda = `rgba(${r}, ${g}, ${b}, 0.14)`;
@@ -284,6 +285,12 @@ function renderRelatorio(
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {/* Selo público de autenticidade (mig 98) — impresso no papel. */}
+        {verificacaoId && (
+          <div style={{ fontSize: "8.5pt", opacity: 0.6, marginTop: "2pt" }}>
+            {`${tr("Verificação de autenticidade")}: ${verificacaoId} · gigscontrol.com/verificar`}
+          </div>
+        )}
       </div>
 
       {/* Um bloco por signatário */}
@@ -614,6 +621,7 @@ export function FolhaA4({
   transformarTexto,
   assinaturas,
   numeroContrato,
+  verificacaoId,
 }: {
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
@@ -623,6 +631,8 @@ export function FolhaA4({
   assinaturas?: AssinaturaInfo[];
   /** Nº do contrato, mostrado no cabeçalho do relatório de assinaturas. */
   numeroContrato?: string;
+  /** Código público GC-XXXX-XXXX (contrato finalizado) — impresso no relatório. */
+  verificacaoId?: string | null;
 }) {
   const tr = useT();
   const num = calcularNumeracao(secoes);
@@ -671,7 +681,13 @@ export function FolhaA4({
                 // marginTop (margem, não captada pelo html2canvas) só afasta o
                 // relatório na TELA — parece uma folha separada, não colado.
                 <div data-nova-pagina="1" style={{ marginTop: "40pt" }}>
-                  {renderRelatorio(assinaturas, estilo, tr, numeroContrato)}
+                  {renderRelatorio(
+                    assinaturas,
+                    estilo,
+                    tr,
+                    numeroContrato,
+                    verificacaoId
+                  )}
                 </div>
               )}
           </div>

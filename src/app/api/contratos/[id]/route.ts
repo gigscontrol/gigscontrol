@@ -5,6 +5,7 @@ import {
   atualizarContratoPorId,
   removerContratoPorId,
   resolverEscopoContrato,
+  ContratoImutavelError,
 } from "@/lib/services/contratos.service";
 import {
   podeVerContrato,
@@ -137,6 +138,9 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
     return NextResponse.json({ contrato });
   } catch (e) {
+    if (e instanceof ContratoImutavelError) {
+      return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
     return respostaDeErro(e, "Falha ao atualizar contrato.");
   }
 }

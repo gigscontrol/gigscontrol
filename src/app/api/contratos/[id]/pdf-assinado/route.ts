@@ -9,6 +9,7 @@ import { podeVerContrato } from "@/lib/api/permissoes";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import { baixarPdfContrato } from "@/lib/db/storage-pdf";
 import { carimbarPdf } from "@/lib/contratos/carimbarPdf";
+import { baixarPdfFinal } from "@/lib/services/contratoPdfFinal.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export const runtime = "nodejs";
@@ -43,6 +44,25 @@ export async function GET(_request: Request, { params }: RouteCtx) {
       return NextResponse.json({ erro: "Contrato não encontrado." }, { status: 404 });
 
     const admin = criarClienteAdmin();
+
+    // Contrato FINALIZADO (todos assinaram) → serve o PDF SELADO (mig 98):
+    // bytes congelados no Storage cujo SHA-256 é o pdf_final_hash publicado na
+    // página /verificar. Sela na primeira chamada se ainda não selado.
+    if (contrato.status === "assinado") {
+      const selado = await baixarPdfFinal(admin, params.id).catch(() => null);
+      if (selado) {
+        return new NextResponse(selado.bytes, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="contrato-${contrato.numero}.pdf"`,
+            "Cache-Control": "no-store",
+            "X-Documento-Sha256": selado.hash,
+          },
+        });
+      }
+    }
+
     const original = await baixarPdfContrato(admin, layout.path);
     const signatarios = await listarSignatariosDoContrato(admin, params.id);
     const bytes = await carimbarPdf(
@@ -61,7 +81,10 @@ export async function GET(_request: Request, { params }: RouteCtx) {
         geolocalizacao: s.geolocalizacao,
         assinadoEm: s.assinadoEm,
       })),
-      { numero: contrato.numero }
+      {
+        numero: contrato.numero,
+        verificacaoId: contrato.verificacaoId ?? undefined,
+      }
     );
     // Cópia num ArrayBuffer "puro" (o Uint8Array do pdf-lib é ArrayBufferLike,
     // que o tipo de BodyInit recusa).

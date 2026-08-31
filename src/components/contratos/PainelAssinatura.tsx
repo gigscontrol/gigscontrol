@@ -27,6 +27,7 @@ import {
   MessageCircle,
   Loader2,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "./folhaA4";
 import {
@@ -55,6 +56,7 @@ const ACCENT = "#3D7BFF";
 type LinhaForm = {
   nome: string;
   email: string;
+  telefone: string;
   papel: string;
   exige: ExigenciasSignatario;
 };
@@ -73,6 +75,11 @@ const EXIGENCIAS_OPCIONAIS: {
   {
     chave: "facial",
     rotulo: "Verificação facial avançada (selfie)",
+    disponivel: true,
+  },
+  {
+    chave: "otpEmail",
+    rotulo: "Verificação do e-mail por código (OTP)",
     disponivel: true,
   },
 ];
@@ -124,12 +131,14 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
       {
         nome: venda?.contratanteNome ?? "",
         email: "",
+        telefone: "",
         papel: "Contratante",
         exige: { ...EXIGENCIAS_PADRAO },
       },
       {
         nome: artista?.name ?? "",
         email: "",
+        telefone: "",
         papel: "Contratado",
         exige: { ...EXIGENCIAS_PADRAO },
       },
@@ -173,7 +182,10 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
     setLinhas((prev) =>
       prev.length >= MAX_SIGNATARIOS
         ? prev
-        : [...prev, { nome: "", email: "", papel: "", exige: { ...EXIGENCIAS_PADRAO } }]
+        : [
+            ...prev,
+            { nome: "", email: "", telefone: "", papel: "", exige: { ...EXIGENCIAS_PADRAO } },
+          ]
     );
   }
 
@@ -197,12 +209,18 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
       setErroForm(t("Cada signatário precisa de um nome."));
       return;
     }
+    // OTP por e-mail sem e-mail não tem como funcionar — barra antes do POST.
+    if (linhas.some((l) => l.exige.otpEmail && !l.email.trim())) {
+      setErroForm(t("A verificação por código (OTP) exige o e-mail do signatário."));
+      return;
+    }
     setSalvando(true);
     try {
       // assinaturaTela + cpfCnpj sempre (do padrão); foto/selfie conforme marcado.
       const rows: EntradaSignatarioUI[] = linhas.map((l) => ({
         nome: l.nome.trim(),
         email: l.email.trim(),
+        telefone: l.telefone.trim(),
         papel: l.papel.trim(),
         exige: { ...EXIGENCIAS_PADRAO, ...l.exige },
       }));
@@ -312,6 +330,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           conteudoRef={conteudoRef}
           assinaturas={assinaturasFolha}
           numeroContrato={contrato.numero}
+          verificacaoId={contrato.verificacaoId}
         />
       </div>
     </div>
@@ -326,7 +345,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           {linhas.map((linha, idx) => (
             <div key={idx} className="rounded-md border border-border p-3 bg-elevated">
               <div className="flex items-start gap-2">
-                <div className="grid flex-1 gap-2 sm:grid-cols-3">
+                <div className="grid flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="stat-label mb-1 block">{t("Nome")}</label>
                     <input
@@ -345,6 +364,16 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                       value={linha.email}
                       onChange={(e) => alterarLinha(idx, { email: e.target.value })}
                       placeholder={t("email@exemplo.com")}
+                    />
+                  </div>
+                  <div>
+                    <label className="stat-label mb-1 block">{t("Telefone")}</label>
+                    <input
+                      type="tel"
+                      className="campo-input"
+                      value={linha.telefone}
+                      onChange={(e) => alterarLinha(idx, { telefone: e.target.value })}
+                      placeholder="+55 11 90000-0000"
                     />
                   </div>
                   <div>
@@ -475,6 +504,32 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   function renderLista() {
     return (
       <div className="flex flex-col gap-4">
+        {/* Selo público de autenticidade — existe após TODOS assinarem. */}
+        {contrato.verificacaoId && (
+          <div
+            className="flex items-start gap-2.5 rounded-md border border-border p-3 text-sm"
+            style={{ backgroundColor: "rgba(34,197,94,0.08)" }}
+          >
+            <ShieldCheck size={18} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
+            <div className="min-w-0">
+              <div className="font-medium text-primary">
+                {t("Contrato finalizado e selado")}
+              </div>
+              <div className="text-xs text-muted mt-0.5">
+                {t("Código público de verificação:")}{" "}
+                <a
+                  href={`/verificar/${contrato.verificacaoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono font-semibold underline"
+                  style={{ color: "var(--brand)" }}
+                >
+                  {contrato.verificacaoId}
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           {signatarios.map((s) => (
             <div key={s.id} className="rounded-md border border-border p-3">

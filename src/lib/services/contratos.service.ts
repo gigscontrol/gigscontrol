@@ -19,6 +19,9 @@ import { getPlano, type PlanoId } from "@/lib/planos";
 import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { verTodosContratos, podeVerContrato } from "@/lib/api/permissoes";
+import { hashConteudoContrato } from "@/lib/contratos/integridade";
+import { registrarEventoContrato } from "@/lib/services/contratoEventos.service";
+import { listarPorContrato } from "@/lib/repositories/contratoSignatarios.repo";
 
 /**
  * Resolve o ARTISTA de um contrato pela venda vinculada (contrato → venda →
@@ -47,6 +50,20 @@ export class LimiteContratosError extends Error {
       `Limite de ${limite} contratos no mês atingido no plano ${plano}. Faça upgrade ou aguarde o próximo mês.`
     );
     this.name = "LimiteContratosError";
+  }
+}
+
+/**
+ * Tentativa de alterar o CONTEÚDO de um contrato já assinado/finalizado
+ * (mig 98 — detecção de alteração). A rota traduz pra HTTP 409.
+ */
+export class ContratoImutavelError extends Error {
+  status = 409;
+  constructor() {
+    super(
+      "Este contrato já tem assinatura registrada — o conteúdo não pode mais ser alterado. Cancele-o e gere um novo se precisar mudar algo."
+    );
+    this.name = "ContratoImutavelError";
   }
 }
 
@@ -130,6 +147,13 @@ export async function criarContratoNoWorkspace(
   if (!escrita.data_emissao)
     escrita.data_emissao = new Date().toISOString().slice(0, 10);
   const row = await repoCriar(supabase, workspaceId, escrita);
+  // Trilha (mig 98): nascimento do contrato — primeiro elo da cadeia.
+  await registrarEventoContrato({
+    contratoId: row.id,
+    workspaceId,
+    tipo: "criado",
+    detalhes: { numero: row.numero, criadoPor: criadoPor ?? null },
+  });
   return rowParaContrato(row);
 }
 
@@ -138,7 +162,66 @@ export async function atualizarContratoPorId(
   id: string,
   input: ContratoUpdateInput
 ): Promise<Contrato> {
-  const row = await repoAtualizar(supabase, id, entradaParaEscrita(input));
+  const escrita = entradaParaEscrita(input);
+  const existente = await repoBuscar(supabase, id);
+
+  // TRAVA DE CONTEÚDO (mig 98 — integridade): comparação por hash CANÔNICO
+  // (CRLF/espaços invisíveis não contam como mudança).
+  const mudaCorpo =
+    existente !== null &&
+    escrita.corpo_preenchido !== undefined &&
+    hashConteudoContrato(escrita.corpo_preenchido ?? "") !==
+      hashConteudoContrato(existente.corpo_preenchido ?? "");
+
+  if (mudaCorpo && existente) {
+    // Já finalizado/assinado → imutável. Com assinatura PARCIAL idem: mudar o
+    // texto depois de alguém assinar invalidaria o que essa pessoa assinou.
+    if (existente.status === "assinado" || existente.finalizado_em) {
+      throw new ContratoImutavelError();
+    }
+    if (existente.status === "enviado") {
+      const sigs = await listarPorContrato(supabase, id);
+      if (sigs.some((s) => s.status === "assinado")) {
+        throw new ContratoImutavelError();
+      }
+    }
+    // Pré-assinatura, mas JÁ ENVIADO (tem hash selado): versiona + re-sela +
+    // registra a alteração na trilha. Rascunho nunca enviado edita livre.
+    if (existente.conteudo_hash) {
+      escrita.conteudo_hash = hashConteudoContrato(escrita.corpo_preenchido ?? "");
+      escrita.conteudo_versao = (existente.conteudo_versao ?? 1) + 1;
+    }
+  }
+
+  const row = await repoAtualizar(supabase, id, escrita);
+
+  // Trilha só DEPOIS do update confirmado (não registra alteração que falhou).
+  if (existente && escrita.conteudo_hash !== undefined) {
+    await registrarEventoContrato({
+      contratoId: id,
+      workspaceId: existente.workspace_id,
+      tipo: "conteudo_alterado",
+      detalhes: {
+        hashAnterior: existente.conteudo_hash,
+        hash: escrita.conteudo_hash,
+        versao: escrita.conteudo_versao,
+      },
+    });
+  }
+
+  // Cancelamento pela agência → evento na trilha (best-effort).
+  if (
+    existente &&
+    escrita.status === "cancelado" &&
+    existente.status !== "cancelado"
+  ) {
+    await registrarEventoContrato({
+      contratoId: id,
+      workspaceId: existente.workspace_id,
+      tipo: "cancelado",
+      detalhes: { statusAnterior: existente.status },
+    });
+  }
   return rowParaContrato(row);
 }
 
