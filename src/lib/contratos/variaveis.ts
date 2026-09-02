@@ -168,6 +168,33 @@ const APELIDOS_TOKEN: Record<string, string> = {
   "data hoje": "data_hoje",
 };
 
+/** Todos os tokens `{{...}}` presentes num texto (crus, como digitados). */
+export function extrairTokens(texto: string): string[] {
+  const out: string[] = [];
+  const re = /\{\{\s*([^}]+?)\s*\}\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(texto))) out.push(m[1].trim());
+  return out;
+}
+
+/**
+ * Resolve um token digitado pro nome CANÔNICO do catálogo — o MESMO matching
+ * de `preencher` (exato → normalizado → apelido). null = fora do catálogo.
+ * Usado pra validar quais campos o modelo realmente exige.
+ */
+export function resolverTokenCanonico(
+  token: string,
+  chaves: string[]
+): string | null {
+  const bruto = token.trim();
+  if (chaves.includes(bruto)) return bruto;
+  const norma = normalizarToken(bruto);
+  for (const c of chaves) if (normalizarToken(c) === norma) return c;
+  const canonico = APELIDOS_TOKEN[norma];
+  if (canonico && chaves.includes(canonico)) return canonico;
+  return null;
+}
+
 /**
  * Substitui todas as ocorrências de `{{ token }}` (com espaços opcionais
  * dentro das chaves) pelos valores em `valores`. Se o token não estiver em
