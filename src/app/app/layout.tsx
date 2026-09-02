@@ -793,7 +793,10 @@ function AppRoot() {
             />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
-            <NovoContratoPage vendaInicialId={contratoVendaInicialId} />
+            <NovoContratoPage
+              vendaInicialId={contratoVendaInicialId}
+              selectedArtistas={selectedArtistas}
+            />
           )}
           {activeTab === "contratos" && activePage === "contratos-modelos" && (
             <ModelosPage />
