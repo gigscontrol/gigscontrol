@@ -1,4 +1,5 @@
 import { TEXTO_TRANSLADO, type LogisticaSelecao } from "@/types";
+import { formatarQuantidade } from "@/lib/contratos/extenso";
 
 /** Código IATA normalizado: 3 letras maiúsculas, ou "" se vazio. */
 export function iata(v?: string): string {
@@ -23,24 +24,29 @@ function rota(origem?: string, destino?: string): string {
  *
  * COMPAT: orçamentos antigos só têm `aereaQtd` (ida+volta combinada). Só caímos
  * nessa linha legada quando NÃO há aérea v2 (senão duplicaria).
+ *
+ * Quantidades no formato "de contrato" — "02 (duas) …" — em TODAS as
+ * superfícies (pedido do dono: nada de "2x"). Passagem/bagagem/logística
+ * são femininos → extenso no feminino.
  */
 export function linhasLogistica(l: LogisticaSelecao): string[] {
+  const q = (n: number): string => formatarQuantidade(n, "pt", "f");
   const linhas: string[] = [];
 
   const ida = l.aereaIdaQtd ?? 0;
   const volta = l.aereaVoltaQtd ?? 0;
   const temAereaV2 = ida > 0 || volta > 0;
   if (ida > 0)
-    linhas.push(`${ida}x Passagem aérea ida${rota(l.aereaIdaOrigem, l.aereaIdaDestino)}`);
+    linhas.push(`${q(ida)} Passagem aérea ida${rota(l.aereaIdaOrigem, l.aereaIdaDestino)}`);
   if (volta > 0)
-    linhas.push(`${volta}x Passagem aérea volta${rota(l.aereaVoltaOrigem, l.aereaVoltaDestino)}`);
+    linhas.push(`${q(volta)} Passagem aérea volta${rota(l.aereaVoltaOrigem, l.aereaVoltaDestino)}`);
   if (!temAereaV2 && (l.aereaQtd ?? 0) > 0)
-    linhas.push(`${l.aereaQtd}x Logística Aérea (Ida e Volta)`);
+    linhas.push(`${q(l.aereaQtd)} Logística Aérea (Ida e Volta)`);
 
   const bagD = l.bagagemDespachadaQtd ?? 0;
   const bagE = l.bagagemEspecialQtd ?? 0;
-  if (bagD > 0) linhas.push(`${bagD}x Bagagem despachada extra`);
-  if (bagE > 0) linhas.push(`${bagE}x Bagagem especial extra`);
+  if (bagD > 0) linhas.push(`${q(bagD)} Bagagem despachada extra`);
+  if (bagE > 0) linhas.push(`${q(bagE)} Bagagem especial extra`);
 
   if (l.transladoTerrestre) linhas.push(TEXTO_TRANSLADO);
   return linhas;

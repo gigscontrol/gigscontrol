@@ -53,9 +53,9 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
       agencia: "GIGS",
       numero: "CTR-1",
     });
-    expect(v["rider de camarim"]).toBe("Whisky x1, Água x12");
-    expect(v["rider de efeitos"]).toBe("CO2 x4");
-    expect(v.hospedagem).toBe("Diária hotel 4 estrelas x1");
+    expect(v["rider de camarim"]).toBe("01 (um) Whisky, 12 (doze) Água");
+    expect(v["rider de efeitos"]).toBe("04 (quatro) CO2");
+    expect(v.hospedagem).toBe("01 (um) Diária hotel 4 estrelas");
     expect(v.logistica).toContain("Translado Terrestre");
   });
 
@@ -85,6 +85,6 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
       agencia: "GIGS",
       numero: "CTR-1",
     });
-    expect(comSelecao["rider tecnico"]).toBe("DJM-900 x1");
+    expect(comSelecao["rider tecnico"]).toBe("01 (um) DJM-900");
   });
 });

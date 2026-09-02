@@ -19,7 +19,7 @@ import type {
 } from "@/types";
 import { linhasLogistica, temLogistica } from "@/lib/logisticaTexto";
 import { preencher } from "./variaveis";
-import { cachePorExtenso, dataPorExtenso } from "./extenso";
+import { cachePorExtenso, dataPorExtenso, formatarQuantidade } from "./extenso";
 import { formatarMoeda } from "@/lib/formatters";
 import { configDocumento } from "@/lib/data/documentos";
 import { ehEmailInterno } from "@/lib/email-interno";
@@ -28,11 +28,14 @@ function juntarRider(itens: string[] | undefined): string {
   return (itens ?? []).filter((s) => s.trim()).join(", ");
 }
 
-/** Itens SELECIONADOS na venda (qtd > 0) → "Whisky x1, Água x12". */
-function juntarSelecao(itens: ItemQuantidade[] | undefined): string {
+/** Itens SELECIONADOS na venda (qtd > 0) → "01 (um) Whisky, 12 (doze) Água". */
+function juntarSelecao(
+  itens: ItemQuantidade[] | undefined,
+  idioma: IdiomaModelo
+): string {
   return (itens ?? [])
     .filter((i) => i.qtd > 0 && i.nome.trim())
-    .map((i) => `${i.nome} x${i.qtd}`)
+    .map((i) => `${formatarQuantidade(i.qtd, idioma)} ${i.nome}`)
     .join(", ");
 }
 
@@ -186,14 +189,14 @@ export function valoresDeVenda(opts: {
     // Riders/hospedagem: o que foi SELECIONADO NA VENDA (qtd > 0). Nada
     // selecionado cai no texto de praxe do idioma do modelo.
     "rider de camarim":
-      juntarSelecao(venda.camarim) || FALLBACK_CONTEUDO[idioma].camarim,
+      juntarSelecao(venda.camarim, idioma) || FALLBACK_CONTEUDO[idioma].camarim,
     "rider de efeitos":
-      juntarSelecao(venda.efeitos) || FALLBACK_CONTEUDO[idioma].efeitos,
+      juntarSelecao(venda.efeitos, idioma) || FALLBACK_CONTEUDO[idioma].efeitos,
     // Técnico: seleção da venda; venda antiga sem snapshot cai no cadastro.
     "rider tecnico":
-      juntarSelecao(venda.tecnico) || juntarRider(artista?.riderTecnico),
+      juntarSelecao(venda.tecnico, idioma) || juntarRider(artista?.riderTecnico),
     hospedagem:
-      juntarSelecao(venda.hotel) || FALLBACK_CONTEUDO[idioma].hospedagem,
+      juntarSelecao(venda.hotel, idioma) || FALLBACK_CONTEUDO[idioma].hospedagem,
     // Logística selecionada na venda (aéreas/bagagens/translado) — nada
     // marcado = já inclusa no cachê (mesma regra do resto do app).
     logistica: venda.logistica && temLogistica(venda.logistica)

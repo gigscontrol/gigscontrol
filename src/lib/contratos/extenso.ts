@@ -316,6 +316,51 @@ function inteiroIt(n: number): string {
 // ---------------- API pública ----------------
 
 /**
+ * Flexão de gênero do ÚLTIMO numeral (pra substantivo feminino conhecido:
+ * "02 (duas) Passagens…"). Só mexe na palavra final — cobre compostos
+ * ("vinte e um" → "vinte e uma"). Itens de rider (texto livre, gênero
+ * desconhecido) ficam no masculino invariável — praxe de listas.
+ */
+const FEMININO: Record<IdiomaModelo, [RegExp, string][]> = {
+  pt: [[/\bum$/, "uma"], [/\bdois$/, "duas"]],
+  en: [],
+  es: [[/\bun$/, "una"], [/\bveintiún$/, "veintiuna"]],
+  fr: [[/\bun$/, "une"]],
+  de: [[/\bein$/, "eine"]],
+  it: [[/\buno$/, "una"]],
+};
+
+/** Quantidade (1..999) por extenso no idioma. Fora do alcance → "". */
+export function quantidadePorExtenso(
+  n: number,
+  idioma: IdiomaModelo = "pt",
+  genero: "m" | "f" = "m"
+): string {
+  if (!Number.isInteger(n) || n < 0 || n > 999) return "";
+  const r = IDIOMA_REGRA[idioma] ?? IDIOMA_REGRA.pt;
+  let s = r.n(n);
+  if (genero === "f") {
+    for (const [re, sub] of FEMININO[idioma] ?? []) s = s.replace(re, sub);
+  }
+  return s;
+}
+
+/**
+ * Quantidade no formato "de contrato": `01 (um)`, `02 (duas)`, `12 (doze)`.
+ * Usado nos riders/hospedagem do contrato e nos textos de copiar/colar
+ * (orçamento e fechamento) — pedido do dono: nada de "1x".
+ */
+export function formatarQuantidade(
+  n: number,
+  idioma: IdiomaModelo = "pt",
+  genero: "m" | "f" = "m"
+): string {
+  const extenso = quantidadePorExtenso(n, idioma, genero);
+  const digitos = String(n).padStart(2, "0");
+  return extenso ? `${digitos} (${extenso})` : digitos;
+}
+
+/**
  * Regra POR IDIOMA (independe da moeda): numerador por extenso, conector entre
  * inteiro e centavos, e a preposição do milhão exato ("um milhão DE dólares"
  * pt/es/fr, "di" it; de/en não usam).
