@@ -51,11 +51,14 @@ const OCULTOS = new Set(["numero_contrato"]);
 
 export default function NovoContratoPage({
   vendaInicialId = null,
+  selectedArtistas = [],
 }: {
   /** Venda já selecionada ao abrir a tela — vem do alerta "Shows sem contrato"
    *  da Agência ("Fazer contrato"), pro admin não ter que reencontrar a venda
    *  no select. Só semeia o estado inicial; depois o usuário manda no campo. */
   vendaInicialId?: string | null;
+  /** Artistas marcados na sidebar — vendas de artista desmarcado somem do select. */
+  selectedArtistas?: string[];
 } = {}) {
   const t = useT();
   const { modelos } = useModelos();
@@ -115,6 +118,31 @@ export default function NovoContratoPage({
     () => vendas.find((v) => v.id === vendaId) ?? null,
     [vendas, vendaId]
   );
+
+  // Vendas do SELECT: (1) só as de artista que o usuário pode gerar contrato
+  // (permissão por artista — espelha o gate da API); (2) só artistas MARCADOS
+  // na sidebar (desmarcou → some, mesma regra do Histórico de Vendas; venda
+  // sem artista segue visível); (3) em ordem de DATA DO SHOW: próximos shows
+  // primeiro (a partir de hoje, crescente), depois os passados (mais recente
+  // antes). A venda já selecionada nunca some (senão o select órfã).
+  const vendasDoSelect = useMemo(() => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const filtradas = vendas.filter((v) => {
+      if (v.id === vendaId) return true;
+      if (v.artistaId && !selectedArtistas.includes(v.artistaId)) return false;
+      return podeUI(v.artistaId || null, "contratos.criar");
+    });
+    const chave = (d: string | undefined | null) => d || "9999-12-31";
+    return filtradas.sort((a, b) => {
+      const da = chave(a.dataShow);
+      const db = chave(b.dataShow);
+      const fa = da >= hoje;
+      const fb = db >= hoje;
+      if (fa !== fb) return fa ? -1 : 1; // futuros antes dos passados
+      if (da !== db) return fa ? da.localeCompare(db) : db.localeCompare(da);
+      return (b.numero || "").localeCompare(a.numero || "");
+    });
+  }, [vendas, vendaId, selectedArtistas, podeUI]);
 
   // Idioma do modelo (do JSON de `corpo`) — dirige o A4 na geração: fallback
   // "Não informado"/"Not provided" + data/cachê por extenso. Sem modelo → "pt".
@@ -432,7 +460,7 @@ export default function NovoContratoPage({
                   className="campo-input"
                 >
                   <option value="">{t("Sem venda (preencher manual)")}</option>
-                  {vendas.map((v) => {
+                  {vendasDoSelect.map((v) => {
                     const artista = artistas.find((a) => a.id === v.artistaId);
                     return (
                       <option key={v.id} value={v.id}>
