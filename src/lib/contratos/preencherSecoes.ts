@@ -29,6 +29,21 @@ function juntarRider(itens: string[] | undefined): string {
   return (itens ?? []).filter((s) => s.trim()).join(", ");
 }
 
+/**
+ * CPF (11 dígitos) / CNPJ (14) com máscara. Só mascara quando o valor é
+ * numérico no padrão BR — documento estrangeiro/atípico passa intacto.
+ */
+function mascararDocBr(doc: string | null | undefined): string {
+  const v = (doc ?? "").trim();
+  if (!/^[\d.\-/ ]+$/.test(v)) return v;
+  const d = v.replace(/\D/g, "");
+  if (d.length === 11)
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  if (d.length === 14)
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  return v;
+}
+
 /** Itens SELECIONADOS na venda (qtd > 0) → "01 (um) Whisky, 12 (doze) Água". */
 function juntarSelecao(
   itens: ItemQuantidade[] | undefined,
@@ -161,8 +176,16 @@ export function valoresDeVenda(opts: {
     artista_telefone: artista?.telefone ?? "",
     // Contratante (já vem denormalizado na venda)
     contratante: venda.contratanteNome ?? "",
-    documento: venda.contratanteDocumento ?? "",
-    razao_social: venda.contratanteRazaoSocial || contratante?.razaoSocial || "",
+    // CPF/CNPJ com máscara (109.293.599-17) — documento estrangeiro/fora do
+    // padrão passa como está.
+    documento: mascararDocBr(venda.contratanteDocumento),
+    // Sem razão social (pessoa física) → cai no NOME do contratante, nunca
+    // num "Não informado" no meio da qualificação das partes.
+    razao_social:
+      venda.contratanteRazaoSocial ||
+      contratante?.razaoSocial ||
+      venda.contratanteNome ||
+      "",
     email: venda.contratanteEmail ?? "",
     endereco: venda.contratanteEndereco ?? "",
     telefone: venda.contratanteTelefone ?? "",
@@ -271,7 +294,15 @@ export function preencherSecoes(
         // valor resolvido — não muda quando o documento for reaberto).
         return { ...s, local: p(s.local), data: p("{{data_hoje}}") };
       case "assinaturas":
-        return s; // testemunhas são manuais — nada a substituir
+        // Nomes/documento dos blocos RESOLVIDOS aqui (o render do contrato
+        // gerado não tem transformarTexto — sem isto os tokens saíam crus
+        // nas linhas de assinatura). Testemunhas seguem manuais.
+        return {
+          ...s,
+          contratanteNome: p("{{contratante}}"),
+          contratanteDoc: p("{{documento}}"),
+          contratadoNome: p("{{artista}}"),
+        };
     }
   });
 }

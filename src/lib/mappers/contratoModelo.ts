@@ -86,6 +86,14 @@ export type SecaoAssinaturas = {
    * contratado vêm automáticos dos dados do contrato.
    */
   testemunhas: Testemunha[];
+  /**
+   * Nomes/documento RESOLVIDOS na geração (preencherSecoes) — o render do
+   * contrato gerado usa estes; sem eles (modelo/preview), cai nos tokens
+   * {{contratante}}/{{documento}}/{{artista}} via transformarTexto.
+   */
+  contratanteNome?: string;
+  contratanteDoc?: string;
+  contratadoNome?: string;
 };
 
 export type SecaoAnexo = {
@@ -293,7 +301,21 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
                 documento: texto(t.documento),
               }))
           : [];
-        out.push({ id, tipo: "assinaturas", testemunhas });
+        out.push({
+          id,
+          tipo: "assinaturas",
+          testemunhas,
+          // Nomes resolvidos na geração (snapshot de contrato); ausentes no modelo.
+          ...(typeof o.contratanteNome === "string" && o.contratanteNome
+            ? { contratanteNome: o.contratanteNome }
+            : {}),
+          ...(typeof o.contratanteDoc === "string" && o.contratanteDoc
+            ? { contratanteDoc: o.contratanteDoc }
+            : {}),
+          ...(typeof o.contratadoNome === "string" && o.contratadoNome
+            ? { contratadoNome: o.contratadoNome }
+            : {}),
+        });
         break;
       }
       case "anexo":
