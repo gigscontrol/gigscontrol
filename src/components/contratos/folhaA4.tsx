@@ -800,25 +800,28 @@ function renderSecao(
                   style={{ marginTop: idx > 0 ? "6pt" : undefined }}
                 />
               ) : item.tipo === "subclausula" ? (
-                <CorpoRico
-                  key={item.id}
-                  texto={ex(item.texto)}
-                  prefixo={<strong>{num.itens[item.id]}</strong>}
-                />
-              ) : (
-                // Parágrafo: "Parágrafo único." / "§ 1º." em negrito+itálico.
+                // Sub-cláusula também escreve "CLÁUSULA 1.1." na frente.
                 <CorpoRico
                   key={item.id}
                   texto={ex(item.texto)}
                   prefixo={
                     <strong>
-                      <em>
-                        {num.paragrafos[item.id] === "Parágrafo único"
-                          ? `${tr("Parágrafo único")}.`
-                          : `${num.paragrafos[item.id] ?? "§"}.`}
-                      </em>
+                      {tr("CLÁUSULA")} {num.itens[item.id]}.
                     </strong>
                   }
+                />
+              ) : (
+                // Parágrafo INTEIRO em itálico (mesma fonte do corpo), rótulo
+                // "Parágrafo único." / "§ 1º." sem negrito — pedido do dono.
+                <CorpoRico
+                  key={item.id}
+                  texto={ex(item.texto)}
+                  prefixo={
+                    num.paragrafos[item.id] === "Parágrafo único"
+                      ? `${tr("Parágrafo único")}.`
+                      : `${num.paragrafos[item.id] ?? "§"}.`
+                  }
+                  style={{ fontStyle: "italic" }}
                 />
               )
             )}
