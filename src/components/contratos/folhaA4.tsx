@@ -830,13 +830,24 @@ function renderSecao(
       );
 
     case "assinaturas": {
+      // Nomes: campos RESOLVIDOS na geração (secao.contratanteNome etc.);
+      // no preview do modelo caem nos tokens via ex. Token que sobreviver
+      // cru (contrato antigo, gerado antes do fix) vira vazio — linha de
+      // assinatura sem nome é melhor que "{{contratante}}" impresso.
+      const semTokenCru = (s: string | undefined): string => {
+        const v = (s ?? "").trim();
+        return /^\{\{.+\}\}$/.test(v) ? "" : v;
+      };
       const blocos: { nome: string; doc?: string; papel: string }[] = [
         {
-          nome: ex("{{contratante}}"),
-          doc: ex("{{documento}}"),
+          nome: semTokenCru(secao.contratanteNome || ex("{{contratante}}")),
+          doc: semTokenCru(secao.contratanteDoc || ex("{{documento}}")),
           papel: tr("CONTRATANTE"),
         },
-        { nome: ex("{{artista}}"), papel: tr("CONTRATADO") },
+        {
+          nome: semTokenCru(secao.contratadoNome || ex("{{artista}}")),
+          papel: tr("CONTRATADO"),
+        },
       ];
       secao.testemunhas.forEach((testemunha, i) => {
         blocos.push({

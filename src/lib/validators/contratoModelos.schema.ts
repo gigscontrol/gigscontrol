@@ -40,6 +40,10 @@ const secaoSchema = z.discriminatedUnion("tipo", [
         z.object({ id: z.string(), nome: z.string(), documento: z.string() })
       )
       .max(2),
+    // Resolvidos na geração (snapshot do contrato) — ausentes no modelo.
+    contratanteNome: z.string().optional(),
+    contratanteDoc: z.string().optional(),
+    contratadoNome: z.string().optional(),
   }),
   z.object({
     id: z.string(),

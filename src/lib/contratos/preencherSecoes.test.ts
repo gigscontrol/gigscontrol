@@ -23,6 +23,27 @@ const artista = {
   riderTecnico: ["CDJ-3000 x2"],
 } as unknown as Artista;
 
+describe("preencherSecoes — seção Assinaturas (nomes resolvidos na geração)", () => {
+  it("grava contratante/documento/artista resolvidos dentro da seção", () => {
+    const secoes: SecaoModelo[] = [
+      { id: "a", tipo: "assinaturas", testemunhas: [] },
+    ];
+    const [s] = preencherSecoes(secoes, {
+      contratante: "Marcos Lima",
+      documento: "109.293.599-17",
+      artista: "Maninhoo",
+    });
+    expect(s).toEqual({
+      id: "a",
+      tipo: "assinaturas",
+      testemunhas: [],
+      contratanteNome: "Marcos Lima",
+      contratanteDoc: "109.293.599-17",
+      contratadoNome: "Maninhoo",
+    });
+  });
+});
+
 describe("preencherSecoes — seção Local e data", () => {
   it("resolve o local (com variáveis) e congela a data do dia", () => {
     const secoes: SecaoModelo[] = [
@@ -42,6 +63,20 @@ describe("preencherSecoes — seção Local e data", () => {
 });
 
 describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
+  it("documento do contratante ganha máscara; razão social vazia cai no nome", () => {
+    const v = valoresDeVenda({
+      venda: vendaBase({
+        contratanteNome: "Matheus Henrique",
+        contratanteDocumento: "10929359917",
+      } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(v.documento).toBe("109.293.599-17");
+    expect(v.razao_social).toBe("Matheus Henrique");
+  });
+
   it("nada selecionado na venda → textos de praxe", () => {
     const v = valoresDeVenda({
       venda: vendaBase(),
