@@ -572,17 +572,32 @@ function renderSecao(
     case "clausula":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>
-            {tr("CLÁUSULA")} {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
-          </h3>
+          {/* Título da SEÇÃO (opcional) — as cláusulas vivem nos itens. */}
+          {secao.titulo.trim() && (
+            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
-            {secao.itens.map((item) => (
-              <div key={item.id} style={corpo}>
-                {item.tipo === "subclausula"
-                  ? `${num.itens[item.id]} ${ex(item.texto)}`
-                  : ex(item.texto)}
-              </div>
-            ))}
+            {secao.itens.map((item, idx) =>
+              item.tipo === "clausula" ? (
+                <h3
+                  key={item.id}
+                  style={{
+                    ...estiloTitulo(estilo.corTitulo),
+                    // Respiro entre uma cláusula e a anterior (não na 1ª).
+                    marginTop: idx > 0 ? "12pt" : undefined,
+                  }}
+                >
+                  {tr("CLÁUSULA")} {num.clausulas[item.id]}ª
+                  {item.texto.trim() ? ` — ${ex(item.texto)}` : ""}
+                </h3>
+              ) : (
+                <div key={item.id} style={corpo}>
+                  {item.tipo === "subclausula"
+                    ? `${num.itens[item.id]} ${ex(item.texto)}`
+                    : ex(item.texto)}
+                </div>
+              )
+            )}
           </div>
         </div>
       );
