@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarClock, Check, Loader2, Plug, Unplug } from "lucide-react";
+import { CalendarClock, CalendarPlus, Check, Loader2, Plug, Unplug } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 import { useConfirmar } from "../ConfirmarModal";
@@ -27,6 +27,9 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
   const [email, setEmail] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Backfill: envia os shows futuros criados ANTES da conexão.
+  const [sincronizando, setSincronizando] = useState(false);
+  const [msgSync, setMsgSync] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setEstado("carregando");
@@ -72,6 +75,35 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
     } catch (e) {
       setErro((e as Error).message);
       setOcupado(false);
+    }
+  }
+
+  /** Backfill dos shows FUTUROS sem evento (criados antes de conectar). */
+  async function enviarShowsFuturos() {
+    setSincronizando(true);
+    setErro(null);
+    setMsgSync(null);
+    try {
+      const res = await fetch("/api/google/backfill", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistaId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d?.erro ?? t("Falha ao sincronizar a agenda."));
+      if ((d.criados ?? 0) > 0) {
+        setMsgSync(
+          t("{n} shows enviados para o Google Agenda.", { n: d.criados }) +
+            (d.falhas ? ` (${d.falhas} ${t("falharam")})` : "")
+        );
+      } else {
+        setMsgSync(t("Nenhum show futuro pendente — a agenda já está em dia."));
+      }
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setSincronizando(false);
     }
   }
 
@@ -137,8 +169,30 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
           {isAdmin && (
             <button
               type="button"
+              onClick={enviarShowsFuturos}
+              disabled={sincronizando || ocupado}
+              className="inline-flex items-center gap-1.5 self-start text-xs font-medium disabled:opacity-50"
+              style={{ color: "var(--brand)" }}
+              title={t("Cria na agenda os shows futuros que existiam antes de conectar a conta.")}
+            >
+              {sincronizando ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <CalendarPlus size={13} />
+              )}
+              {t("Enviar shows futuros para a agenda")}
+            </button>
+          )}
+          {msgSync && (
+            <p className="text-xs" style={{ color: "var(--success)" }}>
+              {msgSync}
+            </p>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
               onClick={desconectar}
-              disabled={ocupado}
+              disabled={ocupado || sincronizando}
               className="inline-flex items-center gap-1.5 self-start text-xs font-medium disabled:opacity-50"
               style={{ color: "var(--danger)" }}
             >

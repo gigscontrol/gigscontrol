@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Venda, Parcela, ParcelaMeta } from "@/types";
 import {
   rowParaVenda,
@@ -38,12 +38,12 @@ import { buscarFusoPadrao } from "@/lib/services/workspacePrefs.service";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { aplicarFiltroVendas } from "@/lib/api/permissoes";
 
-/** Orçamento já tem uma venda ativa — bloqueia concretizar de novo. */
+/** OrÃ§amento jÃ¡ tem uma venda ativa â€” bloqueia concretizar de novo. */
 export class VendaDuplicadaError extends Error {
   status = 409;
   constructor(public numeroExistente: string) {
     super(
-      `Este orçamento já foi concretizado na venda ${numeroExistente}. ` +
+      `Este orÃ§amento jÃ¡ foi concretizado na venda ${numeroExistente}. ` +
         `Abra a venda existente em vez de criar outra.`
     );
     this.name = "VendaDuplicadaError";
@@ -51,15 +51,15 @@ export class VendaDuplicadaError extends Error {
 }
 
 /**
- * Soma das parcelas não bate com o cachê. Guard de integridade financeira do
- * servidor (o cliente já valida, mas integração externa/request adulterado não).
+ * Soma das parcelas nÃ£o bate com o cachÃª. Guard de integridade financeira do
+ * servidor (o cliente jÃ¡ valida, mas integraÃ§Ã£o externa/request adulterado nÃ£o).
  */
 export class ParcelasNaoBatemError extends Error {
   status = 400;
   constructor(soma: number, cache: number) {
     super(
-      `As parcelas somam R$ ${soma.toFixed(2)}, mas o cachê é R$ ${cache.toFixed(2)}. ` +
-        `Ajuste as parcelas para que a soma bata com o cachê.`
+      `As parcelas somam R$ ${soma.toFixed(2)}, mas o cachÃª Ã© R$ ${cache.toFixed(2)}. ` +
+        `Ajuste as parcelas para que a soma bata com o cachÃª.`
     );
     this.name = "ParcelasNaoBatemError";
   }
@@ -111,7 +111,7 @@ function vendaInputParaEscrita(
   return out;
 }
 
-async function carregarVendaCompleta(
+export async function carregarVendaCompleta(
   supabase: SupabaseClient,
   id: string
 ): Promise<Venda | null> {
@@ -142,9 +142,9 @@ export async function listarVendasDoWorkspace(
 }
 
 /**
- * A venda `id` é visível para a sessão? Reusa EXATAMENTE o filtro da lista
- * (aplicarFiltroVendas), só que estreitado ao id — se a linha passa no escopo
- * (modelo novo OU legado) e casa o id, é visível. Zero divergência com a lista;
+ * A venda `id` Ã© visÃ­vel para a sessÃ£o? Reusa EXATAMENTE o filtro da lista
+ * (aplicarFiltroVendas), sÃ³ que estreitado ao id â€” se a linha passa no escopo
+ * (modelo novo OU legado) e casa o id, Ã© visÃ­vel. Zero divergÃªncia com a lista;
  * usado no GET /vendas/[id] pra fechar o vazamento de leitura por link direto.
  */
 export async function vendaVisivelParaSessao(
@@ -171,12 +171,12 @@ export async function buscarVendaPorId(
 
 /**
  * Cria uma venda. Orquestra:
- *   1) gera número
+ *   1) gera nÃºmero
  *   2) insere venda
  *   3) insere parcelas (se houver)
- *   4) se há orcamento_id: cria show novo (ou atualiza existente do orçamento)
- *      e vincula show_id na venda; marca o orçamento como aceito.
- *   5) se NÃO há orcamento_id: cria show direto e vincula.
+ *   4) se hÃ¡ orcamento_id: cria show novo (ou atualiza existente do orÃ§amento)
+ *      e vincula show_id na venda; marca o orÃ§amento como aceito.
+ *   5) se NÃƒO hÃ¡ orcamento_id: cria show direto e vincula.
  */
 export async function criarVendaCompleta(
   supabase: SupabaseClient,
@@ -184,8 +184,8 @@ export async function criarVendaCompleta(
   criadoPor: string,
   input: VendaCreateInput
 ): Promise<Venda> {
-  // 0: guard anti-duplicação. Se este orçamento já tem uma venda ATIVA,
-  // não cria outra. Protege contra double-click / re-concretização (bug
+  // 0: guard anti-duplicaÃ§Ã£o. Se este orÃ§amento jÃ¡ tem uma venda ATIVA,
+  // nÃ£o cria outra. Protege contra double-click / re-concretizaÃ§Ã£o (bug
   // que gerou duas VND-0003 do mesmo ORC-0004).
   if (input.orcamento_id) {
     const { data: existente } = await supabase
@@ -200,11 +200,11 @@ export async function criarVendaCompleta(
     }
   }
 
-  // GUARD DE INTEGRIDADE FINANCEIRA: se há parcelas, a soma dos valores tem que
-  // bater com o cachê. O cliente (ConcretizarVenda) já valida, mas uma integração
-  // externa (n8n/zapier — o schema aceita string de propósito) ou um request
-  // adulterado poderia gravar parcelas que não fecham, e aí os dashboards
-  // divergem ("a receber" != "faturamento"). Tolerância p/ arredondamento de
+  // GUARD DE INTEGRIDADE FINANCEIRA: se hÃ¡ parcelas, a soma dos valores tem que
+  // bater com o cachÃª. O cliente (ConcretizarVenda) jÃ¡ valida, mas uma integraÃ§Ã£o
+  // externa (n8n/zapier â€” o schema aceita string de propÃ³sito) ou um request
+  // adulterado poderia gravar parcelas que nÃ£o fecham, e aÃ­ os dashboards
+  // divergem ("a receber" != "faturamento"). TolerÃ¢ncia p/ arredondamento de
   // centavos ao ratear percentuais.
   const parcelasIn = input.parcelas ?? [];
   if (parcelasIn.length > 0) {
@@ -218,8 +218,8 @@ export async function criarVendaCompleta(
   // 1 + 2: cria a venda
   const escrita = vendaInputParaEscrita(input);
   escrita.numero = await proximoNumeroVenda(supabase, workspaceId);
-  // Herda do orçamento o que o input não trouxe (info_extra + fuso do horário).
-  // Cliente concretizar pode editar antes; se não editou, assume o do orçamento.
+  // Herda do orÃ§amento o que o input nÃ£o trouxe (info_extra + fuso do horÃ¡rio).
+  // Cliente concretizar pode editar antes; se nÃ£o editou, assume o do orÃ§amento.
   const faltaInfoExtra = escrita.info_extra === undefined || escrita.info_extra === null;
   const faltaFuso = escrita.fuso_horario === undefined || escrita.fuso_horario === null;
   if (input.orcamento_id && (faltaInfoExtra || faltaFuso)) {
@@ -227,9 +227,9 @@ export async function criarVendaCompleta(
     if (faltaInfoExtra && orc?.infoExtra) escrita.info_extra = orc.infoExtra;
     if (faltaFuso && orc?.fusoHorario) escrita.fuso_horario = orc.fusoHorario;
   }
-  // Taxa da agência (comissão, informativa): recalcula do artista + cachê final.
-  // Nos modos VARIÁVEIS sem valor reenviado na concretização, herda a do
-  // orçamento pra não zerar o que foi definido lá.
+  // Taxa da agÃªncia (comissÃ£o, informativa): recalcula do artista + cachÃª final.
+  // Nos modos VARIÃVEIS sem valor reenviado na concretizaÃ§Ã£o, herda a do
+  // orÃ§amento pra nÃ£o zerar o que foi definido lÃ¡.
   let taxaVenda = await resolverTaxaAgencia(supabase, {
     artistId: escrita.artist_id ?? null,
     cache: escrita.cache ?? null,
@@ -249,17 +249,17 @@ export async function criarVendaCompleta(
     escrita.taxa_agencia_valor = taxaVenda.taxa_agencia_valor;
     escrita.taxa_modo_aplicado = taxaVenda.taxa_modo_aplicado;
   }
-  // Default do fuso do horário = fuso padrão da agência (se input/orçamento não deram).
+  // Default do fuso do horÃ¡rio = fuso padrÃ£o da agÃªncia (se input/orÃ§amento nÃ£o deram).
   if (escrita.fuso_horario === undefined || escrita.fuso_horario === null) {
     escrita.fuso_horario = await buscarFusoPadrao(supabase, workspaceId);
   }
   const vendaRow = await criarVendaRow(supabase, workspaceId, criadoPor, escrita);
 
-  // A venda JÁ existe. Os passos seguintes (parcelas, show, aceite do orçamento)
-  // são escritas separadas (supabase-js não tem transação). Se qualquer um
-  // falhar, desfazemos a venda no catch — senão sobra venda sem parcelas E o
-  // guard anti-duplicação acima trava TODA re-tentativa (venda soft-deletada é
-  // ignorada pelo guard, então a re-tentativa passa).
+  // A venda JÃ existe. Os passos seguintes (parcelas, show, aceite do orÃ§amento)
+  // sÃ£o escritas separadas (supabase-js nÃ£o tem transaÃ§Ã£o). Se qualquer um
+  // falhar, desfazemos a venda no catch â€” senÃ£o sobra venda sem parcelas E o
+  // guard anti-duplicaÃ§Ã£o acima trava TODA re-tentativa (venda soft-deletada Ã©
+  // ignorada pelo guard, entÃ£o a re-tentativa passa).
   try {
     // 3: parcelas (se houver)
   const hojeYmd = new Date().toISOString().slice(0, 10);
@@ -268,8 +268,8 @@ export async function criarVendaCompleta(
     valor: p.valor,
     data_vencimento: p.data_vencimento ?? null,
     status_base: p.status_base ?? "pendente",
-    // Mesma regra do PATCH: 'pago' sem data → hoje; 'pendente' → sempre null.
-    // (fecha o buraco de integração que gravava pago sem data de pagamento.)
+    // Mesma regra do PATCH: 'pago' sem data â†’ hoje; 'pendente' â†’ sempre null.
+    // (fecha o buraco de integraÃ§Ã£o que gravava pago sem data de pagamento.)
     data_pagamento:
       p.status_base === "pago" ? p.data_pagamento ?? hojeYmd : null,
     observacao: p.observacao ?? null,
@@ -306,7 +306,7 @@ export async function criarVendaCompleta(
         const show = await criarShowNoWorkspace(supabase, workspaceId, showPayload, criadoPor);
         showIdFinal = show.id;
       }
-      // Atualiza o orçamento (aceito + show_id + data/horario sincronizados)
+      // Atualiza o orÃ§amento (aceito + show_id + data/horario sincronizados)
       await atualizarOrcamentoPorId(supabase, input.orcamento_id, {
         status: "aceito",
         show_id: showIdFinal,
@@ -323,7 +323,7 @@ export async function criarVendaCompleta(
     await atualizarVendaRow(supabase, vendaRow.id, { show_id: showIdFinal });
 
     // Google Calendar (best-effort): cria o evento de dia inteiro no
-    // calendário do artista conectado. Falha aqui NÃO quebra a venda.
+    // calendÃ¡rio do artista conectado. Falha aqui NÃƒO quebra a venda.
     if (showIdFinal && input.artist_id) {
       try {
         await sincronizarShowNoGoogle(supabase, {
@@ -337,10 +337,10 @@ export async function criarVendaCompleta(
     }
   }
 
-    // Retorno consistente: re-busca a venda já com show_id e parcelas resolvidas
+    // Retorno consistente: re-busca a venda jÃ¡ com show_id e parcelas resolvidas
     const final = await carregarVendaCompleta(supabase, vendaRow.id);
     if (!final) {
-      // fallback improvável
+      // fallback improvÃ¡vel
       return rowParaVenda(
         { ...vendaRow, show_id: showIdFinal },
         parcelasInseridas.map(rowParaParcela)
@@ -348,8 +348,8 @@ export async function criarVendaCompleta(
     }
     return final;
   } catch (e) {
-    // Cleanup compensatório: a venda ficou meio-feita → soft-delete pra não
-    // deixar órfão nem travar a re-tentativa. (best-effort + log)
+    // Cleanup compensatÃ³rio: a venda ficou meio-feita â†’ soft-delete pra nÃ£o
+    // deixar Ã³rfÃ£o nem travar a re-tentativa. (best-effort + log)
     await removerVendaRow(supabase, vendaRow.id, criadoPor).catch((err) =>
       console.error("[criarVendaCompleta] falha ao limpar venda parcial:", err)
     );
@@ -358,7 +358,7 @@ export async function criarVendaCompleta(
 }
 
 /** A venda editada, no formato que o Google Calendar consome (snake_case). */
-function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
+export function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
   return {
     contratante_nome: v.contratanteNome || null,
     contratante_telefone: v.contratanteTelefone || null,
@@ -379,31 +379,31 @@ function vendaParaInputDoGoogle(v: Venda): VendaCreateInput {
 }
 
 /**
- * Edita uma venda. Diferente do PATCH antigo (que só mexia na linha da venda e
- * deixava show/parcelas/Google desatualizados), esta versão propaga a edição:
+ * Edita uma venda. Diferente do PATCH antigo (que sÃ³ mexia na linha da venda e
+ * deixava show/parcelas/Google desatualizados), esta versÃ£o propaga a ediÃ§Ã£o:
  *
- *   1) PARCELAS (D5): se o input trouxe parcelas e NENHUMA tem histórico
+ *   1) PARCELAS (D5): se o input trouxe parcelas e NENHUMA tem histÃ³rico
  *      financeiro (`parcelaTemHistorico`: paga, cancelada, fixada ou cobrada),
- *      regenera. Se QUALQUER uma tem, NÃO TOCA em nada e devolve
+ *      regenera. Se QUALQUER uma tem, NÃƒO TOCA em nada e devolve
  *      `parcelasPreservadas: true` pra UI avisar que o Financeiro precisa de
- *      revisão. O delete→insert não recria `meta` — apagar destruiria o
- *      comprovante, o motivo do cancelamento e o log de cobranças. Perder isso
- *      é MUITO pior que uma parcela desatualizada.
- *   2) taxa da agência (recalculada quando artista/cachê/valor digitado mudam);
+ *      revisÃ£o. O deleteâ†’insert nÃ£o recria `meta` â€” apagar destruiria o
+ *      comprovante, o motivo do cancelamento e o log de cobranÃ§as. Perder isso
+ *      Ã© MUITO pior que uma parcela desatualizada.
+ *   2) taxa da agÃªncia (recalculada quando artista/cachÃª/valor digitado mudam);
  *   3) linha da venda;
- *   4) SHOW da agenda (data/horário/casa/cidade/artista/valor) — senão a agenda
+ *   4) SHOW da agenda (data/horÃ¡rio/casa/cidade/artista/valor) â€” senÃ£o a agenda
  *      mostraria o show na data velha;
- *   5) Google Calendar (best-effort — falha NÃO derruba a edição).
+ *   5) Google Calendar (best-effort â€” falha NÃƒO derruba a ediÃ§Ã£o).
  */
 export async function atualizarVendaPorId(
   supabase: SupabaseClient,
   id: string,
   input: VendaUpdateInput
 ): Promise<{ venda: Venda; parcelasPreservadas: boolean }> {
-  // O "antes" é necessário de qualquer jeito (parcelas, taxa, show_id) — carrega
-  // uma vez só, a partir da row (que traz workspace_id e show_id).
+  // O "antes" Ã© necessÃ¡rio de qualquer jeito (parcelas, taxa, show_id) â€” carrega
+  // uma vez sÃ³, a partir da row (que traz workspace_id e show_id).
   const rowAntes = await repoBuscar(supabase, id);
-  if (!rowAntes) throw new Error("Venda não encontrada.");
+  if (!rowAntes) throw new Error("Venda nÃ£o encontrada.");
   const antes = rowParaVenda(
     rowAntes,
     (await listarParcelasDaVenda(supabase, id)).map(rowParaParcela)
@@ -415,12 +415,12 @@ export async function atualizarVendaPorId(
   let parcelasPreservadas = false;
   if (input.parcelas !== undefined) {
     if (algumaParcelaTemHistorico(antes.parcelas)) {
-      // Nem as pendentes são mexidas: na dúvida, preserva o dado e avisa.
+      // Nem as pendentes sÃ£o mexidas: na dÃºvida, preserva o dado e avisa.
       parcelasPreservadas = true;
     } else {
       const novas = input.parcelas ?? [];
       const cacheAlvo = input.cache !== undefined ? input.cache : antes.cache;
-      // Mesmo guard de integridade da criação: a soma tem que bater com o cachê.
+      // Mesmo guard de integridade da criaÃ§Ã£o: a soma tem que bater com o cachÃª.
       if (novas.length > 0) {
         const soma = novas.reduce((acc, p) => acc + (p.valor ?? 0), 0);
         const tolerancia = 0.01 * novas.length + 0.01;
@@ -437,14 +437,14 @@ export async function atualizarVendaPorId(
         data_pagamento: p.status_base === "pago" ? p.data_pagamento ?? hojeYmd : null,
         observacao: p.observacao ?? null,
       }));
-      // Ordem delete→insert. Se o insert falhar o erro propaga: só se perdem
-      // parcelas PENDENTES (regeneráveis pelo form) — nenhum pagamento.
+      // Ordem deleteâ†’insert. Se o insert falhar o erro propaga: sÃ³ se perdem
+      // parcelas PENDENTES (regenerÃ¡veis pelo form) â€” nenhum pagamento.
       await removerParcelasDaVenda(supabase, id);
       await inserirParcelasEmLote(supabase, rowAntes.workspace_id, id, payload);
     }
   }
 
-  // 2: taxa da agência — recalcula quando o que a define muda.
+  // 2: taxa da agÃªncia â€” recalcula quando o que a define muda.
   if (
     input.artist_id !== undefined ||
     input.cache !== undefined ||
@@ -470,9 +470,9 @@ export async function atualizarVendaPorId(
   // 3: linha da venda
   await atualizarVendaRow(supabase, id, escrita);
   const final = await carregarVendaCompleta(supabase, id);
-  if (!final) throw new Error("Venda não encontrada após atualização.");
+  if (!final) throw new Error("Venda nÃ£o encontrada apÃ³s atualizaÃ§Ã£o.");
 
-  // 4 + 5: show + Google. Só quando o input mexeu em algo que o show reflete.
+  // 4 + 5: show + Google. SÃ³ quando o input mexeu em algo que o show reflete.
   const mexeuNoShow =
     input.data_show !== undefined ||
     input.horario !== undefined ||
@@ -483,8 +483,8 @@ export async function atualizarVendaPorId(
     input.cache !== undefined;
 
   if (rowAntes.show_id && mexeuNoShow) {
-    // Payload montado do estado FINAL (o input é parcial). SEM `status`: não
-    // ressuscita show cancelado nem re-carimba o que já estava lá.
+    // Payload montado do estado FINAL (o input Ã© parcial). SEM `status`: nÃ£o
+    // ressuscita show cancelado nem re-carimba o que jÃ¡ estava lÃ¡.
     await atualizarShowPorId(supabase, rowAntes.show_id, {
       artist_id: normalizarUuid(final.artistaId),
       contratante_id: normalizarUuid(final.contratanteId),
@@ -525,7 +525,7 @@ export async function atualizarParcelaPorId(
   supabase: SupabaseClient,
   id: string,
   input: ParcelaUpdateInput,
-  /** Meta já computada pela rota (pagamento/cancelamento/cobranças + sessão). */
+  /** Meta jÃ¡ computada pela rota (pagamento/cancelamento/cobranÃ§as + sessÃ£o). */
   meta?: ParcelaMeta
 ): Promise<Parcela> {
   const payload: ParcelaEscrita = {};
