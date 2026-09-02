@@ -34,6 +34,8 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
   const carregar = useCallback(async () => {
     setEstado("carregando");
     setErro(null);
+    // Troca de artista: o resultado do backfill anterior não vale aqui.
+    setMsgSync(null);
     try {
       const res = await fetch(
         `/api/google/connection?artistaId=${encodeURIComponent(artistaId)}`,
