@@ -266,6 +266,10 @@ export function preencherSecoes(
         };
       case "anexo":
         return { ...s, titulo: p(s.titulo), conteudo: p(s.conteudo) };
+      case "localdata":
+        // Data do dia CONGELADA na geração (o snapshot do contrato guarda o
+        // valor resolvido — não muda quando o documento for reaberto).
+        return { ...s, local: p(s.local), data: p("{{data_hoje}}") };
       case "assinaturas":
         return s; // testemunhas são manuais — nada a substituir
     }

@@ -95,12 +95,27 @@ export type SecaoAnexo = {
   conteudo: string;
 };
 
+/**
+ * Linha de fechamento "Local, data" (ex.: "São José dos Pinhais, 21/08/2026").
+ * `local` é editável (aceita {{variáveis}}); `data` é PREENCHIDA
+ * AUTOMATICAMENTE na geração do contrato (preencherSecoes grava a data do dia
+ * — congelada no snapshot, como manda a praxe).
+ */
+export type SecaoLocalData = {
+  id: string;
+  tipo: "localdata";
+  local: string;
+  /** Data resolvida na GERAÇÃO (vazia no modelo; o preview usa exemplo). */
+  data: string;
+};
+
 export type SecaoModelo =
   | SecaoTitulo
   | SecaoPartes
   | SecaoClausula
   | SecaoAssinaturas
-  | SecaoAnexo;
+  | SecaoAnexo
+  | SecaoLocalData;
 
 // ---------------- Estilo (cores do modelo) ----------------
 
@@ -283,6 +298,9 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
       }
       case "anexo":
         out.push({ id, tipo: "anexo", titulo: texto(o.titulo), conteudo: texto(o.conteudo) });
+        break;
+      case "localdata":
+        out.push({ id, tipo: "localdata", local: texto(o.local), data: texto(o.data) });
         break;
       default: {
         // Compat com formatos antigos ({titulo, paragrafos[]} ou {titulo, corpo}) → cláusula.

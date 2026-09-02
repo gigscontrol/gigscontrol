@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { valoresDeVenda } from "./preencherSecoes";
+import { hojeBR, preencherSecoes, valoresDeVenda } from "./preencherSecoes";
 import { LOGISTICA_VAZIA, type Artista, type Venda } from "@/types";
+import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
 
 /** Venda mínima pro teste — só os campos que valoresDeVenda lê. */
 function vendaBase(extra: Partial<Venda> = {}): Venda {
@@ -21,6 +22,24 @@ const artista = {
   pix: "529.982.247-25",
   riderTecnico: ["CDJ-3000 x2"],
 } as unknown as Artista;
+
+describe("preencherSecoes — seção Local e data", () => {
+  it("resolve o local (com variáveis) e congela a data do dia", () => {
+    const secoes: SecaoModelo[] = [
+      { id: "ld", tipo: "localdata", local: "{{cidade}}", data: "" },
+    ];
+    const [s] = preencherSecoes(secoes, {
+      cidade: "São José dos Pinhais",
+      data_hoje: hojeBR(),
+    });
+    expect(s).toEqual({
+      id: "ld",
+      tipo: "localdata",
+      local: "São José dos Pinhais",
+      data: hojeBR(),
+    });
+  });
+});
 
 describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
   it("nada selecionado na venda → textos de praxe", () => {

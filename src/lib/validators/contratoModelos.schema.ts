@@ -47,6 +47,13 @@ const secaoSchema = z.discriminatedUnion("tipo", [
     titulo: z.string(),
     conteudo: z.string(),
   }),
+  z.object({
+    id: z.string(),
+    tipo: z.literal("localdata"),
+    local: z.string(),
+    // Preenchida na geração; no modelo viaja vazia.
+    data: z.string().default(""),
+  }),
 ]);
 
 export const contratoModeloCreateSchema = z.object({

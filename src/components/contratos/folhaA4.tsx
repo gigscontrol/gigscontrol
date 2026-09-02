@@ -28,6 +28,8 @@ function temConteudo(secoes: SecaoModelo[]): boolean {
         return !!(s.titulo.trim() || s.itens.some((i) => i.texto.trim()));
       case "anexo":
         return !!(s.titulo.trim() || s.conteudo.trim());
+      case "localdata":
+        return true; // a data automática sempre imprime algo
       case "assinaturas":
         return s.testemunhas.length > 0;
     }
@@ -685,6 +687,19 @@ function renderSecao(
           <div style={corpo}>{ex(secao.conteudo)}</div>
         </div>
       );
+
+    case "localdata": {
+      // "São José dos Pinhais, 21/08/2026" — centrado. No contrato gerado a
+      // data já vem resolvida (preencherSecoes); no preview cai no exemplo.
+      const dataTxt = secao.data.trim() || ex("{{data_hoje}}");
+      const localTxt = secao.local.trim() ? `${ex(secao.local)}, ` : "";
+      return (
+        <div style={{ textAlign: "center", paddingTop: "6pt" }}>
+          {localTxt}
+          {dataTxt}
+        </div>
+      );
+    }
   }
 }
 

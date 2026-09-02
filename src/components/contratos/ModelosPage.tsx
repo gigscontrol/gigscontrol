@@ -85,6 +85,8 @@ function clonarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
         return { id, tipo: "assinaturas", testemunhas: s.testemunhas };
       case "anexo":
         return { id, tipo: "anexo", titulo: s.titulo, conteudo: s.conteudo };
+      case "localdata":
+        return { id, tipo: "localdata", local: s.local, data: "" };
     }
   });
 }
