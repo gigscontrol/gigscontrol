@@ -44,6 +44,7 @@ const secaoSchema = z.discriminatedUnion("tipo", [
     contratanteNome: z.string().optional(),
     contratanteDoc: z.string().optional(),
     contratadoNome: z.string().optional(),
+    contratadoDoc: z.string().optional(),
   }),
   z.object({
     id: z.string(),

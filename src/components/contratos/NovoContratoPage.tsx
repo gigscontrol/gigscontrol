@@ -87,8 +87,11 @@ function textosDoModelo(secoes: import("@/lib/mappers/contratoModelo").SecaoMode
         out.push(s.local);
         break;
       case "assinaturas":
-        // Blocos usam contratante/documento/artista — exigidos implicitamente.
-        out.push("{{contratante}} {{documento}} {{artista}}");
+        // Blocos imprimem contratante/documento e o contratado como
+        // "Nome civil (Artístico)" + documento — exigidos implicitamente.
+        out.push(
+          "{{contratante}} {{documento}} {{artista}} {{artista_nome_civil}} {{artista_documento}}"
+        );
         break;
     }
   }
