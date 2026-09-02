@@ -1740,6 +1740,7 @@ const SWEEP2: Record<string, string> = {
   "Título da cláusula (ex: DO OBJETO)": "Clause title (e.g. SUBJECT MATTER)",
   "Título da seção": "Section title",
   "Cláusulas": "Clauses",
+  "Cláusula numerada automaticamente (3., 4., …).": "Clause numbered automatically (3., 4., …).",
   "Opcional — aparece centralizado acima das cláusulas": "Optional — shown centered above the clauses",
   "Ex: DAS PARTES (vazio = sem título)": "E.g. THE PARTIES (empty = no title)",
   "Sub-cláusula": "Sub-clause",

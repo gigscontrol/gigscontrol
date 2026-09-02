@@ -579,17 +579,14 @@ function renderSecao(
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {secao.itens.map((item, idx) =>
               item.tipo === "clausula" ? (
-                <h3
+                // CAPUT da cláusula: texto principal numerado "N." (padrão
+                // BR: 3. texto… / 3.1 / 3.2). Respiro antes (não na 1ª).
+                <div
                   key={item.id}
-                  style={{
-                    ...estiloTitulo(estilo.corTitulo),
-                    // Respiro entre uma cláusula e a anterior (não na 1ª).
-                    marginTop: idx > 0 ? "12pt" : undefined,
-                  }}
+                  style={{ ...corpo, marginTop: idx > 0 ? "8pt" : undefined }}
                 >
-                  {tr("CLÁUSULA")} {num.clausulas[item.id]}ª
-                  {item.texto.trim() ? ` — ${ex(item.texto)}` : ""}
-                </h3>
+                  {`${num.clausulas[item.id]}. ${ex(item.texto)}`}
+                </div>
               ) : (
                 <div key={item.id} style={corpo}>
                   {item.tipo === "subclausula"

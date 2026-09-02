@@ -14,10 +14,10 @@ import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
 
 export const NOME_MODELO_EXEMPLO = "Modelo Padrão BR";
 
-// Seções escritas no formato COMPACTO (1 seção = 1 cláusula, título na
-// seção) — os exports no fim passam por `comClausulasNumeradas`, que insere
-// o item "clausula" com o título, preservando o cabeçalho tradicional
-// "CLÁUSULA Nª — TÍTULO" dos exemplos. Editar aqui continua simples.
+// Seções escritas no formato COMPACTO (título na seção + itens) — os
+// exports no fim passam por `comCaputNumerado`, que promove o 1º item de
+// cada seção a CAPUT da cláusula (numerado "N." — padrão BR: 1. / 1.1 /
+// 1.2). O título da seção vira o cabeçalho centralizado.
 const SECOES_EXEMPLO_LEGADO: SecaoModelo[] = [
   {
     id: "titulo",
@@ -315,28 +315,22 @@ const SECOES_GLOBAL_LEGADO: SecaoModelo[] = [
 ];
 
 /**
- * Converte as cláusulas compactas dos EXEMPLOS pro formato atual: o título
- * da seção vira o item "clausula" (cabeçalho "CLÁUSULA Nª — TÍTULO") e a
- * seção fica sem título próprio. Só pros exemplos embutidos — modelo de
- * USUÁRIO no formato antigo mantém o título como título da seção (ele pode
- * já trazer a própria numeração no texto).
+ * Converte as seções compactas dos EXEMPLOS pro formato atual: o 1º item de
+ * cada seção de cláusulas vira o CAPUT (tipo "clausula", numerado "N.");
+ * o título permanece como título da SEÇÃO (cabeçalho centralizado). Render:
+ * "DO OBJETO" + "1. O presente contrato…" + "1.1 …" — padrão BR moderno.
  */
-function comClausulasNumeradas(secoes: SecaoModelo[]): SecaoModelo[] {
-  return secoes.map((s): SecaoModelo =>
-    s.tipo === "clausula" && !s.itens.some((i) => i.tipo === "clausula")
-      ? {
-          ...s,
-          titulo: "",
-          itens: [
-            { id: `${s.id}-c1`, tipo: "clausula", texto: s.titulo },
-            ...s.itens,
-          ],
-        }
-      : s
-  );
+function comCaputNumerado(secoes: SecaoModelo[]): SecaoModelo[] {
+  return secoes.map((s): SecaoModelo => {
+    if (s.tipo !== "clausula" || s.itens.some((i) => i.tipo === "clausula"))
+      return s;
+    const [primeiro, ...resto] = s.itens;
+    if (!primeiro) return s;
+    return { ...s, itens: [{ ...primeiro, tipo: "clausula" }, ...resto] };
+  });
 }
 
 export const SECOES_MODELO_EXEMPLO: SecaoModelo[] =
-  comClausulasNumeradas(SECOES_EXEMPLO_LEGADO);
+  comCaputNumerado(SECOES_EXEMPLO_LEGADO);
 export const SECOES_MODELO_GLOBAL: SecaoModelo[] =
-  comClausulasNumeradas(SECOES_GLOBAL_LEGADO);
+  comCaputNumerado(SECOES_GLOBAL_LEGADO);
