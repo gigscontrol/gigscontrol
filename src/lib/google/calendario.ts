@@ -3,7 +3,7 @@ import type { VendaCreateInput } from "@/lib/validators/vendas.schema";
 import type { LogisticaSelecao } from "@/types";
 import { accessTokenValido } from "./conexao";
 import { formatarMoeda } from "@/lib/formatters";
-import { formatarQuantidade } from "@/lib/contratos/extenso";
+import { numeroQtd } from "@/lib/quantidades";
 
 /**
  * Criação do evento do show no Google Calendar do artista conectado.
@@ -36,7 +36,7 @@ function listaItens(itens?: ItemQtd[]): string {
   if (!itens?.length) return "";
   return itens
     .filter((i) => i && i.nome && i.qtd > 0)
-    .map((i) => `${formatarQuantidade(i.qtd)} ${i.nome}`)
+    .map((i) => `${numeroQtd(i.qtd)} ${i.nome}`)
     .join(", ");
 }
 

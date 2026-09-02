@@ -1,7 +1,7 @@
 import type { Orcamento, Contratante, Casa, Cidade, Artista } from "@/types";
 import { formatarMoeda } from "./formatters";
 import { linhasLogistica } from "./logisticaTexto";
-import { formatarQuantidade } from "./contratos/extenso";
+import { numeroQtd, pluralizarItemHotel } from "./quantidades";
 
 export function formatarDuracao(horas: number, minutos: number): string {
   const h = Math.max(0, horas);
@@ -44,28 +44,30 @@ export function gerarTextoWhatsApp(
   if (camarim.length > 0) {
     linhas.push("");
     linhas.push("*Rider de Camarim (não incluso no cachê)*");
-    camarim.forEach((i) => linhas.push(`${formatarQuantidade(i.qtd)} ${i.nome}`));
+    camarim.forEach((i) => linhas.push(`${numeroQtd(i.qtd)} ${i.nome}`));
   }
 
   const efeitos = orc.efeitos.filter((i) => i.qtd > 0);
   if (efeitos.length > 0) {
     linhas.push("");
     linhas.push("*Rider de Efeitos (não incluso no cachê)*");
-    efeitos.forEach((i) => linhas.push(`${formatarQuantidade(i.qtd)} ${i.nome}`));
+    efeitos.forEach((i) => linhas.push(`${numeroQtd(i.qtd)} ${i.nome}`));
   }
 
   const tecnico = orc.tecnico.filter((i) => i.qtd > 0);
   if (tecnico.length > 0) {
     linhas.push("");
     linhas.push("*Rider Técnico (não incluso no cachê)*");
-    tecnico.forEach((i) => linhas.push(`${formatarQuantidade(i.qtd)} ${i.nome}`));
+    tecnico.forEach((i) => linhas.push(`${numeroQtd(i.qtd)} ${i.nome}`));
   }
 
   const hotel = orc.hotel.filter((i) => i.qtd > 0);
   if (hotel.length > 0) {
     linhas.push("");
     linhas.push("*Hotel (não incluso no cachê)*");
-    hotel.forEach((i) => linhas.push(`${formatarQuantidade(i.qtd)} ${i.nome}`));
+    hotel.forEach((i) =>
+      linhas.push(`${numeroQtd(i.qtd)} ${pluralizarItemHotel(i.nome, i.qtd)}`)
+    );
   }
 
   // ----- Logística ----- (aéreas ida/volta + aeroportos + bagagens + translado)

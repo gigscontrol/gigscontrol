@@ -7,7 +7,7 @@ import QuantitySelector from "../QuantitySelector";
 import { useT } from "@/lib/i18n";
 import type { Artista, ItemQuantidade } from "@/types";
 import { CATALOGO_CAMARIM, CATALOGO_EFEITOS, CATALOGO_TECNICO } from "@/types";
-import { formatarQuantidade } from "@/lib/contratos/extenso";
+import { numeroQtd } from "@/lib/quantidades";
 import {
   CATEGORIAS_PRESET,
   LABELS_CATEGORIA_PRESET,
@@ -118,7 +118,7 @@ export default function PresetsRiderEditor({
                   type="button"
                   disabled={!podeEditar}
                   onClick={() => setEditando({ categoria, indice: i })}
-                  title={p.itens.map((it) => `${formatarQuantidade(it.qtd)} ${it.nome}`).join("\n")}
+                  title={p.itens.map((it) => `${numeroQtd(it.qtd)} ${it.nome}`).join("\n")}
                   className="group flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 text-left hover:border-border-strong transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <div className="min-w-0">
