@@ -4,7 +4,8 @@ const tipoSchema = z.enum(["editavel", "pdf"]);
 
 const itemClausulaSchema = z.object({
   id: z.string(),
-  tipo: z.enum(["subclausula", "paragrafo"]),
+  // "clausula" abre uma cláusula nova dentro da seção (título no texto).
+  tipo: z.enum(["clausula", "subclausula", "paragrafo"]),
   texto: z.string(),
 });
 

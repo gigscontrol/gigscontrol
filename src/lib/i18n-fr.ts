@@ -1943,6 +1943,8 @@ export const FR: Record<string, string> = {
   "Parágrafo de abertura (ex: 'As partes acima têm, entre si...').": "Paragraphe d'ouverture (ex. : « Les parties ci-dessus conviennent entre elles... »).",
   "Título da cláusula (ex: DO OBJETO)": "Titre de la clause (ex. : OBJET)",
   "Título da seção": "Titre de la section",
+  "Cláusulas": "Clauses",
+  "Opcional — aparece centralizado acima das cláusulas": "Facultatif — affiché centré au-dessus des clauses",
   "Ex: DAS PARTES (vazio = sem título)": "Ex. : LES PARTIES (vide = sans titre)",
   "Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.": "Contenu de l'annexe. Utilisez les variables à droite pour insérer {{campos}}.",
   "Artista/Agência": "Artiste/Agence",

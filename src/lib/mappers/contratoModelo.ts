@@ -40,13 +40,26 @@ export type SecaoPartes = {
   paragrafo: string;
 };
 
-/** Item de uma cláusula: sub-cláusula (numerada N.M) ou parágrafo (sem número). */
+/**
+ * Item de uma seção de cláusulas:
+ *  - "clausula":    ABRE uma cláusula nova ("CLÁUSULA Nª — {texto}"); o texto é
+ *                   o título dela. Numerada 1, 2, 3… globalmente no documento.
+ *  - "subclausula": item numerado N.M dentro da cláusula corrente.
+ *  - "paragrafo":   texto sem número.
+ */
 export type ItemClausula = {
   id: string;
-  tipo: "subclausula" | "paragrafo";
+  tipo: "clausula" | "subclausula" | "paragrafo";
   texto: string;
 };
 
+/**
+ * Seção de CLÁUSULAS (container): pode ter várias cláusulas, cada uma com
+ * suas sub-cláusulas/parágrafos. `titulo` é o título da SEÇÃO (opcional,
+ * centralizado acima) — o título de cada cláusula vive no item "clausula".
+ * Formato antigo (1 seção = 1 cláusula, título no `titulo`) é migrado em
+ * `secoesValidas`.
+ */
 export type SecaoClausula = {
   id: string;
   tipo: "clausula";
@@ -236,11 +249,32 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
               .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
               .map((i) => ({
                 id: texto(i.id),
-                tipo: i.tipo === "paragrafo" ? "paragrafo" : "subclausula",
+                tipo:
+                  i.tipo === "paragrafo"
+                    ? "paragrafo"
+                    : i.tipo === "clausula"
+                      ? "clausula"
+                      : "subclausula",
                 texto: texto(i.texto),
               }))
           : [];
-        out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
+        // MIGRAÇÃO do formato antigo (1 seção = 1 cláusula, título no
+        // `titulo` da seção): sem nenhum item "clausula" gravado, o título da
+        // seção vira o título da CLÁUSULA 1 (item inserido na frente) e a
+        // seção fica sem título próprio — render idêntico ao de antes.
+        if (!itens.some((i) => i.tipo === "clausula")) {
+          out.push({
+            id,
+            tipo: "clausula",
+            titulo: "",
+            itens: [
+              { id: `${id}-c1`, tipo: "clausula", texto: texto(o.titulo) },
+              ...itens,
+            ],
+          });
+        } else {
+          out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
+        }
         break;
       }
       case "assinaturas": {
@@ -271,7 +305,16 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
           const itens: ItemClausula[] = fonte
             .filter((p): p is string => typeof p === "string")
             .map((p) => ({ id: "", tipo: "paragrafo" as const, texto: p }));
-          out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
+          out.push({
+            id,
+            tipo: "clausula",
+            titulo: "",
+            // Mesma migração: o título antigo vira a CLÁUSULA 1 da seção.
+            itens: [
+              { id: `${id}-c1`, tipo: "clausula", texto: texto(o.titulo) },
+              ...itens,
+            ],
+          });
         }
         break;
       }

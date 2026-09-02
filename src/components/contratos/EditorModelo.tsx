@@ -63,7 +63,7 @@ type TipoSecao = SecaoModelo["tipo"];
 const TIPOS_SECAO: { tipo: TipoSecao; label: string; Icon: typeof Heading }[] = [
   { tipo: "titulo", label: "Título", Icon: Heading },
   { tipo: "partes", label: "Das partes", Icon: Users },
-  { tipo: "clausula", label: "Cláusula", Icon: ListOrdered },
+  { tipo: "clausula", label: "Cláusulas", Icon: ListOrdered },
   { tipo: "assinaturas", label: "Assinaturas", Icon: PenLine },
   { tipo: "anexo", label: "Anexo", Icon: Paperclip },
 ];
@@ -78,11 +78,15 @@ function novaSecao(tipo: TipoSecao): SecaoModelo {
       // Título NASCE vazio (o usuário escolhe; placeholder sugere "DAS PARTES").
       return { id, tipo: "partes", titulo: "", contratante: "", contratado: "", paragrafo: "" };
     case "clausula":
+      // Seção de CLÁUSULAS: nasce com a 1ª cláusula + uma sub-cláusula.
       return {
         id,
         tipo: "clausula",
         titulo: "",
-        itens: [{ id: crypto.randomUUID(), tipo: "subclausula", texto: "" }],
+        itens: [
+          { id: crypto.randomUUID(), tipo: "clausula", texto: "" },
+          { id: crypto.randomUUID(), tipo: "subclausula", texto: "" },
+        ],
       };
     case "assinaturas":
       return { id, tipo: "assinaturas", testemunhas: [] };
@@ -343,20 +347,6 @@ export default function EditorModelo({
     );
   }
 
-  /**
-   * Insere uma NOVA seção de cláusula logo APÓS a seção dada (o "+ Cláusula"
-   * de dentro do card pula pra próxima cláusula: 4, 5, 6… — sub-cláusulas
-   * N.M são os itens, via "+ Sub-cláusula").
-   */
-  function adicionarClausulaApos(secaoId: string) {
-    setSecoes((prev) => {
-      const idx = prev.findIndex((s) => s.id === secaoId);
-      if (idx < 0) return [...prev, novaSecao("clausula")];
-      const copia = [...prev];
-      copia.splice(idx + 1, 0, novaSecao("clausula"));
-      return copia;
-    });
-  }
 
   async function removerItem(secaoId: string, itemId: string) {
     const secao = secoes.find((s) => s.id === secaoId);
@@ -745,66 +735,106 @@ export default function EditorModelo({
 
                   {secao.tipo === "clausula" && (
                     <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="badge flex-shrink-0"
-                          style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
-                        >
-                          {t("Cláusula")} {num.clausulas[secao.id]}
-                        </span>
+                      {/* Título da SEÇÃO (opcional) — as cláusulas vêm abaixo. */}
+                      <label className="flex flex-col gap-1">
+                        <span className="stat-label">{t("Título da seção")}</span>
                         <input
                           type="text"
                           {...campoProps({ secaoId: secao.id, campo: "titulo" })}
                           value={secao.titulo}
                           onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
-                          placeholder={t("Título da cláusula (ex: DO OBJETO)")}
+                          placeholder={t("Opcional — aparece centralizado acima das cláusulas")}
                           className="campo-input font-semibold"
                         />
-                      </div>
+                      </label>
 
                       <div className="flex flex-col gap-2 pl-1">
-                        {secao.itens.map((item) => (
-                          <div key={item.id} className="flex items-start gap-1.5">
-                            <span
-                              className="text-xs font-semibold flex-shrink-0 mt-2 w-9 text-right"
-                              style={{
-                                color:
-                                  item.tipo === "subclausula" ? ACCENT : "var(--text-muted)",
-                              }}
-                              title={item.tipo === "subclausula" ? t("Sub-cláusula") : t("Parágrafo")}
-                            >
-                              {item.tipo === "subclausula" ? num.itens[item.id] : "¶"}
-                            </span>
-                            <textarea
-                              {...campoProps({
-                                secaoId: secao.id,
-                                campo: "item",
-                                itemId: item.id,
-                              })}
-                              value={item.texto}
-                              onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
-                              placeholder={
-                                item.tipo === "subclausula"
-                                  ? t("Sub-cláusula numerada automaticamente.")
-                                  : t("Parágrafo (sem número).")
-                              }
-                              className="campo-input min-h-[80px] resize-y leading-relaxed flex-1"
-                              style={{ whiteSpace: "pre-wrap" }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removerItem(secao.id, item.id)}
-                              title={t("Remover item")}
-                              aria-label={t("Remover item")}
-                              className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
+                        {secao.itens.map((item) =>
+                          item.tipo === "clausula" ? (
+                            /* Abre uma CLÁUSULA nova (numerada 1, 2, 3…). */
+                            <div key={item.id} className="flex items-center gap-2 mt-1.5">
+                              <span
+                                className="badge flex-shrink-0"
+                                style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                              >
+                                {t("Cláusula")} {num.clausulas[item.id]}
+                              </span>
+                              <input
+                                type="text"
+                                {...campoProps({
+                                  secaoId: secao.id,
+                                  campo: "item",
+                                  itemId: item.id,
+                                })}
+                                value={item.texto}
+                                onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
+                                placeholder={t("Título da cláusula (ex: DO OBJETO)")}
+                                className="campo-input font-semibold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removerItem(secao.id, item.id)}
+                                title={t("Remover item")}
+                                aria-label={t("Remover item")}
+                                className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div key={item.id} className="flex items-start gap-1.5">
+                              <span
+                                className="text-xs font-semibold flex-shrink-0 mt-2 w-9 text-right"
+                                style={{
+                                  color:
+                                    item.tipo === "subclausula" ? ACCENT : "var(--text-muted)",
+                                }}
+                                title={item.tipo === "subclausula" ? t("Sub-cláusula") : t("Parágrafo")}
+                              >
+                                {item.tipo === "subclausula" ? num.itens[item.id] : "¶"}
+                              </span>
+                              <textarea
+                                {...campoProps({
+                                  secaoId: secao.id,
+                                  campo: "item",
+                                  itemId: item.id,
+                                })}
+                                value={item.texto}
+                                onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
+                                placeholder={
+                                  item.tipo === "subclausula"
+                                    ? t("Sub-cláusula numerada automaticamente.")
+                                    : t("Parágrafo (sem número).")
+                                }
+                                className="campo-input min-h-[80px] resize-y leading-relaxed flex-1"
+                                style={{ whiteSpace: "pre-wrap" }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removerItem(secao.id, item.id)}
+                                title={t("Remover item")}
+                                aria-label={t("Remover item")}
+                                className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )
+                        )}
 
                         <div className="flex flex-wrap items-center gap-2 pl-9">
-                          {/* Itens DESTA cláusula (numerados N.M / sem número) */}
+                          {/* + Cláusula PRIMEIRO: abre a próxima cláusula (N+1)
+                              DENTRO desta seção. Sub-cláusula/parágrafo entram
+                              na cláusula corrente (a última da lista). */}
+                          <button
+                            type="button"
+                            onClick={() => adicionarItem(secao.id, "clausula")}
+                            className="btn btn-ghost text-xs px-2 py-1"
+                            style={{ color: ACCENT }}
+                          >
+                            <Plus size={13} />
+                            {t("Cláusula")}
+                          </button>
                           <button
                             type="button"
                             onClick={() => adicionarItem(secao.id, "subclausula")}
@@ -820,16 +850,6 @@ export default function EditorModelo({
                           >
                             <Plus size={13} />
                             {t("Parágrafo")}
-                          </button>
-                          {/* PRÓXIMA cláusula (nova seção numerada N+1) */}
-                          <button
-                            type="button"
-                            onClick={() => adicionarClausulaApos(secao.id)}
-                            className="btn btn-ghost text-xs px-2 py-1"
-                            style={{ color: ACCENT }}
-                          >
-                            <Plus size={13} />
-                            {t("Cláusula")}
                           </button>
                         </div>
                       </div>
@@ -1234,17 +1254,31 @@ function renderPreviewSecao(
     case "clausula":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>
-            {tr("CLÁUSULA")} {num.clausulas[secao.id]}ª — {ex(secao.titulo)}
-          </h3>
+          {/* Título da SEÇÃO (opcional) — as cláusulas vivem nos itens. */}
+          {secao.titulo.trim() && (
+            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
-            {secao.itens.map((item) => (
-              <div key={item.id} style={corpo}>
-                {item.tipo === "subclausula"
-                  ? `${num.itens[item.id]} ${ex(item.texto)}`
-                  : ex(item.texto)}
-              </div>
-            ))}
+            {secao.itens.map((item, idx) =>
+              item.tipo === "clausula" ? (
+                <h3
+                  key={item.id}
+                  style={{
+                    ...estiloTitulo(estilo.corTitulo),
+                    marginTop: idx > 0 ? "12pt" : undefined,
+                  }}
+                >
+                  {tr("CLÁUSULA")} {num.clausulas[item.id]}ª
+                  {item.texto.trim() ? ` — ${ex(item.texto)}` : ""}
+                </h3>
+              ) : (
+                <div key={item.id} style={corpo}>
+                  {item.tipo === "subclausula"
+                    ? `${num.itens[item.id]} ${ex(item.texto)}`
+                    : ex(item.texto)}
+                </div>
+              )
+            )}
           </div>
         </div>
       );

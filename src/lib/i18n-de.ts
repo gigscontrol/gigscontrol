@@ -1943,6 +1943,8 @@ export const DE: Record<string, string> = {
   "Parágrafo de abertura (ex: 'As partes acima têm, entre si...').": "Einleitungsabsatz (z. B. „Die oben genannten Parteien vereinbaren untereinander...\").",
   "Título da cláusula (ex: DO OBJETO)": "Klauseltitel (z. B. VERTRAGSGEGENSTAND)",
   "Título da seção": "Abschnittstitel",
+  "Cláusulas": "Klauseln",
+  "Opcional — aparece centralizado acima das cláusulas": "Optional — zentriert über den Klauseln angezeigt",
   "Ex: DAS PARTES (vazio = sem título)": "Z. B. DIE PARTEIEN (leer = ohne Titel)",
   "Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.": "Anlageninhalt. Verwenden Sie die Variablen auf der rechten Seite, um {{campos}} einzufügen.",
   "Artista/Agência": "Künstler/Agentur",
