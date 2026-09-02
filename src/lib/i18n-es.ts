@@ -869,6 +869,7 @@ export const ES: Record<string, string> = {
   "Hotel": "Hotel",
   "Logística": "Logística",
   "Já inclusa do cachê": "Ya incluida en el caché",
+  "{n} Logística Aérea (Ida e Volta)": "{n} Logística Aérea (Ida y Vuelta)",
   "{n}× Logística Aérea (Ida e Volta)": "{n}× Logística Aérea (Ida y Vuelta)",
   "Pré-visualização do WhatsApp": "Vista previa de WhatsApp",
   "negrito": "negrita",

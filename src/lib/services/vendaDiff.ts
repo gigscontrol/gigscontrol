@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Venda, ItemQuantidade, LogisticaSelecao } from "@/types";
 import { formatarMoeda, mascararCpfCnpj } from "@/lib/formatters";
+import { formatarQuantidade } from "@/lib/contratos/extenso";
 
 /**
  * DIFF DA VENDA — insumo do rastro antifraude (histórico_acoes.dados).
@@ -78,7 +79,7 @@ function duracao(horas: number | null | undefined, minutos: number | null | unde
 function itens(lista: ItemQuantidade[] | null | undefined): string {
   const s = (lista ?? [])
     .filter((i) => i && i.nome && i.qtd > 0)
-    .map((i) => `${i.nome} ×${i.qtd}`)
+    .map((i) => `${formatarQuantidade(i.qtd)} ${i.nome}`)
     .join(", ");
   return s || VAZIO;
 }
@@ -86,7 +87,8 @@ function itens(lista: ItemQuantidade[] | null | undefined): string {
 function logistica(l: LogisticaSelecao | null | undefined): string {
   if (!l) return VAZIO;
   const partes: string[] = [];
-  if (l.aereaQtd > 0) partes.push(`Aéreo ×${l.aereaQtd}`);
+  if (l.aereaQtd > 0)
+    partes.push(`${formatarQuantidade(l.aereaQtd, "pt", "f")} Aérea`);
   if (l.transladoTerrestre) partes.push("Translado terrestre");
   return partes.join(" · ") || "Inclusa no cachê";
 }

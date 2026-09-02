@@ -4,6 +4,7 @@ import { Wand2, PencilLine } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { ItemQuantidade } from "@/types";
 import { aplicarPreset, presetAtivo, type PresetRider } from "@/lib/presetsRider";
+import { formatarQuantidade } from "@/lib/contratos/extenso";
 
 /**
  * Chips de PRESET acima de uma lista de itens (Camarim/Efeitos/Técnico) no
@@ -45,7 +46,7 @@ export default function PresetChips({
             key={i}
             type="button"
             onClick={() => onChange(aplicarPreset(items, p))}
-            title={p.itens.map((it) => `${it.qtd}× ${it.nome}`).join("\n")}
+            title={p.itens.map((it) => `${formatarQuantidade(it.qtd)} ${it.nome}`).join("\n")}
             className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
               isAtivo
                 ? "border-transparent text-white"

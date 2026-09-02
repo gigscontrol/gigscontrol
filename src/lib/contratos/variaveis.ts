@@ -257,9 +257,10 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   chave_pix_artista: "contato@maninhoo.com",
 
   // Riders/Hospedagem
-  "rider de camarim": "Whisky x1, Água sem gás x12, Refrigerante x6, Gelo x2",
-  "rider de efeitos": "Máquina de fumaça x2, CO2 x4, Confete x2",
-  "rider tecnico": "CDJ-3000 x2, DJM-900NXS2 x1, Monitor de palco x2",
+  "rider de camarim":
+    "01 (um) Whisky, 12 (doze) Água sem gás, 06 (seis) Refrigerante, 02 (dois) Gelo",
+  "rider de efeitos": "02 (dois) Máquina de fumaça, 04 (quatro) CO2, 02 (dois) Confete",
+  "rider tecnico": "02 (dois) CDJ-3000, 01 (um) DJM-900NXS2, 02 (dois) Monitor de palco",
   hospedagem: "1 diária em hotel 4 estrelas, quarto single com café da manhã",
 
   // Logística

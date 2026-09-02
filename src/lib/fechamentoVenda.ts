@@ -1,6 +1,7 @@
 import { type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
 import { formatarMoeda } from "./formatters";
 import { linhasLogistica } from "./logisticaTexto";
+import { formatarQuantidade } from "./contratos/extenso";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
  *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
@@ -52,7 +53,7 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
   const blocoItens = (titulo: string, itens?: ItemQuantidade[], sempreMostrar = true) => {
     const list = (itens ?? []).filter((i) => i.qtd > 0);
     if (list.length === 0) return sempreMostrar ? `*${titulo}:* ` : null;
-    return [`*${titulo}:*`, ...list.map((i) => `${i.qtd}x ${i.nome}`)].join("\n");
+    return [`*${titulo}:*`, ...list.map((i) => `${formatarQuantidade(i.qtd)} ${i.nome}`)].join("\n");
   };
 
   const contratante = [

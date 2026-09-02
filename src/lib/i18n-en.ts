@@ -302,6 +302,7 @@ const VENDAS: Record<string, string> = {
   "Hotel": "Hotel",
   "Logística": "Logistics",
   "Já inclusa do cachê": "Already included in the fee",
+  "{n} Logística Aérea (Ida e Volta)": "{n} Air Logistics (Round Trip)",
   "{n}× Logística Aérea (Ida e Volta)": "{n}× Air Logistics (Round Trip)",
   "Pré-visualização do WhatsApp": "WhatsApp preview",
   "negrito": "bold",

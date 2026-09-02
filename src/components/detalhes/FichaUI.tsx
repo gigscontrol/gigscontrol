@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Avatar from "../Avatar";
 import type { ItemQuantidade } from "@/types";
+import { formatarQuantidade } from "@/lib/contratos/extenso";
 
 /**
  * Linguagem visual da "ficha" — extraída do ShowDetalheModal (o popup do show
@@ -178,7 +179,7 @@ export function Linha({
   );
 }
 
-/** Itens quantidade — "Nome …………… 2×" com divisores finos. */
+/** Itens quantidade — "Nome …………… 02 (dois)" com divisores finos. */
 export function ItensGrid({ items }: { items: ItemQuantidade[] }) {
   return (
     <div className="flex flex-col">
@@ -189,7 +190,7 @@ export function ItensGrid({ items }: { items: ItemQuantidade[] }) {
         >
           <span className="text-secondary truncate">{i.nome}</span>
           <span className="font-semibold tabular-nums text-primary flex-shrink-0">
-            {i.qtd}×
+            {formatarQuantidade(i.qtd)}
           </span>
         </div>
       ))}
