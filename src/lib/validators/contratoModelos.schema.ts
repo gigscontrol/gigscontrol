@@ -18,6 +18,9 @@ const secaoSchema = z.discriminatedUnion("tipo", [
   z.object({
     id: z.string(),
     tipo: z.literal("partes"),
+    // Default preserva o cabeçalho de modelos salvos ANTES do campo existir
+    // (mesma regra de compat do mapper secoesValidas).
+    titulo: z.string().default("Das partes"),
     contratante: z.string(),
     contratado: z.string(),
     paragrafo: z.string(),

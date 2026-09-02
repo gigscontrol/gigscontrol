@@ -19,6 +19,7 @@ function temConteudo(secoes: SecaoModelo[]): boolean {
         return !!(s.titulo.trim() || s.subtitulo.trim());
       case "partes":
         return !!(
+          s.titulo.trim() ||
           s.contratante.trim() ||
           s.contratado.trim() ||
           s.paragrafo.trim()
@@ -44,9 +45,52 @@ export function hexParaRgb(hex: string): [number, number, number] {
 }
 
 /**
+ * Acha um ponto de corte "limpo" pra fatiar uma seção alta: varre pra CIMA a
+ * partir do corte desejado procurando uma linha de pixels 100% da cor de
+ * fundo (o vão entre linhas de texto). Cortar ali nunca decapita letra.
+ * Se não achar vão na janela (ex.: imagem contínua), devolve o alvo mesmo.
+ */
+function acharCorteLimpo(
+  canvas: HTMLCanvasElement,
+  alvoPx: number,
+  minPx: number,
+  fundo: [number, number, number]
+): number {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return alvoPx;
+  // Janela de busca: até ~160px acima do alvo (≈ 3 linhas em scale 2).
+  const janela = Math.min(alvoPx - minPx, 160);
+  if (janela <= 0) return alvoPx;
+  const dados = ctx.getImageData(0, alvoPx - janela, canvas.width, janela).data;
+  const [br, bg, bb] = fundo;
+  const TOL = 16; // tolerância por canal (anti-aliasing/JPEG do fundo)
+  for (let linha = janela - 1; linha >= 0; linha--) {
+    let limpa = true;
+    const base = linha * canvas.width * 4;
+    // Amostra 1 a cada 3 pixels — suficiente pra detectar tinta de texto.
+    for (let x = 0; x < canvas.width; x += 3) {
+      const i = base + x * 4;
+      if (
+        Math.abs(dados[i] - br) > TOL ||
+        Math.abs(dados[i + 1] - bg) > TOL ||
+        Math.abs(dados[i + 2] - bb) > TOL
+      ) {
+        limpa = false;
+        break;
+      }
+    }
+    if (limpa) return alvoPx - janela + linha + 1;
+  }
+  return alvoPx;
+}
+
+/**
  * Gera o PDF a partir do container das seções (`conteudoEl`, cujos filhos são
  * as seções). Página a página: o fundo preenche a folha inteira, a quebra
- * acontece ENTRE seções (nunca cortando texto) e toda página tem margem.
+ * acontece ENTRE seções e, quando uma seção é maior que a página, a fatia
+ * cai num VÃO entre linhas de texto (acharCorteLimpo) — nunca no meio de uma
+ * letra. Cada captura leva uma folga no rodapé pro html2canvas não decepar
+ * os descendentes (g, p, ç) da última linha.
  * Lazy-load de jspdf/html2canvas (só carrega no clique).
  */
 export async function gerarPdfFolha(
@@ -54,7 +98,19 @@ export async function gerarPdfFolha(
   estilo: EstiloModelo,
   nomeArquivo: string
 ): Promise<void> {
-  if (conteudoEl.children.length === 0) return;
+  const pdf = await gerarPdfDoc(conteudoEl, estilo);
+  if (pdf) pdf.save(`${nomeArquivo}.pdf`);
+}
+
+/**
+ * Monta o documento jsPDF (sem salvar) — separado pra permitir também
+ * `output()` (bench/preview). null se o container está vazio.
+ */
+export async function gerarPdfDoc(
+  conteudoEl: HTMLElement,
+  estilo: EstiloModelo
+): Promise<import("jspdf").jsPDF | null> {
+  if (conteudoEl.children.length === 0) return null;
   const [{ jsPDF }, html2canvasMod] = await Promise.all([
     import("jspdf"),
     import("html2canvas"),
@@ -68,9 +124,13 @@ export async function gerarPdfFolha(
   const MBOT = 22;
   const contentW = A4_W - 2 * MX;
   const limiteY = A4_H - MBOT;
-  const GAP = 6.5;
+  const GAP = 4;
+  // Folga (px CSS) além da altura medida do elemento: captura os descendentes
+  // que o html2canvas cortava na última linha (bug do "letra decepada").
+  const FOLGA_CAPTURA = 8;
 
-  const [fr, fg, fb] = hexParaRgb(estilo.corFundo);
+  const fundoRgb = hexParaRgb(estilo.corFundo);
+  const [fr, fg, fb] = fundoRgb;
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
   let y = MTOP;
@@ -93,6 +153,7 @@ export async function gerarPdfFolha(
       scale: 2,
       backgroundColor: estilo.corFundo,
       useCORS: true,
+      height: Math.ceil(el.getBoundingClientRect().height) + FOLGA_CAPTURA,
     });
     const hmm = (canvas.height / canvas.width) * contentW;
 
@@ -113,10 +174,15 @@ export async function gerarPdfFolha(
       while (offset < canvas.height) {
         if (y > MTOP) novaPagina();
         const dispMm = limiteY - y;
-        const slicePx = Math.min(
-          canvas.height - offset,
-          Math.floor(dispMm * pxPorMm)
-        );
+        const restante = canvas.height - offset;
+        let slicePx = Math.min(restante, Math.floor(dispMm * pxPorMm));
+        // Se ainda sobra conteúdo depois desta fatia, recua o corte pro vão
+        // entre linhas mais próximo — texto nunca é cortado ao meio.
+        if (slicePx < restante) {
+          slicePx =
+            acharCorteLimpo(canvas, offset + slicePx, offset + 1, fundoRgb) -
+            offset;
+        }
         const tmp = document.createElement("canvas");
         tmp.width = canvas.width;
         tmp.height = slicePx;
@@ -151,7 +217,7 @@ export async function gerarPdfFolha(
     }
   }
 
-  pdf.save(`${nomeArquivo}.pdf`);
+  return pdf;
 }
 
 function estiloTitulo(cor: string): CSSProperties {
@@ -487,7 +553,10 @@ function renderSecao(
     case "partes":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Das partes")}</h3>
+          {/* Título EDITÁVEL da seção (campo `titulo`); vazio = sem cabeçalho. */}
+          {secao.titulo.trim() && (
+            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
               .filter((s) => s.trim())

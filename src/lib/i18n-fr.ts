@@ -1942,6 +1942,8 @@ export const FR: Record<string, string> = {
   "Excluir o contrato {numero}? Esta ação não pode ser desfeita.": "Supprimer le contrat {numero} ? Cette action est irréversible.",
   "Parágrafo de abertura (ex: 'As partes acima têm, entre si...').": "Paragraphe d'ouverture (ex. : « Les parties ci-dessus conviennent entre elles... »).",
   "Título da cláusula (ex: DO OBJETO)": "Titre de la clause (ex. : OBJET)",
+  "Título da seção": "Titre de la section",
+  "Ex: DAS PARTES (vazio = sem título)": "Ex. : LES PARTIES (vide = sans titre)",
   "Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.": "Contenu de l'annexe. Utilisez les variables à droite pour insérer {{campos}}.",
   "Artista/Agência": "Artiste/Agence",
   "Riders/Hospedagem": "Riders/Hébergement",

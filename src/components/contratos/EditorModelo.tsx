@@ -34,6 +34,7 @@ import type {
   IdiomaModelo,
 } from "@/lib/mappers/contratoModelo";
 import { estiloParaCorpo } from "@/lib/mappers/contratoModelo";
+import { gerarPdfFolha } from "./folhaA4";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
 import {
   VARIAVEIS_CONTRATO,
@@ -74,7 +75,8 @@ function novaSecao(tipo: TipoSecao): SecaoModelo {
     case "titulo":
       return { id, tipo: "titulo", titulo: "", subtitulo: "" };
     case "partes":
-      return { id, tipo: "partes", contratante: "", contratado: "", paragrafo: "" };
+      // Título NASCE vazio (o usuário escolhe; placeholder sugere "DAS PARTES").
+      return { id, tipo: "partes", titulo: "", contratante: "", contratado: "", paragrafo: "" };
     case "clausula":
       return {
         id,
@@ -141,7 +143,7 @@ function temConteudo(secoes: SecaoModelo[]): boolean {
       case "titulo":
         return !!(s.titulo.trim() || s.subtitulo.trim());
       case "partes":
-        return !!(s.contratante.trim() || s.contratado.trim() || s.paragrafo.trim());
+        return !!(s.titulo.trim() || s.contratante.trim() || s.contratado.trim() || s.paragrafo.trim());
       case "clausula":
         return !!(s.titulo.trim() || s.itens.some((i) => i.texto.trim()));
       case "anexo":
@@ -247,6 +249,7 @@ export default function EditorModelo({
             if (campo === "subtitulo") return { ...s, subtitulo: valor };
             return s;
           case "partes":
+            if (campo === "titulo") return { ...s, titulo: valor };
             if (campo === "contratante") return { ...s, contratante: valor };
             if (campo === "contratado") return { ...s, contratado: valor };
             if (campo === "paragrafo") return { ...s, paragrafo: valor };
@@ -340,6 +343,21 @@ export default function EditorModelo({
     );
   }
 
+  /**
+   * Insere uma NOVA seção de cláusula logo APÓS a seção dada (o "+ Cláusula"
+   * de dentro do card pula pra próxima cláusula: 4, 5, 6… — sub-cláusulas
+   * N.M são os itens, via "+ Sub-cláusula").
+   */
+  function adicionarClausulaApos(secaoId: string) {
+    setSecoes((prev) => {
+      const idx = prev.findIndex((s) => s.id === secaoId);
+      if (idx < 0) return [...prev, novaSecao("clausula")];
+      const copia = [...prev];
+      copia.splice(idx + 1, 0, novaSecao("clausula"));
+      return copia;
+    });
+  }
+
   async function removerItem(secaoId: string, itemId: string) {
     const secao = secoes.find((s) => s.id === secaoId);
     const item =
@@ -367,7 +385,10 @@ export default function EditorModelo({
     if (!secao) return null;
     switch (d.campo) {
       case "titulo":
-        return secao.tipo === "titulo" || secao.tipo === "clausula" || secao.tipo === "anexo"
+        return secao.tipo === "titulo" ||
+          secao.tipo === "partes" ||
+          secao.tipo === "clausula" ||
+          secao.tipo === "anexo"
           ? secao.titulo
           : null;
       case "subtitulo":
@@ -463,111 +484,15 @@ export default function EditorModelo({
     }
   }
 
-  // ---- Baixar PDF (lazy-load só no clique; paginação A4 página a página) ----
-  // Captura cada seção num canvas e monta as páginas A4: o fundo preenche a
-  // página inteira (sem branco sobrando), a quebra acontece ENTRE seções
-  // (nunca cortando o texto no meio) e toda página tem a mesma margem.
+  // ---- Baixar PDF — delega pra gerarPdfFolha (a MESMA paginação do app:
+  // quebra entre seções, fatia em vão de linha, folga anti-corte de letra).
   async function baixarPdf() {
     const cont = conteudoRef.current;
     if (!cont || cont.children.length === 0) return;
     setBaixandoPdf(true);
     setErro(null);
     try {
-      const [{ jsPDF }, html2canvasMod] = await Promise.all([
-        import("jspdf"),
-        import("html2canvas"),
-      ]);
-      const html2canvas = html2canvasMod.default;
-
-      const A4_W = 210;
-      const A4_H = 297;
-      const MX = 20; // margem lateral (mm)
-      const MTOP = 22;
-      const MBOT = 22;
-      const contentW = A4_W - 2 * MX; // 170mm
-      const limiteY = A4_H - MBOT; // y máximo do conteúdo
-      const GAP = 6.5; // espaço entre seções (≈ 1 linha, mm)
-
-      const [fr, fg, fb] = hexParaRgb(estilo.corFundo);
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-
-      let y = MTOP;
-      let primeira = true;
-      const novaPagina = () => {
-        if (!primeira) pdf.addPage();
-        primeira = false;
-        pdf.setFillColor(fr, fg, fb);
-        pdf.rect(0, 0, A4_W, A4_H, "F"); // fundo preenche a página inteira
-        y = MTOP;
-      };
-      novaPagina();
-
-      for (const el of Array.from(cont.children) as HTMLElement[]) {
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          backgroundColor: estilo.corFundo,
-          useCORS: true,
-        });
-        const hmm = (canvas.height / canvas.width) * contentW;
-
-        if (hmm <= limiteY - MTOP) {
-          // Seção cabe numa página — quebra antes se não couber no que resta.
-          if (y + hmm > limiteY && y > MTOP) novaPagina();
-          pdf.addImage(
-            canvas.toDataURL("image/jpeg", 0.95),
-            "JPEG",
-            MX,
-            y,
-            contentW,
-            hmm
-          );
-          y += hmm + GAP;
-        } else {
-          // Seção maior que a página — fatia em páginas (preenchendo o fundo).
-          const pxPorMm = canvas.height / hmm;
-          let offset = 0;
-          while (offset < canvas.height) {
-            if (y > MTOP) novaPagina();
-            const dispMm = limiteY - y;
-            const slicePx = Math.min(
-              canvas.height - offset,
-              Math.floor(dispMm * pxPorMm)
-            );
-            const tmp = document.createElement("canvas");
-            tmp.width = canvas.width;
-            tmp.height = slicePx;
-            const ctx = tmp.getContext("2d");
-            if (ctx) {
-              ctx.fillStyle = estilo.corFundo;
-              ctx.fillRect(0, 0, canvas.width, slicePx);
-              ctx.drawImage(
-                canvas,
-                0,
-                offset,
-                canvas.width,
-                slicePx,
-                0,
-                0,
-                canvas.width,
-                slicePx
-              );
-            }
-            const sliceMm = slicePx / pxPorMm;
-            pdf.addImage(
-              tmp.toDataURL("image/jpeg", 0.95),
-              "JPEG",
-              MX,
-              y,
-              contentW,
-              sliceMm
-            );
-            offset += slicePx;
-            y += sliceMm + GAP;
-          }
-        }
-      }
-
-      pdf.save(`${nome.trim() || "contrato"}.pdf`);
+      await gerarPdfFolha(cont, estilo, nome.trim() || "contrato");
     } catch {
       setErro(t("Não foi possível gerar o PDF. Tente novamente."));
     } finally {
@@ -772,6 +697,17 @@ export default function EditorModelo({
                   {secao.tipo === "partes" && (
                     <div className="flex flex-col gap-3">
                       <label className="flex flex-col gap-1">
+                        <span className="stat-label">{t("Título da seção")}</span>
+                        <input
+                          type="text"
+                          {...campoProps({ secaoId: secao.id, campo: "titulo" })}
+                          value={secao.titulo}
+                          onChange={(e) => setCampo(secao.id, "titulo", e.target.value)}
+                          placeholder={t("Ex: DAS PARTES (vazio = sem título)")}
+                          className="campo-input font-semibold"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
                         <span className="stat-label">{t("Contratante")}</span>
                         <textarea
                           {...campoProps({ secaoId: secao.id, campo: "contratante" })}
@@ -867,14 +803,15 @@ export default function EditorModelo({
                           </div>
                         ))}
 
-                        <div className="flex items-center gap-2 pl-9">
+                        <div className="flex flex-wrap items-center gap-2 pl-9">
+                          {/* Itens DESTA cláusula (numerados N.M / sem número) */}
                           <button
                             type="button"
                             onClick={() => adicionarItem(secao.id, "subclausula")}
                             className="btn btn-ghost text-xs px-2 py-1"
                           >
                             <Plus size={13} />
-                            {t("Cláusula")}
+                            {t("Sub-cláusula")}
                           </button>
                           <button
                             type="button"
@@ -883,6 +820,16 @@ export default function EditorModelo({
                           >
                             <Plus size={13} />
                             {t("Parágrafo")}
+                          </button>
+                          {/* PRÓXIMA cláusula (nova seção numerada N+1) */}
+                          <button
+                            type="button"
+                            onClick={() => adicionarClausulaApos(secao.id)}
+                            className="btn btn-ghost text-xs px-2 py-1"
+                            style={{ color: ACCENT }}
+                          >
+                            <Plus size={13} />
+                            {t("Cláusula")}
                           </button>
                         </div>
                       </div>
@@ -1072,16 +1019,6 @@ function primeiroCampoTexto(secoes: SecaoModelo[]): Descritor | null {
     }
   }
   return null;
-}
-
-/** Hex (#rrggbb) → [r, g, b] pra preencher o fundo da página no jsPDF. */
-function hexParaRgb(hex: string): [number, number, number] {
-  const m = hex.replace("#", "");
-  return [
-    parseInt(m.slice(0, 2), 16) || 0,
-    parseInt(m.slice(2, 4), 16) || 0,
-    parseInt(m.slice(4, 6), 16) || 0,
-  ];
 }
 
 // Presets de cor (4 + a opção RGB custom via ColorPicker) pra cada parte.
@@ -1278,7 +1215,10 @@ function renderPreviewSecao(
     case "partes":
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>{tr("Das partes")}</h3>
+          {/* Título EDITÁVEL da seção (campo `titulo`); vazio = sem cabeçalho. */}
+          {secao.titulo.trim() && (
+            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
               .filter((s) => s.trim())
