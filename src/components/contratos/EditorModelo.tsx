@@ -35,7 +35,7 @@ import type {
   IdiomaModelo,
 } from "@/lib/mappers/contratoModelo";
 import { estiloParaCorpo } from "@/lib/mappers/contratoModelo";
-import { gerarPdfFolha } from "./folhaA4";
+import { FolhaA4, gerarPdfFolha } from "./folhaA4";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
 import {
   VARIAVEIS_CONTRATO,
@@ -463,6 +463,48 @@ export default function EditorModelo({
       return;
     }
     setCampo(d.secaoId, d.campo, valor);
+  }
+
+  /**
+   * FORMATAÇÃO: envolve a SELEÇÃO do campo focado com o marcador
+   * (**negrito**, *itálico*, __sublinhado__) — o A4 renderiza os marcadores
+   * como formatação de verdade. Sem seleção, insere o par e deixa o cursor
+   * no meio pra digitar já formatado.
+   */
+  function envolverSelecao(marca: string) {
+    const foco = focoRef.current;
+    const alvo: Descritor | null =
+      foco && lerValor(foco) !== null ? foco : null;
+    if (!alvo) return;
+    const valor = lerValor(alvo);
+    if (valor === null) return;
+
+    const chave = chaveCampo(alvo);
+    const el = camposRef.current[chave];
+    const inicio = el?.selectionStart ?? valor.length;
+    const fim = el?.selectionEnd ?? valor.length;
+    const novoValor =
+      valor.slice(0, inicio) +
+      marca +
+      valor.slice(inicio, fim) +
+      marca +
+      valor.slice(fim);
+    escreverValor(alvo, novoValor);
+
+    // Reposiciona mantendo a seleção DENTRO dos marcadores.
+    const novoInicio = inicio + marca.length;
+    const novoFim = fim + marca.length;
+    requestAnimationFrame(() => {
+      const ref = camposRef.current[chave];
+      if (ref) {
+        ref.focus();
+        try {
+          ref.setSelectionRange(novoInicio, novoFim);
+        } catch {
+          /* ignora navegadores que não suportam */
+        }
+      }
+    });
   }
 
   function inserirVariavel(token: string) {
@@ -1067,6 +1109,41 @@ export default function EditorModelo({
 
         {/* Coluna direita: paleta de variáveis (sticky) */}
         <aside className="lg:sticky lg:top-6 self-start">
+          <div className="card p-4 mb-4">
+            <div className="section-title mb-1">{t("Formatação")}</div>
+            <p className="section-subtitle mb-3">
+              {t("Selecione um trecho no campo e clique para formatar.")}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => envolverSelecao("**")}
+                title={t("Negrito")}
+                aria-label={t("Negrito")}
+                className="btn btn-secondary h-8 w-9 px-0 font-bold"
+              >
+                B
+              </button>
+              <button
+                type="button"
+                onClick={() => envolverSelecao("*")}
+                title={t("Itálico")}
+                aria-label={t("Itálico")}
+                className="btn btn-secondary h-8 w-9 px-0 italic font-serif"
+              >
+                I
+              </button>
+              <button
+                type="button"
+                onClick={() => envolverSelecao("__")}
+                title={t("Sublinhado")}
+                aria-label={t("Sublinhado")}
+                className="btn btn-secondary h-8 w-9 px-0 underline"
+              >
+                U
+              </button>
+            </div>
+          </div>
           <div className="card p-4">
             <div className="section-title mb-1">{t("Variáveis")}</div>
             <p className="section-subtitle mb-4">
@@ -1209,9 +1286,9 @@ function SeletorCorInline({
 }
 
 /**
- * Preview do modelo numa FOLHA A4 (210×297mm), com as cores escolhidas
- * (fundo / texto / título) e dados de exemplo já substituídos. O `folhaRef`
- * aponta pra folha — é o nó capturado na geração do PDF.
+ * Preview do modelo — delega pra MESMA FolhaA4 do app: o que o editor
+ * mostra é EXATAMENTE o que o contrato gerado imprime (render único, sem
+ * duplicata pra divergir), com os dados de exemplo substituídos na hora.
  */
 function PreviewSecoes({
   secoes,
@@ -1224,217 +1301,14 @@ function PreviewSecoes({
   folhaRef: Ref<HTMLDivElement>;
   conteudoRef: Ref<HTMLDivElement>;
 }) {
-  const translate = useT();
-  const num = calcularNumeracao(secoes);
   const ex = (s: string) => preencher(s, VALORES_EXEMPLO);
-
   return (
-    <div
-      className="overflow-auto rounded-md p-4"
-      style={{
-        background: "var(--bg-main)",
-        border: "1px solid var(--border-color)",
-      }}
-    >
-      <div
-        ref={folhaRef}
-        style={{
-          width: "210mm",
-          minHeight: "297mm",
-          margin: "0 auto",
-          padding: "22mm 20mm",
-          background: estilo.corFundo,
-          color: estilo.corTexto,
-          boxShadow: "0 6px 28px var(--shadow-color)",
-          fontFamily: "'Times New Roman', Georgia, serif",
-          fontSize: "11pt",
-          lineHeight: 1.6,
-        }}
-      >
-        {!temConteudo(secoes) ? (
-          <p style={{ fontStyle: "italic", opacity: 0.55 }}>
-            {translate("Nada para mostrar ainda — adicione seções e preencha o conteúdo.")}
-          </p>
-        ) : (
-          <div
-            ref={conteudoRef}
-            style={{ display: "flex", flexDirection: "column", gap: "18pt" }}
-          >
-            {secoes.map((secao) => (
-              <div key={secao.id}>{renderPreviewSecao(secao, num, ex, estilo, translate)}</div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <FolhaA4
+      secoes={secoes}
+      estilo={estilo}
+      folhaRef={folhaRef}
+      conteudoRef={conteudoRef}
+      transformarTexto={ex}
+    />
   );
-}
-
-/** Estilo de um título centralizado (usa a cor de título do modelo). */
-function estiloTitulo(cor: string): CSSProperties {
-  return {
-    color: cor,
-    fontSize: "11pt",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.03em",
-    textAlign: "center",
-    marginBottom: "6pt",
-  };
-}
-
-function renderPreviewSecao(
-  secao: SecaoModelo,
-  num: ReturnType<typeof calcularNumeracao>,
-  ex: (s: string) => string,
-  estilo: EstiloModelo,
-  tr: (s: string) => string
-) {
-  const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
-
-  switch (secao.tipo) {
-    case "titulo":
-      return (
-        <div style={{ textAlign: "center" }}>
-          {secao.titulo.trim() && (
-            <h2
-              style={{
-                color: estilo.corTitulo,
-                fontSize: "15pt",
-                fontWeight: 700,
-                letterSpacing: "0.02em",
-              }}
-            >
-              {ex(secao.titulo)}
-            </h2>
-          )}
-          {secao.subtitulo.trim() && (
-            <p style={{ fontSize: "11pt", marginTop: "4pt", opacity: 0.85 }}>
-              {ex(secao.subtitulo)}
-            </p>
-          )}
-        </div>
-      );
-
-    case "partes":
-      return (
-        <div>
-          {/* Título EDITÁVEL da seção (campo `titulo`); vazio = sem cabeçalho. */}
-          {secao.titulo.trim() && (
-            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
-            {[secao.contratante, secao.contratado, secao.paragrafo]
-              .filter((s) => s.trim())
-              .map((s, i) => (
-                <div key={i} style={corpo}>
-                  {ex(s)}
-                </div>
-              ))}
-          </div>
-        </div>
-      );
-
-    case "clausula":
-      return (
-        <div>
-          {/* Título da SEÇÃO (opcional) — as cláusulas vivem nos itens. */}
-          {secao.titulo.trim() && (
-            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
-            {secao.itens.map((item, idx) =>
-              item.tipo === "clausula" ? (
-                // CAPUT da cláusula numerado "N." (padrão BR: 3. / 3.1 / 3.2).
-                <div
-                  key={item.id}
-                  style={{ ...corpo, marginTop: idx > 0 ? "8pt" : undefined }}
-                >
-                  {`${num.clausulas[item.id]}. ${ex(item.texto)}`}
-                </div>
-              ) : (
-                <div key={item.id} style={corpo}>
-                  {item.tipo === "subclausula"
-                    ? `${num.itens[item.id]} ${ex(item.texto)}`
-                    : ex(item.texto)}
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      );
-
-    case "assinaturas": {
-      const blocos: { nome: string; doc?: string; papel: string }[] = [
-        { nome: ex("{{contratante}}"), doc: ex("{{documento}}"), papel: tr("CONTRATANTE") },
-        { nome: ex("{{artista}}"), papel: tr("CONTRATADO") },
-      ];
-      secao.testemunhas.forEach((testemunha, i) => {
-        blocos.push({ nome: testemunha.nome, doc: testemunha.documento, papel: `${tr("Testemunha")} ${i + 1}` });
-      });
-      return (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "26pt",
-            paddingTop: "14pt",
-          }}
-        >
-          {blocos.map((b, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{ width: "70mm", borderTop: `1px solid ${estilo.corTexto}` }}
-              />
-              {b.nome && <span style={{ marginTop: "3pt" }}>{b.nome}</span>}
-              {b.doc && b.doc.trim() && (
-                <span style={{ fontSize: "9pt", opacity: 0.7, marginTop: "1pt" }}>
-                  {b.doc}
-                </span>
-              )}
-              <span
-                style={{
-                  fontSize: "9pt",
-                  opacity: 0.7,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  marginTop: "1pt",
-                }}
-              >
-                {b.papel}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    case "anexo":
-      return (
-        <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
-          <div style={corpo}>{ex(secao.conteudo)}</div>
-        </div>
-      );
-
-    case "localdata": {
-      // "São José dos Pinhais, 21/08/2026" — no preview a data vem do exemplo.
-      const dataTxt = secao.data.trim() || ex("{{data_hoje}}");
-      const localTxt = secao.local.trim() ? `${ex(secao.local)}, ` : "";
-      return (
-        <div style={{ textAlign: "center", paddingTop: "6pt" }}>
-          {localTxt}
-          {dataTxt}
-        </div>
-      );
-    }
-  }
 }

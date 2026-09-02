@@ -20,18 +20,39 @@ export type Numeracao = {
   clausulas: Record<string, number>;
   /** itemId (sub-cláusula) -> rótulo "N.M" */
   itens: Record<string, string>;
+  /**
+   * itemId (parágrafo) -> rótulo jurídico: "Parágrafo único" quando é o ÚNICO
+   * parágrafo da cláusula; "§ 1º", "§ 2º"… quando há mais de um (praxe BR).
+   */
+  paragrafos: Record<string, string>;
 };
 
 export function calcularNumeracao(secoes: SecaoModelo[]): Numeracao {
   const clausulas: Record<string, number> = {};
   const itens: Record<string, string> = {};
+  const paragrafos: Record<string, string> = {};
   let n = 0;
+  // Parágrafos da cláusula corrente — rotulados no fechamento dela (só aí
+  // sabemos se é "único" ou "§ Nº").
+  let grupoParagrafos: string[] = [];
+  const fecharClausula = () => {
+    if (grupoParagrafos.length === 1) {
+      paragrafos[grupoParagrafos[0]] = "Parágrafo único";
+    } else {
+      grupoParagrafos.forEach((id, i) => {
+        paragrafos[id] = `§ ${i + 1}º`;
+      });
+    }
+    grupoParagrafos = [];
+  };
+
   for (const s of secoes) {
     if (s.tipo !== "clausula") continue;
     let m = 0;
     let aberta = false;
     for (const it of s.itens) {
       if (it.tipo === "clausula") {
+        fecharClausula();
         n++;
         m = 0;
         aberta = true;
@@ -45,8 +66,11 @@ export function calcularNumeracao(secoes: SecaoModelo[]): Numeracao {
         }
         m++;
         itens[it.id] = `${n}.${m}`;
+      } else {
+        grupoParagrafos.push(it.id);
       }
     }
+    fecharClausula(); // parágrafos não atravessam seções
   }
-  return { clausulas, itens };
+  return { clausulas, itens, paragrafos };
 }

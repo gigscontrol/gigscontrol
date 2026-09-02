@@ -6,7 +6,7 @@
  * preenchidas (ou um `transformarTexto` para preencher na hora, usado no
  * preview do editor de modelos com dados de exemplo).
  */
-import { type CSSProperties, type Ref } from "react";
+import { type CSSProperties, type ReactNode, type Ref } from "react";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import { calcularNumeracao } from "@/lib/contratos/numeracao";
 import { resumirDispositivo } from "@/lib/contratos/dispositivo";
@@ -98,9 +98,10 @@ function acharCorteLimpo(
 export async function gerarPdfFolha(
   conteudoEl: HTMLElement,
   estilo: EstiloModelo,
-  nomeArquivo: string
+  nomeArquivo: string,
+  opts?: { verificacaoId?: string | null }
 ): Promise<void> {
-  const pdf = await gerarPdfDoc(conteudoEl, estilo);
+  const pdf = await gerarPdfDoc(conteudoEl, estilo, opts);
   if (pdf) pdf.save(`${nomeArquivo}.pdf`);
 }
 
@@ -110,7 +111,8 @@ export async function gerarPdfFolha(
  */
 export async function gerarPdfDoc(
   conteudoEl: HTMLElement,
-  estilo: EstiloModelo
+  estilo: EstiloModelo,
+  opts?: { verificacaoId?: string | null }
 ): Promise<import("jspdf").jsPDF | null> {
   if (conteudoEl.children.length === 0) return null;
   const [{ jsPDF }, html2canvasMod] = await Promise.all([
@@ -131,15 +133,17 @@ export async function gerarPdfDoc(
   // que o html2canvas cortava na última linha (bug do "letra decepada").
   const FOLGA_CAPTURA = 8;
 
-  const fundoRgb = hexParaRgb(estilo.corFundo);
-  const [fr, fg, fb] = fundoRgb;
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
+  // Fundo POR PÁGINA: o documento usa a cor do modelo; a(s) página(s) do
+  // relatório de assinaturas (data-pagina-branca) são SEMPRE brancas.
+  let fundoPagina = estilo.corFundo;
   let y = MTOP;
   let primeira = true;
   const novaPagina = () => {
     if (!primeira) pdf.addPage();
     primeira = false;
+    const [fr, fg, fb] = hexParaRgb(fundoPagina);
     pdf.setFillColor(fr, fg, fb);
     pdf.rect(0, 0, A4_W, A4_H, "F");
     y = MTOP;
@@ -147,13 +151,19 @@ export async function gerarPdfDoc(
   novaPagina();
 
   for (const el of Array.from(conteudoEl.children) as HTMLElement[]) {
-    // Quebra de página FORÇADA: um filho marcado (o relatório de assinaturas)
-    // começa sempre numa folha nova. Não existe @media print/page-break no
-    // fluxo (paginamos por imagem), então a quebra vive aqui no loop.
-    if (el.dataset.novaPagina === "1" && y > MTOP) novaPagina();
+    const branca = el.dataset.paginaBranca === "1";
+    const fundoEl = branca ? "#ffffff" : estilo.corFundo;
+    // Quebra de página FORÇADA: filho marcado (relatório) começa em folha
+    // nova; idem quando o FUNDO da página muda (colorido → branco e volta).
+    const precisaNova =
+      el.dataset.novaPagina === "1" || fundoEl !== fundoPagina;
+    fundoPagina = fundoEl;
+    if (precisaNova && y > MTOP) novaPagina();
+    const fundoRgb = hexParaRgb(fundoEl);
+
     const canvas = await html2canvas(el, {
       scale: 2,
-      backgroundColor: estilo.corFundo,
+      backgroundColor: fundoEl,
       useCORS: true,
       height: Math.ceil(el.getBoundingClientRect().height) + FOLGA_CAPTURA,
     });
@@ -190,7 +200,7 @@ export async function gerarPdfDoc(
         tmp.height = slicePx;
         const ctx = tmp.getContext("2d");
         if (ctx) {
-          ctx.fillStyle = estilo.corFundo;
+          ctx.fillStyle = fundoEl;
           ctx.fillRect(0, 0, canvas.width, slicePx);
           ctx.drawImage(
             canvas,
@@ -219,19 +229,103 @@ export async function gerarPdfDoc(
     }
   }
 
+  // Rodapé de validade em TODAS as páginas (padrão das plataformas de
+  // assinatura). Cinza médio — legível sobre fundo claro E escuro.
+  const rodape = [
+    "Documento gerado na GIGS CONTROL · Assinatura eletrônica com validade jurídica — MP 2.200-2/2001 e Lei 14.063/2020",
+    opts?.verificacaoId
+      ? `Verificação: ${opts.verificacaoId} · gigscontrol.com/verificar`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("  |  ");
+  const total = pdf.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    pdf.setPage(p);
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(138, 138, 145);
+    pdf.text(rodape, A4_W / 2, A4_H - 6, { align: "center" });
+  }
+
   return pdf;
 }
 
 function estiloTitulo(cor: string): CSSProperties {
   return {
     color: cor,
-    fontSize: "11pt",
+    fontSize: "11.5pt",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.03em",
     textAlign: "center",
-    marginBottom: "6pt",
+    marginBottom: "8pt",
   };
+}
+
+// ---------------- Texto rico + reflow (padrão dos contratos) ----------------
+
+/**
+ * Formatação inline nos textos do modelo: **negrito**, *itálico* e
+ * __sublinhado__ (inseridos pela barra de formatação do editor ou digitados).
+ * Sem aninhamento — o suficiente pra destacar trechos de cláusula.
+ */
+function richInline(texto: string, keyBase: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /(\*\*([^*]+)\*\*)|(__([^_]+)__)|(\*([^*\n]+)\*)/g;
+  let ultimo = 0;
+  let m: RegExpExecArray | null;
+  let k = 0;
+  while ((m = re.exec(texto))) {
+    if (m.index > ultimo) out.push(texto.slice(ultimo, m.index));
+    if (m[2] !== undefined) out.push(<strong key={`${keyBase}b${k++}`}>{m[2]}</strong>);
+    else if (m[4] !== undefined) out.push(<u key={`${keyBase}u${k++}`}>{m[4]}</u>);
+    else out.push(<em key={`${keyBase}i${k++}`}>{m[6]}</em>);
+    ultimo = m.index + m[0].length;
+  }
+  if (ultimo < texto.length) out.push(texto.slice(ultimo));
+  return out;
+}
+
+/**
+ * REFLOW do corpo: quebra de linha SIMPLES vira espaço (texto colado de
+ * outro lugar volta a fluir justificado até a margem — era o que deixava as
+ * cláusulas "picotadas"); linha EM BRANCO separa parágrafos de verdade.
+ */
+function paragrafosDe(texto: string): string[] {
+  return texto
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
+    .filter(Boolean);
+}
+
+/**
+ * Corpo de contrato: justificado, com reflow e formatação inline. `prefixo`
+ * (ex.: "CLÁUSULA 14ª." em negrito) entra colado no início do 1º parágrafo.
+ */
+function CorpoRico({
+  texto,
+  prefixo,
+  style,
+}: {
+  texto: string;
+  prefixo?: ReactNode;
+  style?: CSSProperties;
+}) {
+  const paragrafos = paragrafosDe(texto);
+  if (paragrafos.length === 0 && !prefixo) return null;
+  if (paragrafos.length === 0) {
+    return <div style={{ textAlign: "justify", ...style }}>{prefixo}</div>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "5pt", ...style }}>
+      {paragrafos.map((p, i) => (
+        <div key={i} style={{ textAlign: "justify" }}>
+          {i === 0 && prefixo ? <>{prefixo} </> : null}
+          {richInline(p, `p${i}`)}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** Dados de uma assinatura registrada (folha assinada + relatório). */
@@ -299,82 +393,151 @@ function LinhaInfo({ rotulo, valor }: { rotulo: string; valor: string }) {
 }
 
 /**
- * Relatório de assinaturas (padrão ZapSign): cabeçalho + um bloco por
- * signatário (moldura clean, miniatura da assinatura + grade rótulo:valor).
- * Cores fixas do papel (corFundo/corTexto/corTitulo) — vai pro PDF via
- * html2canvas, então tokens do tema (var(--x)) não valem aqui; bordas suaves
- * saem de um rgba derivado de corTexto (nada de concatenar hex).
+ * RELATÓRIO DE ASSINATURAS — página EXTRA sempre BRANCA (padrão ZapSign),
+ * independente das cores que o usuário escolheu pro documento. Paleta fixa
+ * (nada de estilo do modelo): cabeçalho, bloco de identificação (número,
+ * código público de verificação, hash SHA-256), um cartão por signatário com
+ * as evidências e o selo de validade jurídica no rodapé.
  * As miniaturas de foto/selfie (KYC) só aparecem quando há URL — a rota
  * pública não as envia, então nunca vazam pra quem abre o link.
  */
+const REL_TEXTO = "#1c1c22";
+const REL_MUTED = "#6d6d78";
+const REL_BORDA = "#e3e3ea";
+const REL_FUNDO2 = "#f6f6f8";
+const REL_VERDE = "#177a44";
+const REL_VERDE_BG = "#e7f6ee";
+
 function renderRelatorio(
   assinaturas: AssinaturaInfo[],
-  estilo: EstiloModelo,
   tr: (s: string) => string,
   numeroContrato?: string,
-  verificacaoId?: string | null
+  verificacaoId?: string | null,
+  conteudoHash?: string | null
 ) {
-  const [r, g, b] = hexParaRgb(estilo.corTexto);
-  const borda = `rgba(${r}, ${g}, ${b}, 0.14)`;
-  const bordaForte = `rgba(${r}, ${g}, ${b}, 0.3)`;
-
   return (
     <div
       style={{
-        border: `1px solid ${borda}`,
-        borderRadius: "6pt",
-        padding: "14pt 16pt 16pt",
-        background: estilo.corFundo,
+        background: "#ffffff",
+        color: REL_TEXTO,
+        fontFamily: "'Helvetica Neue', Arial, sans-serif",
+        fontSize: "9pt",
+        lineHeight: 1.55,
       }}
     >
       {/* Cabeçalho */}
       <div
         style={{
-          borderBottom: `1px solid ${borda}`,
-          paddingBottom: "8pt",
-          marginBottom: "12pt",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "8mm",
         }}
       >
+        <div>
+          <div style={{ fontSize: "16pt", fontWeight: 700, letterSpacing: "0.01em" }}>
+            {tr("Relatório de assinaturas")}
+          </div>
+          <div style={{ fontSize: "8pt", color: REL_MUTED, marginTop: "2pt" }}>
+            {`${tr("Emitido em")} ${dataHojeBr()} · ${tr("Datas e horários em UTC")}`}
+          </div>
+        </div>
         <div
           style={{
-            color: estilo.corTitulo,
-            fontSize: "12.5pt",
-            fontWeight: 700,
-            letterSpacing: "0.02em",
+            fontSize: "9.5pt",
+            fontWeight: 800,
+            letterSpacing: "0.14em",
+            color: REL_TEXTO,
+            whiteSpace: "nowrap",
+            paddingTop: "3pt",
           }}
         >
-          {tr("Relatório de assinaturas")}
+          GIGS CONTROL
         </div>
-        <div style={{ fontSize: "8.5pt", opacity: 0.6, marginTop: "2pt" }}>
-          {[
-            numeroContrato ? `${tr("Contrato")} ${numeroContrato}` : "",
-            `${tr("Emitido em")} ${dataHojeBr()}`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </div>
-        {/* Selo público de autenticidade (mig 98) — impresso no papel. */}
+      </div>
+
+      <div style={{ borderTop: `2px solid ${REL_TEXTO}`, margin: "8pt 0 10pt" }} />
+
+      {/* Identificação do documento */}
+      <div
+        style={{
+          border: `1px solid ${REL_BORDA}`,
+          background: REL_FUNDO2,
+          borderRadius: "5pt",
+          padding: "9pt 11pt",
+          display: "flex",
+          flexDirection: "column",
+          gap: "3pt",
+        }}
+      >
+        {numeroContrato && (
+          <div style={{ display: "flex", gap: "6pt" }}>
+            <span style={{ minWidth: "34mm", color: REL_MUTED }}>{tr("Documento")}</span>
+            <span style={{ fontWeight: 700 }}>{numeroContrato}</span>
+          </div>
+        )}
         {verificacaoId && (
-          <div style={{ fontSize: "8.5pt", opacity: 0.6, marginTop: "2pt" }}>
-            {`${tr("Verificação de autenticidade")}: ${verificacaoId} · gigscontrol.com/verificar`}
+          <div style={{ display: "flex", gap: "6pt" }}>
+            <span style={{ minWidth: "34mm", color: REL_MUTED }}>
+              {tr("Código de verificação")}
+            </span>
+            <span style={{ fontFamily: "Consolas, monospace", fontWeight: 700 }}>
+              {verificacaoId}
+              <span style={{ color: REL_MUTED, fontWeight: 400 }}>
+                {" "}
+                · gigscontrol.com/verificar
+              </span>
+            </span>
+          </div>
+        )}
+        {conteudoHash && (
+          <div style={{ display: "flex", gap: "6pt" }}>
+            <span style={{ minWidth: "34mm", color: REL_MUTED, flexShrink: 0 }}>
+              {tr("Hash do conteúdo (SHA-256)")}
+            </span>
+            <span
+              style={{
+                fontFamily: "Consolas, monospace",
+                fontSize: "7pt",
+                wordBreak: "break-all",
+                paddingTop: "1pt",
+              }}
+            >
+              {conteudoHash}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Um bloco por signatário */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "10pt" }}>
+      {/* Assinaturas */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          margin: "12pt 0 6pt",
+        }}
+      >
+        <span style={{ fontSize: "11pt", fontWeight: 700 }}>{tr("Assinaturas")}</span>
+        <span style={{ fontSize: "8pt", color: REL_MUTED }}>
+          {assinaturas.length}{" "}
+          {assinaturas.length === 1 ? tr("assinatura") : tr("assinaturas")}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "8pt" }}>
         {assinaturas.map((a, i) => {
           const assinou = !!a.assinadoEm || !!a.assinatura;
           return (
             <div
               key={i}
               style={{
-                border: `1px solid ${borda}`,
+                border: `1px solid ${REL_BORDA}`,
                 borderRadius: "5pt",
-                padding: "10pt 12pt",
+                padding: "9pt 11pt",
               }}
             >
-              {/* Nome / papel + status */}
+              {/* Badge + nome/papel */}
               <div
                 style={{
                   display: "flex",
@@ -384,14 +547,30 @@ function renderRelatorio(
                 }}
               >
                 <div style={{ minWidth: 0 }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      fontSize: "7pt",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      padding: "1.5pt 7pt",
+                      borderRadius: "999px",
+                      background: assinou ? REL_VERDE_BG : REL_FUNDO2,
+                      color: assinou ? REL_VERDE : REL_MUTED,
+                      marginBottom: "3pt",
+                    }}
+                  >
+                    {assinou ? `✓ ${tr("Assinado")}` : tr("Pendente")}
+                  </span>
                   <div style={{ fontWeight: 700, fontSize: "10.5pt" }}>{a.nome}</div>
                   {a.papel && (
                     <div
                       style={{
-                        fontSize: "8pt",
-                        opacity: 0.6,
+                        fontSize: "7.5pt",
+                        color: REL_MUTED,
                         textTransform: "uppercase",
-                        letterSpacing: "0.04em",
+                        letterSpacing: "0.05em",
                         marginTop: "1pt",
                       }}
                     >
@@ -399,79 +578,63 @@ function renderRelatorio(
                     </div>
                   )}
                 </div>
-                <span
-                  style={{
-                    fontSize: "7.5pt",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    padding: "2pt 8pt",
-                    borderRadius: "999px",
-                    whiteSpace: "nowrap",
-                    border: `1px solid ${bordaForte}`,
-                    opacity: assinou ? 1 : 0.55,
-                  }}
-                >
-                  {assinou ? tr("Assinado") : tr("Pendente")}
-                </span>
-              </div>
-
-              {/* Grade rótulo:valor + miniatura da assinatura */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8mm",
-                  alignItems: "flex-start",
-                  marginTop: "8pt",
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "2pt",
-                  }}
-                >
-                  <LinhaInfo rotulo={tr("Documento")} valor={a.documento ?? ""} />
-                  <LinhaInfo rotulo={tr("E-mail")} valor={a.email ?? ""} />
-                  <LinhaInfo rotulo={tr("Assinado em")} valor={dataHoraRel(a.assinadoEm)} />
-                  <LinhaInfo rotulo="IP" valor={a.ip ?? ""} />
-                  <LinhaInfo
-                    rotulo={tr("Dispositivo")}
-                    valor={resumirDispositivo(a.dispositivo)}
-                  />
-                  <LinhaInfo rotulo={tr("Geolocalização")} valor={a.geolocalizacao ?? ""} />
-                  {typeof a.facialSimilaridade === "number" && (
-                    <LinhaInfo
-                      rotulo={tr("Reconhecimento facial")}
-                      valor={`${a.facialSimilaridade}% ${
-                        a.facialMatch ? `(${tr("compatível")})` : `(${tr("divergente")})`
-                      }`}
-                    />
-                  )}
-                </div>
                 {a.assinatura && (
-                  <div style={{ width: "48mm", flexShrink: 0, textAlign: "center" }}>
+                  <div
+                    style={{
+                      width: "46mm",
+                      flexShrink: 0,
+                      textAlign: "center",
+                      border: `1px solid ${REL_BORDA}`,
+                      borderRadius: "4pt",
+                      padding: "4pt 6pt 3pt",
+                    }}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={a.assinatura}
                       alt=""
-                      style={{ width: "100%", maxHeight: "16mm", objectFit: "contain" }}
+                      style={{ width: "100%", maxHeight: "14mm", objectFit: "contain" }}
                     />
                     <div
                       style={{
-                        borderTop: `1px solid ${bordaForte}`,
+                        borderTop: `1px solid ${REL_BORDA}`,
                         marginTop: "2pt",
                         paddingTop: "2pt",
-                        fontSize: "7pt",
-                        opacity: 0.55,
+                        fontSize: "6.5pt",
+                        color: REL_MUTED,
                       }}
                     >
-                      {tr("Assinatura")}
+                      {tr("Assinatura registrada")}
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Evidências */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2pt",
+                  marginTop: "6pt",
+                }}
+              >
+                <LinhaInfo rotulo={tr("Documento")} valor={a.documento ?? ""} />
+                <LinhaInfo rotulo={tr("E-mail")} valor={a.email ?? ""} />
+                <LinhaInfo rotulo={tr("Assinado em")} valor={dataHoraRel(a.assinadoEm)} />
+                <LinhaInfo rotulo="IP" valor={a.ip ?? ""} />
+                <LinhaInfo
+                  rotulo={tr("Dispositivo")}
+                  valor={resumirDispositivo(a.dispositivo)}
+                />
+                <LinhaInfo rotulo={tr("Geolocalização")} valor={a.geolocalizacao ?? ""} />
+                {typeof a.facialSimilaridade === "number" && (
+                  <LinhaInfo
+                    rotulo={tr("Reconhecimento facial")}
+                    valor={`${a.facialSimilaridade}% ${
+                      a.facialMatch ? `(${tr("compatível")})` : `(${tr("divergente")})`
+                    }`}
+                  />
                 )}
               </div>
 
@@ -484,7 +647,7 @@ function renderRelatorio(
                   style={{
                     display: "flex",
                     gap: "4mm",
-                    marginTop: "8pt",
+                    marginTop: "7pt",
                     flexWrap: "wrap",
                   }}
                 >
@@ -501,9 +664,16 @@ function renderRelatorio(
                         <img
                           src={f.url as string}
                           alt=""
-                          style={{ height: "20mm", borderRadius: "2pt", objectFit: "cover" }}
+                          style={{
+                            height: "20mm",
+                            borderRadius: "3pt",
+                            objectFit: "cover",
+                            border: `1px solid ${REL_BORDA}`,
+                          }}
                         />
-                        <div style={{ fontSize: "6.5pt", opacity: 0.6, marginTop: "1pt" }}>
+                        <div
+                          style={{ fontSize: "6.5pt", color: REL_MUTED, marginTop: "1pt" }}
+                        >
                           {f.leg}
                         </div>
                       </div>
@@ -513,6 +683,38 @@ function renderRelatorio(
             </div>
           );
         })}
+      </div>
+
+      {/* Selo de validade jurídica */}
+      <div
+        style={{
+          marginTop: "12pt",
+          border: `1px solid ${REL_BORDA}`,
+          borderLeft: `3px solid ${REL_VERDE}`,
+          borderRadius: "5pt",
+          padding: "8pt 11pt",
+          background: REL_FUNDO2,
+        }}
+      >
+        <div
+          style={{
+            fontSize: "8pt",
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: REL_VERDE,
+          }}
+        >
+          {tr("Validade jurídica")}
+        </div>
+        <div style={{ fontSize: "8pt", color: REL_MUTED, marginTop: "2pt" }}>
+          {tr(
+            "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001 e da Lei 14.063/2020."
+          )}
+          {verificacaoId
+            ? ` ${tr("Verifique a autenticidade em")} gigscontrol.com/verificar · ${verificacaoId}`
+            : ""}
+        </div>
       </div>
     </div>
   );
@@ -526,8 +728,6 @@ function renderSecao(
   tr: (s: string) => string,
   assinaturas?: AssinaturaInfo[]
 ) {
-  const corpo: CSSProperties = { whiteSpace: "pre-wrap", textAlign: "justify" };
-
   switch (secao.tipo) {
     case "titulo":
       return (
@@ -536,16 +736,24 @@ function renderSecao(
             <h2
               style={{
                 color: estilo.corTitulo,
-                fontSize: "15pt",
+                fontSize: "18pt",
                 fontWeight: 700,
                 letterSpacing: "0.02em",
+                lineHeight: 1.3,
               }}
             >
               {ex(secao.titulo)}
             </h2>
           )}
           {secao.subtitulo.trim() && (
-            <p style={{ fontSize: "11pt", marginTop: "4pt", opacity: 0.85 }}>
+            <p
+              style={{
+                fontSize: "11.5pt",
+                marginTop: "5pt",
+                opacity: 0.85,
+                fontStyle: "italic",
+              }}
+            >
               {ex(secao.subtitulo)}
             </p>
           )}
@@ -559,13 +767,11 @@ function renderSecao(
           {secao.titulo.trim() && (
             <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
               .filter((s) => s.trim())
               .map((s, i) => (
-                <div key={i} style={corpo}>
-                  {ex(s)}
-                </div>
+                <CorpoRico key={i} texto={ex(s)} />
               ))}
           </div>
         </div>
@@ -578,23 +784,42 @@ function renderSecao(
           {secao.titulo.trim() && (
             <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6pt" }}>
             {secao.itens.map((item, idx) =>
               item.tipo === "clausula" ? (
-                // CAPUT da cláusula: texto principal numerado "N." (padrão
-                // BR: 3. texto… / 3.1 / 3.2). Respiro antes (não na 1ª).
-                <div
+                // CAPUT: "CLÁUSULA 14ª." em negrito + texto justificado
+                // (padrão dos contratos BR). Respiro antes (não no 1º item).
+                <CorpoRico
                   key={item.id}
-                  style={{ ...corpo, marginTop: idx > 0 ? "8pt" : undefined }}
-                >
-                  {`${num.clausulas[item.id]}. ${ex(item.texto)}`}
-                </div>
+                  texto={ex(item.texto)}
+                  prefixo={
+                    <strong>
+                      {tr("CLÁUSULA")} {num.clausulas[item.id]}ª.
+                    </strong>
+                  }
+                  style={{ marginTop: idx > 0 ? "6pt" : undefined }}
+                />
+              ) : item.tipo === "subclausula" ? (
+                <CorpoRico
+                  key={item.id}
+                  texto={ex(item.texto)}
+                  prefixo={<strong>{num.itens[item.id]}</strong>}
+                />
               ) : (
-                <div key={item.id} style={corpo}>
-                  {item.tipo === "subclausula"
-                    ? `${num.itens[item.id]} ${ex(item.texto)}`
-                    : ex(item.texto)}
-                </div>
+                // Parágrafo: "Parágrafo único." / "§ 1º." em negrito+itálico.
+                <CorpoRico
+                  key={item.id}
+                  texto={ex(item.texto)}
+                  prefixo={
+                    <strong>
+                      <em>
+                        {num.paragrafos[item.id] === "Parágrafo único"
+                          ? `${tr("Parágrafo único")}.`
+                          : `${num.paragrafos[item.id] ?? "§"}.`}
+                      </em>
+                    </strong>
+                  }
+                />
               )
             )}
           </div>
@@ -618,75 +843,107 @@ function renderSecao(
         });
       });
       return (
+        // Blocos LADO A LADO (2 por linha), com espaço reservado pra
+        // assinatura — mesmo vazio o layout fica alinhado, estilo ZapSign.
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            gap: "26pt",
-            paddingTop: "14pt",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "14pt 12mm",
+            paddingTop: "16pt",
           }}
         >
-          {blocos.map((b, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-              }}
-            >
-              {(() => {
-                const ass = achaAssinatura(assinaturas, b.papel);
-                return ass?.assinatura ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={ass.assinatura}
-                    alt=""
-                    style={{
-                      height: "15mm",
-                      objectFit: "contain",
-                      marginBottom: "-2pt",
-                    }}
-                  />
-                ) : null;
-              })()}
+          {blocos.map((b, i) => {
+            const ass = achaAssinatura(assinaturas, b.papel);
+            return (
               <div
+                key={i}
                 style={{
-                  width: "70mm",
-                  borderTop: `1px solid ${estilo.corTexto}`,
-                }}
-              />
-              {b.nome && <span style={{ marginTop: "3pt" }}>{b.nome}</span>}
-              {b.doc && b.doc.trim() && (
-                <span style={{ fontSize: "9pt", opacity: 0.7, marginTop: "1pt" }}>
-                  {b.doc}
-                </span>
-              )}
-              <span
-                style={{
-                  fontSize: "9pt",
-                  opacity: 0.7,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  marginTop: "1pt",
+                  width: "72mm",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
                 }}
               >
-                {b.papel}
-              </span>
-            </div>
-          ))}
+                {/* Área da assinatura — altura fixa, com ou sem imagem. */}
+                <div
+                  style={{
+                    height: "16mm",
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                  }}
+                >
+                  {ass?.assinatura ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={ass.assinatura}
+                      alt=""
+                      style={{
+                        maxHeight: "15mm",
+                        maxWidth: "60mm",
+                        objectFit: "contain",
+                        marginBottom: "-2pt",
+                      }}
+                    />
+                  ) : null}
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    borderTop: `1.5px solid ${estilo.corTexto}`,
+                  }}
+                />
+                {b.nome && (
+                  <span style={{ marginTop: "4pt", fontWeight: 700, fontSize: "10.5pt" }}>
+                    {b.nome}
+                  </span>
+                )}
+                {b.doc && b.doc.trim() && (
+                  <span style={{ fontSize: "8.5pt", opacity: 0.7, marginTop: "1pt" }}>
+                    {b.doc}
+                  </span>
+                )}
+                <span
+                  style={{
+                    fontSize: "8.5pt",
+                    opacity: 0.7,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginTop: "2pt",
+                  }}
+                >
+                  {b.papel}
+                </span>
+              </div>
+            );
+          })}
         </div>
       );
     }
 
-    case "anexo":
+    case "anexo": {
+      // Anexos costumam ser LISTAS (rider) — cada linha vira um item; a
+      // formatação inline (**b**/*i*/__u__) vale linha a linha.
+      const linhas = ex(secao.conteudo)
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
       return (
         <div>
           <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
-          <div style={corpo}>{ex(secao.conteudo)}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "3pt" }}>
+            {linhas.map((l, i) => (
+              <div key={i} style={{ textAlign: "justify" }}>
+                {richInline(l, `ax${i}`)}
+              </div>
+            ))}
+          </div>
         </div>
       );
+    }
 
     case "localdata": {
       // "São José dos Pinhais, 21/08/2026" — centrado. No contrato gerado a
@@ -718,6 +975,7 @@ export function FolhaA4({
   assinaturas,
   numeroContrato,
   verificacaoId,
+  conteudoHash,
 }: {
   secoes: SecaoModelo[];
   estilo: EstiloModelo;
@@ -729,6 +987,8 @@ export function FolhaA4({
   numeroContrato?: string;
   /** Código público GC-XXXX-XXXX (contrato finalizado) — impresso no relatório. */
   verificacaoId?: string | null;
+  /** SHA-256 do conteúdo (mig 98) — impresso no relatório de assinaturas. */
+  conteudoHash?: string | null;
 }) {
   const tr = useT();
   const num = calcularNumeracao(secoes);
@@ -764,7 +1024,7 @@ export function FolhaA4({
         ) : (
           <div
             ref={conteudoRef}
-            style={{ display: "flex", flexDirection: "column", gap: "18pt" }}
+            style={{ display: "flex", flexDirection: "column", gap: "24pt" }}
           >
             {secoes.map((secao) => (
               <div key={secao.id}>
@@ -773,16 +1033,26 @@ export function FolhaA4({
             ))}
             {assinaturas &&
               assinaturas.some((a) => a.assinatura || a.assinadoEm) && (
-                // data-nova-pagina: gerarPdfFolha força uma folha nova aqui.
-                // marginTop (margem, não captada pelo html2canvas) só afasta o
-                // relatório na TELA — parece uma folha separada, não colado.
-                <div data-nova-pagina="1" style={{ marginTop: "40pt" }}>
+                // data-nova-pagina + data-pagina-branca: no PDF o relatório
+                // começa numa folha nova SEMPRE BRANCA (mesmo com o documento
+                // em outra cor). Na TELA, o bloco branco arredondado com
+                // margem simula essa folha à parte.
+                <div
+                  data-nova-pagina="1"
+                  data-pagina-branca="1"
+                  style={{
+                    marginTop: "40pt",
+                    background: "#ffffff",
+                    borderRadius: "4pt",
+                    padding: "8mm",
+                  }}
+                >
                   {renderRelatorio(
                     assinaturas,
-                    estilo,
                     tr,
                     numeroContrato,
-                    verificacaoId
+                    verificacaoId,
+                    conteudoHash
                   )}
                 </div>
               )}

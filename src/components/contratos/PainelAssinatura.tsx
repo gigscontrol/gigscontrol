@@ -268,7 +268,8 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
       await gerarPdfFolha(
         conteudoRef.current,
         contrato.conteudo.estilo,
-        `${contrato.numero}-assinado`
+        `${contrato.numero}-assinado`,
+        { verificacaoId: contrato.verificacaoId }
       );
     } finally {
       setGerandoPdf(false);
@@ -331,6 +332,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           assinaturas={assinaturasFolha}
           numeroContrato={contrato.numero}
           verificacaoId={contrato.verificacaoId}
+          conteudoHash={contrato.conteudoHash}
         />
       </div>
     </div>

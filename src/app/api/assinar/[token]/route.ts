@@ -70,6 +70,9 @@ export async function GET(
         numero: contrato.numero,
         conteudo: contrato.conteudo,
         verificacaoId: contrato.verificacaoId,
+        // Hash selado do conteúdo — impresso no relatório de assinaturas
+        // (público por design: também sai na página /verificar).
+        conteudoHash: contrato.conteudoHash,
       },
       assinaturas,
       jaAssinou: signatario.status === "assinado",
