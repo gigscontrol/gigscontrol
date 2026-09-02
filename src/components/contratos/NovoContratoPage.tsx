@@ -36,7 +36,6 @@ const ACCENT = "#3D7BFF";
 
 // Tokens que costumam ser longos → textarea.
 const LONGOS = new Set([
-  "forma de pagamento",
   "rider de camarim",
   "rider de efeitos",
   "rider tecnico",

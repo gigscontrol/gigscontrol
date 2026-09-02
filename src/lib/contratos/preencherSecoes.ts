@@ -3,12 +3,21 @@
  * a agência, e aplica esses valores nas seções do modelo (substituindo os
  * tokens {{...}}) para produzir o conteúdo final do contrato.
  *
- * Best-effort: o que a venda não tem (forma de pagamento, hospedagem,
- * logística, translado, cidade do evento) fica vazio para o usuário completar
- * na tela de Novo Contrato — todos os valores são editáveis lá.
+ * Riders/hospedagem/logística vêm da SELEÇÃO DA VENDA; sem nada selecionado,
+ * caem no texto de praxe do idioma do modelo ("já inclusa no cachê" / "Sem
+ * efeitos"…). O que a venda não tem (translado, cidade do evento) fica vazio
+ * para o usuário completar na tela de Novo Contrato — tudo é editável lá.
  */
 import type { IdiomaModelo, SecaoModelo } from "@/lib/mappers/contratoModelo";
-import type { Artista, Contratante, Moeda, Parcela, Venda } from "@/types";
+import type {
+  Artista,
+  Contratante,
+  ItemQuantidade,
+  Moeda,
+  Parcela,
+  Venda,
+} from "@/types";
+import { linhasLogistica, temLogistica } from "@/lib/logisticaTexto";
 import { preencher } from "./variaveis";
 import { cachePorExtenso, dataPorExtenso } from "./extenso";
 import { formatarMoeda } from "@/lib/formatters";
@@ -18,6 +27,62 @@ import { ehEmailInterno } from "@/lib/email-interno";
 function juntarRider(itens: string[] | undefined): string {
   return (itens ?? []).filter((s) => s.trim()).join(", ");
 }
+
+/** Itens SELECIONADOS na venda (qtd > 0) → "Whisky x1, Água x12". */
+function juntarSelecao(itens: ItemQuantidade[] | undefined): string {
+  return (itens ?? [])
+    .filter((i) => i.qtd > 0 && i.nome.trim())
+    .map((i) => `${i.nome} x${i.qtd}`)
+    .join(", ");
+}
+
+/**
+ * Fallbacks de CONTEÚDO (pedido do dono, 04/09/2026): quando a venda/cadastro
+ * não traz nada, o contrato não sai com "Não informado" nesses campos — sai
+ * com o texto de praxe, no idioma do MODELO. Editável na tela de Novo
+ * Contrato como qualquer valor.
+ */
+const FALLBACK_CONTEUDO: Record<
+  IdiomaModelo,
+  { hospedagem: string; logistica: string; efeitos: string; camarim: string }
+> = {
+  pt: {
+    hospedagem: "Hospedagem já inclusa no cachê",
+    logistica: "Logística já inclusa no cachê",
+    efeitos: "Sem efeitos",
+    camarim: "Sem rider de camarim",
+  },
+  en: {
+    hospedagem: "Accommodation already included in the fee",
+    logistica: "Logistics already included in the fee",
+    efeitos: "No special effects",
+    camarim: "No hospitality rider",
+  },
+  es: {
+    hospedagem: "Alojamiento ya incluido en el caché",
+    logistica: "Logística ya incluida en el caché",
+    efeitos: "Sin efectos",
+    camarim: "Sin rider de camerino",
+  },
+  fr: {
+    hospedagem: "Hébergement déjà inclus dans le cachet",
+    logistica: "Logistique déjà incluse dans le cachet",
+    efeitos: "Sans effets",
+    camarim: "Sans rider loge",
+  },
+  de: {
+    hospedagem: "Unterkunft bereits in der Gage enthalten",
+    logistica: "Logistik bereits in der Gage enthalten",
+    efeitos: "Keine Effekte",
+    camarim: "Kein Hospitality-Rider",
+  },
+  it: {
+    hospedagem: "Alloggio già incluso nel cachet",
+    logistica: "Logistica già inclusa nel cachet",
+    efeitos: "Nessun effetto",
+    camarim: "Nessun rider camerino",
+  },
+};
 
 /** Duração formatada: "2h30" (h+m), "2h" (só h), "45min" (só m), "" (nada). */
 function formatarTempo(horas: number | undefined, minutos: number | undefined): string {
@@ -114,14 +179,26 @@ export function valoresDeVenda(opts: {
     cache_extenso:
       typeof venda.cache === "number" ? cachePorExtenso(venda.cache, idioma, venda.moeda) : "",
     parcelas: formatarParcelas(venda.parcelas, venda.moeda),
-    "forma de pagamento": "",
-    // Riders (dos dados do artista)
-    "rider de camarim": juntarRider(artista?.riderCamarim),
-    "rider de efeitos": juntarRider(artista?.riderEfeitos),
-    "rider tecnico": juntarRider(artista?.riderTecnico),
-    hospedagem: "",
-    // Logística
-    logistica: "",
+    // Chave PIX do cadastro do artista (substituiu "forma de pagamento";
+    // o token antigo é apelido desta — ver variaveis.ts). Redigida pra
+    // não-admin → sai "Não informado", igual aos demais dados do artista.
+    chave_pix_artista: artista?.pix ?? "",
+    // Riders/hospedagem: o que foi SELECIONADO NA VENDA (qtd > 0). Nada
+    // selecionado cai no texto de praxe do idioma do modelo.
+    "rider de camarim":
+      juntarSelecao(venda.camarim) || FALLBACK_CONTEUDO[idioma].camarim,
+    "rider de efeitos":
+      juntarSelecao(venda.efeitos) || FALLBACK_CONTEUDO[idioma].efeitos,
+    // Técnico: seleção da venda; venda antiga sem snapshot cai no cadastro.
+    "rider tecnico":
+      juntarSelecao(venda.tecnico) || juntarRider(artista?.riderTecnico),
+    hospedagem:
+      juntarSelecao(venda.hotel) || FALLBACK_CONTEUDO[idioma].hospedagem,
+    // Logística selecionada na venda (aéreas/bagagens/translado) — nada
+    // marcado = já inclusa no cachê (mesma regra do resto do app).
+    logistica: venda.logistica && temLogistica(venda.logistica)
+      ? linhasLogistica(venda.logistica).join("; ")
+      : FALLBACK_CONTEUDO[idioma].logistica,
     translado: "",
     // Contrato
     numero_contrato: numero,
