@@ -212,10 +212,41 @@ export default function EditorModelo({
     setMenuAberto(false);
   }
 
+  /** 1º texto preenchido de uma seção — vira a citação do modal de remoção. */
+  function trechoDaSecao(secao: SecaoModelo): string {
+    switch (secao.tipo) {
+      case "titulo":
+        return secao.titulo || secao.subtitulo;
+      case "partes":
+        return secao.contratante || secao.contratado || secao.paragrafo || secao.titulo;
+      case "clausula":
+        return (
+          secao.itens.map((i) => i.texto).find((tx) => tx.trim()) || secao.titulo
+        );
+      case "anexo":
+        return secao.conteudo || secao.titulo;
+      case "assinaturas":
+        return "";
+    }
+  }
+
   async function removerSecao(id: string) {
-    if (temConteudo(secoes.filter((s) => s.id === id)) &&
-        !(await confirmar({ titulo: t("Remover esta seção? O conteúdo será perdido."), perigo: true }))) {
-      return;
+    const secao = secoes.find((s) => s.id === id);
+    if (!secao) return;
+    if (temConteudo([secao])) {
+      const rotulo = t(
+        TIPOS_SECAO.find((tp) => tp.tipo === secao.tipo)?.label ?? secao.tipo
+      );
+      const ok = await confirmar({
+        titulo: t('Remover a seção "{nome}"?', { nome: rotulo }),
+        mensagem: t(
+          "Tudo o que foi preenchido nela será perdido. Esta ação não pode ser desfeita."
+        ),
+        trecho: trechoDaSecao(secao),
+        confirmarLabel: t("Remover seção"),
+        perigo: true,
+      });
+      if (!ok) return;
     }
     setSecoes((prev) => prev.filter((s) => s.id !== id));
     if (focoRef.current?.secaoId === id) focoRef.current = null;
@@ -349,9 +380,23 @@ export default function EditorModelo({
     const secao = secoes.find((s) => s.id === secaoId);
     const item =
       secao?.tipo === "clausula" ? secao.itens.find((i) => i.id === itemId) : null;
-    if (item?.texto.trim() &&
-        !(await confirmar({ titulo: t("Remover este item? O conteúdo será perdido."), perigo: true }))) {
-      return;
+    if (item?.texto.trim()) {
+      const titulo =
+        item.tipo === "clausula"
+          ? t("Remover a cláusula {n}?", { n: num.clausulas[itemId] ?? "" })
+          : item.tipo === "subclausula"
+            ? t("Remover a sub-cláusula {n}?", { n: num.itens[itemId] ?? "" })
+            : t("Remover este parágrafo?");
+      const ok = await confirmar({
+        titulo,
+        mensagem: t(
+          "Os itens seguintes são renumerados automaticamente. Esta ação não pode ser desfeita."
+        ),
+        trecho: item.texto,
+        confirmarLabel: t("Remover"),
+        perigo: true,
+      });
+      if (!ok) return;
     }
     setSecoes((prev) =>
       prev.map((s) =>
