@@ -127,6 +127,14 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
   function linhasIniciais(): LinhaForm[] {
     const venda = vendas.find((v) => v.id === contrato.vendaId);
     const artista = artistas.find((a) => a.id === venda?.artistaId);
+    // Signatário assina com o NOME COMPLETO (civil), com o artístico entre
+    // parênteses — mesmo formato do bloco de assinaturas do contrato. Sem
+    // nome civil no cadastro (ou redigido p/ não-admin), cai no artístico.
+    const nomeContratado = artista
+      ? artista.nomeLegal && artista.nomeLegal !== artista.name
+        ? `${artista.nomeLegal} (${artista.name})`
+        : artista.name
+      : "";
     return [
       {
         nome: venda?.contratanteNome ?? "",
@@ -136,7 +144,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         exige: { ...EXIGENCIAS_PADRAO },
       },
       {
-        nome: artista?.name ?? "",
+        nome: nomeContratado,
         email: "",
         telefone: "",
         papel: "Contratado",
