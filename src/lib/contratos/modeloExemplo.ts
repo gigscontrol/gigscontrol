@@ -1,5 +1,4 @@
 import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
-import { secoesValidas } from "@/lib/mappers/contratoModelo";
 
 /**
  * Modelo de contrato de EXEMPLO embutido no app (não vive no banco). É
@@ -15,10 +14,10 @@ import { secoesValidas } from "@/lib/mappers/contratoModelo";
 
 export const NOME_MODELO_EXEMPLO = "Modelo Padrão BR";
 
-// Seções no formato LEGADO (1 seção = 1 cláusula, título na seção) — os
-// exports no fim passam por secoesValidas, que migra pro formato atual
-// (seção de cláusulas com itens tipo "clausula"). Editar aqui continua
-// simples; o consumidor sempre recebe o formato novo.
+// Seções escritas no formato COMPACTO (1 seção = 1 cláusula, título na
+// seção) — os exports no fim passam por `comClausulasNumeradas`, que insere
+// o item "clausula" com o título, preservando o cabeçalho tradicional
+// "CLÁUSULA Nª — TÍTULO" dos exemplos. Editar aqui continua simples.
 const SECOES_EXEMPLO_LEGADO: SecaoModelo[] = [
   {
     id: "titulo",
@@ -315,8 +314,29 @@ const SECOES_GLOBAL_LEGADO: SecaoModelo[] = [
   },
 ];
 
-// Exports no formato ATUAL (secoesValidas migra as cláusulas legadas acima).
+/**
+ * Converte as cláusulas compactas dos EXEMPLOS pro formato atual: o título
+ * da seção vira o item "clausula" (cabeçalho "CLÁUSULA Nª — TÍTULO") e a
+ * seção fica sem título próprio. Só pros exemplos embutidos — modelo de
+ * USUÁRIO no formato antigo mantém o título como título da seção (ele pode
+ * já trazer a própria numeração no texto).
+ */
+function comClausulasNumeradas(secoes: SecaoModelo[]): SecaoModelo[] {
+  return secoes.map((s): SecaoModelo =>
+    s.tipo === "clausula" && !s.itens.some((i) => i.tipo === "clausula")
+      ? {
+          ...s,
+          titulo: "",
+          itens: [
+            { id: `${s.id}-c1`, tipo: "clausula", texto: s.titulo },
+            ...s.itens,
+          ],
+        }
+      : s
+  );
+}
+
 export const SECOES_MODELO_EXEMPLO: SecaoModelo[] =
-  secoesValidas(SECOES_EXEMPLO_LEGADO);
+  comClausulasNumeradas(SECOES_EXEMPLO_LEGADO);
 export const SECOES_MODELO_GLOBAL: SecaoModelo[] =
-  secoesValidas(SECOES_GLOBAL_LEGADO);
+  comClausulasNumeradas(SECOES_GLOBAL_LEGADO);

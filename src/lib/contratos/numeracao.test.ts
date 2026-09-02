@@ -53,36 +53,31 @@ describe("calcularNumeracao — seção de cláusulas (container)", () => {
   });
 });
 
-describe("secoesValidas — migração do formato antigo (1 seção = 1 cláusula)", () => {
-  it("título da seção antiga vira a CLÁUSULA 1 (item), seção fica sem título", () => {
+describe("secoesValidas — formato antigo (1 seção = 1 cláusula)", () => {
+  it("título antigo vira TÍTULO DA SEÇÃO (sem item cláusula); subs numeram via cláusula implícita", () => {
     const antigas = [
       {
         id: "s1",
         tipo: "clausula",
-        titulo: "DO OBJETO",
+        titulo: "II DO OBJETO DO CONTRATO",
         itens: [
           { id: "i1", tipo: "subclausula", texto: "aaa" },
           { id: "i2", tipo: "paragrafo", texto: "bbb" },
         ],
+      },
+      {
+        id: "s2",
+        tipo: "clausula",
+        titulo: "III DOS SERVIÇOS",
+        itens: [{ id: "i3", tipo: "subclausula", texto: "ccc" }],
       },
     ];
-    const migradas = secoesValidas(antigas);
-    expect(migradas).toEqual([
-      {
-        id: "s1",
-        tipo: "clausula",
-        titulo: "",
-        itens: [
-          { id: "s1-c1", tipo: "clausula", texto: "DO OBJETO" },
-          { id: "i1", tipo: "subclausula", texto: "aaa" },
-          { id: "i2", tipo: "paragrafo", texto: "bbb" },
-        ],
-      },
-    ]);
-    // Render antigo preservado: "CLÁUSULA 1ª — DO OBJETO" + 1.1.
-    const num = calcularNumeracao(migradas);
-    expect(num.clausulas["s1-c1"]).toBe(1);
-    expect(num.itens["i1"]).toBe("1.1");
+    const secoes = secoesValidas(antigas);
+    expect(secoes).toEqual(antigas);
+    // Numeração N.M continua a mesma do render antigo (1.1, 2.1…).
+    const num = calcularNumeracao(secoes);
+    expect(num.clausulas).toEqual({});
+    expect(num.itens).toEqual({ i1: "1.1", i3: "2.1" });
   });
 
   it("seção já no formato novo passa intacta (sem re-migrar)", () => {

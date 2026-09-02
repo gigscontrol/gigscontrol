@@ -57,8 +57,8 @@ export type ItemClausula = {
  * Seção de CLÁUSULAS (container): pode ter várias cláusulas, cada uma com
  * suas sub-cláusulas/parágrafos. `titulo` é o título da SEÇÃO (opcional,
  * centralizado acima) — o título de cada cláusula vive no item "clausula".
- * Formato antigo (1 seção = 1 cláusula, título no `titulo`) é migrado em
- * `secoesValidas`.
+ * Seção antiga (1 seção = 1 cláusula) já é válida neste formato: o título
+ * fica como título da seção e as subs numeram via cláusula implícita.
  */
 export type SecaoClausula = {
   id: string;
@@ -258,23 +258,12 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
                 texto: texto(i.texto),
               }))
           : [];
-        // MIGRAÇÃO do formato antigo (1 seção = 1 cláusula, título no
-        // `titulo` da seção): sem nenhum item "clausula" gravado, o título da
-        // seção vira o título da CLÁUSULA 1 (item inserido na frente) e a
-        // seção fica sem título próprio — render idêntico ao de antes.
-        if (!itens.some((i) => i.tipo === "clausula")) {
-          out.push({
-            id,
-            tipo: "clausula",
-            titulo: "",
-            itens: [
-              { id: `${id}-c1`, tipo: "clausula", texto: texto(o.titulo) },
-              ...itens,
-            ],
-          });
-        } else {
-          out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
-        }
+        // Formato antigo (1 seção = 1 cláusula, título no `titulo`): o título
+        // vira o TÍTULO DA SEÇÃO como está — sem inserir item "clausula"
+        // (decisão do dono: o título dele já traz a própria numeração, ex.
+        // "II DO OBJETO"). As sub-cláusulas seguem numeradas via cláusula
+        // implícita (ver numeracao.ts), então o N.M não muda.
+        out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
         break;
       }
       case "assinaturas": {
@@ -305,16 +294,7 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
           const itens: ItemClausula[] = fonte
             .filter((p): p is string => typeof p === "string")
             .map((p) => ({ id: "", tipo: "paragrafo" as const, texto: p }));
-          out.push({
-            id,
-            tipo: "clausula",
-            titulo: "",
-            // Mesma migração: o título antigo vira a CLÁUSULA 1 da seção.
-            itens: [
-              { id: `${id}-c1`, tipo: "clausula", texto: texto(o.titulo) },
-              ...itens,
-            ],
-          });
+          out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
         }
         break;
       }
