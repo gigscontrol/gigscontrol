@@ -65,6 +65,7 @@ function clonarSecoes(secoes: SecaoModelo[]): SecaoModelo[] {
         return {
           id,
           tipo: "partes",
+          titulo: s.titulo,
           contratante: s.contratante,
           contratado: s.contratado,
           paragrafo: s.paragrafo,

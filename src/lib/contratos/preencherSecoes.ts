@@ -170,6 +170,7 @@ export function preencherSecoes(
       case "partes":
         return {
           ...s,
+          titulo: p(s.titulo),
           contratante: p(s.contratante),
           contratado: p(s.contratado),
           paragrafo: p(s.paragrafo),

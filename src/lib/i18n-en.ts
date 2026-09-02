@@ -1738,6 +1738,8 @@ const SWEEP2: Record<string, string> = {
   "Parágrafo de abertura (ex: 'As partes acima têm, entre si...').": "Opening paragraph (e.g. 'The parties above agree, between themselves...').",
   "Cláusula": "Clause",
   "Título da cláusula (ex: DO OBJETO)": "Clause title (e.g. SUBJECT MATTER)",
+  "Título da seção": "Section title",
+  "Ex: DAS PARTES (vazio = sem título)": "E.g. THE PARTIES (empty = no title)",
   "Sub-cláusula": "Sub-clause",
   "Sub-cláusula numerada automaticamente.": "Automatically numbered sub-clause.",
   "Parágrafo (sem número).": "Paragraph (unnumbered).",

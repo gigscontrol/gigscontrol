@@ -29,6 +29,12 @@ export type SecaoTitulo = {
 export type SecaoPartes = {
   id: string;
   tipo: "partes";
+  /**
+   * Título da seção, EDITÁVEL (ex.: "DAS PARTES"). Vazio = sem título no A4.
+   * Seções antigas (sem o campo gravado) caem no default "Das partes" — o
+   * cabeçalho que o A4 imprimia fixo antes do campo existir.
+   */
+  titulo: string;
   contratante: string;
   contratado: string;
   paragrafo: string;
@@ -216,6 +222,9 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
         out.push({
           id,
           tipo: "partes",
+          // Compat: seção gravada ANTES do campo existir mantém o cabeçalho
+          // fixo de antigamente; "" gravado = usuário removeu o título.
+          titulo: typeof o.titulo === "string" ? o.titulo : "Das partes",
           contratante: texto(o.contratante),
           contratado: texto(o.contratado),
           paragrafo: texto(o.paragrafo),

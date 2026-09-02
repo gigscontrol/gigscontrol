@@ -24,6 +24,7 @@ export const SECOES_MODELO_EXEMPLO: SecaoModelo[] = [
   {
     id: "partes",
     tipo: "partes",
+    titulo: "Das partes",
     contratante:
       "CONTRATANTE: {{contratante}}, inscrito(a) no CPF/CNPJ sob o nº {{documento}}, com endereço em {{endereco}}, telefone {{telefone}}.",
     contratado: "CONTRATADO(A): {{artista}}, representado(a) por {{agencia}}.",
@@ -177,6 +178,7 @@ export const SECOES_MODELO_GLOBAL: SecaoModelo[] = [
   {
     id: "g-partes",
     tipo: "partes",
+    titulo: "The parties",
     contratante:
       "PURCHASER (CLIENT): {{contratante}}, holder of tax/registration ID no. {{documento}}, with address at {{endereco}}, phone {{telefone}}.",
     contratado:

@@ -1942,6 +1942,8 @@ export const DE: Record<string, string> = {
   "Excluir o contrato {numero}? Esta ação não pode ser desfeita.": "Vertrag {numero} löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
   "Parágrafo de abertura (ex: 'As partes acima têm, entre si...').": "Einleitungsabsatz (z. B. „Die oben genannten Parteien vereinbaren untereinander...\").",
   "Título da cláusula (ex: DO OBJETO)": "Klauseltitel (z. B. VERTRAGSGEGENSTAND)",
+  "Título da seção": "Abschnittstitel",
+  "Ex: DAS PARTES (vazio = sem título)": "Z. B. DIE PARTEIEN (leer = ohne Titel)",
   "Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.": "Anlageninhalt. Verwenden Sie die Variablen auf der rechten Seite, um {{campos}} einzufügen.",
   "Artista/Agência": "Künstler/Agentur",
   "Riders/Hospedagem": "Rider/Unterkunft",

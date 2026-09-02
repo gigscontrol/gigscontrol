@@ -93,20 +93,115 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
 ];
 
 /**
+ * Normaliza um token pra comparação TOLERANTE: minúsculas, sem acentos,
+ * `_` vira espaço, conectivos (de/do/da/dos/das) caem e espaços colapsam.
+ * Assim `{{ENDEREÇO_CONTRATANTE}}`, `{{endereco contratante}}` e
+ * `{{Endereco do Contratante}}` são o MESMO token. Aplicada nos DOIS lados
+ * (o que o usuário digitou e as chaves do catálogo), nunca muda o que fica
+ * gravado no modelo — só o matching.
+ */
+export function normalizarToken(token: string): string {
+  return token
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove acentos (combining marks do NFD)
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b(de|do|da|dos|das)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Apelidos de token (já NORMALIZADOS) → token canônico do catálogo. Cobre os
+ * nomes "intuitivos" que usuários escrevem à mão nos modelos (ex.:
+ * {{CNPJ_CONTRATANTE}}, {{NOME_ARTISTA}}, {{DATA_DO_SHOW}}) sem inflar o
+ * catálogo visível no editor.
+ */
+const APELIDOS_TOKEN: Record<string, string> = {
+  // Contratante
+  "nome contratante": "contratante",
+  "cnpj contratante": "documento",
+  "cpf contratante": "documento",
+  "cpf cnpj contratante": "documento",
+  "documento contratante": "documento",
+  "razao social contratante": "razao_social",
+  "endereco contratante": "endereco",
+  "email contratante": "email",
+  "e mail contratante": "email",
+  "telefone contratante": "telefone",
+  // Artista / contratado
+  "nome artista": "artista",
+  "nome contratado": "artista",
+  "cnpj artista": "artista_documento",
+  "cpf artista": "artista_documento",
+  "documento artista": "artista_documento",
+  "cnpj contratado": "artista_documento",
+  "razao social artista": "artista_razao_social",
+  "endereco artista": "artista_endereco",
+  "email artista": "artista_email",
+  "telefone artista": "artista_telefone",
+  // Evento
+  "nome evento": "evento",
+  "data evento": "data",
+  "data show": "data",
+  "endereco evento": "endereco_local",
+  "endereco do local": "endereco_local",
+  "local evento": "local",
+  "cidade evento": "cidade",
+  "horario inicio": "horario",
+  "hora inicio": "horario",
+  "horario final": "horario_fim",
+  "horario termino": "horario_fim",
+  "hora fim": "horario_fim",
+  // Valores
+  "valor": "cache",
+  "valor cache": "cache",
+  "cache show": "cache",
+  // Contrato
+  "numero contrato": "numero_contrato",
+  "data hoje": "data_hoje",
+};
+
+/**
  * Substitui todas as ocorrências de `{{ token }}` (com espaços opcionais
  * dentro das chaves) pelos valores em `valores`. Se o token não estiver em
  * `valores`, o `{{token}}` original permanece intacto.
  *
+ * Matching em 3 níveis: exato → normalizado (case/acentos/underscores não
+ * importam) → apelido (ex.: {{CNPJ_CONTRATANTE}} resolve pra `documento`).
  * Suporta tokens com espaços internos, ex.: `{{forma de pagamento}}`.
  */
 export function preencher(
   template: string,
   valores: Record<string, string>
 ): string {
+  // Índice normalizado das chaves reais (montado 1x por chamada).
+  let porNorma: Map<string, string> | null = null;
+  const indice = (): Map<string, string> => {
+    if (!porNorma) {
+      porNorma = new Map();
+      for (const chave of Object.keys(valores)) {
+        const n = normalizarToken(chave);
+        if (!porNorma.has(n)) porNorma.set(n, chave);
+      }
+    }
+    return porNorma;
+  };
+
   return template.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (original, bruto) => {
     const token = String(bruto).trim();
+    // 1) match exato (caminho de sempre — zero custo extra).
     if (Object.prototype.hasOwnProperty.call(valores, token)) {
       return valores[token];
+    }
+    // 2) match normalizado (maiúsculas, acentos, _ e conectivos não importam).
+    const norma = normalizarToken(token);
+    const chaveReal = indice().get(norma);
+    if (chaveReal !== undefined) return valores[chaveReal];
+    // 3) apelido → token canônico.
+    const canonico = APELIDOS_TOKEN[norma];
+    if (canonico && Object.prototype.hasOwnProperty.call(valores, canonico)) {
+      return valores[canonico];
     }
     // Token sem valor: mantém o placeholder original visível.
     return original;
