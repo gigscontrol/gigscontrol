@@ -151,6 +151,18 @@ export default function ModelosPage() {
     setVista("editor");
   }
 
+  /** Abre o editor com uma CÓPIA do modelo (ids novos); vira modelo novo no salvar. */
+  function duplicar(modelo: ContratoModelo) {
+    setEditando({
+      modeloId: null,
+      nome: t("{nome} (cópia)", { nome: modelo.nome }),
+      secoes: clonarSecoes(modelo.secoes),
+      estilo: modelo.estilo,
+      idioma: modelo.idioma,
+    });
+    setVista("editor");
+  }
+
   function abrirEdicao(modelo: ContratoModelo) {
     setEditando({
       modeloId: modelo.id,
@@ -389,6 +401,20 @@ export default function ModelosPage() {
                       >
                         <Pencil size={14} />
                         {t("Editar")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => duplicar(modelo)}
+                        disabled={noLimite}
+                        title={
+                          noLimite
+                            ? t("Limite de modelos do plano atingido.")
+                            : t("Duplicar modelo")
+                        }
+                        aria-label={t("Duplicar modelo")}
+                        className="btn-ghost p-2 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Copy size={15} />
                       </button>
                       <button
                         type="button"

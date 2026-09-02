@@ -27,7 +27,11 @@ import {
   dataBR,
   hojeBR,
 } from "@/lib/contratos/preencherSecoes";
-import { VARIAVEIS_CONTRATO } from "@/lib/contratos/variaveis";
+import {
+  VARIAVEIS_CONTRATO,
+  extrairTokens,
+  resolverTokenCanonico,
+} from "@/lib/contratos/variaveis";
 import type { Contrato } from "@/lib/mappers/contrato";
 import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
@@ -48,6 +52,48 @@ const LONGOS = new Set([
 
 // Auto-preenchidos (não editáveis no form): número (no save) e data de hoje.
 const OCULTOS = new Set(["numero_contrato"]);
+
+// Tokens com AUTO-PREENCHIMENTO de conteúdo ("já inclusa no cachê" / "Sem
+// efeitos"…) ou sistêmicos — nunca ficam "Não informado", então NÃO entram na
+// validação obrigatória da geração.
+const AUTO_PREENCHIDOS = new Set([
+  "logistica",
+  "hospedagem",
+  "rider de camarim",
+  "rider de efeitos",
+  "numero_contrato",
+  "data_hoje",
+  "agencia",
+]);
+
+/** Todos os textos de um modelo onde pode haver {{tokens}}. */
+function textosDoModelo(secoes: import("@/lib/mappers/contratoModelo").SecaoModelo[]): string[] {
+  const out: string[] = [];
+  for (const s of secoes) {
+    switch (s.tipo) {
+      case "titulo":
+        out.push(s.titulo, s.subtitulo);
+        break;
+      case "partes":
+        out.push(s.titulo, s.contratante, s.contratado, s.paragrafo);
+        break;
+      case "clausula":
+        out.push(s.titulo, ...s.itens.map((i) => i.texto));
+        break;
+      case "anexo":
+        out.push(s.titulo, s.conteudo);
+        break;
+      case "localdata":
+        out.push(s.local);
+        break;
+      case "assinaturas":
+        // Blocos usam contratante/documento/artista — exigidos implicitamente.
+        out.push("{{contratante}} {{documento}} {{artista}}");
+        break;
+    }
+  }
+  return out;
+}
 
 export default function NovoContratoPage({
   vendaInicialId = null,
@@ -198,12 +244,60 @@ export default function NovoContratoPage({
     return Array.from(m.entries());
   }, []);
 
+  // Tokens do CATÁLOGO usados no modelo (resolvidos com o mesmo matching do
+  // preencher: maiúsculas/apelidos contam) — só esses são exigidos na geração.
+  const tokensUsados = useMemo(() => {
+    if (!modelo) return new Set<string>();
+    const chaves = Object.keys(valores);
+    if (chaves.length === 0) return new Set<string>();
+    const usados = new Set<string>();
+    for (const texto of textosDoModelo(modelo.secoes)) {
+      for (const bruto of extrairTokens(texto)) {
+        const canonico = resolverTokenCanonico(bruto, chaves);
+        if (canonico) usados.add(canonico);
+      }
+    }
+    return usados;
+  }, [modelo, valores]);
+
+  // Campos obrigatórios em branco (bloqueiam a geração) — pintados de
+  // vermelho. Limpa campo a campo conforme o usuário digita.
+  const [camposFaltando, setCamposFaltando] = useState<Set<string>>(new Set());
+
+  function calcularFaltando(): Set<string> {
+    const faltam = new Set<string>();
+    for (const token of tokensUsados) {
+      if (AUTO_PREENCHIDOS.has(token)) continue;
+      if (!(valores[token] ?? "").trim()) faltam.add(token);
+    }
+    return faltam;
+  }
+
   function setValor(token: string, valor: string) {
     setValores((prev) => ({ ...prev, [token]: valor }));
+    if (camposFaltando.has(token) && valor.trim()) {
+      setCamposFaltando((prev) => {
+        const novo = new Set(prev);
+        novo.delete(token);
+        return novo;
+      });
+    }
   }
 
   async function gerar() {
     if (!modelo) return;
+    // TRAVA: campo usado no modelo em branco viraria "Não informado" impresso
+    // — bloqueia a geração e destaca o que falta (pedido do dono).
+    const faltam = calcularFaltando();
+    setCamposFaltando(faltam);
+    if (faltam.size > 0) {
+      setErro(
+        t("Faltam {n} informações no contrato — preencha os campos destacados em vermelho antes de gerar.", {
+          n: faltam.size,
+        })
+      );
+      return;
+    }
     setGerando(true);
     setErro(null);
     try {
@@ -482,31 +576,67 @@ export default function NovoContratoPage({
                 <p className="text-xs text-muted -mt-2">
                   {t("Pré-preenchido pela venda. Edite o que precisar; o que ficar vazio aparece como")}{" "}<code>{"{{token}}"}</code>{" "}{t("no contrato.")}
                 </p>
+                {camposFaltando.size > 0 && (
+                  <div
+                    className="flex items-start gap-2 rounded-md px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: "var(--danger-weak)",
+                      color: "var(--danger)",
+                    }}
+                  >
+                    <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+                    <span>
+                      {t("Faltam {n} informações no contrato — preencha os campos destacados em vermelho antes de gerar.", {
+                        n: camposFaltando.size,
+                      })}
+                    </span>
+                  </div>
+                )}
                 {grupos.map(([grupo, vars]) => (
                   <div key={grupo} className="flex flex-col gap-2">
                     <div className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted">
                       {t(grupo)}
                     </div>
-                    {vars.map((v) => (
-                      <label key={v.token} className="flex flex-col gap-1">
-                        <span className="text-xs text-secondary">{t(v.label)}</span>
-                        {LONGOS.has(v.token) ? (
-                          <textarea
-                            value={valores[v.token] ?? ""}
-                            onChange={(e) => setValor(v.token, e.target.value)}
-                            rows={2}
-                            className="campo-input resize-y leading-relaxed"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={valores[v.token] ?? ""}
-                            onChange={(e) => setValor(v.token, e.target.value)}
-                            className="campo-input"
-                          />
-                        )}
-                      </label>
-                    ))}
+                    {vars.map((v) => {
+                      const falta = camposFaltando.has(v.token);
+                      const estiloFalta = falta
+                        ? {
+                            borderColor: "var(--danger)",
+                            boxShadow: "0 0 0 1px var(--danger)",
+                          }
+                        : undefined;
+                      return (
+                        <label key={v.token} className="flex flex-col gap-1">
+                          <span
+                            className="text-xs text-secondary"
+                            style={{
+                              color: falta ? "var(--danger)" : undefined,
+                              fontWeight: falta ? 600 : undefined,
+                            }}
+                          >
+                            {t(v.label)}
+                            {falta ? ` — ${t("obrigatório neste modelo")}` : ""}
+                          </span>
+                          {LONGOS.has(v.token) ? (
+                            <textarea
+                              value={valores[v.token] ?? ""}
+                              onChange={(e) => setValor(v.token, e.target.value)}
+                              rows={2}
+                              className="campo-input resize-y leading-relaxed"
+                              style={estiloFalta}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={valores[v.token] ?? ""}
+                              onChange={(e) => setValor(v.token, e.target.value)}
+                              className="campo-input"
+                              style={estiloFalta}
+                            />
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
