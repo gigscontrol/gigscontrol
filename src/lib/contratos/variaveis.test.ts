@@ -25,6 +25,7 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     endereco_local: "Av. B, 2",
     horario: "23h00",
     "rider de camarim": "Água x12",
+    chave_pix_artista: "pix@maninhoo.com",
   };
 
   it("match exato continua funcionando", () => {
@@ -51,6 +52,13 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     expect(preencher("{{DATA_DO_SHOW}}", valores)).toBe("31/12/2026");
     expect(preencher("{{ENDEREÇO_DO_EVENTO}}", valores)).toBe("Av. B, 2");
     expect(preencher("{{HORARIO_INICIO}}", valores)).toBe("23h00");
+  });
+
+  it("legado {{forma de pagamento}} e variações de PIX resolvem pra chave_pix_artista", () => {
+    expect(preencher("{{forma de pagamento}}", valores)).toBe("pix@maninhoo.com");
+    expect(preencher("{{FORMA_DE_PAGAMENTO}}", valores)).toBe("pix@maninhoo.com");
+    expect(preencher("{{CHAVE_PIX}}", valores)).toBe("pix@maninhoo.com");
+    expect(preencher("{{PIX}}", valores)).toBe("pix@maninhoo.com");
   });
 
   it("token desconhecido permanece visível", () => {

@@ -52,6 +52,7 @@ import { configDocumento } from "@/lib/data/documentos";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import InputDataBR, { haDataPendente } from "@/components/inputs/InputDataBR";
 import { exemploEndereco } from "@/lib/data/exemplos";
+import { detectarChavePix, ROTULO_CHAVE_PIX } from "@/lib/pix";
 import { BRASIL, buscarPais, montarTelefoneE164, type Country } from "@/lib/data/countries";
 import Modal from "../Modal";
 import {
@@ -3692,6 +3693,23 @@ export function CamposDadosContrato({
             placeholder={t("CPF, CNPJ, e-mail, telefone ou chave aleatória")}
             className="campo-input"
           />
+          {/* Detecção AO VIVO do tipo (conta dígitos + valida DV de CPF/CNPJ). */}
+          {(() => {
+            const tipo = detectarChavePix(pix ?? "");
+            if (!tipo) return null;
+            const ok = tipo !== "desconhecida";
+            return (
+              <div
+                className="mt-1 inline-flex items-center gap-1.5 text-xs"
+                style={{ color: ok ? "var(--success)" : "var(--danger)" }}
+              >
+                {ok ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                {ok
+                  ? `${t("Detectado")}: ${t(ROTULO_CHAVE_PIX[tipo])}`
+                  : t("Chave não reconhecida — confira o valor digitado.")}
+              </div>
+            );
+          })()}
         </Campo>
       )}
     </>

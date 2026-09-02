@@ -6,7 +6,7 @@
  * correspondente. Tokens sem valor permanecem visíveis (não são apagados),
  * para que o usuário perceba o que ainda falta preencher.
  *
- * Atenção: alguns tokens têm espaços internos (ex.: `forma de pagamento`),
+ * Atenção: alguns tokens têm espaços internos (ex.: `rider de camarim`),
  * mantidos exatamente como escritos.
  */
 
@@ -56,8 +56,8 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   { token: "cache_extenso", label: "Cachê por extenso", grupo: "Valores" },
   { token: "parcelas", label: "Plano de parcelas", grupo: "Valores" },
   {
-    token: "forma de pagamento",
-    label: "Forma de pagamento",
+    token: "chave_pix_artista",
+    label: "Chave PIX do artista",
     grupo: "Valores",
   },
 
@@ -157,6 +157,12 @@ const APELIDOS_TOKEN: Record<string, string> = {
   "valor": "cache",
   "valor cache": "cache",
   "cache show": "cache",
+  // Legado: "forma de pagamento" virou a chave PIX do artista (pedido do
+  // dono) — modelos antigos com o token continuam preenchendo.
+  "forma pagamento": "chave_pix_artista",
+  "pix": "chave_pix_artista",
+  "chave pix": "chave_pix_artista",
+  "pix artista": "chave_pix_artista",
   // Contrato
   "numero contrato": "numero_contrato",
   "data hoje": "data_hoje",
@@ -169,7 +175,7 @@ const APELIDOS_TOKEN: Record<string, string> = {
  *
  * Matching em 3 níveis: exato → normalizado (case/acentos/underscores não
  * importam) → apelido (ex.: {{CNPJ_CONTRATANTE}} resolve pra `documento`).
- * Suporta tokens com espaços internos, ex.: `{{forma de pagamento}}`.
+ * Suporta tokens com espaços internos, ex.: `{{rider de camarim}}`.
  */
 export function preencher(
   template: string,
@@ -248,7 +254,7 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   cache_extenso: "oito mil reais",
   parcelas:
     "1ª parcela: R$ 4.000,00 até 01/12/2026; 2ª parcela: R$ 4.000,00 até 24/12/2026",
-  "forma de pagamento": "50% na assinatura, 50% até 7 dias antes do evento",
+  chave_pix_artista: "contato@maninhoo.com",
 
   // Riders/Hospedagem
   "rider de camarim": "Whisky x1, Água sem gás x12, Refrigerante x6, Gelo x2",

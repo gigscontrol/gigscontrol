@@ -83,7 +83,7 @@ const SECOES_EXEMPLO_LEGADO: SecaoModelo[] = [
         id: "c-pgto-1",
         tipo: "subclausula",
         texto:
-          "Pela prestação dos serviços, o CONTRATANTE pagará ao(à) CONTRATADO(A) o valor de {{cache}}, na seguinte forma: {{forma de pagamento}}.",
+          "Pela prestação dos serviços, o CONTRATANTE pagará ao(à) CONTRATADO(A) o valor de {{cache}}, conforme o plano de pagamento: {{parcelas}}. Pagamento via PIX na chave: {{chave_pix_artista}}.",
       },
       {
         id: "c-pgto-2",
@@ -238,7 +238,7 @@ const SECOES_GLOBAL_LEGADO: SecaoModelo[] = [
         id: "g-fee-1",
         tipo: "subclausula",
         texto:
-          "In consideration of the Performance, the Purchaser shall pay the Artist the fee of {{cache}}, payable as follows: {{forma de pagamento}}.",
+          "In consideration of the Performance, the Purchaser shall pay the Artist the fee of {{cache}}, payable as follows: {{parcelas}}.",
       },
       {
         id: "g-fee-2",
