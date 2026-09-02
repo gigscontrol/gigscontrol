@@ -78,15 +78,12 @@ function novaSecao(tipo: TipoSecao): SecaoModelo {
       // Título NASCE vazio (o usuário escolhe; placeholder sugere "DAS PARTES").
       return { id, tipo: "partes", titulo: "", contratante: "", contratado: "", paragrafo: "" };
     case "clausula":
-      // Seção de CLÁUSULAS: nasce com a 1ª cláusula + uma sub-cláusula.
+      // Seção de CLÁUSULAS: nasce com o caput da 1ª cláusula.
       return {
         id,
         tipo: "clausula",
         titulo: "",
-        itens: [
-          { id: crypto.randomUUID(), tipo: "clausula", texto: "" },
-          { id: crypto.randomUUID(), tipo: "subclausula", texto: "" },
-        ],
+        itens: [{ id: crypto.randomUUID(), tipo: "clausula", texto: "" }],
       };
     case "assinaturas":
       return { id, tipo: "assinaturas", testemunhas: [] };
@@ -751,16 +748,17 @@ export default function EditorModelo({
                       <div className="flex flex-col gap-2 pl-1">
                         {secao.itens.map((item) =>
                           item.tipo === "clausula" ? (
-                            /* Abre uma CLÁUSULA nova (numerada 1, 2, 3…). */
-                            <div key={item.id} className="flex items-center gap-2 mt-1.5">
+                            /* CAPUT: texto principal da cláusula, numerado
+                               "N." — as subs seguintes numeram N.1, N.2… */
+                            <div key={item.id} className="flex items-start gap-1.5 mt-1.5">
                               <span
-                                className="badge flex-shrink-0"
-                                style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                                className="text-xs font-bold flex-shrink-0 mt-2 w-9 text-right"
+                                style={{ color: ACCENT }}
+                                title={t("Cláusula")}
                               >
-                                {t("Cláusula")} {num.clausulas[item.id]}
+                                {num.clausulas[item.id]}.
                               </span>
-                              <input
-                                type="text"
+                              <textarea
                                 {...campoProps({
                                   secaoId: secao.id,
                                   campo: "item",
@@ -768,15 +766,16 @@ export default function EditorModelo({
                                 })}
                                 value={item.texto}
                                 onChange={(e) => atualizarItem(secao.id, item.id, e.target.value)}
-                                placeholder={t("Título da cláusula (ex: DO OBJETO)")}
-                                className="campo-input font-semibold"
+                                placeholder={t("Cláusula numerada automaticamente (3., 4., …).")}
+                                className="campo-input min-h-[80px] resize-y leading-relaxed flex-1"
+                                style={{ whiteSpace: "pre-wrap" }}
                               />
                               <button
                                 type="button"
                                 onClick={() => removerItem(secao.id, item.id)}
                                 title={t("Remover item")}
                                 aria-label={t("Remover item")}
-                                className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0"
+                                className="btn-ghost p-1 rounded hover:text-danger flex-shrink-0 mt-1"
                               >
                                 <X size={14} />
                               </button>
@@ -1261,16 +1260,13 @@ function renderPreviewSecao(
           <div style={{ display: "flex", flexDirection: "column", gap: "0pt" }}>
             {secao.itens.map((item, idx) =>
               item.tipo === "clausula" ? (
-                <h3
+                // CAPUT da cláusula numerado "N." (padrão BR: 3. / 3.1 / 3.2).
+                <div
                   key={item.id}
-                  style={{
-                    ...estiloTitulo(estilo.corTitulo),
-                    marginTop: idx > 0 ? "12pt" : undefined,
-                  }}
+                  style={{ ...corpo, marginTop: idx > 0 ? "8pt" : undefined }}
                 >
-                  {tr("CLÁUSULA")} {num.clausulas[item.id]}ª
-                  {item.texto.trim() ? ` — ${ex(item.texto)}` : ""}
-                </h3>
+                  {`${num.clausulas[item.id]}. ${ex(item.texto)}`}
+                </div>
               ) : (
                 <div key={item.id} style={corpo}>
                   {item.tipo === "subclausula"

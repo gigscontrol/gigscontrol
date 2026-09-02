@@ -1944,6 +1944,7 @@ export const DE: Record<string, string> = {
   "Título da cláusula (ex: DO OBJETO)": "Klauseltitel (z. B. VERTRAGSGEGENSTAND)",
   "Título da seção": "Abschnittstitel",
   "Cláusulas": "Klauseln",
+  "Cláusula numerada automaticamente (3., 4., …).": "Klausel automatisch nummeriert (3., 4., …).",
   "Opcional — aparece centralizado acima das cláusulas": "Optional — zentriert über den Klauseln angezeigt",
   "Ex: DAS PARTES (vazio = sem título)": "Z. B. DIE PARTEIEN (leer = ohne Titel)",
   "Conteúdo do anexo. Use as variáveis ao lado para inserir {{campos}}.": "Anlageninhalt. Verwenden Sie die Variablen auf der rechten Seite, um {{campos}} einzufügen.",

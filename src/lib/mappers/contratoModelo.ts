@@ -42,8 +42,9 @@ export type SecaoPartes = {
 
 /**
  * Item de uma seção de cláusulas:
- *  - "clausula":    ABRE uma cláusula nova ("CLÁUSULA Nª — {texto}"); o texto é
- *                   o título dela. Numerada 1, 2, 3… globalmente no documento.
+ *  - "clausula":    CAPUT — abre uma cláusula nova; o texto é o corpo
+ *                   principal dela, numerado "N." (padrão BR: 3. / 3.1 /
+ *                   3.2). N conta globalmente no documento.
  *  - "subclausula": item numerado N.M dentro da cláusula corrente.
  *  - "paragrafo":   texto sem número.
  */
