@@ -38,6 +38,8 @@ type Dados = {
     conteudo: { secoes: SecaoModelo[]; estilo: EstiloModelo };
     /** Código público GC-XXXX-XXXX (só quando finalizado). */
     verificacaoId?: string | null;
+    /** SHA-256 selado do conteúdo (relatório de assinaturas). */
+    conteudoHash?: string | null;
   };
   /** Signatários do mesmo contrato que já assinaram (relatório, sem KYC). */
   assinaturas: AssinaturaInfo[];
@@ -287,7 +289,8 @@ export default function AssinarPage({
       await gerarPdfFolha(
         conteudoRef.current,
         dados.contrato.conteudo.estilo,
-        dados.contrato.numero
+        dados.contrato.numero,
+        { verificacaoId: dados.contrato.verificacaoId }
       );
     } catch {
       setErro("Não foi possível gerar o PDF.");
@@ -393,6 +396,7 @@ export default function AssinarPage({
           assinaturas={dados.assinaturas}
           numeroContrato={contrato.numero}
           verificacaoId={contrato.verificacaoId}
+          conteudoHash={contrato.conteudoHash}
         />
 
         {/* Form de assinatura (só se ainda não assinou) */}
