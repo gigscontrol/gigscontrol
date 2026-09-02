@@ -49,7 +49,7 @@ import { useContratos } from "@/lib/contratos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatarDuracao } from "@/lib/whatsapp";
 import { formatarMoeda } from "@/lib/formatters";
-import { formatarQuantidade } from "@/lib/contratos/extenso";
+import { numeroQtd } from "@/lib/quantidades";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import {
@@ -615,7 +615,7 @@ export default function ShowDetalheModal({
             {logistica.aereaQtd > 0 && (
               <Linha icon={<Plane size={13} />}>
                 {t("{n} Logística Aérea (Ida e Volta)", {
-                  n: formatarQuantidade(logistica.aereaQtd, "pt", "f"),
+                  n: numeroQtd(logistica.aereaQtd),
                 })}
               </Linha>
             )}

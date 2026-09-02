@@ -46,7 +46,10 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
           { nome: "Ignorado", qtd: 0 },
         ],
         efeitos: [{ nome: "CO2", qtd: 4 }],
-        hotel: [{ nome: "Diária hotel 4 estrelas", qtd: 1 }],
+        hotel: [
+          { nome: "Diária hotel 4 estrelas", qtd: 1 },
+          { nome: "Quarto Duplo", qtd: 2 },
+        ],
         logistica: { ...LOGISTICA_VAZIA, transladoTerrestre: true },
       } as Partial<Venda>),
       artista,
@@ -55,7 +58,9 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
     });
     expect(v["rider de camarim"]).toBe("01 (um) Whisky, 12 (doze) Água");
     expect(v["rider de efeitos"]).toBe("04 (quatro) CO2");
-    expect(v.hospedagem).toBe("01 (um) Diária hotel 4 estrelas");
+    expect(v.hospedagem).toBe(
+      "01 (um) Diária hotel 4 estrelas, 02 (dois) Quartos Duplos"
+    );
     expect(v.logistica).toContain("Translado Terrestre");
   });
 

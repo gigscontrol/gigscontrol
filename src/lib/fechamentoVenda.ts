@@ -1,7 +1,7 @@
 import { type ItemQuantidade, type LogisticaSelecao, type Moeda } from "@/types";
 import { formatarMoeda } from "./formatters";
 import { linhasLogistica } from "./logisticaTexto";
-import { formatarQuantidade } from "./contratos/extenso";
+import { numeroQtd, pluralizarItemHotel } from "./quantidades";
 
 /** Dados que alimentam o texto de fechamento — subconjunto da Venda, mas aceita
  *  também o estado vivo do formulário de ConcretizarVenda (todos opcionais). */
@@ -50,10 +50,16 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
 
   // Bloco de lista (efeitos/camarim/hotel): cabeçalho em negrito + itens colados.
   // `sempreMostrar=false` → some quando não há itens (caso do Hotel).
-  const blocoItens = (titulo: string, itens?: ItemQuantidade[], sempreMostrar = true) => {
+  // `nomeFmt` permite pluralizar (hotel: "Quartos Duplos" com qtd > 1).
+  const blocoItens = (
+    titulo: string,
+    itens?: ItemQuantidade[],
+    sempreMostrar = true,
+    nomeFmt: (i: ItemQuantidade) => string = (i) => i.nome
+  ) => {
     const list = (itens ?? []).filter((i) => i.qtd > 0);
     if (list.length === 0) return sempreMostrar ? `*${titulo}:* ` : null;
-    return [`*${titulo}:*`, ...list.map((i) => `${formatarQuantidade(i.qtd)} ${i.nome}`)].join("\n");
+    return [`*${titulo}:*`, ...list.map((i) => `${numeroQtd(i.qtd)} ${nomeFmt(i)}`)].join("\n");
   };
 
   const contratante = [
@@ -80,7 +86,9 @@ export function textoFechamentoVenda(v: DadosFechamento): string {
   ];
 
   // Hotel e Logística: SÓ aparecem se tiverem opção selecionada.
-  const blocoHotel = blocoItens("Hotel", v.hotel, false);
+  const blocoHotel = blocoItens("Hotel", v.hotel, false, (i) =>
+    pluralizarItemHotel(i.nome, i.qtd)
+  );
   const logLinhas = v.logistica ? linhasLogistica(v.logistica) : [];
   const blocoLogistica = logLinhas.length ? ["*Logística:*", ...logLinhas].join("\n") : null;
 

@@ -18,6 +18,7 @@ import type {
   Venda,
 } from "@/types";
 import { linhasLogistica, temLogistica } from "@/lib/logisticaTexto";
+import { pluralizarItemHotel } from "@/lib/quantidades";
 import { preencher } from "./variaveis";
 import { cachePorExtenso, dataPorExtenso, formatarQuantidade } from "./extenso";
 import { formatarMoeda } from "@/lib/formatters";
@@ -31,11 +32,12 @@ function juntarRider(itens: string[] | undefined): string {
 /** Itens SELECIONADOS na venda (qtd > 0) → "01 (um) Whisky, 12 (doze) Água". */
 function juntarSelecao(
   itens: ItemQuantidade[] | undefined,
-  idioma: IdiomaModelo
+  idioma: IdiomaModelo,
+  nomeFmt: (i: ItemQuantidade) => string = (i) => i.nome
 ): string {
   return (itens ?? [])
     .filter((i) => i.qtd > 0 && i.nome.trim())
-    .map((i) => `${formatarQuantidade(i.qtd, idioma)} ${i.nome}`)
+    .map((i) => `${formatarQuantidade(i.qtd, idioma)} ${nomeFmt(i)}`)
     .join(", ");
 }
 
@@ -196,11 +198,12 @@ export function valoresDeVenda(opts: {
     "rider tecnico":
       juntarSelecao(venda.tecnico, idioma) || juntarRider(artista?.riderTecnico),
     hospedagem:
-      juntarSelecao(venda.hotel, idioma) || FALLBACK_CONTEUDO[idioma].hospedagem,
+      juntarSelecao(venda.hotel, idioma, (i) => pluralizarItemHotel(i.nome, i.qtd)) ||
+      FALLBACK_CONTEUDO[idioma].hospedagem,
     // Logística selecionada na venda (aéreas/bagagens/translado) — nada
     // marcado = já inclusa no cachê (mesma regra do resto do app).
     logistica: venda.logistica && temLogistica(venda.logistica)
-      ? linhasLogistica(venda.logistica).join("; ")
+      ? linhasLogistica(venda.logistica, "contrato").join("; ")
       : FALLBACK_CONTEUDO[idioma].logistica,
     translado: "",
     // Contrato
