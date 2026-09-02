@@ -22,6 +22,7 @@ import {
   Paperclip,
   Download,
   Palette,
+  CalendarDays,
 } from "lucide-react";
 import { useModelos } from "@/lib/modelos-context";
 import { useT } from "@/lib/i18n";
@@ -42,6 +43,7 @@ import {
   preencher,
   type VariavelContrato,
 } from "@/lib/contratos/variaveis";
+import { hojeBR } from "@/lib/contratos/preencherSecoes";
 
 const ACCENT = "#3D7BFF";
 
@@ -64,6 +66,7 @@ const TIPOS_SECAO: { tipo: TipoSecao; label: string; Icon: typeof Heading }[] = 
   { tipo: "titulo", label: "Título", Icon: Heading },
   { tipo: "partes", label: "Das partes", Icon: Users },
   { tipo: "clausula", label: "Cláusulas", Icon: ListOrdered },
+  { tipo: "localdata", label: "Local e data", Icon: CalendarDays },
   { tipo: "assinaturas", label: "Assinaturas", Icon: PenLine },
   { tipo: "anexo", label: "Anexo", Icon: Paperclip },
 ];
@@ -89,6 +92,8 @@ function novaSecao(tipo: TipoSecao): SecaoModelo {
       return { id, tipo: "assinaturas", testemunhas: [] };
     case "anexo":
       return { id, tipo: "anexo", titulo: "", conteudo: "" };
+    case "localdata":
+      return { id, tipo: "localdata", local: "", data: "" };
   }
 }
 
@@ -103,7 +108,8 @@ type CampoTextoSimples =
   | "contratante"
   | "contratado"
   | "paragrafo"
-  | "conteudo";
+  | "conteudo"
+  | "local";
 
 /** Qualquer campo editável: os simples acima OU um item de cláusula. */
 type CampoTexto = CampoTextoSimples | "item";
@@ -149,6 +155,8 @@ function temConteudo(secoes: SecaoModelo[]): boolean {
         return !!(s.titulo.trim() || s.itens.some((i) => i.texto.trim()));
       case "anexo":
         return !!(s.titulo.trim() || s.conteudo.trim());
+      case "localdata":
+        return !!s.local.trim(); // só o local é conteúdo do usuário
       case "assinaturas":
         return true; // assinaturas sempre geram blocos
     }
@@ -225,6 +233,8 @@ export default function EditorModelo({
         );
       case "anexo":
         return secao.conteudo || secao.titulo;
+      case "localdata":
+        return secao.local;
       case "assinaturas":
         return "";
     }
@@ -292,6 +302,9 @@ export default function EditorModelo({
           case "anexo":
             if (campo === "titulo") return { ...s, titulo: valor };
             if (campo === "conteudo") return { ...s, conteudo: valor };
+            return s;
+          case "localdata":
+            if (campo === "local") return { ...s, local: valor };
             return s;
           case "assinaturas":
             return s;
@@ -433,6 +446,8 @@ export default function EditorModelo({
         return secao.tipo === "partes" ? secao.paragrafo : null;
       case "conteudo":
         return secao.tipo === "anexo" ? secao.conteudo : null;
+      case "local":
+        return secao.tipo === "localdata" ? secao.local : null;
       case "item": {
         if (secao.tipo !== "clausula") return null;
         const it = secao.itens.find((i) => i.id === d.itemId);
@@ -984,6 +999,29 @@ export default function EditorModelo({
                       />
                     </div>
                   )}
+
+                  {secao.tipo === "localdata" && (
+                    <div className="flex flex-col gap-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="stat-label">{t("Local da assinatura")}</span>
+                        <input
+                          type="text"
+                          {...campoProps({ secaoId: secao.id, campo: "local" })}
+                          value={secao.local}
+                          onChange={(e) => setCampo(secao.id, "local", e.target.value)}
+                          placeholder={t("Ex: São José dos Pinhais (aceita variáveis)")}
+                          className="campo-input"
+                        />
+                      </label>
+                      <p className="section-subtitle inline-flex items-center gap-1.5">
+                        <CalendarDays size={13} style={{ color: ACCENT }} />
+                        {t("A data de hoje entra automaticamente na geração:")}{" "}
+                        <em>
+                          {secao.local.trim() || t("Sua cidade")}, {hojeBR()}
+                        </em>
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -1078,6 +1116,8 @@ function primeiroCampoTexto(secoes: SecaoModelo[]): Descritor | null {
         return { secaoId: s.id, campo: "titulo" };
       case "anexo":
         return { secaoId: s.id, campo: "titulo" };
+      case "localdata":
+        return { secaoId: s.id, campo: "local" };
       case "assinaturas":
         break; // sem campo de texto
     }
@@ -1384,5 +1424,17 @@ function renderPreviewSecao(
           <div style={corpo}>{ex(secao.conteudo)}</div>
         </div>
       );
+
+    case "localdata": {
+      // "São José dos Pinhais, 21/08/2026" — no preview a data vem do exemplo.
+      const dataTxt = secao.data.trim() || ex("{{data_hoje}}");
+      const localTxt = secao.local.trim() ? `${ex(secao.local)}, ` : "";
+      return (
+        <div style={{ textAlign: "center", paddingTop: "6pt" }}>
+          {localTxt}
+          {dataTxt}
+        </div>
+      );
+    }
   }
 }

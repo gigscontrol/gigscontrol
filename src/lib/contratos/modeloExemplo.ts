@@ -153,6 +153,12 @@ const SECOES_EXEMPLO_LEGADO: SecaoModelo[] = [
       "Itens de camarim a serem disponibilizados ao(à) CONTRATADO(A):\n{{rider de camarim}}",
   },
   {
+    id: "localdata",
+    tipo: "localdata",
+    local: "{{cidade}}",
+    data: "",
+  },
+  {
     id: "assinaturas",
     tipo: "assinaturas",
     testemunhas: [],
@@ -306,6 +312,12 @@ const SECOES_GLOBAL_LEGADO: SecaoModelo[] = [
     titulo: "ANNEX — HOSPITALITY / DRESSING ROOM RIDER",
     conteudo:
       "Hospitality and dressing room items to be provided to the Artist:\n{{rider de camarim}}",
+  },
+  {
+    id: "g-localdata",
+    tipo: "localdata",
+    local: "{{cidade}}",
+    data: "",
   },
   {
     id: "g-assinaturas",
