@@ -293,16 +293,31 @@ export function preencherSecoes(
         // Data do dia CONGELADA na geração (o snapshot do contrato guarda o
         // valor resolvido — não muda quando o documento for reaberto).
         return { ...s, local: p(s.local), data: p("{{data_hoje}}") };
-      case "assinaturas":
+      case "assinaturas": {
         // Nomes/documento dos blocos RESOLVIDOS aqui (o render do contrato
         // gerado não tem transformarTexto — sem isto os tokens saíam crus
         // nas linhas de assinatura). Testemunhas seguem manuais.
+        // Contratado assina como "Nome civil (Nome artístico)" + documento.
+        const util = (v: string): string =>
+          !v ||
+          /^\{\{.+\}\}$/.test(v.trim()) ||
+          Object.values(NAO_INFORMADO).includes(v)
+            ? ""
+            : v;
+        const civil = util(p("{{artista_nome_civil}}"));
+        const artistico = util(p("{{artista}}"));
+        const contratadoNome =
+          civil && civil !== artistico
+            ? `${civil}${artistico ? ` (${artistico})` : ""}`
+            : artistico;
         return {
           ...s,
           contratanteNome: p("{{contratante}}"),
           contratanteDoc: p("{{documento}}"),
-          contratadoNome: p("{{artista}}"),
+          contratadoNome,
+          contratadoDoc: util(p("{{artista_documento}}")),
         };
+      }
     }
   });
 }

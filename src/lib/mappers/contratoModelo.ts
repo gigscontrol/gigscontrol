@@ -94,6 +94,7 @@ export type SecaoAssinaturas = {
   contratanteNome?: string;
   contratanteDoc?: string;
   contratadoNome?: string;
+  contratadoDoc?: string;
 };
 
 export type SecaoAnexo = {
@@ -314,6 +315,9 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
             : {}),
           ...(typeof o.contratadoNome === "string" && o.contratadoNome
             ? { contratadoNome: o.contratadoNome }
+            : {}),
+          ...(typeof o.contratadoDoc === "string" && o.contratadoDoc
+            ? { contratadoDoc: o.contratadoDoc }
             : {}),
         });
         break;

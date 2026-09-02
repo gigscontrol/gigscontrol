@@ -838,6 +838,15 @@ function renderSecao(
         const v = (s ?? "").trim();
         return /^\{\{.+\}\}$/.test(v) ? "" : v;
       };
+      // Preview (sem campos gravados): compõe "Nome civil (Artístico)" com
+      // os tokens de exemplo — mesmo formato que a geração grava.
+      const contratadoPreview = (() => {
+        const civil = semTokenCru(ex("{{artista_nome_civil}}"));
+        const artistico = semTokenCru(ex("{{artista}}"));
+        return civil && civil !== artistico
+          ? `${civil}${artistico ? ` (${artistico})` : ""}`
+          : artistico;
+      })();
       const blocos: { nome: string; doc?: string; papel: string }[] = [
         {
           nome: semTokenCru(secao.contratanteNome || ex("{{contratante}}")),
@@ -845,7 +854,8 @@ function renderSecao(
           papel: tr("CONTRATANTE"),
         },
         {
-          nome: semTokenCru(secao.contratadoNome || ex("{{artista}}")),
+          nome: semTokenCru(secao.contratadoNome ?? "") || contratadoPreview,
+          doc: semTokenCru(secao.contratadoDoc || ex("{{artista_documento}}")),
           papel: tr("CONTRATADO"),
         },
       ];

@@ -32,6 +32,8 @@ describe("preencherSecoes — seção Assinaturas (nomes resolvidos na geração
       contratante: "Marcos Lima",
       documento: "109.293.599-17",
       artista: "Maninhoo",
+      artista_nome_civil: "Leonardo Souza Malaquias",
+      artista_documento: "40.617.822/0001-30",
     });
     expect(s).toEqual({
       id: "a",
@@ -39,8 +41,24 @@ describe("preencherSecoes — seção Assinaturas (nomes resolvidos na geração
       testemunhas: [],
       contratanteNome: "Marcos Lima",
       contratanteDoc: "109.293.599-17",
-      contratadoNome: "Maninhoo",
+      contratadoNome: "Leonardo Souza Malaquias (Maninhoo)",
+      contratadoDoc: "40.617.822/0001-30",
     });
+  });
+
+  it("sem nome civil (ou 'Não informado'), o contratado assina só com o artístico", () => {
+    const secoes: SecaoModelo[] = [
+      { id: "a", tipo: "assinaturas", testemunhas: [] },
+    ];
+    const [s] = preencherSecoes(secoes, {
+      contratante: "Marcos",
+      documento: "1",
+      artista: "Maninhoo",
+      artista_nome_civil: "Não informado",
+      artista_documento: "Não informado",
+    });
+    expect((s as { contratadoNome?: string }).contratadoNome).toBe("Maninhoo");
+    expect((s as { contratadoDoc?: string }).contratadoDoc).toBe("");
   });
 });
 
