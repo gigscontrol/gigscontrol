@@ -232,7 +232,10 @@ export async function gerarPdfDoc(
   // Rodapé de validade em TODAS as páginas (padrão das plataformas de
   // assinatura). Cinza médio — legível sobre fundo claro E escuro.
   const rodape = [
-    "Documento gerado na GIGS CONTROL · Assinatura eletrônica com validade jurídica — MP 2.200-2/2001 e Lei 14.063/2020",
+    // Só a MP 2.200-2 (art. 10, §2º): a Lei 14.063/2020 rege interação com
+    // ENTES PÚBLICOS e exclui expressamente contratos entre privados — citá-la
+    // aqui dava munição pra desacreditar o documento em juízo.
+    "Documento gerado na GIGS CONTROL · Assinatura eletrônica com validade jurídica — art. 10, §2º, da MP 2.200-2/2001",
     opts?.verificacaoId
       ? `Verificação: ${opts.verificacaoId} · gigscontrol.com/verificar`
       : "",
@@ -349,28 +352,31 @@ export type AssinaturaInfo = {
   facialMatch?: boolean;
 };
 
-/** Acha a assinatura que combina com o papel do bloco (contratante/contratado). */
+/**
+ * Acha a assinatura que combina com o papel do bloco. Recebe a CHAVE interna
+ * (não o rótulo traduzido — em en/es/de/it "CONTRACTED PARTY"/"CLIENTE" etc.
+ * nunca continham "contratado" e a imagem da assinatura sumia do PDF).
+ */
 function achaAssinatura(
   assinaturas: AssinaturaInfo[] | undefined,
-  papelBloco: string
+  chave: "contratante" | "contratado" | ""
 ): AssinaturaInfo | undefined {
-  if (!assinaturas) return undefined;
-  const p = papelBloco.toLowerCase();
-  const tem = (chave: string) =>
-    assinaturas.find(
-      (a) => (a.papel ?? "").toLowerCase().includes(chave) && a.assinatura
-    );
-  if (p.includes("contratante")) return tem("contratante");
-  if (p.includes("contratado")) return tem("contratado");
-  return undefined;
+  if (!assinaturas || !chave) return undefined;
+  return assinaturas.find(
+    (a) => (a.papel ?? "").toLowerCase().includes(chave) && a.assinatura
+  );
 }
 
 function dataHoraRel(iso: string | null): string {
   if (!iso) return "";
-  const d = iso.slice(0, 10).split("-");
-  const h = iso.slice(11, 16);
-  if (d.length !== 3) return iso;
-  return `${d[2]}/${d[1]}/${d[0]}${h ? ` ${h}` : ""}`;
+  // Fuso LOCAL + GMT explícito (gravado em UTC; fatiar a string ISO imprimia
+  // 3h a mais no Brasil — contestação fácil num relatório de prova).
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const p = (n: number) => String(n).padStart(2, "0");
+  const off = -d.getTimezoneOffset() / 60;
+  const gmt = `GMT${off >= 0 ? "+" : ""}${off}`;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())} (${gmt})`;
 }
 
 /** Data de hoje (DD/MM/AAAA) — usada no cabeçalho do relatório. */
@@ -709,7 +715,7 @@ function renderRelatorio(
         </div>
         <div style={{ fontSize: "8pt", color: REL_MUTED, marginTop: "2pt" }}>
           {tr(
-            "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001 e da Lei 14.063/2020."
+            "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001, e dos arts. 104 e 107 do Código Civil."
           )}
           {verificacaoId
             ? ` ${tr("Verifique a autenticidade em")} gigscontrol.com/verificar · ${verificacaoId}`
@@ -742,7 +748,7 @@ function renderSecao(
                 lineHeight: 1.3,
               }}
             >
-              {ex(secao.titulo)}
+              {richInline(ex(secao.titulo), "tt")}
             </h2>
           )}
           {secao.subtitulo.trim() && (
@@ -754,7 +760,7 @@ function renderSecao(
                 fontStyle: "italic",
               }}
             >
-              {ex(secao.subtitulo)}
+              {richInline(ex(secao.subtitulo), "ts")}
             </p>
           )}
         </div>
@@ -763,9 +769,13 @@ function renderSecao(
     case "partes":
       return (
         <div>
-          {/* Título EDITÁVEL da seção (campo `titulo`); vazio = sem cabeçalho. */}
+          {/* Título EDITÁVEL da seção (campo `titulo`); vazio = sem cabeçalho.
+              richInline: a barra B/I/U aceita títulos — sem ele os marcadores
+              saíam CRUS ("**Título**") no documento impresso. */}
           {secao.titulo.trim() && (
-            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+            <h3 style={estiloTitulo(estilo.corTitulo)}>
+              {richInline(ex(secao.titulo), "pt")}
+            </h3>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "8pt" }}>
             {[secao.contratante, secao.contratado, secao.paragrafo]
@@ -782,7 +792,9 @@ function renderSecao(
         <div>
           {/* Título da SEÇÃO (opcional) — as cláusulas vivem nos itens. */}
           {secao.titulo.trim() && (
-            <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+            <h3 style={estiloTitulo(estilo.corTitulo)}>
+              {richInline(ex(secao.titulo), "ct")}
+            </h3>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "6pt" }}>
             {secao.itens.map((item, idx) =>
@@ -847,16 +859,24 @@ function renderSecao(
           ? `${civil}${artistico ? ` (${artistico})` : ""}`
           : artistico;
       })();
-      const blocos: { nome: string; doc?: string; papel: string }[] = [
+      const blocos: {
+        nome: string;
+        doc?: string;
+        papel: string;
+        /** Chave INTERNA pro pareamento da assinatura (papel é traduzido). */
+        chave: "contratante" | "contratado" | "";
+      }[] = [
         {
           nome: semTokenCru(secao.contratanteNome || ex("{{contratante}}")),
           doc: semTokenCru(secao.contratanteDoc || ex("{{documento}}")),
           papel: tr("CONTRATANTE"),
+          chave: "contratante",
         },
         {
           nome: semTokenCru(secao.contratadoNome ?? "") || contratadoPreview,
           doc: semTokenCru(secao.contratadoDoc || ex("{{artista_documento}}")),
           papel: tr("CONTRATADO"),
+          chave: "contratado",
         },
       ];
       secao.testemunhas.forEach((testemunha, i) => {
@@ -864,6 +884,7 @@ function renderSecao(
           nome: testemunha.nome,
           doc: testemunha.documento,
           papel: `${tr("Testemunha")} ${i + 1}`,
+          chave: "",
         });
       });
       return (
@@ -879,7 +900,7 @@ function renderSecao(
           }}
         >
           {blocos.map((b, i) => {
-            const ass = achaAssinatura(assinaturas, b.papel);
+            const ass = achaAssinatura(assinaturas, b.chave);
             return (
               <div
                 key={i}
@@ -957,7 +978,9 @@ function renderSecao(
         .filter(Boolean);
       return (
         <div>
-          <h3 style={estiloTitulo(estilo.corTitulo)}>{ex(secao.titulo)}</h3>
+          <h3 style={estiloTitulo(estilo.corTitulo)}>
+            {richInline(ex(secao.titulo), "at")}
+          </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "3pt" }}>
             {linhas.map((l, i) => (
               <div key={i} style={{ textAlign: "justify" }}>
@@ -976,8 +999,7 @@ function renderSecao(
       const localTxt = secao.local.trim() ? `${ex(secao.local)}, ` : "";
       return (
         <div style={{ textAlign: "center", paddingTop: "6pt" }}>
-          {localTxt}
-          {dataTxt}
+          {richInline(`${localTxt}${dataTxt}`, "ld")}
         </div>
       );
     }

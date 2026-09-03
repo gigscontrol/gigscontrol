@@ -248,10 +248,15 @@ function texto(v: unknown): string {
 export function secoesValidas(raw: unknown): SecaoModelo[] {
   if (!Array.isArray(raw)) return [];
   const out: SecaoModelo[] = [];
-  for (const s of raw) {
+  for (let idx = 0; idx < raw.length; idx++) {
+    const s = raw[idx];
     if (!s || typeof s !== "object") continue;
     const o = s as Record<string, unknown>;
-    const id = texto(o.id);
+    // Dados antigos podem vir SEM id — e editor, keys do React e numeração de
+    // § indexam por id: id "" repetido replicava a digitação em TODOS os
+    // parágrafos da seção e imprimia "§ 2º." em dobro. Fallback determinístico
+    // por posição (o próximo salvar do editor persiste os ids gerados).
+    const id = texto(o.id) || `sec-${idx}`;
     switch (o.tipo) {
       case "titulo":
         out.push({ id, tipo: "titulo", titulo: texto(o.titulo), subtitulo: texto(o.subtitulo) });
@@ -272,8 +277,8 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
         const itens: ItemClausula[] = Array.isArray(o.itens)
           ? o.itens
               .filter((i): i is Record<string, unknown> => !!i && typeof i === "object")
-              .map((i) => ({
-                id: texto(i.id),
+              .map((i, n) => ({
+                id: texto(i.id) || `${id}-it${n}`,
                 tipo:
                   i.tipo === "paragrafo"
                     ? "paragrafo"
@@ -338,7 +343,11 @@ export function secoesValidas(raw: unknown): SecaoModelo[] {
         if (fonte) {
           const itens: ItemClausula[] = fonte
             .filter((p): p is string => typeof p === "string")
-            .map((p) => ({ id: "", tipo: "paragrafo" as const, texto: p }));
+            .map((p, n) => ({
+              id: `${id}-it${n}`,
+              tipo: "paragrafo" as const,
+              texto: p,
+            }));
           out.push({ id, tipo: "clausula", titulo: texto(o.titulo), itens });
         }
         break;

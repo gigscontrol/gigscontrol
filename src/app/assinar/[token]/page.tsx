@@ -27,6 +27,7 @@ import {
   Clock,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "@/components/contratos/folhaA4";
+import LogoGC from "@/components/LogoGC";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
@@ -67,10 +68,14 @@ type Etapa = "documento" | "form" | "codigo";
 
 function dataHoraBR(iso: string | null): string {
   if (!iso) return "";
-  const d = iso.slice(0, 10).split("-");
-  const h = iso.slice(11, 16);
-  if (d.length !== 3) return iso;
-  return `${d[2]}/${d[1]}/${d[0]}${h ? ` ${h}` : ""}`;
+  // Convertido pro fuso LOCAL de quem vê, com o GMT explícito (o banco grava
+  // em UTC — fatiar a string ISO mostrava 3h a mais no Brasil).
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const p = (n: number) => String(n).padStart(2, "0");
+  const off = -d.getTimezoneOffset() / 60;
+  const gmt = `GMT${off >= 0 ? "+" : ""}${off}`;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())} (${gmt})`;
 }
 
 const ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
@@ -99,6 +104,9 @@ export default function AssinarPage({
     null
   );
   const [mostrarCamera, setMostrarCamera] = useState(false);
+  // Consentimento ESPECÍFICO pro tratamento biométrico (LGPD art. 11) —
+  // exigido quando a assinatura pede selfie/reconhecimento facial.
+  const [consenteBiometria, setConsenteBiometria] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
@@ -158,6 +166,9 @@ export default function AssinarPage({
         if (res.ok && (body as Dados).signatario?.status === "assinado") {
           setDados(body as Dados);
           setMostrarCamera(false);
+          // Volta pra etapa do documento — é onde o banner verde "Assinado"
+          // aparece (ficar no form deixava a página em branco no desktop).
+          setEtapa("documento");
         }
       } catch {
         /* silencioso — tenta de novo no próximo ciclo */
@@ -225,6 +236,12 @@ export default function AssinarPage({
       setErro("Envie a foto do verso do seu documento (CNH ou RG).");
       return;
     }
+    if ((ex.selfie || ex.facial) && !consenteBiometria) {
+      setErro(
+        "Para continuar, autorize o uso da sua imagem na verificação de identidade (caixa acima do botão)."
+      );
+      return;
+    }
     setErro(null);
     // Selfie de verificação é tirada AO VIVO: abre a câmera e envia na captura.
     if (ex.selfie || ex.facial) {
@@ -261,6 +278,7 @@ export default function AssinarPage({
           fotoDocumento: fotoDocumento ?? "",
           fotoDocumentoVerso: fotoDocumentoVerso ?? "",
           selfie: selfie ?? "",
+          consentimentoBiometria: consenteBiometria,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -304,7 +322,13 @@ export default function AssinarPage({
         assinado?: boolean;
         erro?: string;
         expirado?: boolean;
+        cancelado?: boolean;
       };
+      // A agência cancelou o contrato enquanto a confirmação estava pendente.
+      if (body.cancelado) {
+        setCancelado(true);
+        return;
+      }
       if (body.expirado) {
         setOtpExpirado(true);
         setOtpMsg(body.erro ?? "O prazo expirou — assine novamente.");
@@ -330,6 +354,10 @@ export default function AssinarPage({
         method: "POST",
       });
       const body = await res.json().catch(() => ({}));
+      if ((body as { cancelado?: boolean }).cancelado) {
+        setCancelado(true);
+        return;
+      }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
       setOtpExpirado(false);
       setOtpMsg("Código reenviado! Confira sua caixa de entrada (e o spam).");
@@ -400,8 +428,13 @@ export default function AssinarPage({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-main)" }}>
-      {/* ===== Header: Assinaturas X/Y + download (esq) · marca (dir) ===== */}
-      <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur px-4 py-2.5">
+      {/* ===== Header: Assinaturas X/Y + download (esq) · marca (dir) =====
+          Fundo SÓLIDO (sem blur): com transparência, o documento branco
+          passando por trás estourava o contraste do header. */}
+      <div
+        className="sticky top-0 z-30 border-b border-border px-4 py-2.5"
+        style={{ backgroundColor: "var(--bg-surface)" }}
+      >
         <div className="max-w-[1000px] mx-auto flex items-center gap-2">
           <div className="relative">
             <button
@@ -470,11 +503,8 @@ export default function AssinarPage({
             {contrato.numero} · {signatario.nome}
           </div>
 
-          <div
-            className="ml-auto text-sm font-extrabold whitespace-nowrap"
-            style={{ letterSpacing: "0.14em", color: "var(--text-primary)" }}
-          >
-            GIGS CONTROL
+          <div className="ml-auto text-primary">
+            <LogoGC size={20} withWordmark />
           </div>
         </div>
       </div>
@@ -501,31 +531,39 @@ export default function AssinarPage({
             </div>
           )}
 
-          {/* Zoom centralizado sobre o documento */}
-          <div className="flex items-center justify-center gap-1">
-            <button
-              type="button"
-              onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
-              disabled={zoomIdx === 0}
-              title="Diminuir zoom"
-              aria-label="Diminuir zoom"
-              className="btn btn-secondary p-2 disabled:opacity-40"
+          {/* Zoom FLUTUANTE: gruda logo abaixo do header e acompanha a
+              rolagem — dá pra ajustar o zoom em qualquer ponto da leitura.
+              pointer-events-none na faixa (só a pílula clica) pra não bloquear
+              o documento atrás. */}
+          <div className="sticky top-[60px] z-20 flex justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto flex items-center gap-1 rounded-full border border-border px-1.5 py-1 shadow-md"
+              style={{ backgroundColor: "var(--bg-surface)" }}
             >
-              <ZoomOut size={15} />
-            </button>
-            <span className="text-xs text-muted w-12 text-center tabular-nums">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
-              disabled={zoomIdx === ZOOMS.length - 1}
-              title="Aumentar zoom"
-              aria-label="Aumentar zoom"
-              className="btn btn-secondary p-2 disabled:opacity-40"
-            >
-              <ZoomIn size={15} />
-            </button>
+              <button
+                type="button"
+                onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
+                disabled={zoomIdx === 0}
+                title="Diminuir zoom"
+                aria-label="Diminuir zoom"
+                className="btn btn-secondary p-2 rounded-full disabled:opacity-40"
+              >
+                <ZoomOut size={15} />
+              </button>
+              <span className="text-xs text-muted w-12 text-center tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
+                disabled={zoomIdx === ZOOMS.length - 1}
+                title="Aumentar zoom"
+                aria-label="Aumentar zoom"
+                className="btn btn-secondary p-2 rounded-full disabled:opacity-40"
+              >
+                <ZoomIn size={15} />
+              </button>
+            </div>
           </div>
 
           {/* O contrato + relatório de assinaturas (de quem já assinou) */}
@@ -666,6 +704,25 @@ export default function AssinarPage({
                 </span>
               </div>
             )}
+            {(signatario.exige.selfie || signatario.exige.facial) && (
+              <label className="flex items-start gap-2.5 text-xs text-muted leading-relaxed cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consenteBiometria}
+                  onChange={(e) => setConsenteBiometria(e.target.checked)}
+                  className="mt-0.5 flex-shrink-0"
+                />
+                <span>
+                  Autorizo o uso da minha <strong>imagem</strong> (selfie
+                  {signatario.exige.facial
+                    ? " e comparação com a foto do meu documento"
+                    : ""}
+                  ) para a verificação de identidade desta assinatura, como
+                  prova de autoria do documento (LGPD, art. 11). As imagens
+                  ficam guardadas junto ao contrato, acessíveis só à agência.
+                </span>
+              </label>
+            )}
 
             {signatario.exige.otpEmail && (
               <div className="flex items-start gap-2.5 rounded-lg border border-dashed border-border bg-surface-2 p-3 text-xs text-muted">
@@ -711,11 +768,24 @@ export default function AssinarPage({
 
             <p className="text-[0.7rem] text-muted inline-flex items-start gap-1.5 leading-relaxed">
               <ShieldCheck size={13} className="flex-shrink-0 mt-0.5" />
-              Ao assinar, você aceita assinar eletronicamente este documento
-              (art. 10, §2º, da MP 2.200-2/2001) e registramos data/hora, seu
-              IP, dispositivo e (se você permitir) sua localização, como prova
-              da assinatura. A ação é única — depois de concluída não dá pra
-              refazer.
+              <span>
+                Ao assinar, você aceita assinar eletronicamente este documento
+                (art. 10, §2º, da MP 2.200-2/2001). Como prova da assinatura,
+                registramos: data/hora, seu IP, dispositivo, fuso horário e (se
+                você permitir) sua localização
+                {signatario.exige.fotoDocumento || signatario.exige.fotoCpf
+                  ? ", além das fotos de documento enviadas"
+                  : ""}
+                {signatario.exige.selfie || signatario.exige.facial
+                  ? `, da selfie${signatario.exige.facial ? " e do resultado da verificação facial" : ""}`
+                  : ""}
+                {signatario.exige.cpfAvancado
+                  ? ", e dos dados informados (nome completo, CPF e data de nascimento)"
+                  : ""}
+                . Esses registros ficam guardados com o contrato enquanto ele
+                servir de prova, acessíveis à agência responsável. A ação é
+                única — depois de concluída não dá pra refazer.
+              </span>
             </p>
           </div>
         </div>

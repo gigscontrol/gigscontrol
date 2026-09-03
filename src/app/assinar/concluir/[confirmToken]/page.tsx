@@ -12,6 +12,7 @@ type EstadoPagina =
   | { fase: "confirmando" }
   | { fase: "assinado"; token: string | null }
   | { fase: "expirado"; mensagem: string }
+  | { fase: "cancelado"; mensagem: string }
   | { fase: "erro"; mensagem: string };
 
 export default function ConcluirAssinaturaPage({
@@ -36,9 +37,17 @@ export default function ConcluirAssinaturaPage({
           token?: string;
           erro?: string;
           expirado?: boolean;
+          cancelado?: boolean;
         };
         if (res.ok && body.assinado) {
           setEstado({ fase: "assinado", token: body.token ?? null });
+        } else if (body.cancelado) {
+          setEstado({
+            fase: "cancelado",
+            mensagem:
+              body.erro ??
+              "Este contrato foi cancelado pela agência e não pode mais ser assinado.",
+          });
         } else if (body.expirado) {
           setEstado({
             fase: "expirado",
@@ -101,6 +110,16 @@ export default function ConcluirAssinaturaPage({
             <p className="text-xs text-muted max-w-sm">
               O link do contrato continua o mesmo — é só abrir de novo,
               preencher e assinar; um novo código será enviado.
+            </p>
+          </>
+        )}
+        {estado.fase === "cancelado" && (
+          <>
+            <AlertCircle size={30} style={{ color: "var(--danger)" }} />
+            <div className="section-title">Contrato cancelado</div>
+            <p className="text-sm text-muted max-w-sm">{estado.mensagem}</p>
+            <p className="text-xs text-muted max-w-sm">
+              Em caso de dúvida, fale com quem te enviou o link.
             </p>
           </>
         )}

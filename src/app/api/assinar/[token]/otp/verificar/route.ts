@@ -3,13 +3,14 @@ import { ipDe, rateLimit } from "@/lib/api/rate-limit";
 import { criarClienteAdmin } from "@/lib/db/supabase-admin";
 import {
   buscarPorToken,
-  atualizarPorToken,
+  consumirTentativaOtp,
 } from "@/lib/repositories/contratoSignatarios.repo";
 import { otpConfere, OTP_MAX_TENTATIVAS } from "@/lib/contratos/integridade";
 import { otpVerificarSchema } from "@/lib/validators/contratoSignatarios.schema";
 import {
   confirmarAssinaturaPendente,
   ConfirmacaoExpiradaError,
+  ContratoCanceladoError,
 } from "@/lib/services/contratoSignatarios.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -63,10 +64,19 @@ export async function POST(
       );
     }
 
+    // Consome a tentativa ANTES de comparar, com compare-and-swap: sob
+    // requisições paralelas só uma vence a escrita — o teto de 5 deixa de ser
+    // contornável por concorrência (o rate limit em memória é por instância e
+    // não segura flood em serverless).
+    const consumiu = await consumirTentativaOtp(admin, params.token, tentativas);
+    if (!consumiu) {
+      return NextResponse.json(
+        { erro: "Não foi possível validar agora. Tente novamente." },
+        { status: 429 }
+      );
+    }
+
     if (!otpConfere(params.token, parsed.data.codigo, sigRow.otp_hash)) {
-      await atualizarPorToken(admin, params.token, {
-        otp_tentativas: tentativas + 1,
-      });
       const restantes = OTP_MAX_TENTATIVAS - tentativas - 1;
       return NextResponse.json(
         {
@@ -94,6 +104,9 @@ export async function POST(
   } catch (e) {
     if (e instanceof ConfirmacaoExpiradaError) {
       return NextResponse.json({ erro: e.message, expirado: true }, { status: e.status });
+    }
+    if (e instanceof ContratoCanceladoError) {
+      return NextResponse.json({ erro: e.message, cancelado: true }, { status: e.status });
     }
     return respostaDeErro(e, "Não foi possível verificar o código.");
   }

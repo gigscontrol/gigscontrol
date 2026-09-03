@@ -26,6 +26,7 @@ import {
   aplicarFallbackVazios,
   dataBR,
   hojeBR,
+  fallbacksConteudo,
 } from "@/lib/contratos/preencherSecoes";
 import {
   VARIAVEIS_CONTRATO,
@@ -64,6 +65,11 @@ const AUTO_PREENCHIDOS = new Set([
   "numero_contrato",
   "data_hoje",
   "agencia",
+  // Dados do artista REDIGIDOS pra não-admin (privacidade): exigi-los travava
+  // qualquer operacional com contratos.criar em todo modelo com bloco de
+  // assinaturas. O render já cai no nome artístico e omite o documento.
+  "artista_nome_civil",
+  "artista_documento",
 ]);
 
 /** Todos os textos de um modelo onde pode haver {{tokens}}. */
@@ -175,7 +181,10 @@ export default function NovoContratoPage({
   // primeiro (a partir de hoje, crescente), depois os passados (mais recente
   // antes). A venda já selecionada nunca some (senão o select órfã).
   const vendasDoSelect = useMemo(() => {
-    const hoje = new Date().toISOString().slice(0, 10);
+    // Data local (toISOString é UTC — à noite classificava o show de hoje
+    // como "amanhã"/passado errado na ordenação).
+    const agora = new Date();
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
     const filtradas = vendas.filter((v) => {
       if (v.id === vendaId) return true;
       if (v.artistaId && !selectedArtistas.includes(v.artistaId)) return false;
@@ -222,6 +231,11 @@ export default function NovoContratoPage({
         base,
         valoresDeVenda({ venda, artista, agencia, numero: "", idioma, contratante })
       );
+    } else {
+      // Sem venda (preencher manual): riders/hospedagem/logística caem no
+      // texto de praxe do idioma — mesma regra do caminho com venda; sem isso
+      // saíam "Não informado" impressos (são isentos da validação).
+      Object.assign(base, fallbacksConteudo(idioma));
     }
     setValores(base);
     setGerado(null);

@@ -1963,7 +1963,7 @@ export const FR: Record<string, string> = {
   "Hash do conteúdo (SHA-256)": "Empreinte du contenu (SHA-256)",
   "Assinatura registrada": "Signature enregistrée",
   "Validade jurídica": "Validité juridique",
-  "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001 e da Lei 14.063/2020.": "Les signatures électroniques ont une validité légale selon l'art. 10, §2 de la MP 2.200-2/2001 et la loi 14.063/2020 du Brésil.",
+  "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001, e dos arts. 104 e 107 do Código Civil.": "Les signatures électroniques ont une validité légale selon l'art. 10, §2 de la MP 2.200-2/2001 et les art. 104 et 107 du Code civil brésilien.",
   "Verifique a autenticidade em": "Vérifiez l'authenticité sur",
   "Parágrafo único": "Paragraphe unique",
   "Formatação": "Mise en forme",

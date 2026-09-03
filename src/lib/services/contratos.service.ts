@@ -179,15 +179,17 @@ export async function atualizarContratoPorId(
     if (existente.status === "assinado" || existente.finalizado_em) {
       throw new ContratoImutavelError();
     }
-    if (existente.status === "enviado") {
+    // A checagem de assinatura parcial vale pra QUALQUER status com hash
+    // selado (já foi enviado ao menos uma vez): regredir o status pra
+    // "rascunho" num PATCH e editar o corpo no seguinte não pode destravar o
+    // texto que alguém já assinou.
+    if (existente.conteudo_hash) {
       const sigs = await listarPorContrato(supabase, id);
       if (sigs.some((s) => s.status === "assinado")) {
         throw new ContratoImutavelError();
       }
-    }
-    // Pré-assinatura, mas JÁ ENVIADO (tem hash selado): versiona + re-sela +
-    // registra a alteração na trilha. Rascunho nunca enviado edita livre.
-    if (existente.conteudo_hash) {
+      // Pré-assinatura, mas JÁ ENVIADO: versiona + re-sela + registra a
+      // alteração na trilha. Rascunho nunca enviado edita livre.
       escrita.conteudo_hash = hashConteudoContrato(escrita.corpo_preenchido ?? "");
       escrita.conteudo_versao = (existente.conteudo_versao ?? 1) + 1;
     }
@@ -225,10 +227,29 @@ export async function atualizarContratoPorId(
   return rowParaContrato(row);
 }
 
+/**
+ * Contrato FINALIZADO não pode ir pra lixeira: o código GC-XXXX-XXXX impresso
+ * no PDF das partes deixaria de responder na verificação pública — pra
+ * contraparte, indistinguível de fraude. A rota traduz pra HTTP 409.
+ */
+export class ContratoFinalizadoError extends Error {
+  status = 409;
+  constructor() {
+    super(
+      "Este contrato foi finalizado e tem verificação pública ativa — não pode ser excluído. Cancele-o se precisar tirá-lo de circulação."
+    );
+    this.name = "ContratoFinalizadoError";
+  }
+}
+
 export async function removerContratoPorId(
   supabase: SupabaseClient,
   id: string,
   deletadoPor?: string
 ): Promise<void> {
+  const existente = await repoBuscar(supabase, id);
+  if (existente && (existente.finalizado_em || existente.verificacao_id)) {
+    throw new ContratoFinalizadoError();
+  }
   await repoRemover(supabase, id, deletadoPor);
 }

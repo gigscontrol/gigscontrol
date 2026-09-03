@@ -6,6 +6,7 @@ import { hashTokenConfirmacao } from "@/lib/contratos/integridade";
 import {
   confirmarAssinaturaPendente,
   ConfirmacaoExpiradaError,
+  ContratoCanceladoError,
 } from "@/lib/services/contratoSignatarios.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -59,6 +60,9 @@ export async function POST(
   } catch (e) {
     if (e instanceof ConfirmacaoExpiradaError) {
       return NextResponse.json({ erro: e.message, expirado: true }, { status: e.status });
+    }
+    if (e instanceof ContratoCanceladoError) {
+      return NextResponse.json({ erro: e.message, cancelado: true }, { status: e.status });
     }
     return respostaDeErro(e, "Não foi possível concluir a assinatura.");
   }
