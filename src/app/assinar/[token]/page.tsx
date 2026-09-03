@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Página PÚBLICA de assinatura (padrão ZapSign):
+ *  - Header: painel "Assinaturas X/Y" + download à esquerda; marca à direita.
+ *  - Etapa DOCUMENTO: contrato com zoom (+/−) e barra fixa "Continuar".
+ *  - Etapa FORM: identificação + exigências (CPF avançado, fotos, selfie…).
+ *  - Etapa CÓDIGO (exigência de e-mail): a assinatura fica PENDENTE até a
+ *    pessoa digitar o código de 6 dígitos OU clicar no botão do e-mail
+ *    (válidos por 30 min). Só então conta como assinada.
+ */
+
 import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -10,12 +20,18 @@ import {
   ShieldCheck,
   ScanFace,
   MailCheck,
+  ChevronDown,
+  ZoomIn,
+  ZoomOut,
+  ArrowLeft,
+  Clock,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "@/components/contratos/folhaA4";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
 import { documentoValido } from "@/lib/documento";
+import { cpfValido } from "@/lib/pix";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import type { SecaoModelo, EstiloModelo } from "@/lib/mappers/contratoModelo";
 import type { ExigenciasSignatario } from "@/lib/mappers/contratoSignatario";
@@ -30,21 +46,24 @@ type Dados = {
     assinatura: string | null;
     documento: string | null;
     assinadoEm: string | null;
-    /** OTP de e-mail já confirmado (exigência otpEmail). */
-    otpVerificado?: boolean;
+    /** Assinatura submetida aguardando código/botão do e-mail (30 min). */
+    aguardandoConfirmacao?: boolean;
+    confirmacaoExpiraEm?: string | null;
   };
   contrato: {
     numero: string;
     conteudo: { secoes: SecaoModelo[]; estilo: EstiloModelo };
-    /** Código público GC-XXXX-XXXX (só quando finalizado). */
     verificacaoId?: string | null;
-    /** SHA-256 selado do conteúdo (relatório de assinaturas). */
     conteudoHash?: string | null;
   };
-  /** Signatários do mesmo contrato que já assinaram (relatório, sem KYC). */
+  /** Signatários que já assinaram (relatório, sem KYC). */
   assinaturas: AssinaturaInfo[];
+  /** TODOS os signatários (nome/papel/status) — painel "Assinaturas X/Y". */
+  signatariosResumo?: { nome: string; papel: string | null; status: string }[];
   jaAssinou: boolean;
 };
+
+type Etapa = "documento" | "form" | "codigo";
 
 function dataHoraBR(iso: string | null): string {
   if (!iso) return "";
@@ -53,6 +72,8 @@ function dataHoraBR(iso: string | null): string {
   if (d.length !== 3) return iso;
   return `${d[2]}/${d[1]}/${d[0]}${h ? ` ${h}` : ""}`;
 }
+
+const ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
 
 export default function AssinarPage({
   params,
@@ -65,7 +86,13 @@ export default function AssinarPage({
   // Contrato cancelado pela agência (D4): tela dedicada, não "link inválido".
   const [cancelado, setCancelado] = useState(false);
 
+  const [etapa, setEtapa] = useState<Etapa>("documento");
+  const [zoomIdx, setZoomIdx] = useState(4); // 100%
+  const [painelAberto, setPainelAberto] = useState(false);
+
   const [documento, setDocumento] = useState("");
+  const [nomeCompleto, setNomeCompleto] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [assinatura, setAssinatura] = useState<string | null>(null);
   const [fotoDocumento, setFotoDocumento] = useState<string | null>(null);
   const [fotoDocumentoVerso, setFotoDocumentoVerso] = useState<string | null>(
@@ -76,12 +103,11 @@ export default function AssinarPage({
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState(false);
 
-  // OTP por e-mail (exigência otpEmail): estado local do fluxo de verificação.
-  const [otpOk, setOtpOk] = useState(false);
-  const [otpEnviado, setOtpEnviado] = useState(false);
+  // Etapa CÓDIGO (confirmação por e-mail da assinatura pendente).
   const [otpCodigo, setOtpCodigo] = useState("");
   const [otpOcupado, setOtpOcupado] = useState(false);
   const [otpMsg, setOtpMsg] = useState<string | null>(null);
+  const [otpExpirado, setOtpExpirado] = useState(false);
 
   const folhaRef = useRef<HTMLDivElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -98,12 +124,15 @@ export default function AssinarPage({
         return;
       }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
-      setDados(body as Dados);
-      if ((body as Dados).signatario.otpVerificado) setOtpOk(true);
-      if ((body as Dados).signatario.documento)
-        setDocumento(
-          mascararCpfCnpj((body as Dados).signatario.documento ?? "")
-        );
+      const d = body as Dados;
+      setDados(d);
+      if (d.signatario.documento)
+        setDocumento(mascararCpfCnpj(d.signatario.documento ?? ""));
+      // Assinatura pendente de confirmação → reabre direto na tela do código
+      // (a pessoa pode ter fechado a página pra buscar o e-mail).
+      if (d.signatario.status !== "assinado" && d.signatario.aguardandoConfirmacao) {
+        setEtapa("codigo");
+      }
     } catch (e) {
       setErroCarga((e as Error).message);
     } finally {
@@ -158,65 +187,31 @@ export default function AssinarPage({
    * câmera ao vivo (o envio acontece depois, quando a selfie é capturada).
    * Caso contrário, envia direto.
    */
-  // ---- OTP por e-mail ----
-
-  async function enviarOtp() {
-    setOtpOcupado(true);
-    setOtpMsg(null);
-    try {
-      const res = await fetch(`/api/assinar/${params.token}/otp`, {
-        method: "POST",
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
-      setOtpEnviado(true);
-      setOtpMsg("Código enviado! Confira sua caixa de entrada (e o spam).");
-    } catch (e) {
-      setOtpMsg((e as Error).message);
-    } finally {
-      setOtpOcupado(false);
-    }
-  }
-
-  async function verificarOtp() {
-    if (!/^\d{6}$/.test(otpCodigo.trim())) {
-      setOtpMsg("Digite o código de 6 dígitos.");
-      return;
-    }
-    setOtpOcupado(true);
-    setOtpMsg(null);
-    try {
-      const res = await fetch(`/api/assinar/${params.token}/otp/verificar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codigo: otpCodigo.trim() }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
-      setOtpOk(true);
-      setOtpMsg(null);
-      setErro(null);
-    } catch (e) {
-      setOtpMsg((e as Error).message);
-    } finally {
-      setOtpOcupado(false);
-    }
-  }
-
   function assinar() {
     if (!dados) return;
     const ex = dados.signatario.exige;
-    if (ex.otpEmail && !otpOk) {
-      setErro("Confirme o código enviado ao seu e-mail antes de assinar.");
-      return;
-    }
-    if (ex.cpfCnpj && !documento.trim()) {
-      setErro("Informe seu CPF ou CNPJ.");
-      return;
-    }
-    if (ex.cpfCnpj && !documentoValido(documento)) {
-      setErro("Documento inválido: informe um CPF (11 dígitos) ou CNPJ (14 dígitos).");
-      return;
+    if (ex.cpfAvancado) {
+      if (nomeCompleto.trim().split(/\s+/).length < 2) {
+        setErro("Informe seu nome completo (nome e sobrenome).");
+        return;
+      }
+      if (!dataNascimento) {
+        setErro("Informe sua data de nascimento.");
+        return;
+      }
+      if (!cpfValido(documento)) {
+        setErro("CPF inválido — confira os 11 dígitos.");
+        return;
+      }
+    } else if (ex.cpfCnpj) {
+      if (!documento.trim()) {
+        setErro("Informe seu CPF ou CNPJ.");
+        return;
+      }
+      if (!documentoValido(documento)) {
+        setErro("Documento inválido: informe um CPF (11 dígitos) ou CNPJ (14 dígitos).");
+        return;
+      }
     }
     if (ex.assinaturaTela && !assinatura) {
       setErro("Desenhe sua assinatura no quadro.");
@@ -261,6 +256,8 @@ export default function AssinarPage({
           documento,
           geolocalizacao,
           fusoHorario,
+          nomeCompleto,
+          dataNascimento,
           fotoDocumento: fotoDocumento ?? "",
           fotoDocumentoVerso: fotoDocumentoVerso ?? "",
           selfie: selfie ?? "",
@@ -274,11 +271,72 @@ export default function AssinarPage({
         return;
       }
       if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      if ((body as { aguardandoConfirmacao?: boolean }).aguardandoConfirmacao) {
+        // Assinatura PENDENTE: falta o código/botão do e-mail.
+        setOtpMsg(null);
+        setOtpExpirado(false);
+        setOtpCodigo("");
+        setEtapa("codigo");
+        return;
+      }
       await carregar(); // recarrega no estado "assinado"
     } catch (e) {
       setErro((e as Error).message);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function confirmarCodigo() {
+    if (!/^\d{6}$/.test(otpCodigo.trim())) {
+      setOtpMsg("Digite o código de 6 dígitos.");
+      return;
+    }
+    setOtpOcupado(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch(`/api/assinar/${params.token}/otp/verificar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo: otpCodigo.trim() }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        assinado?: boolean;
+        erro?: string;
+        expirado?: boolean;
+      };
+      if (body.expirado) {
+        setOtpExpirado(true);
+        setOtpMsg(body.erro ?? "O prazo expirou — assine novamente.");
+        return;
+      }
+      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      if (body.assinado) {
+        setEtapa("documento");
+        await carregar();
+      }
+    } catch (e) {
+      setOtpMsg((e as Error).message);
+    } finally {
+      setOtpOcupado(false);
+    }
+  }
+
+  async function reenviarCodigo() {
+    setOtpOcupado(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch(`/api/assinar/${params.token}/otp`, {
+        method: "POST",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.erro ?? `HTTP ${res.status}`);
+      setOtpExpirado(false);
+      setOtpMsg("Código reenviado! Confira sua caixa de entrada (e o spam).");
+    } catch (e) {
+      setOtpMsg((e as Error).message);
+    } finally {
+      setOtpOcupado(false);
     }
   }
 
@@ -335,76 +393,173 @@ export default function AssinarPage({
 
   const { signatario, contrato } = dados;
   const assinado = signatario.status === "assinado";
+  const resumo = dados.signatariosResumo ?? [];
+  const totalAssinados = resumo.filter((s) => s.status === "assinado").length;
+  const zoom = ZOOMS[zoomIdx];
+  const pendente = !assinado;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-main)" }}>
-      {/* Topo */}
-      <div className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur px-4 py-3">
-        <div className="max-w-[900px] mx-auto flex items-center gap-3 flex-wrap">
-          <PenLine size={18} style={{ color: "var(--brand)" }} />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-primary truncate">
-              Assinatura de contrato · {contrato.numero}
-            </div>
-            <div className="text-xs text-muted truncate">
-              {signatario.nome}
-              {signatario.papel ? ` — ${signatario.papel}` : ""}
-            </div>
+      {/* ===== Header: Assinaturas X/Y + download (esq) · marca (dir) ===== */}
+      <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur px-4 py-2.5">
+        <div className="max-w-[1000px] mx-auto flex items-center gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPainelAberto((a) => !a)}
+              className="btn btn-secondary text-sm"
+              aria-expanded={painelAberto}
+            >
+              Assinaturas {totalAssinados}/{resumo.length || 1}
+              <ChevronDown
+                size={14}
+                style={{
+                  transform: painelAberto ? "rotate(180deg)" : undefined,
+                  transition: "transform .15s",
+                }}
+              />
+            </button>
+            {painelAberto && (
+              <div
+                className="absolute left-0 top-full mt-1 z-40 w-[280px] rounded-lg border p-2 shadow-lg flex flex-col gap-1.5"
+                style={{
+                  backgroundColor: "var(--bg-surface)",
+                  borderColor: "var(--border-color)",
+                }}
+              >
+                <div className="stat-label px-1">Assinaturas</div>
+                {resumo.map((s, i) => (
+                  <div
+                    key={i}
+                    className="rounded-md border border-border px-3 py-2"
+                  >
+                    <span
+                      className={`badge ${
+                        s.status === "assinado" ? "badge-success" : "badge-warning"
+                      } mb-1`}
+                    >
+                      {s.status === "assinado" ? "Assinado" : "Em curso"}
+                    </span>
+                    <div className="text-sm text-primary truncate" title={s.nome}>
+                      {s.nome}
+                    </div>
+                    {s.papel && (
+                      <div className="text-xs text-muted">{s.papel}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button
             type="button"
             onClick={baixarPdf}
             disabled={baixando}
-            className="btn btn-secondary text-sm"
+            title="Baixar PDF"
+            aria-label="Baixar PDF"
+            className="btn-ghost p-2 rounded"
           >
             {baixando ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <Download size={14} />
+              <Download size={16} />
             )}
-            PDF
           </button>
+
+          <div className="flex-1 min-w-0 text-center text-xs text-muted truncate hidden sm:block">
+            {contrato.numero} · {signatario.nome}
+          </div>
+
+          <div
+            className="ml-auto text-sm font-extrabold whitespace-nowrap"
+            style={{ letterSpacing: "0.14em", color: "var(--text-primary)" }}
+          >
+            GIGS CONTROL
+          </div>
         </div>
       </div>
 
-      <div className="max-w-[900px] mx-auto p-4 flex flex-col gap-4">
-        {assinado && (
-          <div
-            className="flex items-center gap-2 rounded-md px-4 py-3 text-sm"
-            style={{
-              backgroundColor: "rgba(34,197,94,0.12)",
-              color: "var(--success)",
-            }}
-          >
-            <CheckCircle2 size={18} />
-            <span>
-              <strong>Assinado.</strong>{" "}
-              {signatario.assinadoEm
-                ? `Em ${dataHoraBR(signatario.assinadoEm)}.`
-                : ""}{" "}
-              Este link agora serve só para visualizar o contrato.
+      {/* ===== Etapa DOCUMENTO ===== */}
+      {etapa === "documento" && (
+        <div className="max-w-[1000px] mx-auto p-4 flex flex-col gap-3 pb-24">
+          {assinado && (
+            <div
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm"
+              style={{
+                backgroundColor: "rgba(34,197,94,0.12)",
+                color: "var(--success)",
+              }}
+            >
+              <CheckCircle2 size={18} />
+              <span>
+                <strong>Assinado.</strong>{" "}
+                {signatario.assinadoEm
+                  ? `Em ${dataHoraBR(signatario.assinadoEm)}.`
+                  : ""}{" "}
+                Este link agora serve só para visualizar o contrato.
+              </span>
+            </div>
+          )}
+
+          {/* Zoom centralizado sobre o documento */}
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
+              disabled={zoomIdx === 0}
+              title="Diminuir zoom"
+              aria-label="Diminuir zoom"
+              className="btn btn-secondary p-2 disabled:opacity-40"
+            >
+              <ZoomOut size={15} />
+            </button>
+            <span className="text-xs text-muted w-12 text-center tabular-nums">
+              {Math.round(zoom * 100)}%
             </span>
+            <button
+              type="button"
+              onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
+              disabled={zoomIdx === ZOOMS.length - 1}
+              title="Aumentar zoom"
+              aria-label="Aumentar zoom"
+              className="btn btn-secondary p-2 disabled:opacity-40"
+            >
+              <ZoomIn size={15} />
+            </button>
           </div>
-        )}
 
-        {/* O contrato + relatório de assinaturas (de quem já assinou) */}
-        <FolhaA4
-          secoes={contrato.conteudo.secoes}
-          estilo={contrato.conteudo.estilo}
-          folhaRef={folhaRef}
-          conteudoRef={conteudoRef}
-          assinaturas={dados.assinaturas}
-          numeroContrato={contrato.numero}
-          verificacaoId={contrato.verificacaoId}
-          conteudoHash={contrato.conteudoHash}
-        />
+          {/* O contrato + relatório de assinaturas (de quem já assinou) */}
+          <div style={{ zoom }}>
+            <FolhaA4
+              secoes={contrato.conteudo.secoes}
+              estilo={contrato.conteudo.estilo}
+              folhaRef={folhaRef}
+              conteudoRef={conteudoRef}
+              assinaturas={dados.assinaturas}
+              numeroContrato={contrato.numero}
+              verificacaoId={contrato.verificacaoId}
+              conteudoHash={contrato.conteudoHash}
+            />
+          </div>
+        </div>
+      )}
 
-        {/* Form de assinatura (só se ainda não assinou) */}
-        {!assinado && (
+      {/* ===== Etapa FORM ===== */}
+      {etapa === "form" && !assinado && (
+        <div className="max-w-[640px] mx-auto p-4 flex flex-col gap-4">
+          <button
+            type="button"
+            onClick={() => setEtapa("documento")}
+            className="btn btn-ghost self-start"
+          >
+            <ArrowLeft size={15} />
+            Voltar ao documento
+          </button>
+
           <div className="card flex flex-col gap-4">
             <div className="section-title inline-flex items-center gap-2">
               <PenLine size={16} style={{ color: "var(--brand)" }} />
-              Sua assinatura
+              Confirme sua identidade para assinar
             </div>
 
             <div className="flex flex-col gap-1">
@@ -414,104 +569,62 @@ export default function AssinarPage({
               <div className="campo-input opacity-80">{signatario.nome}</div>
             </div>
 
-            {signatario.exige.cpfCnpj && (
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-secondary">
-                  CPF ou CNPJ
-                </span>
-                <input
-                  value={documento}
-                  onChange={(e) => setDocumento(mascararCpfCnpj(e.target.value))}
-                  inputMode="numeric"
-                  maxLength={18}
-                  placeholder="000.000.000-00"
-                  className="campo-input font-mono"
-                />
-              </label>
-            )}
-
-            {signatario.exige.otpEmail && (
-              <div
-                className="flex flex-col gap-2.5 rounded-lg border border-border p-3"
-                style={
-                  otpOk ? { backgroundColor: "rgba(34,197,94,0.08)" } : undefined
-                }
-              >
-                <div className="flex items-center gap-2 text-sm font-medium text-secondary">
-                  <MailCheck
-                    size={16}
-                    style={{ color: otpOk ? "var(--success)" : "var(--brand)" }}
-                  />
-                  Verificação de e-mail
+            {signatario.exige.cpfAvancado ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+                <div className="text-sm font-medium text-secondary inline-flex items-center gap-2">
+                  <ShieldCheck size={15} style={{ color: "var(--brand)" }} />
+                  Verificação de CPF avançada
                 </div>
-                {otpOk ? (
-                  <div
-                    className="flex items-center gap-2 text-sm"
-                    style={{ color: "var(--success)" }}
-                  >
-                    <CheckCircle2 size={15} />
-                    E-mail verificado com sucesso.
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Para assinar, confirme que este e-mail é seu:{" "}
-                      <strong>{signatario.email ?? "—"}</strong>. Enviaremos um
-                      código de 6 dígitos.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void enviarOtp()}
-                        disabled={otpOcupado}
-                        className="btn btn-secondary text-sm"
-                      >
-                        {otpOcupado && !otpEnviado ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <MailCheck size={14} />
-                        )}
-                        {otpEnviado ? "Reenviar código" : "Enviar código"}
-                      </button>
-                      {otpEnviado && (
-                        <>
-                          <input
-                            value={otpCodigo}
-                            onChange={(e) =>
-                              setOtpCodigo(
-                                e.target.value.replace(/\D/g, "").slice(0, 6)
-                              )
-                            }
-                            inputMode="numeric"
-                            maxLength={6}
-                            placeholder="000000"
-                            className="campo-input font-mono w-28 text-center tracking-widest"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => void verificarOtp()}
-                            disabled={otpOcupado || otpCodigo.length !== 6}
-                            className="btn text-sm disabled:opacity-50"
-                            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
-                          >
-                            {otpOcupado ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <CheckCircle2 size={14} />
-                            )}
-                            Confirmar
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {otpMsg && (
-                      <p className="text-xs" style={{ color: "var(--muted)" }}>
-                        {otpMsg}
-                      </p>
-                    )}
-                  </>
-                )}
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary">
+                    Nome completo
+                  </span>
+                  <input
+                    value={nomeCompleto}
+                    onChange={(e) => setNomeCompleto(e.target.value)}
+                    placeholder="Como está no seu documento"
+                    className="campo-input"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary">CPF</span>
+                  <input
+                    value={documento}
+                    onChange={(e) => setDocumento(mascararCpfCnpj(e.target.value))}
+                    inputMode="numeric"
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    className="campo-input font-mono"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary">
+                    Data de nascimento
+                  </span>
+                  <input
+                    type="date"
+                    value={dataNascimento}
+                    onChange={(e) => setDataNascimento(e.target.value)}
+                    className="campo-input"
+                  />
+                </label>
               </div>
+            ) : (
+              signatario.exige.cpfCnpj && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-secondary">
+                    CPF ou CNPJ
+                  </span>
+                  <input
+                    value={documento}
+                    onChange={(e) => setDocumento(mascararCpfCnpj(e.target.value))}
+                    inputMode="numeric"
+                    maxLength={18}
+                    placeholder="000.000.000-00"
+                    className="campo-input font-mono"
+                  />
+                </label>
+              )
             )}
 
             {signatario.exige.assinaturaTela && (
@@ -548,7 +661,24 @@ export default function AssinarPage({
                   verificação
                   {signatario.exige.facial
                     ? " — comparamos com a foto do seu documento (reconhecimento facial) e registramos o resultado."
-                    : "."}
+                    : "."}{" "}
+                  No computador, você pode continuar pelo celular via QR code.
+                </span>
+              </div>
+            )}
+
+            {signatario.exige.otpEmail && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-dashed border-border bg-surface-2 p-3 text-xs text-muted">
+                <MailCheck
+                  size={18}
+                  className="flex-shrink-0"
+                  style={{ color: "var(--brand)" }}
+                />
+                <span className="leading-relaxed">
+                  Após assinar, enviaremos um <strong>código de 6 dígitos</strong>{" "}
+                  para <strong>{signatario.email ?? "seu e-mail"}</strong> — a
+                  assinatura só é concluída com a confirmação (válida por 30
+                  minutos).
                 </span>
               </div>
             )}
@@ -581,13 +711,139 @@ export default function AssinarPage({
 
             <p className="text-[0.7rem] text-muted inline-flex items-start gap-1.5 leading-relaxed">
               <ShieldCheck size={13} className="flex-shrink-0 mt-0.5" />
-              Ao assinar, registramos data/hora, seu IP, dispositivo e (se você
-              permitir) sua localização, como prova da assinatura. A ação é
-              única — depois de assinar não dá pra refazer.
+              Ao assinar, você aceita assinar eletronicamente este documento
+              (art. 10, §2º, da MP 2.200-2/2001) e registramos data/hora, seu
+              IP, dispositivo e (se você permitir) sua localização, como prova
+              da assinatura. A ação é única — depois de concluída não dá pra
+              refazer.
             </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ===== Etapa CÓDIGO (confirmação por e-mail) ===== */}
+      {etapa === "codigo" && !assinado && (
+        <div className="max-w-[480px] mx-auto p-4 pt-10">
+          <div className="card flex flex-col items-center text-center gap-4 py-8">
+            {otpExpirado ? (
+              <>
+                <Clock size={30} style={{ color: "var(--warning)" }} />
+                <div className="section-title">Prazo expirado</div>
+                <p className="text-sm text-muted max-w-sm">
+                  O código venceu (validade de 30 minutos) e a assinatura não
+                  foi concluída. Sem problema: é só assinar novamente — um novo
+                  código será enviado.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpExpirado(false);
+                    setOtpMsg(null);
+                    setEtapa("form");
+                  }}
+                  className="btn"
+                  style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                >
+                  <PenLine size={15} />
+                  Assinar novamente
+                </button>
+              </>
+            ) : (
+              <>
+                <MailCheck size={30} style={{ color: "var(--brand)" }} />
+                <div className="section-title">Confirme seu e-mail</div>
+                <p className="text-sm text-muted max-w-sm">
+                  Sua assinatura foi registrada e está <strong>aguardando
+                  confirmação</strong>. Enviamos um código de 6 dígitos para{" "}
+                  <strong>{signatario.email ?? "seu e-mail"}</strong> — ele vale
+                  por 30 minutos.
+                </p>
+                <input
+                  value={otpCodigo}
+                  onChange={(e) =>
+                    setOtpCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  autoFocus
+                  className="campo-input font-mono w-44 text-center text-2xl tracking-[0.4em]"
+                />
+                <button
+                  type="button"
+                  onClick={() => void confirmarCodigo()}
+                  disabled={otpOcupado || otpCodigo.length !== 6}
+                  className="btn w-44 disabled:opacity-50"
+                  style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                >
+                  {otpOcupado ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={15} />
+                  )}
+                  Confirmar
+                </button>
+                {otpMsg && (
+                  <p className="text-xs max-w-sm" style={{ color: "var(--muted, var(--text-muted))" }}>
+                    {otpMsg}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void reenviarCodigo()}
+                  disabled={otpOcupado}
+                  className="btn-ghost text-xs"
+                  style={{ color: "var(--brand)" }}
+                >
+                  Reenviar código
+                </button>
+                <p className="text-[0.7rem] text-muted max-w-sm leading-relaxed">
+                  Dica: o e-mail também traz o botão{" "}
+                  <strong>“Concluir assinatura”</strong> — clicar nele confirma
+                  tudo sem digitar o código.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Barra fixa "Continuar" (etapa documento, pendente) ===== */}
+      {etapa === "documento" && pendente && !signatario.aguardandoConfirmacao && (
+        <div
+          className="fixed bottom-0 inset-x-0 z-30 border-t border-border px-4 py-3"
+          style={{ backgroundColor: "var(--bg-surface)" }}
+        >
+          <div className="max-w-[1000px] mx-auto flex justify-end">
+            <button
+              type="button"
+              onClick={() => setEtapa("form")}
+              className="btn w-full sm:w-auto sm:min-w-[220px] justify-center"
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
+      {etapa === "documento" && pendente && signatario.aguardandoConfirmacao && (
+        <div
+          className="fixed bottom-0 inset-x-0 z-30 border-t border-border px-4 py-3"
+          style={{ backgroundColor: "var(--bg-surface)" }}
+        >
+          <div className="max-w-[1000px] mx-auto flex justify-end">
+            <button
+              type="button"
+              onClick={() => setEtapa("codigo")}
+              className="btn w-full sm:w-auto sm:min-w-[220px] justify-center"
+              style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+            >
+              <MailCheck size={15} />
+              Digitar o código do e-mail
+            </button>
+          </div>
+        </div>
+      )}
 
       {mostrarCamera && (
         <SelfieAoVivo

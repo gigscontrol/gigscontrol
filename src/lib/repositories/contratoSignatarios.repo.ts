@@ -10,7 +10,8 @@ const COLS = `
   exige, arquivos, status, assinatura, documento, ip, geolocalizacao,
   dispositivo, assinado_em, aberturas, criado_em,
   telefone, fuso_horario, metodo_autenticacao,
-  otp_hash, otp_expira_em, otp_tentativas, otp_verificado_em
+  otp_hash, otp_expira_em, otp_tentativas, otp_verificado_em,
+  pendente_payload, confirm_token_hash, nome_completo, data_nascimento
 `;
 
 /** Signatários de um contrato (uso da agência — RLS por workspace). */
@@ -104,6 +105,20 @@ export async function removerSignatario(
 
 // ---------------- Acesso público por token (service-role) ----------------
 
+/** Busca pelo HASH do token de confirmação do e-mail (botão mágico). */
+export async function buscarPorConfirmTokenHash(
+  admin: SupabaseClient,
+  hash: string
+): Promise<SignatarioRow | null> {
+  const { data, error } = await admin
+    .from("contrato_signatarios")
+    .select(COLS)
+    .eq("confirm_token_hash", hash)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as SignatarioRow) ?? null;
+}
+
 /** Busca UM signatário pelo token (página pública — usa client admin). */
 export async function buscarPorToken(
   admin: SupabaseClient,
@@ -135,6 +150,8 @@ export async function registrarAssinaturaPorToken(
     fuso_horario: string | null;
     metodo_autenticacao: string | null;
     arquivos: ArquivosSignatario;
+    nome_completo?: string | null;
+    data_nascimento?: string | null;
   }
 ): Promise<SignatarioRow | null> {
   const { data, error } = await admin
@@ -149,7 +166,13 @@ export async function registrarAssinaturaPorToken(
       fuso_horario: dados.fuso_horario,
       metodo_autenticacao: dados.metodo_autenticacao,
       arquivos: dados.arquivos,
+      nome_completo: dados.nome_completo ?? null,
+      data_nascimento: dados.data_nascimento ?? null,
       assinado_em: new Date().toISOString(),
+      // Efetivou → staging/tokens de confirmação não valem mais.
+      pendente_payload: null,
+      otp_hash: null,
+      confirm_token_hash: null,
     })
     .eq("token", token)
     .eq("status", "pendente")

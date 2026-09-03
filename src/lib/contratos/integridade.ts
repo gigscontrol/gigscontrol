@@ -55,8 +55,18 @@ export function verificacaoIdValido(id: string): boolean {
 
 // ---------------- OTP por e-mail ----------------
 
-export const OTP_VALIDADE_MIN = 10;
+export const OTP_VALIDADE_MIN = 30;
 export const OTP_MAX_TENTATIVAS = 5;
+
+/** Token do botão "concluir assinatura" do e-mail (24 bytes URL-safe). */
+export function gerarTokenConfirmacao(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+/** Hash do token de confirmação — só o hash toca o banco. */
+export function hashTokenConfirmacao(token: string): string {
+  return sha256Hex(`confirmar|${token}`);
+}
 
 /** Código de 6 dígitos criptograficamente aleatório (nunca começa forçado em 0? começa como vier — 000123 é válido). */
 export function gerarCodigoOtp(): string {
