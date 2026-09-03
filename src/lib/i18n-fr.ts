@@ -1192,6 +1192,7 @@ export const FR: Record<string, string> = {
   "Verificação de documento avançado com foto (CNH ou RG)": "Vérification avancée du document avec photo (permis de conduire ou pièce d'identité)",
   "Verificação facial avançada (selfie)": "Vérification faciale avancée (selfie)",
   "Verificação do e-mail por código (OTP)": "Vérification de l'e-mail par code (OTP)",
+  "CPF avançado (nome completo + data de nascimento)": "CPF avancé (nom complet + date de naissance)",
   "A verificação por código (OTP) exige o e-mail do signatário.": "La vérification par code (OTP) nécessite l'e-mail du signataire.",
   "Contrato finalizado e selado": "Contrat finalisé et scellé",
   "Código público de verificação:": "Code public de vérification :",

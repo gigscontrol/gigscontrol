@@ -10,6 +10,7 @@ const exigeSchema = z
     selfie: z.boolean().optional(),
     facial: z.boolean().optional(),
     otpEmail: z.boolean().optional(),
+    cpfAvancado: z.boolean().optional(),
   })
   .optional();
 
@@ -57,6 +58,13 @@ export const assinarSchema = z.object({
   geolocalizacao: z.string().max(160).optional().or(z.literal("")),
   /** Fuso IANA do navegador (evidência — mig 98), ex.: America/Sao_Paulo. */
   fusoHorario: z.string().max(64).optional().or(z.literal("")),
+  /** CPF avançado (mig 99): nome completo + nascimento declarados. */
+  nomeCompleto: z.string().max(120).optional().or(z.literal("")),
+  dataNascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
   // Fotos (data URLs base64, já reduzidas no cliente) — só quando exigidas.
   fotoCpf: z.string().max(MAX_FOTO).optional().or(z.literal("")),
   fotoDocumento: z.string().max(MAX_FOTO).optional().or(z.literal("")),

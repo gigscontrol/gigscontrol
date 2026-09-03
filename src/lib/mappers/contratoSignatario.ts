@@ -20,6 +20,12 @@ export type ExigenciasSignatario = {
   facial: boolean;
   /** Verificar posse do e-mail via código OTP antes de assinar (mig 98). */
   otpEmail: boolean;
+  /**
+   * CPF AVANÇADO (mig 99): coleta nome completo + data de nascimento e exige
+   * CPF com dígitos verificadores VÁLIDOS. (Checagem contra base oficial —
+   * Receita/Datavalid — é plugável quando houver provedor contratado.)
+   */
+  cpfAvancado: boolean;
 };
 
 export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
@@ -30,6 +36,7 @@ export const EXIGENCIAS_PADRAO: ExigenciasSignatario = {
   selfie: false,
   facial: false,
   otpEmail: false,
+  cpfAvancado: false,
 };
 
 /** Teto de signatários por contrato (vale pros dois fluxos: modelo e PDF). */
@@ -97,6 +104,11 @@ export type SignatarioRow = {
   otp_expira_em?: string | null;
   otp_tentativas?: number | null;
   otp_verificado_em?: string | null;
+  // Assinatura pendente de confirmação por e-mail + CPF avançado (mig 99)
+  pendente_payload?: unknown;
+  confirm_token_hash?: string | null;
+  nome_completo?: string | null;
+  data_nascimento?: string | null;
 };
 
 export type Signatario = {
@@ -128,6 +140,14 @@ export type Signatario = {
   metodoAutenticacao: string | null;
   /** Quando o OTP foi verificado (null = nunca). */
   otpVerificadoEm: string | null;
+  // Confirmação por e-mail pendente (mig 99)
+  /** Há uma assinatura submetida aguardando o código/botão do e-mail. */
+  aguardandoConfirmacao: boolean;
+  /** Prazo da confirmação (ISO) — 30 min após o envio. */
+  confirmacaoExpiraEm: string | null;
+  // CPF avançado (mig 99)
+  nomeCompleto: string | null;
+  dataNascimento: string | null;
 };
 
 function bool(v: unknown, d: boolean): boolean {
@@ -145,6 +165,7 @@ export function exigeValido(raw: unknown): ExigenciasSignatario {
     selfie: bool(o.selfie, EXIGENCIAS_PADRAO.selfie),
     facial: bool(o.facial, EXIGENCIAS_PADRAO.facial),
     otpEmail: bool(o.otpEmail, EXIGENCIAS_PADRAO.otpEmail),
+    cpfAvancado: bool(o.cpfAvancado, EXIGENCIAS_PADRAO.cpfAvancado),
   };
 }
 
@@ -176,6 +197,14 @@ export function rowParaSignatario(row: SignatarioRow): Signatario {
     fusoHorario: row.fuso_horario ?? null,
     metodoAutenticacao: row.metodo_autenticacao ?? null,
     otpVerificadoEm: row.otp_verificado_em ?? null,
+    // Pendente só conta se ainda está no prazo (30 min).
+    aguardandoConfirmacao:
+      !!row.pendente_payload &&
+      !!row.otp_expira_em &&
+      new Date(row.otp_expira_em) > new Date(),
+    confirmacaoExpiraEm: row.pendente_payload ? row.otp_expira_em ?? null : null,
+    nomeCompleto: row.nome_completo ?? null,
+    dataNascimento: row.data_nascimento ?? null,
   };
 }
 
@@ -204,4 +233,9 @@ export type SignatarioEscrita = {
   otp_expira_em?: string | null;
   otp_tentativas?: number;
   otp_verificado_em?: string | null;
+  // Pendente de confirmação + CPF avançado (mig 99)
+  pendente_payload?: unknown;
+  confirm_token_hash?: string | null;
+  nome_completo?: string | null;
+  data_nascimento?: string | null;
 };

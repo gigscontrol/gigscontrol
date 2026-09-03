@@ -7,7 +7,9 @@ import {
   registrarAbertura,
   assinantesPublicosDoContrato,
   ExigenciaNaoAtendidaError,
+  MailerIndisponivelError,
 } from "@/lib/services/contratoSignatarios.service";
+import { listarPorContrato } from "@/lib/repositories/contratoSignatarios.repo";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -53,6 +55,15 @@ export async function GET(
     // Quem já assinou (do MESMO contrato) → relatório de assinaturas visível
     // no link, padrão ZapSign. Sem KYC (foto/selfie/facial) — só o relatório.
     const assinaturas = await assinantesPublicosDoContrato(admin, contrato.id);
+    // Painel "Assinaturas X/Y": TODOS os signatários (nome/papel/status —
+    // nada de token, e-mail ou PII dos outros).
+    const signatariosResumo = (await listarPorContrato(admin, contrato.id)).map(
+      (s) => ({
+        nome: s.nome,
+        papel: s.papel ?? null,
+        status: s.status === "assinado" ? "assinado" : "pendente",
+      })
+    );
     return NextResponse.json({
       signatario: {
         nome: signatario.nome,
@@ -63,9 +74,11 @@ export async function GET(
         assinatura: signatario.assinatura,
         documento: signatario.documento,
         assinadoEm: signatario.assinadoEm,
-        /** OTP de e-mail já confirmado neste link (gate do botão Assinar). */
-        otpVerificado: !!signatario.otpVerificadoEm,
+        /** Assinatura submetida aguardando código/botão do e-mail (30 min). */
+        aguardandoConfirmacao: signatario.aguardandoConfirmacao,
+        confirmacaoExpiraEm: signatario.confirmacaoExpiraEm,
       },
+      signatariosResumo,
       contrato: {
         numero: contrato.numero,
         conteudo: contrato.conteudo,
@@ -124,27 +137,39 @@ export async function POST(
         { status: 409 }
       );
     }
-    const sig = await registrarAssinatura(admin, params.token, {
+    const resultado = await registrarAssinatura(admin, params.token, {
       assinatura: parsed.data.assinatura,
       documento: parsed.data.documento || null,
       ip: ipDaRequest(request),
       dispositivo: request.headers.get("user-agent"),
       geolocalizacao: parsed.data.geolocalizacao || null,
       fusoHorario: parsed.data.fusoHorario || null,
+      nomeCompleto: parsed.data.nomeCompleto || null,
+      dataNascimento: parsed.data.dataNascimento || null,
       fotoCpf: parsed.data.fotoCpf || null,
       fotoDocumento: parsed.data.fotoDocumento || null,
       fotoDocumentoVerso: parsed.data.fotoDocumentoVerso || null,
       selfie: parsed.data.selfie || null,
     });
-    if (!sig) {
+    if (!resultado) {
       return NextResponse.json(
         { erro: "Este link já foi assinado ou é inválido." },
         { status: 409 }
       );
     }
-    return NextResponse.json({ ok: true, assinadoEm: sig.assinadoEm });
+    if (resultado.status === "aguardando") {
+      return NextResponse.json({
+        ok: true,
+        aguardandoConfirmacao: true,
+        expiraEm: resultado.expiraEm,
+      });
+    }
+    return NextResponse.json({
+      ok: true,
+      assinadoEm: resultado.signatario.assinadoEm,
+    });
   } catch (e) {
-    if (e instanceof ExigenciaNaoAtendidaError) {
+    if (e instanceof ExigenciaNaoAtendidaError || e instanceof MailerIndisponivelError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
     }
     return respostaDeErro(e, "Erro ao registrar a assinatura.");

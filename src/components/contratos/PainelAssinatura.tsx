@@ -82,6 +82,11 @@ const EXIGENCIAS_OPCIONAIS: {
     rotulo: "Verificação do e-mail por código (OTP)",
     disponivel: true,
   },
+  {
+    chave: "cpfAvancado",
+    rotulo: "CPF avançado (nome completo + data de nascimento)",
+    disponivel: true,
+  },
 ];
 
 /** ISO → DD/MM/AAAA (vazio se não houver data). */

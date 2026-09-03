@@ -7,14 +7,17 @@ import {
 } from "@/lib/repositories/contratoSignatarios.repo";
 import { otpConfere, OTP_MAX_TENTATIVAS } from "@/lib/contratos/integridade";
 import { otpVerificarSchema } from "@/lib/validators/contratoSignatarios.schema";
-import { registrarEventoContrato } from "@/lib/services/contratoEventos.service";
+import {
+  confirmarAssinaturaPendente,
+  ConfirmacaoExpiradaError,
+} from "@/lib/services/contratoSignatarios.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
 /**
- * POST /api/assinar/[token]/otp/verificar — confere o código OTP digitado.
- * Comparação em tempo constante contra o hash gravado; máx. 5 tentativas por
- * código (depois exige reenvio); expiração de 10 min. Sucesso grava
- * otp_verificado_em — o gate server-side que `registrarAssinatura` exige.
+ * POST /api/assinar/[token]/otp/verificar — confere o código de 6 dígitos e,
+ * batendo, CONFIRMA a assinatura pendente (ela só conta como assinada aqui).
+ * Comparação em tempo constante; máx. 5 tentativas por código; prazo de
+ * 30 min — vencido, o staging é limpo e a pessoa assina de novo no mesmo link.
  */
 export async function POST(
   request: Request,
@@ -44,20 +47,11 @@ export async function POST(
       return NextResponse.json({ erro: "Link inválido." }, { status: 404 });
     }
     if (sigRow.status === "assinado") {
-      return NextResponse.json(
-        { erro: "Este link já foi assinado." },
-        { status: 409 }
-      );
+      return NextResponse.json({ ok: true, assinado: true });
     }
-    if (!sigRow.otp_hash) {
+    if (!sigRow.pendente_payload || !sigRow.otp_hash) {
       return NextResponse.json(
-        { erro: "Nenhum código ativo. Toque em “Enviar código” primeiro." },
-        { status: 400 }
-      );
-    }
-    if (sigRow.otp_expira_em && new Date(sigRow.otp_expira_em) < new Date()) {
-      return NextResponse.json(
-        { erro: "Código expirado. Peça um novo." },
+        { erro: "Não há assinatura aguardando confirmação. Assine o contrato primeiro." },
         { status: 400 }
       );
     }
@@ -85,24 +79,22 @@ export async function POST(
       );
     }
 
-    // Confere → marca verificado e descarta o hash (código de uso único).
-    await atualizarPorToken(admin, params.token, {
-      otp_verificado_em: new Date().toISOString(),
-      metodo_autenticacao: "email_otp",
-      otp_hash: null,
-      otp_expira_em: null,
+    const signatario = await confirmarAssinaturaPendente(admin, sigRow, "codigo");
+    if (!signatario) {
+      return NextResponse.json(
+        { erro: "Este link já foi assinado ou é inválido." },
+        { status: 409 }
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      assinado: true,
+      assinadoEm: signatario.assinadoEm,
     });
-    await registrarEventoContrato({
-      contratoId: sigRow.contrato_id,
-      workspaceId: sigRow.workspace_id,
-      signatarioId: sigRow.id,
-      tipo: "otp_verificado",
-      detalhes: {},
-      ip: ipDe(request),
-      dispositivo: request.headers.get("user-agent"),
-    });
-    return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof ConfirmacaoExpiradaError) {
+      return NextResponse.json({ erro: e.message, expirado: true }, { status: e.status });
+    }
     return respostaDeErro(e, "Não foi possível verificar o código.");
   }
 }
