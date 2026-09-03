@@ -27,6 +27,7 @@ import {
   Clock,
 } from "lucide-react";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "@/components/contratos/folhaA4";
+import LogoGC from "@/components/LogoGC";
 import AssinaturaCanvas from "@/components/contratos/AssinaturaCanvas";
 import CapturaFoto from "@/components/contratos/CapturaFoto";
 import SelfieAoVivo from "@/components/contratos/SelfieAoVivo";
@@ -427,8 +428,13 @@ export default function AssinarPage({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-main)" }}>
-      {/* ===== Header: Assinaturas X/Y + download (esq) · marca (dir) ===== */}
-      <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur px-4 py-2.5">
+      {/* ===== Header: Assinaturas X/Y + download (esq) · marca (dir) =====
+          Fundo SÓLIDO (sem blur): com transparência, o documento branco
+          passando por trás estourava o contraste do header. */}
+      <div
+        className="sticky top-0 z-30 border-b border-border px-4 py-2.5"
+        style={{ backgroundColor: "var(--bg-surface)" }}
+      >
         <div className="max-w-[1000px] mx-auto flex items-center gap-2">
           <div className="relative">
             <button
@@ -497,11 +503,8 @@ export default function AssinarPage({
             {contrato.numero} · {signatario.nome}
           </div>
 
-          <div
-            className="ml-auto text-sm font-extrabold whitespace-nowrap"
-            style={{ letterSpacing: "0.14em", color: "var(--text-primary)" }}
-          >
-            GIGS CONTROL
+          <div className="ml-auto text-primary">
+            <LogoGC size={20} withWordmark />
           </div>
         </div>
       </div>
@@ -528,31 +531,39 @@ export default function AssinarPage({
             </div>
           )}
 
-          {/* Zoom centralizado sobre o documento */}
-          <div className="flex items-center justify-center gap-1">
-            <button
-              type="button"
-              onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
-              disabled={zoomIdx === 0}
-              title="Diminuir zoom"
-              aria-label="Diminuir zoom"
-              className="btn btn-secondary p-2 disabled:opacity-40"
+          {/* Zoom FLUTUANTE: gruda logo abaixo do header e acompanha a
+              rolagem — dá pra ajustar o zoom em qualquer ponto da leitura.
+              pointer-events-none na faixa (só a pílula clica) pra não bloquear
+              o documento atrás. */}
+          <div className="sticky top-[60px] z-20 flex justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto flex items-center gap-1 rounded-full border border-border px-1.5 py-1 shadow-md"
+              style={{ backgroundColor: "var(--bg-surface)" }}
             >
-              <ZoomOut size={15} />
-            </button>
-            <span className="text-xs text-muted w-12 text-center tabular-nums">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
-              disabled={zoomIdx === ZOOMS.length - 1}
-              title="Aumentar zoom"
-              aria-label="Aumentar zoom"
-              className="btn btn-secondary p-2 disabled:opacity-40"
-            >
-              <ZoomIn size={15} />
-            </button>
+              <button
+                type="button"
+                onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
+                disabled={zoomIdx === 0}
+                title="Diminuir zoom"
+                aria-label="Diminuir zoom"
+                className="btn btn-secondary p-2 rounded-full disabled:opacity-40"
+              >
+                <ZoomOut size={15} />
+              </button>
+              <span className="text-xs text-muted w-12 text-center tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomIdx((i) => Math.min(ZOOMS.length - 1, i + 1))}
+                disabled={zoomIdx === ZOOMS.length - 1}
+                title="Aumentar zoom"
+                aria-label="Aumentar zoom"
+                className="btn btn-secondary p-2 rounded-full disabled:opacity-40"
+              >
+                <ZoomIn size={15} />
+              </button>
+            </div>
           </div>
 
           {/* O contrato + relatório de assinaturas (de quem já assinou) */}
