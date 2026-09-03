@@ -6,6 +6,7 @@ import {
   removerContratoPorId,
   resolverEscopoContrato,
   ContratoImutavelError,
+  ContratoFinalizadoError,
 } from "@/lib/services/contratos.service";
 import {
   podeVerContrato,
@@ -167,6 +168,9 @@ export async function DELETE(_request: Request, { params }: RouteCtx) {
     await removerContratoPorId(r.sessao.supabase, params.id, r.sessao.userId);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof ContratoFinalizadoError) {
+      return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
     return respostaDeErro(e, "Falha ao remover contrato.");
   }
 }

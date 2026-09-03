@@ -8,6 +8,7 @@ import {
   assinantesPublicosDoContrato,
   ExigenciaNaoAtendidaError,
   MailerIndisponivelError,
+  ContratoCanceladoError,
 } from "@/lib/services/contratoSignatarios.service";
 import { listarPorContrato } from "@/lib/repositories/contratoSignatarios.repo";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
@@ -29,6 +30,11 @@ export async function GET(
   _request: Request,
   { params }: { params: { token: string } }
 ) {
+  // Cada abertura grava evento na trilha IMUTÁVEL — sem freio, um loop de
+  // refresh infla a cadeia (e o custo de verificação) de graça. 30/min por IP.
+  const limitado = rateLimit("assinar-get", ipDe(_request), 30, 60_000);
+  if (limitado) return limitado;
+
   try {
     const admin = criarClienteAdmin();
     const r = await buscarParaAssinar(admin, params.token);
@@ -150,6 +156,7 @@ export async function POST(
       fotoDocumento: parsed.data.fotoDocumento || null,
       fotoDocumentoVerso: parsed.data.fotoDocumentoVerso || null,
       selfie: parsed.data.selfie || null,
+      consentimentoBiometria: parsed.data.consentimentoBiometria ?? null,
     });
     if (!resultado) {
       return NextResponse.json(
@@ -171,6 +178,9 @@ export async function POST(
   } catch (e) {
     if (e instanceof ExigenciaNaoAtendidaError || e instanceof MailerIndisponivelError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
+    if (e instanceof ContratoCanceladoError) {
+      return NextResponse.json({ erro: e.message, cancelado: true }, { status: e.status });
     }
     return respostaDeErro(e, "Erro ao registrar a assinatura.");
   }

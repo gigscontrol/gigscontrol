@@ -63,6 +63,26 @@ export async function POST(
       { status: 404 }
     );
 
+  // Contrato FINALIZADO é imutável (o PDF selado/hash publicado não conteria
+  // assinaturas novas) e CANCELADO não ganha signatários por aqui — o
+  // definirSignatarios força status 'enviado' e regredia/ressuscitava os dois.
+  if (contrato.status === "assinado" || contrato.finalizadoEm) {
+    return NextResponse.json(
+      {
+        erro: "Este contrato já foi finalizado — cancele-o e gere um novo se precisar mudar signatários.",
+      },
+      { status: 409 }
+    );
+  }
+  if (contrato.status === "cancelado") {
+    return NextResponse.json(
+      {
+        erro: "Este contrato está cancelado. Reative-o (status) antes de definir signatários.",
+      },
+      { status: 409 }
+    );
+  }
+
   let raw: unknown;
   try {
     raw = await request.json();

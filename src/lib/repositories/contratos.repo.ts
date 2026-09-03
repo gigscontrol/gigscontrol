@@ -102,6 +102,51 @@ export async function atualizarContrato(
   return data as unknown as ContratoRow;
 }
 
+/**
+ * Atualiza SEM ressuscitar contrato cancelado: o UPDATE só aplica quando
+ * status != 'cancelado'. Usado pelo fluxo público de assinatura — a agência
+ * pode cancelar durante os 30 min do staging de confirmação por e-mail, e a
+ * confirmação não pode reverter o cancelamento. Devolve null se não aplicou.
+ */
+export async function atualizarContratoSeNaoCancelado(
+  admin: SupabaseClient,
+  id: string,
+  payload: ContratoEscrita
+): Promise<ContratoRow | null> {
+  const { data, error } = await admin
+    .from("contratos")
+    .update({ ...payload, atualizado_em: new Date().toISOString() })
+    .eq("id", id)
+    .neq("status", "cancelado")
+    .select(COLS)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as ContratoRow) ?? null;
+}
+
+/**
+ * Grava o verificacao_id da finalização SÓ se ainda não existe um (corrida
+ * entre os dois últimos signatários: um único vencedor — o perdedor relê e
+ * usa o ID gravado, senão o segundo UPDATE sobrescreveria o ID já exibido/
+ * carimbado do primeiro). Também não toca contrato cancelado.
+ */
+export async function atribuirVerificacaoId(
+  admin: SupabaseClient,
+  id: string,
+  payload: ContratoEscrita
+): Promise<ContratoRow | null> {
+  const { data, error } = await admin
+    .from("contratos")
+    .update({ ...payload, atualizado_em: new Date().toISOString() })
+    .eq("id", id)
+    .is("verificacao_id", null)
+    .neq("status", "cancelado")
+    .select(COLS)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as ContratoRow) ?? null;
+}
+
 export async function removerContrato(
   supabase: SupabaseClient,
   id: string,

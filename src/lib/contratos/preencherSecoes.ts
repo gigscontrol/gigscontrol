@@ -131,9 +131,33 @@ export function dataBR(iso: string | null | undefined): string {
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
-/** Data de hoje em DD/MM/AAAA. */
+/**
+ * Data de hoje em DD/MM/AAAA — no FUSO LOCAL. (toISOString é UTC: um contrato
+ * gerado depois das 21h no Brasil saía datado do DIA SEGUINTE, e a data
+ * congela no snapshot do documento.)
+ */
 export function hojeBR(): string {
-  return dataBR(new Date().toISOString());
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/**
+ * Fallbacks de praxe dos tokens de rider/hospedagem/logística, por token.
+ * Usado também pelo caminho SEM venda da tela de Novo Contrato — sem isso o
+ * contrato manual imprimia "Não informado" exatamente onde a regra promete o
+ * texto de praxe.
+ */
+export function fallbacksConteudo(
+  idioma: IdiomaModelo = "pt"
+): Record<string, string> {
+  const f = FALLBACK_CONTEUDO[idioma] ?? FALLBACK_CONTEUDO.pt;
+  return {
+    hospedagem: f.hospedagem,
+    logistica: f.logistica,
+    "rider de efeitos": f.efeitos,
+    "rider de camarim": f.camarim,
+  };
 }
 
 /**

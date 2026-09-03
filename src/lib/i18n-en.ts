@@ -1759,7 +1759,7 @@ const SWEEP2: Record<string, string> = {
   "Hash do conteúdo (SHA-256)": "Content hash (SHA-256)",
   "Assinatura registrada": "Recorded signature",
   "Validade jurídica": "Legal validity",
-  "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001 e da Lei 14.063/2020.": "Electronic signatures are legally valid under art. 10, §2 of Brazilian Provisional Measure 2.200-2/2001 and Law 14.063/2020.",
+  "Assinaturas eletrônicas têm validade legal, nos termos do art. 10, §2º, da MP 2.200-2/2001, e dos arts. 104 e 107 do Código Civil.": "Electronic signatures are legally valid under art. 10, §2 of Brazilian Provisional Measure 2.200-2/2001 and arts. 104 and 107 of the Brazilian Civil Code.",
   "Verifique a autenticidade em": "Verify authenticity at",
   "Parágrafo único": "Sole paragraph",
   "Formatação": "Formatting",

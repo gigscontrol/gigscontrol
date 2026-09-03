@@ -203,6 +203,30 @@ export async function atualizarPorToken(
   return (data as unknown as SignatarioRow) ?? null;
 }
 
+/**
+ * Consome UMA tentativa de OTP de forma serializada (compare-and-swap): o
+ * UPDATE só aplica se `otp_tentativas` ainda vale o que a rota leu. N
+ * requisições concorrentes leem o mesmo valor mas só uma vence — o teto de
+ * 5 tentativas vale de verdade mesmo sob flood paralelo (antes o read-modify-
+ * write deixava todas gravarem "1" e o cap virava decorativo).
+ */
+export async function consumirTentativaOtp(
+  admin: SupabaseClient,
+  token: string,
+  tentativasLidas: number
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("contrato_signatarios")
+    .update({ otp_tentativas: tentativasLidas + 1 })
+    .eq("token", token)
+    .eq("status", "pendente")
+    .eq("otp_tentativas", tentativasLidas)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
 /** Todos os signatários de um contrato (via admin) — pra recomputar status. */
 export async function listarPorContratoAdmin(
   admin: SupabaseClient,

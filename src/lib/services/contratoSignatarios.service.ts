@@ -31,6 +31,8 @@ import {
 import {
   buscarContrato,
   atualizarContrato,
+  atualizarContratoSeNaoCancelado,
+  atribuirVerificacaoId,
 } from "@/lib/repositories/contratos.repo";
 import { rowParaContrato, type Contrato } from "@/lib/mappers/contrato";
 import {
@@ -229,6 +231,22 @@ export class MailerIndisponivelError extends Error {
   }
 }
 
+/**
+ * Contrato cancelado pela agência — a rota traduz pra 409 { cancelado: true }.
+ * Vale pros caminhos de CONFIRMAÇÃO (código/botão/reenvio): o POST público já
+ * barra cancelado, mas a agência pode cancelar DURANTE os 30 min do staging, e
+ * a confirmação não pode efetivar a assinatura nem reviver o contrato.
+ */
+export class ContratoCanceladoError extends Error {
+  status = 409;
+  constructor() {
+    super(
+      "Este contrato foi cancelado pela agência e não pode mais ser assinado."
+    );
+    this.name = "ContratoCanceladoError";
+  }
+}
+
 /** Prazo dos 30 minutos do código/botão vencido — a rota traduz pra 410. */
 export class ConfirmacaoExpiradaError extends Error {
   status = 410;
@@ -252,6 +270,9 @@ type PayloadAssinatura = {
   arquivos: ArquivosSignatario;
   nome_completo: string | null;
   data_nascimento: string | null;
+  /** Consentimento específico pro tratamento biométrico (LGPD art. 11) —
+   * exigido quando há selfie/facial; registrado no evento 'assinado'. */
+  consentimento_biometria?: boolean | null;
 };
 
 export type ResultadoAssinatura =
@@ -265,17 +286,25 @@ export type ResultadoAssinatura =
  */
 async function efetivarAssinatura(
   admin: SupabaseClient,
-  token: string,
+  sigRow: SignatarioRow,
   payload: PayloadAssinatura
 ): Promise<Signatario | null> {
-  const row = await registrarAssinaturaPorToken(admin, token, payload);
+  // Contrato CANCELADO nunca efetiva: o POST público checa antes, mas o
+  // código/botão do e-mail chega por aqui sem passar por lá — e a agência
+  // pode ter cancelado durante o staging. Limpa o pacote e barra.
+  const contratoRow = await buscarContrato(admin, sigRow.contrato_id);
+  if (contratoRow?.status === "cancelado") {
+    await limparPendente(admin, sigRow.token);
+    throw new ContratoCanceladoError();
+  }
+
+  const row = await registrarAssinaturaPorToken(admin, sigRow.token, payload);
   if (!row) return null;
 
   // Evento OBRIGATÓRIO na cadeia (mig 98): a assinatura é o ponto crítico da
   // trilha — se a auditoria falhar aqui, a operação inteira falha (a linha do
   // signatário fica gravada, mas o erro sobe e fica visível; o mesmo banco que
   // acabou de aceitar o UPDATE praticamente não falha na RPC).
-  const contratoRow = await buscarContrato(admin, row.contrato_id);
   await registrarEventoContrato(
     {
       contratoId: row.contrato_id,
@@ -291,6 +320,9 @@ async function efetivarAssinatura(
           : null,
         geolocalizacao: !!payload.geolocalizacao,
         ...(payload.nome_completo ? { cpfAvancado: true } : {}),
+        ...(payload.consentimento_biometria
+          ? { consentimentoBiometria: true }
+          : {}),
         ...(payload.arquivos.facialSimilaridade !== undefined
           ? {
               facialSimilaridade: payload.arquivos.facialSimilaridade,
@@ -310,24 +342,39 @@ async function efetivarAssinatura(
     todos.length > 0 && todos.every((s) => s.status === "assinado");
 
   if (!todosAssinados) {
-    await atualizarContrato(admin, row.contrato_id, { status: "enviado" });
+    // Condicional: nunca reverte um cancelamento que aconteceu no meio-tempo.
+    await atualizarContratoSeNaoCancelado(admin, row.contrato_id, {
+      status: "enviado",
+    });
     return rowParaSignatario(row);
   }
 
   // FINALIZAÇÃO: todos assinaram → contrato imutável. Gera o ID público de
   // verificação (GC-XXXX-XXXX, único — retry em colisão) e sela na trilha.
+  // A atribuição é GUARDADA (.is verificacao_id null): quando os dois últimos
+  // signatários efetivam quase juntos, só um vence — o outro relê e usa o ID
+  // do vencedor (que também é o único a registrar 'finalizado' e selar o PDF).
   let verificacaoId = contratoRow?.verificacao_id ?? null;
   const finalizadoEm = contratoRow?.finalizado_em ?? new Date().toISOString();
+  let venceuFinalizacao = false;
   if (!verificacaoId) {
     for (let tentativa = 0; tentativa < 5; tentativa++) {
       const candidato = gerarVerificacaoId();
       try {
-        await atualizarContrato(admin, row.contrato_id, {
+        const atualizado = await atribuirVerificacaoId(admin, row.contrato_id, {
           status: "assinado",
           verificacao_id: candidato,
           finalizado_em: finalizadoEm,
         });
-        verificacaoId = candidato;
+        if (atualizado) {
+          verificacaoId = candidato;
+          venceuFinalizacao = true;
+        } else {
+          // Outro signatário finalizou primeiro (ou o contrato foi cancelado):
+          // usa o que ficou gravado; sem ID = cancelado → não finaliza.
+          const atual = await buscarContrato(admin, row.contrato_id);
+          verificacaoId = atual?.verificacao_id ?? null;
+        }
         break;
       } catch (e) {
         // 23505 = colisão do índice único de verificacao_id → tenta outro.
@@ -335,31 +382,35 @@ async function efetivarAssinatura(
       }
     }
   } else {
-    await atualizarContrato(admin, row.contrato_id, {
-      status: "assinado",
-      finalizado_em: finalizadoEm,
-    });
+    const atualizado = await atualizarContratoSeNaoCancelado(
+      admin,
+      row.contrato_id,
+      { status: "assinado", finalizado_em: finalizadoEm }
+    );
+    venceuFinalizacao = !!atualizado;
   }
-  await registrarEventoContrato(
-    {
-      contratoId: row.contrato_id,
-      workspaceId: row.workspace_id,
-      tipo: "finalizado",
-      detalhes: {
-        verificacaoId,
-        conteudoHash: contratoRow?.conteudo_hash ?? null,
-        conteudoVersao: contratoRow?.conteudo_versao ?? 1,
-        signatarios: todos.length,
+  if (venceuFinalizacao) {
+    await registrarEventoContrato(
+      {
+        contratoId: row.contrato_id,
+        workspaceId: row.workspace_id,
+        tipo: "finalizado",
+        detalhes: {
+          verificacaoId,
+          conteudoHash: contratoRow?.conteudo_hash ?? null,
+          conteudoVersao: contratoRow?.conteudo_versao ?? 1,
+          signatarios: todos.length,
+        },
       },
-    },
-    true
-  );
-  // PDF final selado (só contratos por UPLOAD): carimba, hasheia e congela.
-  // Best-effort — se falhar, a rota do PDF assinado sela na primeira abertura.
-  try {
-    await selarPdfFinal(admin, row.contrato_id);
-  } catch (e) {
-    console.warn("[contrato] falha ao selar PDF final:", (e as Error).message);
+      true
+    );
+    // PDF final selado (só contratos por UPLOAD): carimba, hasheia e congela.
+    // Best-effort — se falhar, a rota do PDF assinado sela na primeira abertura.
+    try {
+      await selarPdfFinal(admin, row.contrato_id);
+    } catch (e) {
+      console.warn("[contrato] falha ao selar PDF final:", (e as Error).message);
+    }
   }
   return rowParaSignatario(row);
 }
@@ -454,6 +505,12 @@ export async function reenviarConfirmacao(
     return null;
   }
   const contratoRow = await buscarContrato(admin, sigRow.contrato_id);
+  // Contrato cancelado no meio-tempo: não reenvia e-mail de confirmação de
+  // um contrato que não existe mais — limpa o staging e barra.
+  if (contratoRow?.status === "cancelado") {
+    await limparPendente(admin, sigRow.token);
+    throw new ContratoCanceladoError();
+  }
   const expiraEm = await enviarEmailConfirmacao(
     admin,
     sigRow,
@@ -478,6 +535,14 @@ export async function confirmarAssinaturaPendente(
     await limparPendente(admin, sigRow.token);
     throw new ConfirmacaoExpiradaError();
   }
+  // Contrato cancelado durante o staging: a confirmação não pode efetivar a
+  // assinatura (nem registrar otp_verificado num contrato morto). O
+  // efetivarAssinatura reconfere — aqui é o caminho feliz que barra cedo.
+  const contratoRow = await buscarContrato(admin, sigRow.contrato_id);
+  if (contratoRow?.status === "cancelado") {
+    await limparPendente(admin, sigRow.token);
+    throw new ContratoCanceladoError();
+  }
   await atualizarPorToken(admin, sigRow.token, {
     otp_verificado_em: new Date().toISOString(),
   });
@@ -488,7 +553,7 @@ export async function confirmarAssinaturaPendente(
     tipo: "otp_verificado",
     detalhes: { via },
   });
-  return efetivarAssinatura(admin, sigRow.token, {
+  return efetivarAssinatura(admin, sigRow, {
     ...payload,
     arquivos: arquivosValido(payload.arquivos),
   });
@@ -518,6 +583,8 @@ export async function registrarAssinatura(
     fotoDocumento?: string | null;
     fotoDocumentoVerso?: string | null;
     selfie?: string | null;
+    /** Consentimento específico pra verificação por imagem (LGPD art. 11). */
+    consentimentoBiometria?: boolean | null;
   }
 ): Promise<ResultadoAssinatura | null> {
   // Confere antes de subir foto (evita upload pra link já assinado/inválido).
@@ -556,12 +623,27 @@ export async function registrarAssinatura(
   if (exige.fotoDocumento && !dados.fotoDocumento) {
     throw new ExigenciaNaoAtendidaError("Foto do documento é obrigatória.");
   }
+  // O VERSO também é exigido (o client valida, mas um POST cru não pode
+  // assinar com o pacote de evidências pela metade — é no verso que ficam os
+  // dados da CNH/RG).
+  if (exige.fotoDocumento && !dados.fotoDocumentoVerso) {
+    throw new ExigenciaNaoAtendidaError(
+      "Foto do verso do documento é obrigatória."
+    );
+  }
   if (exige.fotoCpf && !dados.fotoCpf) {
     throw new ExigenciaNaoAtendidaError("Foto do CPF é obrigatória.");
   }
   // 'facial' depende da selfie + foto do documento pra comparar; exigir ambas.
   if ((exige.selfie || exige.facial) && !dados.selfie) {
     throw new ExigenciaNaoAtendidaError("Selfie é obrigatória.");
+  }
+  // Selfie/facial = dado biométrico (LGPD art. 11): sem o consentimento
+  // específico marcado, não processa imagem nenhuma.
+  if ((exige.selfie || exige.facial) && !dados.consentimentoBiometria) {
+    throw new ExigenciaNaoAtendidaError(
+      "É preciso autorizar o uso da sua imagem para a verificação de identidade."
+    );
   }
   if (exige.facial && !dados.fotoDocumento) {
     throw new ExigenciaNaoAtendidaError(
@@ -616,6 +698,7 @@ export async function registrarAssinatura(
     arquivos,
     nome_completo: exige.cpfAvancado ? (dados.nomeCompleto ?? "").trim() : null,
     data_nascimento: exige.cpfAvancado ? (dados.dataNascimento ?? null) : null,
+    consentimento_biometria: dados.consentimentoBiometria ?? null,
   };
 
   if (exige.otpEmail) {
@@ -632,7 +715,7 @@ export async function registrarAssinatura(
     return { status: "aguardando", expiraEm };
   }
 
-  const signatario = await efetivarAssinatura(admin, token, payload);
+  const signatario = await efetivarAssinatura(admin, sigRow, payload);
   if (!signatario) return null;
   return { status: "assinado", signatario };
 }
@@ -689,6 +772,14 @@ export async function resumoAssinantesDoWorkspace(
  * evento 'aberto' na trilha (best-effort). No-op se já assinou. Chamado na
  * rota pública GET /api/assinar/[token].
  */
+/**
+ * Teto de eventos 'aberto' POR SIGNATÁRIO na cadeia imutável: o link é
+ * público e se repassa — sem teto, um loop de refresh inflaria a trilha sem
+ * limite (eventos são permanentes e a verificação recomputa a cadeia toda).
+ * O CONTADOR de aberturas segue contando sempre.
+ */
+const MAX_EVENTOS_ABERTURA = 25;
+
 export async function registrarAbertura(
   admin: SupabaseClient,
   signatario: { id: string; status: string; aberturas: number; contratoId: string },
@@ -699,13 +790,15 @@ export async function registrarAbertura(
   }
 ): Promise<void> {
   if (signatario.status === "assinado") return;
-  await incrementarAberturas(admin, signatario.id, (signatario.aberturas ?? 0) + 1);
+  const abertura = (signatario.aberturas ?? 0) + 1;
+  await incrementarAberturas(admin, signatario.id, abertura);
+  if (abertura > MAX_EVENTOS_ABERTURA) return;
   await registrarEventoContrato({
     contratoId: signatario.contratoId,
     workspaceId: contexto.workspaceId,
     signatarioId: signatario.id,
     tipo: "aberto",
-    detalhes: { abertura: (signatario.aberturas ?? 0) + 1 },
+    detalhes: { abertura },
     ip: contexto.ip ?? null,
     dispositivo: contexto.dispositivo ?? null,
   });

@@ -49,7 +49,10 @@ export async function GET(_request: Request, { params }: RouteCtx) {
     // bytes congelados no Storage cujo SHA-256 é o pdf_final_hash publicado na
     // página /verificar. Sela na primeira chamada se ainda não selado.
     if (contrato.status === "assinado") {
-      const selado = await baixarPdfFinal(admin, params.id).catch(() => null);
+      // SEM fallback silencioso: se o selo falhar, o recarimbo efêmero sairia
+      // com "Emitido em <hoje>" — bytes que NÃO batem com o pdf_final_hash
+      // publicado em /verificar. Melhor falhar visível do que divergir.
+      const selado = await baixarPdfFinal(admin, params.id);
       if (selado) {
         return new NextResponse(selado.bytes, {
           status: 200,
@@ -60,6 +63,12 @@ export async function GET(_request: Request, { params }: RouteCtx) {
             "X-Documento-Sha256": selado.hash,
           },
         });
+      }
+      if (contrato.pdfFinalHash) {
+        return NextResponse.json(
+          { erro: "PDF selado indisponível no momento. Tente novamente em instantes." },
+          { status: 503 }
+        );
       }
     }
 
