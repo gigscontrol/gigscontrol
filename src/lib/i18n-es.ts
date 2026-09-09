@@ -1993,6 +1993,7 @@ export const ES: Record<string, string> = {
   "Endereço do contratante": "Dirección del cliente",
   "Data do show": "Fecha del show",
   "Horário (início)": "Horario (inicio)",
+  "Horário da apresentação (frase completa)": "Horario de la actuación (frase completa)",
   "Horário (fim)": "Horario (fin)",
   "Forma de pagamento": "Forma de pago",
   "Hospedagem": "Alojamiento",

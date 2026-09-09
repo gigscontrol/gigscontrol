@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { hojeBR, preencherSecoes, valoresDeVenda } from "./preencherSecoes";
+import {
+  fraseHorarioApresentacao,
+  hojeBR,
+  preencherSecoes,
+  valoresDeVenda,
+} from "./preencherSecoes";
 import { LOGISTICA_VAZIA, type Artista, type Venda } from "@/types";
 import type { SecaoModelo } from "@/lib/mappers/contratoModelo";
 
@@ -148,6 +153,40 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
     expect(v["rider de efeitos"]).toBe("No special effects");
   });
 
+  it("horário a definir → tokens saem 'a definir' (não travam a geração)", () => {
+    const v = valoresDeVenda({
+      venda: vendaBase({
+        duracaoHoras: 1,
+        duracaoMinutos: 30,
+      } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(v.horario).toBe("a definir");
+    expect(v.horario_fim).toBe("a definir");
+    expect(v.horario_apresentacao).toBe(
+      "com horário a definir, sendo o tempo total da apresentação de aproximadamente 1 hora e 30 minutos"
+    );
+  });
+
+  it("horário definido sem fim: fim fica vazio (informação faltando de verdade)", () => {
+    const v = valoresDeVenda({
+      venda: vendaBase({
+        horario: "20:00",
+        duracaoHoras: 2,
+      } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(v.horario).toBe("20:00");
+    expect(v.horario_fim).toBe("");
+    expect(v.horario_apresentacao).toBe(
+      "com início às 20:00, totalizando aproximadamente 2 horas de apresentação"
+    );
+  });
+
   it("rider técnico: seleção da venda vence; sem seleção cai no cadastro", () => {
     const semSelecao = valoresDeVenda({
       venda: vendaBase(),
@@ -163,5 +202,32 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
       numero: "CTR-1",
     });
     expect(comSelecao["rider tecnico"]).toBe("01 (um) DJM-900");
+  });
+});
+
+describe("fraseHorarioApresentacao — frase completa do horário", () => {
+  it("com início, fim e duração", () => {
+    expect(
+      fraseHorarioApresentacao(
+        { horario: "23:00", horarioFim: "04:00", duracaoHoras: 2, duracaoMinutos: 30 },
+        "pt"
+      )
+    ).toBe(
+      "com início às 23:00 e término às 04:00, totalizando aproximadamente 2 horas e 30 minutos de apresentação"
+    );
+  });
+
+  it("a definir sem duração informada → só a frase do horário", () => {
+    expect(
+      fraseHorarioApresentacao({}, "pt")
+    ).toBe("com horário a definir");
+  });
+
+  it("segue o idioma do modelo (en)", () => {
+    expect(
+      fraseHorarioApresentacao({ duracaoHoras: 1 }, "en")
+    ).toBe(
+      "at a time to be defined, with a total performance time of approximately 1 hour"
+    );
   });
 });

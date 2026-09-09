@@ -50,6 +50,15 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   { token: "horario", label: "Horário (início)", grupo: "Evento" },
   { token: "horario_fim", label: "Horário (fim)", grupo: "Evento" },
   { token: "tempo_apresentacao", label: "Tempo de apresentação", grupo: "Evento" },
+  // Frase pronta pro texto corrido: "com início às 20:00 e término às 21:00,
+  // totalizando aproximadamente 1 hora de apresentação" — e, quando a venda
+  // ficou com horário A DEFINIR, "com horário a definir, sendo o tempo total
+  // da apresentação de aproximadamente 1 hora" (pedido do dono, 09/09/2026).
+  {
+    token: "horario_apresentacao",
+    label: "Horário da apresentação (frase completa)",
+    grupo: "Evento",
+  },
 
   // Valores
   { token: "cache", label: "Cachê", grupo: "Valores" },
@@ -275,6 +284,8 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   horario: "23h00",
   horario_fim: "04h00",
   tempo_apresentacao: "2h30",
+  horario_apresentacao:
+    "com início às 23h00 e término às 04h00, totalizando aproximadamente 2 horas e 30 minutos de apresentação",
 
   // Valores
   cache: "R$ 8.000,00",

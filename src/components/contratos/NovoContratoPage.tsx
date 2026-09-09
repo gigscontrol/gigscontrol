@@ -49,6 +49,7 @@ const LONGOS = new Set([
   "translado",
   "endereco",
   "endereco_local",
+  "horario_apresentacao",
 ]);
 
 // Auto-preenchidos (não editáveis no form): número (no save) e data de hoje.

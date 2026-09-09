@@ -1818,6 +1818,7 @@ const SWEEP2: Record<string, string> = {
   "Endereço do local": "Venue address",
   "Data do show": "Show date",
   "Horário (início)": "Time (start)",
+  "Horário da apresentação (frase completa)": "Performance time (full sentence)",
   "Horário (fim)": "Time (end)",
   "Cachê": "Fee",
   "Forma de pagamento": "Payment method",

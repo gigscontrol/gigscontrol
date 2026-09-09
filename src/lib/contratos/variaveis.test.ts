@@ -73,6 +73,12 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     );
   });
 
+  it("variações de {{horario_apresentacao}} resolvem pelo matching normalizado", () => {
+    const v = { horario_apresentacao: "com início às 23h00" };
+    expect(preencher("{{HORARIO_APRESENTACAO}}", v)).toBe("com início às 23h00");
+    expect(preencher("{{Horário da Apresentação}}", v)).toBe("com início às 23h00");
+  });
+
   it("apelidos também resolvem contra os VALORES_EXEMPLO do preview", () => {
     expect(preencher("{{NOME_ARTISTA}}", VALORES_EXEMPLO)).toBe(
       VALORES_EXEMPLO.artista
