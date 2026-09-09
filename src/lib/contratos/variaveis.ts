@@ -45,6 +45,11 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   { token: "endereco_local", label: "Endereço do evento", grupo: "Evento" },
   { token: "cidade", label: "Cidade", grupo: "Evento" },
   { token: "capacidade", label: "Capacidade do local", grupo: "Evento" },
+  // Data do EVENTO ≠ data do SHOW: show que começa de madrugada (00:00–05:59)
+  // acontece no dia seguinte ao início do evento — o autopreenchimento da
+  // venda soma 1 dia em `data`/`data_extenso` e mantém `data_evento` (pedido
+  // do dono, 09/09/2026).
+  { token: "data_evento", label: "Data do evento", grupo: "Evento" },
   { token: "data", label: "Data do show", grupo: "Evento" },
   { token: "data_extenso", label: "Data do show por extenso", grupo: "Evento" },
   { token: "horario", label: "Horário (início)", grupo: "Evento" },
@@ -151,7 +156,8 @@ const APELIDOS_TOKEN: Record<string, string> = {
   "telefone artista": "artista_telefone",
   // Evento
   "nome evento": "evento",
-  "data evento": "data",
+  // {{DATA_DO_EVENTO}} é o token próprio (não cai mais em `data`): num show de
+  // madrugada as duas datas divergem de propósito.
   "data show": "data",
   "endereco evento": "endereco_local",
   "endereco do local": "endereco_local",
@@ -279,6 +285,7 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   endereco_local: "Av. Beira-Mar, 1500 — Praia Grande/SP",
   cidade: "Praia Grande/SP",
   capacidade: "1.500 pessoas",
+  data_evento: "31/12/2026",
   data: "31/12/2026",
   data_extenso: "31 de dezembro de 2026",
   horario: "23h00",

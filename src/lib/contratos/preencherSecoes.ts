@@ -225,6 +225,26 @@ function formatarParcelas(parcelas: Parcela[] | undefined, moeda: Moeda): string
     .join("; ");
 }
 
+/**
+ * Show que COMEÇA de madrugada (00:00–05:59) acontece no dia seguinte ao
+ * início do evento: a data da venda é a do EVENTO, e a do SHOW soma 1 dia
+ * (pedido do dono, 09/09/2026). Horário a definir → não dá pra saber → não soma.
+ */
+function comecaNaMadrugada(horario: string | null | undefined): boolean {
+  const m = /^(\d{1,2}):\d{2}/.exec((horario ?? "").trim());
+  if (!m) return false;
+  return Number(m[1]) < 6;
+}
+
+/** Soma dias num ISO YYYY-MM-DD (aritmética em UTC — sem sustos de fuso). */
+function somarDiasIso(iso: string, dias: number): string {
+  const partes = iso.slice(0, 10).split("-").map(Number);
+  if (partes.length !== 3 || partes.some((n) => !Number.isFinite(n))) return iso;
+  const dt = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2] + dias));
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
+}
+
 /** YYYY-MM-DD → DD/MM/AAAA (tolerante a vazio / formato inesperado). */
 export function dataBR(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -279,6 +299,13 @@ export function valoresDeVenda(opts: {
 }): Record<string, string> {
   const { venda, artista, agencia, numero, contratante } = opts;
   const idioma = opts.idioma ?? "pt";
+  // Data do EVENTO = a da venda; data do SHOW pula pro dia seguinte quando a
+  // apresentação começa de madrugada (o evento do dia 19 com show à 01:00 tem
+  // show no dia 20).
+  const dataShowReal =
+    venda.dataShow && comecaNaMadrugada(venda.horario)
+      ? somarDiasIso(venda.dataShow, 1)
+      : venda.dataShow;
   return {
     // Artista / Agência
     artista: artista?.name ?? "",
@@ -323,8 +350,9 @@ export function valoresDeVenda(opts: {
     capacidade: venda.capacidadePublico
       ? `${venda.capacidadePublico.toLocaleString("pt-BR")} pessoas`
       : "",
-    data: dataBR(venda.dataShow),
-    data_extenso: dataPorExtenso(venda.dataShow, idioma),
+    data_evento: dataBR(venda.dataShow),
+    data: dataBR(dataShowReal),
+    data_extenso: dataPorExtenso(dataShowReal, idioma),
     // Horário a definir (venda sem horário): os tokens saem "a definir" em vez
     // de travar a geração como obrigatórios em branco. Com horário definido
     // mas SEM fim, o fim fica vazio (aí sim é informação faltando de verdade).

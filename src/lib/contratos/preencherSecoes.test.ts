@@ -187,6 +187,39 @@ describe("valoresDeVenda — chave PIX e fallbacks de conteúdo (pt)", () => {
     );
   });
 
+  it("show de madrugada (00:00–05:59) → data do show = dia seguinte ao evento", () => {
+    const v = valoresDeVenda({
+      venda: vendaBase({
+        dataShow: "2026-12-31",
+        horario: "01:00",
+      } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(v.data_evento).toBe("31/12/2026");
+    expect(v.data).toBe("01/01/2027");
+    expect(v.data_extenso).toBe("1 de janeiro de 2027");
+  });
+
+  it("show à noite (ou horário a definir) → data do show = data do evento", () => {
+    const noite = valoresDeVenda({
+      venda: vendaBase({ dataShow: "2026-11-19", horario: "23:00" } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(noite.data_evento).toBe("19/11/2026");
+    expect(noite.data).toBe("19/11/2026");
+    const aDefinir = valoresDeVenda({
+      venda: vendaBase({ dataShow: "2026-11-19" } as Partial<Venda>),
+      artista,
+      agencia: "GIGS",
+      numero: "CTR-1",
+    });
+    expect(aDefinir.data).toBe("19/11/2026");
+  });
+
   it("rider técnico: seleção da venda vence; sem seleção cai no cadastro", () => {
     const semSelecao = valoresDeVenda({
       venda: vendaBase(),
