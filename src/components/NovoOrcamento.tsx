@@ -165,7 +165,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     // Segue a agência quando as prefs terminam de carregar, até o usuário escolher.
     if (!moedaTocada.current) setMoeda(moedaAgencia);
   }, [moedaAgencia]);
-  const { podeUI } = useAuth();
+  const { podeUI, sessao } = useAuth();
   const { confirmar, confirmador } = useConfirmar();
   const { avisar, avisador } = useAviso();
 
@@ -206,6 +206,30 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // O bloco inicial nasce com artistaId "" (vazio) DE PROPÓSITO: ao entrar na
   // etapa 2, o usuário escolhe o 1º artista no MESMO popup de seleção (em vez
   // de um dropdown pré-selecionado). NÃO pré-selecionar o primeiro da lista.
+  //
+  // EXCEÇÃO — PAPEL ARTISTA (pedido do dono, 10/09/2026): o artista só vê o
+  // próprio painel, então o 1º bloco já nasce com ele (não faz sentido "se
+  // escolher"). Só semeia enquanto o bloco único está vazio — edição e blocos
+  // já escolhidos nunca são sobrescritos.
+  const artistaDaSessao =
+    sessao?.usuario?.papel === "artista" ? sessao.usuario.artistaId ?? null : null;
+  useEffect(() => {
+    if (!artistaDaSessao) return;
+    setBlocos((prev) =>
+      prev.length === 1 && !prev[0].artistaId
+        ? [
+            {
+              ...prev[0],
+              ...patchDoArtista(
+                artistas.find((d) => d.id === artistaDaSessao),
+                artistaDaSessao
+              ),
+            },
+          ]
+        : prev
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artistaDaSessao, artistas.length]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

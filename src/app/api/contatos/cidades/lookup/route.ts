@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { autenticarComWorkspace } from "@/lib/api/session";
 import { verificarAcessoContatos } from "@/lib/api/permissoes";
+import { podeNaSessao } from "@/lib/api/permissao";
 import { lookupOuCriarCidade } from "@/lib/services/cidades.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -31,8 +32,21 @@ const schema = z.object({
 export async function POST(request: Request) {
   const r = await autenticarComWorkspace();
   if ("response" in r) return r.response;
-  const bloqueio = verificarAcessoContatos(r.sessao);
-  if (bloqueio) return bloqueio;
+  // ARTISTA: a venda/orçamento direto dele resolve (ou cria) a cidade por
+  // aqui — governado pelo motor via contatos.criar (vendasCriar/
+  // orcamentosCriar). O gate fixo de contatos 403ava e o "Confirmar venda"
+  // do artista morria em silêncio (bug do CZ, 10/09/2026).
+  if (r.sessao.papel === "artista") {
+    if (!podeNaSessao(r.sessao, r.sessao.artistaId ?? null, "contatos.criar")) {
+      return NextResponse.json(
+        { erro: "Você não tem permissão para registrar cidades." },
+        { status: 403 }
+      );
+    }
+  } else {
+    const bloqueio = verificarAcessoContatos(r.sessao);
+    if (bloqueio) return bloqueio;
+  }
 
   let raw: unknown;
   try {
