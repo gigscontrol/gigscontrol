@@ -795,6 +795,16 @@ export function verificarMutacaoContato(
 ): NextResponse | null {
   if (sessao.isSuperAdmin || sessao.papel === "admin") return null;
   if (sessao.papel === "artista") {
+    // CRIAR acompanha a venda/orçamento direto do artista: o fluxo cria o
+    // contratante (e cidade/casa) ANTES de postar a venda — o motor decide
+    // via vendasCriar/orcamentosCriar (pedido do dono, 10/09/2026). Editar/
+    // excluir a base de contatos da agência continua fechado pro artista.
+    if (
+      acao === "criar" &&
+      podeNaSessao(sessao, sessao.artistaId ?? null, "contatos.criar")
+    ) {
+      return null;
+    }
     return NextResponse.json(
       { erro: "Artista não tem acesso a contatos." },
       { status: 403 }

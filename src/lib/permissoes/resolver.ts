@@ -115,8 +115,13 @@ function podeArtista(priv: PrivacidadeDj, chave: string): boolean {
     case "contatos":
       // Leitura governada por priv.contatos: "nenhum" nega, "proprios"/"todos"
       // liberam VER (a lista é filtrada no servidor por escopoContatosDoArtista).
-      // Artista nunca MUTA contatos (não cria/edita/exclui).
       if (ehLeitura) return priv.contatos !== "nenhum";
+      // CRIAR acompanha vendas/orçamentos (pedido do dono, 10/09/2026): a
+      // venda/orçamento direto do artista cria o contratante (e cidade/casa)
+      // ANTES de postar — sem isso, vendasCriar era beco sem saída ("Artista
+      // não tem acesso a contatos"). Editar/excluir a base da agência continua
+      // proibido pro artista.
+      if (acao === "criar") return priv.vendasCriar || priv.orcamentosCriar;
       return false;
     case "agencia":
     default:
