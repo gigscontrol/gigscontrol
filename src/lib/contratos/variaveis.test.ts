@@ -21,7 +21,8 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     artista: "Maninhoo",
     artista_documento: "12.345.678/0001-90",
     evento: "Réveillon",
-    data: "31/12/2026",
+    data_evento: "31/12/2026",
+    data: "01/01/2027",
     endereco_local: "Av. B, 2",
     horario: "23h00",
     "rider de camarim": "Água x12",
@@ -48,8 +49,12 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     expect(preencher("{{NOME_ARTISTA}}", valores)).toBe("Maninhoo");
     expect(preencher("{{CNPJ_ARTISTA}}", valores)).toBe("12.345.678/0001-90");
     expect(preencher("{{NOME_DO_EVENTO}}", valores)).toBe("Réveillon");
+    // Evento ≠ show: madrugada empurra o show pro dia seguinte — cada apelido
+    // resolve pro seu token.
     expect(preencher("{{DATA_DO_EVENTO}}", valores)).toBe("31/12/2026");
-    expect(preencher("{{DATA_DO_SHOW}}", valores)).toBe("31/12/2026");
+    expect(preencher("{{data_evento}}", valores)).toBe("31/12/2026");
+    expect(preencher("{{DATA_DO_SHOW}}", valores)).toBe("01/01/2027");
+    expect(preencher("{{data}}", valores)).toBe("01/01/2027");
     expect(preencher("{{ENDEREÇO_DO_EVENTO}}", valores)).toBe("Av. B, 2");
     expect(preencher("{{HORARIO_INICIO}}", valores)).toBe("23h00");
   });
@@ -71,6 +76,12 @@ describe("preencher — matching tolerante (mesmo valor por 3 caminhos)", () => 
     expect(preencher(tpl, valores)).toBe(
       "CONTRATANTE: Lima Eventos LTDA inscrito no CNPJ sob nº 123.456.789-00 com sede Rua A, 1, representada por Marcos Lima."
     );
+  });
+
+  it("variações de {{horario_apresentacao}} resolvem pelo matching normalizado", () => {
+    const v = { horario_apresentacao: "com início às 23h00" };
+    expect(preencher("{{HORARIO_APRESENTACAO}}", v)).toBe("com início às 23h00");
+    expect(preencher("{{Horário da Apresentação}}", v)).toBe("com início às 23h00");
   });
 
   it("apelidos também resolvem contra os VALORES_EXEMPLO do preview", () => {

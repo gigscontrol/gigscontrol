@@ -505,3 +505,34 @@ export function dataPorExtenso(
       return `${dia} de ${nomeMes} de ${ano}`;
   }
 }
+
+/** Palavras hora/minuto [singular, plural] + conector, por idioma. */
+const TEMPO_PALAVRAS: Record<
+  IdiomaModelo,
+  { hora: [string, string]; minuto: [string, string]; e: string }
+> = {
+  pt: { hora: ["hora", "horas"], minuto: ["minuto", "minutos"], e: " e " },
+  en: { hora: ["hour", "hours"], minuto: ["minute", "minutes"], e: " and " },
+  es: { hora: ["hora", "horas"], minuto: ["minuto", "minutos"], e: " y " },
+  fr: { hora: ["heure", "heures"], minuto: ["minute", "minutes"], e: " et " },
+  de: { hora: ["Stunde", "Stunden"], minuto: ["Minute", "Minuten"], e: " und " },
+  it: { hora: ["ora", "ore"], minuto: ["minuto", "minuti"], e: " e " },
+};
+
+/**
+ * Duração pro texto corrido do contrato, algarismo + palavra (pedido do dono):
+ * "1 hora e 30 minutos", "2 horas", "45 minutos". Nada informado → "".
+ */
+export function tempoPorExtenso(
+  horas: number | undefined,
+  minutos: number | undefined,
+  idioma: IdiomaModelo = "pt"
+): string {
+  const h = horas ?? 0;
+  const m = minutos ?? 0;
+  const p = TEMPO_PALAVRAS[idioma] ?? TEMPO_PALAVRAS.pt;
+  const partes: string[] = [];
+  if (h > 0) partes.push(`${h} ${h === 1 ? p.hora[0] : p.hora[1]}`);
+  if (m > 0) partes.push(`${m} ${m === 1 ? p.minuto[0] : p.minuto[1]}`);
+  return partes.join(p.e);
+}

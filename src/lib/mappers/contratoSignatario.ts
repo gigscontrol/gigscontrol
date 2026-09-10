@@ -157,7 +157,7 @@ function bool(v: unknown, d: boolean): boolean {
 export function exigeValido(raw: unknown): ExigenciasSignatario {
   if (!raw || typeof raw !== "object") return { ...EXIGENCIAS_PADRAO };
   const o = raw as Record<string, unknown>;
-  return {
+  const e: ExigenciasSignatario = {
     assinaturaTela: bool(o.assinaturaTela, EXIGENCIAS_PADRAO.assinaturaTela),
     cpfCnpj: bool(o.cpfCnpj, EXIGENCIAS_PADRAO.cpfCnpj),
     fotoCpf: bool(o.fotoCpf, EXIGENCIAS_PADRAO.fotoCpf),
@@ -167,6 +167,12 @@ export function exigeValido(raw: unknown): ExigenciasSignatario {
     otpEmail: bool(o.otpEmail, EXIGENCIAS_PADRAO.otpEmail),
     cpfAvancado: bool(o.cpfAvancado, EXIGENCIAS_PADRAO.cpfAvancado),
   };
+  // FACIAL compara a selfie COM A FOTO DO DOCUMENTO: exigir facial implica
+  // exigir a foto. Sem isso, exige gravado com facial e sem fotoDocumento
+  // virava beco sem saída — o form não mostrava a captura do documento e o
+  // servidor barrava com "Verificação facial exige a foto do documento".
+  if (e.facial) e.fotoDocumento = true;
+  return e;
 }
 
 function statusValido(s: string | null | undefined): SignatarioStatus {

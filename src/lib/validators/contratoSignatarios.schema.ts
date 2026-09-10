@@ -65,6 +65,9 @@ export const assinarSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .or(z.literal("")),
+  /** Consentimento específico pra verificação por imagem (LGPD art. 11) —
+   * obrigatório quando a exigência inclui selfie/facial (servidor confere). */
+  consentimentoBiometria: z.boolean().optional(),
   // Fotos (data URLs base64, já reduzidas no cliente) — só quando exigidas.
   fotoCpf: z.string().max(MAX_FOTO).optional().or(z.literal("")),
   fotoDocumento: z.string().max(MAX_FOTO).optional().or(z.literal("")),

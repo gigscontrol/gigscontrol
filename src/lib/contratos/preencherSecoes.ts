@@ -20,7 +20,12 @@ import type {
 import { linhasLogistica, temLogistica } from "@/lib/logisticaTexto";
 import { pluralizarItemHotel } from "@/lib/quantidades";
 import { preencher } from "./variaveis";
-import { cachePorExtenso, dataPorExtenso, formatarQuantidade } from "./extenso";
+import {
+  cachePorExtenso,
+  dataPorExtenso,
+  formatarQuantidade,
+  tempoPorExtenso,
+} from "./extenso";
 import { formatarMoeda } from "@/lib/formatters";
 import { configDocumento } from "@/lib/data/documentos";
 import { ehEmailInterno } from "@/lib/email-interno";
@@ -104,6 +109,103 @@ const FALLBACK_CONTEUDO: Record<
   },
 };
 
+/**
+ * "a definir" no idioma do modelo — vira o valor dos tokens de horário quando
+ * a venda ficou com horário a definir (em vez de travar a geração como campo
+ * obrigatório em branco).
+ */
+const A_DEFINIR: Record<IdiomaModelo, string> = {
+  pt: "a definir",
+  en: "to be defined",
+  es: "por definir",
+  fr: "à définir",
+  de: "noch festzulegen",
+  it: "da definire",
+};
+
+/** Fragmentos da frase completa de horário ({{horario_apresentacao}}). */
+const FRASE_HORARIO: Record<
+  IdiomaModelo,
+  {
+    inicio: (h: string) => string;
+    fim: (hf: string) => string;
+    total: (t: string) => string;
+    aDefinir: string;
+    totalADefinir: (t: string) => string;
+  }
+> = {
+  pt: {
+    inicio: (h) => `com início às ${h}`,
+    fim: (hf) => ` e término às ${hf}`,
+    total: (t) => `, totalizando aproximadamente ${t} de apresentação`,
+    aDefinir: "com horário a definir",
+    totalADefinir: (t) =>
+      `, sendo o tempo total da apresentação de aproximadamente ${t}`,
+  },
+  en: {
+    inicio: (h) => `starting at ${h}`,
+    fim: (hf) => ` and ending at ${hf}`,
+    total: (t) => `, totaling approximately ${t} of performance`,
+    aDefinir: "at a time to be defined",
+    totalADefinir: (t) => `, with a total performance time of approximately ${t}`,
+  },
+  es: {
+    inicio: (h) => `con inicio a las ${h}`,
+    fim: (hf) => ` y término a las ${hf}`,
+    total: (t) => `, totalizando aproximadamente ${t} de actuación`,
+    aDefinir: "con horario por definir",
+    totalADefinir: (t) =>
+      `, siendo el tiempo total de actuación de aproximadamente ${t}`,
+  },
+  fr: {
+    inicio: (h) => `avec début à ${h}`,
+    fim: (hf) => ` et fin à ${hf}`,
+    total: (t) => `, totalisant environ ${t} de prestation`,
+    aDefinir: "avec horaire à définir",
+    totalADefinir: (t) =>
+      `, pour une durée totale de prestation d'environ ${t}`,
+  },
+  de: {
+    inicio: (h) => `mit Beginn um ${h} Uhr`,
+    fim: (hf) => ` und Ende um ${hf} Uhr`,
+    total: (t) => `, mit einer Gesamtdauer von etwa ${t}`,
+    aDefinir: "mit noch festzulegender Uhrzeit",
+    totalADefinir: (t) => `, mit einer Gesamtspieldauer von etwa ${t}`,
+  },
+  it: {
+    inicio: (h) => `con inizio alle ${h}`,
+    fim: (hf) => ` e termine alle ${hf}`,
+    total: (t) => `, per un totale di circa ${t} di esibizione`,
+    aDefinir: "con orario da definire",
+    totalADefinir: (t) =>
+      `, con una durata totale dell'esibizione di circa ${t}`,
+  },
+};
+
+/**
+ * Frase COMPLETA do horário pro texto corrido do contrato (token
+ * `horario_apresentacao`). Com horário: "com início às 20:00 e término às
+ * 21:00, totalizando aproximadamente 1 hora de apresentação". Horário a
+ * definir (pedido do dono, 09/09/2026): "com horário a definir, sendo o tempo
+ * total da apresentação de aproximadamente 1 hora e 30 minutos".
+ */
+export function fraseHorarioApresentacao(
+  venda: Partial<
+    Pick<Venda, "horario" | "horarioFim" | "duracaoHoras" | "duracaoMinutos">
+  >,
+  idioma: IdiomaModelo = "pt"
+): string {
+  const f = FRASE_HORARIO[idioma] ?? FRASE_HORARIO.pt;
+  const tempo = tempoPorExtenso(venda.duracaoHoras, venda.duracaoMinutos, idioma);
+  if (!venda.horario) {
+    return tempo ? `${f.aDefinir}${f.totalADefinir(tempo)}` : f.aDefinir;
+  }
+  let frase = f.inicio(venda.horario);
+  if (venda.horarioFim) frase += f.fim(venda.horarioFim);
+  if (tempo) frase += f.total(tempo);
+  return frase;
+}
+
 /** Duração formatada: "2h30" (h+m), "2h" (só h), "45min" (só m), "" (nada). */
 function formatarTempo(horas: number | undefined, minutos: number | undefined): string {
   const h = horas ?? 0;
@@ -123,6 +225,26 @@ function formatarParcelas(parcelas: Parcela[] | undefined, moeda: Moeda): string
     .join("; ");
 }
 
+/**
+ * Show que COMEÇA de madrugada (00:00–05:59) acontece no dia seguinte ao
+ * início do evento: a data da venda é a do EVENTO, e a do SHOW soma 1 dia
+ * (pedido do dono, 09/09/2026). Horário a definir → não dá pra saber → não soma.
+ */
+function comecaNaMadrugada(horario: string | null | undefined): boolean {
+  const m = /^(\d{1,2}):\d{2}/.exec((horario ?? "").trim());
+  if (!m) return false;
+  return Number(m[1]) < 6;
+}
+
+/** Soma dias num ISO YYYY-MM-DD (aritmética em UTC — sem sustos de fuso). */
+function somarDiasIso(iso: string, dias: number): string {
+  const partes = iso.slice(0, 10).split("-").map(Number);
+  if (partes.length !== 3 || partes.some((n) => !Number.isFinite(n))) return iso;
+  const dt = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2] + dias));
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
+}
+
 /** YYYY-MM-DD → DD/MM/AAAA (tolerante a vazio / formato inesperado). */
 export function dataBR(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -131,9 +253,33 @@ export function dataBR(iso: string | null | undefined): string {
   return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
-/** Data de hoje em DD/MM/AAAA. */
+/**
+ * Data de hoje em DD/MM/AAAA — no FUSO LOCAL. (toISOString é UTC: um contrato
+ * gerado depois das 21h no Brasil saía datado do DIA SEGUINTE, e a data
+ * congela no snapshot do documento.)
+ */
 export function hojeBR(): string {
-  return dataBR(new Date().toISOString());
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+/**
+ * Fallbacks de praxe dos tokens de rider/hospedagem/logística, por token.
+ * Usado também pelo caminho SEM venda da tela de Novo Contrato — sem isso o
+ * contrato manual imprimia "Não informado" exatamente onde a regra promete o
+ * texto de praxe.
+ */
+export function fallbacksConteudo(
+  idioma: IdiomaModelo = "pt"
+): Record<string, string> {
+  const f = FALLBACK_CONTEUDO[idioma] ?? FALLBACK_CONTEUDO.pt;
+  return {
+    hospedagem: f.hospedagem,
+    logistica: f.logistica,
+    "rider de efeitos": f.efeitos,
+    "rider de camarim": f.camarim,
+  };
 }
 
 /**
@@ -153,6 +299,13 @@ export function valoresDeVenda(opts: {
 }): Record<string, string> {
   const { venda, artista, agencia, numero, contratante } = opts;
   const idioma = opts.idioma ?? "pt";
+  // Data do EVENTO = a da venda; data do SHOW pula pro dia seguinte quando a
+  // apresentação começa de madrugada (o evento do dia 19 com show à 01:00 tem
+  // show no dia 20).
+  const dataShowReal =
+    venda.dataShow && comecaNaMadrugada(venda.horario)
+      ? somarDiasIso(venda.dataShow, 1)
+      : venda.dataShow;
   return {
     // Artista / Agência
     artista: artista?.name ?? "",
@@ -197,10 +350,15 @@ export function valoresDeVenda(opts: {
     capacidade: venda.capacidadePublico
       ? `${venda.capacidadePublico.toLocaleString("pt-BR")} pessoas`
       : "",
-    data: dataBR(venda.dataShow),
-    data_extenso: dataPorExtenso(venda.dataShow, idioma),
-    horario: venda.horario ?? "",
-    horario_fim: venda.horarioFim ?? "",
+    data_evento: dataBR(venda.dataShow),
+    data: dataBR(dataShowReal),
+    data_extenso: dataPorExtenso(dataShowReal, idioma),
+    // Horário a definir (venda sem horário): os tokens saem "a definir" em vez
+    // de travar a geração como obrigatórios em branco. Com horário definido
+    // mas SEM fim, o fim fica vazio (aí sim é informação faltando de verdade).
+    horario: venda.horario || A_DEFINIR[idioma],
+    horario_fim: venda.horarioFim || (venda.horario ? "" : A_DEFINIR[idioma]),
+    horario_apresentacao: fraseHorarioApresentacao(venda, idioma),
     tempo_apresentacao: formatarTempo(venda.duracaoHoras, venda.duracaoMinutos),
     // Valores (na moeda da venda — snapshot da migração 92)
     cache: typeof venda.cache === "number" ? formatarMoeda(venda.cache, venda.moeda) : "",

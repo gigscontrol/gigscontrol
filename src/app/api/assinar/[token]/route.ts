@@ -8,8 +8,11 @@ import {
   assinantesPublicosDoContrato,
   ExigenciaNaoAtendidaError,
   MailerIndisponivelError,
+  ContratoCanceladoError,
 } from "@/lib/services/contratoSignatarios.service";
 import { listarPorContrato } from "@/lib/repositories/contratoSignatarios.repo";
+import { buscarVenda } from "@/lib/repositories/vendas.repo";
+import { buscarArtista } from "@/lib/repositories/artistas.repo";
 import { assinarSchema } from "@/lib/validators/contratoSignatarios.schema";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -29,6 +32,11 @@ export async function GET(
   _request: Request,
   { params }: { params: { token: string } }
 ) {
+  // Cada abertura grava evento na trilha IMUTÁVEL — sem freio, um loop de
+  // refresh infla a cadeia (e o custo de verificação) de graça. 30/min por IP.
+  const limitado = rateLimit("assinar-get", ipDe(_request), 30, 60_000);
+  if (limitado) return limitado;
+
   try {
     const admin = criarClienteAdmin();
     const r = await buscarParaAssinar(admin, params.token);
@@ -52,21 +60,42 @@ export async function GET(
       ip: ipDaRequest(_request),
       dispositivo: _request.headers.get("user-agent"),
     }).catch(() => {});
+    // NOME COMPLETO do contratado (pedido do dono): signatário antigo pode ter
+    // sido gravado só com o nome artístico — o header, o painel e o relatório
+    // mostram "Nome civil (Artístico)", resolvendo o cadastro do artista na
+    // hora (o nome civil já sai impresso no próprio corpo do contrato).
+    let nomeCivilArtista = "";
+    if (contrato.vendaId) {
+      const venda = await buscarVenda(admin, contrato.vendaId);
+      const artistaRow = venda?.artist_id
+        ? await buscarArtista(admin, venda.artist_id)
+        : null;
+      nomeCivilArtista = artistaRow?.nome_legal ?? "";
+    }
+    const comNomeCompleto = (nome: string, papel: string | null): string =>
+      nomeCivilArtista &&
+      papel &&
+      /contratado/i.test(papel) &&
+      !nome.includes(nomeCivilArtista)
+        ? `${nomeCivilArtista} (${nome})`
+        : nome;
     // Quem já assinou (do MESMO contrato) → relatório de assinaturas visível
     // no link, padrão ZapSign. Sem KYC (foto/selfie/facial) — só o relatório.
-    const assinaturas = await assinantesPublicosDoContrato(admin, contrato.id);
+    const assinaturas = (
+      await assinantesPublicosDoContrato(admin, contrato.id)
+    ).map((a) => ({ ...a, nome: comNomeCompleto(a.nome, a.papel) }));
     // Painel "Assinaturas X/Y": TODOS os signatários (nome/papel/status —
     // nada de token, e-mail ou PII dos outros).
     const signatariosResumo = (await listarPorContrato(admin, contrato.id)).map(
       (s) => ({
-        nome: s.nome,
+        nome: comNomeCompleto(s.nome, s.papel ?? null),
         papel: s.papel ?? null,
         status: s.status === "assinado" ? "assinado" : "pendente",
       })
     );
     return NextResponse.json({
       signatario: {
-        nome: signatario.nome,
+        nome: comNomeCompleto(signatario.nome, signatario.papel),
         email: signatario.email,
         papel: signatario.papel,
         exige: signatario.exige,
@@ -150,6 +179,7 @@ export async function POST(
       fotoDocumento: parsed.data.fotoDocumento || null,
       fotoDocumentoVerso: parsed.data.fotoDocumentoVerso || null,
       selfie: parsed.data.selfie || null,
+      consentimentoBiometria: parsed.data.consentimentoBiometria ?? null,
     });
     if (!resultado) {
       return NextResponse.json(
@@ -171,6 +201,9 @@ export async function POST(
   } catch (e) {
     if (e instanceof ExigenciaNaoAtendidaError || e instanceof MailerIndisponivelError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
+    if (e instanceof ContratoCanceladoError) {
+      return NextResponse.json({ erro: e.message, cancelado: true }, { status: e.status });
     }
     return respostaDeErro(e, "Erro ao registrar a assinatura.");
   }

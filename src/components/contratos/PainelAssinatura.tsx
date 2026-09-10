@@ -445,6 +445,13 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                             exige: {
                               ...linha.exige,
                               [ex.chave]: e.target.checked,
+                              // Facial compara selfie × FOTO DO DOCUMENTO:
+                              // marcar facial implica exigir a foto (o mapper
+                              // normaliza de todo jeito — aqui é só pro
+                              // checkbox refletir na hora).
+                              ...(ex.chave === "facial" && e.target.checked
+                                ? { fotoDocumento: true }
+                                : {}),
                             },
                           })
                         }

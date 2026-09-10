@@ -5,6 +5,7 @@ import {
   reenviarConfirmacao,
   MailerIndisponivelError,
   ExigenciaNaoAtendidaError,
+  ContratoCanceladoError,
 } from "@/lib/services/contratoSignatarios.service";
 import { respostaDeErro } from "@/lib/api/erros";
 
@@ -36,6 +37,9 @@ export async function POST(
   } catch (e) {
     if (e instanceof MailerIndisponivelError || e instanceof ExigenciaNaoAtendidaError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
+    }
+    if (e instanceof ContratoCanceladoError) {
+      return NextResponse.json({ erro: e.message, cancelado: true }, { status: e.status });
     }
     return respostaDeErro(e, "Não foi possível reenviar o código.");
   }

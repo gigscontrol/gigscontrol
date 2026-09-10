@@ -45,11 +45,25 @@ export const VARIAVEIS_CONTRATO: VariavelContrato[] = [
   { token: "endereco_local", label: "Endereço do evento", grupo: "Evento" },
   { token: "cidade", label: "Cidade", grupo: "Evento" },
   { token: "capacidade", label: "Capacidade do local", grupo: "Evento" },
+  // Data do EVENTO ≠ data do SHOW: show que começa de madrugada (00:00–05:59)
+  // acontece no dia seguinte ao início do evento — o autopreenchimento da
+  // venda soma 1 dia em `data`/`data_extenso` e mantém `data_evento` (pedido
+  // do dono, 09/09/2026).
+  { token: "data_evento", label: "Data do evento", grupo: "Evento" },
   { token: "data", label: "Data do show", grupo: "Evento" },
   { token: "data_extenso", label: "Data do show por extenso", grupo: "Evento" },
   { token: "horario", label: "Horário (início)", grupo: "Evento" },
   { token: "horario_fim", label: "Horário (fim)", grupo: "Evento" },
   { token: "tempo_apresentacao", label: "Tempo de apresentação", grupo: "Evento" },
+  // Frase pronta pro texto corrido: "com início às 20:00 e término às 21:00,
+  // totalizando aproximadamente 1 hora de apresentação" — e, quando a venda
+  // ficou com horário A DEFINIR, "com horário a definir, sendo o tempo total
+  // da apresentação de aproximadamente 1 hora" (pedido do dono, 09/09/2026).
+  {
+    token: "horario_apresentacao",
+    label: "Horário da apresentação (frase completa)",
+    grupo: "Evento",
+  },
 
   // Valores
   { token: "cache", label: "Cachê", grupo: "Valores" },
@@ -142,7 +156,8 @@ const APELIDOS_TOKEN: Record<string, string> = {
   "telefone artista": "artista_telefone",
   // Evento
   "nome evento": "evento",
-  "data evento": "data",
+  // {{DATA_DO_EVENTO}} é o token próprio (não cai mais em `data`): num show de
+  // madrugada as duas datas divergem de propósito.
   "data show": "data",
   "endereco evento": "endereco_local",
   "endereco do local": "endereco_local",
@@ -270,11 +285,14 @@ export const VALORES_EXEMPLO: Record<string, string> = {
   endereco_local: "Av. Beira-Mar, 1500 — Praia Grande/SP",
   cidade: "Praia Grande/SP",
   capacidade: "1.500 pessoas",
+  data_evento: "31/12/2026",
   data: "31/12/2026",
   data_extenso: "31 de dezembro de 2026",
   horario: "23h00",
   horario_fim: "04h00",
   tempo_apresentacao: "2h30",
+  horario_apresentacao:
+    "com início às 23h00 e término às 04h00, totalizando aproximadamente 2 horas e 30 minutos de apresentação",
 
   // Valores
   cache: "R$ 8.000,00",
