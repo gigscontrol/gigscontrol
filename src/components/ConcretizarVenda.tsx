@@ -1128,6 +1128,9 @@ export default function ConcretizarVenda({
     } catch (e) {
       setErrors((p) => ({ ...p, cidade: (e as Error).message }));
       setSalvando(false);
+      // Fecha o resumo de confirmação — o erro fica no campo cidade e, com o
+      // modal na frente, "Confirmar venda" parecia simplesmente não fazer nada.
+      setConfirmandoVenda(false);
       return;
     }
 
@@ -1464,6 +1467,16 @@ export default function ConcretizarVenda({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artistaEfetivoOrc?.id]);
+
+  // PAPEL ARTISTA: só existe ele no painel — já nasce selecionado (venda
+  // direta e conversão), sem ter que se escolher (pedido do dono, 10/09/2026).
+  // Só semeia quando ainda não há seleção: nunca briga com venda/orçamento.
+  const artistaDaSessao =
+    sessao?.usuario?.papel === "artista" ? sessao.usuario.artistaId ?? null : null;
+  useEffect(() => {
+    if (artistaId === null && artistaDaSessao) setDjId(artistaDaSessao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artistaDaSessao]);
 
   return (
     <div
