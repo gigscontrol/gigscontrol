@@ -118,11 +118,23 @@ export default function NovoContratoPage({
 } = {}) {
   const t = useT();
   const { modelos } = useModelos();
-  const { vendas } = useVendas();
-  const { artistas } = useWorkspace();
-  const { contratantes } = useContatos();
+  const { vendas, recarregar: recarregarVendas } = useVendas();
+  const { artistas, recarregarArtistas } = useWorkspace();
+  const { contratantes, recarregar: recarregarContatos } = useContatos();
   const { sessao, podeUI } = useAuth();
   const { contratos, criarContrato, atualizarContrato } = useContratos();
+
+  // Dados FRESCOS ao abrir a tela: os contextos carregam uma vez por aba, e
+  // venda/artista/contratante editados em OUTRA aba (ou no celular) pré-
+  // preenchiam o contrato com valores velhos — venda nova nem aparecia no
+  // select. Fire-and-forget: enquanto busca, a tela usa o que está em memória
+  // e o efeito de seed re-preenche quando a resposta chegar (deps abaixo).
+  useEffect(() => {
+    void recarregarVendas().catch(() => {});
+    void recarregarArtistas().catch(() => {});
+    void recarregarContatos().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const editaveis = useMemo(
     () => modelos.filter((m) => m.tipo === "editavel"),
@@ -213,8 +225,26 @@ export default function NovoContratoPage({
     ? podeUI(venda.artistaId || null, "contratos.criar")
     : artistas.some((a) => podeUI(a.id, "contratos.criar"));
 
-  // (Re)preenche os valores quando muda o modelo ou a venda. Edições do
-  // usuário são sobrescritas só nessas trocas (comportamento esperado).
+  // Artista/contratante DA VENDA selecionada — memos à parte porque são deps
+  // do seed abaixo: quando o refetch do mount devolve a venda/artista/
+  // contratante editados em outra aba, a identidade muda e o seed re-preenche
+  // com os dados frescos. Sem venda selecionada ficam null (estáveis): o
+  // preenchimento manual nunca é apagado por um refetch.
+  const artistaDaVenda = useMemo(
+    () => (venda ? artistas.find((a) => a.id === venda.artistaId) ?? null : null),
+    [artistas, venda]
+  );
+  const contratanteDaVenda = useMemo(
+    () =>
+      venda ? contratantes.find((c) => c.id === venda.contratanteId) ?? null : null,
+    [contratantes, venda]
+  );
+
+  // (Re)preenche os valores quando muda o modelo/venda — e também quando a
+  // PRÓPRIA venda selecionada muda de conteúdo (edição em outra tela ou o
+  // refetch do mount): contrato não pode nascer de snapshot velho. Edições
+  // manuais dos tokens são sobrescritas nesses momentos (comportamento
+  // esperado — o dado da venda é a fonte).
   useEffect(() => {
     if (!modeloId) {
       setValores({});
@@ -225,12 +255,16 @@ export default function NovoContratoPage({
     base.agencia = agencia;
     base.data_hoje = hojeBR();
     if (venda) {
-      const artista = artistas.find((a) => a.id === venda.artistaId) ?? null;
-      const contratante =
-        contratantes.find((c) => c.id === venda.contratanteId) ?? null;
       Object.assign(
         base,
-        valoresDeVenda({ venda, artista, agencia, numero: "", idioma, contratante })
+        valoresDeVenda({
+          venda,
+          artista: artistaDaVenda,
+          agencia,
+          numero: "",
+          idioma,
+          contratante: contratanteDaVenda,
+        })
       );
     } else {
       // Sem venda (preencher manual): riders/hospedagem/logística caem no
@@ -241,7 +275,7 @@ export default function NovoContratoPage({
     setValores(base);
     setGerado(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modeloId, vendaId]);
+  }, [modeloId, vendaId, venda, artistaDaVenda, contratanteDaVenda]);
 
   // Preview e geração aplicam o A4 (valores vazios → "Não informado"/"Not
   // provided", pelo idioma do modelo). O state `valores` fica CRU — os inputs
