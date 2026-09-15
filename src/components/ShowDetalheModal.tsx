@@ -84,7 +84,7 @@ export default function ShowDetalheModal({
   const { shows, updateShow } = useShows();
   const { contratantes, casas, cidades } = useContatos();
   const { orcamentos } = useOrcamentos();
-  const { vendas } = useVendas();
+  const { vendas, recarregar: recarregarVendas } = useVendas();
   const { contratos, assinantesPorContrato } = useContratos();
   const artistas = useArtistas();
   const { podeUI, sessao } = useAuth();
@@ -148,6 +148,9 @@ export default function ShowDetalheModal({
     setProcessando(true);
     try {
       await updateShow(show.id, { status: "cancelado", cancelamentoMotivo: m });
+      // O servidor baixou o cachê pendente da venda junto (cascata) — o
+      // Financeiro local precisa acompanhar sem F5.
+      void recarregarVendas().catch(() => {});
       setMostrarFormCancel(false);
       setMotivoCancel("");
     } catch (e) {
@@ -163,6 +166,8 @@ export default function ShowDetalheModal({
     setProcessando(true);
     try {
       await updateShow(show.id, { status: "confirmado" });
+      // Reativar o show reativa o cachê que a cascata baixou — sincroniza.
+      void recarregarVendas().catch(() => {});
     } catch (e) {
       avisar((e as Error).message ?? t("Falha ao atualizar o show."));
     } finally {

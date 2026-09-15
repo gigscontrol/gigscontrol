@@ -5,6 +5,10 @@ import {
   atualizarShowPorId,
   removerShowPorId,
 } from "@/lib/services/shows.service";
+import {
+  cancelarCachePendenteDaVenda,
+  reativarCacheCanceladoPeloShow,
+} from "@/lib/services/vendas.service";
 import { showUpdateSchema } from "@/lib/validators/shows.schema";
 import { buscarShow as repoBuscarShow } from "@/lib/repositories/shows.repo";
 import {
@@ -245,6 +249,31 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         p_booking_patch: bookingPatch,
       });
       if (error) throw error;
+    }
+    // CASCATA DO CACHÊ (pedido do dono, 15/09/2026): cancelar o show baixa as
+    // parcelas PENDENTES da venda ligada (pagas ficam como estão); reativar o
+    // show reativa SÓ o que a cascata baixou (marcador peloShow — cachê
+    // cancelado na mão não revive). Best-effort: o show já mudou de status,
+    // falha aqui não desfaz o cancelamento — fica no log do servidor.
+    if (row.venda_id && (querCancelar || querReativar)) {
+      try {
+        if (querCancelar) {
+          const motivo = (parsed.data.cancelamentoMotivo ?? "").trim();
+          await cancelarCachePendenteDaVenda(
+            r.sessao.supabase,
+            row.venda_id,
+            {
+              userId: r.sessao.userId,
+              userNome: r.sessao.userNome ?? r.sessao.userEmail,
+            },
+            motivo ? `Show cancelado: ${motivo}` : "Show cancelado"
+          );
+        } else {
+          await reativarCacheCanceladoPeloShow(r.sessao.supabase, row.venda_id);
+        }
+      } catch (e) {
+        console.error("Falha ao propagar o cancelamento do show pro cachê:", e);
+      }
     }
     // Re-lê pra devolver a meta já mesclada. Redige cachê/venda pra quem tem
     // editar mas não ver_detalhado (senão a resposta vaza o que o GET esconde).

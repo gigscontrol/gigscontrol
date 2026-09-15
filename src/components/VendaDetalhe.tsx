@@ -90,7 +90,7 @@ export default function VendaDetalhe({
   const { podeUI, sessao } = useAuth();
   const { confirmar, confirmador } = useConfirmar();
   const accent = MODULE_THEMES.vendas.color;
-  const { vendas, removeVenda, updateVenda } = useVendas();
+  const { vendas, removeVenda, updateVenda, recarregar: recarregarVendas } = useVendas();
   const { shows, updateShow } = useShows();
   const { orcamentos } = useOrcamentos();
   const artistas = useArtistas();
@@ -192,9 +192,23 @@ export default function VendaDetalhe({
     }
     setProcessandoShow(true);
     try {
-      await updateShow(showIdLigado, {
-        status: cancelado ? "confirmado" : "cancelado",
-      });
+      // Cancelar EXIGE motivo na rota (auditoria) — este caminho não tem form
+      // de motivo (o do ShowDetalheModal tem); sem o padrão, o PATCH caía em
+      // 400 "Informe o motivo do cancelamento".
+      await updateShow(
+        showIdLigado,
+        cancelado
+          ? { status: "confirmado" }
+          : {
+              status: "cancelado",
+              // Texto de DADO (vai pro meta/auditoria como um motivo digitado),
+              // não de UI — de propósito fora do t().
+              cancelamentoMotivo: "Cancelado pelo detalhe da venda",
+            }
+      );
+      // Cascata do cachê no servidor (cancelar baixa pendentes; reativar
+      // revive o que a cascata baixou) — as parcelas locais precisam acompanhar.
+      void recarregarVendas().catch(() => {});
       setToastMsg({
         msg: cancelado
           ? t("Show reativado.")
