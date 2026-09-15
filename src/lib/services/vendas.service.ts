@@ -547,3 +547,69 @@ export async function atualizarParcelaPorId(
   const row = await atualizarParcelaRow(supabase, id, payload);
   return rowParaParcela(row);
 }
+
+/**
+ * CASCATA do cancelamento de SHOW (pedido do dono, 15/09/2026): cancelar o
+ * show baixa o cachê PENDENTE da venda ligada. Parcela PAGA fica como está
+ * (o registro do pagamento é imutável); parcela já cancelada na mão não é
+ * tocada. O marcador `peloShow` é o que permite à reativação do show reviver
+ * SÓ o que esta cascata baixou. Devolve quantas parcelas cancelou.
+ */
+export async function cancelarCachePendenteDaVenda(
+  supabase: SupabaseClient,
+  vendaId: string,
+  autor: { userId: string; userNome?: string | null },
+  motivo: string
+): Promise<number> {
+  const parcelas = await listarParcelasDaVenda(supabase, vendaId);
+  const agora = new Date().toISOString();
+  let n = 0;
+  for (const p of parcelas) {
+    if (p.status_base === "pago") continue;
+    if (p.meta?.cancelamento?.cancelado) continue;
+    const { error } = await supabase.rpc("merge_parcela_meta", {
+      p_id: p.id,
+      p_patch: {
+        cancelamento: {
+          cancelado: true,
+          peloShow: true,
+          motivo,
+          canceladoPor: autor.userId,
+          canceladoPorNome: autor.userNome ?? undefined,
+          canceladoEm: agora,
+        },
+      },
+      p_remove: null,
+      p_cobranca: null,
+    });
+    if (error) throw error;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Reverter o cancelamento do show REATIVA só o cachê que a cascata baixou
+ * (meta.cancelamento.peloShow) — cancelamento manual de cachê continua
+ * cancelado. O merge substitui a chave `cancelamento` inteira, então o
+ * marcador não sobra. Devolve quantas parcelas reativou.
+ */
+export async function reativarCacheCanceladoPeloShow(
+  supabase: SupabaseClient,
+  vendaId: string
+): Promise<number> {
+  const parcelas = await listarParcelasDaVenda(supabase, vendaId);
+  let n = 0;
+  for (const p of parcelas) {
+    if (!p.meta?.cancelamento?.cancelado || !p.meta.cancelamento.peloShow) continue;
+    const { error } = await supabase.rpc("merge_parcela_meta", {
+      p_id: p.id,
+      p_patch: { cancelamento: { cancelado: false } },
+      p_remove: null,
+      p_cobranca: null,
+    });
+    if (error) throw error;
+    n++;
+  }
+  return n;
+}

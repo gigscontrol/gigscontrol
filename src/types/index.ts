@@ -610,6 +610,12 @@ export type ParcelaMeta = {
     canceladoPor?: string;
     canceladoPorNome?: string;
     canceladoEm?: string;
+    /**
+     * true = foi o CANCELAMENTO DO SHOW que baixou este cachê (cascata,
+     * pedido do dono 15/09/2026) — reativar o show reativa SÓ estas parcelas;
+     * cancelamento manual de cachê nunca é revivido por reativar o show.
+     */
+    peloShow?: boolean;
   };
   /** Log de cobranças enviadas (quantas vezes cobrou e não foi pago). */
   cobrancas?: { em: string; por?: string; porNome?: string }[];
