@@ -1559,6 +1559,7 @@ export const IT: Record<string, string> = {
   "Translado Terrestre": "Trasferimento terrestre",
   "Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto": "Autista o van: Aeroporto → Hotel → Locale → Hotel → Aeroporto",
   "E-mail obrigatório": "Email obbligatoria",
+  "E-mail inválido": "Email non valida",
   "CPF/CNPJ obrigatório": "CPF/CNPJ obbligatorio",
   "Endereço obrigatório": "Indirizzo obbligatorio",
   "Nome do evento obrigatório": "Nome evento obbligatorio",

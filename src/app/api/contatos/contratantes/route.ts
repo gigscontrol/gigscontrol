@@ -48,8 +48,18 @@ export async function POST(request: Request) {
 
   const parsed = contratanteCreateSchema.safeParse(raw);
   if (!parsed.success) {
+    // O 400 genérico escondia QUAL campo barrou (a venda direta abortava com
+    // "Dados inválidos." seco — caso do e-mail malformado, 24/09/2026). Nomeia
+    // os campos na mensagem; `detalhes` continua com o flatten completo.
+    const flat = parsed.error.flatten().fieldErrors;
+    const campos = Object.entries(flat)
+      .map(([campo, msgs]) => `${campo}: ${msgs?.[0] ?? "inválido"}`)
+      .join("; ");
     return NextResponse.json(
-      { erro: "Dados inválidos.", detalhes: parsed.error.flatten() },
+      {
+        erro: campos ? `Dados inválidos — ${campos}.` : "Dados inválidos.",
+        detalhes: parsed.error.flatten(),
+      },
       { status: 400 }
     );
   }

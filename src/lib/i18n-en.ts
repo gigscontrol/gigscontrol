@@ -1016,6 +1016,7 @@ const VENDAS_FORMS: Record<string, string> = {
   "Translado Terrestre": "Ground Transfer",
   "Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto": "Executive driver or van: Airport → Hotel → Venue → Hotel → Airport",
   "E-mail obrigatório": "Email is required",
+  "E-mail inválido": "Invalid email",
   "CPF/CNPJ obrigatório": "CPF/CNPJ is required",
   "Endereço obrigatório": "Address is required",
   "Nome do evento obrigatório": "Event name is required",
