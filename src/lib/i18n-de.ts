@@ -1559,6 +1559,7 @@ export const DE: Record<string, string> = {
   "Translado Terrestre": "Bodentransfer",
   "Motorista executivo ou van: Aeroporto → Hotel → Evento → Hotel → Aeroporto": "Fahrer oder Van: Flughafen → Hotel → Veranstaltung → Hotel → Flughafen",
   "E-mail obrigatório": "E-Mail erforderlich",
+  "E-mail inválido": "Ungültige E-Mail",
   "CPF/CNPJ obrigatório": "CPF/CNPJ erforderlich",
   "Endereço obrigatório": "Adresse erforderlich",
   "Nome do evento obrigatório": "Veranstaltungsname erforderlich",

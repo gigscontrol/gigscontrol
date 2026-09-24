@@ -769,6 +769,11 @@ export default function ConcretizarVenda({
     const errs: Record<string, string> = {};
     if (!contratanteNome.trim()) errs.contratanteNome = t("Nome obrigatório");
     if (!contratanteEmail.trim()) errs.contratanteEmail = t("E-mail obrigatório");
+    // FORMATO também (bug do Igor Fabricio, 24/09/2026): o schema do servidor
+    // rejeita e-mail malformado com um 400 "Dados inválidos" genérico DEPOIS
+    // do resumo de confirmação — barra aqui, com o campo em vermelho.
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contratanteEmail.trim()))
+      errs.contratanteEmail = t("E-mail inválido");
     const dig = contarDigitos(telDigits);
     if (dig === 0) errs.contratanteTelefone = t("Telefone obrigatório");
     else if (dig < country.minDigits) errs.contratanteTelefone = t("Faltam dígitos");
