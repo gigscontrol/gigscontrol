@@ -14,6 +14,7 @@ import PageHeader from "../PageHeader";
 import DateRangeSelector from "../DateRangeSelector";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
+import Vinculos from "../detalhes/Vinculos";
 import {
   buscarSignatarios,
   paraAssinaturaInfo,
@@ -30,6 +31,7 @@ import { useT } from "@/lib/i18n";
 import { useConfirmar, useAviso } from "../ConfirmarModal";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange } from "@/types";
+import { STATUS_CONTRATO } from "@/lib/statusUI";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
@@ -73,20 +75,13 @@ const STATUS_ORDEM: ContratoStatus[] = [
   "cancelado",
 ];
 
-const STATUS_LABEL: Record<ContratoStatus, string> = {
-  rascunho: "Rascunho",
-  enviado: "Enviado",
-  assinado: "Assinado",
-  cancelado: "Cancelado",
-};
-
-/** Classe do badge por status (segue a paleta do globals.css). */
-const STATUS_BADGE: Record<ContratoStatus, string> = {
-  rascunho: "badge-neutral",
-  enviado: "badge-info",
-  assinado: "badge-success",
-  cancelado: "badge-danger",
-};
+/** Nome e classe do badge por status — fonte única em lib/statusUI. */
+const STATUS_LABEL = Object.fromEntries(
+  Object.entries(STATUS_CONTRATO).map(([k, v]) => [k, v.label])
+) as Record<ContratoStatus, string>;
+const STATUS_BADGE = Object.fromEntries(
+  Object.entries(STATUS_CONTRATO).map(([k, v]) => [k, v.badge])
+) as Record<ContratoStatus, string>;
 
 /** ISO/YYYY-MM-DD → DD/MM/AAAA (só a parte da data). "—" se vazio/ inválido. */
 function formatarData(iso: string | null): string {
@@ -99,6 +94,7 @@ function formatarData(iso: string | null): string {
 export default function HistoricoPage({
   contratoId = null,
   statusInicial = null,
+  focarAssinatura = false,
   onAbrirContrato,
   onVoltar,
 }: {
@@ -106,6 +102,8 @@ export default function HistoricoPage({
   contratoId?: string | null;
   /** Filtro de status inicial (?status=, vindo de um card da dashboard). */
   statusInicial?: ContratoStatus | null;
+  /** Abre rolado até o painel de assinatura (?assinar=1, vindo do "Mandar para assinatura"). */
+  focarAssinatura?: boolean;
   onAbrirContrato: (id: string) => void;
   /** Sai do contrato aberto (volta pra onde a pessoa estava). */
   onVoltar: () => void;
@@ -335,6 +333,7 @@ export default function HistoricoPage({
       ) : selecionado ? (
         <DetalheContrato
           contrato={selecionado}
+          focarAssinatura={focarAssinatura}
           folhaRef={folhaRef}
           conteudoRef={conteudoRef}
           gerandoPdf={gerandoPdf}
@@ -540,6 +539,7 @@ function ListaContratos({
 
 function DetalheContrato({
   contrato,
+  focarAssinatura,
   folhaRef,
   conteudoRef,
   gerandoPdf,
@@ -554,6 +554,7 @@ function DetalheContrato({
   onCancelar,
 }: {
   contrato: Contrato;
+  focarAssinatura: boolean;
   folhaRef: React.Ref<HTMLDivElement>;
   conteudoRef: React.Ref<HTMLDivElement>;
   gerandoPdf: boolean;
@@ -589,6 +590,17 @@ function DetalheContrato({
       vivo = false;
     };
   }, [contrato.id]);
+
+  // Veio do "Mandar para assinatura" (Novo contrato): já mostra o painel.
+  const painelAssinaturaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focarAssinatura) return;
+    const id = setTimeout(
+      () => painelAssinaturaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      150
+    );
+    return () => clearTimeout(id);
+  }, [focarAssinatura, contrato.id]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -701,8 +713,19 @@ function DetalheContrato({
         </div>
       </div>
 
+      {/* Venda, show, orçamento e contratante deste contrato — cada um abre. */}
+      {contrato.vendaId && (
+        <Vinculos
+          vendaId={contrato.vendaId}
+          ocultar={["contrato"]}
+          titulo={t("Ligado a este contrato")}
+        />
+      )}
+
       {/* Painel de assinatura — signatários, links/WhatsApp, PDF assinado */}
-      <PainelAssinatura contrato={contrato} />
+      <div ref={painelAssinaturaRef} className="scroll-mt-4">
+        <PainelAssinatura contrato={contrato} />
+      </div>
 
       {/* Preview da folha A4 (com o relatório de assinaturas quando houver) */}
       <FolhaA4

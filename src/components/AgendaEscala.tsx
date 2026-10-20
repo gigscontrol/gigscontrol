@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth-context";
 import { podeCriarShowUI } from "@/lib/permissoes/gatesShow";
 import { useContratos } from "@/lib/contratos-context";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
+import { STATUS_SHOW } from "@/lib/statusUI";
 import { showNoDia } from "@/lib/agenda/showNoDia";
 
 const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -80,24 +81,12 @@ function cellDeISO(iso: string): DayCell | null {
 
 /** Casamento show↔célula: lógica pura em `@/lib/agenda/showNoDia` (com bateria). */
 
-const STATUS_STYLES: Record<ShowStatus, { bg: string; color: string; label: string }> = {
-  confirmado: { bg: "rgba(34, 197, 94, 0.12)", color: "var(--success)", label: "Confirmado" },
-  pendente: { bg: "rgba(239, 68, 68, 0.12)", color: "var(--danger)", label: "Sem contrato" },
-  logistica: { bg: "rgba(245, 158, 11, 0.12)", color: "var(--warning)", label: "Logística" },
-  cancelado: { bg: "rgba(239, 68, 68, 0.18)", color: "var(--danger)", label: "Cancelado" },
-};
-
+/** Status do show com o MESMO nome/cor do resto do app (lib/statusUI). O
+ *  "Sem contrato" que aparecia aqui não é status de show — é do contrato. */
 function StatusBadge({ status }: { status: ShowStatus }) {
   const t = useT();
-  const st = STATUS_STYLES[status];
-  return (
-    <span
-      className="text-[0.6rem] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
-      style={{ backgroundColor: st.bg, color: st.color }}
-    >
-      {t(st.label)}
-    </span>
-  );
+  const st = STATUS_SHOW[status] ?? STATUS_SHOW.pendente;
+  return <span className={`badge ${st.badge}`}>{t(st.label)}</span>;
 }
 
 function EventCard({ show, artista, onClick }: { show: Show; artista?: Artista; onClick?: () => void }) {

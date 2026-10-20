@@ -24,18 +24,14 @@ import { descreverContrato, formatarDataCurta } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
+import { STATUS_CONTRATO } from "@/lib/statusUI";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 const DND_TIPO = "text/contrato-id";
 /** Pasta padrão "Arquivados" — sempre presente (id reservado, não editável). */
 const PASTA_ARQUIVADOS = "arquivados";
 
-const STATUS_INFO: Record<ContratoStatus, { label: string; badge: string }> = {
-  rascunho: { label: "Rascunho", badge: "badge-neutral" },
-  enviado: { label: "Enviado", badge: "badge-info" },
-  assinado: { label: "Assinado", badge: "badge-success" },
-  cancelado: { label: "Cancelado", badge: "badge-danger" },
-};
+const STATUS_INFO = STATUS_CONTRATO;
 
 function novoId(): string {
   try {

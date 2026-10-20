@@ -24,7 +24,6 @@ import {
   Clock,
   Pencil,
   Check,
-  CheckCircle2,
   X,
   Hotel,
   Plane,
@@ -39,6 +38,8 @@ import {
 import Modal from "./Modal";
 import Toast from "./Toast";
 import { FichaHeroPagina, Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
+import Vinculos from "./detalhes/Vinculos";
+import ListaParcelas from "./detalhes/ListaParcelas";
 import { useConfirmar } from "./ConfirmarModal";
 import AlteracoesModal, { temDetalhe } from "./AlteracoesModal";
 import type { HistoricoAcao } from "@/lib/mappers/historico";
@@ -57,8 +58,6 @@ import { nomeCidadeFuso } from "./TimezoneSelect";
 import {
   MODULE_THEMES,
   TEXTO_TRANSLADO,
-  LABELS_STATUS_PARCELA,
-  statusEfetivoParcela,
 } from "@/types";
 
 type Props = {
@@ -244,15 +243,6 @@ export default function VendaDetalhe({
     year: "numeric",
   });
 
-  // Resumo do pagamento (mesma matemática do popup do show).
-  const totalParcelas = venda.parcelas.reduce((a, p) => a + p.valor, 0);
-  const pagoParcelas = venda.parcelas
-    .filter((p) => statusEfetivoParcela(p) === "pago")
-    .reduce((a, p) => a + p.valor, 0);
-  const atrasadoParcelas = venda.parcelas
-    .filter((p) => statusEfetivoParcela(p) === "atrasado")
-    .reduce((a, p) => a + p.valor, 0);
-
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
@@ -339,6 +329,12 @@ export default function VendaDetalhe({
         }
       />
 
+      {/* ===== O CICLO: show, contrato, orçamento de origem e contratante —
+          cada um abre a coisa (ou "Fazer contrato" quando ainda não existe). */}
+      <div className="mb-4">
+        <Vinculos vendaId={venda.id} ocultar={["venda"]} titulo={t("Ligado a esta venda")} />
+      </div>
+
       {/* ===== MALHA ALINHADA: um grid só, 2 colunas — cada linha de cards
           compartilha a altura, então as bordas horizontais se alinham "em #".
           Os cards fluem intercalados: info à esquerda, dinheiro/operacional à
@@ -409,75 +405,9 @@ export default function VendaDetalhe({
               </>
             )}
 
-            {venda.parcelas.length > 0 && (
-              <>
-                {/* Resumo — igual ao popup do show */}
-                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 mb-1 text-sm">
-                  <span className="text-secondary">
-                    {t("Recebido:")}{" "}
-                    <span className="font-semibold" style={{ color: "var(--success)" }}>
-                      {formatarMoeda2(pagoParcelas)}
-                    </span>
-                  </span>
-                  <span className="text-secondary">
-                    {t("A receber:")}{" "}
-                    <span className="font-semibold text-primary">
-                      {formatarMoeda2(totalParcelas - pagoParcelas)}
-                    </span>
-                  </span>
-                  {atrasadoParcelas > 0 && (
-                    <span className="text-secondary">
-                      {t("Atrasado:")}{" "}
-                      <span className="font-semibold" style={{ color: "var(--danger)" }}>
-                        {formatarMoeda2(atrasadoParcelas)}
-                      </span>
-                    </span>
-                  )}
-                </div>
-
-                {venda.parcelas.map((p, idx) => {
-                  const st = statusEfetivoParcela(p);
-                  const label = LABELS_STATUS_PARCELA[st];
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between gap-3 py-1.5 text-sm border-b border-border/50 last:border-0"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-primary font-medium">
-                          {t("Parcela")} {idx + 1}/{venda.parcelas.length}
-                        </span>
-                        <span className="text-muted text-xs ml-1.5">({p.percentual.toFixed(0)}%)</span>
-                        <div className="text-xs text-muted">
-                          {t("Vence")}{" "}
-                          {new Date(p.dataVencimento + "T12:00:00").toLocaleDateString("pt-BR")}
-                          {p.dataPagamento && (
-                            <span style={{ color: "var(--success)" }}>
-                              {" "}· {t("pago em")}{" "}
-                              {new Date(p.dataPagamento + "T12:00:00").toLocaleDateString("pt-BR")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="font-semibold tabular-nums text-primary">
-                          {formatarMoeda2(p.valor)}
-                        </span>
-                        <span className={`badge ${label.badge}`}>
-                          {st === "pago" && <CheckCircle2 size={10} />}
-                          {st === "pendente" && <Clock size={10} />}
-                          {st === "atrasado" && <AlertTriangle size={10} />}
-                          {t(label.label)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <p className="text-xs text-muted mt-1">
-                  {t("Gerencie os pagamentos em Financeiro → Pagamentos.")}
-                </p>
-              </>
-            )}
+            {/* Parcelas clicáveis: cada uma abre o modal da parcela (informar
+                pagamento, cobrar, cancelar) — sem ter que ir até o Financeiro. */}
+            <ListaParcelas parcelas={venda.parcelas} moeda={venda.moeda} clicavel />
           </Bloco>
         </div>
 
@@ -711,11 +641,11 @@ export default function VendaDetalhe({
         isOpen={confirmaRemover}
         onClose={() => setConfirmaRemover(false)}
         title={t("Remover venda")}
-        subtitle={t("Esta ação não pode ser desfeita.")}
+        subtitle={t("Esta ação pode ser desfeita até 30 dias na Lixeira.")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            {t("A venda")} <strong className="text-primary">{venda.numero}</strong> {t("e suas parcelas serão apagadas. O")} <strong className="text-primary">{t("show vinculado")}</strong> {t("também será removido da agenda.")}
+            {t("A venda")} <strong className="text-primary">{venda.numero}</strong> {t("e suas parcelas vão pra")} <strong className="text-primary">{t("Lixeira")}</strong>. {t("Você pode restaurar em até 30 dias. Depois disso, é apagado automaticamente.")}
           </p>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button

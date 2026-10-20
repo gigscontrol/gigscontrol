@@ -191,11 +191,17 @@ export const urls = {
     comQuery(`${BASE}/vendas/vendas/nova`, { orcamento: o.orcamento, data: o.data }),
   contratos: (o: { status?: string | null } = {}) =>
     comQuery(`${BASE}/contratos/historico`, { status: o.status }),
-  contrato: (id: string) => `${BASE}/contratos/historico/${enc(id)}`,
+  /** `assinar`: abre já rolado até o painel de assinatura (depois de gerar). */
+  contrato: (id: string, o: { assinar?: boolean } = {}) =>
+    comQuery(`${BASE}/contratos/historico/${enc(id)}`, { assinar: o.assinar ? "1" : null }),
   novoContrato: (o: { venda?: string | null } = {}) =>
     comQuery(`${BASE}/contratos/novo`, { venda: o.venda }),
-  contatos: (aba: AbaContatos = "contratantes") =>
-    aba === "contratantes" ? `${BASE}/contatos/lista` : `${BASE}/contatos/lista/${aba}`,
+  /** `novo`: já abre o formulário de cadastro da aba (atalhos "Novo contratante"…). */
+  contatos: (aba: AbaContatos = "contratantes", o: { novo?: boolean } = {}) =>
+    comQuery(
+      aba === "contratantes" ? `${BASE}/contatos/lista` : `${BASE}/contatos/lista/${aba}`,
+      { novo: o.novo ? "1" : null }
+    ),
   contato: (categoria: ContatoCategoria, id: string) =>
     `${BASE}/contatos/lista/${categoria}/${enc(id)}`,
   pagamentos: () => `${BASE}/financeiro/pagamentos`,

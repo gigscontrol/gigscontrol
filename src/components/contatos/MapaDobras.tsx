@@ -9,7 +9,9 @@ import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "@/components/CidadeGlobalAutocomplete";
-import { ResumoModal, ResumoNumero, ResumoLinha } from "@/components/DashboardResumo";
+import { ResumoModal, ResumoNumero, ResumoLinha, ResumoFooter } from "@/components/DashboardResumo";
+import { useNavegacao } from "@/components/NavOverlay";
+import { urls } from "@/lib/navegacao/rotas";
 import {
   getContratanteStats,
   getCasaStats,
@@ -404,10 +406,18 @@ function DetalhePontoModal({
   vendas: Venda[];
 }) {
   const t = useT();
+  const { navegar } = useNavegacao();
   if (!ponto) return null;
 
   // Os ids dos pontos vêm PREFIXADOS pelo tipo ("casa-<uuid>") — fatia o prefixo.
   const id = ponto.id.slice(ponto.tipo.length + 1);
+  // Mesma ficha da lista de contatos — o mapa não tinha caminho até ela.
+  const fichaHref =
+    ponto.tipo === "contratante"
+      ? urls.contato("contratantes", id)
+      : ponto.tipo === "casa"
+        ? urls.contato("casas", id)
+        : urls.contato("cidades", id);
   const linhas: React.ReactNode[] = [];
   let numero: { valor: string; label: string } | null = null;
 
@@ -475,6 +485,7 @@ function DetalhePontoModal({
         </div>
       )}
       <div className="flex flex-col gap-1.5">{linhas}</div>
+      <ResumoFooter label={t("Abrir ficha completa")} onClick={() => navegar(fichaHref)} />
     </ResumoModal>
   );
 }

@@ -31,7 +31,6 @@ import {
   GlassWater,
   StickyNote,
   CreditCard,
-  CheckCircle2,
   AlertTriangle,
   Pencil,
 } from "lucide-react";
@@ -52,12 +51,12 @@ import { formatarMoeda } from "@/lib/formatters";
 import { numeroQtd } from "@/lib/quantidades";
 import { mascararCpfCnpj } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
+import Vinculos from "./detalhes/Vinculos";
+import ListaParcelas from "./detalhes/ListaParcelas";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
-  LABELS_STATUS_PARCELA,
   TEXTO_TRANSLADO,
-  statusEfetivoParcela,
   type ItemQuantidade,
   type LogisticaSelecao,
 } from "@/types";
@@ -66,7 +65,6 @@ type Props = {
   showId: string | null;
   onClose: () => void;
   onAbrirOrcamento?: (id: string) => void;
-  onAbrirVenda?: (id: string) => void;
   /** Abre a venda ligada no form de edição (D3 — ao lado do cancelar). */
   onEditarVenda?: (id: string) => void;
 };
@@ -75,7 +73,6 @@ export default function ShowDetalheModal({
   showId,
   onClose,
   onAbrirOrcamento,
-  onAbrirVenda,
   onEditarVenda,
 }: Props) {
   const t = useT();
@@ -644,90 +641,13 @@ export default function ShowDetalheModal({
                 <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
               </Linha>
             )}
-            {parcelasPag.length > 0 && (() => {
-              const total = parcelasPag.reduce((a, p) => a + p.valor, 0);
-              const pago = parcelasPag
-                .filter((p) => statusEfetivoParcela(p) === "pago")
-                .reduce((a, p) => a + p.valor, 0);
-              const atrasado = parcelasPag
-                .filter((p) => statusEfetivoParcela(p) === "atrasado")
-                .reduce((a, p) => a + p.valor, 0);
-              const restante = total - pago;
-              return (
-                <>
-                  {/* Resumo */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-sm">
-                    <span className="text-secondary">
-                      {t("Recebido:")}{" "}
-                      <span className="font-semibold" style={{ color: "var(--success)" }}>
-                        {fmtM(pago)}
-                      </span>
-                    </span>
-                    <span className="text-secondary">
-                      {t("A receber:")}{" "}
-                      <span className="font-semibold text-primary">
-                        {fmtM(restante)}
-                      </span>
-                    </span>
-                    {atrasado > 0 && (
-                      <span className="text-secondary">
-                        {t("Atrasado:")}{" "}
-                        <span className="font-semibold" style={{ color: "var(--danger)" }}>
-                          {fmtM(atrasado)}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Lista de parcelas */}
-                  {parcelasPag.map((p, idx) => {
-                    const st = statusEfetivoParcela(p);
-                    const label = LABELS_STATUS_PARCELA[st];
-                    return (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between gap-3 py-1.5 text-sm border-b border-border/50 last:border-0"
-                      >
-                        <div className="min-w-0">
-                          <span className="text-primary font-medium">
-                            {t("Parcela")} {idx + 1}/{parcelasPag.length}
-                          </span>
-                          <span className="text-muted text-xs ml-1.5">
-                            ({p.percentual.toFixed(0)}%)
-                          </span>
-                          <div className="text-xs text-muted">
-                            {t("Vence")}{" "}
-                            {new Date(
-                              p.dataVencimento + "T12:00:00"
-                            ).toLocaleDateString("pt-BR")}
-                            {p.dataPagamento && (
-                              <span style={{ color: "var(--success)" }}>
-                                {" "}
-                                · {t("pago em")}{" "}
-                                {new Date(
-                                  p.dataPagamento + "T12:00:00"
-                                ).toLocaleDateString("pt-BR")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="font-semibold tabular-nums text-primary">
-                            {fmtM(p.valor)}
-                          </span>
-                          <span className={`badge ${label.badge}`}>
-                            {st === "pago" && <CheckCircle2 size={10} />}
-                            {st === "pendente" && <Clock size={10} />}
-                            {st === "atrasado" && <AlertTriangle size={10} />}
-                            {t(label.label)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
+            {/* Parcelas: clicáveis quando o show tem venda (abre o modal da
+                parcela); ficha legada sem venda fica só leitura. */}
+            <ListaParcelas
+              parcelas={parcelasPag}
+              moeda={venda?.moeda ?? "BRL"}
+              clicavel={!!venda}
+            />
           </Bloco>
         )}
 
@@ -786,90 +706,43 @@ export default function ShowDetalheModal({
           </div>
         </Modal>
 
-        {/* ===== ORIGEM (links) ===== */}
-        {verSetor("documentos") && (orcamento || venda || resumoContrato.contrato) && (
-          <Bloco icon={<Hash size={14} />} title={t("Documentos vinculados")}>
-            {resumoContrato.contrato && (
-              <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border mb-2">
-                <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                  <span className={`badge ${rotuloContrato.badgeClass} inline-flex items-center gap-1`}>
-                    <FileSignature size={11} />
-                    {t("Contrato")}
-                  </span>
-                  <span
-                    className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    {resumoContrato.contrato.numero}
-                  </span>
-                  <span className="text-xs text-muted">· {rotuloContrato.texto}</span>
-                </div>
+        {/* ===== LIGAÇÕES — venda, contrato (abre ou "Fazer contrato"),
+            orçamento de origem e contratante: o mesmo bloco da venda. Show sem
+            venda (orçamento marcado aceito) mostra só o orçamento. ===== */}
+        {verSetor("documentos") && venda && (
+          <Bloco icon={<Hash size={14} />} title={t("Ligado a este show")}>
+            <Vinculos vendaId={venda.id} ocultar={["show"]} embutido />
+          </Bloco>
+        )}
+        {verSetor("documentos") && !venda && orcamento && (
+          <Bloco icon={<Hash size={14} />} title={t("Ligado a este show")}>
+            <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="badge badge-neutral">
+                  <FileText size={11} />
+                  {t("Orçamento")}
+                </span>
+                <span
+                  className="font-mono text-sm font-bold tabular-nums"
+                  style={{ color: "var(--brand)" }}
+                >
+                  {orcamento.numero}
+                </span>
               </div>
-            )}
-            {venda && (
-              <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="badge badge-success">
-                    <CalendarCheck2 size={11} />
-                    {t("Venda")}
-                  </span>
-                  <span
-                    className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    {venda.numero}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* Só ABRIR. Este link nunca editou nada — o rótulo "Editar
-                      venda" aqui era decorativo (navegava pro detalhe igual ao
-                      "Abrir"). A edição de verdade tem botão próprio no topo,
-                      ao lado do cancelar. */}
-                  {onAbrirVenda && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onAbrirVenda(venda.id);
-                      }}
-                      className="btn-ghost text-xs inline-flex items-center gap-1"
-                    >
-                      {t("Abrir")}
-                      <ExternalLink size={11} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {orcamento && (
-              <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-elevated border border-border mt-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="badge badge-neutral">
-                    <FileText size={11} />
-                    {t("Orçamento")}
-                  </span>
-                  <span
-                    className="font-mono text-sm font-bold tabular-nums"
-                    style={{ color: "var(--brand)" }}
-                  >
-                    {orcamento.numero}
-                  </span>
-                </div>
-                {onAbrirOrcamento && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onAbrirOrcamento(orcamento.id);
-                    }}
-                    className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
-                  >
-                    {t("Abrir")}
-                    <ExternalLink size={11} />
-                  </button>
-                )}
-              </div>
-            )}
+              {onAbrirOrcamento && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onAbrirOrcamento(orcamento.id);
+                  }}
+                  className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+                >
+                  {t("Abrir")}
+                  <ExternalLink size={11} />
+                </button>
+              )}
+            </div>
           </Bloco>
         )}
 

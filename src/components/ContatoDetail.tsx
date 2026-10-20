@@ -17,10 +17,13 @@ import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, LABELS_TIPO_CASA } from "@/types";
 import { useT } from "@/lib/i18n";
-import { mascararCpfCnpj, formatarMoeda } from "@/lib/formatters";
+import { mascararCpfCnpj, formatarMoeda, formatarDataBR } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
 import { useEffect, useState } from "react";
-import type { Contratante, Casa, Cidade, Show, Venda, Moeda, Orcamento } from "@/types";
+import type { Contratante, Casa, Cidade, Show, Venda, Moeda, Orcamento, ShowStatus } from "@/types";
+import { STATUS_SHOW } from "@/lib/statusUI";
+import { useNavegacao } from "./NavOverlay";
+import { urls } from "@/lib/navegacao/rotas";
 import { iniciaisDoNome } from "@/lib/iniciais";
 
 /**
@@ -34,6 +37,11 @@ import { iniciaisDoNome } from "@/lib/iniciais";
 
 /** Moeda de um show herdada da venda que o gerou (show.vendaId → venda.moeda);
  *  sem venda vinculada → BRL, mantendo a agência 100% BRL idêntica a hoje. */
+/** Data do show por extenso curto (dd/mm/aaaa); legado sem `data` cai no dia do mês. */
+function dataDoShow(show: { data?: string; dayId: number }): string {
+  return formatarDataBR(show.data) || String(show.dayId);
+}
+
 function moedaDoShow(show: Show, vendas: Venda[]): Moeda {
   return (show.vendaId && vendas.find((v) => v.id === show.vendaId)?.moeda) || "BRL";
 }
@@ -85,12 +93,6 @@ type HistoricoSanitizadoItem = {
   artistaCor: string | null;
 };
 
-const STATUS_BADGES: Record<string, { label: string; cls: string }> = {
-  confirmado: { label: "Confirmado", cls: "badge-success" },
-  pendente: { label: "Pendente", cls: "badge-danger" },
-  logistica: { label: "Logística", cls: "badge-warning" },
-  cancelado: { label: "Cancelado", cls: "badge-danger" },
-};
 
 export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow }: Props) {
   const t = useT();
@@ -241,7 +243,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             label={t("Último show")}
             value={
               stats.ultimoShow
-                ? t("Dia {n} — {venue}", { n: stats.ultimoShow.dayId, venue: stats.ultimoShow.venue })
+                ? `${dataDoShow(stats.ultimoShow)} — ${stats.ultimoShow.venue}`
                 : t("Nenhum ainda")
             }
             icon={<Calendar size={14} />}
@@ -368,7 +370,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                       show={show}
                       valorComLabel
                       moeda={moedaDoShow(show, vendas)}
-                      subtitulo={`${show.venue} · ${show.location} · ${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
+                      subtitulo={`${show.venue} · ${show.location} · ${dataDoShow(show)} · ${show.time || t("A definir")}`}
                       onAbrirShow={onAbrirShow}
                     />
                   ))}
@@ -531,7 +533,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                     key={show.id}
                     show={show}
                     moeda={moedaDoShow(show, vendas)}
-                    subtitulo={`${t("Dia {n}", { n: show.dayId })} · ${show.time || t("A definir")}`}
+                    subtitulo={`${dataDoShow(show)} · ${show.time || t("A definir")}`}
                     onAbrirShow={onAbrirShow}
                   />
                 ))}
@@ -550,8 +552,8 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           <ResumoLista
             itens={showsCasa.map((show) => ({
               id: show.id,
-              titulo: `${show.artistaNome} — ${t("Dia {n}", { n: show.dayId })}`,
-              subtitulo: `${t(STATUS_BADGES[show.status]?.label ?? show.status)}${show.time ? ` · ${show.time}` : ""}`,
+              titulo: `${show.artistaNome} — ${dataDoShow(show)}`,
+              subtitulo: `${t(STATUS_SHOW[show.status as ShowStatus]?.label ?? show.status)}${show.time ? ` · ${show.time}` : ""}`,
               valor: show.valor ? formatarMoeda(show.valor, moedaDoShow(show, vendas), 0) : undefined,
             }))}
             maxItens={showsCasa.length}
@@ -644,7 +646,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                       key={show.id}
                       show={show}
                       moeda={moedaDoShow(show, vendas)}
-                      subtitulo={`${show.venue} · ${t("Dia {n}", { n: show.dayId })}`}
+                      subtitulo={`${show.venue} · ${dataDoShow(show)}`}
                       onAbrirShow={onAbrirShow}
                     />
                   ))}
@@ -716,7 +718,7 @@ function LinhaShow({
   moeda?: Moeda;
 }) {
   const t = useT();
-  const badge = STATUS_BADGES[show.status] ?? STATUS_BADGES.pendente;
+  const badge = STATUS_SHOW[show.status as ShowStatus] ?? STATUS_SHOW.pendente;
   const conteudo = (
     <>
       <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
@@ -725,7 +727,7 @@ function LinhaShow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-primary">{show.artistaNome}</span>
-          <span className={`badge ${badge.cls}`}>{t(badge.label)}</span>
+          <span className={`badge ${badge.badge}`}>{t(badge.label)}</span>
         </div>
         <div className="text-xs text-muted truncate">{subtitulo}</div>
       </div>
@@ -762,9 +764,8 @@ function LinhaShow({
 }
 
 /** J3 — linha do histórico de orçamentos do contratante: número, status,
- *  artista, data e valor (na moeda do orçamento). Mesmo tratamento visual de
- *  LinhaShow, sem clique (não há tela de detalhe de orçamento navegável a
- *  partir daqui — o histórico de shows já cobre o caminho clicável). */
+ *  artista, data e valor (na moeda do orçamento). Clicável: abre o orçamento
+ *  (que tem endereço próprio). */
 function LinhaOrcamento({
   orcamento,
   artistaNome,
@@ -773,9 +774,14 @@ function LinhaOrcamento({
   artistaNome?: string;
 }) {
   const t = useT();
+  const { navegar } = useNavegacao();
   const badge = LABELS_STATUS_ORCAMENTO[orcamento.status];
   return (
-    <div className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3">
+    <button
+      type="button"
+      onClick={() => navegar(urls.orcamento(orcamento.id))}
+      className="bg-elevated border border-border rounded-md p-3 flex items-center gap-3 text-left w-full hover:border-border-strong transition-colors"
+    >
       <div className="h-10 w-10 rounded-md bg-surface-2 flex items-center justify-center text-secondary flex-shrink-0">
         <FileText size={16} />
       </div>
@@ -797,6 +803,6 @@ function LinhaOrcamento({
           {formatarMoeda(orcamento.valorCache, orcamento.moeda, 0)}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

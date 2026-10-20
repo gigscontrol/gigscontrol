@@ -28,6 +28,8 @@ import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { formatarFaturamento } from "@/lib/contatos-stats";
+import { useNavegacao } from "./NavOverlay";
+import { urls } from "@/lib/navegacao/rotas";
 import { MODULE_THEMES } from "@/types";
 import type { ContatoCategoria, AgendaDateRange, Moeda } from "@/types";
 
@@ -77,6 +79,7 @@ type ResumoAberto = "contratantes" | "casas" | "cidades" | "bloqueados" | null;
 
 export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const t = useT();
+  const { navegar } = useNavegacao();
   const { contratantes, casas, cidades, carregando: carregandoContatos, erro: erroContatos, recarregar: recarregarContatos } = useContatos();
   const { shows } = useShows();
   const { vendas } = useVendas();
@@ -343,7 +346,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             {rankingContratantes.map((r, i) => (
               <button
                 key={r.contratante.id}
-                onClick={() => onAbrirCategoria?.("contratantes")}
+                onClick={() => navegar(urls.contato("contratantes", r.contratante.id))}
                 className="text-left flex items-center gap-3"
               >
                 <span
@@ -386,17 +389,17 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         <AtalhoCard
           icon={<Users size={16} />}
           label={t("Novo contratante")}
-          onClick={() => onAbrirCategoria?.("contratantes")}
+          onClick={() => navegar(urls.contatos("contratantes", { novo: true }))}
         />
         <AtalhoCard
           icon={<Building2 size={16} />}
           label={t("Nova casa")}
-          onClick={() => onAbrirCategoria?.("casas")}
+          onClick={() => navegar(urls.contatos("casas", { novo: true }))}
         />
         <AtalhoCard
           icon={<MapPin size={16} />}
           label={t("Nova cidade")}
-          onClick={() => onAbrirCategoria?.("cidades")}
+          onClick={() => navegar(urls.contatos("cidades", { novo: true }))}
         />
       </div>
 
@@ -485,13 +488,18 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
           <ResumoLista
             itens={itensBloqueados}
             onItemClick={(id) =>
-              onAbrirCategoria?.(id.startsWith("ca-") ? "casas" : "contratantes")
+              // Abre a FICHA do bloqueado (antes caía na lista genérica).
+              navegar(
+                id.startsWith("ca-")
+                  ? urls.contato("casas", id.slice(3))
+                  : urls.contato("contratantes", id.slice(3))
+              )
             }
           />
         )}
         <ResumoFooter
-          label={t("Ver mais detalhes")}
-          onClick={() => onAbrirCategoria?.("contratantes")}
+          label={t("Ver todos os bloqueados")}
+          onClick={() => navegar(urls.contatos("bloqueados"))}
         />
       </ResumoModal>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Ban, ShieldCheck } from "lucide-react";
 import PageHeader from "./PageHeader";
@@ -72,6 +72,7 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
 export default function Contatos({
   aba = "contratantes",
   contatoId = null,
+  abrirNovo = false,
   onAbrirAba,
   onAbrirContato,
   onVoltarDaFicha,
@@ -82,6 +83,8 @@ export default function Contatos({
   aba?: Aba;
   /** Ficha aberta — vem do endereço (/app/contatos/lista/<categoria>/<id>). */
   contatoId?: string | null;
+  /** Chegou pelo atalho "Novo contratante/casa/cidade" (?novo=1): abre o formulário. */
+  abrirNovo?: boolean;
   onAbrirAba: (aba: Aba) => void;
   onAbrirContato: (categoria: ContatoCategoria, id: string) => void;
   onVoltarDaFicha: () => void;
@@ -161,6 +164,17 @@ export default function Contatos({
     | { type: "edit-cidade"; item: Cidade }
     | null
   >(null);
+  // Atalho "Novo …" do dashboard: abre o formulário e tira o ?novo=1 do
+  // endereço (substituindo) — senão um F5 reabriria o cadastro.
+  useEffect(() => {
+    if (!abrirNovo || contatoId) return;
+    if (categoria === "contratantes") setModal({ type: "novo-contratante" });
+    else if (categoria === "casas") setModal({ type: "novo-casa" });
+    else if (categoria === "cidades") setModal({ type: "novo-cidade" });
+    onAbrirAba(categoria);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirNovo]);
+
   // Modal de bloqueio: pede o motivo ao bloquear um contratante/casa.
   const [bloquear, setBloquear] = useState<AlvoBloqueio | null>(null);
   const [motivoBloqueio, setMotivoBloqueio] = useState("");

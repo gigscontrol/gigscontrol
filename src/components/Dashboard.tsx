@@ -35,6 +35,7 @@ import {
 } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange } from "@/types";
 import { useT } from "@/lib/i18n";
+import { useNavegacao } from "./NavOverlay";
 
 const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -120,10 +121,14 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     setResumo(null);
     onNavigate?.("financeiro", "financeiro-pagamentos");
   };
-  // O id do item é "vendaId::parcelaId" (único p/ key); ao clicar, abre a venda.
-  const abrirVendaDoItem = (id: string) => {
+  // O id do item é "vendaId::parcelaId" (único p/ key). Clicar abre a PARCELA
+  // (modal com endereço: informar pagamento, cobrar…), que tem link pra venda.
+  const { abrirSobreposicao } = useNavegacao();
+  const abrirParcelaDoItem = (id: string) => {
     setResumo(null);
-    onAbrirVenda?.(id.split("::")[0]);
+    const parcelaId = id.split("::")[1];
+    if (parcelaId) abrirSobreposicao("parcela", parcelaId);
+    else onAbrirVenda?.(id.split("::")[0]);
   };
 
   const vendasVisiveis = useMemo(
@@ -376,7 +381,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
                 return (
                   <button
                     key={`${l.vendaId}-${l.parcela.id}`}
-                    onClick={() => onAbrirVenda?.(l.vendaId)}
+                    onClick={() => abrirSobreposicao("parcela", l.parcela.id)}
                     className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
                   >
                     <span
@@ -487,7 +492,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       >
         <ResumoNumero valor={totais.recebido} label={t("{pct}% do total", { pct: pctRecebido })} accentColor="var(--success)" />
         {itensRecebidos.length > 0 ? (
-          <ResumoLista itens={itensRecebidos} onItemClick={abrirVendaDoItem} />
+          <ResumoLista itens={itensRecebidos} onItemClick={abrirParcelaDoItem} />
         ) : (
           vazio(t("Nenhuma parcela recebida no período."))
         )}
@@ -503,7 +508,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       >
         <ResumoNumero valor={totais.aReceber} label={t("Parcelas pendentes")} accentColor="var(--warning)" />
         {itensAReceber.length > 0 ? (
-          <ResumoLista itens={itensAReceber} onItemClick={abrirVendaDoItem} />
+          <ResumoLista itens={itensAReceber} onItemClick={abrirParcelaDoItem} />
         ) : (
           vazio(t("Nada a receber no período."))
         )}
@@ -519,7 +524,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       >
         <ResumoNumero valor={totais.atrasado} label={t("Vencidas e não pagas")} accentColor="var(--danger)" />
         {itensAtrasados.length > 0 ? (
-          <ResumoLista itens={itensAtrasados} onItemClick={abrirVendaDoItem} />
+          <ResumoLista itens={itensAtrasados} onItemClick={abrirParcelaDoItem} />
         ) : (
           vazio(t("Nenhuma parcela atrasada. Tudo em dia!"))
         )}

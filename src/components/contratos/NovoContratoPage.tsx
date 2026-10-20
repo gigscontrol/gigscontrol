@@ -9,7 +9,10 @@ import {
   Loader2,
   AlertCircle,
   Plus,
+  Send,
 } from "lucide-react";
+import { useNavegacao } from "../NavOverlay";
+import { urls } from "@/lib/navegacao/rotas";
 import PageHeader from "../PageHeader";
 import Modal from "../Modal";
 import NovoContratoUpload from "./NovoContratoUpload";
@@ -117,6 +120,7 @@ export default function NovoContratoPage({
   selectedArtistas?: string[];
 } = {}) {
   const t = useT();
+  const { navegar } = useNavegacao();
   const { modelos } = useModelos();
   const { vendas, recarregar: recarregarVendas } = useVendas();
   const { artistas, recarregarArtistas } = useWorkspace();
@@ -712,12 +716,12 @@ export default function NovoContratoPage({
                     <div
                       className="flex items-center gap-2 text-sm rounded-md px-3 py-2 flex-1"
                       style={{
-                        backgroundColor: "rgba(34,197,94,0.1)",
+                        backgroundColor: "var(--success-weak)",
                         color: "var(--success)",
                       }}
                     >
                       <Check size={16} />
-                      {t("Contrato")} <strong>{gerado.numero}</strong> {t("gerado e salvo no histórico.")}
+                      {t("Contrato")} <strong>{gerado.numero}</strong> {t("gerado e salvo.")}
                     </div>
                   ) : (
                     <div className="flex-1 text-sm text-muted">
@@ -739,19 +743,38 @@ export default function NovoContratoPage({
                     {baixando ? t("Gerando…") : t("Baixar PDF")}
                   </button>
                   {gerado ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGerado(null);
-                        setModeloId("");
-                        setVendaId("");
-                      }}
-                      className="btn"
-                      style={{ backgroundColor: ACCENT, color: "#fff" }}
-                    >
-                      <Plus size={15} />
-                      {t("Novo")}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGerado(null);
+                          setModeloId("");
+                          setVendaId("");
+                        }}
+                        className="btn btn-secondary"
+                      >
+                        <Plus size={15} />
+                        {t("Novo")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navegar(urls.contrato(gerado.id))}
+                        className="btn btn-secondary"
+                      >
+                        <FileText size={15} />
+                        {t("Abrir contrato")}
+                      </button>
+                      {/* Próximo passo natural: mandar assinar — abre o contrato
+                          já no painel de assinatura (antes era caçar no Histórico). */}
+                      <button
+                        type="button"
+                        onClick={() => navegar(urls.contrato(gerado.id, { assinar: true }))}
+                        className="btn btn-primary"
+                      >
+                        <Send size={15} />
+                        {t("Mandar para assinatura")}
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"

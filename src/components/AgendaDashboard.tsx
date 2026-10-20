@@ -12,6 +12,7 @@ import {
   ListChecks,
   Clock,
   Copy,
+  CalendarRange,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
@@ -443,16 +444,28 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         subtitle={tudo ? t("Panorama completo da agenda") : `${t("Visão do mês")} — ${tituloMes}`}
         accentColor={accent}
         actions={
-          <DateRangeSelector
-            options={ATALHOS}
-            value={range}
-            onChange={setRange}
-            selectedCustomMonth={customMonth}
-            setSelectedCustomMonth={setCustomMonth}
-            selectedCustomYear={customYear}
-            setSelectedCustomYear={setCustomYear}
-            accountCreatedAt={workspaceCriadoEm}
-          />
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <DateRangeSelector
+              options={ATALHOS}
+              value={range}
+              onChange={setRange}
+              selectedCustomMonth={customMonth}
+              setSelectedCustomMonth={setCustomMonth}
+              selectedCustomYear={customYear}
+              setSelectedCustomYear={setCustomYear}
+              accountCreatedAt={workspaceCriadoEm}
+            />
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate("agenda", "agenda-completa")}
+                className="btn btn-secondary"
+              >
+                <CalendarRange size={15} />
+                {t("Abrir calendário")}
+              </button>
+            )}
+          </div>
         }
       />
 
