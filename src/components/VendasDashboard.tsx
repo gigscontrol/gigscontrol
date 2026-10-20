@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { resolverMes } from "@/lib/periodo";
 import { useT } from "@/lib/i18n";
 import {
   FileText,
@@ -42,33 +43,7 @@ type Props = {
 type ResumoTipo = null | "orcamentos" | "vendas" | "negociacao" | "perdidos";
 
 const ATALHOS_MES: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
-const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-/**
- * Resolve {ano, mes(0-based), tudo} a partir do seletor — mesma lógica da Agenda.
- * "Visão geral" = all-time (tudo=true), sem filtro de mês.
- */
-function resolverMes(
-  range: AgendaDateRange,
-  customMonth: string | null,
-  customYear: number | null
-): { ano: number; mes: number; tudo: boolean } {
-  const h = new Date();
-  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
-  if (range === "Mês anterior") {
-    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Próximo mês") {
-    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
-  }
-  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
-}
 
 /**
  * A data cai no mês/ano selecionado? Aceita date-only ("YYYY-MM-DD",

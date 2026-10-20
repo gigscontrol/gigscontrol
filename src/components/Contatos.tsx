@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { resolverMes } from "@/lib/periodo";
 import { useT } from "@/lib/i18n";
 import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Ban, ShieldCheck } from "lucide-react";
 import PageHeader from "./PageHeader";
@@ -37,30 +38,7 @@ type AlvoBloqueio =
   | { tipo: "contratante"; item: Contratante }
   | { tipo: "casa"; item: Casa };
 
-const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const ATALHOS_CONTATOS: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
-
-/** {ano, mes(0-based), tudo}. "Visão geral" = tudo (sem recorte). */
-function resolverMes(
-  range: AgendaDateRange,
-  customMonth: string | null,
-  customYear: number | null
-): { ano: number; mes: number; tudo: boolean } {
-  const h = new Date();
-  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
-  if (range === "Mês anterior") {
-    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Próximo mês") {
-    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
-  }
-  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
-}
 
 /** Casa a data de cadastro (ISO) no período. Sem data de cadastro → SEMPRE visível
  *  (registro legado não some do Gerenciar por causa do filtro de período). */

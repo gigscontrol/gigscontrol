@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MESES_CURTO, resolverMes } from "@/lib/periodo";
 import {
   Music,
   ChevronRight,
@@ -42,7 +43,6 @@ const ATALHOS: AgendaDateRange[] = [
   "Próximo mês",
   "Personalizado",
 ];
-const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGO = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -60,33 +60,6 @@ function diasEntre(aISO: string, bISO: string): number {
   const a = new Date(`${aISO}T12:00:00`).getTime();
   const b = new Date(`${bISO}T12:00:00`).getTime();
   return Math.round((a - b) / 86400000);
-}
-/**
- * Resolve {ano, mes(0-based), tudo} a partir do seletor. `tudo` = "Visão geral"
- * (all-time, sem recorte de data). Nesse caso ano/mes apontam pro mês corrente —
- * fallback pros widgets que precisam de um mês concreto (ocupação, datas).
- */
-function resolverMes(
-  range: AgendaDateRange,
-  customMonth: string | null,
-  customYear: number | null
-): { ano: number; mes: number; tudo: boolean } {
-  const h = new Date();
-  if (range === "Visão geral") {
-    return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
-  }
-  if (range === "Mês anterior") {
-    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Próximo mês") {
-    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
-  }
-  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
 
 export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirShow }: Props) {
