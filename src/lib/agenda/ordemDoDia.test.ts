@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutDoDia, ordenarShowsDoDia } from "./ordemDoDia";
+import { ordenarShowsDoDia } from "./ordemDoDia";
 
 type S = { id: string; status: "confirmado" | "cancelado"; time: string };
 
@@ -30,22 +30,5 @@ describe("ordenarShowsDoDia", () => {
     ];
     ordenarShowsDoDia(dia);
     expect(dia.map((s) => s.id)).toEqual(["b", "a"]);
-  });
-});
-
-describe("layoutDoDia", () => {
-  it("até 2 itens: cartão completo", () => {
-    expect(layoutDoDia(0)).toEqual({ modo: "cheio", visiveis: 0, ocultos: 0 });
-    expect(layoutDoDia(2)).toEqual({ modo: "cheio", visiveis: 2, ocultos: 0 });
-  });
-
-  it("de 3 a 5: linhas compactas, sem esconder nada", () => {
-    expect(layoutDoDia(3)).toEqual({ modo: "compacto", visiveis: 3, ocultos: 0 });
-    expect(layoutDoDia(5)).toEqual({ modo: "compacto", visiveis: 5, ocultos: 0 });
-  });
-
-  it("acima de 5: 4 linhas + o resto no '+N mais'", () => {
-    expect(layoutDoDia(6)).toEqual({ modo: "compacto", visiveis: 4, ocultos: 2 });
-    expect(layoutDoDia(12)).toEqual({ modo: "compacto", visiveis: 4, ocultos: 8 });
   });
 });

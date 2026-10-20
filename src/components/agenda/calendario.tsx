@@ -2,21 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  MapPin,
-  Clock,
-  Music,
-  Calendar,
-  Plus,
-  FileSignature,
-} from "lucide-react";
-import type { AgendaDateRange, Show, ShowStatus, Artista, AgendaItem } from "@/types";
+import { Calendar, Plus, FileSignature } from "lucide-react";
+import type { AgendaDateRange, Show, Artista, AgendaItem } from "@/types";
 import { useT } from "@/lib/i18n";
 import { useContratos } from "@/lib/contratos-context";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import { STATUS_SHOW } from "@/lib/statusUI";
-import { layoutDoDia, ordenarShowsDoDia } from "@/lib/agenda/ordemDoDia";
-import Modal from "../Modal";
+import { useVendas } from "@/lib/vendas-context";
+import { ordenarShowsDoDia } from "@/lib/agenda/ordemDoDia";
 import { AgendaItemCard, labelArtistas } from "./camposAgenda";
 
 export const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -77,90 +70,56 @@ export function cellDeISO(iso: string): DayCell | null {
 
 /** Casamento show↔célula: lógica pura em `@/lib/agenda/showNoDia` (com bateria). */
 
-/** Status do show com o MESMO nome/cor do resto do app (lib/statusUI). O
- *  "Sem contrato" que aparecia aqui não é status de show — é do contrato. */
-export function StatusBadge({ status }: { status: ShowStatus }) {
-  const t = useT();
-  const st = STATUS_SHOW[status] ?? STATUS_SHOW.pendente;
-  return <span className={`badge ${st.badge}`}>{t(st.label)}</span>;
-}
-
-export function EventCard({ show, artista, onClick }: { show: Show; artista?: Artista; onClick?: () => void }) {
-  const t = useT();
-  const { contratos, assinantesPorContrato } = useContratos();
-  const cancelado = show.status === "cancelado";
-  const rcontrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
-  const rotContrato = rotuloContratoShow(rcontrato, t);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full text-left bg-surface-2 border border-border rounded-md p-2.5 mb-2 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer ${
-        cancelado ? "opacity-60" : ""
-      }`}
-      style={{
-        borderLeft: `3px solid ${cancelado ? "var(--danger)" : artista ? artista.color : "transparent"}`,
-      }}
-    >
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <span
-          className={`text-xs font-bold text-primary truncate ${
-            cancelado ? "line-through" : ""
-          }`}
-        >
-          {show.artistaNome}
-        </span>
-        <StatusBadge status={show.status} />
-      </div>
-
-      <div className="space-y-1">
-        <div className="flex items-center gap-1.5 text-[0.7rem] text-secondary">
-          <Music size={11} className="flex-shrink-0 text-muted" />
-          <span className="truncate font-medium text-primary">{show.venue}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[0.7rem] text-muted">
-          <MapPin size={11} className="flex-shrink-0" />
-          <span className="truncate">{show.location}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[0.7rem] text-muted">
-          <Clock size={11} className="flex-shrink-0" />
-          {show.time ? (
-            <span className="font-semibold text-primary tabular-nums">{show.time}</span>
-          ) : (
-            <span className="font-medium text-warning">{t("A definir")}</span>
-          )}
-        </div>
-      </div>
-
-      {show.vendaId && (
-        <div className="mt-2">
-          <span className={`badge ${rotContrato.badgeClass} inline-flex items-center gap-1`}>
-            <FileSignature size={10} />
-            {rotContrato.texto}
-          </span>
-        </div>
-      )}
-    </button>
-  );
-}
-
 /**
- * Versão de 2 linhas do cartão de show — usada quando o dia tem muitos itens
- * (ver `layoutDoDia`): artista + horário / local · cidade. O contrato vira um
- * ícone com a cor do status (texto no title); cancelado continua riscado.
+ * Cartão do show no calendário — UM formato só, 3 linhas, em qualquer dia
+ * (antes: cartão grande até 2 shows e linha compacta acima disso; misturar os
+ * dois na mesma grade ficava estranho).
+ *
+ * Vendo vários artistas: artista + horário / local / cidade.
+ * Vendo UM artista só (login de artista ou filtro com 1): o nome dele seria
+ * repetido em todo cartão, então troca por local + horário / nome do evento /
+ * cidade. O nome do evento só aparece quando é diferente do local (na maioria
+ * das vendas é igual, e ficaria "Pedrão Bar" duas vezes).
+ *
+ * Contrato = ícone com a cor do status (texto no title). Cancelado: barra
+ * vermelha e título riscado.
  */
-export function EventCardCompacto({ show, artista, onClick }: { show: Show; artista?: Artista; onClick?: () => void }) {
+export function CartaoShow({
+  show,
+  artista,
+  umArtista,
+  onClick,
+}: {
+  show: Show;
+  artista?: Artista;
+  umArtista: boolean;
+  onClick?: () => void;
+}) {
   const t = useT();
   const { contratos, assinantesPorContrato } = useContratos();
+  const { vendas } = useVendas();
   const cancelado = show.status === "cancelado";
   const rcontrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
   const rotContrato = rotuloContratoShow(rcontrato, t);
-  const onde = [show.venue, show.location].filter(Boolean).join(" · ");
+  const local = show.venue;
+  const nomeEvento = show.vendaId ? vendas.find((v) => v.id === show.vendaId)?.nomeEvento?.trim() : "";
+  const eventoDiferente =
+    !!nomeEvento && nomeEvento.toLowerCase() !== (local ?? "").trim().toLowerCase();
+  const titulo = umArtista ? local || nomeEvento || show.artistaNome : show.artistaNome;
+  const segunda = umArtista ? (eventoDiferente ? nomeEvento : "") : local;
   return (
     <button
       type="button"
       onClick={onClick}
-      title={[show.artistaNome, onde, t(STATUS_SHOW[show.status]?.label ?? show.status)].filter(Boolean).join(" — ")}
+      title={[
+        show.artistaNome,
+        local,
+        eventoDiferente ? nomeEvento : "",
+        show.location,
+        t(STATUS_SHOW[show.status]?.label ?? show.status),
+      ]
+        .filter(Boolean)
+        .join(" — ")}
       className={`w-full text-left bg-surface-2 border border-border rounded-md px-2 py-1.5 mb-1.5 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer ${
         cancelado ? "opacity-60" : ""
       }`}
@@ -170,7 +129,7 @@ export function EventCardCompacto({ show, artista, onClick }: { show: Show; arti
     >
       <div className="flex items-center gap-1.5 min-w-0">
         <span className={`text-xs font-bold text-primary truncate flex-1 ${cancelado ? "line-through" : ""}`}>
-          {show.artistaNome}
+          {titulo}
         </span>
         {show.time ? (
           <span className="text-[0.7rem] font-semibold text-primary tabular-nums flex-shrink-0">{show.time}</span>
@@ -178,8 +137,9 @@ export function EventCardCompacto({ show, artista, onClick }: { show: Show; arti
           <span className="text-[0.65rem] font-medium text-warning flex-shrink-0">{t("A definir")}</span>
         )}
       </div>
+      {segunda && <div className="text-[0.7rem] text-secondary truncate mt-0.5">{segunda}</div>}
       <div className="flex items-center gap-1 min-w-0 mt-0.5">
-        <span className="text-[0.65rem] text-muted truncate flex-1">{onde}</span>
+        <span className="text-[0.65rem] text-muted truncate flex-1">{show.location}</span>
         {show.vendaId && (
           <span
             className={`badge ${rotContrato.badgeClass} flex-shrink-0 px-1 py-0`}
@@ -201,6 +161,7 @@ export function DayCellComponent({
   shows,
   itens,
   artistas,
+  umArtista,
   accent,
   podeAbrirNovoItem,
   onShowClick,
@@ -211,6 +172,8 @@ export function DayCellComponent({
   shows: Show[];
   itens: AgendaItem[];
   artistas: Artista[];
+  /** Calendário mostrando um artista só — o cartão troca o nome dele pelo local. */
+  umArtista: boolean;
   accent: string;
   podeAbrirNovoItem: boolean;
   onShowClick: (id: string) => void;
@@ -218,19 +181,10 @@ export function DayCellComponent({
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
-  const [diaAberto, setDiaAberto] = useState(false);
   // Dia de outro mês VAZIO continua bem apagado (é só moldura); com conteúdo
   // sobe pra 60% — no 30% o card do show ficava ilegível, e o objetivo aqui é
   // justamente conseguir LER o show da borda sem trocar de mês.
   const temConteudo = shows.length > 0 || itens.length > 0;
-  // Dia cheio não pode esticar a SEMANA inteira (a linha da grade acompanha o
-  // dia mais alto): de 3 itens em diante vira lista compacta e, acima de 5,
-  // o resto vai pro "+N mais", que abre o dia completo.
-  const ordenados = ordenarShowsDoDia(shows);
-  const layout = layoutDoDia(ordenados.length + itens.length);
-  const showsVisiveis = ordenados.slice(0, layout.visiveis);
-  const itensVisiveis = itens.slice(0, Math.max(0, layout.visiveis - showsVisiveis.length));
-  const Cartao = layout.modo === "cheio" ? EventCard : EventCardCompacto;
   return (
     <div
       id={day.isToday ? "day-card-today" : undefined}
@@ -266,16 +220,19 @@ export function DayCellComponent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mr-1 pr-1">
-        {showsVisiveis.map((show) => (
-          <Cartao
+      {/* Todos os shows do dia expostos (nada escondido atrás de "+N"), em
+          ordem de horário — o cartão de 3 linhas é que mantém a semana baixa. */}
+      <div className="flex-1">
+        {ordenarShowsDoDia(shows).map((show) => (
+          <CartaoShow
             key={show.id}
             show={show}
             artista={artistas.find((d) => d.id === show.artistaId)}
+            umArtista={umArtista}
             onClick={() => onShowClick(show.id)}
           />
         ))}
-        {itensVisiveis.map((item) => (
+        {itens.map((item) => (
           <AgendaItemCard
             key={item.id}
             item={item}
@@ -283,65 +240,11 @@ export function DayCellComponent({
             onClick={() => onItemClick(item)}
           />
         ))}
-        {layout.ocultos > 0 && (
-          <button
-            type="button"
-            onClick={() => setDiaAberto(true)}
-            aria-label={t("Ver todos do dia")}
-            className="w-full rounded-md py-1.5 text-xs font-semibold transition-colors hover:bg-elevated"
-            style={{ color: accent }}
-          >
-            {t("+{n} mais", { n: layout.ocultos })}
-          </button>
-        )}
         {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
         {!day.isOtherMonth && (
           <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeAbrirNovoItem} />
         )}
       </div>
-
-      {/* O dia completo, com os cartões inteiros — abre pelo "+N mais". */}
-      <Modal
-        isOpen={diaAberto}
-        onClose={() => setDiaAberto(false)}
-        title={`${t(day.name)}, ${day.date}`}
-        subtitle={t("{n} na agenda", { n: ordenados.length + itens.length })}
-        maxWidth={460}
-      >
-        <div className="flex flex-col">
-          {ordenados.map((show) => (
-            <EventCard
-              key={show.id}
-              show={show}
-              artista={artistas.find((d) => d.id === show.artistaId)}
-              onClick={() => {
-                setDiaAberto(false);
-                onShowClick(show.id);
-              }}
-            />
-          ))}
-          {itens.map((item) => (
-            <AgendaItemCard
-              key={item.id}
-              item={item}
-              artistaLabel={labelArtistas(item.artistIds, artistas)}
-              onClick={() => {
-                setDiaAberto(false);
-                onItemClick(item);
-              }}
-            />
-          ))}
-          {!day.isOtherMonth && (
-            <NovoItemSlot
-              onClick={() => {
-                setDiaAberto(false);
-                onNovoItem(day);
-              }}
-              podeCriar={podeAbrirNovoItem}
-            />
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }
@@ -407,6 +310,7 @@ export function MobileDayCard({
   shows,
   itens,
   artistas,
+  umArtista,
   accent,
   podeAbrirNovoItem,
   onShowClick,
@@ -417,6 +321,7 @@ export function MobileDayCard({
   shows: Show[];
   itens: AgendaItem[];
   artistas: Artista[];
+  umArtista: boolean;
   accent: string;
   podeAbrirNovoItem: boolean;
   onShowClick: (id: string) => void;
@@ -455,10 +360,11 @@ export function MobileDayCard({
         )}
       </div>
       {ordenarShowsDoDia(shows).map((show) => (
-        <EventCard
+        <CartaoShow
           key={show.id}
           show={show}
           artista={artistas.find((d) => d.id === show.artistaId)}
+          umArtista={umArtista}
           onClick={() => onShowClick(show.id)}
         />
       ))}

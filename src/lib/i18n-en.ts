@@ -4013,9 +4013,6 @@ export const EN: Record<string, string> = {
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Standalone contract",
   // --- Navegação nova (out/2026) ---
-  "+{n} mais": "+{n} more",
-  "Ver todos do dia": "See the whole day",
-  "{n} na agenda": "{n} on the schedule",
   "Esse período já passou — nenhuma viagem pela frente.": "This period is over — no upcoming trips.",
   "Nenhuma viagem pela frente no período (só shows na cidade local).": "No upcoming trips in this period (local shows only).",
 };

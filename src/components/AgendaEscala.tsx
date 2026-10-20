@@ -211,6 +211,9 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
   }, [activeDateRange]);
 
   const filteredShows = shows.filter((show) => selectedArtistas.includes(show.artistaId));
+  // Um artista só na tela (login de artista ou filtro com 1): o cartão do show
+  // troca o nome dele (repetido em tudo) pelo local.
+  const umArtista = artistas.filter((a) => selectedArtistas.includes(a.id)).length === 1;
   const { itens: agendaItens, criar: criarItem, editar: editarItem, remover: removerItem } =
     useAgendaItems();
   // Itens visíveis: gerais (sem artista) sempre; com artista, filtra pelo artista.
@@ -306,6 +309,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
                 shows={filteredShows.filter((s) => showNoDia(s, day, mesesNaGrade))}
                 itens={filteredItens.filter((i) => i.data === day.dataISO)}
                 artistas={artistas}
+                umArtista={umArtista}
                 accent={accent}
                 podeAbrirNovoItem={podeAbrirNovoItem}
                 onShowClick={setShowSelecionado}
@@ -332,6 +336,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
                 shows={shows}
                 itens={itens}
                 artistas={artistas}
+                umArtista={umArtista}
                 accent={accent}
                 podeAbrirNovoItem={podeAbrirNovoItem}
                 onShowClick={setShowSelecionado}

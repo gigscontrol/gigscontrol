@@ -3001,9 +3001,6 @@ export const DE: Record<string, string> = {
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Einzelvertrag",
   // --- Navegação nova (out/2026) ---
-  "+{n} mais": "+{n} weitere",
-  "Ver todos do dia": "Ganzen Tag anzeigen",
-  "{n} na agenda": "{n} im Kalender",
   "Esse período já passou — nenhuma viagem pela frente.": "Dieser Zeitraum ist vorbei – keine anstehenden Reisen.",
   "Nenhuma viagem pela frente no período (só shows na cidade local).": "Keine anstehenden Reisen im Zeitraum (nur lokale Shows).",
 };
