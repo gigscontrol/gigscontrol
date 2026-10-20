@@ -45,7 +45,7 @@ import { MODULOS, CATALOGO } from "@/lib/permissoes/catalogo";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "../CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
-import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./AbaArtistas";
+import { SeletorDeCor, Secao, Campo, CamposDadosContrato, CORES } from "./camposCadastro";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
 import ChipsPessoa from "./ChipsPessoa";
 import { iniciaisDoNome } from "@/lib/iniciais";

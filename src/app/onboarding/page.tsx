@@ -43,11 +43,9 @@ import PhoneInput, {
 } from "@/components/PhoneInput";
 import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
 import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
-import {
-  ModalNovoArtista,
-  ModalCredenciais,
-  SeletorDeCor,
-} from "@/components/configuracoes/AbaArtistas";
+import { ModalNovoArtista } from "@/components/configuracoes/ModalNovoArtista";
+import { ModalCredenciais } from "@/components/configuracoes/ModalCredenciais";
+import { SeletorDeCor } from "@/components/configuracoes/camposCadastro";
 import { ModalUsuario } from "@/components/configuracoes/AbaEquipe";
 import LogoGC from "@/components/LogoGC";
 import BotaoTema from "@/components/BotaoTema";

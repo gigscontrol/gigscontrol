@@ -30,7 +30,7 @@ import PhoneInput, {
 } from "@/components/PhoneInput";
 import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
 import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
-import { SeletorDeCor } from "./AbaArtistas";
+import { SeletorDeCor } from "./camposCadastro";
 
 /** Fallback quando o usuário ainda não escolheu cor — mesmo default usado
  *  em AbaEquipe/Topbar pra `perfil?.cor` (var(--brand) em hex fixo, porque o
