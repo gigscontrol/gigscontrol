@@ -2986,4 +2986,18 @@ export const DE: Record<string, string> = {
   "Cadastrar um cliente": "Kunden anlegen",
   // --- Navegação nova (out/2026) ---
   "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "Dieses Angebot entfernen? Es kommt in den Papierkorb und kann 30 Tage lang wiederhergestellt werden.",
+  // --- Navegação nova (out/2026) ---
+  "Anterior": "Zurück",
+  "Próxima": "Weiter",
+  "Ordenar por": "Sortieren nach",
+  "Ordenar por {coluna}": "Nach {coluna} sortieren",
+  "Padrão": "Standard",
+  "Página {p} de {n}": "Seite {p} von {n}",
+  "{ini}–{fim} de {total}": "{ini}–{fim} von {total}",
+  "orçamentos": "Angebote",
+  "contratantes": "Kunden",
+  "casas": "Locations",
+  "cidades": "Städte",
+  // --- Navegação nova (out/2026) ---
+  "Contrato avulso": "Einzelvertrag",
 };

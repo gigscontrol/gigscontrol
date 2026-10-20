@@ -10,6 +10,7 @@ import ContratanteForm from "./forms/ContratanteForm";
 import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
+import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import { useContatosFiltrados } from "@/lib/useContatosFiltrados";
 import MiniLixeira from "./MiniLixeira";
 import { useConfirmar } from "./ConfirmarModal";
@@ -753,7 +754,7 @@ function SummaryTile({
   );
 }
 
-// ---------- Tabelas ----------
+// ---------- Tabelas (lista padrão: ordenar, paginar, cartão no celular) ----------
 
 function TabelaContratantes({
   items,
@@ -778,63 +779,82 @@ function TabelaContratantes({
   const { orcamentos } = useOrcamentos();
   if (items.length === 0) return <EmptyTable label={t("Nenhum contratante encontrado")} />;
 
+  const stats = (c: Contratante) => getContratanteStats(c.id, shows, orcamentos);
+  const colunas: Coluna<Contratante>[] = [
+    {
+      chave: "nome",
+      titulo: "Nome",
+      classe: "font-medium text-primary",
+      ordenarPor: (c) => c.nome,
+      celula: (c) => (
+        <div className="flex flex-col gap-1">
+          <span>{c.nome}</span>
+          {c.bloqueado && (
+            <SeloBloqueado
+              motivo={c.bloqueadoMotivo}
+              por={c.bloqueadoPor}
+              em={c.bloqueadoEm}
+              nomePorUsuario={nomePorUsuario}
+            />
+          )}
+        </div>
+      ),
+    },
+    {
+      chave: "cidade",
+      titulo: "Cidade",
+      classe: "text-secondary",
+      ordenarPor: (c) => getCidadeNome(c.cidadeId, cidades),
+      celula: (c) => getCidadeNome(c.cidadeId, cidades),
+    },
+    {
+      chave: "contato",
+      titulo: "Contato",
+      classe: "text-secondary",
+      celula: (c) => (
+        <>
+          <div className="text-xs">{c.email || <span className="text-muted italic">{t("sem e-mail")}</span>}</div>
+          <div className="text-xs text-muted">{c.telefone}</div>
+        </>
+      ),
+    },
+    {
+      chave: "orcamentos",
+      titulo: "Orçamentos",
+      alinhar: "direita",
+      classe: "tabular-nums font-semibold",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).totalOrcamentos,
+      celula: (c) => stats(c).totalOrcamentos,
+    },
+    {
+      chave: "shows",
+      titulo: "Shows",
+      alinhar: "direita",
+      classe: "tabular-nums",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).totalShows,
+      celula: (c) => stats(c).totalShows,
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface-2/40">
-            <Th>{t("Nome")}</Th>
-            <Th>{t("Cidade")}</Th>
-            <Th>{t("Contato")}</Th>
-            <Th className="text-right">{t("Orçamentos")}</Th>
-            <Th className="text-right">{t("Shows")}</Th>
-            <Th className="w-[1%]"></Th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((c) => {
-            const stats = getContratanteStats(c.id, shows, orcamentos);
-            return (
-              <tr
-                key={c.id}
-                onClick={() => onSelect(c)}
-                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-              >
-                <Td className="font-medium text-primary">
-                  <div className="flex flex-col gap-1">
-                    <span>{c.nome}</span>
-                    {c.bloqueado && (
-                      <SeloBloqueado
-                        motivo={c.bloqueadoMotivo}
-                        por={c.bloqueadoPor}
-                        em={c.bloqueadoEm}
-                        nomePorUsuario={nomePorUsuario}
-                      />
-                    )}
-                  </div>
-                </Td>
-                <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
-                <Td className="text-secondary">
-                  <div className="text-xs">{c.email || <span className="text-muted italic">{t("sem e-mail")}</span>}</div>
-                  <div className="text-xs text-muted">{c.telefone}</div>
-                </Td>
-                <Td className="text-right tabular-nums font-semibold">{stats.totalOrcamentos}</Td>
-                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
-                <Td>
-                  <RowActions
-                    onEdit={() => onEdit(c)}
-                    onRemove={() => onRemove(c.id)}
-                    bloqueado={c.bloqueado}
-                    onBloquear={() => onBloquear(c)}
-                    onDesbloquear={() => onDesbloquear(c)}
-                  />
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TabelaDados
+      itens={items}
+      colunas={colunas}
+      chaveDe={(c) => c.id}
+      onAbrir={onSelect}
+      rotuloItens="contratantes"
+      acoes={(c) => (
+        <RowActions
+          onEdit={() => onEdit(c)}
+          onRemove={() => onRemove(c.id)}
+          bloqueado={c.bloqueado}
+          onBloquear={() => onBloquear(c)}
+          onDesbloquear={() => onDesbloquear(c)}
+        />
+      )}
+    />
   );
 }
 
@@ -861,68 +881,89 @@ function TabelaCasas({
   const { vendas } = useVendas();
   if (items.length === 0) return <EmptyTable label={t("Nenhuma casa encontrada")} />;
 
+  const stats = (c: Casa) => getCasaStats(c.id, shows, vendas);
+  const colunas: Coluna<Casa>[] = [
+    {
+      chave: "nome",
+      titulo: "Nome",
+      classe: "font-medium text-primary",
+      ordenarPor: (c) => c.nome,
+      celula: (c) => (
+        <div className="flex flex-col gap-1">
+          <span>{c.nome}</span>
+          {c.bloqueado && (
+            <SeloBloqueado
+              motivo={c.bloqueadoMotivo}
+              por={c.bloqueadoPor}
+              em={c.bloqueadoEm}
+              nomePorUsuario={nomePorUsuario}
+            />
+          )}
+        </div>
+      ),
+    },
+    {
+      chave: "tipo",
+      titulo: "Tipo",
+      ordenarPor: (c) => t(LABELS_TIPO_CASA[c.tipo] ?? c.tipo),
+      celula: (c) => <span className="badge badge-neutral">{t(LABELS_TIPO_CASA[c.tipo] ?? c.tipo)}</span>,
+    },
+    {
+      chave: "cidade",
+      titulo: "Cidade",
+      classe: "text-secondary",
+      ordenarPor: (c) => getCidadeNome(c.cidadeId, cidades),
+      celula: (c) => getCidadeNome(c.cidadeId, cidades),
+    },
+    {
+      chave: "capacidade",
+      titulo: "Capacidade",
+      alinhar: "direita",
+      classe: "tabular-nums",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => c.capacidade ?? null,
+      celula: (c) => (c.capacidade ? c.capacidade.toLocaleString("pt-BR") : "—"),
+    },
+    {
+      chave: "shows",
+      titulo: "Shows",
+      alinhar: "direita",
+      classe: "tabular-nums",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).totalShows,
+      celula: (c) => stats(c).totalShows,
+    },
+    {
+      chave: "faturado",
+      titulo: "Faturado",
+      alinhar: "direita",
+      classe: "tabular-nums font-semibold",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).faturamento,
+      celula: (c) => {
+        const st = stats(c);
+        return st.faturamento > 0 ? formatarFaturamento(st.faturamentoPorMoeda) : "—";
+      },
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface-2/40">
-            <Th>{t("Nome")}</Th>
-            <Th>{t("Tipo")}</Th>
-            <Th>{t("Cidade")}</Th>
-            <Th className="text-right">{t("Capacidade")}</Th>
-            <Th className="text-right">{t("Shows")}</Th>
-            <Th className="text-right">{t("Faturado")}</Th>
-            <Th className="w-[1%]"></Th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((c) => {
-            const stats = getCasaStats(c.id, shows, vendas);
-            return (
-              <tr
-                key={c.id}
-                onClick={() => onSelect(c)}
-                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-              >
-                <Td className="font-medium text-primary">
-                  <div className="flex flex-col gap-1">
-                    <span>{c.nome}</span>
-                    {c.bloqueado && (
-                      <SeloBloqueado
-                        motivo={c.bloqueadoMotivo}
-                        por={c.bloqueadoPor}
-                        em={c.bloqueadoEm}
-                        nomePorUsuario={nomePorUsuario}
-                      />
-                    )}
-                  </div>
-                </Td>
-                <Td>
-                  <span className="badge badge-neutral">{t(LABELS_TIPO_CASA[c.tipo] ?? c.tipo)}</span>
-                </Td>
-                <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
-                <Td className="text-right tabular-nums">
-                  {c.capacidade ? c.capacidade.toLocaleString("pt-BR") : "—"}
-                </Td>
-                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
-                <Td className="text-right tabular-nums font-semibold">
-                  {stats.faturamento > 0 ? formatarFaturamento(stats.faturamentoPorMoeda) : "—"}
-                </Td>
-                <Td>
-                  <RowActions
-                    onEdit={() => onEdit(c)}
-                    onRemove={() => onRemove(c.id)}
-                    bloqueado={c.bloqueado}
-                    onBloquear={() => onBloquear(c)}
-                    onDesbloquear={() => onDesbloquear(c)}
-                  />
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TabelaDados
+      itens={items}
+      colunas={colunas}
+      chaveDe={(c) => c.id}
+      onAbrir={onSelect}
+      rotuloItens="casas"
+      acoes={(c) => (
+        <RowActions
+          onEdit={() => onEdit(c)}
+          onRemove={() => onRemove(c.id)}
+          bloqueado={c.bloqueado}
+          onBloquear={() => onBloquear(c)}
+          onDesbloquear={() => onDesbloquear(c)}
+        />
+      )}
+    />
   );
 }
 
@@ -943,61 +984,75 @@ function TabelaCidades({
   const { vendas } = useVendas();
   if (items.length === 0) return <EmptyTable label={t("Nenhuma cidade encontrada")} />;
 
+  const stats = (c: Cidade) => getCidadeStats(c.id, shows, casas, vendas);
+  const colunas: Coluna<Cidade>[] = [
+    { chave: "cidade", titulo: "Cidade", classe: "font-medium text-primary", ordenarPor: (c) => c.nome, celula: (c) => c.nome },
+    { chave: "uf", titulo: "UF", classe: "text-secondary", ordenarPor: (c) => c.estado, celula: (c) => c.estado },
+    { chave: "regiao", titulo: "Região", classe: "text-secondary", ordenarPor: (c) => c.regiao, celula: (c) => c.regiao },
+    {
+      chave: "casas",
+      titulo: "Casas",
+      alinhar: "direita",
+      classe: "tabular-nums",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).totalCasas,
+      celula: (c) => stats(c).totalCasas,
+    },
+    {
+      chave: "shows",
+      titulo: "Shows",
+      alinhar: "direita",
+      classe: "tabular-nums",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).totalShows,
+      celula: (c) => stats(c).totalShows,
+    },
+    {
+      chave: "faturado",
+      titulo: "Faturado",
+      alinhar: "direita",
+      classe: "tabular-nums font-semibold",
+      decrescentePrimeiro: true,
+      ordenarPor: (c) => stats(c).faturamento,
+      celula: (c) => {
+        const st = stats(c);
+        return st.faturamento > 0 ? formatarFaturamento(st.faturamentoPorMoeda) : "—";
+      },
+    },
+    {
+      chave: "top",
+      titulo: "Top artista",
+      classe: "text-secondary",
+      celula: (c) => {
+        const top = stats(c).topArtista;
+        return top ? (
+          <span>
+            {top.nome} <span className="text-muted">({top.shows})</span>
+          </span>
+        ) : (
+          "—"
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface-2/40">
-            <Th>{t("Cidade")}</Th>
-            <Th>{t("UF")}</Th>
-            <Th>{t("Região")}</Th>
-            <Th className="text-right">{t("Casas")}</Th>
-            <Th className="text-right">{t("Shows")}</Th>
-            <Th className="text-right">{t("Faturado")}</Th>
-            <Th>{t("Top artista")}</Th>
-            <Th className="w-[1%]"></Th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((c) => {
-            const stats = getCidadeStats(c.id, shows, casas, vendas);
-            return (
-              <tr
-                key={c.id}
-                onClick={() => onSelect(c)}
-                className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-              >
-                <Td className="font-medium text-primary">{c.nome}</Td>
-                <Td className="text-secondary">{c.estado}</Td>
-                <Td className="text-secondary">{c.regiao}</Td>
-                <Td className="text-right tabular-nums">{stats.totalCasas}</Td>
-                <Td className="text-right tabular-nums">{stats.totalShows}</Td>
-                <Td className="text-right tabular-nums font-semibold">
-                  {stats.faturamento > 0 ? formatarFaturamento(stats.faturamentoPorMoeda) : "—"}
-                </Td>
-                <Td className="text-secondary">
-                  {stats.topArtista ? (
-                    <span>
-                      {stats.topArtista.nome}{" "}
-                      <span className="text-muted">({stats.topArtista.shows})</span>
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </Td>
-                <Td>
-                  <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <TabelaDados
+      itens={items}
+      colunas={colunas}
+      chaveDe={(c) => c.id}
+      onAbrir={onSelect}
+      rotuloItens="cidades"
+      acoes={(c) => <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />}
+    />
   );
 }
 
 // ---------- Bloqueados (contratantes + casas) ----------
+
+type LinhaBloqueado =
+  | { tipo: "contratante"; item: Contratante }
+  | { tipo: "casa"; item: Casa };
 
 function TabelaBloqueados({
   contratantes,
@@ -1018,115 +1073,74 @@ function TabelaBloqueados({
 }) {
   const t = useT();
   const { cidades } = useContatos();
-  if (contratantes.length === 0 && casas.length === 0)
-    return <EmptyTable label={t("Nenhum contato bloqueado")} />;
+  const linhas = useMemo<LinhaBloqueado[]>(
+    () => [
+      ...contratantes.map((item) => ({ tipo: "contratante" as const, item })),
+      ...casas.map((item) => ({ tipo: "casa" as const, item })),
+    ],
+    [contratantes, casas]
+  );
+  if (linhas.length === 0) return <EmptyTable label={t("Nenhum contato bloqueado")} />;
+
+  const colunas: Coluna<LinhaBloqueado>[] = [
+    { chave: "nome", titulo: "Nome", classe: "font-medium text-primary", ordenarPor: (l) => l.item.nome, celula: (l) => l.item.nome },
+    {
+      chave: "tipo",
+      titulo: "Tipo",
+      ordenarPor: (l) => l.tipo,
+      celula: (l) => (
+        <span className="badge badge-neutral">{l.tipo === "contratante" ? t("Contratante") : t("Casa / Evento")}</span>
+      ),
+    },
+    {
+      chave: "cidade",
+      titulo: "Cidade",
+      classe: "text-secondary",
+      ordenarPor: (l) => getCidadeNome(l.item.cidadeId, cidades),
+      celula: (l) => getCidadeNome(l.item.cidadeId, cidades),
+    },
+    {
+      chave: "bloqueio",
+      titulo: "Bloqueio",
+      decrescentePrimeiro: true,
+      ordenarPor: (l) => l.item.bloqueadoEm ?? null,
+      celula: (l) => (
+        <SeloBloqueado
+          motivo={l.item.bloqueadoMotivo}
+          por={l.item.bloqueadoPor}
+          em={l.item.bloqueadoEm}
+          nomePorUsuario={nomePorUsuario}
+        />
+      ),
+    },
+  ];
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface-2/40">
-            <Th>{t("Nome")}</Th>
-            <Th>{t("Tipo")}</Th>
-            <Th>{t("Cidade")}</Th>
-            <Th>{t("Bloqueio")}</Th>
-            <Th className="w-[1%]"></Th>
-          </tr>
-        </thead>
-        <tbody>
-          {contratantes.map((c) => (
-            <tr
-              key={`ct-${c.id}`}
-              onClick={() => onSelectContratante(c)}
-              className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-            >
-              <Td className="font-medium text-primary">{c.nome}</Td>
-              <Td>
-                <span className="badge badge-neutral">{t("Contratante")}</span>
-              </Td>
-              <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
-              <Td>
-                <SeloBloqueado
-                  motivo={c.bloqueadoMotivo}
-                  por={c.bloqueadoPor}
-                  em={c.bloqueadoEm}
-                  nomePorUsuario={nomePorUsuario}
-                />
-              </Td>
-              <Td>
-                <div
-                  className="flex items-center justify-end"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => onDesbloquearContratante(c)}
-                    className="btn-ghost p-1.5 rounded hover:text-success"
-                    aria-label={t("Desbloquear")}
-                    title={t("Desbloquear")}
-                  >
-                    <ShieldCheck size={14} />
-                  </button>
-                </div>
-              </Td>
-            </tr>
-          ))}
-          {casas.map((c) => (
-            <tr
-              key={`ca-${c.id}`}
-              onClick={() => onSelectCasa(c)}
-              className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-            >
-              <Td className="font-medium text-primary">{c.nome}</Td>
-              <Td>
-                <span className="badge badge-neutral">{t("Casa / Evento")}</span>
-              </Td>
-              <Td className="text-secondary">{getCidadeNome(c.cidadeId, cidades)}</Td>
-              <Td>
-                <SeloBloqueado
-                  motivo={c.bloqueadoMotivo}
-                  por={c.bloqueadoPor}
-                  em={c.bloqueadoEm}
-                  nomePorUsuario={nomePorUsuario}
-                />
-              </Td>
-              <Td>
-                <div
-                  className="flex items-center justify-end"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => onDesbloquearCasa(c)}
-                    className="btn-ghost p-1.5 rounded hover:text-success"
-                    aria-label={t("Desbloquear")}
-                    title={t("Desbloquear")}
-                  >
-                    <ShieldCheck size={14} />
-                  </button>
-                </div>
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <TabelaDados
+      itens={linhas}
+      colunas={colunas}
+      chaveDe={(l) => `${l.tipo}-${l.item.id}`}
+      onAbrir={(l) => (l.tipo === "contratante" ? onSelectContratante(l.item) : onSelectCasa(l.item))}
+      rotuloItens="contatos"
+      acoes={(l) => (
+        <button
+          onClick={() =>
+            l.tipo === "contratante" ? onDesbloquearContratante(l.item) : onDesbloquearCasa(l.item)
+          }
+          className="btn-ghost p-1.5 rounded hover:text-success"
+          aria-label={t("Desbloquear")}
+          title={t("Desbloquear")}
+        >
+          <ShieldCheck size={14} />
+        </button>
+      )}
+    />
   );
 }
 
 // ---------- Utilitários de tabela ----------
 
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return (
-    <th
-      className={`text-left px-4 py-3 stat-label font-semibold whitespace-nowrap ${className}`}
-    >
-      {children}
-    </th>
-  );
-}
 
-function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
-}
 
 function RowActions({
   onEdit,

@@ -14,7 +14,9 @@ import PageHeader from "../PageHeader";
 import DateRangeSelector from "../DateRangeSelector";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
+import TabelaDados, { type Coluna } from "../lista/TabelaDados";
 import Vinculos from "../detalhes/Vinculos";
+import { FichaHeroPagina } from "../detalhes/FichaUI";
 import {
   buscarSignatarios,
   paraAssinaturaInfo,
@@ -294,6 +296,66 @@ export default function HistoricoPage({
     }
   }
 
+  // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
+  const colunasContratos = useMemo<Coluna<Contrato>[]>(
+    () => [
+      {
+        chave: "contrato",
+        titulo: "Contrato",
+        classe: "font-medium",
+        ordenarPor: (c) => descreverContrato(c, vendas, artistas).titulo,
+        celula: (c) => {
+          const d = descreverContrato(c, vendas, artistas);
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText size={15} className="flex-shrink-0" style={{ color: ACCENT }} />
+              <div className="min-w-0">
+                <div className="text-primary truncate max-w-[260px]" title={d.titulo}>
+                  {d.titulo}
+                </div>
+                <div className="text-xs text-muted font-normal truncate">
+                  {[d.artista, d.temEvento ? d.numero : null].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        chave: "status",
+        titulo: "Status",
+        ordenarPor: (c) => t(STATUS_LABEL[c.status]),
+        celula: (c) => <span className={`badge ${STATUS_BADGE[c.status]}`}>{t(STATUS_LABEL[c.status])}</span>,
+      },
+      {
+        chave: "emissao",
+        titulo: "Emissão",
+        classe: "whitespace-nowrap text-secondary",
+        decrescentePrimeiro: true,
+        ordenarPor: (c) => c.dataEmissao,
+        celula: (c) => formatarData(c.dataEmissao),
+      },
+      {
+        chave: "modelo",
+        titulo: "Modelo",
+        classe: "text-secondary max-w-[220px] truncate",
+        ordenarPor: (c) => nomeModelo(c),
+        celula: (c) => nomeModelo(c),
+      },
+      {
+        chave: "secoes",
+        titulo: "Seções",
+        alinhar: "direita",
+        classe: "tabular-nums text-secondary",
+        noCelular: false,
+        ordenarPor: (c) => c.conteudo.secoes.length,
+        celula: (c) => c.conteudo.secoes.length,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vendas, artistas, nomePorModelo, t]
+  );
+
   // ---- Render: estados base ----
 
   return (
@@ -340,6 +402,11 @@ export default function HistoricoPage({
       ) : selecionado ? (
         <DetalheContrato
           contrato={selecionado}
+          descricao={descreverContrato(selecionado, vendas, artistas)}
+          artista={(() => {
+            const id = artistaDoContrato(selecionado);
+            return id ? artistas.find((a) => a.id === id) ?? null : null;
+          })()}
           focarAssinatura={focarAssinatura}
           folhaRef={folhaRef}
           conteudoRef={conteudoRef}
@@ -377,14 +444,29 @@ export default function HistoricoPage({
               {t("Nenhum contrato com esse status.")}
             </div>
           ) : (
-            <ListaContratos
-              contratos={filtrados}
-              nomeModelo={nomeModelo}
-              desc={(c) => descreverContrato(c, vendas, artistas)}
-              podeExcluir={podeExcluir}
-              onAbrir={(c) => onAbrirContrato(c.id)}
-              onExcluir={excluir}
-            />
+            <div className="card p-0 overflow-hidden">
+              <TabelaDados
+                itens={filtrados}
+                colunas={colunasContratos}
+                chaveDe={(c) => c.id}
+                onAbrir={(c) => onAbrirContrato(c.id)}
+                rotuloItens="contratos"
+                acoes={(c) =>
+                  // Excluir é ADMIN-ONLY (D4): escondido pra não-admin.
+                  podeExcluir(c) ? (
+                    <button
+                      type="button"
+                      onClick={() => excluir(c)}
+                      title={t("Excluir contrato")}
+                      aria-label={t("Excluir contrato")}
+                      className="btn-ghost p-2 rounded hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  ) : null
+                }
+              />
+            </div>
           )}
         </div>
       )}
@@ -442,110 +524,12 @@ function FiltroStatus({
   );
 }
 
-// ---------------- Lista / tabela ----------------
-
-function ListaContratos({
-  contratos,
-  nomeModelo,
-  desc,
-  podeExcluir,
-  onAbrir,
-  onExcluir,
-}: {
-  contratos: Contrato[];
-  nomeModelo: (c: Contrato) => string;
-  desc: (c: Contrato) => ReturnType<typeof descreverContrato>;
-  podeExcluir: (c: Contrato) => boolean;
-  onAbrir: (c: Contrato) => void;
-  onExcluir: (c: Contrato) => void;
-}) {
-  const t = useT();
-  return (
-    <div className="card p-0 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="font-medium px-4 py-3">{t("Contrato")}</th>
-              <th className="font-medium px-4 py-3">{t("Status")}</th>
-              <th className="font-medium px-4 py-3">{t("Emissão")}</th>
-              <th className="font-medium px-4 py-3">{t("Modelo")}</th>
-              <th className="font-medium px-4 py-3 text-right">{t("Seções")}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {contratos.map((c) => {
-              const d = desc(c);
-              return (
-              <tr
-                key={c.id}
-                onClick={() => onAbrir(c)}
-                className="cursor-pointer border-t transition-colors hover:bg-elevated"
-                style={{ borderColor: "var(--border-color)" }}
-              >
-                <td className="px-4 py-3 font-medium">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText
-                      size={15}
-                      className="flex-shrink-0"
-                      style={{ color: ACCENT }}
-                    />
-                    <div className="min-w-0">
-                      <div className="text-primary truncate max-w-[260px]" title={d.titulo}>
-                        {d.titulo}
-                      </div>
-                      <div className="text-xs text-muted font-normal truncate">
-                        {[d.artista, d.temEvento ? d.numero : null].filter(Boolean).join(" · ")}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`badge ${STATUS_BADGE[c.status]}`}>
-                    {t(STATUS_LABEL[c.status])}
-                  </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-secondary">
-                  {formatarData(c.dataEmissao)}
-                </td>
-                <td className="px-4 py-3 text-secondary max-w-[220px] truncate">
-                  {nomeModelo(c)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-secondary">
-                  {c.conteudo.secoes.length}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {/* Excluir é ADMIN-ONLY (D4): escondido pra não-admin. */}
-                  {podeExcluir(c) && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onExcluir(c);
-                      }}
-                      title={t("Excluir contrato")}
-                      aria-label={t("Excluir contrato")}
-                      className="btn-ghost p-2 rounded hover:text-danger"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  )}
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 // ---------------- Detalhe (preview + ações) ----------------
 
 function DetalheContrato({
   contrato,
+  descricao,
+  artista,
   focarAssinatura,
   folhaRef,
   conteudoRef,
@@ -561,6 +545,8 @@ function DetalheContrato({
   onCancelar,
 }: {
   contrato: Contrato;
+  descricao: ReturnType<typeof descreverContrato>;
+  artista: { name: string; color?: string } | null;
   focarAssinatura: boolean;
   folhaRef: React.Ref<HTMLDivElement>;
   conteudoRef: React.Ref<HTMLDivElement>;
@@ -611,113 +597,123 @@ function DetalheContrato({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Barra de ações do detalhe */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Topo de FICHA padrão (igual venda/orçamento): artista, evento, número,
+          status e ações; a troca de status e as ações destrutivas no rodapé. */}
+      <div>
         <button
           type="button"
           onClick={onVoltar}
-          className="btn btn-secondary"
+          className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={14} />
           {t("Voltar")}
         </button>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={onBaixarPdf}
-            disabled={gerandoPdf}
-            className="btn"
-            style={{ backgroundColor: ACCENT, color: "#fff" }}
-          >
-            {gerandoPdf ? (
-              <>
-                <Loader2 size={15} className="animate-spin" />
-                {t("Gerando…")}
-              </>
-            ) : (
-              <>
-                <Download size={15} />
-                {t("Baixar PDF")}
-              </>
-            )}
-          </button>
-
-          {podeCancelar && !jaCancelado && (
+        <FichaHeroPagina
+          artistaNome={artista?.name ?? t("Contrato avulso")}
+          artistaCor={artista?.color}
+          linhaSuperior={
+            <>
+              {t("Emissão")} {formatarData(contrato.dataEmissao)}
+              {contrato.dataAssinatura
+                ? ` · ${t("Assinatura")} ${formatarData(contrato.dataAssinatura)}`
+                : ""}
+            </>
+          }
+          titulo={
+            <>
+              {descricao.temEvento ? descricao.titulo : t("Contrato")}
+              <span className="text-secondary font-normal">
+                {" "}· {descricao.temEvento ? `${t("Contrato")} ` : ""}
+                <span className="font-mono tabular-nums" style={{ color: ACCENT }}>
+                  {contrato.numero}
+                </span>
+              </span>
+            </>
+          }
+          badges={
+            <span className={`badge ${STATUS_BADGE[contrato.status]}`}>
+              {t(STATUS_LABEL[contrato.status])}
+            </span>
+          }
+          acoes={
             <button
               type="button"
-              onClick={onCancelar}
-              disabled={salvandoStatus}
-              className="btn btn-danger-outline"
+              onClick={onBaixarPdf}
+              disabled={gerandoPdf}
+              className="btn btn-primary"
             >
-              <Ban size={15} />
-              {t("Cancelar contrato")}
+              {gerandoPdf ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  {t("Gerando…")}
+                </>
+              ) : (
+                <>
+                  <Download size={15} />
+                  {t("Baixar PDF")}
+                </>
+              )}
             </button>
-          )}
-
-          {/* Excluir é ADMIN-ONLY (D4): escondido pra não-admin. */}
-          {podeExcluir && (
-            <button
-              type="button"
-              onClick={onExcluir}
-              className="btn btn-danger-outline"
-            >
-              <Trash2 size={15} />
-              {t("Excluir")}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Cabeçalho do contrato + troca de status */}
-      <div className="card flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <FileText size={16} style={{ color: ACCENT }} />
-            <span className="section-title">{contrato.numero}</span>
-          </div>
-          <div className="section-subtitle mt-1">
-            {t("Emissão")} {formatarData(contrato.dataEmissao)}
-            {contrato.dataAssinatura
-              ? ` · ${t("Assinatura")} ${formatarData(contrato.dataAssinatura)}`
-              : ""}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="stat-label">{t("Status")}</span>
-          <div
-            className="inline-flex rounded-md p-0.5 gap-0.5"
-            style={{ backgroundColor: "var(--bg-elevated)" }}
-          >
-            {STATUS_ORDEM.map((s) => {
-              const ativo = s === contrato.status;
-              // A transição → "cancelado" usa contratos.cancelar (permissão
-              // própria, D4); as demais mudanças de status usam contratos.editar.
-              const virarCancelado = s === "cancelado" && !jaCancelado;
-              const permitido = virarCancelado ? podeCancelar : podeEditar;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onMudarStatus(s)}
-                  disabled={salvandoStatus || !permitido}
-                  title={!permitido ? t("Você não tem permissão para isso.") : undefined}
-                  className={`badge ${
-                    ativo ? STATUS_BADGE[s] : "text-muted"
-                  } transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
-                  style={
-                    ativo
-                      ? { boxShadow: "0 0 0 1px var(--border-color)" }
-                      : undefined
-                  }
+          }
+          rodape={
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="stat-label">{t("Status")}</span>
+                <div
+                  className="inline-flex rounded-md p-0.5 gap-0.5"
+                  style={{ backgroundColor: "var(--bg-elevated)" }}
                 >
-                  {t(STATUS_LABEL[s])}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  {STATUS_ORDEM.map((s) => {
+                    const ativo = s === contrato.status;
+                    // A transição → "cancelado" usa contratos.cancelar (permissão
+                    // própria, D4); as demais mudanças de status usam contratos.editar.
+                    const virarCancelado = s === "cancelado" && !jaCancelado;
+                    const permitido = virarCancelado ? podeCancelar : podeEditar;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => onMudarStatus(s)}
+                        disabled={salvandoStatus || !permitido}
+                        title={!permitido ? t("Você não tem permissão para isso.") : undefined}
+                        className={`badge ${
+                          ativo ? STATUS_BADGE[s] : "text-muted"
+                        } transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
+                        style={ativo ? { boxShadow: "0 0 0 1px var(--border-color)" } : undefined}
+                      >
+                        {t(STATUS_LABEL[s])}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {podeCancelar && !jaCancelado && (
+                  <button
+                    type="button"
+                    onClick={onCancelar}
+                    disabled={salvandoStatus}
+                    className="btn btn-danger-outline px-3 py-1.5 text-xs"
+                  >
+                    <Ban size={13} />
+                    {t("Cancelar contrato")}
+                  </button>
+                )}
+                {/* Excluir é ADMIN-ONLY (D4): escondido pra não-admin. */}
+                {podeExcluir && (
+                  <button
+                    type="button"
+                    onClick={onExcluir}
+                    className="btn btn-danger-outline px-3 py-1.5 text-xs"
+                  >
+                    <Trash2 size={13} />
+                    {t("Excluir")}
+                  </button>
+                )}
+              </div>
+            </div>
+          }
+        />
       </div>
 
       {/* Venda, show, orçamento e contratante deste contrato — cada um abre. */}

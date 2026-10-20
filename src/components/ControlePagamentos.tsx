@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   CheckCircle2,
@@ -21,6 +21,8 @@ import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import { useNavegacao } from "./NavOverlay";
 import { useFiltroArtistas } from "./FiltroArtistas";
+import { Paginacao } from "./lista/TabelaDados";
+import { paginar } from "@/lib/lista";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
@@ -245,6 +247,10 @@ export default function ControlePagamentos({
   // Na página "Cobranças", a lista é a fila (fixadas + atrasadas); senão, o
   // recorte por período + filtros.
   const itensLista = ehCobrancas ? filaCobrancas : lista;
+  // Paginação da lista padrão (50 por página); volta pra 1ª quando a lista muda.
+  const [pagina, setPagina] = useState(1);
+  useEffect(() => setPagina(1), [itensLista.length, filtroStatus, ehCobrancas]);
+  const pagLista = paginar(itensLista, pagina, 50);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -405,7 +411,7 @@ export default function ControlePagamentos({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {itensLista.map((l) => (
+          {pagLista.itens.map((l) => (
             <ParcelaRow
               key={`${l.vendaId}-${l.parcela.id}`}
               linha={l}
@@ -414,6 +420,9 @@ export default function ControlePagamentos({
               onToggleFixar={() => toggleFixar(l)}
             />
           ))}
+          <div className="card p-0 overflow-hidden empty:hidden">
+            <Paginacao pag={pagLista} porPagina={50} rotuloItens="parcelas" onPagina={setPagina} />
+          </div>
         </div>
       )}
 

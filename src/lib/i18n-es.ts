@@ -2986,4 +2986,18 @@ export const ES: Record<string, string> = {
   "Cadastrar um cliente": "Registrar un cliente",
   // --- Navegação nova (out/2026) ---
   "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "¿Eliminar este presupuesto? Va a la Papelera y puede restaurarse durante 30 días.",
+  // --- Navegação nova (out/2026) ---
+  "Anterior": "Anterior",
+  "Próxima": "Siguiente",
+  "Ordenar por": "Ordenar por",
+  "Ordenar por {coluna}": "Ordenar por {coluna}",
+  "Padrão": "Predeterminado",
+  "Página {p} de {n}": "Página {p} de {n}",
+  "{ini}–{fim} de {total}": "{ini}–{fim} de {total}",
+  "orçamentos": "presupuestos",
+  "contratantes": "contratantes",
+  "casas": "locales",
+  "cidades": "ciudades",
+  // --- Navegação nova (out/2026) ---
+  "Contrato avulso": "Contrato independiente",
 };

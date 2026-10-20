@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Modal from "./Modal";
+import { Bloco, Linha } from "./detalhes/FichaUI";
 import { useNavegacao } from "./NavOverlay";
 import { urls } from "@/lib/navegacao/rotas";
 import { useAviso } from "./ConfirmarModal";
@@ -394,40 +395,5 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
     </Modal>
     {avisador}
     </>
-  );
-}
-
-function Bloco({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
-        <span style={{ color: "var(--brand)" }}>{icon}</span>
-        {title}
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
-}
-
-function Linha({
-  icon,
-  bold,
-  subtle,
-  children,
-}: {
-  icon?: React.ReactNode;
-  bold?: boolean;
-  subtle?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`flex items-start gap-2 text-sm ${
-        bold ? "text-primary font-semibold" : subtle ? "text-muted" : "text-secondary"
-      }`}
-    >
-      {icon && <span className="mt-0.5 text-muted flex-shrink-0">{icon}</span>}
-      <span className="min-w-0">{children}</span>
-    </div>
   );
 }

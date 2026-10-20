@@ -3998,4 +3998,18 @@ export const EN: Record<string, string> = {
   "Cadastrar um cliente": "Register a client",
   // --- Navegação nova (out/2026) ---
   "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "Remove this quote? It goes to the Trash and can be restored for 30 days.",
+  // --- Navegação nova (out/2026) ---
+  "Anterior": "Previous",
+  "Próxima": "Next",
+  "Ordenar por": "Sort by",
+  "Ordenar por {coluna}": "Sort by {coluna}",
+  "Padrão": "Default",
+  "Página {p} de {n}": "Page {p} of {n}",
+  "{ini}–{fim} de {total}": "{ini}–{fim} of {total}",
+  "orçamentos": "quotes",
+  "contratantes": "clients",
+  "casas": "venues",
+  "cidades": "cities",
+  // --- Navegação nova (out/2026) ---
+  "Contrato avulso": "Standalone contract",
 };
