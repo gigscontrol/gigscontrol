@@ -15,6 +15,8 @@ import { useT } from "@/lib/i18n";
 import { useContratos } from "@/lib/contratos-context";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import { STATUS_SHOW } from "@/lib/statusUI";
+import { layoutDoDia, ordenarShowsDoDia } from "@/lib/agenda/ordemDoDia";
+import Modal from "../Modal";
 import { AgendaItemCard, labelArtistas } from "./camposAgenda";
 
 export const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -142,6 +144,56 @@ export function EventCard({ show, artista, onClick }: { show: Show; artista?: Ar
   );
 }
 
+/**
+ * Versão de 2 linhas do cartão de show — usada quando o dia tem muitos itens
+ * (ver `layoutDoDia`): artista + horário / local · cidade. O contrato vira um
+ * ícone com a cor do status (texto no title); cancelado continua riscado.
+ */
+export function EventCardCompacto({ show, artista, onClick }: { show: Show; artista?: Artista; onClick?: () => void }) {
+  const t = useT();
+  const { contratos, assinantesPorContrato } = useContratos();
+  const cancelado = show.status === "cancelado";
+  const rcontrato = resumoContratoDoShow(show.vendaId, contratos, assinantesPorContrato);
+  const rotContrato = rotuloContratoShow(rcontrato, t);
+  const onde = [show.venue, show.location].filter(Boolean).join(" · ");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={[show.artistaNome, onde, t(STATUS_SHOW[show.status]?.label ?? show.status)].filter(Boolean).join(" — ")}
+      className={`w-full text-left bg-surface-2 border border-border rounded-md px-2 py-1.5 mb-1.5 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer ${
+        cancelado ? "opacity-60" : ""
+      }`}
+      style={{
+        borderLeft: `3px solid ${cancelado ? "var(--danger)" : artista ? artista.color : "transparent"}`,
+      }}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className={`text-xs font-bold text-primary truncate flex-1 ${cancelado ? "line-through" : ""}`}>
+          {show.artistaNome}
+        </span>
+        {show.time ? (
+          <span className="text-[0.7rem] font-semibold text-primary tabular-nums flex-shrink-0">{show.time}</span>
+        ) : (
+          <span className="text-[0.65rem] font-medium text-warning flex-shrink-0">{t("A definir")}</span>
+        )}
+      </div>
+      <div className="flex items-center gap-1 min-w-0 mt-0.5">
+        <span className="text-[0.65rem] text-muted truncate flex-1">{onde}</span>
+        {show.vendaId && (
+          <span
+            className={`badge ${rotContrato.badgeClass} flex-shrink-0 px-1 py-0`}
+            title={rotContrato.texto}
+            aria-label={rotContrato.texto}
+          >
+            <FileSignature size={9} />
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 // ---------- Subcomponentes ----------
 
 export function DayCellComponent({
@@ -166,10 +218,19 @@ export function DayCellComponent({
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
+  const [diaAberto, setDiaAberto] = useState(false);
   // Dia de outro mês VAZIO continua bem apagado (é só moldura); com conteúdo
   // sobe pra 60% — no 30% o card do show ficava ilegível, e o objetivo aqui é
   // justamente conseguir LER o show da borda sem trocar de mês.
   const temConteudo = shows.length > 0 || itens.length > 0;
+  // Dia cheio não pode esticar a SEMANA inteira (a linha da grade acompanha o
+  // dia mais alto): de 3 itens em diante vira lista compacta e, acima de 5,
+  // o resto vai pro "+N mais", que abre o dia completo.
+  const ordenados = ordenarShowsDoDia(shows);
+  const layout = layoutDoDia(ordenados.length + itens.length);
+  const showsVisiveis = ordenados.slice(0, layout.visiveis);
+  const itensVisiveis = itens.slice(0, Math.max(0, layout.visiveis - showsVisiveis.length));
+  const Cartao = layout.modo === "cheio" ? EventCard : EventCardCompacto;
   return (
     <div
       id={day.isToday ? "day-card-today" : undefined}
@@ -206,15 +267,15 @@ export function DayCellComponent({
       </div>
 
       <div className="flex-1 overflow-y-auto -mr-1 pr-1">
-        {shows.map((show) => (
-          <EventCard
+        {showsVisiveis.map((show) => (
+          <Cartao
             key={show.id}
             show={show}
             artista={artistas.find((d) => d.id === show.artistaId)}
             onClick={() => onShowClick(show.id)}
           />
         ))}
-        {itens.map((item) => (
+        {itensVisiveis.map((item) => (
           <AgendaItemCard
             key={item.id}
             item={item}
@@ -222,11 +283,65 @@ export function DayCellComponent({
             onClick={() => onItemClick(item)}
           />
         ))}
+        {layout.ocultos > 0 && (
+          <button
+            type="button"
+            onClick={() => setDiaAberto(true)}
+            aria-label={t("Ver todos do dia")}
+            className="w-full rounded-md py-1.5 text-xs font-semibold transition-colors hover:bg-elevated"
+            style={{ color: accent }}
+          >
+            {t("+{n} mais", { n: layout.ocultos })}
+          </button>
+        )}
         {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
         {!day.isOtherMonth && (
           <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeAbrirNovoItem} />
         )}
       </div>
+
+      {/* O dia completo, com os cartões inteiros — abre pelo "+N mais". */}
+      <Modal
+        isOpen={diaAberto}
+        onClose={() => setDiaAberto(false)}
+        title={`${t(day.name)}, ${day.date}`}
+        subtitle={t("{n} na agenda", { n: ordenados.length + itens.length })}
+        maxWidth={460}
+      >
+        <div className="flex flex-col">
+          {ordenados.map((show) => (
+            <EventCard
+              key={show.id}
+              show={show}
+              artista={artistas.find((d) => d.id === show.artistaId)}
+              onClick={() => {
+                setDiaAberto(false);
+                onShowClick(show.id);
+              }}
+            />
+          ))}
+          {itens.map((item) => (
+            <AgendaItemCard
+              key={item.id}
+              item={item}
+              artistaLabel={labelArtistas(item.artistIds, artistas)}
+              onClick={() => {
+                setDiaAberto(false);
+                onItemClick(item);
+              }}
+            />
+          ))}
+          {!day.isOtherMonth && (
+            <NovoItemSlot
+              onClick={() => {
+                setDiaAberto(false);
+                onNovoItem(day);
+              }}
+              podeCriar={podeAbrirNovoItem}
+            />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -339,7 +454,7 @@ export function MobileDayCard({
           </span>
         )}
       </div>
-      {shows.map((show) => (
+      {ordenarShowsDoDia(shows).map((show) => (
         <EventCard
           key={show.id}
           show={show}

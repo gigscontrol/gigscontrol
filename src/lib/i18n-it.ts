@@ -3000,4 +3000,10 @@ export const IT: Record<string, string> = {
   "cidades": "città",
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Contratto autonomo",
+  // --- Navegação nova (out/2026) ---
+  "+{n} mais": "+{n} altri",
+  "Ver todos do dia": "Vedi tutta la giornata",
+  "{n} na agenda": "{n} in agenda",
+  "Esse período já passou — nenhuma viagem pela frente.": "Questo periodo è passato: nessun viaggio in arrivo.",
+  "Nenhuma viagem pela frente no período (só shows na cidade local).": "Nessun viaggio in arrivo nel periodo (solo show locali).",
 };
