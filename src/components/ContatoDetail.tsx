@@ -140,7 +140,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
         className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft size={14} />
-        {t("Voltar para Contatos")}
+        {t("Voltar")}
       </button>
 
       {selecionado.tipo === "contratante" && (

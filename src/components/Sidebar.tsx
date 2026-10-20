@@ -36,6 +36,7 @@ import { podeVerModulo, subPaginasVisiveis } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import LogoGC from "./LogoGC";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { ROTULO_MODULO, ROTULO_PAGINA } from "@/lib/navegacao/rotas";
 
 type Props = {
   activeTab: ActiveTab;
@@ -66,79 +67,78 @@ type ModuleDef = {
   subPages: SubPage[];
 };
 
+// Nomes vêm de ROTULO_PAGINA (lib/navegacao/rotas.ts) — os MESMOS do caminho
+// no topo e dos títulos. Não escreva rótulo de tela aqui.
+const sub = (page: ActivePage, icon: LucideIcon, alsoActiveOn?: ActivePage[]): SubPage => ({
+  page,
+  label: ROTULO_PAGINA[page],
+  icon,
+  alsoActiveOn,
+});
+
 const MODULES: ModuleDef[] = [
   {
     tab: "agenda",
-    label: "Agenda",
+    label: ROTULO_MODULO.agenda,
     icon: CalendarDays,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "agenda-completa", label: "Agenda de Shows", icon: CalendarRange },
-      { page: "agenda-anotacoes", label: "Anotações", icon: NotebookPen },
+      sub("dashboard", LayoutDashboard),
+      sub("agenda-completa", CalendarRange),
+      sub("agenda-anotacoes", NotebookPen),
     ],
   },
   {
     tab: "vendas",
-    label: "Vendas",
+    label: ROTULO_MODULO.vendas,
     icon: ShoppingBag,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "vendas-novo-orcamento", label: "Novo Orçamento", icon: FilePlus },
-      {
-        page: "vendas-historico",
-        label: "Histórico Orçamentos",
-        icon: History,
-        alsoActiveOn: ["vendas-orcamento-detalhe"],
-      },
-      { page: "vendas-nova-venda", label: "Nova Venda Direta", icon: CalendarCheck2 },
-      {
-        page: "vendas-historico-vendas",
-        label: "Histórico Vendas",
-        icon: ShoppingCart,
-        alsoActiveOn: ["vendas-venda-detalhe"],
-      },
+      sub("dashboard", LayoutDashboard),
+      sub("vendas-novo-orcamento", FilePlus),
+      sub("vendas-historico", History, ["vendas-orcamento-detalhe"]),
+      sub("vendas-nova-venda", CalendarCheck2),
+      sub("vendas-historico-vendas", ShoppingCart, ["vendas-venda-detalhe", "vendas-editar-venda"]),
     ],
   },
   {
     tab: "financeiro",
-    label: "Financeiro",
+    label: ROTULO_MODULO.financeiro,
     icon: Banknote,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "financeiro-pagamentos", label: "Controle", icon: Wallet },
-      { page: "financeiro-cobrancas", label: "Fixados", icon: Pin },
+      sub("dashboard", LayoutDashboard),
+      sub("financeiro-pagamentos", Wallet),
+      sub("financeiro-cobrancas", Pin),
     ],
   },
   {
     tab: "contratos",
-    label: "Contratos",
+    label: ROTULO_MODULO.contratos,
     icon: FileSignature,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "contratos-novo", label: "Novo Contrato", icon: FilePlus },
-      { page: "contratos-modelos", label: "Modelos", icon: LayoutTemplate },
-      { page: "contratos-historico", label: "Histórico de Contratos", icon: History },
-      { page: "contratos-pastas", label: "Organizador", icon: FolderOpen },
+      sub("dashboard", LayoutDashboard),
+      sub("contratos-novo", FilePlus),
+      sub("contratos-historico", History),
+      sub("contratos-pastas", FolderOpen),
+      sub("contratos-modelos", LayoutTemplate),
     ],
   },
   {
     tab: "contatos",
-    label: "Contatos",
+    label: ROTULO_MODULO.contatos,
     icon: Users,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "contatos-lista", label: "Gerenciar Contatos", icon: Users },
-      { page: "contatos-mapa", label: "Mapa", icon: Map },
+      sub("dashboard", LayoutDashboard),
+      sub("contatos-lista", Users),
+      sub("contatos-mapa", Map),
     ],
   },
   {
     tab: "agencia",
-    label: "Agência",
+    label: ROTULO_MODULO.agencia,
     icon: Building2,
     subPages: [
-      { page: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { page: "agencia-artistas", label: "Artistas", icon: Music },
-      { page: "agencia-equipe", label: "Equipe", icon: Users },
+      sub("dashboard", LayoutDashboard),
+      sub("agencia-artistas", Music),
+      sub("agencia-equipe", Users),
     ],
   },
 ];
@@ -468,7 +468,7 @@ export default function Sidebar({
         {(
           <div>
             <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
-              <span className="stat-label">Artistas</span>
+              <span className="stat-label">{t("Artistas")}</span>
               {/* "Todos/Limpar" só faz sentido com 2+ artistas (planos
                   Equipe/Agência/etc). Individual = 1 artista = sem toggle. */}
               {!planoIndividual && (

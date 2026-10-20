@@ -63,6 +63,7 @@ import {
   type ResumoListaItem,
 } from "../DashboardResumo";
 import AlertaDetalheModal, { type LinhaAlerta } from "./AlertaDetalheModal";
+import { urls, urlDaTela } from "@/lib/navegacao/rotas";
 
 /**
  * Dashboard do módulo Agência — visão executiva completa.
@@ -75,7 +76,6 @@ import AlertaDetalheModal, { type LinhaAlerta } from "./AlertaDetalheModal";
  * Tudo client-side, a partir dos contexts já montados no layout do módulo.
  */
 
-const BASE = "/app";
 const ATALHOS: AgendaDateRange[] = [
   "Visão geral",
   "Mês anterior",
@@ -212,7 +212,7 @@ export default function AgenciaDashboard({
           acoes: [
             {
               label: t("Ver"),
-              onClick: () => irPara(`${BASE}/vendas/vendas/${v.id}`),
+              onClick: () => irPara(urls.venda(v.id)),
             },
             {
               label: t("Cobrar"),
@@ -223,7 +223,7 @@ export default function AgenciaDashboard({
                 setAlertaAberto(null);
                 setStatAberto(null);
                 if (onVerCobrancaDaVenda) onVerCobrancaDaVenda(v.numero);
-                else irPara(`${BASE}/financeiro/cobrancas`);
+                else irPara(urls.cobrancas());
               },
             },
           ],
@@ -256,7 +256,7 @@ export default function AgenciaDashboard({
                 ? [
                     {
                       label: t("Ver"),
-                      onClick: () => irPara(`${BASE}/vendas/vendas/${v.id}`),
+                      onClick: () => irPara(urls.venda(v.id)),
                     },
                   ]
                 : []),
@@ -269,7 +269,7 @@ export default function AgenciaDashboard({
                   setAlertaAberto(null);
                   setStatAberto(null);
                   if (onAbrirContrato) onAbrirContrato(c.id);
-                  else irPara(`${BASE}/contratos/historico`);
+                  else irPara(urls.contratos());
                 },
               },
             ],
@@ -301,12 +301,12 @@ export default function AgenciaDashboard({
         acoes: [
           {
             label: t("Ver"),
-            onClick: () => irPara(`${BASE}/vendas/orcamentos/${o.id}`),
+            onClick: () => irPara(urls.orcamento(o.id)),
           },
           {
             label: t("Resolver"),
             tone: "acao" as const,
-            onClick: () => irPara(`${BASE}/vendas/orcamentos`),
+            onClick: () => irPara(urls.orcamentos()),
           },
         ],
       }));
@@ -359,7 +359,7 @@ export default function AgenciaDashboard({
         const acoes: LinhaAlerta["acoes"] = [
           {
             label: t("Ver"),
-            onClick: () => irPara(`${BASE}/vendas/vendas/${v.id}`),
+            onClick: () => irPara(urls.venda(v.id)),
           },
         ];
         if (!dispensada) {
@@ -372,7 +372,7 @@ export default function AgenciaDashboard({
               setAlertaAberto(null);
               setStatAberto(null);
               if (onFazerContratoDaVenda) onFazerContratoDaVenda(v.id);
-              else irPara(`${BASE}/contratos/novo`);
+              else irPara(urls.novoContrato());
             },
           });
         }
@@ -899,7 +899,7 @@ export default function AgenciaDashboard({
         )}
         <ResumoFooter
           label={t("Ver mais detalhes")}
-          onClick={() => irPara(`${BASE}/agencia/artistas`)}
+          onClick={() => irPara(urlDaTela("agencia", "agencia-artistas"))}
         />
       </ResumoModal>
 
@@ -920,7 +920,7 @@ export default function AgenciaDashboard({
         )}
         <ResumoFooter
           label={t("Ver mais detalhes")}
-          onClick={() => irPara(`${BASE}/agencia/equipe`)}
+          onClick={() => irPara(urlDaTela("agencia", "agencia-equipe"))}
         />
       </ResumoModal>
 
@@ -945,7 +945,7 @@ export default function AgenciaDashboard({
         )}
         <ResumoFooter
           label={t("Ver mais detalhes")}
-          onClick={() => irPara(`${BASE}/agencia/artistas`)}
+          onClick={() => irPara(urlDaTela("agencia", "agencia-artistas"))}
         />
       </ResumoModal>
 
@@ -970,7 +970,7 @@ export default function AgenciaDashboard({
         )}
         <ResumoFooter
           label={t("Ver mais detalhes")}
-          onClick={() => irPara(`${BASE}/agencia/equipe`)}
+          onClick={() => irPara(urlDaTela("agencia", "agencia-equipe"))}
         />
       </ResumoModal>
     </div>

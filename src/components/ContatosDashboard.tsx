@@ -248,7 +248,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
               className="btn btn-primary w-full sm:w-auto justify-center"
             >
               <UserPlus size={14} />
-              {t("Gerenciar Contatos")}
+              {t("Todos os contatos")}
             </button>
           </div>
         }

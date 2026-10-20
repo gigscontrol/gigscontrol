@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, ChevronRight } from "lucide-react";
 import type { Notificacao } from "@/lib/mappers/notificacao";
+import { linkDaNotificacao } from "@/lib/navegacao/rotas";
+import { useNavegacaoOpcional } from "../NavOverlay";
 
 const LIMIT = 50;
 
@@ -184,7 +186,11 @@ function LinhaCompleta({
   onMarcarLida: () => void;
 }) {
   const t = useT();
+  const nav = useNavegacaoOpcional();
   const lida = !!item.lidaEm;
+  const href = nav
+    ? linkDaNotificacao({ link: item.link, modulo: item.modulo, entidade_id: item.entidadeId })
+    : null;
   const corTipo = (() => {
     switch (item.tipo) {
       case "sucesso": return "var(--success)";
@@ -203,8 +209,33 @@ function LinhaCompleta({
         className="h-2 w-2 rounded-full flex-shrink-0 mt-1.5"
         style={{ backgroundColor: lida ? "transparent" : corTipo }}
       />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-primary">{item.titulo}</div>
+      <div
+        className={`flex-1 min-w-0 ${href ? "cursor-pointer group" : ""}`}
+        role={href ? "link" : undefined}
+        tabIndex={href ? 0 : undefined}
+        onClick={
+          href && nav
+            ? () => {
+                if (!lida) onMarcarLida();
+                nav.navegar(href);
+              }
+            : undefined
+        }
+        onKeyDown={
+          href && nav
+            ? (e) => {
+                if (e.key === "Enter") {
+                  if (!lida) onMarcarLida();
+                  nav.navegar(href);
+                }
+              }
+            : undefined
+        }
+      >
+        <div className="text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:underline">
+          {item.titulo}
+          {href && <ChevronRight size={13} className="text-muted" />}
+        </div>
         <div className="text-xs text-secondary mt-0.5 break-words">{item.mensagem}</div>
         <div className="text-[0.65rem] text-muted mt-1">
           {new Date(item.criadoEm).toLocaleString("pt-BR", {

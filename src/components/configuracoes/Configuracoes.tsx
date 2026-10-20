@@ -68,6 +68,7 @@ function abaValidaParaPapel(id: string | null, abas: AbaDef[]): AbaConfig | null
   return encontrada ? encontrada.id : null;
 }
 
+/** `onSair` volta pra tela de onde a pessoa abriu as Configurações. */
 export default function Configuracoes({ onSair }: { onSair: () => void }) {
   const t = useT();
   const { sessao } = useAuth();
@@ -100,7 +101,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-3"
       >
         <ArrowLeft size={13} />
-        {t("Voltar para a dashboard")}
+        {t("Voltar")}
       </button>
 
       <PageHeader

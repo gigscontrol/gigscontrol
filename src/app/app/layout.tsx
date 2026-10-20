@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import Dashboard from "@/components/Dashboard";
@@ -20,18 +20,19 @@ import ConcretizarVenda from "@/components/ConcretizarVenda";
 import HistoricoVendas from "@/components/HistoricoVendas";
 import VendaDetalhe from "@/components/VendaDetalhe";
 import ShowDetalheModal from "@/components/ShowDetalheModal";
+import ParcelaDetalheModal from "@/components/ParcelaDetalheModal";
 import SomenteLeitura from "@/components/SomenteLeitura";
 import BannerPagamento from "@/components/BannerPagamento";
 import BloqueioModal from "@/components/BloqueioModal";
 import PreferenciasApply from "@/components/PreferenciasApply";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
-import { ContatosProvider } from "@/lib/contatos-context";
+import { ContatosProvider, useContatos } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { AgendaItemsProvider } from "@/lib/agenda-items-context";
-import { OrcamentosProvider } from "@/lib/orcamentos-context";
+import { OrcamentosProvider, useOrcamentos } from "@/lib/orcamentos-context";
 import { VendasProvider, useVendas } from "@/lib/vendas-context";
 import { ModelosProvider } from "@/lib/modelos-context";
-import { ContratosProvider } from "@/lib/contratos-context";
+import { ContratosProvider, useContratos } from "@/lib/contratos-context";
 import { AnotacoesProvider } from "@/lib/anotacoes-context";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ctxDaSessao } from "@/lib/permissoes/resolver";
@@ -47,9 +48,15 @@ import HistoricoPage from "@/components/contratos/HistoricoPage";
 import MeusContratosPage from "@/components/contratos/MeusContratosPage";
 import DashboardContratos from "@/components/contratos/DashboardContratos";
 import AgenciaDashboard from "@/components/agencia/AgenciaDashboard";
-import { MODULE_THEMES } from "@/types";
-import type { ActiveTab, ActivePage, ContatoCategoria } from "@/types";
+import type { ActiveTab, ActivePage } from "@/types";
 import type { ContratoStatus } from "@/lib/mappers/contrato";
+import {
+  resolverRota,
+  segmentosDoPath,
+  urlDaTela,
+  urls,
+  migalhasDaRota,
+} from "@/lib/navegacao/rotas";
 
 /**
  * Layout do app logado.
@@ -141,7 +148,13 @@ function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (carregando) return;
     if (!sessao) {
-      router.replace("/login");
+      // Link do painel aberto sem sessão (notificação, link compartilhado):
+      // depois do login a pessoa cai no MESMO item. O login só aceita
+      // caminho interno no ?next= (anti open-redirect).
+      const aqui = `${window.location.pathname}${window.location.search}`;
+      router.replace(
+        aqui.startsWith("/app/") ? `/login?next=${encodeURIComponent(aqui)}` : "/login"
+      );
       return;
     }
     // Super-admin só acessa /app em modo visitante (visualizando um cliente)
@@ -238,146 +251,49 @@ function AuthGuard({ children }: { children: ReactNode }) {
 
 // ----------------- Roteamento por URL -----------------
 //
-// O app inteiro vive sob o catch-all /app/[[...slug]]. A aba/tela ativa
-// é DERIVADA da URL (não mais de useState), então o botão "voltar" do
-// navegador anda entre as telas internas e o refresh mantém a tela.
+// O app inteiro vive sob o catch-all /app/[[...slug]]. A tela ativa, o item
+// aberto e os modais com endereço (?show= / ?parcela=) são DERIVADOS da URL
+// (lib/navegacao/rotas.ts) — F5, voltar do navegador e link compartilhado
+// caem sempre no mesmo lugar. Nada de "onde estou" guardado só em memória.
 
-const BASE = "/app";
-
-/** "/app/vendas/orcamentos/123" -> ["vendas","orcamentos","123"] */
-function segmentosDoPath(pathname: string): string[] {
-  return pathname
-    .replace(/^\/app\/?/, "")
-    .split("/")
-    .filter(Boolean)
-    .map((s) => {
-      try {
-        return decodeURIComponent(s);
-      } catch {
-        return s;
-      }
-    });
-}
-
-type Rota = {
-  activeTab: ActiveTab;
-  activePage: ActivePage;
-  configAberta: boolean;
-  orcamentoId: string | null;
-  vendaId: string | null;
-};
-
-function rotaBase(activeTab: ActiveTab, activePage: ActivePage): Rota {
-  return { activeTab, activePage, configAberta: false, orcamentoId: null, vendaId: null };
-}
-
-/** Mapeia os segmentos da URL para aba / tela / ids. */
-function resolverRota(seg: string[]): Rota {
-  const [a, b, c] = seg;
-
-  if (a === "configuracoes") {
-    return { ...rotaBase("agenda", "dashboard"), configAberta: true };
-  }
-  if (a === "vendas") {
-    if (b === "orcamentos") {
-      if (!c) return rotaBase("vendas", "vendas-historico");
-      if (c === "novo") return rotaBase("vendas", "vendas-novo-orcamento");
-      return { ...rotaBase("vendas", "vendas-orcamento-detalhe"), orcamentoId: c };
-    }
-    if (b === "vendas") {
-      if (!c) return rotaBase("vendas", "vendas-historico-vendas");
-      if (c === "nova") return rotaBase("vendas", "vendas-nova-venda");
-      if (seg[3] === "editar")
-        return { ...rotaBase("vendas", "vendas-editar-venda"), vendaId: c };
-      return { ...rotaBase("vendas", "vendas-venda-detalhe"), vendaId: c };
-    }
-    return rotaBase("vendas", "dashboard");
-  }
-  if (a === "financeiro") {
-    if (b === "pagamentos") return rotaBase("financeiro", "financeiro-pagamentos");
-    if (b === "cobrancas") return rotaBase("financeiro", "financeiro-cobrancas");
-    return rotaBase("financeiro", "dashboard");
-  }
-  if (a === "contratos") {
-    if (b === "novo") return rotaBase("contratos", "contratos-novo");
-    if (b === "modelos") return rotaBase("contratos", "contratos-modelos");
-    if (b === "historico") return rotaBase("contratos", "contratos-historico");
-    if (b === "pastas") return rotaBase("contratos", "contratos-pastas");
-    return rotaBase("contratos", "dashboard");
-  }
-  if (a === "contatos") {
-    if (b === "lista") return rotaBase("contatos", "contatos-lista");
-    if (b === "mapa") return rotaBase("contatos", "contatos-mapa");
-    return rotaBase("contatos", "dashboard");
-  }
-  if (a === "agencia") {
-    if (b === "artistas") return rotaBase("agencia", "agencia-artistas");
-    if (b === "equipe") return rotaBase("agencia", "agencia-equipe");
-    return rotaBase("agencia", "dashboard");
-  }
-  // agenda é o default (inclui "/app" puro)
-  if (a === "agenda" && b === "shows") return rotaBase("agenda", "agenda-completa");
-  if (a === "agenda" && b === "anotacoes") return rotaBase("agenda", "agenda-anotacoes");
-  return rotaBase("agenda", "dashboard");
-}
-
-/** Constrói a URL de uma aba/tela (+ id opcional pros detalhes). */
-function urlDaTela(tab: ActiveTab, page: ActivePage, id?: string): string {
-  switch (page) {
-    case "agenda-completa":
-      return `${BASE}/agenda/shows`;
-    case "agenda-anotacoes":
-      return `${BASE}/agenda/anotacoes`;
-    case "vendas-historico":
-      return `${BASE}/vendas/orcamentos`;
-    case "vendas-novo-orcamento":
-      return `${BASE}/vendas/orcamentos/novo`;
-    case "vendas-orcamento-detalhe":
-      return `${BASE}/vendas/orcamentos/${id ?? ""}`;
-    case "vendas-historico-vendas":
-      return `${BASE}/vendas/vendas`;
-    case "vendas-nova-venda":
-      return `${BASE}/vendas/vendas/nova`;
-    case "vendas-venda-detalhe":
-      return `${BASE}/vendas/vendas/${id ?? ""}`;
-    case "vendas-editar-venda":
-      return `${BASE}/vendas/vendas/${id ?? ""}/editar`;
-    case "financeiro-pagamentos":
-      return `${BASE}/financeiro/pagamentos`;
-    case "financeiro-cobrancas":
-      return `${BASE}/financeiro/cobrancas`;
-    case "contratos-novo":
-      return `${BASE}/contratos/novo`;
-    case "contratos-modelos":
-      return `${BASE}/contratos/modelos`;
-    case "contratos-historico":
-      return `${BASE}/contratos/historico`;
-    case "contratos-pastas":
-      return `${BASE}/contratos/pastas`;
-    case "contatos-lista":
-      return `${BASE}/contatos/lista`;
-    case "contatos-mapa":
-      return `${BASE}/contatos/mapa`;
-    case "agencia-artistas":
-      return `${BASE}/agencia/artistas`;
-    case "agencia-equipe":
-      return `${BASE}/agencia/equipe`;
-    case "dashboard":
-    default:
-      return `${BASE}/${tab}`;
-  }
-}
+const STATUS_CONTRATO: ContratoStatus[] = ["rascunho", "enviado", "assinado", "cancelado"];
 
 function AppRoot() {
   const t = useT();
   const pathname = usePathname();
-  const { navegar: irPara } = useNavegacao();
+  const searchParams = useSearchParams();
+  const {
+    navegar: irPara,
+    voltar,
+    voltarPara,
+    abrirSobreposicao,
+    fecharSobreposicao,
+  } = useNavegacao();
   const { sessao, isSuperAdmin } = useAuth();
   // Aba/tela/ids derivados da URL — fonte única da navegação.
-  const { activeTab, activePage, configAberta, orcamentoId, vendaId } = useMemo(
-    () => resolverRota(segmentosDoPath(pathname)),
-    [pathname]
-  );
+  const rota = useMemo(() => resolverRota(segmentosDoPath(pathname)), [pathname]);
+  const {
+    activeTab,
+    activePage,
+    configAberta,
+    orcamentoId,
+    vendaId,
+    contratoId,
+    contatoAba,
+    contatoId,
+  } = rota;
+
+  // Contexto que vem na QUERY (sobrevive a F5 / link):
+  const showAberto = searchParams.get("show");
+  const parcelaAberta = searchParams.get("parcela");
+  const orcamentoOrigem = activePage === "vendas-nova-venda" ? searchParams.get("orcamento") : null;
+  const dataNovaVenda = activePage === "vendas-nova-venda" ? searchParams.get("data") : null;
+  const vendaParaContrato = activePage === "contratos-novo" ? searchParams.get("venda") : null;
+  const statusParam = searchParams.get("status");
+  const statusContratos = (STATUS_CONTRATO as string[]).includes(statusParam ?? "")
+    ? (statusParam as ContratoStatus)
+    : null;
+  const buscaCobrancas = activePage === "financeiro-cobrancas" ? searchParams.get("busca") : null;
 
   // Defesa em profundidade contra a URL DIRETA (link antigo, bookmark, histórico
   // do navegador, aba aberta antes do deploy). A Sidebar esconde o módulo, mas
@@ -405,7 +321,7 @@ function AppRoot() {
     if (configAberta || !sessao || !ctxModulos) return;
     // Vínculos que falharam ao carregar = UI falha ABERTO (o servidor barra).
     if (sessao.vinculosErro) {
-      if (activeTab === "agencia" && !podeAgencia) irPara(urlDaTela("agenda", "dashboard"));
+      if (activeTab === "agencia" && !podeAgencia) irPara(urls.modulo("agenda"), { substituir: true });
       return;
     }
     if (podeVerModulo(ctxModulos, activeTab)) return;
@@ -414,7 +330,7 @@ function AppRoot() {
     const destino = (["agenda", "vendas", "financeiro", "contratos", "contatos", "agencia"] as ActiveTab[]).find(
       (t) => podeVerModulo(ctxModulos, t)
     );
-    if (destino && destino !== activeTab) irPara(urlDaTela(destino, "dashboard"));
+    if (destino && destino !== activeTab) irPara(urls.modulo(destino), { substituir: true });
   }, [activeTab, configAberta, sessao, ctxModulos, podeAgencia, irPara]);
 
   // Filtro de DJs visíveis na sidebar. Inicializa vazio — o efeito
@@ -464,27 +380,11 @@ function AppRoot() {
     artistasIdsPrevRef.current = idsAtuais;
   }, [artistasReal]);
 
-  // Orçamento de origem ao concretizar uma venda (não vai pra URL —
-  // é preenchido só no fluxo "transformar em venda").
-  const [orcamentoSendoTransformado, setOrcamentoSendoTransformado] = useState<string | null>(null);
-  // Data pré-selecionada ao abrir "Nova Venda Direta" pelo "+" de um dia da agenda.
-  const [dataShowInicial, setDataShowInicial] = useState<string | null>(null);
   // D5 — a edição salvou sem recalcular as parcelas (alguma tem histórico
   // financeiro). Mora aqui porque o form desmonta ao navegar pro detalhe: o
   // aviso precisa sobreviver e aparecer onde dá pra agir (o detalhe da venda).
+  // É um aviso de UMA passagem (não é "onde estou"), por isso fica em memória.
   const [avisoParcelasPreservadas, setAvisoParcelasPreservadas] = useState(false);
-  // Categoria inicial ao abrir a lista de Contatos
-  const [contatoCategoria, setContatoCategoria] = useState<ContatoCategoria>("contratantes");
-  // Passados à dashboard de Contratos → Histórico (filtro por status / abrir um contrato).
-  const [contratoStatusFiltro, setContratoStatusFiltro] = useState<ContratoStatus | null>(null);
-  const [contratoAbrirId, setContratoAbrirId] = useState<string | null>(null);
-  // Contexto levado pelos alertas da Agência ao "Resolver" (J5): a venda que
-  // originou o clique. Sem isto o botão jogava o admin num formulário em branco
-  // / na lista inteira, e ele tinha que reencontrar o item na mão.
-  const [contratoVendaInicialId, setContratoVendaInicialId] = useState<string | null>(null);
-  const [cobrancaBuscaInicial, setCobrancaBuscaInicial] = useState<string | null>(null);
-  // Show aberto no modal (a partir de qualquer tela)
-  const [showModalId, setShowModalId] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? "hidden" : "";
@@ -493,109 +393,100 @@ function AppRoot() {
     };
   }, [sidebarOpen]);
 
-  // ---- Navegação: usa o irPara() (não-bloqueante) do NavProvider ----
+  // ---- Navegação ----
 
-  const handleTabChange = (tab: ActiveTab) => {
+  /** Menu / dashboards: vai pra uma tela (sem item). */
+  const irParaTela = (tab: ActiveTab, page: ActivePage) => {
     setSidebarOpen(false);
-    setOrcamentoSendoTransformado(null);
-    setDataShowInicial(null);
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(null);
-    setContratoVendaInicialId(null);
-    setCobrancaBuscaInicial(null);
-    irPara(urlDaTela(tab, "dashboard"));
+    irPara(page === "dashboard" ? urls.modulo(tab) : urlDaTela(tab, page));
   };
-
-  const handlePageChange = (page: ActivePage) => {
+  const irParaHref = (href: string) => {
     setSidebarOpen(false);
-    if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
-    setDataShowInicial(null);
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(null);
-    setContratoVendaInicialId(null);
-    setCobrancaBuscaInicial(null);
-    irPara(urlDaTela(activeTab, page));
+    irPara(href);
   };
 
-  /** Navegação genérica usada pelos dashboards (cards e botões clicáveis) */
-  const navegar = (tab: ActiveTab, page: ActivePage) => {
-    setSidebarOpen(false);
-    if (page !== "vendas-nova-venda") setOrcamentoSendoTransformado(null);
-    setDataShowInicial(null);
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(null);
-    setContratoVendaInicialId(null);
-    setCobrancaBuscaInicial(null);
-    irPara(urlDaTela(tab, page));
-  };
-
-  /** Card de status da dashboard de Contratos → Histórico filtrado. */
-  const verContratosStatus = (status: ContratoStatus | null) => {
-    setContratoAbrirId(null);
-    setContratoStatusFiltro(status);
-    irPara(urlDaTela("contratos", "contratos-historico"));
-  };
-
-  /** Alerta "Shows sem contrato" → Novo Contrato com a venda JÁ selecionada. */
-  const fazerContratoDaVenda = (vendaId: string) => {
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(null);
-    setCobrancaBuscaInicial(null);
-    setContratoVendaInicialId(vendaId);
-    irPara(urlDaTela("contratos", "contratos-novo"));
-  };
-
-  /** Alerta "Parcelas atrasadas" → Cobranças já filtradas por aquela venda. */
-  const verCobrancaDaVenda = (termo: string) => {
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(null);
-    setContratoVendaInicialId(null);
-    setCobrancaBuscaInicial(termo);
-    irPara(urlDaTela("financeiro", "financeiro-cobrancas"));
-  };
-
-  /** Linha de contrato recente → abre o contrato no Histórico. */
-  const abrirContrato = (id: string) => {
-    setContratoStatusFiltro(null);
-    setContratoAbrirId(id);
-    irPara(urlDaTela("contratos", "contratos-historico"));
-  };
-
-  const abrirOrcamento = (id: string) => {
-    irPara(urlDaTela("vendas", "vendas-orcamento-detalhe", id));
-  };
-
+  const abrirOrcamento = (id: string) => irPara(urls.orcamento(id));
   const abrirVenda = (id: string) => {
     // Limpa o aviso da edição anterior: ele é de UMA passagem pelo form, não do
     // detalhe da venda (quem precisa reafirmá-lo re-seta DEPOIS desta chamada).
     setAvisoParcelasPreservadas(false);
-    irPara(urlDaTela("vendas", "vendas-venda-detalhe", id));
+    irPara(urls.venda(id));
   };
+  const editarVenda = (id: string) => irPara(urls.editarVenda(id));
+  const transformarOrcamentoEmVenda = (id: string) => irPara(urls.novaVenda({ orcamento: id }));
+  const novaVendaNoDia = (dataISO: string) => irPara(urls.novaVenda({ data: dataISO }));
+  const abrirContrato = (id: string) => irPara(urls.contrato(id));
+  const abrirShow = (id: string) => abrirSobreposicao("show", id);
 
-  /** Lápis do Histórico / botão "Editar venda" → form de criação em modo edição. */
-  const editarVenda = (id: string) => {
-    irPara(urlDaTela("vendas", "vendas-editar-venda", id));
-  };
+  // ---- Caminho no topo ----
+  const { vendas } = useVendas();
+  const { orcamentos } = useOrcamentos();
+  const { contratos } = useContratos();
+  const { contratantes, casas, cidades } = useContatos();
+  const abaConfig = configAberta ? searchParams.get("aba") ?? "perfil" : null;
+  const ehAdminSessao = isSuperAdmin || sessao?.usuario?.papel === "admin";
+  const migalhas = useMemo(() => {
+    const nomeContato = (() => {
+      if (!contatoId) return null;
+      if (contatoAba === "contratantes") return contratantes.find((c) => c.id === contatoId)?.nome ?? null;
+      if (contatoAba === "casas") return casas.find((c) => c.id === contatoId)?.nome ?? null;
+      if (contatoAba === "cidades") return cidades.find((c) => c.id === contatoId)?.nome ?? null;
+      return null;
+    })();
+    return migalhasDaRota(rota, {
+      nomes: {
+        orcamento: orcamentoId ? orcamentos.find((o) => o.id === orcamentoId)?.numero : null,
+        venda: vendaId ? vendas.find((v) => v.id === vendaId)?.numero : null,
+        contrato: contratoId ? contratos.find((c) => c.id === contratoId)?.numero : null,
+        contato: nomeContato,
+        orcamentoOrigem: orcamentoOrigem
+          ? orcamentos.find((o) => o.id === orcamentoOrigem)?.numero ?? null
+          : null,
+      },
+      abaConfig,
+      ehAdmin: ehAdminSessao,
+    });
+  }, [
+    rota,
+    orcamentoId,
+    vendaId,
+    contratoId,
+    contatoId,
+    contatoAba,
+    orcamentoOrigem,
+    abaConfig,
+    ehAdminSessao,
+    orcamentos,
+    vendas,
+    contratos,
+    contratantes,
+    casas,
+    cidades,
+  ]);
 
-  const transformarOrcamentoEmVenda = (id: string) => {
-    setOrcamentoSendoTransformado(id);
-    setDataShowInicial(null);
-    irPara(urlDaTela("vendas", "vendas-nova-venda"));
-  };
+  // Parcela aberta no modal global: a venda dona é achada pela própria parcela.
+  const vendaDaParcela = parcelaAberta
+    ? vendas.find((v) => v.parcelas.some((p) => p.id === parcelaAberta))?.id ?? null
+    : null;
 
-  /** "Novo Show" no "+" de um dia da agenda → Nova Venda Direta com a data pré-selecionada. */
-  const novaVendaNoDia = (dataISO: string) => {
-    setOrcamentoSendoTransformado(null);
-    setDataShowInicial(dataISO);
-    irPara(urlDaTela("vendas", "vendas-nova-venda"));
-  };
-
-  const abrirContatos = (cat: ContatoCategoria) => {
-    setContatoCategoria(cat);
-    irPara(urlDaTela("contatos", "contatos-lista"));
-  };
-
-  const corModulo = MODULE_THEMES[activeTab]?.color ?? "#3D7BFF";
+  // Lista + ficha do MESMO componente (contratos, contatos) dividem a chave:
+  // abrir/fechar o item não remonta a lista (filtros e período ficam).
+  // Formulários com origem na query remontam quando a origem muda.
+  const chaveMain =
+    activePage === "contratos-historico"
+      ? "contratos-historico"
+      : activePage === "contatos-lista"
+        ? "contatos-lista"
+        : activePage === "vendas-nova-venda"
+          ? `${pathname}?${orcamentoOrigem ?? ""}|${dataNovaVenda ?? ""}`
+          : activePage === "contratos-novo"
+            ? `${pathname}?${vendaParaContrato ?? ""}`
+            : pathname;
+  // Nova tela (ou item) → começa do topo, inclusive quando a chave não muda.
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-main">
@@ -612,9 +503,9 @@ function AppRoot() {
 
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={handleTabChange}
+        setActiveTab={(tab) => irParaTela(tab, "dashboard")}
         activePage={activePage}
-        setActivePage={handlePageChange}
+        setActivePage={(page) => irParaTela(activeTab, page)}
         selectedArtistas={selectedArtistas}
         setSelectedArtistas={setSelectedArtistas}
         isOpenMobile={sidebarOpen}
@@ -625,26 +516,29 @@ function AppRoot() {
       <div
         className="flex flex-1 flex-col overflow-hidden"
         style={{
-          // Glow na ZONA da topbar (cor do módulo), no nível da coluna — atrás do
-          // header transparente. Alinhado e contínuo com a "bola" do PageHeader
+          // Glow na ZONA da topbar, no nível da coluna — atrás do header
+          // transparente. Alinhado e contínuo com a "bola" do PageHeader
           // (que vive dentro do main e é cortada): a bola parece subir pra topbar.
-          background: `radial-gradient(380px 160px at 145px -10px, ${corModulo}26, transparent 66%)`,
+          background: `radial-gradient(380px 160px at 145px -10px, color-mix(in srgb, var(--brand) 15%, transparent), transparent 66%)`,
         }}
       >
         <Topbar
           onOpenSidebar={() => setSidebarOpen(true)}
-          activeTab={activeTab}
-          onAbrirConfiguracoes={() => irPara(`${BASE}/configuracoes`)}
+          migalhas={migalhas}
+          onNavegar={irParaHref}
+          onAbrirConfiguracoes={() => irPara(urls.configuracoes())}
+          onVerNotificacoes={() => irPara(urls.configuracoes("notificacoes"))}
         />
 
         {configAberta ? (
-          <main className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in">
+          <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in">
             <NavOverlay />
-            <Configuracoes onSair={() => irPara(`${BASE}/agenda`)} />
+            <Configuracoes onSair={() => voltar(urls.modulo("agenda"))} />
           </main>
         ) : (
         <main
-          key={pathname}
+          key={chaveMain}
+          ref={mainRef}
           className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in"
         >
           <NavOverlay />
@@ -653,7 +547,7 @@ function AppRoot() {
           {activeTab === "financeiro" && activePage === "dashboard" && (
             <Dashboard
               selectedArtistas={selectedArtistas}
-              onNavigate={navegar}
+              onNavigate={irParaTela}
               onAbrirVenda={abrirVenda}
             />
           )}
@@ -661,14 +555,14 @@ function AppRoot() {
             <ControlePagamentos />
           )}
           {activeTab === "financeiro" && activePage === "financeiro-cobrancas" && (
-            <ControlePagamentos modo="cobrancas" buscaInicial={cobrancaBuscaInicial} />
+            <ControlePagamentos modo="cobrancas" buscaInicial={buscaCobrancas} />
           )}
 
           {/* Vendas */}
           {activeTab === "vendas" && activePage === "dashboard" && (
             <VendasDashboard
               selectedArtistas={selectedArtistas}
-              onNavigate={navegar}
+              onNavigate={irParaTela}
               onAbrirOrcamento={abrirOrcamento}
               onAbrirVenda={abrirVenda}
             />
@@ -676,14 +570,14 @@ function AppRoot() {
           {activeTab === "vendas" && activePage === "vendas-novo-orcamento" && (
             <NovoOrcamento
               onSaved={() => {}}
-              onCancel={() => handlePageChange("dashboard")}
-              onDone={() => handlePageChange("vendas-historico")}
+              onCancel={() => voltar(urls.modulo("vendas"))}
+              onDone={() => voltarPara(urls.orcamentos())}
             />
           )}
           {activeTab === "vendas" && activePage === "vendas-historico" && (
             <HistoricoOrcamentos
               selectedArtistas={selectedArtistas}
-              onNovo={() => handlePageChange("vendas-novo-orcamento")}
+              onNovo={() => irPara(urls.novoOrcamento())}
               onAbrir={abrirOrcamento}
               onTransformarEmVenda={transformarOrcamentoEmVenda}
             />
@@ -693,35 +587,30 @@ function AppRoot() {
             orcamentoId !== null && (
               <OrcamentoDetalhe
                 orcamentoId={orcamentoId}
-                onBack={() => handlePageChange("vendas-historico")}
+                onBack={() => voltar(urls.orcamentos())}
                 onTransformarEmVenda={transformarOrcamentoEmVenda}
                 onAbrir={abrirOrcamento}
               />
             )}
           {activeTab === "vendas" && activePage === "vendas-nova-venda" && (
             <ConcretizarVenda
-              orcamentoId={orcamentoSendoTransformado ?? undefined}
-              dataInicial={dataShowInicial ?? undefined}
-              onSaved={(vendaId) => {
-                setDataShowInicial(null);
-                abrirVenda(vendaId);
+              orcamentoId={orcamentoOrigem ?? undefined}
+              dataInicial={dataNovaVenda ?? undefined}
+              onSaved={(id) => {
+                setAvisoParcelasPreservadas(false);
+                // SUBSTITUI o formulário: o Voltar da venda criada não deve
+                // reabrir um formulário já enviado.
+                irPara(urls.venda(id), { substituir: true });
               }}
               onCancel={() =>
-                handlePageChange(
-                  orcamentoSendoTransformado !== null
-                    ? "vendas-historico"
-                    : "vendas-historico-vendas"
-                )
+                voltar(orcamentoOrigem ? urls.orcamento(orcamentoOrigem) : urls.vendas())
               }
             />
           )}
           {activeTab === "vendas" && activePage === "vendas-historico-vendas" && (
             <HistoricoVendas
               selectedArtistas={selectedArtistas}
-              onNovaVenda={() => {
-                setOrcamentoSendoTransformado(null);
-                handlePageChange("vendas-nova-venda");
-              }}
+              onNovaVenda={() => irPara(urls.novaVenda())}
               onAbrir={abrirVenda}
               onEditar={editarVenda}
             />
@@ -731,7 +620,7 @@ function AppRoot() {
             vendaId !== null && (
               <VendaDetalhe
                 vendaId={vendaId}
-                onBack={() => handlePageChange("vendas-historico-vendas")}
+                onBack={() => voltar(urls.vendas())}
                 onEditar={editarVenda}
                 avisoParcelasPreservadas={avisoParcelasPreservadas}
                 onDispensarAvisoParcelas={() => setAvisoParcelasPreservadas(false)}
@@ -742,12 +631,13 @@ function AppRoot() {
             vendaId !== null && (
               <EditarVendaLoader
                 vendaId={vendaId}
-                onFechar={(id, resultado) => {
-                  // Ordem importa: `abrirVenda` limpa o aviso, então a
-                  // reafirmação vem DEPOIS (o último set do batch vence).
-                  abrirVenda(id);
+                onSalvou={(id, resultado) => {
+                  // Ordem importa: limpa e só então reafirma (o último set vence).
+                  setAvisoParcelasPreservadas(false);
                   if (resultado?.parcelasPreservadas) setAvisoParcelasPreservadas(true);
+                  voltarPara(urls.venda(id));
                 }}
+                onCancelar={(id) => voltar(urls.venda(id))}
               />
             )}
 
@@ -755,15 +645,13 @@ function AppRoot() {
           {activeTab === "agenda" && activePage === "dashboard" && (
             <AgendaDashboard
               selectedArtistas={selectedArtistas}
-              onNavigate={navegar}
-              onAbrirShow={(id) => setShowModalId(id)}
+              onNavigate={irParaTela}
+              onAbrirShow={abrirShow}
             />
           )}
           {activeTab === "agenda" && activePage === "agenda-completa" && (
             <AgendaEscala
               selectedArtistas={selectedArtistas}
-              onAbrirOrcamento={abrirOrcamento}
-              onAbrirVenda={abrirVenda}
               onNovaVendaNoDia={novaVendaNoDia}
             />
           )}
@@ -773,13 +661,18 @@ function AppRoot() {
 
           {/* Contatos */}
           {activeTab === "contatos" && activePage === "dashboard" && (
-            <ContatosDashboard onAbrirCategoria={abrirContatos} />
+            <ContatosDashboard onAbrirCategoria={(cat) => irPara(urls.contatos(cat))} />
           )}
           {activeTab === "contatos" && activePage === "contatos-lista" && (
             <Contatos
-              categoriaInicial={contatoCategoria}
+              aba={contatoAba}
+              contatoId={contatoId}
+              // Trocar de aba não empilha histórico (é filtro da mesma lista).
+              onAbrirAba={(aba) => irPara(urls.contatos(aba), { substituir: true })}
+              onAbrirContato={(cat, id) => irPara(urls.contato(cat, id))}
+              onVoltarDaFicha={() => voltar(urls.contatos(contatoAba))}
               selectedArtistas={selectedArtistas}
-              onAbrirShow={(id) => setShowModalId(id)}
+              onAbrirShow={abrirShow}
             />
           )}
           {activeTab === "contatos" && activePage === "contatos-mapa" && <MapaPage />}
@@ -787,14 +680,14 @@ function AppRoot() {
           {/* Contratos */}
           {activeTab === "contratos" && activePage === "dashboard" && (
             <DashboardContratos
-              onNavigate={navegar}
-              onVerStatus={verContratosStatus}
+              onNavigate={irParaTela}
+              onVerStatus={(status) => irPara(urls.contratos({ status }))}
               onAbrirContrato={abrirContrato}
             />
           )}
           {activeTab === "contratos" && activePage === "contratos-novo" && (
             <NovoContratoPage
-              vendaInicialId={contratoVendaInicialId}
+              vendaInicialId={vendaParaContrato}
               selectedArtistas={selectedArtistas}
             />
           )}
@@ -803,20 +696,22 @@ function AppRoot() {
           )}
           {activeTab === "contratos" && activePage === "contratos-historico" && (
             <HistoricoPage
-              abrirId={contratoAbrirId}
-              statusInicial={contratoStatusFiltro}
+              contratoId={contratoId}
+              statusInicial={statusContratos}
+              onAbrirContrato={abrirContrato}
+              onVoltar={() => voltar(urls.contratos())}
             />
           )}
           {activeTab === "contratos" && activePage === "contratos-pastas" && (
-            <MeusContratosPage onAbrirContrato={abrirContrato} onNavigate={navegar} />
+            <MeusContratosPage onAbrirContrato={abrirContrato} onNavigate={irParaTela} />
           )}
 
           {/* Agência — admin-only (podeAgencia); URL direta de não-admin é
               redirecionada pelo useEffect acima e nunca monta estas telas. */}
           {podeAgencia && activeTab === "agencia" && activePage === "dashboard" && (
             <AgenciaDashboard
-              onFazerContratoDaVenda={fazerContratoDaVenda}
-              onVerCobrancaDaVenda={verCobrancaDaVenda}
+              onFazerContratoDaVenda={(id) => irPara(urls.novoContrato({ venda: id }))}
+              onVerCobrancaDaVenda={(termo) => irPara(urls.cobrancas({ busca: termo }))}
               onAbrirContrato={abrirContrato}
             />
           )}
@@ -835,13 +730,19 @@ function AppRoot() {
         )}
       </div>
 
-      {/* Modal de show — acessível a partir do dashboard da Agenda */}
+      {/* Modais com ENDEREÇO (?show= / ?parcela=): valem por cima de qualquer
+          tela, o F5 reabre e o voltar do navegador fecha. */}
       <ShowDetalheModal
-        showId={showModalId}
-        onClose={() => setShowModalId(null)}
+        showId={showAberto}
+        onClose={() => fecharSobreposicao("show")}
         onAbrirOrcamento={abrirOrcamento}
         onAbrirVenda={abrirVenda}
         onEditarVenda={editarVenda}
+      />
+      <ParcelaDetalheModal
+        vendaId={vendaDaParcela}
+        parcelaId={parcelaAberta}
+        onClose={() => fecharSobreposicao("parcela")}
       />
       </div>
     </div>
@@ -855,10 +756,12 @@ function AppRoot() {
  */
 function EditarVendaLoader({
   vendaId,
-  onFechar,
+  onSalvou,
+  onCancelar,
 }: {
   vendaId: string;
-  onFechar: (id: string, resultado?: { parcelasPreservadas?: boolean }) => void;
+  onSalvou: (id: string, resultado?: { parcelasPreservadas?: boolean }) => void;
+  onCancelar: (id: string) => void;
 }) {
   const t = useT();
   const { vendas, carregando } = useVendas();
@@ -889,8 +792,8 @@ function EditarVendaLoader({
     <ConcretizarVenda
       key={venda.id}
       vendaParaEditar={venda}
-      onSaved={(_id, resultado) => onFechar(venda.id, resultado)}
-      onCancel={() => onFechar(venda.id)}
+      onSaved={(_id, resultado) => onSalvou(venda.id, resultado)}
+      onCancel={() => onCancelar(venda.id)}
     />
   );
 }

@@ -154,8 +154,8 @@ export default function MeusContratosPage({
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Contratos"
-        subtitle={t("Organizador de contratos")}
+        title="Pastas"
+        subtitle={t("Organize seus contratos em pastas")}
         accentColor={ACCENT}
       />
 

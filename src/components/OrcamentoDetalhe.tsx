@@ -162,7 +162,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
-        {t("Voltar para Histórico")}
+        {t("Voltar")}
       </button>
 
       {/* ===== Herói de página ===== */}
@@ -205,7 +205,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 style={{ backgroundColor: accent, color: "#fff" }}
               >
                 <CalendarCheck2 size={14} />
-                {t("Transformar em Venda")}
+                {t("Concretizar venda")}
               </button>
             )}
             <a

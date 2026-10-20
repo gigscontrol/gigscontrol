@@ -74,6 +74,12 @@ export class ExcedenteError extends Error {
 type ContratosContextValue = {
   contratos: Contrato[];
   carregando: boolean;
+  /**
+   * true depois da 1ª busca terminar (com sucesso ou erro). Antes disso,
+   * lista vazia NÃO quer dizer "não existe" — telas que abrem um item pelo
+   * endereço usam isto pra não piscar "não encontrado" no F5.
+   */
+  carregado: boolean;
   erro: string | null;
   recarregar: () => Promise<void>;
   criarContrato: (input: NovoContratoInput) => Promise<Contrato>;
@@ -110,6 +116,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
     Record<string, AssinanteResumo[]>
   >({});
   const [carregando, setCarregando] = useState(false);
+  const [carregado, setCarregado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
@@ -149,6 +156,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
       setContratos([]);
     } finally {
       setCarregando(false);
+      setCarregado(true);
     }
   }, [sessao?.workspace]);
 
@@ -288,6 +296,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
     () => ({
       contratos,
       carregando,
+      carregado,
       erro,
       recarregar,
       criarContrato,
@@ -301,6 +310,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
     [
       contratos,
       carregando,
+      carregado,
       erro,
       recarregar,
       criarContrato,

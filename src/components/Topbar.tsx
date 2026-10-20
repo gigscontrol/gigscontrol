@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { Fragment, useState, useRef, useEffect, useMemo } from "react";
 import {
   Menu,
   LogOut,
@@ -9,9 +9,9 @@ import {
   Settings,
   CalendarClock,
   FileText,
+  ChevronRight,
 } from "lucide-react";
-import { MODULE_THEMES } from "@/types";
-import type { ActiveTab } from "@/types";
+import type { Migalha } from "@/lib/navegacao/rotas";
 import { useAuth } from "@/lib/auth-context";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
@@ -26,16 +26,22 @@ import Avatar from "./Avatar";
 
 type Props = {
   onOpenSidebar: () => void;
-  activeTab: ActiveTab;
+  /** Caminho até a tela atual ("Vendas › Todas as vendas › VND-0063"). */
+  migalhas: Migalha[];
+  /** Navega pra um passo do caminho. */
+  onNavegar: (href: string) => void;
   onAbrirConfiguracoes?: () => void;
+  /** "Ver todas" do sino → Configurações › Notificações. */
+  onVerNotificacoes?: () => void;
 };
 
 export default function Topbar({
   onOpenSidebar,
-  activeTab,
+  migalhas,
+  onNavegar,
   onAbrirConfiguracoes,
+  onVerNotificacoes,
 }: Props) {
-  const theme = MODULE_THEMES[activeTab];
   const { sessao, logout } = useAuth();
   const t = useT();
   const { lang, setLang } = useLang();
@@ -113,10 +119,41 @@ export default function Topbar({
           <Menu size={18} />
         </button>
 
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.color }} />
-          <span className="truncate text-sm font-medium text-secondary">{t(theme.label)}</span>
-        </div>
+        {/* Caminho até a tela atual. No celular só o módulo e o último passo
+            (o meio some) pra caber; cada passo anterior é clicável. */}
+        <nav aria-label={t("Você está em")} className="flex min-w-0 items-center gap-1.5 text-sm">
+          <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: "var(--brand)" }} />
+          {migalhas.map((m, i) => {
+            const ultimo = i === migalhas.length - 1;
+            const meio = i > 0 && !ultimo;
+            const rotulo = m.traduzir ? t(m.rotulo) : m.rotulo;
+            return (
+              <Fragment key={`${i}-${m.rotulo}`}>
+                {i > 0 && (
+                  <ChevronRight
+                    size={13}
+                    className={`flex-shrink-0 text-muted ${meio ? "hidden md:block" : ""}`}
+                  />
+                )}
+                {m.href ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavegar(m.href!)}
+                    className={`truncate text-muted transition-colors hover:text-primary ${
+                      meio ? "hidden md:inline max-w-[180px]" : "max-w-[140px] md:max-w-[200px]"
+                    }`}
+                  >
+                    {rotulo}
+                  </button>
+                ) : (
+                  <span aria-current="page" className="truncate font-medium text-primary">
+                    {rotulo}
+                  </span>
+                )}
+              </Fragment>
+            );
+          })}
+        </nav>
 
         {/* Status do plano (só admin): dias restantes + contratos do mês */}
         {isAdmin && (
@@ -152,7 +189,7 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        <SinoNotificacoes onVerTodas={onAbrirConfiguracoes} />
+        <SinoNotificacoes onVerTodas={onVerNotificacoes} onAbrirLink={onNavegar} />
         {/* No mobile, idioma e tema migram pro dropdown do usuário (abaixo). */}
         <div className="hidden md:flex items-center gap-2">
           <LanguageSwitcher />

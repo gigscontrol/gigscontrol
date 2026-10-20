@@ -162,7 +162,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Histórico de Orçamentos"
+        title="Todos os orçamentos"
         subtitle={`${orcamentos.length} ${orcamentos.length === 1 ? t("orçamento no total") : t("orçamentos no total")}`}
         accentColor={accent}
         actions={
@@ -542,7 +542,7 @@ function RowActions({
         </ActionBtn>
       )}
       {status !== "recusado" && (
-        <ActionBtn label={t("Transformar em venda")} onClick={onTransformar} disabled={!podeConverter} disabledTitle={semPermissao}>
+        <ActionBtn label={t("Concretizar venda")} onClick={onTransformar} disabled={!podeConverter} disabledTitle={semPermissao}>
           <CalendarCheck2 size={14} style={{ color: "var(--brand)" }} />
         </ActionBtn>
       )}

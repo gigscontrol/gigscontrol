@@ -138,7 +138,7 @@ const MODULOS: Modulo[] = [
     icone: "calendario",
     submenu: [
       { icone: "dashboard", label: "Dashboard" },
-      { icone: "calendario", label: "Agenda de Shows" },
+      { icone: "calendario", label: "Calendário" },
       { icone: "nota", label: "Anotações" },
     ],
   },
@@ -148,9 +148,9 @@ const MODULOS: Modulo[] = [
     submenu: [
       { icone: "dashboard", label: "Dashboard" },
       { icone: "doc", label: "Novo Orçamento" },
-      { icone: "relogio", label: "Histórico Orçamentos" },
-      { icone: "calendario", label: "Nova Venda Direta" },
-      { icone: "carrinho", label: "Histórico Vendas" },
+      { icone: "relogio", label: "Todos os orçamentos" },
+      { icone: "calendario", label: "Nova venda" },
+      { icone: "carrinho", label: "Todas as vendas" },
     ],
   },
   {
@@ -158,8 +158,8 @@ const MODULOS: Modulo[] = [
     icone: "cartao",
     submenu: [
       { icone: "dashboard", label: "Dashboard" },
-      { icone: "cartao", label: "Controle de Pagamentos" },
-      { icone: "nota", label: "Fixados" },
+      { icone: "cartao", label: "Pagamentos" },
+      { icone: "nota", label: "Cobranças" },
     ],
   },
   {
@@ -169,8 +169,8 @@ const MODULOS: Modulo[] = [
       { icone: "dashboard", label: "Dashboard" },
       { icone: "doc", label: "Novo Contrato" },
       { icone: "nota", label: "Modelos" },
-      { icone: "relogio", label: "Histórico de Contratos" },
-      { icone: "doc", label: "Organizador" },
+      { icone: "relogio", label: "Todos os contratos" },
+      { icone: "doc", label: "Pastas" },
     ],
   },
   {
@@ -178,7 +178,7 @@ const MODULOS: Modulo[] = [
     icone: "pessoas",
     submenu: [
       { icone: "dashboard", label: "Dashboard" },
-      { icone: "pessoas", label: "Gerenciar Contatos" },
+      { icone: "pessoas", label: "Todos os contatos" },
       { icone: "pin", label: "Mapa" },
     ],
   },

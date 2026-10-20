@@ -19,7 +19,7 @@ import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
-import ParcelaDetalheModal from "./ParcelaDetalheModal";
+import { useNavegacao } from "./NavOverlay";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
@@ -112,7 +112,10 @@ export default function ControlePagamentos({
 
   const [search, setSearch] = useState(buscaInicial ?? "");
   const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
-  const [detalhe, setDetalhe] = useState<{ vendaId: string; parcelaId: string } | null>(null);
+  // A parcela abre no modal GLOBAL com endereço (?parcela=<id>, ver layout):
+  // F5 mantém aberta e o link pode ser mandado pra alguém.
+  const { abrirSobreposicao } = useNavegacao();
+  const abrirParcela = (l: LinhaParcela) => abrirSobreposicao("parcela", l.parcela.id);
   // Seletor de período (padrão: Visão geral). Filtra por data de vencimento.
   const [range, setRange] = useState<AgendaDateRange>("Visão geral");
   const [customMonth, setCustomMonth] = useState<string | null>(null);
@@ -207,16 +210,23 @@ export default function ControlePagamentos({
     [todasParcelas]
   );
 
-  // Fila da página "Fixadas / Cobranças": fixadas + atrasadas (em aberto).
+  // Fila da página "Cobranças": fixadas + atrasadas (em aberto). A busca vale
+  // aqui também — o "Cobrar" da Agência chega com o nº da venda preenchido e
+  // antes era ignorado (a fila inteira aparecia).
   const filaCobrancas = useMemo(
     () =>
-      todasParcelas.filter(
-        (l) =>
-          (l.parcela.meta?.fixada || l.status === "atrasado") &&
-          l.status !== "pago" &&
-          l.status !== "cancelado"
-      ),
-    [todasParcelas]
+      todasParcelas.filter((l) => {
+        if (!(l.parcela.meta?.fixada || l.status === "atrasado")) return false;
+        if (l.status === "pago" || l.status === "cancelado") return false;
+        if (search.trim()) {
+          const hay = [l.vendaNumero, l.contratante, l.nomeEvento, l.artistaNome]
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(search.toLowerCase())) return false;
+        }
+        return true;
+      }),
+    [todasParcelas, search]
   );
 
   async function toggleFixar(l: LinhaParcela) {
@@ -234,7 +244,7 @@ export default function ControlePagamentos({
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title={ehCobrancas ? "Fixados" : "Controle de Pagamentos"}
+        title={ehCobrancas ? "Cobranças" : "Pagamentos"}
         subtitle={
           ehCobrancas
             ? t("Cobranças fixadas e parcelas atrasadas — a fila do que precisa cobrar")
@@ -300,7 +310,6 @@ export default function ControlePagamentos({
         />
       </div>
 
-      {!ehCobrancas && (
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex h-[42px] items-center gap-2 bg-surface border border-border rounded-md px-3 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
@@ -311,8 +320,14 @@ export default function ControlePagamentos({
             placeholder={t("Buscar por venda, contratante, evento, artista...")}
             className="input"
           />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
+              {t("Limpar")}
+            </button>
+          )}
         </div>
 
+        {!ehCobrancas && (
         <div className="pill-group h-[42px] items-center">
           <button type="button" className={`pill ${filtroStatus === "todos" ? "active" : ""}`} onClick={() => setFiltroStatus("todos")}>
             {t("Todas ({n})", { n: parcelasPeriodo.length })}
@@ -336,8 +351,8 @@ export default function ControlePagamentos({
             </button>
           )}
         </div>
+        )}
       </div>
-      )}
 
       {!ehCobrancas && fixadas.length > 0 && (
         <div className="card mb-4" style={{ borderColor: "var(--warning)" }}>
@@ -351,7 +366,7 @@ export default function ControlePagamentos({
                 key={`fix-${l.vendaId}-${l.parcela.id}`}
                 linha={l}
                 accent={accent}
-                onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+                onClick={() => abrirParcela(l)}
                 onToggleFixar={() => toggleFixar(l)}
               />
             ))}
@@ -365,14 +380,18 @@ export default function ControlePagamentos({
             <Wallet size={18} className="text-muted" />
           </div>
           <div className="section-title mb-1">
-            {ehCobrancas
+            {ehCobrancas && search.trim()
+              ? t("Nenhum resultado")
+              : ehCobrancas
               ? t("Nenhuma cobrança pendente 🎉")
               : todasParcelas.length === 0
                 ? t("Nenhuma parcela registrada")
                 : t("Nenhum resultado")}
           </div>
           <div className="section-subtitle">
-            {ehCobrancas
+            {ehCobrancas && search.trim()
+              ? t("Ajuste os filtros ou a busca")
+              : ehCobrancas
               ? t("Nada fixado nem atrasado — tudo em dia!")
               : todasParcelas.length === 0
                 ? t("As parcelas aparecem aqui quando você concretiza uma venda")
@@ -386,7 +405,7 @@ export default function ControlePagamentos({
               key={`${l.vendaId}-${l.parcela.id}`}
               linha={l}
               accent={accent}
-              onClick={() => setDetalhe({ vendaId: l.vendaId, parcelaId: l.parcela.id })}
+              onClick={() => abrirParcela(l)}
               onToggleFixar={() => toggleFixar(l)}
             />
           ))}
@@ -406,11 +425,6 @@ export default function ControlePagamentos({
         </div>
       )}
 
-      <ParcelaDetalheModal
-        vendaId={detalhe?.vendaId ?? null}
-        parcelaId={detalhe?.parcelaId ?? null}
-        onClose={() => setDetalhe(null)}
-      />
     </div>
   );
 }

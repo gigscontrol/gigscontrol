@@ -131,7 +131,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Histórico de Vendas"
+        title="Todas as vendas"
         subtitle={`${ativas.length} ${ativas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${totaisPorMoeda(ativas.map((v) => ({ valor: v.cache, moeda: v.moeda })))}`}
         accentColor={accent}
         actions={
@@ -141,7 +141,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
             style={{ backgroundColor: accent, color: "#fff" }}
           >
             <Plus size={14} />
-            {t("Nova venda direta")}
+            {t("Nova venda")}
           </button>
         }
       />
@@ -192,7 +192,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
             </div>
             <div className="section-subtitle mb-4">
               {vendas.length === 0
-                ? t("Concretize um orçamento aceito ou crie uma venda direta")
+                ? t("Concretize um orçamento aceito ou crie uma nova venda")
                 : t("Ajuste os filtros ou a busca")}
             </div>
             {vendas.length === 0 && (
@@ -202,7 +202,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
                 style={{ backgroundColor: accent, color: "#fff" }}
               >
                 <Plus size={14} />
-                {t("Nova venda direta")}
+                {t("Nova venda")}
               </button>
             )}
           </div>

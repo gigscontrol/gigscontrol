@@ -10,9 +10,18 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useT } from "@/lib/i18n";
 import ConfirmarSaidaModal from "./ConfirmarSaidaModal";
+import {
+  registrarVisita,
+  restaurarPilha,
+  temAnterior,
+  anterior,
+} from "@/lib/navegacao/pilha";
+import type { Sobreposicao } from "@/lib/navegacao/rotas";
+
+const CHAVE_PILHA = "gc-pilha-nav";
 
 /**
  * Navegação não-bloqueante do app.
@@ -41,8 +50,28 @@ type Guarda = () => { sujo: boolean; salvar: (() => Promise<boolean>) | null };
 type NavCtx = {
   /** true quando uma navegação está "lenta" (> limiar) e ainda em andamento. */
   navegando: boolean;
-  /** Navega para `href` de forma não-bloqueante. Ignora se já está na rota. */
-  navegar: (href: string) => void;
+  /**
+   * Navega para `href` de forma não-bloqueante. Ignora se já está na URL.
+   * `substituir`: troca a entrada atual do histórico em vez de criar outra —
+   * use depois de SALVAR um formulário (o Voltar da tela seguinte não deve
+   * cair de novo no formulário).
+   */
+  navegar: (href: string, opts?: { substituir?: boolean }) => void;
+  /**
+   * "Voltar" de verdade: volta pra tela de onde a pessoa veio. Sem tela
+   * anterior no app (chegou por link/notificação) → vai pro `padrao`.
+   */
+  voltar: (padrao: string) => void;
+  /**
+   * Depois de SALVAR: leva até `href`. Se `href` é a tela anterior (abriu o
+   * formulário a partir dela), volta no histórico — sem duplicar a entrada;
+   * senão vai até ela substituindo o formulário.
+   */
+  voltarPara: (href: string) => void;
+  /** Abre um modal com endereço (`?show=<id>` / `?parcela=<id>`) por cima da tela atual. */
+  abrirSobreposicao: (tipo: Sobreposicao, id: string) => void;
+  /** Fecha o modal com endereço (volta no histórico se foi aberto pelo app). */
+  fecharSobreposicao: (tipo: Sobreposicao) => void;
   /** Registra a guarda de saída da tela atual (chamada no mount da tela). */
   registrarGuarda: (g: Guarda) => void;
   /** Remove a guarda registrada (chamada no unmount / após salvar). */
@@ -57,18 +86,58 @@ const LIMIAR_MS = 150;
 export function NavProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  // URL completa (caminho + query): modais com endereço vivem na query, então
+  // "já estou aqui?" e a pilha do Voltar precisam olhar os dois.
+  const urlAtual = query ? `${pathname}?${query}` : pathname;
+  const urlAtualRef = useRef(urlAtual);
+  urlAtualRef.current = urlAtual;
+
   const [isPending, startTransition] = useTransition();
   const [navegando, setNavegando] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alvoRef = useRef<string | null>(null);
 
+  // ---- Pilha do Voltar (ver lib/navegacao/pilha.ts) ----
+  const pilhaRef = useRef<string[] | null>(null);
+  const proximaSubstituiRef = useRef(false);
+  const persistirPilha = (p: string[]) => {
+    try {
+      sessionStorage.setItem(CHAVE_PILHA, JSON.stringify(p));
+    } catch {
+      /* modo privado / quota — a pilha segue em memória */
+    }
+  };
+  useEffect(() => {
+    if (pilhaRef.current === null) {
+      // 1ª montagem (carga da página / F5): restaura só se a pilha salva
+      // termina AQUI — senão recomeça (link novo, pós-login, outra aba).
+      let salva: unknown = null;
+      try {
+        salva = JSON.parse(sessionStorage.getItem(CHAVE_PILHA) ?? "null");
+      } catch {
+        salva = null;
+      }
+      pilhaRef.current = restaurarPilha(salva, urlAtual);
+    } else {
+      pilhaRef.current = registrarVisita(
+        pilhaRef.current,
+        urlAtual,
+        proximaSubstituiRef.current
+      );
+    }
+    proximaSubstituiRef.current = false;
+    persistirPilha(pilhaRef.current);
+  }, [urlAtual]);
+
   // ---- Guarda de "alterações não salvas" ----
   // guardaRef guarda a função registrada pela tela editável atual (ou null).
-  // `saida` = destino pendente + salvar, quando interceptamos uma navegação
-  // com mudanças pendentes (dispara o popup). Só existe UMA guarda por vez
-  // (só uma tela de edição fica montada por vez).
+  // `saida` = a ação pendente (ir pra um destino OU voltar) + salvar, quando
+  // interceptamos uma saída com mudanças pendentes (dispara o popup). Só
+  // existe UMA guarda por vez (só uma tela de edição fica montada por vez).
   const guardaRef = useRef<Guarda | null>(null);
-  const [saida, setSaida] = useState<{ href: string; salvar: (() => Promise<boolean>) | null } | null>(null);
+  const [saida, setSaida] = useState<{ ir: () => void; salvar: (() => Promise<boolean>) | null } | null>(null);
   const [salvandoSaida, setSalvandoSaida] = useState(false);
 
   const registrarGuarda = useCallback((g: Guarda) => {
@@ -101,37 +170,124 @@ export function NavProvider({ children }: { children: ReactNode }) {
   // Empurra a rota de fato (sem passar pela guarda). Reusado pelo caminho
   // normal e pelos botões do popup de saída.
   const empurrar = useCallback(
-    (href: string) => {
+    (href: string, substituir = false) => {
       alvoRef.current = href;
+      proximaSubstituiRef.current = substituir;
       startTransition(() => {
-        router.push(href);
+        if (substituir) router.replace(href);
+        else router.push(href);
       });
     },
     [router]
   );
 
-  const navegar = (href: string) => {
-    if (href === pathname) return; // mesma rota: no-op
-    // Sem guarda registrada (99% das telas) → comporta EXATAMENTE como antes.
+  /** Executa `ir` — ou segura e pergunta, se a tela atual tem edição pendente. */
+  const comGuarda = useCallback((ir: () => void) => {
+    // Sem guarda registrada (99% das telas) → segue direto.
     const guarda = guardaRef.current;
     if (guarda) {
       const { sujo, salvar } = guarda();
       if (sujo) {
-        // Há mudanças pendentes: NÃO navega — segura o destino e abre o popup.
-        setSaida({ href, salvar });
+        setSaida({ ir, salvar });
         return;
       }
     }
-    empurrar(href);
+    ir();
+  }, []);
+
+  // Fechar um modal com endereço é ADIADO um instante: botões como "Abrir
+  // venda" dentro do modal do show fecham e navegam no mesmo clique — sem o
+  // adiamento, o "voltar" do fechar disputava com a ida pra venda e a pessoa
+  // caía de volta no modal. Qualquer navegação logo em seguida cancela o
+  // fechar (a entrada do modal fica no histórico: o Voltar da venda reabre o
+  // show de onde a pessoa veio).
+  const fecharPendenteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelarFecharPendente = () => {
+    if (fecharPendenteRef.current) {
+      clearTimeout(fecharPendenteRef.current);
+      fecharPendenteRef.current = null;
+    }
   };
+
+  const navegar = useCallback(
+    (href: string, opts?: { substituir?: boolean }) => {
+      cancelarFecharPendente();
+      if (href === urlAtualRef.current) return; // mesma URL: no-op
+      comGuarda(() => empurrar(href, !!opts?.substituir));
+    },
+    [comGuarda, empurrar]
+  );
+
+  const voltar = useCallback(
+    (padrao: string) => {
+      cancelarFecharPendente();
+      const pilha = pilhaRef.current ?? [];
+      comGuarda(() => {
+        if (temAnterior(pilha)) {
+          alvoRef.current = anterior(pilha);
+          router.back();
+        } else {
+          // Sem tela anterior do app: "sobe" pro destino-padrão SUBSTITUINDO
+          // (o voltar do navegador não deve reabrir a ficha de onde saiu).
+          empurrar(padrao, true);
+        }
+      });
+    },
+    [comGuarda, empurrar, router]
+  );
+
+  const voltarPara = useCallback(
+    (href: string) => {
+      cancelarFecharPendente();
+      const pilha = pilhaRef.current ?? [];
+      comGuarda(() => {
+        if (anterior(pilha) === href) {
+          alvoRef.current = href;
+          router.back();
+        } else {
+          empurrar(href, true);
+        }
+      });
+    },
+    [comGuarda, empurrar, router]
+  );
+
+  const abrirSobreposicao = useCallback(
+    (tipo: Sobreposicao, id: string) => {
+      cancelarFecharPendente();
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.set(tipo, id);
+      empurrar(`${pathname}?${sp.toString()}`);
+    },
+    [empurrar, pathname, searchParams]
+  );
+
+  const fecharSobreposicao = useCallback(
+    (tipo: Sobreposicao) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      if (!sp.has(tipo)) return;
+      sp.delete(tipo);
+      const destino = sp.toString() ? `${pathname}?${sp.toString()}` : pathname;
+      cancelarFecharPendente();
+      fecharPendenteRef.current = setTimeout(() => {
+        fecharPendenteRef.current = null;
+        const pilha = pilhaRef.current ?? [];
+        // Aberto pelo app → volta no histórico (o voltar do navegador fica
+        // coerente). Aberto por link → só tira o parâmetro.
+        if (anterior(pilha) === destino) router.back();
+        else empurrar(destino, true);
+      }, 0);
+    },
+    [empurrar, pathname, router, searchParams]
+  );
 
   // Popup: "Descartar" — sai perdendo as alterações.
   const descartarESair = () => {
     if (!saida) return;
-    const href = saida.href;
+    const { ir } = saida;
     guardaRef.current = null;
     setSaida(null);
-    empurrar(href);
+    ir();
   };
 
   // Popup: "Salvar e sair" — salva; só sai se o salvar reportar sucesso.
@@ -146,10 +302,10 @@ export function NavProvider({ children }: { children: ReactNode }) {
     }
     setSalvandoSaida(false);
     if (ok) {
-      const href = saida.href;
+      const { ir } = saida;
       guardaRef.current = null;
       setSaida(null);
-      empurrar(href);
+      ir();
     } else {
       // Falha (ex.: validação) — fecha o popup pro usuário ver o erro na tela.
       setSaida(null);
@@ -157,7 +313,18 @@ export function NavProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ navegando, navegar, registrarGuarda, limparGuarda }}>
+    <Ctx.Provider
+      value={{
+        navegando,
+        navegar,
+        voltar,
+        voltarPara,
+        abrirSobreposicao,
+        fecharSobreposicao,
+        registrarGuarda,
+        limparGuarda,
+      }}
+    >
       {children}
       {saida && (
         <ConfirmarSaidaModal

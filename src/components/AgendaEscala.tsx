@@ -11,7 +11,7 @@ import { useWorkspace, useArtistas } from "@/lib/workspace-context";
 import { setFeriados, ehFeriado, ehVesperaDeFeriado } from "@/lib/feriados";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange, Show, ShowStatus, Artista, AgendaItem } from "@/types";
-import ShowDetalheModal from "./ShowDetalheModal";
+import { useNavegacao } from "./NavOverlay";
 import Modal from "./Modal";
 import InputHora from "./inputs/InputHora";
 import InputDataBR from "./inputs/InputDataBR";
@@ -161,13 +161,11 @@ function EventCard({ show, artista, onClick }: { show: Show; artista?: Artista; 
 
 type Props = {
   selectedArtistas: string[];
-  onAbrirOrcamento?: (id: string) => void;
-  onAbrirVenda?: (id: string) => void;
-  /** "Novo Show" no "+" de um dia → abre Nova Venda Direta com a data. */
+  /** "Nova venda" no "+" de um dia → abre a Nova venda com a data. */
   onNovaVendaNoDia?: (dataISO: string) => void;
 };
 
-export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbrirVenda, onNovaVendaNoDia }: Props) {
+export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Props) {
   const t = useT();
   const { shows, recarregar: recarregarShows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
@@ -186,7 +184,10 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   const podeCriarAlgum = artistas.some((a) => podeUI(a.id, "agenda.criar"));
   const podeCriarShow = artistas.some((a) => podeCriarShowUI(podeUI, a.id));
   const podeAbrirNovoItem = podeCriarAlgum || podeCriarShow;
-  const [showSelecionado, setShowSelecionado] = useState<string | null>(null);
+  // O show abre no modal GLOBAL com endereço (?show=<id>, ver layout) — o
+  // mesmo de toda tela, com "Editar venda" (o modal local daqui não tinha).
+  const { abrirSobreposicao } = useNavegacao();
+  const setShowSelecionado = (id: string) => abrirSobreposicao("show", id);
   const [activeDateRange, setActiveDateRange] = useState<AgendaDateRange>("Mês atual");
   // Personalizado: seleção única de mês e ano. Defaults pro mês/ano
   // atuais (respeitando o mínimo de mai/2026 — data de criação do GIGS).
@@ -390,7 +391,7 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Agenda de Shows"
+        title="Calendário"
         subtitle={`${t("Visão dinâmica")} — ${t(activeDateRange)}`}
         accentColor={accent}
         actions={
@@ -529,13 +530,6 @@ export default function AgendaEscala({ selectedArtistas, onAbrirOrcamento, onAbr
         </Modal>
       )}
 
-      {/* Modal de detalhes ao clicar em um show */}
-      <ShowDetalheModal
-        showId={showSelecionado}
-        onClose={() => setShowSelecionado(null)}
-        onAbrirOrcamento={onAbrirOrcamento}
-        onAbrirVenda={onAbrirVenda}
-      />
 
       {/* Menu "+" — adicionar item a um dia */}
       {novoItemDia && (
@@ -825,7 +819,7 @@ const ACOES_NOVO_ITEM: {
   cor: string;
   emBreve?: boolean;
 }[] = [
-  { key: "show", label: "Novo Show", desc: "Venda direta neste dia", icon: Music, cor: "var(--brand)" },
+  { key: "show", label: "Nova venda", desc: "Show neste dia (cria a venda e o show)", icon: Music, cor: "var(--brand)" },
   { key: "voo", label: "Novo Voo", desc: "Voo com passageiros (busca por número)", icon: Plane, cor: "var(--brand)" },
   {
     key: "transporte",
