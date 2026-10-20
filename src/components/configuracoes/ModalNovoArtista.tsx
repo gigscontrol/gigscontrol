@@ -29,7 +29,7 @@ import {
   type TaxaAgenciaModo,
   type DocumentoTipo,
 } from "@/types";
-import { CORES, Campo, ListaRider, MODOS_TAXA, Secao, SecaoDadosContrato, SeletorDeCor, documentoValido, tipoDocumentoPorDigitos } from "./camposCadastro";
+import { CORES, Campo, ListaRider, MODOS_TAXA, Secao, SecaoDadosContrato, SeletorDeCor, documentoValido, normalizarUsername, tipoDocumentoPorDigitos } from "./camposCadastro";
 import { PrivacidadePills } from "./PrivacidadePills";
 
 // ============================================================
@@ -85,22 +85,6 @@ export function extrairRaizUsername(
   const u = usernameCompleto.toLowerCase();
   const sufixo = `-${slugAgencia.toLowerCase()}`;
   return u.endsWith(sufixo) ? u.slice(0, -sufixo.length) : u;
-}
-
-/**
- * Normaliza um texto pra virar username:
- *   "DJ Lúnar" → "djlunar"
- *   "Black Drumm!" → "blackdrumm"
- * Remove acentos, lowercase, mantém só [a-z0-9-].
- */
-export function normalizarUsername(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 export function ModalNovoArtista({

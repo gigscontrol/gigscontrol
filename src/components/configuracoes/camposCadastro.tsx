@@ -82,7 +82,6 @@ export const MODOS_TAXA: TaxaAgenciaModo[] = [
   "valor-variavel",
 ];
 
-
 // ============================================================
 // Seletor de cor — 10 cores + cor personalizada
 // ============================================================
@@ -691,4 +690,20 @@ export function ListaRider({
       )}
     </div>
   );
+}
+
+/**
+ * Normaliza um texto pra virar username (cadastro de artista e de usuário):
+ *   "DJ Lúnar" → "djlunar"
+ *   "João Vendas" → "joaovendas"
+ * Remove acentos, lowercase, mantém só [a-z0-9-].
+ */
+export function normalizarUsername(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
