@@ -2984,4 +2984,6 @@ export const ES: Record<string, string> = {
   "Proposta pro contratante aprovar": "Propuesta para que el contratante apruebe",
   "A partir de um modelo e de uma venda": "A partir de una plantilla y una venta",
   "Cadastrar um cliente": "Registrar un cliente",
+  // --- Navegação nova (out/2026) ---
+  "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "¿Eliminar este presupuesto? Va a la Papelera y puede restaurarse durante 30 días.",
 };

@@ -384,8 +384,7 @@ export default function Contatos({
             <button
               onClick={confirmarBloqueio}
               disabled={salvandoBloqueio}
-              className="btn text-white disabled:opacity-60"
-              style={{ backgroundColor: "var(--danger)" }}
+              className="btn btn-danger"
             >
               <Ban size={14} />
               {salvandoBloqueio ? t("Bloqueando...") : t("Bloquear")}

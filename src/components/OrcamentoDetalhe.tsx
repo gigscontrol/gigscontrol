@@ -284,7 +284,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               onClick={async () => {
                 const ok = await confirmar({
                   titulo: t("Remover orçamento"),
-                  mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
+                  mensagem: t("Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias."),
                   perigo: true,
                 });
                 if (ok) {
@@ -294,8 +294,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               }}
               disabled={!podeExcluirOrc}
               title={!podeExcluirOrc ? semPermissao : undefined}
-              className="ml-auto text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              style={{ color: "var(--danger)" }}
+              className="ml-auto btn btn-danger-outline px-3 py-1.5 text-xs"
             >
               <Trash2 size={12} />
               {t("Remover")}

@@ -347,8 +347,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
                   setRemovendo(false);
                 }
               }}
-              className="btn btn-primary"
-              style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+              className="btn btn-danger"
               disabled={removendo}
             >
               {removendo ? t("Removendo...") : t("Remover")}
@@ -389,8 +388,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
             </button>
             <button
               onClick={confirmarCancelamento}
-              className="btn btn-primary"
-              style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+              className="btn btn-danger"
               disabled={cancelando}
             >
               {cancelando ? t("Cancelando...") : t("Confirmar cancelamento")}

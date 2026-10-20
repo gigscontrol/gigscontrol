@@ -2984,4 +2984,6 @@ export const FR: Record<string, string> = {
   "Proposta pro contratante aprovar": "Proposition à faire valider par le client",
   "A partir de um modelo e de uma venda": "À partir d'un modèle et d'une vente",
   "Cadastrar um cliente": "Enregistrer un client",
+  // --- Navegação nova (out/2026) ---
+  "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "Supprimer ce devis ? Il va dans la Corbeille et peut être restauré pendant 30 jours.",
 };

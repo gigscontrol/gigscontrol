@@ -87,8 +87,7 @@ export default function ConfirmarModal({
         {perigo ? (
           <button
             onClick={() => onResposta(true)}
-            className="btn text-sm"
-            style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+            className="btn btn-danger text-sm"
           >
             {confirmarLabel ?? t("Confirmar")}
           </button>
