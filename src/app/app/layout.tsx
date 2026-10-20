@@ -26,6 +26,7 @@ import BannerPagamento from "@/components/BannerPagamento";
 import BloqueioModal from "@/components/BloqueioModal";
 import PreferenciasApply from "@/components/PreferenciasApply";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
+import { FiltroArtistasProvider, AvisoFiltroArtistas } from "@/components/FiltroArtistas";
 import { ContatosProvider, useContatos } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { AgendaItemsProvider } from "@/lib/agenda-items-context";
@@ -258,6 +259,26 @@ function AuthGuard({ children }: { children: ReactNode }) {
 
 const STATUS_CONTRATO: ContratoStatus[] = ["rascunho", "enviado", "assinado", "cancelado"];
 
+/**
+ * Telas que OBEDECEM o filtro de artistas (listas, calendário, dashboards…).
+ * Fichas e formulários não filtram (link pra venda de artista desmarcado
+ * abre do mesmo jeito) e a Agência fica de fora por decisão do dono.
+ */
+const TELAS_COM_FILTRO: ActivePage[] = [
+  "dashboard",
+  "agenda-completa",
+  "agenda-anotacoes",
+  "vendas-historico",
+  "vendas-historico-vendas",
+  "financeiro-pagamentos",
+  "financeiro-cobrancas",
+  "contratos-novo",
+  "contratos-historico",
+  "contratos-pastas",
+  "contatos-lista",
+  "contatos-mapa",
+];
+
 function AppRoot() {
   const t = useT();
   const pathname = usePathname();
@@ -393,6 +414,18 @@ function AppRoot() {
     };
   }, [sidebarOpen]);
 
+  // Filtro de artistas pra QUALQUER tela (contexto) + onde ele vale.
+  const filtroArtistas = useMemo(
+    () => ({
+      selecionados: selectedArtistas,
+      todos: artistasReal.map((a) => a.id),
+      definir: setSelectedArtistas,
+    }),
+    [selectedArtistas, artistasReal]
+  );
+  const filtroValeAqui =
+    !configAberta && activeTab !== "agencia" && TELAS_COM_FILTRO.includes(activePage);
+
   // ---- Navegação ----
 
   /** Menu / dashboards: vai pra uma tela (sem item). */
@@ -489,6 +522,7 @@ function AppRoot() {
   }, [pathname]);
 
   return (
+    <FiltroArtistasProvider valor={filtroArtistas}>
     <div className="flex flex-col h-screen overflow-hidden bg-main">
       {/* Faixa — super-admin visualizando a dashboard de um cliente */}
       <VisitanteBanner />
@@ -511,6 +545,8 @@ function AppRoot() {
         isOpenMobile={sidebarOpen}
         onCloseMobile={() => setSidebarOpen(false)}
         configAberta={configAberta}
+        // Onde o filtro não vale (Agência, Configurações) ele some do menu.
+        mostrarFiltroArtistas={!configAberta && activeTab !== "agencia"}
       />
 
       <div
@@ -542,6 +578,7 @@ function AppRoot() {
           className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in"
         >
           <NavOverlay />
+          {filtroValeAqui && !contratoId && !contatoId && <AvisoFiltroArtistas />}
           <SomenteLeitura>
           {/* Financeiro */}
           {activeTab === "financeiro" && activePage === "dashboard" && (
@@ -747,6 +784,7 @@ function AppRoot() {
       />
       </div>
     </div>
+    </FiltroArtistasProvider>
   );
 }
 

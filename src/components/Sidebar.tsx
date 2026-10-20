@@ -49,6 +49,8 @@ type Props = {
   onCloseMobile: () => void;
   /** true quando a tela de Configurações está aberta — nenhum módulo fica ativo */
   configAberta?: boolean;
+  /** Filtro de artistas só aparece onde ele vale (some na Agência/Configurações). */
+  mostrarFiltroArtistas?: boolean;
 };
 
 type SubPage = {
@@ -153,6 +155,7 @@ export default function Sidebar({
   isOpenMobile,
   onCloseMobile,
   configAberta = false,
+  mostrarFiltroArtistas = true,
 }: Props) {
   const { aparencia } = useWorkspace();
   const { sessao, isSuperAdmin } = useAuth();
@@ -461,11 +464,11 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* DJs — aparece em todos os módulos. Em Contatos, os checks
-            filtram quais contatos aparecem na lista (regra: contato fica
-            visível se pelo menos 1 DJ marcado tem show/orçamento/venda
-            com ele; contatos manuais sem histórico aparecem sempre). */}
-        {(
+        {/* Filtro de artistas — vale em todas as telas menos Agência e
+            Configurações (lá ele some). Regra única em lib/filtroArtistas:
+            coisa de artista desmarcado some; coisa sem artista (contato sem
+            histórico, contrato avulso) aparece sempre. */}
+        {mostrarFiltroArtistas && (
           <div>
             <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
               <span className="stat-label">{t("Artistas")}</span>
@@ -531,7 +534,7 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed ? "lg:hidden" : ""}`}>
+      <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed || !mostrarFiltroArtistas ? "lg:hidden" : ""} ${!mostrarFiltroArtistas ? "hidden" : ""}`}>
         <div className="text-[0.7rem] text-muted">
           {planoIndividual
             ? t(ARTISTAS.length === 1 ? "{n} artista" : "{n} artistas", { n: ARTISTAS.length })

@@ -20,6 +20,7 @@ import { EstadoCarga } from "./EstadoCarga";
 import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import { useNavegacao } from "./NavOverlay";
+import { useFiltroArtistas } from "./FiltroArtistas";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
@@ -126,9 +127,12 @@ export default function ControlePagamentos({
   );
   const tituloPeriodo = periodo.tudo ? t("Visão geral") : `${MESES_LONGO[periodo.mes]} ${periodo.ano}`;
 
+  // Filtro "Artistas" da barra lateral (regra única: lib/filtroArtistas).
+  const filtro = useFiltroArtistas();
   const todasParcelas = useMemo<LinhaParcela[]>(() => {
     const linhas: LinhaParcela[] = [];
     for (const v of vendas) {
+      if (!filtro.passa(v.artistaId)) continue;
       const artista = artistas.find((d) => d.id === v.artistaId);
       v.parcelas.forEach((parcela, idx) => {
         linhas.push({
@@ -152,7 +156,8 @@ export default function ControlePagamentos({
         new Date(a.parcela.dataVencimento).getTime() -
         new Date(b.parcela.dataVencimento).getTime()
     );
-  }, [vendas, artistas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendas, artistas, filtro.selecionados, filtro.ativo]);
 
   // Recorte do período (por data de vencimento). "Visão geral" = todas.
   const parcelasPeriodo = useMemo(

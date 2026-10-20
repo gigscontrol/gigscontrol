@@ -3975,4 +3975,8 @@ export const EN: Record<string, string> = {
   "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Pagamentos.": "Installments not recalculated: one has financial history (paid, cancelled, collected or pinned) and was kept. If the fee changed, review in Finance → Payments.",
   "Bloquear sinaliza que este contato é problemático. Ele continua visível para a equipe, com um selo de bloqueio.": "Blocking flags this contact as problematic. It stays visible to the team, with a block badge.",
   "Ver a mensagem que será enviada": "See the message that will be sent",
+  // --- Navegação nova (out/2026) ---
+  "Mostrando {n} de {m} artistas": "Showing {n} of {m} artists",
+  "Mostrar todos": "Show all",
+  "Nenhum artista marcado no filtro": "No artist selected in the filter",
 };

@@ -10,6 +10,7 @@ import ContratanteForm from "./forms/ContratanteForm";
 import CasaForm from "./forms/CasaForm";
 import CidadeForm from "./forms/CidadeForm";
 import ContatoDetail from "./ContatoDetail";
+import { useContatosFiltrados } from "@/lib/useContatosFiltrados";
 import MiniLixeira from "./MiniLixeira";
 import { useConfirmar } from "./ConfirmarModal";
 import { useContatos } from "@/lib/contatos-context";
@@ -228,13 +229,17 @@ export default function Contatos({
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [cidades]);
 
+  // Filtro "Artistas" da barra lateral (decisão do dono, 20/10/2026: vale
+  // aqui também). Contato herda os artistas do histórico; SEM histórico
+  // aparece sempre — o contratante recém-criado nunca "some" (lição do I11),
+  // e a faixa "Mostrando N de M artistas" no topo explica o que está oculto.
+  // A ficha aberta por endereço usa as listas COMPLETAS (link de contato de
+  // artista desmarcado abre do mesmo jeito); as listas da tela, as filtradas.
+  const visiveis = useContatosFiltrados();
+
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
-    // I11 — o Gerenciar é o CADASTRO: mostra tudo que o papel permite. O
-    // toggle de DJ da sidebar filtra visualizações (agenda/vendas/dashboards),
-    // não o registro — com ele aqui, desmarcar um DJ fazia o contratante
-    // recém-criado "sumir" e parecia que a venda não tinha salvado o contato.
-    let base = contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
+    let base = visiveis.contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
     // J1 — filtro vazio ("") não filtra nada, nunca esconde por padrão.
     if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
     if (filtroEstado) base = base.filter((c) => estadoPorCidadeId.get(c.cidadeId ?? "") === filtroEstado);
@@ -247,13 +252,10 @@ export default function Contatos({
         c.telefone.toLowerCase().includes(q) ||
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q)
     );
-  }, [contratantes, search, cidades, periodo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
+  }, [visiveis.contratantes, search, cidades, periodo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
 
   const casasFiltradas = useMemo(() => {
-    let base = casas.filter(
-      (c) =>
-        dataNoMes(c.criadoEm, periodo)
-    );
+    let base = visiveis.casas.filter((c) => dataNoMes(c.criadoEm, periodo));
     // J1 — tipo/cidade/estado; "" = sem filtro (mostra tudo).
     if (filtroTipo) base = base.filter((c) => c.tipo === filtroTipo);
     if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
@@ -266,39 +268,39 @@ export default function Contatos({
         getCidadeNome(c.cidadeId, cidades).toLowerCase().includes(q) ||
         LABELS_TIPO_CASA[c.tipo]?.toLowerCase().includes(q)
     );
-  }, [casas, search, cidades, periodo, filtroTipo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
+  }, [visiveis.casas, search, cidades, periodo, filtroTipo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
 
   const cidadesFiltradas = useMemo(() => {
     // I11 — cadastro mostra tudo; só a busca filtra (cidade ignora período).
     // J1 — cidade/estado do filtro não se aplicam aqui: a aba já É a lista
     // de cidades (o próprio nome/UF já é filtrável pela busca acima).
-    const base = cidades;
+    const base = visiveis.cidades;
     if (!search.trim()) return base;
     const q = search.toLowerCase();
     return base.filter(
       (c) => c.nome.toLowerCase().includes(q) || c.estado.toLowerCase().includes(q)
     );
-  }, [cidades, search]);
+  }, [visiveis.cidades, search]);
 
   // Bloqueados: contratantes + casas bloqueados (respeitando a busca).
   // Cidades não têm bloqueio.
   const contratantesBloqueados = useMemo(
     () =>
-      contratantes.filter(
+      visiveis.contratantes.filter(
         (c) =>
           c.bloqueado &&
           (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
       ),
-    [contratantes, search]
+    [visiveis.contratantes, search]
   );
   const casasBloqueadas = useMemo(
     () =>
-      casas.filter(
+      visiveis.casas.filter(
         (c) =>
           c.bloqueado &&
           (!search.trim() || c.nome.toLowerCase().includes(search.toLowerCase()))
       ),
-    [casas, search]
+    [visiveis.casas, search]
   );
   const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
 

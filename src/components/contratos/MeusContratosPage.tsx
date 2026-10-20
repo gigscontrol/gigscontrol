@@ -25,6 +25,7 @@ import { useT } from "@/lib/i18n";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage } from "@/types";
 import { STATUS_CONTRATO } from "@/lib/statusUI";
+import { useFiltroArtistas } from "../FiltroArtistas";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 const DND_TIPO = "text/contrato-id";
@@ -50,7 +51,7 @@ export default function MeusContratosPage({
 }) {
   const t = useT();
   const {
-    contratos,
+    contratos: contratosTodos,
     carregando,
     erro,
     pastas,
@@ -59,6 +60,19 @@ export default function MeusContratosPage({
     assinantesPorContrato,
   } = useContratos();
   const { vendas } = useVendas();
+  const vendasTodas = vendas;
+  // Filtro "Artistas" da barra lateral: contrato herda o artista da venda;
+  // contrato avulso (sem venda) aparece sempre (lib/filtroArtistas).
+  const filtro = useFiltroArtistas();
+  const contratos = useMemo(() => {
+    if (!filtro.ativo) return contratosTodos;
+    const artistaDaVenda = new Map(vendasTodas.map((v) => [v.id, v.artistaId]));
+    return contratosTodos.filter((c) =>
+      filtro.passa(c.vendaId ? artistaDaVenda.get(c.vendaId) : null)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contratosTodos, vendasTodas, filtro.ativo, filtro.selecionados]);
+
   const artistas = useArtistas();
   const { confirmar, confirmador } = useConfirmar();
 

@@ -33,6 +33,7 @@ import NotaEditor, { type NotaEditorDados } from "./NotaEditor";
 import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { useFiltroArtistas } from "../FiltroArtistas";
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const MAX_PASTAS = 8;
@@ -52,7 +53,7 @@ export default function AnotacoesPage() {
   const { sessao } = useAuth();
   const {
     pastas,
-    notas,
+    notas: notasTodas,
     podeCriarPasta,
     carregando,
     addPasta,
@@ -65,6 +66,21 @@ export default function AnotacoesPage() {
   const { shows } = useShows();
   const artistas = useArtistas();
   const usuarios = useEquipe();
+
+  // Filtro "Artistas" da barra lateral: nota com etiqueta de artista segue o
+  // filtro; nota de show segue o artista do show; o resto (pastas, notas
+  // gerais) aparece sempre.
+  const filtroArt = useFiltroArtistas();
+  const notas = useMemo(() => {
+    if (!filtroArt.ativo) return notasTodas;
+    const artistaDoShow = new Map(shows.map((x) => [x.id, x.artistaId]));
+    return notasTodas.filter((n) => {
+      if (n.artistId) return filtroArt.passa(n.artistId);
+      if (n.showId) return filtroArt.passa(artistaDoShow.get(n.showId));
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notasTodas, shows, filtroArt.ativo, filtroArt.selecionados]);
   const { confirmar, confirmador } = useConfirmar();
 
   const meuId = sessao?.usuario?.id ?? "";

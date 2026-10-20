@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -19,13 +19,9 @@ import {
   Eye,
   FileText,
   CalendarCheck2,
-  Users,
-  ChevronDown,
-  Check,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
-import Modal from "./Modal";
 import MiniLixeira from "./MiniLixeira";
 import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -34,7 +30,6 @@ import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
 import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
-import { iniciaisDoNome } from "@/lib/iniciais";
 
 type Props = {
   selectedArtistas: string[];
@@ -66,11 +61,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   const podeCriarOrcamento = artistas.some((a) => podeUI(a.id, "vendas.criar"));
 
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
-  const [filtroDJ, setFiltroDJ] = useState<string | "todos">("todos");
   const [search, setSearch] = useState("");
-  const [modalArtista, setModalArtista] = useState(false);
-
-  const artistaSelecionado = artistas.find((d) => d.id === filtroDJ);
 
   // Respeita a seleção de artistas da sidebar (filtro de visualização, não de
   // permissão — D3). Orçamento sem artistaId nunca some (não tem checkbox pra
@@ -80,20 +71,11 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
     [orcamentos, selectedArtistas]
   );
 
-  // Se o artista do filtro foi desmarcado na sidebar, volta pra "todos" —
-  // senão o dono fica preso vendo zero resultado sem opção visível pra desfazer.
-  useEffect(() => {
-    if (filtroDJ !== "todos" && !selectedArtistas.includes(filtroDJ)) {
-      setFiltroDJ("todos");
-    }
-  }, [selectedArtistas, filtroDJ]);
-
   const lista = useMemo(() => {
     return [...orcamentosVisiveis]
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
       .filter((o) => {
         if (filtroStatus !== "todos" && o.status !== filtroStatus) return false;
-        if (filtroDJ !== "todos" && o.artistaId !== filtroDJ) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const cont = contratantes.find((c) => c.id === o.contratanteId);
@@ -113,7 +95,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
         }
         return true;
       });
-  }, [orcamentosVisiveis, filtroStatus, filtroDJ, search, contratantes, cidades, casas, artistas]);
+  }, [orcamentosVisiveis, filtroStatus, search, contratantes, cidades, casas, artistas]);
 
   // Cards de status também derivam da lista visível, pra ficar coerente com
   // o filtro de artista da sidebar.
@@ -257,74 +239,8 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setModalArtista(true)}
-          className="btn btn-secondary"
-        >
-          <Users size={14} />
-          {filtroDJ === "todos" ? t("Todos artistas") : (artistaSelecionado?.name ?? t("Todos artistas"))}
-          <ChevronDown size={14} />
-        </button>
+        {/* Filtro de artista: SÓ o da barra lateral (havia um 2º aqui). */}
       </div>
-
-      <Modal
-        isOpen={modalArtista}
-        onClose={() => setModalArtista(false)}
-        title={t("Filtrar por artista")}
-        maxWidth={440}
-      >
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setFiltroDJ("todos");
-              setModalArtista(false);
-            }}
-            className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
-          >
-            <span className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 bg-surface border border-border text-muted">
-              <Users size={16} />
-            </span>
-            <span className="flex-1 text-sm font-semibold text-primary">
-              {t("Todos artistas")}
-            </span>
-            {filtroDJ === "todos" && (
-              <Check size={16} style={{ color: "var(--brand)" }} />
-            )}
-          </button>
-          {artistas
-            .filter((d) => selectedArtistas.includes(d.id))
-            .map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => {
-                  setFiltroDJ(d.id);
-                  setModalArtista(false);
-                }}
-                className="flex items-center gap-3 px-3 py-3 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
-              >
-                <span
-                  className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{
-                    backgroundColor: d.color,
-                    color: "#fff",
-                    boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
-                  }}
-                >
-                  {iniciaisDoNome(d.name)}
-                </span>
-                <span className="flex-1 text-sm font-semibold text-primary">
-                  {d.name}
-                </span>
-                {filtroDJ === d.id && (
-                  <Check size={16} style={{ color: "var(--brand)" }} />
-                )}
-              </button>
-            ))}
-        </div>
-      </Modal>
 
       {/* Tabela */}
       <div className="card p-0 overflow-hidden">
