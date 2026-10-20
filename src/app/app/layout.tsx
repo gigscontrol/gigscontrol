@@ -27,6 +27,8 @@ import BloqueioModal from "@/components/BloqueioModal";
 import PreferenciasApply from "@/components/PreferenciasApply";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { FiltroArtistasProvider, AvisoFiltroArtistas } from "@/components/FiltroArtistas";
+import BuscaGlobal from "@/components/navegacao/BuscaGlobal";
+import BarraInferior from "@/components/navegacao/BarraInferior";
 import { ContatosProvider, useContatos } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { AgendaItemsProvider } from "@/lib/agenda-items-context";
@@ -767,6 +769,13 @@ function AppRoot() {
           </SomenteLeitura>
         </main>
         )}
+        {/* Celular: barra de navegação de baixo (irmã do main, não "fixed":
+            rodapés grudados das telas ficam acima dela, nunca por baixo). */}
+        <BarraInferior
+          activeTab={activeTab}
+          configAberta={configAberta}
+          onAbrirMenu={() => setSidebarOpen(true)}
+        />
       </div>
 
       {/* Modais com ENDEREÇO (?show= / ?parcela=): valem por cima de qualquer
@@ -782,6 +791,8 @@ function AppRoot() {
         parcelaId={parcelaAberta}
         onClose={() => fecharSobreposicao("parcela")}
       />
+      {/* Busca geral — Ctrl+K em qualquer tela. */}
+      <BuscaGlobal />
       </div>
     </div>
     </FiltroArtistasProvider>
