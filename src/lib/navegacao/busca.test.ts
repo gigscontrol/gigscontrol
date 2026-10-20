@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buscar, normalizar, pontuar, type ItemBusca } from "./busca";
+import { buscar, normalizar, pontuar, registrarRecente, resolverRecentes, type ItemBusca } from "./busca";
 
 const itens: ItemBusca[] = [
   { id: "v1", tipo: "venda", titulo: "Skyfall Music", subtitulo: "Theuzzo", href: "/v1", texto: "VND-0063 Skyfall Music Theuzzo São Paulo", codigo: "VND-0063" },
@@ -42,5 +42,18 @@ describe("busca geral", () => {
     }));
     expect(buscar(muitos, "casa", 5)).toHaveLength(5);
     expect(buscar(itens, "   ")).toEqual([]);
+  });
+});
+
+describe("recentes", () => {
+  it("põe o último aberto na frente, sem repetir, até o limite", () => {
+    expect(registrarRecente([], "a")).toEqual(["a"]);
+    expect(registrarRecente(["a", "b", "c"], "c")).toEqual(["c", "a", "b"]);
+    expect(registrarRecente(["a", "b", "c", "d", "e"], "f")).toEqual(["f", "a", "b", "c", "d"]);
+  });
+
+  it("só devolve o que ainda existe no índice, na ordem dos recentes", () => {
+    const r = resolverRecentes(["sumiu", "c1", "v1"], itens);
+    expect(r.map((i) => i.id)).toEqual(["c1", "v1"]);
   });
 });

@@ -4015,4 +4015,20 @@ export const EN: Record<string, string> = {
   // --- Navegação nova (out/2026) ---
   "Esse período já passou — nenhuma viagem pela frente.": "This period is over — no upcoming trips.",
   "Nenhuma viagem pela frente no período (só shows na cidade local).": "No upcoming trips in this period (local shows only).",
+  // --- Navegação nova (out/2026) ---
+  "Tela": "Screen",
+  "Abre o formulário": "Opens the form",
+  "Abre a tela": "Opens the screen",
+  "Abre a venda": "Opens the sale",
+  "Abre o orçamento": "Opens the quote",
+  "Abre o contrato": "Opens the contract",
+  "Abre a ficha": "Opens the record",
+  "Número (VND-0138), evento, contratante ou local": "Number (VND-0138), event, client or venue",
+  "Número, contratante ou artista": "Number, client or artist",
+  "Número ou nome do evento": "Number or event name",
+  "Nome, telefone, e-mail ou CPF/CNPJ": "Name, phone, email or tax ID",
+  "Nome da casa ou cidade": "Venue name or city",
+  "Nome da tela — ex.: pagamentos, calendário": "Screen name — e.g. payments, calendar",
+  "Abertos recentemente": "Recently opened",
+  "O que dá pra buscar": "What you can search",
 };

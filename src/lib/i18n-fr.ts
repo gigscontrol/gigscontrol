@@ -3003,4 +3003,20 @@ export const FR: Record<string, string> = {
   // --- Navegação nova (out/2026) ---
   "Esse período já passou — nenhuma viagem pela frente.": "Cette période est passée — aucun voyage à venir.",
   "Nenhuma viagem pela frente no período (só shows na cidade local).": "Aucun voyage à venir sur la période (uniquement des concerts locaux).",
+  // --- Navegação nova (out/2026) ---
+  "Tela": "Écran",
+  "Abre o formulário": "Ouvre le formulaire",
+  "Abre a tela": "Ouvre l'écran",
+  "Abre a venda": "Ouvre la vente",
+  "Abre o orçamento": "Ouvre le devis",
+  "Abre o contrato": "Ouvre le contrat",
+  "Abre a ficha": "Ouvre la fiche",
+  "Número (VND-0138), evento, contratante ou local": "Numéro (VND-0138), événement, client ou lieu",
+  "Número, contratante ou artista": "Numéro, client ou artiste",
+  "Número ou nome do evento": "Numéro ou nom de l'événement",
+  "Nome, telefone, e-mail ou CPF/CNPJ": "Nom, téléphone, e-mail ou n° fiscal",
+  "Nome da casa ou cidade": "Nom du lieu ou ville",
+  "Nome da tela — ex.: pagamentos, calendário": "Nom de l'écran — ex. : paiements, calendrier",
+  "Abertos recentemente": "Ouverts récemment",
+  "O que dá pra buscar": "Ce que vous pouvez chercher",
 };
