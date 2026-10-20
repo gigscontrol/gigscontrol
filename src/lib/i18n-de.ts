@@ -3019,4 +3019,6 @@ export const DE: Record<string, string> = {
   "Nome da tela — ex.: pagamentos, calendário": "Name der Ansicht – z. B. Zahlungen, Kalender",
   "Abertos recentemente": "Zuletzt geöffnet",
   "O que dá pra buscar": "Was du suchen kannst",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "schließen",
 };

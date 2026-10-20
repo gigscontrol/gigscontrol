@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   Building2,
   CalendarCheck2,
-  CornerDownLeft,
   FileSignature,
   FileText,
   LayoutGrid,
   Plus,
   Search,
   User,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
@@ -102,6 +104,15 @@ function lerRecentes(chave: string): string[] {
 }
 
 const MODULOS: ActiveTab[] = ["agenda", "vendas", "financeiro", "contratos", "contatos", "agencia"];
+
+/** Tecla no rodapé — mesmo chip do "Ctrl K" da barra do topo. */
+function Tecla({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border px-1.5 text-[0.65rem] font-medium text-secondary">
+      {children}
+    </kbd>
+  );
+}
 
 /**
  * Busca geral (Ctrl+K / ⌘K): uma caixa só pra achar venda, orçamento,
@@ -332,9 +343,9 @@ export default function BuscaGlobal() {
           {item.subtitulo && <span className="block truncate text-xs text-muted">{item.subtitulo}</span>}
         </span>
         {ativo ? (
-          <span className="flex flex-shrink-0 items-center gap-1 text-[0.7rem] text-muted">
+          <span className="flex flex-shrink-0 items-center gap-1.5 text-xs text-muted">
             {t(DESTINO[item.tipo])}
-            <CornerDownLeft size={12} />
+            <Tecla>Enter</Tecla>
           </span>
         ) : (
           mostrarTipo && (
@@ -347,18 +358,20 @@ export default function BuscaGlobal() {
 
   return (
     <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={t("Buscar")}>
+      {/* Mesmo fundo, cantos, sombra e animação das outras janelas (Modal). */}
       <button
         type="button"
         aria-label={t("Fechar")}
+        tabIndex={-1}
         onClick={() => setAberta(false)}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade"
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm animate-fade"
       />
       <div
-        className="relative mx-auto mt-3 w-[calc(100%-24px)] max-w-[620px] overflow-hidden rounded-xl border border-border bg-surface animate-in md:mt-[12vh]"
+        className="relative mx-auto mt-3 w-[calc(100%-24px)] max-w-[620px] overflow-hidden rounded-lg border border-border bg-surface animate-modal md:mt-[12vh]"
         style={{ boxShadow: "0 24px 60px var(--shadow-color)" }}
       >
-        <div className="flex items-center gap-2 border-b border-border px-4">
-          <Search size={16} className="flex-shrink-0 text-muted" />
+        <div className="flex items-center gap-3 border-b border-border pl-5 pr-3">
+          <Search size={18} className="flex-shrink-0 text-muted" />
           <input
             ref={inputRef}
             value={consulta}
@@ -384,7 +397,14 @@ export default function BuscaGlobal() {
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.65rem] text-muted md:inline">Esc</kbd>
+          <button
+            type="button"
+            onClick={() => setAberta(false)}
+            className="btn-ghost flex-shrink-0 rounded p-1.5"
+            aria-label={t("Fechar")}
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div ref={listaRef} id="busca-resultados" role="listbox" className="max-h-[60vh] overflow-y-auto p-2">
@@ -425,10 +445,24 @@ export default function BuscaGlobal() {
             ))
           )}
         </div>
-        <div className="hidden items-center gap-4 border-t border-border px-4 py-2 text-[0.7rem] text-muted md:flex">
-          <span>↑↓ {t("navegar")}</span>
-          <span>↵ {t("abrir")}</span>
-          <span>Ctrl K {t("abre e fecha a busca")}</span>
+        <div className="hidden items-center gap-5 border-t border-border px-5 py-2.5 text-xs text-muted md:flex">
+          <span className="flex items-center gap-1.5">
+            <Tecla>
+              <ArrowUp size={11} />
+            </Tecla>
+            <Tecla>
+              <ArrowDown size={11} />
+            </Tecla>
+            {t("navegar")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Tecla>Enter</Tecla>
+            {t("abrir")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Tecla>Esc</Tecla>
+            {t("fechar")}
+          </span>
         </div>
       </div>
     </div>

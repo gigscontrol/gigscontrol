@@ -3019,4 +3019,6 @@ export const IT: Record<string, string> = {
   "Nome da tela — ex.: pagamentos, calendário": "Nome della schermata — es.: pagamenti, calendario",
   "Abertos recentemente": "Aperti di recente",
   "O que dá pra buscar": "Cosa puoi cercare",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "chiudi",
 };

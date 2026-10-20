@@ -4031,4 +4031,6 @@ export const EN: Record<string, string> = {
   "Nome da tela — ex.: pagamentos, calendário": "Screen name — e.g. payments, calendar",
   "Abertos recentemente": "Recently opened",
   "O que dá pra buscar": "What you can search",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "close",
 };
