@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { resolverMes } from "@/lib/periodo";
 import {
   Search,
   CheckCircle2,
@@ -37,31 +38,8 @@ import {
 } from "@/types";
 import { useT } from "@/lib/i18n";
 
-const MESES_CURTO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
-
-/** {ano, mes(0-based), tudo}. "Visão geral" = all-time. */
-function resolverMes(
-  range: AgendaDateRange,
-  customMonth: string | null,
-  customYear: number | null
-): { ano: number; mes: number; tudo: boolean } {
-  const h = new Date();
-  if (range === "Visão geral") return { ano: h.getFullYear(), mes: h.getMonth(), tudo: true };
-  if (range === "Mês anterior") {
-    const d = new Date(h.getFullYear(), h.getMonth() - 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Próximo mês") {
-    const d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
-    return { ano: d.getFullYear(), mes: d.getMonth(), tudo: false };
-  }
-  if (range === "Personalizado" && customMonth && customYear !== null) {
-    return { ano: customYear, mes: Math.max(0, MESES_CURTO.indexOf(customMonth)), tudo: false };
-  }
-  return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
-}
 
 function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
   if (p.tudo) return true;
