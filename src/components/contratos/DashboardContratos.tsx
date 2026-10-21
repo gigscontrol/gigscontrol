@@ -193,7 +193,7 @@ export default function DashboardContratos({
               style={{ backgroundColor: ACCENT, color: "#fff" }}
             >
               <Plus size={14} />
-              {t("Novo Contrato")}
+              {t("Novo contrato")}
             </button>
           </div>
         }
@@ -225,7 +225,7 @@ export default function DashboardContratos({
             style={{ backgroundColor: ACCENT, color: "#fff" }}
           >
             <Plus size={14} />
-            {t("Novo Contrato")}
+            {t("Novo contrato")}
           </button>
         </div>
       ) : (

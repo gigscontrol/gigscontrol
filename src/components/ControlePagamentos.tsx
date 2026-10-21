@@ -146,7 +146,7 @@ export default function ControlePagamentos({
           indiceParcela: idx + 1,
           totalParcelas: v.parcelas.length,
           artistaId: v.artistaId,
-          artistaNome: artista?.name ?? "—",
+          artistaNome: artista?.name ?? (artistas.length > 0 && v.artistaId ? t("Artista removido") : "—"),
           artistaColor: artista?.color ?? "#888",
           contratante: v.contratanteNome,
           nomeEvento: v.nomeEvento,

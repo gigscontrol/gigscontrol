@@ -4096,6 +4096,9 @@ export const EN: Record<string, string> = {
   "Expirado": "Expired",
   "A data do show já passou": "The show date has passed",
   "Buscar por número, evento, contratante ou artista…": "Search by number, event, client or artist…",
+  "em parcelas atrasadas. Resolva em Pagamentos.": "in overdue installments. Sort it out in Payments.",
+  "Ver o resumo": "See the summary",
+  "Abra uma parcela para informar pagamento, cobrar ou cancelar.": "Open an installment to record a payment, send a reminder or cancel.",
   // --- Roteiro de cobrança (out/2026) ---
   "Lembrar": "Remind",
   "1 dia": "1 day",

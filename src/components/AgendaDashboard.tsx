@@ -219,7 +219,7 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         return {
           show: s,
           cidade: cid ? `${cid.nome}/${cid.estado}` : s.location || "—",
-          artistaNome: artista?.name ?? "—",
+          artistaNome: artista?.name ?? (artistas.length > 0 && s.artistaId ? t("Artista removido") : "—"),
           artistaCor: artista?.color ?? "#888",
           dias,
           data: s.data ?? "",

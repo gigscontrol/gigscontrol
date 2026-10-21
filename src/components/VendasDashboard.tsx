@@ -288,7 +288,7 @@ export default function VendasDashboard({
               style={{ backgroundColor: accent, color: "#fff" }}
             >
               <Plus size={14} />
-              {t("Novo Orçamento")}
+              {t("Novo orçamento")}
             </button>
           </div>
         }

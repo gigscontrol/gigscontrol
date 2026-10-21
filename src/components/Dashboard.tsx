@@ -144,7 +144,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
           indice: idx + 1,
           total: v.parcelas.length,
           artistaId: v.artistaId,
-          artistaNome: artista?.name ?? "—",
+          artistaNome: artista?.name ?? (artistas.length > 0 && v.artistaId ? t("Artista removido") : "—"),
           artistaColor: artista?.color ?? "#888",
           contratante: v.contratanteNome,
           moeda: v.moeda,
@@ -152,7 +152,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
       });
     }
     return linhas;
-  }, [vendasVisiveis, artistas]);
+  }, [vendasVisiveis, artistas, t]);
 
   // Parcelas do período (por data de vencimento).
   const parcelasPeriodo = useMemo(
@@ -452,7 +452,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
             style={{ color: "var(--danger)" }}
           />
           <div className="flex-1 text-sm text-secondary">
-            {t("Você tem")} <strong>{totais.atrasado}</strong> {t("em parcelas atrasadas. Toque para resolver em Pagamentos.")}
+            {t("Você tem")} <strong>{totais.atrasado}</strong> {t("em parcelas atrasadas. Resolva em Pagamentos.")}
           </div>
           <ChevronRight size={16} className="text-muted flex-shrink-0" />
         </button>

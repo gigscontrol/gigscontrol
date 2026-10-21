@@ -113,7 +113,7 @@ export default function ListaParcelas({
       })}
       {clicavel && (
         <p className="text-xs text-muted mt-1">
-          {t("Toque numa parcela para informar pagamento, cobrar ou cancelar.")}
+          {t("Abra uma parcela para informar pagamento, cobrar ou cancelar.")}
         </p>
       )}
     </>
