@@ -134,6 +134,50 @@ export function FichaHeroPagina({
   );
 }
 
+/**
+ * A ficha inteira num DOCUMENTO SÓ (pedido do Bruno, 21/10/2026): uma folha
+ * com as seções separadas por linhas finas, em 2 colunas que crescem cada uma
+ * por si. Antes eram cards soltos num grid — cada linha esticava o card menor
+ * até a altura do maior (Contratante virava uma caixa vazia ao lado do rider)
+ * e parecia que eram coisas diferentes, não o mesmo orçamento/venda.
+ *
+ *   <FolhaFicha>
+ *     <ColunaFicha>…seções…</ColunaFicha>
+ *     <ColunaFicha lado="direita">…seções…</ColunaFicha>
+ *     <SecaoFicha cheia>…largura toda, embaixo…</SecaoFicha>
+ *   </FolhaFicha>
+ */
+export function FolhaFicha({ children }: { children: ReactNode }) {
+  return <div className="card p-0 overflow-hidden grid grid-cols-1 lg:grid-cols-2">{children}</div>;
+}
+
+export function ColunaFicha({
+  lado = "esquerda",
+  children,
+}: {
+  lado?: "esquerda" | "direita";
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`flex flex-col divide-y divide-border min-w-0 ${
+        lado === "direita" ? "border-t border-border lg:border-t-0 lg:border-l" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Uma seção da folha. `cheia` = ocupa as 2 colunas (fica embaixo). */
+export function SecaoFicha({ cheia = false, children }: { cheia?: boolean; children: ReactNode }) {
+  return (
+    <section className={`p-5 min-w-0 ${cheia ? "lg:col-span-2 border-t border-border" : ""}`}>
+      {children}
+    </section>
+  );
+}
+
 /** Bloco de seção: ícone na cor da marca + título em negrito. */
 export function Bloco({
   icon,
