@@ -129,6 +129,15 @@ export function mascararCapacidade(s: string | null | undefined): string {
  * Retorna string vazia se o input for vazio/inválido — não joga erro
  * pra não quebrar a render.
  */
+/**
+ * Só a primeira letra em maiúscula: "sexta-feira, 30 de outubro" →
+ * "Sexta-feira, 30 de outubro". (O `capitalize` do CSS punha maiúscula em
+ * TODA palavra: "Sexta-Feira, 30 De Outubro De 2026".)
+ */
+export function primeiraMaiuscula(s: string): string {
+  return s ? s.charAt(0).toLocaleUpperCase("pt-BR") + s.slice(1) : s;
+}
+
 export function formatarDataBR(iso: string | null | undefined): string {
   if (!iso) return "";
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);

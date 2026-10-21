@@ -49,7 +49,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { mascararCpfCnpj } from "@/lib/formatters";
+import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
 import { formatarDuracao } from "@/lib/whatsapp";
 import { linhasLogistica } from "@/lib/logisticaTexto";
 import { formatarMoeda } from "@/lib/formatters";
@@ -236,12 +236,14 @@ export default function VendaDetalhe({
     itensTecnico.length > 0 ||
     itensHotel.length > 0;
 
-  const dataLegivel = new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const dataLegivel = primeiraMaiuscula(
+    new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
+  );
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -416,7 +418,7 @@ export default function VendaDetalhe({
           <SecaoFicha>
             <Bloco icon={<Plane size={14} />} title={t("Logística")}>
               {linhasLog.length === 0 && (
-                <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
+                <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa no cachê")}</Linha>
               )}
               {linhasLog.map((l, i) => (
                 <Linha

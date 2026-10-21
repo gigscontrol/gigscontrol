@@ -51,7 +51,7 @@ import { useArtistas } from "@/lib/workspace-context";
 import { formatarDuracao } from "@/lib/whatsapp";
 import { formatarMoeda } from "@/lib/formatters";
 import { numeroQtd } from "@/lib/quantidades";
-import { mascararCpfCnpj } from "@/lib/formatters";
+import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
 import Vinculos from "./detalhes/Vinculos";
 import ListaParcelas from "./detalhes/ListaParcelas";
@@ -313,7 +313,9 @@ export default function ShowDetalheModal({
             <div className="text-base font-bold text-primary truncate">
               {artista?.name ?? t("Sem artista")}
             </div>
-            <div className="text-xs text-secondary capitalize">{dataLegivel || t("Data não definida")}</div>
+            <div className="text-xs text-secondary">
+              {dataLegivel ? primeiraMaiuscula(dataLegivel) : t("Data não definida")}
+            </div>
           </div>
         </div>
 
@@ -613,7 +615,7 @@ export default function ShowDetalheModal({
           <Bloco icon={<Plane size={14} />} title={t("Logística")}>
             {logistica.aereaQtd === 0 && !logistica.transladoTerrestre && (
               <Linha icon={<Plane size={13} />} subtle>
-                {t("Já inclusa do cachê")}
+                {t("Já inclusa no cachê")}
               </Linha>
             )}
             {logistica.aereaQtd > 0 && (

@@ -17,7 +17,7 @@ export function formatarDuracao(horas: number, minutos: number): string {
  * Gera o texto do orçamento.
  * - Asteriscos viram negrito no WhatsApp.
  * - Seções com 0 itens são suprimidas.
- * - Logística: se nada selecionado → "Já inclusa do cachê".
+ * - Logística: se nada selecionado → "Já inclusa no cachê".
  *              Caso contrário → lista as opções selecionadas.
  */
 export function gerarTextoWhatsApp(
@@ -75,11 +75,11 @@ export function gerarTextoWhatsApp(
   if (logistica.length === 0) {
     // Nada selecionado = inclusa no cachê
     linhas.push("");
-    linhas.push("*Logistica*");
-    linhas.push("Já inclusa do cachê");
+    linhas.push("*Logística*");
+    linhas.push("Já inclusa no cachê");
   } else {
     linhas.push("");
-    linhas.push("*Logistica (não incluso no cachê)*");
+    linhas.push("*Logística (não inclusa no cachê)*");
     logistica.forEach((l) => linhas.push(l));
   }
 

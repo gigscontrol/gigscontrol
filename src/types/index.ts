@@ -431,7 +431,7 @@ export type ItemQuantidade = {
 };
 
 /**
- * Logística — múltipla escolha. Se nada marcado, é "Já inclusa do cachê".
+ * Logística — múltipla escolha. Se nada marcado, é "Já inclusa no cachê".
  */
 export type LogisticaSelecao = {
   /** LEGADO: aérea ida+volta combinada. Mantido só p/ ler orçamentos antigos. */

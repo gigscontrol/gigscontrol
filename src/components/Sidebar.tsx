@@ -472,14 +472,16 @@ export default function Sidebar({
           <div>
             <div className={`flex items-center justify-between px-2 mb-2 ${collapsed ? "lg:invisible" : ""}`}>
               <span className="stat-label">{t("Artistas")}</span>
-              {/* "Todos/Limpar" só faz sentido com 2+ artistas (planos
-                  Equipe/Agência/etc). Individual = 1 artista = sem toggle. */}
+              {/* "Mostrar/Ocultar todos" só faz sentido com 2+ artistas
+                  (planos Equipe/Agência/etc). Individual = 1 artista = sem
+                  toggle. O nome diz o efeito: "Limpar" escondia todo mundo
+                  e esvaziava o painel sem avisar. */}
               {!planoIndividual && (
                 <button
                   onClick={toggleAll}
                   className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
                 >
-                  {allSelected ? t("Limpar") : t("Todos")}
+                  {allSelected ? t("Ocultar todos") : t("Mostrar todos")}
                 </button>
               )}
             </div>
