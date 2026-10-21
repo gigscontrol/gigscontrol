@@ -49,6 +49,16 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
   return d.getFullYear() === p.ano && d.getMonth() === p.mes;
 }
 
+/** Mais antigo primeiro. */
+function porVencimento(a: LinhaParcela, b: LinhaParcela): number {
+  return new Date(a.parcela.dataVencimento).getTime() - new Date(b.parcela.dataVencimento).getTime();
+}
+
+/** Quando o dinheiro entrou: pagamento; lançamento antigo sem data cai no vencimento. */
+function entrouEm(l: LinhaParcela): string {
+  return l.parcela.dataPagamento || l.parcela.dataVencimento;
+}
+
 function fmtData(dataISO: string): string {
   return new Date(dataISO + "T12:00:00").toLocaleDateString("pt-BR");
 }
@@ -165,20 +175,17 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     [parcelas, periodo]
   );
 
-  // Próximos vencimentos (pendentes/atrasados, ordenado por data)
-  const proximosVencimentos = useMemo(() => {
-    return parcelasPeriodo
-      .filter((l) => {
-        const st = statusEfetivoParcela(l.parcela);
-        return st !== "pago" && st !== "cancelado";
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.parcela.dataVencimento).getTime() -
-          new Date(b.parcela.dataVencimento).getTime()
-      )
-      .slice(0, 6);
-  }, [parcelasPeriodo]);
+  // Vencimentos, separados como os cards: VENCIDAS de todos os meses (igual
+  // ao card Atrasado) e A VENCER no período, em dia. Antes uma lista só
+  // ("Próximos vencimentos") misturava atrasadas do período com as futuras.
+  const vencidas = useMemo(
+    () => parcelas.filter((l) => statusEfetivoParcela(l.parcela) === "atrasado").sort(porVencimento),
+    [parcelas]
+  );
+  const aVencer = useMemo(
+    () => parcelasPeriodo.filter((l) => statusEfetivoParcela(l.parcela) === "pendente").sort(porVencimento),
+    [parcelasPeriodo]
+  );
 
   // ---- Listas dos popups (por status), como ResumoListaItem ----
   const paraItem = (l: LinhaParcela): ResumoListaItem => ({
@@ -187,14 +194,15 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     subtitulo: `${l.vendaNumero} · ${t("parc")} ${l.indice}/${l.total} · ${fmtData(l.parcela.dataVencimento)}`,
     valor: formatarMoeda(l.parcela.valor, l.moeda),
   });
+  // Mesma régua do card: entra no mês em que o dinheiro entrou.
   const itensRecebidos = useMemo(
     () =>
-      parcelasPeriodo
-        .filter((l) => statusEfetivoParcela(l.parcela) === "pago")
-        .sort((a, b) => new Date(b.parcela.dataVencimento).getTime() - new Date(a.parcela.dataVencimento).getTime())
+      parcelas
+        .filter((l) => statusEfetivoParcela(l.parcela) === "pago" && dataNoMes(entrouEm(l), periodo))
+        .sort((a, b) => new Date(entrouEm(b)).getTime() - new Date(entrouEm(a)).getTime())
         .map(paraItem),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [parcelasPeriodo, t]
+    [parcelas, periodo, t]
   );
   const itensAReceber = useMemo(
     () =>
@@ -209,13 +217,9 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
     [parcelasPeriodo, t]
   );
   const itensAtrasados = useMemo(
-    () =>
-      parcelasPeriodo
-        .filter((l) => statusEfetivoParcela(l.parcela) === "atrasado")
-        .sort((a, b) => new Date(a.parcela.dataVencimento).getTime() - new Date(b.parcela.dataVencimento).getTime())
-        .map(paraItem),
+    () => vencidas.map(paraItem),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [parcelasPeriodo, t]
+    [vencidas, t]
   );
 
   // Faturamento por artista — soma as parcelas do período (exclui canceladas).
@@ -276,13 +280,13 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       {/* Cards clicáveis — abrem um popup de resumo na própria página; o rodapé do
           popup leva ao Controle de Pagamentos. */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total em vendas")}>
+        <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total do período")}>
           <StatCard
-            title={t("Total em Vendas")}
+            title={t("Total do período")}
             value={totais.total}
             icon={<DollarSign size={16} />}
             accentColor={accent}
-            subtitle={t("Soma de todas as parcelas")}
+            subtitle={t("Recebido + a receber + atrasado")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("recebido")} ariaLabel={t("Resumo do recebido")}>
@@ -291,7 +295,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             value={totais.recebido}
             icon={<CheckCircle2 size={16} />}
             accentColor="var(--success)"
-            subtitle={t("{pct}% do total", { pct: pctRecebido })}
+            subtitle={t("Pela data do pagamento · {pct}% do total", { pct: pctRecebido })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("areceber")} ariaLabel={t("Resumo do a receber")}>
@@ -300,7 +304,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             value={totais.aReceber}
             icon={<CalendarClock size={16} />}
             accentColor="var(--warning)"
-            subtitle={t("Parcelas pendentes")}
+            subtitle={t("Vencem no período, em dia")}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("atrasado")} ariaLabel={t("Resumo do atrasado")}>
@@ -309,7 +313,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             value={totais.atrasado}
             icon={<AlertTriangle size={16} />}
             accentColor="var(--danger)"
-            subtitle={t("Vencidas e não pagas")}
+            subtitle={t("Vencidas, de todos os meses")}
           />
         </ClickableStat>
       </div>
@@ -335,10 +339,10 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-4">
-        {/* Próximos vencimentos */}
+        {/* Vencimentos: vencidas (todos os meses) separadas das a vencer */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">{t("Próximos vencimentos")}</div>
+            <div className="section-title">{t("Vencimentos")}</div>
             <button
               onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
@@ -347,43 +351,30 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
               <ChevronRight size={12} />
             </button>
           </div>
-          {proximosVencimentos.length === 0 ? (
+          {vencidas.length === 0 && aVencer.length === 0 ? (
             <div className="text-sm text-muted text-center py-8">
               {t("Nenhuma parcela pendente. Tudo em dia!")}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {proximosVencimentos.map((l) => {
-                const st = statusEfetivoParcela(l.parcela);
-                const label = LABELS_STATUS_PARCELA[st];
-                return (
-                  <button
-                    key={`${l.vendaId}-${l.parcela.id}`}
-                    onClick={() => abrirSobreposicao("parcela", l.parcela.id)}
-                    className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
-                  >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: l.artistaColor }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-primary truncate">
-                        {l.contratante}
-                        <span className="text-muted text-xs ml-1.5">
-                          {l.vendaNumero} · {t("parc")} {l.indice}/{l.total}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted">
-                        {t("Vence")} {fmtData(l.parcela.dataVencimento)}
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
-                      {formatarMoeda(l.parcela.valor, l.moeda)}
-                    </span>
-                    <span className={`badge ${label.badge}`}>{t(label.label)}</span>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-4">
+              {vencidas.length > 0 && (
+                <GrupoVencimentos
+                  titulo={t("Vencidas")}
+                  total={vencidas.length}
+                  cor="var(--danger)"
+                  linhas={vencidas.slice(0, 3)}
+                  prefixoData={t("Venceu")}
+                  onAbrir={(id) => abrirSobreposicao("parcela", id)}
+                />
+              )}
+              <GrupoVencimentos
+                titulo={t("A vencer · {periodo}", { periodo: tituloPeriodo })}
+                total={aVencer.length}
+                linhas={aVencer.slice(0, vencidas.length > 0 ? 3 : 6)}
+                prefixoData={t("Vence")}
+                vazio={t("Nada mais a vencer no período.")}
+                onAbrir={(id) => abrirSobreposicao("parcela", id)}
+              />
             </div>
           )}
         </div>
@@ -392,7 +383,12 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} style={{ color: accent }} />
-            <div className="section-title">{t("Faturamento")}</div>
+            <div className="min-w-0">
+              <div className="section-title">{t("Parcelas por artista")}</div>
+              <div className="text-xs text-muted">
+                {t("Pelo vencimento · {periodo}", { periodo: tituloPeriodo })}
+              </div>
+            </div>
           </div>
           {porArtista.every((p) => p.valor === 0) ? (
             <div className="text-sm text-muted text-center py-8">
@@ -449,11 +445,11 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
       <ResumoModal
         isOpen={resumo === "total"}
         onClose={() => setResumo(null)}
-        title={t("Total em Vendas")}
+        title={t("Total do período")}
         subtitle={tituloPeriodo}
         accentColor={accent}
       >
-        <ResumoNumero valor={totais.total} label={t("Soma de todas as parcelas")} accentColor={accent} />
+        <ResumoNumero valor={totais.total} label={t("Recebido + a receber + atrasado")} accentColor={accent} />
         <ResumoLinha label={t("Recebido")} valor={totais.recebido} />
         <ResumoLinha label={t("A Receber")} valor={totais.aReceber} />
         <ResumoLinha label={t("Atrasado")} valor={totais.atrasado} />
@@ -484,7 +480,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         subtitle={tituloPeriodo}
         accentColor="var(--warning)"
       >
-        <ResumoNumero valor={totais.aReceber} label={t("Parcelas pendentes")} accentColor="var(--warning)" />
+        <ResumoNumero valor={totais.aReceber} label={t("Vencem no período, em dia")} accentColor="var(--warning)" />
         {itensAReceber.length > 0 ? (
           <ResumoLista itens={itensAReceber} onItemClick={abrirParcelaDoItem} />
         ) : (
@@ -497,7 +493,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         isOpen={resumo === "atrasado"}
         onClose={() => setResumo(null)}
         title={t("Atrasado")}
-        subtitle={tituloPeriodo}
+        subtitle={t("Vencidas, de todos os meses")}
         accentColor="var(--danger)"
       >
         <ResumoNumero valor={totais.atrasado} label={t("Vencidas e não pagas")} accentColor="var(--danger)" />
@@ -508,6 +504,73 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         )}
         <ResumoFooter label={t("Ver em Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
+    </div>
+  );
+}
+
+/** Um grupo da lista de vencimentos (Vencidas / A vencer). */
+function GrupoVencimentos({
+  titulo,
+  total,
+  cor,
+  linhas,
+  prefixoData,
+  vazio,
+  onAbrir,
+}: {
+  titulo: string;
+  total: number;
+  cor?: string;
+  linhas: LinhaParcela[];
+  prefixoData: string;
+  vazio?: string;
+  onAbrir: (parcelaId: string) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="stat-label" style={cor ? { color: cor } : undefined}>
+          {titulo}
+        </span>
+        {total > linhas.length && (
+          <span className="text-xs text-muted">{t("{n} de {total}", { n: linhas.length, total })}</span>
+        )}
+      </div>
+      {linhas.length === 0 && vazio ? (
+        <div className="text-sm text-muted py-2">{vazio}</div>
+      ) : (
+        linhas.map((l) => {
+          const label = LABELS_STATUS_PARCELA[statusEfetivoParcela(l.parcela)];
+          return (
+            <button
+              key={`${l.vendaId}-${l.parcela.id}`}
+              onClick={() => onAbrir(l.parcela.id)}
+              className="flex items-center gap-3 p-2.5 rounded-md border border-border bg-elevated hover:border-border-strong transition-colors text-left"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: l.artistaColor }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-primary truncate">
+                  {l.contratante}
+                  <span className="text-muted text-xs ml-1.5">
+                    {l.vendaNumero} · {t("parc")} {l.indice}/{l.total}
+                  </span>
+                </div>
+                <div className="text-xs text-muted">
+                  {prefixoData} {fmtData(l.parcela.dataVencimento)}
+                </div>
+              </div>
+              <span className="text-sm font-semibold tabular-nums text-primary flex-shrink-0">
+                {formatarMoeda(l.parcela.valor, l.moeda)}
+              </span>
+              <span className={`badge ${label.badge}`}>{t(label.label)}</span>
+            </button>
+          );
+        })
+      )}
     </div>
   );
 }

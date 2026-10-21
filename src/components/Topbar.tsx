@@ -93,20 +93,21 @@ export default function Topbar({
     };
   }, [isAdmin]);
 
-  // Contratos que ainda dá pra gerar no mês = limite do plano − gerados no mês
-  // (por criadoEm), mesmo cálculo do "Novo contrato".
+  // Contratos gerados no mês (por criadoEm) / limite do plano — o MESMO
+  // formato do "Novo contrato" ("3 de 400"). Antes a pílula mostrava os
+  // RESTANTES ("397/400") e a página os USADOS, no mesmo formato.
   const { contratos } = useContratos();
   const limiteContratos = plano?.maxContratosMes ?? 0;
-  const contratosRestantes = useMemo(() => {
+  const contratosUsados = useMemo(() => {
     const agora = new Date();
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-    const usados = contratos.filter((c) => {
+    return contratos.filter((c) => {
       if (!c.criadoEm) return false;
       const d = new Date(c.criadoEm);
       return !isNaN(d.getTime()) && d >= inicioMes;
     }).length;
-    return Math.max(0, limiteContratos - usados);
-  }, [contratos, limiteContratos]);
+  }, [contratos]);
+  const contratosRestantes = Math.max(0, limiteContratos - contratosUsados);
 
   const pillBase =
     "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap";
@@ -177,14 +178,16 @@ export default function Topbar({
             {plano && (
               <span
                 className={pillBase}
-                title={t("Contratos que você ainda pode gerar neste mês")}
+                title={t("Contratos gerados neste mês / limite do plano ({n} restantes)", {
+                  n: contratosRestantes,
+                })}
                 style={{
                   borderColor: contratosRestantes === 0 ? "var(--danger)" : "var(--border-color)",
                   color: contratosRestantes === 0 ? "var(--danger)" : "var(--text-secondary)",
                 }}
               >
                 <FileText size={13} />
-                {contratosRestantes}/{limiteContratos} {t("contratos")}
+                {contratosUsados}/{limiteContratos} {t("contratos")}
               </span>
             )}
           </div>
@@ -299,7 +302,7 @@ export default function Topbar({
                       className="text-xs font-semibold"
                       style={{ color: contratosRestantes === 0 ? "var(--danger)" : "var(--text-primary)" }}
                     >
-                      {contratosRestantes}/{limiteContratos}
+                      {contratosUsados}/{limiteContratos}
                     </span>
                   </div>
                 )}

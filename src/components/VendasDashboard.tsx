@@ -124,9 +124,6 @@ export default function VendasDashboard({
     const valorEmAberto = totaisPorMoeda(
       orcamentosVisiveis.filter((o) => o.status === "pendente" || o.status === "negociacao").map(orcItem)
     );
-    const valorNegociacao = totaisPorMoeda(
-      orcamentosVisiveis.filter((o) => o.status === "negociacao").map(orcItem)
-    );
     const valorPerdidos = totaisPorMoeda(
       orcamentosVisiveis.filter((o) => o.status === "recusado").map(orcItem)
     );
@@ -186,7 +183,6 @@ export default function VendasDashboard({
       porStatus,
       valorTotalOrc,
       valorEmAberto,
-      valorNegociacao,
       valorPerdidos,
       pendentes,
       totalVendas,
@@ -213,8 +209,8 @@ export default function VendasDashboard({
       subtitulo: t("Fechadas em {mes}", { mes: tituloMes }),
     },
     negociacao: {
-      titulo: t("Em negociação"),
-      subtitulo: tituloMes,
+      titulo: t("Em aberto"),
+      subtitulo: t("Pendentes ou em negociação · criados em {mes}", { mes: tituloMes }),
     },
     perdidos: {
       titulo: t("Orçamentos perdidos"),
@@ -223,11 +219,11 @@ export default function VendasDashboard({
   };
   const meta = resumo ? RESUMO_META[resumo] : { titulo: "", subtitulo: "" };
 
-  // Orçamentos em negociação (recentes)
-  const negociacaoRecentes = useMemo(
+  // Orçamentos em aberto — pendentes ou em negociação (recentes)
+  const abertosRecentes = useMemo(
     () =>
       [...orcamentosVisiveis]
-        .filter((o) => o.status === "negociacao")
+        .filter((o) => o.status === "pendente" || o.status === "negociacao")
         .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
         .slice(0, 5),
     [orcamentosVisiveis]
@@ -319,13 +315,13 @@ export default function VendasDashboard({
             subtitle={t("{n} fechadas no período", { n: stats.totalVendas })}
           />
         </ClickableStat>
-        <ClickableStat onClick={() => setResumo("negociacao")} ariaLabel={t("Em negociação")}>
+        <ClickableStat onClick={() => setResumo("negociacao")} ariaLabel={t("Em aberto")}>
           <StatCard
-            title={t("Em negociação")}
-            value={stats.valorNegociacao}
+            title={t("Em aberto")}
+            value={stats.valorEmAberto}
             icon={<Handshake size={16} />}
             accentColor="var(--warning)"
-            subtitle={t("{n} orçamentos abertos", { n: stats.porStatus.negociacao })}
+            subtitle={t("{n} pendentes ou em negociação", { n: stats.pendentes })}
           />
         </ClickableStat>
         <ClickableStat onClick={() => setResumo("orcamentos")} ariaLabel={t("Resumo de orçamentos")}>
@@ -591,17 +587,17 @@ export default function VendasDashboard({
         {resumo === "negociacao" && (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <ResumoNumero label={t("Em negociação")} valor={stats.porStatus.negociacao} accentColor="var(--warning)" />
-              <ResumoNumero label={t("Valor total")} valor={stats.valorNegociacao} />
+              <ResumoNumero label={t("Em aberto")} valor={stats.pendentes} accentColor="var(--warning)" />
+              <ResumoNumero label={t("Valor total")} valor={stats.valorEmAberto} />
             </div>
-            {negociacaoRecentes.length > 0 ? (
+            {abertosRecentes.length > 0 ? (
               <div className="flex flex-col gap-2">
                 <div className="stat-label">{t("Recentes")}</div>
                 <ResumoLista
-                  itens={negociacaoRecentes.map((o) => ({
+                  itens={abertosRecentes.map((o) => ({
                     id: o.id,
                     titulo: artistas.find((d) => d.id === o.artistaId)?.name ?? o.numero,
-                    subtitulo: o.numero,
+                    subtitulo: `${o.numero} · ${t(LABELS_STATUS_ORCAMENTO[o.status].label)}`,
                     valor: formatarMoeda(o.valorCache, o.moeda),
                   }))}
                   onItemClick={(id) => {
@@ -612,7 +608,7 @@ export default function VendasDashboard({
               </div>
             ) : (
               <div className="text-sm text-muted text-center py-4">
-                {t("Nenhum orçamento em negociação em {mes}.", { mes: tituloMes })}
+                {t("Nenhum orçamento em aberto criado em {mes}.", { mes: tituloMes })}
               </div>
             )}
             <ResumoFooter

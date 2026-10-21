@@ -75,6 +75,20 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
     [orcamentos, selectedArtistas]
   );
 
+  // O total do topo conta o MESMO conjunto dos cards e da lista; o que ficou
+  // de fora é dito com o motivo (antes: "142 no total" sobre cards somando 113).
+  const resumoTotal = useMemo(() => {
+    const n = orcamentosVisiveis.length;
+    const base = n === 1 ? t("1 orçamento") : t("{n} orçamentos", { n });
+    const fora = orcamentos.filter((o) => o.artistaId && !selectedArtistas.includes(o.artistaId));
+    const doFiltro = fora.filter((o) => artistas.some((a) => a.id === o.artistaId)).length;
+    const semArtista = fora.length - doFiltro;
+    const partes = [base];
+    if (doFiltro > 0) partes.push(t("{n} ocultos pelo filtro de artistas", { n: doFiltro }));
+    if (semArtista > 0) partes.push(t("{n} de artistas removidos", { n: semArtista }));
+    return partes.join(" · ");
+  }, [orcamentos, orcamentosVisiveis, selectedArtistas, artistas, t]);
+
   const lista = useMemo(() => {
     return [...orcamentosVisiveis]
       .sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime())
@@ -250,7 +264,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
         title="Todos os orçamentos"
-        subtitle={`${orcamentos.length} ${orcamentos.length === 1 ? t("orçamento no total") : t("orçamentos no total")}`}
+        subtitle={resumoTotal}
         accentColor={accent}
         actions={
           <button

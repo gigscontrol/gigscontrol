@@ -695,6 +695,9 @@ export default function AgenciaDashboard({
           <div className="flex items-center gap-2 mt-8 mb-4">
             <div className="section-title">{t("Rankings")}</div>
             <span className="badge badge-neutral">{tituloPeriodo}</span>
+            {/* Mesma régua de Vendas (data de criação) — o Financeiro soma
+                parcelas pelo vencimento, por isso os números diferem. */}
+            <span className="text-xs text-muted">{t("pela data em que a venda ou o orçamento foi criado")}</span>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <RankingCard
