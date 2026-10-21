@@ -284,7 +284,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
               className="btn btn-primary whitespace-nowrap"
             >
               <Wallet size={14} />
-              {t("Controle de Pagamentos")}
+              {t("Pagamentos")}
             </button>
           </div>
         }
@@ -456,7 +456,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             style={{ color: "var(--danger)" }}
           />
           <div className="flex-1 text-sm text-secondary">
-            {t("Você tem")} <strong>{totais.atrasado}</strong> {t("em parcelas atrasadas. Toque para resolver no Controle de Pagamentos.")}
+            {t("Você tem")} <strong>{totais.atrasado}</strong> {t("em parcelas atrasadas. Toque para resolver em Pagamentos.")}
           </div>
           <ChevronRight size={16} className="text-muted flex-shrink-0" />
         </button>
@@ -475,7 +475,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         <ResumoLinha label={t("A Receber")} valor={totais.aReceber} />
         <ResumoLinha label={t("Atrasado")} valor={totais.atrasado} />
         <ResumoLinha label={t("Progresso de recebimento")} valor={`${pctRecebido}%`} destaque />
-        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+        <ResumoFooter label={t("Ver em Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
 
       <ResumoModal
@@ -491,7 +491,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         ) : (
           vazio(t("Nenhuma parcela recebida no período."))
         )}
-        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+        <ResumoFooter label={t("Ver em Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
 
       <ResumoModal
@@ -507,7 +507,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         ) : (
           vazio(t("Nada a receber no período."))
         )}
-        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+        <ResumoFooter label={t("Ver em Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
 
       <ResumoModal
@@ -523,7 +523,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
         ) : (
           vazio(t("Nenhuma parcela atrasada. Tudo em dia!"))
         )}
-        <ResumoFooter label={t("Ver no Controle de Pagamentos")} onClick={irParaPagamentos} />
+        <ResumoFooter label={t("Ver em Pagamentos")} onClick={irParaPagamentos} />
       </ResumoModal>
     </div>
   );

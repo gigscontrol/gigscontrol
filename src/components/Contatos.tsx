@@ -70,11 +70,21 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
 }
 
 export default function Contatos({
-  categoriaInicial = "contratantes",
+  aba = "contratantes",
+  contatoId = null,
+  onAbrirAba,
+  onAbrirContato,
+  onVoltarDaFicha,
   selectedArtistas = [],
   onAbrirShow,
 }: {
-  categoriaInicial?: ContatoCategoria;
+  /** Aba ativa — vem do ENDEREÇO (/app/contatos/lista/<aba>). */
+  aba?: Aba;
+  /** Ficha aberta — vem do endereço (/app/contatos/lista/<categoria>/<id>). */
+  contatoId?: string | null;
+  onAbrirAba: (aba: Aba) => void;
+  onAbrirContato: (categoria: ContatoCategoria, id: string) => void;
+  onVoltarDaFicha: () => void;
   selectedArtistas?: string[];
   /** Abre o modal global de detalhe do show (ShowDetalheModal, em
    *  layout.tsx). Repassado ao ContatoDetail — histórico de shows clicável. */
@@ -92,6 +102,7 @@ export default function Contatos({
     removeCidade,
     updateContratante,
     updateCasa,
+    carregado: contatosCarregados,
   } = useContatos();
   const { shows } = useShows();
   const { orcamentos } = useOrcamentos();
@@ -107,7 +118,9 @@ export default function Contatos({
     return m;
   }, [equipe]);
 
-  const [categoria, setCategoria] = useState<Aba>(categoriaInicial);
+  // Aba e ficha moram no ENDEREÇO: F5, voltar do navegador e link
+  // compartilhado caem no mesmo lugar.
+  const categoria = aba;
   const [search, setSearch] = useState("");
   // J1 — filtro por tipo (só casas)/cidade/estado no Gerenciar Contatos.
   // Vazio = "" em todos → não esconde nada por padrão (mesma regra do
@@ -123,7 +136,22 @@ export default function Contatos({
     () => resolverMes(range, customMonth, customYear),
     [range, customMonth, customYear]
   );
-  const [selecionado, setSelecionado] = useState<Selecionado>(null);
+  const selecionado: Selecionado = useMemo(() => {
+    if (!contatoId) return null;
+    if (categoria === "contratantes") {
+      const item = contratantes.find((c) => c.id === contatoId);
+      return item ? { tipo: "contratante", item } : null;
+    }
+    if (categoria === "casas") {
+      const item = casas.find((c) => c.id === contatoId);
+      return item ? { tipo: "casa", item } : null;
+    }
+    if (categoria === "cidades") {
+      const item = cidades.find((c) => c.id === contatoId);
+      return item ? { tipo: "cidade", item } : null;
+    }
+    return null;
+  }, [contatoId, categoria, contratantes, casas, cidades]);
   const [modal, setModal] = useState<
     | { type: "novo-contratante" }
     | { type: "edit-contratante"; item: Contratante }
@@ -260,12 +288,122 @@ export default function Contatos({
   );
   const totalBloqueados = contratantesBloqueados.length + casasBloqueadas.length;
 
+  // Modais (form de contratante/casa/cidade, bloqueio, confirmação) valem
+  // nos DOIS ramos: o "Editar" de dentro da ficha abria o form num ramo que
+  // não estava montado — o clique não fazia nada até voltar pra lista.
+  const modais = (
+    <>
+      {/* Modais */}
+      <Modal
+        isOpen={modal?.type === "novo-contratante" || modal?.type === "edit-contratante"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-contratante" ? t("Editar contratante") : t("Novo contratante")}
+        subtitle={t("Cliente que contrata os artistas da agência")}
+      >
+        <ContratanteForm
+          initial={modal?.type === "edit-contratante" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={modal?.type === "novo-casa" || modal?.type === "edit-casa"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-casa" ? t("Editar casa / evento") : t("Nova casa / evento")}
+        subtitle={t("Local onde os shows acontecem")}
+        maxWidth={640}
+      >
+        <CasaForm
+          initial={modal?.type === "edit-casa" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={modal?.type === "novo-cidade" || modal?.type === "edit-cidade"}
+        onClose={() => setModal(null)}
+        title={modal?.type === "edit-cidade" ? t("Editar cidade") : t("Nova cidade")}
+        subtitle={t("Cidades onde a agência atua")}
+      >
+        <CidadeForm
+          initial={modal?.type === "edit-cidade" ? modal.item : undefined}
+          onSubmit={() => setModal(null)}
+          onCancel={() => setModal(null)}
+        />
+      </Modal>
+
+      {/* Modal de bloqueio — pede o motivo ao bloquear um contratante/casa */}
+      <Modal
+        isOpen={bloquear !== null}
+        onClose={() => setBloquear(null)}
+        title={t("Bloquear contato")}
+        subtitle={bloquear?.item.nome}
+        maxWidth={480}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 rounded-md border border-border bg-elevated p-3">
+            <Ban size={16} className="text-danger flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-secondary">
+              {t(
+                "Bloquear sinaliza que este contato é problemático. Ele continua visível para a equipe, com um selo de bloqueio."
+              )}
+            </p>
+          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="stat-label">{t("Motivo (opcional)")}</span>
+            <textarea
+              value={motivoBloqueio}
+              onChange={(e) => setMotivoBloqueio(e.target.value)}
+              rows={3}
+              placeholder={t("Ex.: calote, comportamento abusivo...")}
+              className="input resize-none"
+            />
+          </label>
+          <div className="flex items-center justify-end gap-2 mt-1">
+            <button onClick={() => setBloquear(null)} className="btn btn-ghost">
+              {t("Cancelar")}
+            </button>
+            <button
+              onClick={confirmarBloqueio}
+              disabled={salvandoBloqueio}
+              className="btn text-white disabled:opacity-60"
+              style={{ backgroundColor: "var(--danger)" }}
+            >
+              <Ban size={14} />
+              {salvandoBloqueio ? t("Bloqueando...") : t("Bloquear")}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      {confirmador}
+    </>
+  );
+
   // Tela de detalhe quando algo selecionado
+  if (contatoId && !selecionado) {
+    return (
+      <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+        <div className="card text-center py-12">
+          <div className="section-title mb-3">
+            {!contatosCarregados ? t("Carregando...") : t("Contato não encontrado")}
+          </div>
+          {contatosCarregados && (
+            <button onClick={onVoltarDaFicha} className="btn btn-secondary">
+              {t("Voltar")}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
   if (selecionado) {
     return (
+      <>
       <ContatoDetail
         selecionado={selecionado}
-        onBack={() => setSelecionado(null)}
+        onBack={onVoltarDaFicha}
         onEdit={() => {
           if (selecionado.tipo === "contratante")
             setModal({ type: "edit-contratante", item: selecionado.item });
@@ -275,13 +413,15 @@ export default function Contatos({
         }}
         onAbrirShow={onAbrirShow}
       />
+      {modais}
+      </>
     );
   }
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Contatos"
+        title="Todos os contatos"
         subtitle="Contratantes, casas/eventos e cidades — sua base de relacionamento"
         accentColor={accent}
         actions={
@@ -321,7 +461,7 @@ export default function Contatos({
           value={contratantesFiltrados.length}
           active={categoria === "contratantes"}
           accent={accent}
-          onClick={() => setCategoria("contratantes")}
+          onClick={() => onAbrirAba("contratantes")}
         />
         <SummaryTile
           icon={<Building2 size={16} />}
@@ -329,7 +469,7 @@ export default function Contatos({
           value={casasFiltradas.length}
           active={categoria === "casas"}
           accent={accent}
-          onClick={() => setCategoria("casas")}
+          onClick={() => onAbrirAba("casas")}
         />
         <SummaryTile
           icon={<MapPin size={16} />}
@@ -337,7 +477,7 @@ export default function Contatos({
           value={cidadesFiltradas.length}
           active={categoria === "cidades"}
           accent={accent}
-          onClick={() => setCategoria("cidades")}
+          onClick={() => onAbrirAba("cidades")}
         />
         <SummaryTile
           icon={<Ban size={16} />}
@@ -345,7 +485,7 @@ export default function Contatos({
           value={totalBloqueados}
           active={categoria === "bloqueados"}
           accent="var(--danger)"
-          onClick={() => setCategoria("bloqueados")}
+          onClick={() => onAbrirAba("bloqueados")}
         />
       </div>
 
@@ -455,7 +595,7 @@ export default function Contatos({
           <TabelaContratantes
             items={contratantesFiltrados}
             nomePorUsuario={nomePorUsuario}
-            onSelect={(item) => setSelecionado({ tipo: "contratante", item })}
+            onSelect={(item) => onAbrirContato("contratantes", item.id)}
             onEdit={(item) => setModal({ type: "edit-contratante", item })}
             onRemove={async (id) => {
               if (await confirmar({ titulo: t("Remover este contratante?"), perigo: true })) {
@@ -471,7 +611,7 @@ export default function Contatos({
           <TabelaCasas
             items={casasFiltradas}
             nomePorUsuario={nomePorUsuario}
-            onSelect={(item) => setSelecionado({ tipo: "casa", item })}
+            onSelect={(item) => onAbrirContato("casas", item.id)}
             onEdit={(item) => setModal({ type: "edit-casa", item })}
             onRemove={async (id) => {
               if (await confirmar({ titulo: t("Remover esta casa?"), perigo: true })) {
@@ -486,7 +626,7 @@ export default function Contatos({
         {categoria === "cidades" && (
           <TabelaCidades
             items={cidadesFiltradas}
-            onSelect={(item) => setSelecionado({ tipo: "cidade", item })}
+            onSelect={(item) => onAbrirContato("cidades", item.id)}
             onEdit={(item) => setModal({ type: "edit-cidade", item })}
             onRemove={async (id) => {
               if (await confirmar({ titulo: t("Remover esta cidade?"), perigo: true })) {
@@ -501,8 +641,8 @@ export default function Contatos({
             contratantes={contratantesBloqueados}
             casas={casasBloqueadas}
             nomePorUsuario={nomePorUsuario}
-            onSelectContratante={(item) => setSelecionado({ tipo: "contratante", item })}
-            onSelectCasa={(item) => setSelecionado({ tipo: "casa", item })}
+            onSelectContratante={(item) => onAbrirContato("contratantes", item.id)}
+            onSelectCasa={(item) => onAbrirContato("casas", item.id)}
             onDesbloquearContratante={(item) => desbloquear({ tipo: "contratante", item })}
             onDesbloquearCasa={(item) => desbloquear({ tipo: "casa", item })}
           />
@@ -515,91 +655,7 @@ export default function Contatos({
       {categoria === "casas" && <MiniLixeira tipo="casa" />}
       {categoria === "cidades" && <MiniLixeira tipo="cidade" />}
 
-      {/* Modais */}
-      <Modal
-        isOpen={modal?.type === "novo-contratante" || modal?.type === "edit-contratante"}
-        onClose={() => setModal(null)}
-        title={modal?.type === "edit-contratante" ? t("Editar contratante") : t("Novo contratante")}
-        subtitle={t("Cliente que contrata os artistas da agência")}
-      >
-        <ContratanteForm
-          initial={modal?.type === "edit-contratante" ? modal.item : undefined}
-          onSubmit={() => setModal(null)}
-          onCancel={() => setModal(null)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={modal?.type === "novo-casa" || modal?.type === "edit-casa"}
-        onClose={() => setModal(null)}
-        title={modal?.type === "edit-casa" ? t("Editar casa / evento") : t("Nova casa / evento")}
-        subtitle={t("Local onde os shows acontecem")}
-        maxWidth={640}
-      >
-        <CasaForm
-          initial={modal?.type === "edit-casa" ? modal.item : undefined}
-          onSubmit={() => setModal(null)}
-          onCancel={() => setModal(null)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={modal?.type === "novo-cidade" || modal?.type === "edit-cidade"}
-        onClose={() => setModal(null)}
-        title={modal?.type === "edit-cidade" ? t("Editar cidade") : t("Nova cidade")}
-        subtitle={t("Cidades onde a agência atua")}
-      >
-        <CidadeForm
-          initial={modal?.type === "edit-cidade" ? modal.item : undefined}
-          onSubmit={() => setModal(null)}
-          onCancel={() => setModal(null)}
-        />
-      </Modal>
-
-      {/* Modal de bloqueio — pede o motivo ao bloquear um contratante/casa */}
-      <Modal
-        isOpen={bloquear !== null}
-        onClose={() => setBloquear(null)}
-        title={t("Bloquear contato")}
-        subtitle={bloquear?.item.nome}
-        maxWidth={480}
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3 rounded-md border border-border bg-elevated p-3">
-            <Ban size={16} className="text-danger flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-secondary">
-              {t(
-                "Bloquear sinaliza que este contato é problemático. Ele continua visível para a equipe, com um selo de bloqueio."
-              )}
-            </p>
-          </div>
-          <label className="flex flex-col gap-1.5">
-            <span className="stat-label">{t("Motivo (opcional)")}</span>
-            <textarea
-              value={motivoBloqueio}
-              onChange={(e) => setMotivoBloqueio(e.target.value)}
-              rows={3}
-              placeholder={t("Ex.: calote, comportamento abusivo...")}
-              className="input resize-none"
-            />
-          </label>
-          <div className="flex items-center justify-end gap-2 mt-1">
-            <button onClick={() => setBloquear(null)} className="btn btn-ghost">
-              {t("Cancelar")}
-            </button>
-            <button
-              onClick={confirmarBloqueio}
-              disabled={salvandoBloqueio}
-              className="btn text-white disabled:opacity-60"
-              style={{ backgroundColor: "var(--danger)" }}
-            >
-              <Ban size={14} />
-              {salvandoBloqueio ? t("Bloqueando...") : t("Bloquear")}
-            </button>
-          </div>
-        </div>
-      </Modal>
-      {confirmador}
+      {modais}
     </div>
   );
 }

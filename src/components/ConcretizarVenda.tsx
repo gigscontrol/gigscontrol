@@ -1503,10 +1503,10 @@ export default function ConcretizarVenda({
       <PageHeader
         title={
           v
-            ? `Editar Venda · ${v.numero}`
+            ? `Editar venda · ${v.numero}`
             : orc
-              ? `Concretizar Venda · ${orc.numero}`
-              : "Nova Venda Direta"
+              ? `Concretizar venda · ${orc.numero}`
+              : "Nova venda"
         }
         subtitle={
           v
@@ -2596,7 +2596,7 @@ export default function ConcretizarVenda({
               : t("Salvar alterações")
             : salvando
               ? t("Concretizando...")
-              : t("Concretizar Venda")}
+              : t("Concretizar venda")}
         </button>
       </div>
 

@@ -47,6 +47,12 @@ type ContatosContextValue = {
   casas: Casa[];
   cidades: Cidade[];
   carregando: boolean;
+  /**
+   * true depois da 1ª busca terminar (com sucesso ou erro). Antes disso,
+   * lista vazia NÃO quer dizer "não existe" — telas que abrem um item pelo
+   * endereço usam isto pra não piscar "não encontrado" no F5.
+   */
+  carregado: boolean;
   erro: string | null;
   recarregar: () => Promise<void>;
 
@@ -143,6 +149,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
   const [casas, setCasas] = useState<Casa[]>([]);
   const [cidades, setCidades] = useState<Cidade[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [carregado, setCarregado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
@@ -175,6 +182,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
       setContratantes([]);
     } finally {
       setCarregando(false);
+      setCarregado(true);
     }
   }, [sessao?.workspace]);
 
@@ -319,6 +327,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
       casas,
       cidades,
       carregando,
+      carregado,
       erro,
       recarregar,
       addContratante,
@@ -337,6 +346,7 @@ export function ContatosProvider({ children }: { children: ReactNode }) {
       casas,
       cidades,
       carregando,
+      carregado,
       erro,
       recarregar,
       addContratante,

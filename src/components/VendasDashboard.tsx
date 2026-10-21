@@ -560,7 +560,7 @@ export default function VendasDashboard({
               </div>
             )}
             <ResumoFooter
-              label={t("Ver histórico de orçamentos")}
+              label={t("Ver todos os orçamentos")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico");
@@ -604,7 +604,7 @@ export default function VendasDashboard({
               </div>
             )}
             <ResumoFooter
-              label={t("Ver histórico de vendas")}
+              label={t("Ver todas as vendas")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico-vendas");
@@ -641,7 +641,7 @@ export default function VendasDashboard({
               </div>
             )}
             <ResumoFooter
-              label={t("Ver histórico de orçamentos")}
+              label={t("Ver todos os orçamentos")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico");
@@ -678,7 +678,7 @@ export default function VendasDashboard({
               </div>
             )}
             <ResumoFooter
-              label={t("Ver histórico de orçamentos")}
+              label={t("Ver todos os orçamentos")}
               onClick={() => {
                 setResumo(null);
                 onNavigate?.("vendas", "vendas-historico");

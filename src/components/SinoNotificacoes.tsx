@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCheck, X } from "lucide-react";
+import { Bell, CheckCheck, ChevronRight, X } from "lucide-react";
 import type { Notificacao } from "@/lib/mappers/notificacao";
+import { linkDaNotificacao } from "@/lib/navegacao/rotas";
 import { useT } from "@/lib/i18n";
 import type { Traduzir } from "@/lib/i18n";
 
 const POLL_INTERVAL_MS = 60_000;
 
 type Props = {
-  /** Chamado quando o usuário clica em "Ver todas" — abre Configurações. */
+  /** Chamado quando o usuário clica em "Ver todas" — abre Configurações › Notificações. */
   onVerTodas?: () => void;
+  /** Abre o que a notificação fala (a venda, o orçamento…). */
+  onAbrirLink?: (href: string) => void;
 };
 
 /**
@@ -23,7 +26,7 @@ type Props = {
  * Self-contained: usa fetch direto pra `/api/notificacoes` em vez de
  * passar pelo workspace-context (mantém o context mais enxuto).
  */
-export default function SinoNotificacoes({ onVerTodas }: Props) {
+export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
   const t = useT();
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
@@ -177,6 +180,16 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
                   key={n.id}
                   notificacao={n}
                   onMarcarLida={() => aoMarcarLida(n.id)}
+                  onAbrir={
+                    onAbrirLink
+                      ? (href) => {
+                          // Abrir = ler: marca como lida e leva até o item.
+                          if (!n.lidaEm) void aoMarcarLida(n.id);
+                          setAberto(false);
+                          onAbrirLink(href);
+                        }
+                      : undefined
+                  }
                 />
               ))
             )}
@@ -192,7 +205,7 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
                 }}
                 className="text-xs text-muted hover:text-primary"
               >
-                {t("Ver todas em Configurações → Notificações")}
+                {t("Ver todas as notificações")}
               </button>
             </div>
           )}
@@ -202,15 +215,25 @@ export default function SinoNotificacoes({ onVerTodas }: Props) {
   );
 }
 
-function LinhaNotificacao({
+export function LinhaNotificacao({
   notificacao,
   onMarcarLida,
+  onAbrir,
 }: {
   notificacao: Notificacao;
   onMarcarLida: () => void;
+  /** Presente = a linha é clicável e leva ao item da notificação. */
+  onAbrir?: (href: string) => void;
 }) {
   const t = useT();
   const lida = !!notificacao.lidaEm;
+  const href = onAbrir
+    ? linkDaNotificacao({
+        link: notificacao.link,
+        modulo: notificacao.modulo,
+        entidade_id: notificacao.entidadeId,
+      })
+    : null;
 
   const corTipo = (() => {
     switch (notificacao.tipo) {
@@ -230,17 +253,37 @@ function LinhaNotificacao({
         className="h-2 w-2 rounded-full flex-shrink-0 mt-1.5"
         style={{ backgroundColor: lida ? "transparent" : corTipo }}
       />
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-primary truncate">
-          {notificacao.titulo}
-        </div>
-        <div className="text-xs text-secondary mt-0.5 break-words">
-          {notificacao.mensagem}
-        </div>
-        <div className="text-[0.65rem] text-muted mt-1">
-          {formatarTempoRelativo(notificacao.criadoEm, t)}
-        </div>
-      </div>
+      {(() => {
+        const corpo = (
+          <>
+            <div className="text-sm font-medium text-primary truncate">
+              {notificacao.titulo}
+            </div>
+            <div className="text-xs text-secondary mt-0.5 break-words">
+              {notificacao.mensagem}
+            </div>
+            <div className="text-[0.65rem] text-muted mt-1">
+              {formatarTempoRelativo(notificacao.criadoEm, t)}
+            </div>
+          </>
+        );
+        return href && onAbrir ? (
+          <button
+            type="button"
+            onClick={() => onAbrir(href)}
+            className="group flex flex-1 min-w-0 items-start gap-2 text-left"
+            title={t("Abrir")}
+          >
+            <div className="flex-1 min-w-0">{corpo}</div>
+            <ChevronRight
+              size={14}
+              className="mt-0.5 flex-shrink-0 text-muted transition-colors group-hover:text-primary"
+            />
+          </button>
+        ) : (
+          <div className="flex-1 min-w-0">{corpo}</div>
+        );
+      })()}
       {!lida && (
         <button
           onClick={onMarcarLida}

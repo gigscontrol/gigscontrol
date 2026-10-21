@@ -97,16 +97,21 @@ function formatarData(iso: string | null): string {
 }
 
 export default function HistoricoPage({
-  abrirId = null,
+  contratoId = null,
   statusInicial = null,
+  onAbrirContrato,
+  onVoltar,
 }: {
-  /** Abre este contrato já no detalhe ao montar (vindo da dashboard). */
-  abrirId?: string | null;
-  /** Filtro de status inicial (vindo de um card da dashboard). */
+  /** Contrato aberto — vem do ENDEREÇO (/app/contratos/historico/<id>). */
+  contratoId?: string | null;
+  /** Filtro de status inicial (?status=, vindo de um card da dashboard). */
   statusInicial?: ContratoStatus | null;
-} = {}) {
+  onAbrirContrato: (id: string) => void;
+  /** Sai do contrato aberto (volta pra onde a pessoa estava). */
+  onVoltar: () => void;
+}) {
   const t = useT();
-  const { contratos, carregando, erro, atualizarContrato, removerContrato } =
+  const { contratos, carregando, carregado, erro, atualizarContrato, removerContrato } =
     useContratos();
   const { modelos } = useModelos();
   const { vendas } = useVendas();
@@ -134,7 +139,6 @@ export default function HistoricoPage({
     podeUI(artistaDoContrato(c), "contratos.cancelar_proprios") ||
     podeUI(artistaDoContrato(c), "contratos.cancelar_outros");
 
-  const [selecionadoId, setSelecionadoId] = useState<string | null>(abrirId);
   const [filtro, setFiltro] = useState<ContratoStatus | "todos">(
     statusInicial ?? "todos"
   );
@@ -194,9 +198,11 @@ export default function HistoricoPage({
     [ordenados, filtro]
   );
 
+  // Procura em TODOS (não só no período da lista): um link pro contrato de
+  // outro mês tem que abrir mesmo com o filtro de período em "Mês atual".
   const selecionado = useMemo(
-    () => ordenados.find((c) => c.id === selecionadoId) ?? null,
-    [ordenados, selecionadoId]
+    () => (contratoId ? contratos.find((c) => c.id === contratoId) ?? null : null),
+    [contratos, contratoId]
   );
 
   // ---- Ações ----
@@ -253,8 +259,8 @@ export default function HistoricoPage({
     }
     try {
       await removerContrato(contrato.id);
-      // Se estava aberto no detalhe, volta pra lista.
-      setSelecionadoId((atual) => (atual === contrato.id ? null : atual));
+      // Se estava aberto no detalhe, sai dele.
+      if (contratoId === contrato.id) onVoltar();
     } catch (e) {
       avisar((e as Error).message || t("Não foi possível excluir o contrato."));
     }
@@ -288,8 +294,8 @@ export default function HistoricoPage({
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Contratos"
-        subtitle={`${t("Histórico")} · ${tituloPeriodo}`}
+        title="Todos os contratos"
+        subtitle={tituloPeriodo}
         accentColor={ACCENT}
         actions={
           <DateRangeSelector
@@ -305,7 +311,7 @@ export default function HistoricoPage({
         }
       />
 
-      {carregando ? (
+      {carregando || (contratoId && !carregado) ? (
         <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" />
           {t("Carregando contratos...")}
@@ -318,6 +324,14 @@ export default function HistoricoPage({
           <AlertCircle size={16} className="flex-shrink-0" />
           {erro}
         </div>
+      ) : contratoId && !selecionado ? (
+        <div className="card flex flex-col items-center gap-3 py-12 text-center">
+          <div className="section-title">{t("Contrato não encontrado")}</div>
+          <button type="button" onClick={onVoltar} className="btn btn-secondary">
+            <ArrowLeft size={15} />
+            {t("Voltar")}
+          </button>
+        </div>
       ) : selecionado ? (
         <DetalheContrato
           contrato={selecionado}
@@ -328,7 +342,7 @@ export default function HistoricoPage({
           podeEditar={podeEditar(selecionado)}
           podeExcluir={podeExcluir(selecionado)}
           podeCancelar={podeCancelar(selecionado)}
-          onVoltar={() => setSelecionadoId(null)}
+          onVoltar={onVoltar}
           onBaixarPdf={() => baixarPdf(selecionado)}
           onMudarStatus={(s) => mudarStatus(selecionado, s)}
           onExcluir={() => excluir(selecionado)}
@@ -362,7 +376,7 @@ export default function HistoricoPage({
               nomeModelo={nomeModelo}
               desc={(c) => descreverContrato(c, vendas, artistas)}
               podeExcluir={podeExcluir}
-              onAbrir={(c) => setSelecionadoId(c.id)}
+              onAbrir={(c) => onAbrirContrato(c.id)}
               onExcluir={excluir}
             />
           )}

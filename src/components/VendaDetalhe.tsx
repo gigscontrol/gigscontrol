@@ -257,7 +257,7 @@ export default function VendaDetalhe({
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
-        {t("Voltar para Vendas")}
+        {t("Voltar")}
       </button>
 
       {/* ===== Herói de página (identidade da ficha, em escala de página) ===== */}
@@ -378,7 +378,7 @@ export default function VendaDetalhe({
               >
                 <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
                 <div className="text-sm text-secondary">
-                  {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Controle de Pagamentos.")}
+                  {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Pagamentos.")}
                 </div>
                 <button
                   onClick={onDispensarAvisoParcelas}
@@ -474,7 +474,7 @@ export default function VendaDetalhe({
                   );
                 })}
                 <p className="text-xs text-muted mt-1">
-                  {t("Gerencie os pagamentos em Financeiro → Controle de Pagamentos.")}
+                  {t("Gerencie os pagamentos em Financeiro → Pagamentos.")}
                 </p>
               </>
             )}
