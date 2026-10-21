@@ -260,7 +260,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
             value={contratantes.length}
             icon={<Users size={16} />}
             accentColor="var(--info)"
-            subtitle={t("Toque para ver o resumo")}
+            subtitle={t("Ver o resumo")}
           />
         </ClickableStat>
         <ClickableStat

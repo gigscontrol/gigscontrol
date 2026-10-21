@@ -414,7 +414,7 @@ export default function HistoricoPage({
           </div>
           <div className="section-title mb-1">{t("Nenhum contrato gerado ainda")}</div>
           <div className="section-subtitle">
-            {t("Crie um em")}{" "}<span className="font-medium">{t("Novo Contrato")}</span>.
+            {t("Crie um em")}{" "}<span className="font-medium">{t("Novo contrato")}</span>.
           </div>
         </div>
       ) : (

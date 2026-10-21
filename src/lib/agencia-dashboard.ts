@@ -310,7 +310,8 @@ export function rankingFaturamentoPorArtista(
     const artista = artistas.find((a) => a.id === id);
     linhas.push({
       id,
-      nome: artista?.name ?? "—",
+      // Saiu da conta → diz isso (com a lista ainda vazia, "—").
+      nome: artista?.name ?? (artistas.length > 0 && id ? "Artista removido" : "—"),
       cor: artista?.color,
       a: bruto,
       b: taxa,

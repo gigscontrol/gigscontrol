@@ -902,7 +902,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
-        title="Novo Orçamento"
+        title="Novo orçamento"
         subtitle="Você pode incluir mais de um artista — cada um gera um orçamento próprio"
         accentColor={accent}
         actions={
