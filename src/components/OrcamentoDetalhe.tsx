@@ -173,14 +173,21 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         {t("Voltar")}
       </button>
 
-      {/* ===== Herói de página ===== */}
+      {/* ===== Herói de página =====
+          Identidade = o CONTRATANTE (pedido do Bruno, 21/10/2026): quem abre o
+          orçamento quer ver pra quem ele foi. O artista vira um chip ao lado
+          do status, com a cor dele. */}
       <FichaHeroPagina
-        artistaNome={artista?.name}
-        artistaCor={artista?.color}
+        artistaNome={cont?.nome ?? t("Contratante não informado")}
+        artistaCor={accent}
         linhaSuperior={
-          dataLegivel || (
-            <span className="text-warning normal-case">{t("Data não definida")}</span>
-          )
+          cont && (cont.telefone || cont.email) ? (
+            <span className="normal-case">
+              {[cont.telefone ? `+${cont.telefone.replace(/\D/g, "")}` : "", cont.email ?? ""]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          ) : undefined
         }
         titulo={
           <>
@@ -195,10 +202,27 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         }
         badges={
           <>
+            {artista && (
+              <span
+                className="badge inline-flex items-center gap-1.5 normal-case"
+                style={{
+                  color: "var(--text-primary)",
+                  backgroundColor: `color-mix(in srgb, ${artista.color} 18%, transparent)`,
+                }}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: artista.color }} />
+                {artista.name}
+              </span>
+            )}
             <span className={`badge ${st.badge}`}>{t(st.label)}</span>
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[orc.tipoEvento])}</span>
+            {dataLegivel ? (
+              <span className="text-xs text-secondary capitalize">{dataLegivel}</span>
+            ) : (
+              <span className="text-xs text-warning">{t("Data não definida")}</span>
+            )}
             <span className="text-xs text-muted">
-              {t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}
+              · {t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}
             </span>
           </>
         }

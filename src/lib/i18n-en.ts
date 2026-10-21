@@ -4033,4 +4033,11 @@ export const EN: Record<string, string> = {
   "O que dá pra buscar": "What you can search",
   // --- Navegação nova (out/2026) ---
   "fechar": "close",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Client not provided",
+  "Enviado em": "Sent on",
+  "Abrir em outra aba": "Open in a new tab",
+  "Mostrando os {n} mais recentes de {total}.": "Showing the {n} most recent of {total}.",
+  "Últimos orçamentos para {cidade}": "Latest quotes for {cidade}",
+  "Orçamentos anteriores deste evento / local": "Previous quotes for this event / venue",
 };

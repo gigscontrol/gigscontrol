@@ -3021,4 +3021,11 @@ export const FR: Record<string, string> = {
   "O que dá pra buscar": "Ce que vous pouvez chercher",
   // --- Navegação nova (out/2026) ---
   "fechar": "fermer",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Client non renseigné",
+  "Enviado em": "Envoyé le",
+  "Abrir em outra aba": "Ouvrir dans un autre onglet",
+  "Mostrando os {n} mais recentes de {total}.": "Affichage des {n} plus récents sur {total}.",
+  "Últimos orçamentos para {cidade}": "Derniers devis pour {cidade}",
+  "Orçamentos anteriores deste evento / local": "Devis précédents pour cet événement / lieu",
 };

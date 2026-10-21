@@ -3021,4 +3021,11 @@ export const DE: Record<string, string> = {
   "O que dá pra buscar": "Was du suchen kannst",
   // --- Navegação nova (out/2026) ---
   "fechar": "schließen",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Auftraggeber nicht angegeben",
+  "Enviado em": "Gesendet am",
+  "Abrir em outra aba": "In neuem Tab öffnen",
+  "Mostrando os {n} mais recentes de {total}.": "Die {n} neuesten von {total}.",
+  "Últimos orçamentos para {cidade}": "Letzte Angebote für {cidade}",
+  "Orçamentos anteriores deste evento / local": "Frühere Angebote für dieses Event / diese Location",
 };

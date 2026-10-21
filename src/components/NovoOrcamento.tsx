@@ -36,6 +36,7 @@ import CasaParecidaModal, {
   type EscolhaCasaParecida,
 } from "./CasaParecidaModal";
 import HistoricoContratante from "./HistoricoContratante";
+import { OrcamentosDaCidade, OrcamentosDoEvento } from "./OrcamentosAnteriores";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
@@ -1204,10 +1205,16 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               })()}
             />
             {errors.contratante && <p className="text-xs text-danger mt-2">{errors.contratante}</p>}
-            {/* Passo 2 — histórico comercial do contratante (só quando existente). */}
-            {contratanteMode === "existente" && (
-              <HistoricoContratante contratanteId={contratanteId} />
-            )}
+            {/* Passo 2 — histórico comercial do contratante. Aparece JÁ ao digitar
+                um número cadastrado (antes de escolher "usar"), não só no modo
+                "existente" — é ali que o vendedor precisa ver o que já foi passado. */}
+            <HistoricoContratante
+              contratanteId={
+                contratanteMode === "existente"
+                  ? contratanteId
+                  : vinculadoId ?? contratanteDuplicado()?.id ?? null
+              }
+            />
           </div>
 
           <ContratanteBuscaModal
@@ -1242,6 +1249,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               {errors.cidade && (
                 <p className="text-xs text-danger mt-1">{errors.cidade}</p>
               )}
+              <OrcamentosDaCidade cidade={cidadeIbge} />
             </div>
           )}
 
@@ -1265,6 +1273,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     placeholder={t("Ex: São Paulo, Belo Horizonte...")}
                   />
                 </Field>
+                <OrcamentosDaCidade cidade={cidadeIbge} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1358,6 +1367,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                   </Field>
                 </div>
               </div>
+              <OrcamentosDoEvento nomeEvento={evNome} nomeLocal={evLocal} />
             </div>
           )}
         </div>
