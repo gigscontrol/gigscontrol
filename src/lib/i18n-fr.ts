@@ -3028,4 +3028,6 @@ export const FR: Record<string, string> = {
   "Mostrando os {n} mais recentes de {total}.": "Affichage des {n} plus récents sur {total}.",
   "Últimos orçamentos para {cidade}": "Derniers devis pour {cidade}",
   "Orçamentos anteriores deste evento / local": "Devis précédents pour cet événement / lieu",
+  // --- Navegação nova (out/2026) ---
+  "Mensagem do WhatsApp": "Message WhatsApp",
 };

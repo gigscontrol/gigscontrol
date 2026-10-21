@@ -35,7 +35,6 @@ import {
   Plane,
   Car,
   StickyNote,
-  Eye,
 } from "lucide-react";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -44,6 +43,7 @@ import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import Vinculos from "./detalhes/Vinculos";
+import PreviaWhatsApp from "./PreviaWhatsApp";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { linhasLogistica } from "@/lib/logisticaTexto";
@@ -90,7 +90,6 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const [editandoInfoExtra, setEditandoInfoExtra] = useState(false);
   const [infoExtraDraft, setInfoExtraDraft] = useState("");
   const [salvandoInfoExtra, setSalvandoInfoExtra] = useState(false);
-  const [previewAberto, setPreviewAberto] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
     tipo: "sucesso" | "erro";
@@ -575,29 +574,19 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           )}
         </ColunaFicha>
 
-        {/* Preview do WhatsApp ocupa a linha inteira — o texto é longo. */}
+        {/* Mensagem do WhatsApp na linha inteira, SEMPRE aberta, com Copiar e
+            Enviar no topo — igual à tela de "Orçamento criado". */}
         <SecaoFicha cheia>
-          <Bloco icon={<MessageCircle size={14} />} title={t("Pré-visualização do WhatsApp")}>
-            {previewAberto ? (
-              <>
-                <pre className="bg-elevated border border-border rounded-md p-3 text-xs text-primary whitespace-pre-wrap font-sans">
-                  {texto}
-                </pre>
-                <div className="text-xs text-muted mt-1">
-                  * {t("Asteriscos viram")} <strong>{t("negrito")}</strong> {t("no WhatsApp.")}
-                </div>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPreviewAberto(true)}
-                className="btn-ghost text-xs inline-flex items-center gap-1.5 self-start"
-              >
-                <Eye size={12} />
-                {t("Ver a mensagem que será enviada")}
-              </button>
-            )}
-          </Bloco>
+          <PreviaWhatsApp
+            texto={texto}
+            linkWA={linkWA}
+            titulo={
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold text-primary">
+                <MessageCircle size={14} style={{ color: "var(--brand)" }} />
+                {t("Mensagem do WhatsApp")}
+              </span>
+            }
+          />
         </SecaoFicha>
       </FolhaFicha>
 

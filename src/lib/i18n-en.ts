@@ -4040,4 +4040,6 @@ export const EN: Record<string, string> = {
   "Mostrando os {n} mais recentes de {total}.": "Showing the {n} most recent of {total}.",
   "Últimos orçamentos para {cidade}": "Latest quotes for {cidade}",
   "Orçamentos anteriores deste evento / local": "Previous quotes for this event / venue",
+  // --- Navegação nova (out/2026) ---
+  "Mensagem do WhatsApp": "WhatsApp message",
 };
