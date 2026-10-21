@@ -4091,6 +4091,7 @@ export const EN: Record<string, string> = {
   // --- Textos do painel (out/2026) ---
   "Artista removido": "Removed artist",
   "Ocultar todos": "Hide all",
+  "Artistas removidos": "Removed artists",
   // --- Roteiro de cobrança (out/2026) ---
   "Lembrar": "Remind",
   "1 dia": "1 day",

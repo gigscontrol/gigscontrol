@@ -31,6 +31,7 @@ import { useAuth } from "@/lib/auth-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/types";
 import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange, Moeda } from "@/types";
+import { useFiltroArtistas } from "./FiltroArtistas";
 
 type Props = {
   selectedArtistas: string[];
@@ -56,12 +57,12 @@ function mesAnoBate(dataISO: string | undefined, ano: number, mes: number): bool
 }
 
 export default function VendasDashboard({
-  selectedArtistas,
   onNavigate,
   onAbrirOrcamento,
   onAbrirVenda,
 }: Props) {
   const t = useT();
+  const filtro = useFiltroArtistas();
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos } = useOrcamentos();
   const { vendas, carregando: carregandoVendas, erro: erroVendas, recarregar: recarregarVendas } = useVendas();
@@ -87,9 +88,12 @@ export default function VendasDashboard({
   const orcamentosVisiveis = useMemo(
     () =>
       orcamentos.filter(
-        (o) => selectedArtistas.includes(o.artistaId) && (tudo || mesAnoBate(o.criadoEm, ano, mes))
+        // Regra ÚNICA do filtro de artistas (a mesma das listas e de
+        // Pagamentos) — o `includes` escondia sempre os de artista removido.
+        (o) => filtro.passa(o.artistaId) && (tudo || mesAnoBate(o.criadoEm, ano, mes))
       ),
-    [orcamentos, selectedArtistas, ano, mes, tudo]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orcamentos, filtro.selecionados, filtro.ativo, ano, mes, tudo]
   );
   const vendasVisiveis = useMemo(
     () =>
@@ -97,10 +101,11 @@ export default function VendasDashboard({
         (v) =>
           // Vendas canceladas (D5) saem dos dashboards e do "a receber".
           v.status !== "cancelada" &&
-          selectedArtistas.includes(v.artistaId) &&
+          filtro.passa(v.artistaId) &&
           (tudo || mesAnoBate(v.criadoEm, ano, mes))
       ),
-    [vendas, selectedArtistas, ano, mes, tudo]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vendas, filtro.selecionados, filtro.ativo, ano, mes, tudo]
   );
 
   const stats = useMemo(() => {
