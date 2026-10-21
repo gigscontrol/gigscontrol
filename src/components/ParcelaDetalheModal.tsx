@@ -17,8 +17,12 @@ import {
   Building2,
   Hash,
   StickyNote,
+  ExternalLink,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Modal from "./Modal";
+import { useNavegacao } from "./NavOverlay";
+import { urls } from "@/lib/navegacao/rotas";
 import { useAviso } from "./ConfirmarModal";
 import { useVendas } from "@/lib/vendas-context";
 import { useAuth } from "@/lib/auth-context";
@@ -52,6 +56,8 @@ type Props = {
 
 export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Props) {
   const t = useT();
+  const { navegar } = useNavegacao();
+  const pathname = usePathname();
   const { vendas, acaoParcela } = useVendas();
   const { podeUI, modoVisitante, sessao } = useAuth();
   const userId = sessao?.usuario.id;
@@ -173,7 +179,20 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
         </div>
 
         <Bloco icon={<DollarSign size={14} />} title={t("Venda")}>
-          <Linha icon={<Hash size={13} />} bold>{venda.numero}</Linha>
+          <div className="flex items-center justify-between gap-3">
+            <Linha icon={<Hash size={13} />} bold>{venda.numero}</Linha>
+            {/* Leva até a venda — a não ser que o modal já esteja aberto em cima dela. */}
+            {pathname !== urls.venda(venda.id) && (
+              <button
+                type="button"
+                onClick={() => navegar(urls.venda(venda.id))}
+                className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0"
+              >
+                {t("Abrir venda")}
+                <ExternalLink size={11} />
+              </button>
+            )}
+          </div>
           {venda.contratanteNome && <Linha icon={<User size={13} />}>{venda.contratanteNome}</Linha>}
           {venda.nomeEvento && <Linha icon={<Building2 size={13} />}>{venda.nomeEvento}</Linha>}
           {artista && (

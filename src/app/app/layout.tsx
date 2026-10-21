@@ -667,6 +667,7 @@ function AppRoot() {
             <Contatos
               aba={contatoAba}
               contatoId={contatoId}
+              abrirNovo={searchParams.get("novo") === "1"}
               // Trocar de aba não empilha histórico (é filtro da mesma lista).
               onAbrirAba={(aba) => irPara(urls.contatos(aba), { substituir: true })}
               onAbrirContato={(cat, id) => irPara(urls.contato(cat, id))}
@@ -698,6 +699,7 @@ function AppRoot() {
             <HistoricoPage
               contratoId={contratoId}
               statusInicial={statusContratos}
+              focarAssinatura={searchParams.get("assinar") === "1"}
               onAbrirContrato={abrirContrato}
               onVoltar={() => voltar(urls.contratos())}
             />
@@ -736,7 +738,6 @@ function AppRoot() {
         showId={showAberto}
         onClose={() => fecharSobreposicao("show")}
         onAbrirOrcamento={abrirOrcamento}
-        onAbrirVenda={abrirVenda}
         onEditarVenda={editarVenda}
       />
       <ParcelaDetalheModal

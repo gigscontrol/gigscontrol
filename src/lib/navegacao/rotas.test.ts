@@ -65,6 +65,15 @@ describe("urls", () => {
     expect(urls.parcela("p1")).toBe("/app/financeiro/pagamentos?parcela=p1");
   });
 
+  it("atalhos com intenção: assinar contrato e cadastrar contato", () => {
+    expect(urls.contrato("c1")).toBe("/app/contratos/historico/c1");
+    expect(urls.contrato("c1", { assinar: true })).toBe("/app/contratos/historico/c1?assinar=1");
+    expect(urls.contatos("casas", { novo: true })).toBe("/app/contatos/lista/casas?novo=1");
+    expect(urls.contatos("contratantes", { novo: true })).toBe("/app/contatos/lista?novo=1");
+    // a query não atrapalha a leitura do caminho
+    expect(rota("/app/contratos/historico/c1").contratoId).toBe("c1");
+  });
+
   it("ida e volta: o que urls monta, resolverRota entende", () => {
     expect(rota(urls.contrato("x")).contratoId).toBe("x");
     expect(rota(urls.contato("cidades", "y")).contatoId).toBe("y");

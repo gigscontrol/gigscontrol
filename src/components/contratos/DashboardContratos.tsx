@@ -29,19 +29,12 @@ import { descreverContrato, formatarDataCurta } from "@/lib/contratoTitulo";
 import { useT } from "@/lib/i18n";
 import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange } from "@/types";
+import { STATUS_CONTRATO } from "@/lib/statusUI";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
 /** Rótulo + classe de badge + cor por status. */
-const STATUS_INFO: Record<
-  ContratoStatus,
-  { label: string; badge: string; color: string }
-> = {
-  rascunho: { label: "Rascunho", badge: "badge-neutral", color: "var(--text-muted)" },
-  enviado: { label: "Enviado", badge: "badge-info", color: "var(--info)" },
-  assinado: { label: "Assinado", badge: "badge-success", color: "var(--success)" },
-  cancelado: { label: "Cancelado", badge: "badge-danger", color: "var(--danger)" },
-};
+const STATUS_INFO = STATUS_CONTRATO;
 
 const STATUS_ORDEM: ContratoStatus[] = ["rascunho", "enviado", "assinado", "cancelado"];
 
@@ -308,9 +301,9 @@ export default function DashboardContratos({
             : resumo === "aguardando"
               ? "var(--warning)"
               : resumo
-                ? STATUS_INFO[resumo].color === "var(--text-muted)"
+                ? STATUS_INFO[resumo].cor === "var(--text-muted)"
                   ? undefined
-                  : STATUS_INFO[resumo].color
+                  : STATUS_INFO[resumo].cor
                 : undefined
         }
       >
@@ -388,7 +381,7 @@ export default function DashboardContratos({
                     : t(STATUS_INFO[resumo].label)
               }
               valor={porStatus[resumo]}
-              accentColor={STATUS_INFO[resumo].color === "var(--text-muted)" ? undefined : STATUS_INFO[resumo].color}
+              accentColor={STATUS_INFO[resumo].cor === "var(--text-muted)" ? undefined : STATUS_INFO[resumo].cor}
             />
             {resumo === "assinado" && (
               <ResumoLinha label={t("Vendas sem contrato")} valor={vendasSemContrato} destaque />

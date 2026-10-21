@@ -42,6 +42,8 @@ import Toast from "./Toast";
 import { FichaHeroPagina, Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
 import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
+import { useVendas } from "@/lib/vendas-context";
+import Vinculos from "./detalhes/Vinculos";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { linhasLogistica } from "@/lib/logisticaTexto";
@@ -79,6 +81,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const accent = MODULE_THEMES.vendas.color;
   const { orcamentos, marcarStatus, aceitarOrcamento, removeOrcamento, duplicarOrcamento, updateOrcamento } = useOrcamentos();
   const { contratantes, casas, cidades } = useContatos();
+  const { vendas } = useVendas();
   const artistas = useArtistas();
 
   const [confirmaDuplicar, setConfirmaDuplicar] = useState(false);
@@ -96,6 +99,11 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   } | null>(null);
 
   const orc = orcamentos.find((o) => o.id === orcamentoId);
+  // Venda ativa nascida deste orçamento (no máx. 1 — o servidor barra a 2ª).
+  const vendaDoOrcamento =
+    vendas.find((v) => v.orcamentoId === orcamentoId && v.status !== "cancelada") ??
+    vendas.find((v) => v.orcamentoId === orcamentoId) ??
+    null;
   if (!orc) {
     return (
       <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
@@ -312,6 +320,17 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               {t("Você pode aceitar e enviar pelo WhatsApp normalmente; esses dados serão necessários quando o orçamento virar venda fechada.")}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Já virou venda: o ciclo inteiro (venda, show, contrato, contratante). */}
+      {vendaDoOrcamento && (
+        <div className="mb-4">
+          <Vinculos
+            vendaId={vendaDoOrcamento.id}
+            ocultar={["orcamento"]}
+            titulo={t("Este orçamento virou venda")}
+          />
         </div>
       )}
 
