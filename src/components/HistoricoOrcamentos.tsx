@@ -135,7 +135,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   async function handleRemover(id: string) {
     const ok = await confirmar({
       titulo: t("Remover orçamento"),
-      mensagem: t("Remover este orçamento? Esta ação não pode ser desfeita."),
+      mensagem: t("Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias."),
       perigo: true,
     });
     if (ok) removeOrcamento(id);

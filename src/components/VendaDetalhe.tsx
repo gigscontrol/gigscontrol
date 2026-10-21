@@ -314,8 +314,7 @@ export default function VendaDetalhe({
                   onClick={cancelarOuReativarShow}
                   disabled={processandoShow || !podeCancelarShow}
                   title={!podeCancelarShow ? semPermissao : undefined}
-                  className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  style={{ color: cancelado ? "var(--success)" : "var(--danger)" }}
+                  className={`btn px-3 py-1.5 text-xs ${cancelado ? "btn-secondary" : "btn-danger-outline"}`}
                 >
                   {processandoShow
                     ? t("Salvando…")
@@ -628,8 +627,7 @@ export default function VendaDetalhe({
           onClick={() => setConfirmaRemover(true)}
           disabled={!podeExcluirVenda}
           title={!podeExcluirVenda ? semPermissao : undefined}
-          className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ color: "var(--danger)" }}
+          className="btn btn-danger-outline px-3 py-1.5 text-xs"
         >
           <Trash2 size={12} />
           {t("Remover venda")}
@@ -668,8 +666,7 @@ export default function VendaDetalhe({
                   setRemovendo(false);
                 }
               }}
-              className="btn btn-primary"
-              style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+              className="btn btn-danger"
               disabled={removendo}
             >
               {removendo ? t("Removendo...") : t("Remover")}

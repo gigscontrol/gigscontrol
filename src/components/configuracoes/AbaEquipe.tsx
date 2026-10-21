@@ -1121,8 +1121,7 @@ export default function AbaEquipe() {
             </button>
             <button
               onClick={aoRemover}
-              className="btn btn-primary"
-              style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+              className="btn btn-danger"
               disabled={removendo}
             >
               {removendo ? t("Removendo...") : t("Remover")}

@@ -349,6 +349,28 @@
   }
   .btn:active { transform: translateY(1px); }
 
+  /* Ações DESTRUTIVAS — só dois jeitos (padrão definido em out/2026):
+     .btn-danger         → a confirmação final ("Excluir" no "tem certeza?");
+     .btn-danger-outline → o botão que ABRE a confirmação, na tela.
+     Lixeira em linha de tabela: btn-ghost + hover:text-danger. */
+  .btn-danger {
+    background-color: var(--danger);
+    color: #fff;
+  }
+  .btn-danger:hover { filter: brightness(0.93); }
+  .btn-danger-outline {
+    background-color: transparent;
+    color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  }
+  .btn-danger-outline:hover { background-color: var(--danger-weak); }
+  .btn-danger:disabled,
+  .btn-danger-outline:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: none;
+  }
+
   /* Typography helpers */
   .stat-value {
     font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;

@@ -325,8 +325,7 @@ function PresetModal({
               type="button"
               onClick={onExcluir}
               disabled={salvando}
-              className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors"
-              style={{ color: "var(--danger)" }}
+              className="btn btn-danger-outline px-3 py-1.5 text-xs"
             >
               <Trash2 size={12} />
               {t("Excluir preset")}

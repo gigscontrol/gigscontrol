@@ -303,9 +303,8 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                     <button
                       onClick={() => setModo("cancelar")}
                       disabled={!podeCancelar}
-                      className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="btn btn-danger-outline text-sm"
                       title={!podeCancelar ? t("Você não tem permissão para isso.") : undefined}
-                      style={{ color: "var(--danger)" }}
                     >
                       <Ban size={14} /> {t("Cancelar cachê")}
                     </button>
@@ -382,8 +381,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                       rodar(() => acaoParcela(venda.id, parcela.id, { cancelar: true, cancelamento_motivo: motivo.trim() }))
                     }
                     disabled={salvando || !motivo.trim()}
-                    className="btn text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
-                    style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+                    className="btn btn-danger text-sm"
                   >
                     <Ban size={14} /> {salvando ? t("Cancelando…") : t("Cancelar cachê")}
                   </button>

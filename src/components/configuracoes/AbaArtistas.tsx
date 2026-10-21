@@ -765,8 +765,7 @@ export default function AbaArtistas() {
                       removerArtista(artistaSelecionado.id);
                       setRemovendo(null);
                     }}
-                    className="btn text-xs px-2.5 py-1"
-                    style={{ backgroundColor: "var(--danger)", color: "#fff" }}
+                    className="btn btn-danger text-xs px-2.5 py-1"
                   >
                     {t("Sim")}
                   </button>

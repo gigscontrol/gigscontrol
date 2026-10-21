@@ -2416,8 +2416,7 @@ function ItemDetalheModal({
             onClick={excluir}
             disabled={excluindo || !podeExcluir}
             title={!podeExcluir ? t("Você não tem permissão para isso.") : undefined}
-            className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--danger)" }}
+            className="btn btn-danger-outline text-sm"
           >
             <Trash2 size={14} />
             {excluindo ? t("Excluindo…") : t("Excluir")}

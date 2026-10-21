@@ -648,7 +648,7 @@ function DetalheContrato({
               type="button"
               onClick={onCancelar}
               disabled={salvandoStatus}
-              className="btn btn-secondary hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-danger-outline"
             >
               <Ban size={15} />
               {t("Cancelar contrato")}
@@ -660,7 +660,7 @@ function DetalheContrato({
             <button
               type="button"
               onClick={onExcluir}
-              className="btn btn-secondary hover:text-danger"
+              className="btn btn-danger-outline"
             >
               <Trash2 size={15} />
               {t("Excluir")}

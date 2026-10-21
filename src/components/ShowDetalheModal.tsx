@@ -460,8 +460,7 @@ export default function ShowDetalheModal({
             <button
               type="button"
               onClick={() => setMostrarFormCancel(true)}
-              className="text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-              style={{ color: "var(--danger)" }}
+              className="btn btn-danger-outline px-3 py-1.5 text-xs"
             >
               {t("Cancelar show")}
             </button>

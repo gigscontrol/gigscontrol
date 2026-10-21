@@ -3996,4 +3996,6 @@ export const EN: Record<string, string> = {
   "Proposta pro contratante aprovar": "Proposal for the client to approve",
   "A partir de um modelo e de uma venda": "From a template and a sale",
   "Cadastrar um cliente": "Register a client",
+  // --- Navegação nova (out/2026) ---
+  "Remover este orçamento? Ele vai para a Lixeira e pode ser restaurado por 30 dias.": "Remove this quote? It goes to the Trash and can be restored for 30 days.",
 };
