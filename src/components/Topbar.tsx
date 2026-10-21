@@ -10,6 +10,7 @@ import {
   CalendarClock,
   FileText,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import type { Migalha } from "@/lib/navegacao/rotas";
 import { useAuth } from "@/lib/auth-context";
@@ -17,6 +18,8 @@ import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
 import { useContratos } from "@/lib/contratos-context";
 import SinoNotificacoes from "./SinoNotificacoes";
+import { BotaoNovo } from "./navegacao/MenuNovo";
+import { abrirBusca } from "./navegacao/BuscaGlobal";
 import LanguageSwitcher, { IDIOMAS } from "./LanguageSwitcher";
 import BotaoTema from "./BotaoTema";
 import Flag from "./Flag";
@@ -189,6 +192,26 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Busca geral (Ctrl+K): campo no computador, lupa no celular. */}
+        <button
+          type="button"
+          onClick={abrirBusca}
+          className="hidden h-9 w-56 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted transition-colors hover:border-border-strong hover:text-secondary xl:flex"
+        >
+          <Search size={15} />
+          <span className="flex-1 text-left">{t("Buscar…")}</span>
+          <kbd className="rounded border border-border px-1.5 text-[0.65rem]">Ctrl K</kbd>
+        </button>
+        <button
+          type="button"
+          onClick={abrirBusca}
+          aria-label={t("Buscar")}
+          title={t("Buscar (Ctrl+K)")}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-secondary transition-colors hover:border-border-strong hover:text-primary xl:hidden"
+        >
+          <Search size={17} />
+        </button>
+        <BotaoNovo />
         <SinoNotificacoes onVerTodas={onVerNotificacoes} onAbrirLink={onNavegar} />
         {/* No mobile, idioma e tema migram pro dropdown do usuário (abaixo). */}
         <div className="hidden md:flex items-center gap-2">

@@ -252,6 +252,28 @@ export const ROTULO_PAGINA: Record<ActivePage, string> = {
   "agencia-equipe": "Equipe",
 };
 
+/** Páginas de cada módulo, na ordem do menu (o "Dashboard" é o módulo em si). */
+export const PAGINAS_DO_MENU: Record<ActiveTab, ActivePage[]> = {
+  agenda: ["dashboard", "agenda-completa", "agenda-anotacoes"],
+  vendas: [
+    "dashboard",
+    "vendas-novo-orcamento",
+    "vendas-historico",
+    "vendas-nova-venda",
+    "vendas-historico-vendas",
+  ],
+  financeiro: ["dashboard", "financeiro-pagamentos", "financeiro-cobrancas"],
+  contratos: [
+    "dashboard",
+    "contratos-novo",
+    "contratos-historico",
+    "contratos-pastas",
+    "contratos-modelos",
+  ],
+  contatos: ["dashboard", "contatos-lista", "contatos-mapa"],
+  agencia: ["dashboard", "agencia-artistas", "agencia-equipe"],
+};
+
 const ROTULO_ABA_CONTATOS: Record<AbaContatos, string> = {
   contratantes: "Contratantes",
   casas: "Casas / Eventos",
