@@ -1526,7 +1526,7 @@ export default function ConcretizarVenda({
           <Sparkles size={16} className="flex-shrink-0 mt-0.5" style={{ color: accent }} />
           <div className="text-sm text-secondary">
             {t("Os campos com selo")}{" "}
-            <span className="badge badge-neutral text-[0.6rem]">auto</span> {t("vieram do orçamento")}{" "}
+            <span className="badge badge-neutral text-[0.6875rem]">auto</span> {t("vieram do orçamento")}{" "}
             <strong>{orc.numero}</strong>. {t("Você pode alterar qualquer um — o selo some quando edita.")}
           </div>
         </div>
@@ -1716,7 +1716,7 @@ export default function ConcretizarVenda({
                     }}
                   >
                     <span
-                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0"
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
                       style={{
                         backgroundColor: isActive
                           ? d.color

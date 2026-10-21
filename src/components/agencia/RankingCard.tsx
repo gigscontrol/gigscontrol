@@ -142,7 +142,7 @@ export default function RankingCard({
                     {i + 1}
                   </span>
                   <span
-                    className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] font-semibold"
+                    className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center text-[0.6875rem] font-semibold"
                     style={
                       l.cor
                         ? { backgroundColor: l.cor, color: "#fff" }

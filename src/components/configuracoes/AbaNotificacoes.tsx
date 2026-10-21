@@ -100,7 +100,7 @@ export default function AbaNotificacoes() {
           <div className="section-title">{t("Notificações")}</div>
           {naoLidas > 0 && (
             <span
-              className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded text-white"
+              className="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded text-white"
               style={{ backgroundColor: "var(--danger)" }}
             >
               {naoLidas} {naoLidas === 1 ? t("nova") : t("novas")}
@@ -132,7 +132,7 @@ export default function AbaNotificacoes() {
           {naoLidas > 0 && (
             <button
               onClick={marcarTodas}
-              className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
+              className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
             >
               <CheckCheck size={12} />
               {t("Marcar todas como lidas")}
@@ -237,7 +237,7 @@ function LinhaCompleta({
           {href && <ChevronRight size={13} className="text-muted" />}
         </div>
         <div className="text-xs text-secondary mt-0.5 break-words">{item.mensagem}</div>
-        <div className="text-[0.65rem] text-muted mt-1">
+        <div className="text-[0.6875rem] text-muted mt-1">
           {new Date(item.criadoEm).toLocaleString("pt-BR", {
             day: "2-digit",
             month: "2-digit",
@@ -250,7 +250,7 @@ function LinhaCompleta({
       {!lida && (
         <button
           onClick={onMarcarLida}
-          className="text-[0.65rem] text-muted hover:text-primary"
+          className="text-[0.6875rem] text-muted hover:text-primary"
           title={t("Marcar como lida")}
         >
           {t("Marcar lida")}

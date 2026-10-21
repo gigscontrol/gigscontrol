@@ -377,10 +377,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
           <div className="text-lg font-bold tabular-nums leading-none text-primary">
             {diaMes}
           </div>
-          <div className="text-[0.6rem] uppercase text-muted">{t(MESES_CURTO[mesShow])}</div>
+          <div className="text-[0.6875rem] uppercase text-muted">{t(MESES_CURTO[mesShow])}</div>
         </div>
         <span
-          className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold flex-shrink-0"
+          className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
           style={{ backgroundColor: artista?.color ?? "#888", color: "#fff" }}
         >
           {iniciaisDoNome(artista?.name)}
@@ -400,10 +400,12 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
             ))}
           </span>
         ) : (
+          // No celular, "confirmado" (o normal) some e sobra espaço pro nome
+          // da casa; o badge fica só pras exceções, que pedem atenção.
           <span
             className={`badge ${
               show.status === "confirmado"
-                ? "badge-success"
+                ? "badge-success max-sm:hidden"
                 : show.status === "logistica"
                 ? "badge-danger"
                 : "badge-warning"

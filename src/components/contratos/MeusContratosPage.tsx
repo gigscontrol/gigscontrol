@@ -435,7 +435,7 @@ function ContratoCard({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {pastaNome && (
             <span
-              className="hidden sm:inline-flex items-center gap-1 text-[0.65rem] px-1.5 py-0.5 rounded max-w-[110px] truncate"
+              className="hidden sm:inline-flex items-center gap-1 text-[0.6875rem] px-1.5 py-0.5 rounded max-w-[110px] truncate"
               style={{ backgroundColor: "var(--bg-elevated)", color: "var(--text-muted)", border: "1px solid var(--border-color)" }}
               title={pastaNome}
             >

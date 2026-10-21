@@ -484,7 +484,7 @@ export default function Sidebar({
               {!planoIndividual && (
                 <button
                   onClick={toggleAll}
-                  className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                  className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
                 >
                   {allSelected ? t("Ocultar todos") : t("Mostrar todos")}
                 </button>
@@ -520,7 +520,7 @@ export default function Sidebar({
                     }
                   >
                     <span
-                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.65rem] font-bold flex-shrink-0 transition-all"
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0 transition-all"
                       style={{
                         backgroundColor: isActiveDj ? artista.color : "var(--bg-elevated)",
                         color: isActiveDj ? "#fff" : "var(--text-muted)",

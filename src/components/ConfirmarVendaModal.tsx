@@ -63,7 +63,7 @@ export default function ConfirmarVendaModal({
           {iniciaisDoNome(resumo.artistaNome)}
         </span>
         <div className="min-w-0">
-          <div className="text-[0.65rem] text-muted uppercase tracking-wide">{t("Artista")}</div>
+          <div className="text-[0.6875rem] text-muted uppercase tracking-wide">{t("Artista")}</div>
           <div className="text-sm font-bold text-primary truncate">{resumo.artistaNome}</div>
         </div>
       </div>
@@ -94,7 +94,7 @@ export default function ConfirmarVendaModal({
           onClick={onConfirmar}
           disabled={salvando}
           className="btn"
-          style={{ backgroundColor: "var(--success)", color: "#fff", opacity: salvando ? 0.6 : 1 }}
+          style={{ backgroundColor: "var(--success-solid)", color: "#fff", opacity: salvando ? 0.6 : 1 }}
         >
           <CalendarCheck2 size={15} />
           {salvando ? t("Salvando...") : t("Confirmar venda")}

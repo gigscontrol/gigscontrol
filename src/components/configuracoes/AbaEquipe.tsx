@@ -602,7 +602,7 @@ export default function AbaEquipe() {
                     if (vs.length === 0)
                       return (
                         <span
-                          className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                          className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                           style={{
                             backgroundColor: `${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888"}22`,
                             color: LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888",
@@ -620,7 +620,7 @@ export default function AbaEquipe() {
                           return (
                             <span
                               key={pid}
-                              className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                              className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                               style={{
                                 backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
                                 color: perfil?.cor ?? "#3D7BFF",
@@ -631,7 +631,7 @@ export default function AbaEquipe() {
                           );
                         })}
                         <span
-                          className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                          className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                           style={{
                             backgroundColor: "var(--elevated)",
                             color: "var(--text-muted)",
@@ -874,7 +874,7 @@ export default function AbaEquipe() {
                               return (
                                 <span
                                   key={pid}
-                                  className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                                  className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
                                     color: perfil?.cor ?? "#3D7BFF",
@@ -885,11 +885,11 @@ export default function AbaEquipe() {
                               );
                             })
                           ) : (
-                            <span className="text-[0.65rem] text-muted">
+                            <span className="text-[0.6875rem] text-muted">
                               {t("Personalizado")}
                             </span>
                           )}
-                          <span className="text-[0.65rem] text-muted">
+                          <span className="text-[0.6875rem] text-muted">
                             {t("{n} permissões", { n: v.permissoes.length })}
                           </span>
                         </div>
@@ -938,7 +938,7 @@ export default function AbaEquipe() {
                           </span>
                         </div>
                         {mods.length === 0 ? (
-                          <span className="text-[0.65rem] text-muted">
+                          <span className="text-[0.6875rem] text-muted">
                             {t("Sem permissões")}
                           </span>
                         ) : (
@@ -946,7 +946,7 @@ export default function AbaEquipe() {
                             {mods.map((m) => (
                               <span
                                 key={m.modulo}
-                                className="inline-flex items-center gap-1 text-[0.65rem] font-medium px-1.5 py-0.5 rounded bg-elevated text-secondary"
+                                className="inline-flex items-center gap-1 text-[0.6875rem] font-medium px-1.5 py-0.5 rounded bg-elevated text-secondary"
                               >
                                 {m.label}
                                 <span className="text-muted tabular-nums">{m.n}</span>
