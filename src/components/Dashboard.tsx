@@ -37,6 +37,7 @@ import {
 import type { ActiveTab, ActivePage, AgendaDateRange } from "@/types";
 import { useT } from "@/lib/i18n";
 import { useNavegacao } from "./NavOverlay";
+import { useFiltroArtistas } from "./FiltroArtistas";
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -86,8 +87,9 @@ type LinhaParcela = {
 /** Qual card está com o popup de resumo aberto. */
 type ResumoAberto = null | "total" | "recebido" | "areceber" | "atrasado";
 
-export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }: Props) {
+export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
   const t = useT();
+  const filtro = useFiltroArtistas();
   const accent = "var(--brand)";
   const { vendas } = useVendas();
   const artistas = useArtistas();
@@ -120,8 +122,13 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
   };
 
   const vendasVisiveis = useMemo(
-    () => vendas.filter((v) => selectedArtistas.includes(v.artistaId)),
-    [vendas, selectedArtistas]
+    // Regra ÚNICA do filtro de artistas (a mesma de Pagamentos): filtro
+    // desligado = tudo, inclusive venda de artista que saiu da conta. O
+    // `selectedArtistas.includes` daqui escondia essas vendas sempre, e o
+    // "Atrasado" daqui não batia com o de Pagamentos.
+    () => vendas.filter((v) => filtro.passa(v.artistaId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vendas, filtro.selecionados, filtro.ativo]
   );
 
   // Achata parcelas
@@ -226,19 +233,29 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
   // `valor` (soma crua) só ordena e dimensiona a barra; a exibição usa `valorStr`
   // agrupado por moeda (um artista pode ter vendas em moedas diferentes).
   const porArtista = useMemo(() => {
-    return artistas.filter((d) => selectedArtistas.includes(d.id))
-      .map((artista) => {
-        const linhas = parcelasPeriodo.filter(
-          (l) => l.artistaId === artista.id && statusEfetivoParcela(l.parcela) !== "cancelado"
-        );
-        return {
-          artista,
-          valor: linhas.reduce((acc, l) => acc + l.parcela.valor, 0),
-          valorStr: totaisPorMoeda(linhas.map((l) => ({ valor: l.parcela.valor, moeda: l.moeda }))),
-        };
-      })
-      .sort((a, b) => b.valor - a.valor);
-  }, [parcelasPeriodo, selectedArtistas, artistas]);
+    const somar = (linhas: LinhaParcela[]) => ({
+      valor: linhas.reduce((acc, l) => acc + l.parcela.valor, 0),
+      valorStr: totaisPorMoeda(linhas.map((l) => ({ valor: l.parcela.valor, moeda: l.moeda }))),
+    });
+    const ativas = parcelasPeriodo.filter((l) => statusEfetivoParcela(l.parcela) !== "cancelado");
+    const barras = artistas
+      .filter((d) => filtro.passa(d.id))
+      .map((artista) => ({
+        id: artista.id,
+        nome: artista.name,
+        cor: artista.color,
+        ...somar(ativas.filter((l) => l.artistaId === artista.id)),
+      }));
+    // Venda de artista que saiu da conta (ou sem artista) também é dinheiro:
+    // uma barra própria, pra soma das barras bater com o total.
+    const semArtista = ativas.filter((l) => !artistas.some((a) => a.id === l.artistaId));
+    // (Com a lista de artistas ainda carregando, tudo pareceria "removido".)
+    if (artistas.length > 0 && semArtista.length > 0) {
+      barras.push({ id: "__sem-artista", nome: t("Artistas removidos"), cor: "#6B7280", ...somar(semArtista) });
+    }
+    return barras.sort((a, b) => b.valor - a.valor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parcelasPeriodo, filtro.selecionados, filtro.ativo, artistas, t]);
 
   const maxArtista = Math.max(1, ...porArtista.map((p) => p.valor));
   const pctRecebido =
@@ -396,10 +413,10 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {porArtista.map(({ artista, valor, valorStr }) => (
-                <div key={artista.id}>
+              {porArtista.map(({ id, nome, cor, valor, valorStr }) => (
+                <div key={id}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-primary">{artista.name}</span>
+                    <span className="font-medium text-primary">{nome}</span>
                     <span className="tabular-nums text-secondary">
                       {valorStr}
                     </span>
@@ -409,7 +426,7 @@ export default function Dashboard({ selectedArtistas, onNavigate, onAbrirVenda }
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${(valor / maxArtista) * 100}%`,
-                        background: gradienteSutil(artista.color),
+                        background: gradienteSutil(cor),
                       }}
                     />
                   </div>
