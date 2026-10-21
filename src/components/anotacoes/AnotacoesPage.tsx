@@ -639,7 +639,7 @@ function PastaView({
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => setFiltroArtista(null)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors"
             style={{
               borderColor: filtroArtista === null ? ACCENT : "var(--border)",
               backgroundColor: filtroArtista === null ? `${ACCENT}15` : "transparent",
@@ -654,7 +654,7 @@ function PastaView({
               <button
                 key={a.id}
                 onClick={() => setFiltroArtista(on ? null : a.id)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors"
                 style={{
                   borderColor: on ? ACCENT : "var(--border)",
                   backgroundColor: on ? `${ACCENT}15` : "transparent",
@@ -935,7 +935,7 @@ function PastaFormModal({
                         <button
                           key={u.id}
                           onClick={() => toggleMembro(u.id)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-sm transition-colors"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-sm transition-colors"
                           style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `${ACCENT}15` : "transparent" }}
                         >
                           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: u.cor || "#8892a6" }} />
@@ -960,7 +960,7 @@ function PastaFormModal({
                       <button
                         key={a.id}
                         onClick={() => toggleArtista(a.id)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-sm transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-sm transition-colors"
                         style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `${ACCENT}15` : "transparent" }}
                       >
                         <span

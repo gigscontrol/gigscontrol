@@ -83,3 +83,21 @@ export function buscar(itens: readonly ItemBusca[], consulta: string, porTipo = 
   }
   return out;
 }
+
+/** Quantos "abertos recentemente" a busca guarda. */
+export const LIMITE_RECENTES = 5;
+
+/** Põe `id` na frente da lista de recentes (sem repetir), no máximo `limite`. */
+export function registrarRecente(ids: readonly string[], id: string, limite = LIMITE_RECENTES): string[] {
+  return [id, ...ids.filter((x) => x !== id)].slice(0, limite);
+}
+
+/**
+ * Recentes → itens do índice ATUAL. Só guardamos ids: o que sumiu (apagado)
+ * ou que a pessoa não enxerga mais simplesmente não aparece, e título/
+ * subtítulo vêm sempre atualizados.
+ */
+export function resolverRecentes(ids: readonly string[], itens: readonly ItemBusca[]): ItemBusca[] {
+  const porId = new Map(itens.map((i) => [i.id, i]));
+  return ids.map((id) => porId.get(id)).filter((i): i is ItemBusca => !!i);
+}

@@ -69,9 +69,11 @@ export function BotaoNovo() {
         onClick={() => setAberto((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={aberto}
-        className="btn btn-primary h-9 px-3"
+        // Mesmo desenho dos vizinhos da barra (busca, sino, idioma, tema):
+        // contorno, h-9, texto normal — o "+" azul já destaca sem pesar.
+        className="flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-secondary transition-colors hover:border-border-strong hover:text-primary"
       >
-        <Plus size={15} />
+        <Plus size={15} style={{ color: "var(--brand)" }} />
         {t("Novo")}
       </button>
       {aberto && (

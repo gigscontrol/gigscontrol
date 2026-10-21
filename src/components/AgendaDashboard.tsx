@@ -196,9 +196,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
   const viagens = useMemo(() => {
     return showsMes
       .filter((s) => {
-        // Em "Visão geral", "próximas viagens" = só as futuras (senão o
-        // histórico inteiro entraria, inclusive viagens já passadas).
-        if (tudo && (!s.data || s.data < hoje)) return false;
+        // "Próximas" = de hoje em diante, em QUALQUER período (no mês atual
+        // entravam as viagens do começo do mês, já feitas). Show cancelado
+        // não é viagem.
+        if (!s.data || s.data < hoje || s.status === "cancelado") return false;
         const cid = cidadeDoShow(s);
         const artista = artistaDoShow(s);
         // Sem cidade não dá pra dizer se é viagem — inclui por garantia.
@@ -227,6 +228,8 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       .sort((a, b) => a.data.localeCompare(b.data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showsMes, cidades, artistas, hoje]);
+  // Sem viagem pela frente porque o período já passou ≠ só shows locais.
+  const periodoPassado = !tudo && iso(ano, mes + 1, new Date(ano, mes + 1, 0).getDate()) < hoje;
 
   // ---- 3) Fim de semana / feriados ocupados ----
   const ocupacao = useMemo(() => {
@@ -268,9 +271,13 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
     return v.parcelas.some((p) => p.statusBase !== "pago");
   };
   const realizados = useMemo(() => {
-    const passados = showsMes.filter(
-      (s) => s.data && s.data < hoje && s.status !== "cancelado"
-    );
+    // Mais recente primeiro: a prévia mostra os ÚLTIMOS realizados, não os
+    // do começo do mês.
+    const passados = showsMes
+      .filter((s) => s.data && s.data < hoje && s.status !== "cancelado")
+      .sort((a, b) =>
+        `${b.data ?? ""} ${b.time ?? ""}`.localeCompare(`${a.data ?? ""} ${a.time ?? ""}`)
+      );
     const comPendencia = passados.filter(temPendencia);
     return { total: passados.length, comPendencia, lista: passados };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -661,7 +668,9 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
           </div>
           {viagens.length === 0 ? (
             <div className="text-sm text-muted text-center py-6">
-              {t("Nenhuma viagem no mês (só shows na cidade local).")}
+              {periodoPassado
+                ? t("Esse período já passou — nenhuma viagem pela frente.")
+                : t("Nenhuma viagem pela frente no período (só shows na cidade local).")}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">

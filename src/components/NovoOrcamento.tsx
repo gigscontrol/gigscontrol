@@ -5,12 +5,10 @@ import { useT } from "@/lib/i18n";
 import {
   ArrowLeft,
   ArrowRight,
-  MessageCircle,
   Save,
   Building2,
   PartyPopper,
   Sparkles,
-  Copy,
   Check,
   FileText,
   Plus,
@@ -36,6 +34,8 @@ import CasaParecidaModal, {
   type EscolhaCasaParecida,
 } from "./CasaParecidaModal";
 import HistoricoContratante from "./HistoricoContratante";
+import { OrcamentosDaCidade, OrcamentosDoEvento } from "./OrcamentosAnteriores";
+import PreviaWhatsApp from "./PreviaWhatsApp";
 import PhoneInput, { DEFAULT_COUNTRY, contarDigitos, type Country } from "./PhoneInput";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import InputHora from "./inputs/InputHora";
@@ -308,7 +308,6 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     texto: string;
     linkWA: string;
   }> | null>(null);
-  const [copiadoIdx, setCopiadoIdx] = useState<number | null>(null);
 
   // Guarda de saída (auditoria 27/08/2026): o wizard não tinha proteção —
   // navegar embora no meio descartava tudo sem aviso. "Sujo" = fez progresso
@@ -819,29 +818,6 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
     onSaved(resultados.map((r) => r.id));
   }
 
-  async function handleCopiar(idx: number) {
-    if (!salvos) return;
-    const texto = salvos[idx].texto;
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiadoIdx(idx);
-      setTimeout(() => setCopiadoIdx(null), 2000);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = texto;
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand("copy");
-        setCopiadoIdx(idx);
-        setTimeout(() => setCopiadoIdx(null), 2000);
-      } catch {
-        avisar(t("Não foi possível copiar."));
-      }
-      document.body.removeChild(ta);
-    }
-  }
-
   // ============ TELA 3 ============
   if (salvos) {
     return (
@@ -856,70 +832,10 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           accentColor={accent}
         />
 
-        {salvos.map((s, idx) => (
-          <div key={s.id} className="mb-6">
-            <div className="flex items-center justify-between gap-3 mb-2 px-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${s.artistaCor}25`, color: s.artistaCor }}
-                >
-                  <User size={14} />
-                </div>
-                <span className="text-sm font-semibold text-primary truncate">{s.artistaNome}</span>
-                <span className="text-xs font-mono tabular-nums" style={{ color: accent }}>
-                  {s.numero}
-                </span>
-              </div>
-            </div>
-
-            <div className="card mb-2">
-              <div className="flex items-center justify-between mb-3">
-                <div className="section-title text-sm">{t("Mensagem")}</div>
-                <button
-                  onClick={() => handleCopiar(idx)}
-                  className="btn btn-secondary text-xs"
-                  style={
-                    copiadoIdx === idx
-                      ? { color: "var(--success)", borderColor: "var(--success)" }
-                      : undefined
-                  }
-                >
-                  {copiadoIdx === idx ? (
-                    <>
-                      <Check size={12} />
-                      {t("Copiado!")}
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={12} />
-                      {t("Copiar")}
-                    </>
-                  )}
-                </button>
-              </div>
-              <pre className="bg-elevated border border-border rounded-md p-3 text-xs text-primary whitespace-pre-wrap font-sans">
-                {s.texto}
-              </pre>
-            </div>
-
-            <div className="flex justify-end">
-              <a
-                href={s.linkWA}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary text-sm"
-                style={{ backgroundColor: "#25D366", color: "#fff" }}
-              >
-                <MessageCircle size={14} />
-                {t("Enviar pelo WhatsApp")}
-              </a>
-            </div>
-          </div>
-        ))}
-
+        {/* Topo: o que foi criado, pra quem vai e "Concluir" — antes era um
+            card solto no fim, depois do botão do WhatsApp perdido no canto. */}
         <div
-          className="card mt-6 flex flex-wrap items-center justify-between gap-3"
+          className="card mb-4 flex flex-wrap items-center justify-between gap-3"
           style={{ borderColor: accent, boxShadow: `0 0 0 1px ${accent}30` }}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -939,6 +855,11 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               >
                 {salvos.map((s) => s.numero).join("  ·  ")}
               </div>
+              {salvos[0]?.telefoneE164 && (
+                <div className="text-xs text-muted mt-0.5">
+                  {t("Destino:")}{" "}<strong>+{salvos[0].telefoneE164}</strong>
+                </div>
+              )}
             </div>
           </div>
           <button onClick={onDone} className="btn btn-primary">
@@ -946,11 +867,29 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           </button>
         </div>
 
-        {salvos[0]?.telefoneE164 && (
-          <div className="mt-3 text-xs text-muted">
-            {t("Destino:")}{" "}<strong>+{salvos[0].telefoneE164}</strong>
+        {/* Uma mensagem por artista: Copiar e Enviar juntos no topo dela. */}
+        {salvos.map((s) => (
+          <div key={s.id} className="card mb-4">
+            <PreviaWhatsApp
+              texto={s.texto}
+              linkWA={s.linkWA}
+              titulo={
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${s.artistaCor}25`, color: s.artistaCor }}
+                  >
+                    <User size={14} />
+                  </div>
+                  <span className="text-sm font-semibold text-primary truncate">{s.artistaNome}</span>
+                  <span className="text-xs font-mono tabular-nums" style={{ color: accent }}>
+                    {s.numero}
+                  </span>
+                </div>
+              }
+            />
           </div>
-        )}
+        ))}
 
         {avisador}
       </div>
@@ -1204,10 +1143,16 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               })()}
             />
             {errors.contratante && <p className="text-xs text-danger mt-2">{errors.contratante}</p>}
-            {/* Passo 2 — histórico comercial do contratante (só quando existente). */}
-            {contratanteMode === "existente" && (
-              <HistoricoContratante contratanteId={contratanteId} />
-            )}
+            {/* Passo 2 — histórico comercial do contratante. Aparece JÁ ao digitar
+                um número cadastrado (antes de escolher "usar"), não só no modo
+                "existente" — é ali que o vendedor precisa ver o que já foi passado. */}
+            <HistoricoContratante
+              contratanteId={
+                contratanteMode === "existente"
+                  ? contratanteId
+                  : vinculadoId ?? contratanteDuplicado()?.id ?? null
+              }
+            />
           </div>
 
           <ContratanteBuscaModal
@@ -1242,6 +1187,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               {errors.cidade && (
                 <p className="text-xs text-danger mt-1">{errors.cidade}</p>
               )}
+              <OrcamentosDaCidade cidade={cidadeIbge} />
             </div>
           )}
 
@@ -1265,6 +1211,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     placeholder={t("Ex: São Paulo, Belo Horizonte...")}
                   />
                 </Field>
+                <OrcamentosDaCidade cidade={cidadeIbge} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1358,6 +1305,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                   </Field>
                 </div>
               </div>
+              <OrcamentosDoEvento nomeEvento={evNome} nomeLocal={evLocal} />
             </div>
           )}
         </div>

@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   Building2,
   CalendarCheck2,
-  CornerDownLeft,
   FileSignature,
   FileText,
   LayoutGrid,
   Plus,
   Search,
   User,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth-context";
 import { useNavegacao } from "../NavOverlay";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
@@ -28,7 +31,13 @@ import {
   urlDaTela,
   urls,
 } from "@/lib/navegacao/rotas";
-import { buscar, type ItemBusca, type TipoBusca } from "@/lib/navegacao/busca";
+import {
+  buscar,
+  registrarRecente,
+  resolverRecentes,
+  type ItemBusca,
+  type TipoBusca,
+} from "@/lib/navegacao/busca";
 import { descreverContrato } from "@/lib/contratoTitulo";
 import { formatarDataBR } from "@/lib/formatters";
 import { STATUS_ORCAMENTO } from "@/lib/statusUI";
@@ -51,7 +60,59 @@ const GRUPO: Record<TipoBusca, { rotulo: string; icone: LucideIcon }> = {
   casa: { rotulo: "Casas / Eventos", icone: Building2 },
 };
 
+/** Nome de UM resultado (na lista de recentes, sem cabeçalho de grupo). */
+const TIPO_SINGULAR: Record<TipoBusca, string> = {
+  acao: "Criar",
+  pagina: "Tela",
+  venda: "Venda",
+  orcamento: "Orçamento",
+  contrato: "Contrato",
+  contratante: "Contratante",
+  casa: "Casa",
+};
+
+/** Pra onde o resultado leva — aparece na linha selecionada. */
+const DESTINO: Record<TipoBusca, string> = {
+  acao: "Abre o formulário",
+  pagina: "Abre a tela",
+  venda: "Abre a venda",
+  orcamento: "Abre o orçamento",
+  contrato: "Abre o contrato",
+  contratante: "Abre a ficha",
+  casa: "Abre a ficha",
+};
+
+/** Tela inicial da busca: o que dá pra digitar em cada tipo (só os que a pessoa vê). */
+const GUIA: { tipo: TipoBusca; modulo: ActiveTab | null; dica: string }[] = [
+  { tipo: "venda", modulo: "vendas", dica: "Número (VND-0138), evento, contratante ou local" },
+  { tipo: "orcamento", modulo: "vendas", dica: "Número, contratante ou artista" },
+  { tipo: "contrato", modulo: "contratos", dica: "Número ou nome do evento" },
+  { tipo: "contratante", modulo: "contatos", dica: "Nome, telefone, e-mail ou CPF/CNPJ" },
+  { tipo: "casa", modulo: "contatos", dica: "Nome da casa ou cidade" },
+  { tipo: "pagina", modulo: null, dica: "Nome da tela — ex.: pagamentos, calendário" },
+];
+
+/** "Abertos recentemente" ficam no navegador, um por usuário (só ids). */
+const chaveRecentes = (usuarioId: string) => `gc-busca-recentes:${usuarioId}`;
+function lerRecentes(chave: string): string[] {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(chave) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 const MODULOS: ActiveTab[] = ["agenda", "vendas", "financeiro", "contratos", "contatos", "agencia"];
+
+/** Tecla no rodapé — mesmo chip do "Ctrl K" da barra do topo. */
+function Tecla({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border px-1.5 text-[0.65rem] font-medium text-secondary">
+      {children}
+    </kbd>
+  );
+}
 
 /**
  * Busca geral (Ctrl+K / ⌘K): uma caixa só pra achar venda, orçamento,
@@ -76,6 +137,9 @@ export default function BuscaGlobal() {
   const { contratos } = useContratos();
   const { contratantes, casas, cidades } = useContatos();
   const artistas = useArtistas();
+  const { sessao } = useAuth();
+  const chave = chaveRecentes(sessao?.usuario.id ?? "anon");
+  const [recentesIds, setRecentesIds] = useState<string[]>([]);
 
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
@@ -97,9 +161,10 @@ export default function BuscaGlobal() {
     if (!aberta) return;
     setConsulta("");
     setSel(0);
+    setRecentesIds(lerRecentes(chave));
     const id = setTimeout(() => inputRef.current?.focus(), 0);
     return () => clearTimeout(id);
-  }, [aberta]);
+  }, [aberta, chave]);
 
   // Monta o índice só com a busca aberta (nada custa enquanto fechada).
   const itens = useMemo<ItemBusca[]>(() => {
@@ -208,16 +273,13 @@ export default function BuscaGlobal() {
     return out;
   }, [aberta, acoes, paginasVisiveis, podeVer, vendas, orcamentos, contratos, contratantes, casas, cidades, artistas, t]);
 
-  // Sem texto: atalhos (criar + telas). Com texto: os melhores de cada tipo.
-  const resultados = useMemo(() => {
-    if (!consulta.trim()) {
-      return [
-        ...itens.filter((i) => i.tipo === "acao"),
-        ...itens.filter((i) => i.tipo === "pagina" && i.subtitulo === t("Dashboard")),
-      ];
-    }
-    return buscar(itens, consulta);
-  }, [itens, consulta, t]);
+  // Sem texto: só os abertos recentemente (+ o guia do que dá pra buscar).
+  // Com texto: os melhores de cada tipo. Criar e telas já estão no menu e no
+  // "+ Novo" — na tela inicial só confundiam; digitando, continuam achados.
+  const vazio = !consulta.trim();
+  const recentes = useMemo(() => resolverRecentes(recentesIds, itens), [recentesIds, itens]);
+  const resultados = useMemo(() => (vazio ? [] : buscar(itens, consulta)), [itens, consulta, vazio]);
+  const guia = GUIA.filter((g) => !g.modulo || podeVer(g.modulo));
 
   // Agrupa preservando a relevância: o grupo do melhor resultado vem primeiro.
   const grupos = useMemo(() => {
@@ -232,7 +294,7 @@ export default function BuscaGlobal() {
     }
     return ordem.map((tipo) => ({ tipo, itens: por.get(tipo)! }));
   }, [resultados]);
-  const plano = useMemo(() => grupos.flatMap((g) => g.itens), [grupos]);
+  const plano = useMemo(() => (vazio ? recentes : grupos.flatMap((g) => g.itens)), [vazio, recentes, grupos]);
 
   useEffect(() => setSel(0), [consulta]);
   useEffect(() => {
@@ -245,24 +307,71 @@ export default function BuscaGlobal() {
 
   const escolher = (item: ItemBusca | undefined) => {
     if (!item) return;
+    try {
+      localStorage.setItem(chave, JSON.stringify(registrarRecente(recentesIds, item.id)));
+    } catch {
+      // sem storage (aba anônima/bloqueado): só não guarda o recente
+    }
     setAberta(false);
     navegar(item.href);
   };
 
+  const cabecalho = (texto: string) => (
+    <div className="px-3 pb-1 pt-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">{texto}</div>
+  );
+
+  const linha = (item: ItemBusca, mostrarTipo: boolean) => {
+    const indice = plano.indexOf(item);
+    const ativo = indice === sel;
+    const Icone = GRUPO[item.tipo].icone;
+    return (
+      <button
+        key={item.id}
+        id={`busca-${item.id}`}
+        type="button"
+        role="option"
+        aria-selected={ativo}
+        data-indice={indice}
+        onMouseMove={() => setSel(indice)}
+        onClick={() => escolher(item)}
+        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
+        style={ativo ? { backgroundColor: "var(--bg-elevated)" } : undefined}
+      >
+        <Icone size={15} className="flex-shrink-0 text-muted" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-primary">{item.titulo}</span>
+          {item.subtitulo && <span className="block truncate text-xs text-muted">{item.subtitulo}</span>}
+        </span>
+        {ativo ? (
+          <span className="flex flex-shrink-0 items-center gap-1.5 text-xs text-muted">
+            {t(DESTINO[item.tipo])}
+            <Tecla>Enter</Tecla>
+          </span>
+        ) : (
+          mostrarTipo && (
+            <span className="flex-shrink-0 text-[0.7rem] text-muted">{t(TIPO_SINGULAR[item.tipo])}</span>
+          )
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={t("Buscar")}>
+      {/* Mesmo fundo, cantos, sombra e animação das outras janelas (Modal). */}
       <button
         type="button"
         aria-label={t("Fechar")}
+        tabIndex={-1}
         onClick={() => setAberta(false)}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade"
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm animate-fade"
       />
       <div
-        className="relative mx-auto mt-3 w-[calc(100%-24px)] max-w-[620px] overflow-hidden rounded-xl border border-border bg-surface animate-in md:mt-[12vh]"
+        className="relative mx-auto mt-3 w-[calc(100%-24px)] max-w-[620px] overflow-hidden rounded-lg border border-border bg-surface animate-modal md:mt-[12vh]"
         style={{ boxShadow: "0 24px 60px var(--shadow-color)" }}
       >
-        <div className="flex items-center gap-2 border-b border-border px-4">
-          <Search size={16} className="flex-shrink-0 text-muted" />
+        <div className="flex items-center gap-3 border-b border-border pl-5 pr-3">
+          <Search size={18} className="flex-shrink-0 text-muted" />
           <input
             ref={inputRef}
             value={consulta}
@@ -288,59 +397,72 @@ export default function BuscaGlobal() {
             autoComplete="off"
             spellCheck={false}
           />
-          <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.65rem] text-muted md:inline">Esc</kbd>
+          <button
+            type="button"
+            onClick={() => setAberta(false)}
+            className="btn-ghost flex-shrink-0 rounded p-1.5"
+            aria-label={t("Fechar")}
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div ref={listaRef} id="busca-resultados" role="listbox" className="max-h-[60vh] overflow-y-auto p-2">
-          {plano.length === 0 ? (
+          {vazio ? (
+            <>
+              {recentes.length > 0 && (
+                <div className="mb-2">
+                  {cabecalho(t("Abertos recentemente"))}
+                  {recentes.map((item) => linha(item, true))}
+                </div>
+              )}
+              {cabecalho(t("O que dá pra buscar"))}
+              <div className="grid gap-1 pb-1 sm:grid-cols-2">
+                {guia.map((g) => {
+                  const Icone = GRUPO[g.tipo].icone;
+                  return (
+                    <div key={g.tipo} className="flex items-start gap-3 rounded-md px-3 py-2">
+                      <Icone size={15} className="mt-0.5 flex-shrink-0 text-muted" />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-primary">{t(GRUPO[g.tipo].rotulo)}</span>
+                        <span className="block text-xs text-muted">{t(g.dica)}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : plano.length === 0 ? (
             <div className="px-3 py-10 text-center text-sm text-muted">
-              {consulta.trim() ? t("Nada encontrado para “{q}”.", { q: consulta.trim() }) : t("Digite para buscar.")}
+              {t("Nada encontrado para “{q}”.", { q: consulta.trim() })}
             </div>
           ) : (
-            grupos.map((g) => {
-              const G = GRUPO[g.tipo];
-              return (
-                <div key={g.tipo} className="mb-1">
-                  <div className="px-3 pb-1 pt-2 text-[0.65rem] font-semibold uppercase tracking-wider text-muted">
-                    {t(G.rotulo)}
-                  </div>
-                  {g.itens.map((item) => {
-                    const indice = plano.indexOf(item);
-                    const ativo = indice === sel;
-                    const Icone = G.icone;
-                    return (
-                      <button
-                        key={item.id}
-                        id={`busca-${item.id}`}
-                        type="button"
-                        role="option"
-                        aria-selected={ativo}
-                        data-indice={indice}
-                        onMouseMove={() => setSel(indice)}
-                        onClick={() => escolher(item)}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left"
-                        style={ativo ? { backgroundColor: "var(--bg-elevated)" } : undefined}
-                      >
-                        <Icone size={15} className="flex-shrink-0 text-muted" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-primary">{item.titulo}</span>
-                          {item.subtitulo && (
-                            <span className="block truncate text-xs text-muted">{item.subtitulo}</span>
-                          )}
-                        </span>
-                        {ativo && <CornerDownLeft size={13} className="flex-shrink-0 text-muted" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })
+            grupos.map((g) => (
+              <div key={g.tipo} className="mb-1">
+                {cabecalho(t(GRUPO[g.tipo].rotulo))}
+                {g.itens.map((item) => linha(item, false))}
+              </div>
+            ))
           )}
         </div>
-        <div className="hidden items-center gap-4 border-t border-border px-4 py-2 text-[0.7rem] text-muted md:flex">
-          <span>↑↓ {t("navegar")}</span>
-          <span>↵ {t("abrir")}</span>
-          <span>Ctrl K {t("abre e fecha a busca")}</span>
+        <div className="hidden items-center gap-5 border-t border-border px-5 py-2.5 text-xs text-muted md:flex">
+          <span className="flex items-center gap-1.5">
+            <Tecla>
+              <ArrowUp size={11} />
+            </Tecla>
+            <Tecla>
+              <ArrowDown size={11} />
+            </Tecla>
+            {t("navegar")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Tecla>Enter</Tecla>
+            {t("abrir")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Tecla>Esc</Tecla>
+            {t("fechar")}
+          </span>
         </div>
       </div>
     </div>

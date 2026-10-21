@@ -3000,4 +3000,36 @@ export const ES: Record<string, string> = {
   "cidades": "ciudades",
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Contrato independiente",
+  // --- Navegação nova (out/2026) ---
+  "Esse período já passou — nenhuma viagem pela frente.": "Este período ya pasó: no hay viajes por delante.",
+  "Nenhuma viagem pela frente no período (só shows na cidade local).": "No hay viajes por delante en el período (solo shows locales).",
+  // --- Navegação nova (out/2026) ---
+  "Tela": "Pantalla",
+  "Abre o formulário": "Abre el formulario",
+  "Abre a tela": "Abre la pantalla",
+  "Abre a venda": "Abre la venta",
+  "Abre o orçamento": "Abre el presupuesto",
+  "Abre o contrato": "Abre el contrato",
+  "Abre a ficha": "Abre la ficha",
+  "Número (VND-0138), evento, contratante ou local": "Número (VND-0138), evento, contratante o local",
+  "Número, contratante ou artista": "Número, contratante o artista",
+  "Número ou nome do evento": "Número o nombre del evento",
+  "Nome, telefone, e-mail ou CPF/CNPJ": "Nombre, teléfono, e-mail o documento",
+  "Nome da casa ou cidade": "Nombre del local o ciudad",
+  "Nome da tela — ex.: pagamentos, calendário": "Nombre de la pantalla — ej.: pagos, calendario",
+  "Abertos recentemente": "Abiertos recientemente",
+  "O que dá pra buscar": "Qué se puede buscar",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "cerrar",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Contratante no informado",
+  "Enviado em": "Enviado el",
+  "Abrir em outra aba": "Abrir en otra pestaña",
+  "Mostrando os {n} mais recentes de {total}.": "Mostrando los {n} más recientes de {total}.",
+  "Últimos orçamentos para {cidade}": "Últimos presupuestos para {cidade}",
+  "Orçamentos anteriores deste evento / local": "Presupuestos anteriores de este evento / local",
+  // --- Navegação nova (out/2026) ---
+  "Mensagem do WhatsApp": "Mensaje de WhatsApp",
+  // --- Navegação nova (out/2026) ---
+  "Comprovante": "Comprobante",
 };

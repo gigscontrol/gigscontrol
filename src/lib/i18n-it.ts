@@ -3000,4 +3000,36 @@ export const IT: Record<string, string> = {
   "cidades": "città",
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Contratto autonomo",
+  // --- Navegação nova (out/2026) ---
+  "Esse período já passou — nenhuma viagem pela frente.": "Questo periodo è passato: nessun viaggio in arrivo.",
+  "Nenhuma viagem pela frente no período (só shows na cidade local).": "Nessun viaggio in arrivo nel periodo (solo show locali).",
+  // --- Navegação nova (out/2026) ---
+  "Tela": "Schermata",
+  "Abre o formulário": "Apre il modulo",
+  "Abre a tela": "Apre la schermata",
+  "Abre a venda": "Apre la vendita",
+  "Abre o orçamento": "Apre il preventivo",
+  "Abre o contrato": "Apre il contratto",
+  "Abre a ficha": "Apre la scheda",
+  "Número (VND-0138), evento, contratante ou local": "Numero (VND-0138), evento, committente o locale",
+  "Número, contratante ou artista": "Numero, committente o artista",
+  "Número ou nome do evento": "Numero o nome dell'evento",
+  "Nome, telefone, e-mail ou CPF/CNPJ": "Nome, telefono, e-mail o codice fiscale",
+  "Nome da casa ou cidade": "Nome del locale o città",
+  "Nome da tela — ex.: pagamentos, calendário": "Nome della schermata — es.: pagamenti, calendario",
+  "Abertos recentemente": "Aperti di recente",
+  "O que dá pra buscar": "Cosa puoi cercare",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "chiudi",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Committente non indicato",
+  "Enviado em": "Inviato il",
+  "Abrir em outra aba": "Apri in un'altra scheda",
+  "Mostrando os {n} mais recentes de {total}.": "I {n} più recenti su {total}.",
+  "Últimos orçamentos para {cidade}": "Ultimi preventivi per {cidade}",
+  "Orçamentos anteriores deste evento / local": "Preventivi precedenti per questo evento / locale",
+  // --- Navegação nova (out/2026) ---
+  "Mensagem do WhatsApp": "Messaggio WhatsApp",
+  // --- Navegação nova (out/2026) ---
+  "Comprovante": "Ricevuta",
 };

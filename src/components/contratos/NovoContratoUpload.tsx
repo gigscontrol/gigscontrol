@@ -153,7 +153,7 @@ export default function NovoContratoUpload() {
   // ---------- Sucesso: links ----------
   if (links) {
     return (
-      <div className="card flex flex-col gap-4 max-w-xl">
+      <div className="card flex flex-col gap-4">
         <div className="flex items-center gap-2 text-success">
           <Check size={18} />
           <span className="font-semibold">{t("Contrato criado! Envie os links de assinatura:")}</span>
@@ -185,7 +185,7 @@ export default function NovoContratoUpload() {
   // ---------- Passo 1: upload ----------
   if (!pdf || !objectUrl) {
     return (
-      <div className="card flex flex-col items-center gap-3 py-10 max-w-xl text-center">
+      <div className="card flex flex-col items-center gap-3 py-16 text-center">
         <FileSignature size={28} style={{ color: "var(--brand)" }} />
         <div className="font-semibold text-primary">{t("Suba um PDF pronto pra coletar assinaturas")}</div>
         <p className="text-xs text-muted max-w-sm">

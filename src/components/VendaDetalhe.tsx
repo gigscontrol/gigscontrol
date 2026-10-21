@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import Modal from "./Modal";
 import Toast from "./Toast";
-import { FichaHeroPagina, Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
+import { FichaHeroPagina, Bloco, Linha, ItensGrid, FolhaFicha, ColunaFicha, SecaoFicha } from "./detalhes/FichaUI";
 import Vinculos from "./detalhes/Vinculos";
 import ListaParcelas from "./detalhes/ListaParcelas";
 import { useConfirmar } from "./ConfirmarModal";
@@ -334,282 +334,284 @@ export default function VendaDetalhe({
         <Vinculos vendaId={venda.id} ocultar={["venda"]} titulo={t("Ligado a esta venda")} />
       </div>
 
-      {/* ===== MALHA ALINHADA: um grid só, 2 colunas — cada linha de cards
-          compartilha a altura, então as bordas horizontais se alinham "em #".
-          Os cards fluem intercalados: info à esquerda, dinheiro/operacional à
-          direita. Condicionais ausentes só puxam o fluxo — o alinhamento
-          por linha nunca quebra. ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card">
-          <Bloco icon={<User size={14} />} title={t("Contratante")}>
-            <Linha icon={<User size={13} />} bold>{venda.contratanteNome}</Linha>
-            {venda.contratanteRazaoSocial && (
-              <Linha icon={<Building2 size={13} />}>{venda.contratanteRazaoSocial}</Linha>
-            )}
-            {venda.contratanteTelefone && (
-              <Linha icon={<Phone size={13} />}>+{venda.contratanteTelefone.replace(/\D/g, "")}</Linha>
-            )}
-            {venda.contratanteEmail && (
-              <Linha icon={<Mail size={13} />}>{venda.contratanteEmail}</Linha>
-            )}
-            {venda.contratanteDocumento && (
-              <Linha icon={<Hash size={13} />}>{mascararCpfCnpj(venda.contratanteDocumento)}</Linha>
-            )}
-            {venda.contratanteEndereco && (
-              <Linha icon={<MapPin size={13} />}>{venda.contratanteEndereco}</Linha>
-            )}
-          </Bloco>
-        </div>
+      {/* ===== A FICHA NUM DOCUMENTO SÓ (pedido do Bruno, 21/10/2026): uma
+          folha com as seções separadas por linhas finas, em 2 colunas que
+          crescem cada uma por si. Esquerda: o que é curto (pessoas, local,
+          horário); direita: dinheiro e listas longas. ===== */}
+      <FolhaFicha>
+        <ColunaFicha>
+          <SecaoFicha>
+            <Bloco icon={<User size={14} />} title={t("Contratante")}>
+              <Linha icon={<User size={13} />} bold>{venda.contratanteNome}</Linha>
+              {venda.contratanteRazaoSocial && (
+                <Linha icon={<Building2 size={13} />}>{venda.contratanteRazaoSocial}</Linha>
+              )}
+              {venda.contratanteTelefone && (
+                <Linha icon={<Phone size={13} />}>+{venda.contratanteTelefone.replace(/\D/g, "")}</Linha>
+              )}
+              {venda.contratanteEmail && (
+                <Linha icon={<Mail size={13} />}>{venda.contratanteEmail}</Linha>
+              )}
+              {venda.contratanteDocumento && (
+                <Linha icon={<Hash size={13} />}>{mascararCpfCnpj(venda.contratanteDocumento)}</Linha>
+              )}
+              {venda.contratanteEndereco && (
+                <Linha icon={<MapPin size={13} />}>{venda.contratanteEndereco}</Linha>
+              )}
+            </Bloco>
+          </SecaoFicha>
 
-        <div className="card">
-          <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
-            {/* D5 — a edição que acabou de salvar NÃO recalculou as parcelas.
-                Banner (e não Toast no form) porque o form desmonta ao navegar
-                pra cá. Só o usuário dispensa. */}
-            {avisoParcelasPreservadas && (
-              <div
-                className="mb-2 flex items-start gap-3 rounded-md p-3"
-                style={{ border: "1px solid var(--warning)", backgroundColor: "var(--warning-weak)" }}
-              >
-                <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
-                <div className="text-sm text-secondary">
-                  {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Pagamentos.")}
+          <SecaoFicha>
+            <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
+              <Linha icon={<Building2 size={13} />} bold>{venda.nomeLocal}</Linha>
+              {venda.eventoInstagram && (
+                <Linha icon={<Instagram size={13} />}>{venda.eventoInstagram}</Linha>
+              )}
+              {venda.enderecoLocal && (
+                <Linha icon={<MapPin size={13} />}>{venda.enderecoLocal}</Linha>
+              )}
+              {venda.capacidadePublico && (
+                <Linha icon={<Users size={13} />}>
+                  {t("Capacidade:")} {venda.capacidadePublico.toLocaleString("pt-BR")} {t("pessoas")}
+                </Linha>
+              )}
+            </Bloco>
+          </SecaoFicha>
+
+          <SecaoFicha>
+            <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
+              {venda.horario ? (
+                <Linha icon={<Clock size={13} />} bold>
+                  {venda.horarioFim ? `${venda.horario} — ${venda.horarioFim}` : venda.horario}
+                  {venda.fusoHorario && (
+                    <span className="text-xs text-muted font-normal"> · {nomeCidadeFuso(venda.fusoHorario)}</span>
+                  )}
+                  <span className="ml-2 text-xs text-muted font-normal">
+                    ({formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)})
+                  </span>
+                </Linha>
+              ) : (
+                <Linha icon={<Clock size={13} />}>
+                  <span className="text-warning font-medium">{t("A definir")}</span>
+                  <span className="ml-2 text-xs text-muted font-normal">
+                    · {t("Duração:")} {formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
+                  </span>
+                </Linha>
+              )}
+              {venda.lineUp && venda.lineUp.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {venda.lineUp.map((nome, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center bg-elevated border border-border rounded-md px-2.5 py-1 text-sm text-primary"
+                    >
+                      {nome}
+                    </span>
+                  ))}
                 </div>
-                <button
-                  onClick={onDispensarAvisoParcelas}
-                  className="btn-ghost flex-shrink-0 p-1"
-                  aria-label={t("Dispensar aviso")}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            <Linha icon={<DollarSign size={13} />} bold>
-              <span className="tabular-nums">{formatarMoeda2(venda.cache)}</span>
-              <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
-            </Linha>
-            {venda.taxaAgenciaValor !== undefined && venda.taxaAgenciaValor > 0 && (
-              <>
-                <Linha icon={<DollarSign size={13} />}>
-                  {t("Taxa de agência")}:{" "}
-                  <span className="tabular-nums">{formatarMoeda2(venda.taxaAgenciaValor)}</span>
-                </Linha>
-                <Linha icon={<DollarSign size={13} />}>
-                  {t("Líquido do artista")}:{" "}
-                  <span className="font-semibold text-primary tabular-nums">
-                    {formatarMoeda2(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
-                  </span>
-                </Linha>
-              </>
-            )}
-
-            {/* Parcelas clicáveis: cada uma abre o modal da parcela (informar
-                pagamento, cobrar, cancelar) — sem ter que ir até o Financeiro. */}
-            <ListaParcelas parcelas={venda.parcelas} moeda={venda.moeda} clicavel />
-          </Bloco>
-        </div>
-
-        <div className="card">
-          <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
-            <Linha icon={<Building2 size={13} />} bold>{venda.nomeLocal}</Linha>
-            {venda.eventoInstagram && (
-              <Linha icon={<Instagram size={13} />}>{venda.eventoInstagram}</Linha>
-            )}
-            {venda.enderecoLocal && (
-              <Linha icon={<MapPin size={13} />}>{venda.enderecoLocal}</Linha>
-            )}
-            {venda.capacidadePublico && (
-              <Linha icon={<Users size={13} />}>
-                {t("Capacidade:")} {venda.capacidadePublico.toLocaleString("pt-BR")} {t("pessoas")}
-              </Linha>
-            )}
-          </Bloco>
-        </div>
-
-        {show && (podeEditarBooking || show.booking) && (
-          <div className="card">
-            <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
-              <BookingSection
-                showId={show.id}
-                booking={show.booking}
-                podeEditar={podeEditarBooking}
-                onSave={async (booking) => {
-                  await updateShow(show.id, { booking });
-                }}
-              />
+              )}
             </Bloco>
-          </div>
-        )}
+          </SecaoFicha>
 
-        <div className="card">
-          <Bloco icon={<Music size={14} />} title={t("Detalhes do show")}>
-            {venda.horario ? (
-              <Linha icon={<Clock size={13} />} bold>
-                {venda.horarioFim ? `${venda.horario} — ${venda.horarioFim}` : venda.horario}
-                {venda.fusoHorario && (
-                  <span className="text-xs text-muted font-normal"> · {nomeCidadeFuso(venda.fusoHorario)}</span>
-                )}
-                <span className="ml-2 text-xs text-muted font-normal">
-                  ({formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)})
-                </span>
-              </Linha>
-            ) : (
-              <Linha icon={<Clock size={13} />}>
-                <span className="text-warning font-medium">{t("A definir")}</span>
-                <span className="ml-2 text-xs text-muted font-normal">
-                  · {t("Duração:")} {formatarDuracao(venda.duracaoHoras, venda.duracaoMinutos ?? 0)}
-                </span>
-              </Linha>
-            )}
-            {venda.lineUp && venda.lineUp.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {venda.lineUp.map((nome, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center bg-elevated border border-border rounded-md px-2.5 py-1 text-sm text-primary"
-                  >
-                    {nome}
-                  </span>
-                ))}
-              </div>
-            )}
-          </Bloco>
-        </div>
-
-        {temAdicionais && (
-          <div className="card">
-            <div className="flex flex-col gap-5">
-              {itensCamarim.length > 0 && (
-                <Bloco icon={<GlassWater size={14} />} title={t("Rider de Camarim")}>
-                  <ItensGrid items={itensCamarim} />
-                </Bloco>
+          <SecaoFicha>
+            <Bloco icon={<Plane size={14} />} title={t("Logística")}>
+              {linhasLog.length === 0 && (
+                <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
               )}
-              {itensEfeitos.length > 0 && (
-                <Bloco icon={<Sparkles size={14} />} title={t("Rider de Efeitos")}>
-                  <ItensGrid items={itensEfeitos} />
-                </Bloco>
-              )}
-              {itensTecnico.length > 0 && (
-                <Bloco icon={<Music size={14} />} title={t("Rider Técnico")}>
-                  <ItensGrid items={itensTecnico} />
-                </Bloco>
-              )}
-              {itensHotel.length > 0 && (
-                <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
-                  <ItensGrid items={itensHotel} />
-                </Bloco>
-              )}
-            </div>
-          </div>
-        )}
-
-        {venda.observacoes && (
-          <div className="card">
-            <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
-              <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
-            </Bloco>
-          </div>
-        )}
-
-        <div className="card">
-          <Bloco icon={<Plane size={14} />} title={t("Logística")}>
-            {linhasLog.length === 0 && (
-              <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
-            )}
-            {linhasLog.map((l, i) => (
-              <Linha
-                key={i}
-                icon={l === TEXTO_TRANSLADO ? <Car size={13} /> : <Plane size={13} />}
-                subtle={l === TEXTO_TRANSLADO}
-              >
-                {l}
-              </Linha>
-            ))}
-          </Bloco>
-        </div>
-
-        <div className="card">
-          <Bloco icon={<StickyNote size={14} />} title={t("Informações extras")}>
-            {!editandoInfoExtra && (
-              <div className="flex items-start justify-between gap-3 -mt-1">
-                <span />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInfoExtraDraft(venda.infoExtra ?? "");
-                    setEditandoInfoExtra(true);
-                  }}
-                  disabled={!podeEditarVenda}
-                  title={!podeEditarVenda ? semPermissao : undefined}
-                  className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              {linhasLog.map((l, i) => (
+                <Linha
+                  key={i}
+                  icon={l === TEXTO_TRANSLADO ? <Car size={13} /> : <Plane size={13} />}
+                  subtle={l === TEXTO_TRANSLADO}
                 >
-                  <Pencil size={12} />
-                  {t("Editar")}
-                </button>
-              </div>
-            )}
-            {editandoInfoExtra ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={infoExtraDraft}
-                  onChange={(e) => setInfoExtraDraft(e.target.value)}
-                  rows={4}
-                  maxLength={1000}
-                  placeholder={t("Algo extra que apareceu no orçamento ou queira anotar.")}
-                  className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
-                  autoFocus
-                />
-                <div className="flex items-center justify-end gap-2">
+                  {l}
+                </Linha>
+              ))}
+            </Bloco>
+          </SecaoFicha>
+
+          <SecaoFicha>
+            <Bloco icon={<StickyNote size={14} />} title={t("Informações extras")}>
+              {!editandoInfoExtra && (
+                <div className="flex items-start justify-between gap-3 -mt-1">
+                  <span />
                   <button
                     type="button"
                     onClick={() => {
-                      setEditandoInfoExtra(false);
-                      setInfoExtraDraft("");
+                      setInfoExtraDraft(venda.infoExtra ?? "");
+                      setEditandoInfoExtra(true);
                     }}
-                    disabled={salvandoInfoExtra}
-                    className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+                    disabled={!podeEditarVenda}
+                    title={!podeEditarVenda ? semPermissao : undefined}
+                    className="btn-ghost text-xs inline-flex items-center gap-1 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <X size={13} />
-                    {t("Cancelar")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setSalvandoInfoExtra(true);
-                      try {
-                        await updateVenda(venda.id, {
-                          infoExtra: infoExtraDraft.trim() || undefined,
-                        });
-                        setEditandoInfoExtra(false);
-                        setToastMsg({ msg: t("Informações extras atualizadas."), tipo: "sucesso" });
-                      } catch (e) {
-                        setToastMsg({ msg: (e as Error).message, tipo: "erro" });
-                      } finally {
-                        setSalvandoInfoExtra(false);
-                      }
-                    }}
-                    disabled={salvandoInfoExtra}
-                    className="btn btn-primary text-sm inline-flex items-center gap-1.5"
-                  >
-                    <Check size={13} />
-                    {salvandoInfoExtra ? t("Salvando...") : t("Salvar")}
+                    <Pencil size={12} />
+                    {t("Editar")}
                   </button>
                 </div>
+              )}
+              {editandoInfoExtra ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={infoExtraDraft}
+                    onChange={(e) => setInfoExtraDraft(e.target.value)}
+                    rows={4}
+                    maxLength={1000}
+                    placeholder={t("Algo extra que apareceu no orçamento ou queira anotar.")}
+                    className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditandoInfoExtra(false);
+                        setInfoExtraDraft("");
+                      }}
+                      disabled={salvandoInfoExtra}
+                      className="btn btn-secondary text-sm inline-flex items-center gap-1.5"
+                    >
+                      <X size={13} />
+                      {t("Cancelar")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setSalvandoInfoExtra(true);
+                        try {
+                          await updateVenda(venda.id, {
+                            infoExtra: infoExtraDraft.trim() || undefined,
+                          });
+                          setEditandoInfoExtra(false);
+                          setToastMsg({ msg: t("Informações extras atualizadas."), tipo: "sucesso" });
+                        } catch (e) {
+                          setToastMsg({ msg: (e as Error).message, tipo: "erro" });
+                        } finally {
+                          setSalvandoInfoExtra(false);
+                        }
+                      }}
+                      disabled={salvandoInfoExtra}
+                      className="btn btn-primary text-sm inline-flex items-center gap-1.5"
+                    >
+                      <Check size={13} />
+                      {salvandoInfoExtra ? t("Salvando...") : t("Salvar")}
+                    </button>
+                  </div>
+                </div>
+              ) : venda.infoExtra ? (
+                <p className="text-sm text-secondary whitespace-pre-wrap">{venda.infoExtra}</p>
+              ) : (
+                <p className="text-sm text-muted italic">
+                  {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
+                </p>
+              )}
+            </Bloco>
+          </SecaoFicha>
+        </ColunaFicha>
+        <ColunaFicha lado="direita">
+          <SecaoFicha>
+            <Bloco icon={<CreditCard size={14} />} title={t("Pagamento")}>
+              {/* D5 — a edição que acabou de salvar NÃO recalculou as parcelas.
+                  Banner (e não Toast no form) porque o form desmonta ao navegar
+                  pra cá. Só o usuário dispensa. */}
+              {avisoParcelasPreservadas && (
+                <div
+                  className="mb-2 flex items-start gap-3 rounded-md p-3"
+                  style={{ border: "1px solid var(--warning)", backgroundColor: "var(--warning-weak)" }}
+                >
+                  <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
+                  <div className="text-sm text-secondary">
+                    {t("Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Pagamentos.")}
+                  </div>
+                  <button
+                    onClick={onDispensarAvisoParcelas}
+                    className="btn-ghost flex-shrink-0 p-1"
+                    aria-label={t("Dispensar aviso")}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
+              <Linha icon={<DollarSign size={13} />} bold>
+                <span className="tabular-nums">{formatarMoeda2(venda.cache)}</span>
+                <span className="text-xs text-muted font-normal"> {t("de cachê")}</span>
+              </Linha>
+              {venda.taxaAgenciaValor !== undefined && venda.taxaAgenciaValor > 0 && (
+                <>
+                  <Linha icon={<DollarSign size={13} />}>
+                    {t("Taxa de agência")}:{" "}
+                    <span className="tabular-nums">{formatarMoeda2(venda.taxaAgenciaValor)}</span>
+                  </Linha>
+                  <Linha icon={<DollarSign size={13} />}>
+                    {t("Líquido do artista")}:{" "}
+                    <span className="font-semibold text-primary tabular-nums">
+                      {formatarMoeda2(liquidoArtista(venda.cache, venda.taxaAgenciaValor))}
+                    </span>
+                  </Linha>
+                </>
+              )}
+
+              {/* Parcelas clicáveis: cada uma abre o modal da parcela (informar
+                  pagamento, cobrar, cancelar) — sem ter que ir até o Financeiro. */}
+              <ListaParcelas parcelas={venda.parcelas} moeda={venda.moeda} clicavel />
+            </Bloco>
+          </SecaoFicha>
+
+          {show && (podeEditarBooking || show.booking) && (
+            <SecaoFicha>
+              <Bloco icon={<Hotel size={14} />} title={t("Hospedagem / Booking")}>
+                <BookingSection
+                  showId={show.id}
+                  booking={show.booking}
+                  podeEditar={podeEditarBooking}
+                  onSave={async (booking) => {
+                    await updateShow(show.id, { booking });
+                  }}
+                />
+              </Bloco>
+            </SecaoFicha>
+          )}
+
+          {temAdicionais && (
+            <SecaoFicha>
+              <div className="flex flex-col gap-5">
+                {itensCamarim.length > 0 && (
+                  <Bloco icon={<GlassWater size={14} />} title={t("Rider de Camarim")}>
+                    <ItensGrid items={itensCamarim} />
+                  </Bloco>
+                )}
+                {itensEfeitos.length > 0 && (
+                  <Bloco icon={<Sparkles size={14} />} title={t("Rider de Efeitos")}>
+                    <ItensGrid items={itensEfeitos} />
+                  </Bloco>
+                )}
+                {itensTecnico.length > 0 && (
+                  <Bloco icon={<Music size={14} />} title={t("Rider Técnico")}>
+                    <ItensGrid items={itensTecnico} />
+                  </Bloco>
+                )}
+                {itensHotel.length > 0 && (
+                  <Bloco icon={<Hotel size={14} />} title={t("Hotel")}>
+                    <ItensGrid items={itensHotel} />
+                  </Bloco>
+                )}
               </div>
-            ) : venda.infoExtra ? (
-              <p className="text-sm text-secondary whitespace-pre-wrap">{venda.infoExtra}</p>
-            ) : (
-              <p className="text-sm text-muted italic">
-                {t("Nenhuma informação extra. Clique em \"Editar\" pra adicionar.")}
-              </p>
-            )}
-          </Bloco>
-        </div>
+            </SecaoFicha>
+          )}
+
+          {venda.observacoes && (
+            <SecaoFicha>
+              <Bloco icon={<StickyNote size={14} />} title={t("Observações internas")}>
+                <p className="text-sm text-secondary whitespace-pre-wrap">{venda.observacoes}</p>
+              </Bloco>
+            </SecaoFicha>
+          )}
+        </ColunaFicha>
 
         {/* Rastro ocupa a linha inteira — conteúdo largo (nome+cargo+data+diff). */}
         {isAdmin && acoes.length > 0 && (
-          <div className="card lg:col-span-2">
+          <SecaoFicha cheia>
             <Bloco icon={<History size={14} />} title={t("Histórico de alterações")}>
               <div className="flex flex-col gap-3">
                 {acoes.map((a) => (
@@ -617,9 +619,9 @@ export default function VendaDetalhe({
                 ))}
               </div>
             </Bloco>
-          </div>
+          </SecaoFicha>
         )}
-      </div>
+      </FolhaFicha>
 
       {/* ===== Remover ===== */}
       <div className="flex justify-end mt-6">

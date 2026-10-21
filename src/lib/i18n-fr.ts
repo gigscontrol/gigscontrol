@@ -3000,4 +3000,36 @@ export const FR: Record<string, string> = {
   "cidades": "villes",
   // --- Navegação nova (out/2026) ---
   "Contrato avulso": "Contrat indépendant",
+  // --- Navegação nova (out/2026) ---
+  "Esse período já passou — nenhuma viagem pela frente.": "Cette période est passée — aucun voyage à venir.",
+  "Nenhuma viagem pela frente no período (só shows na cidade local).": "Aucun voyage à venir sur la période (uniquement des concerts locaux).",
+  // --- Navegação nova (out/2026) ---
+  "Tela": "Écran",
+  "Abre o formulário": "Ouvre le formulaire",
+  "Abre a tela": "Ouvre l'écran",
+  "Abre a venda": "Ouvre la vente",
+  "Abre o orçamento": "Ouvre le devis",
+  "Abre o contrato": "Ouvre le contrat",
+  "Abre a ficha": "Ouvre la fiche",
+  "Número (VND-0138), evento, contratante ou local": "Numéro (VND-0138), événement, client ou lieu",
+  "Número, contratante ou artista": "Numéro, client ou artiste",
+  "Número ou nome do evento": "Numéro ou nom de l'événement",
+  "Nome, telefone, e-mail ou CPF/CNPJ": "Nom, téléphone, e-mail ou n° fiscal",
+  "Nome da casa ou cidade": "Nom du lieu ou ville",
+  "Nome da tela — ex.: pagamentos, calendário": "Nom de l'écran — ex. : paiements, calendrier",
+  "Abertos recentemente": "Ouverts récemment",
+  "O que dá pra buscar": "Ce que vous pouvez chercher",
+  // --- Navegação nova (out/2026) ---
+  "fechar": "fermer",
+  // --- Navegação nova (out/2026) ---
+  "Contratante não informado": "Client non renseigné",
+  "Enviado em": "Envoyé le",
+  "Abrir em outra aba": "Ouvrir dans un autre onglet",
+  "Mostrando os {n} mais recentes de {total}.": "Affichage des {n} plus récents sur {total}.",
+  "Últimos orçamentos para {cidade}": "Derniers devis pour {cidade}",
+  "Orçamentos anteriores deste evento / local": "Devis précédents pour cet événement / lieu",
+  // --- Navegação nova (out/2026) ---
+  "Mensagem do WhatsApp": "Message WhatsApp",
+  // --- Navegação nova (out/2026) ---
+  "Comprovante": "Justificatif",
 };
