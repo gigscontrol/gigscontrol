@@ -382,7 +382,7 @@ export default function AbaArtistas() {
                     setSobreId(null);
                   }}
                   title={a.name}
-                  className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full flex-shrink-0 transition-colors ${
+                  className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-md flex-shrink-0 transition-colors ${
                     ativo ? "bg-elevated" : "hover:bg-surface-2"
                   }`}
                   style={{

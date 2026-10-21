@@ -33,6 +33,8 @@ import {
   CreditCard,
   AlertTriangle,
   Pencil,
+  Ban,
+  RotateCcw,
 } from "lucide-react";
 import Modal from "./Modal";
 import { Bloco, Linha, ItensGrid } from "./detalhes/FichaUI";
@@ -369,9 +371,9 @@ export default function ShowDetalheModal({
                 type="button"
                 onClick={reverterCancelamento}
                 disabled={processando}
-                className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style={{ color: "var(--success)" }}
+                className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <RotateCcw size={13} />
                 {processando ? t("Salvando…") : t("Reverter cancelamento")}
               </button>
             )}
@@ -411,7 +413,7 @@ export default function ShowDetalheModal({
             <p className="text-[0.65rem] text-muted">
               {t("O evento não é apagado — fica vermelho na agenda e no Google.")}
             </p>
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -419,7 +421,7 @@ export default function ShowDetalheModal({
                   setMotivoCancel("");
                 }}
                 disabled={processando}
-                className="btn-ghost text-xs"
+                className="btn btn-secondary px-3 py-1.5 text-xs disabled:opacity-50"
               >
                 {t("Voltar")}
               </button>
@@ -427,8 +429,7 @@ export default function ShowDetalheModal({
                 type="button"
                 onClick={confirmarCancelamento}
                 disabled={processando || !motivoCancel.trim()}
-                className="text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style={{ color: "var(--danger)" }}
+                className="btn btn-danger px-3 py-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {processando ? t("Salvando…") : t("Confirmar cancelamento")}
               </button>
@@ -436,7 +437,9 @@ export default function ShowDetalheModal({
           </div>
         </div>
       ) : mostrarBarraAcoes ? (
-        <div className="flex justify-end items-center gap-4 mb-5">
+        // As duas ações como botões IGUAIS (mesma altura, lado a lado, dividindo
+        // a largura) — antes era um link azul solto ao lado de um botão.
+        <div className="flex items-center gap-2 mb-5">
           {/* D3 — editar a venda ligada fica ao lado do cancelar. Gate de
               VENDAS (o mesmo do VendaDetalhe), não de agenda. */}
           {onEditarVenda && venda && podeEditarVendaLigada && (
@@ -446,10 +449,9 @@ export default function ShowDetalheModal({
                 onClose();
                 onEditarVenda(venda.id);
               }}
-              className="text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-              style={{ color: "var(--info)" }}
+              className="btn btn-secondary flex-1 px-3 py-2 text-xs"
             >
-              <Pencil size={11} />
+              <Pencil size={13} />
               {t("Editar venda")}
             </button>
           )}
@@ -460,8 +462,9 @@ export default function ShowDetalheModal({
             <button
               type="button"
               onClick={() => setMostrarFormCancel(true)}
-              className="btn btn-danger-outline px-3 py-1.5 text-xs"
+              className="btn btn-danger-outline flex-1 px-3 py-2 text-xs"
             >
+              <Ban size={13} />
               {t("Cancelar show")}
             </button>
           )}

@@ -110,7 +110,7 @@ export default function PosicionadorPdf({
               key={s.ordem}
               type="button"
               onClick={() => setSigAtiva(s.ordem)}
-              className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs transition-colors"
               style={{
                 borderColor: s.cor,
                 backgroundColor: ativo ? s.cor : "transparent",

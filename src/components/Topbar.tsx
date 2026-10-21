@@ -109,7 +109,7 @@ export default function Topbar({
   }, [contratos, limiteContratos]);
 
   const pillBase =
-    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap";
+    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap";
 
   return (
     <header className="flex items-center justify-between gap-4 px-4 lg:px-6 h-16 flex-shrink-0">

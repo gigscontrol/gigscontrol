@@ -127,7 +127,7 @@ export default function Modal({
           // Sem barra: botão de fechar flutuante no topo direito
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 btn-ghost p-1.5 rounded-full bg-surface/80 backdrop-blur-sm"
+            className="absolute top-3 right-3 z-10 btn-ghost p-1.5 rounded-md bg-surface/80 backdrop-blur-sm"
             aria-label={t("Fechar modal")}
           >
             <X size={18} />

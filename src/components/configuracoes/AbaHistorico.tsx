@@ -132,7 +132,7 @@ export default function AbaHistorico() {
                 <button
                   key={m.id}
                   onClick={() => setModulo(m.id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
                   style={{
                     backgroundColor: sel
                       ? `color-mix(in srgb, ${m.cor} 13%, transparent)`

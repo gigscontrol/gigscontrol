@@ -438,28 +438,28 @@ export default function ControlePagamentos({
         </div>
 
         {!ehCobrancas && (
-        <div className="pill-group h-[42px] items-center">
-          <button type="button" className={`pill ${filtroStatus === "todos" ? "active" : ""}`} onClick={() => setFiltroStatus("todos")}>
-            {t("Todas ({n})", { n: parcelasPeriodo.length })}
-          </button>
-          <button type="button" className={`pill ${filtroStatus === "pendente" ? "active" : ""}`} onClick={() => setFiltroStatus("pendente")}>
-            <Clock size={11} />
-            {t("Pendentes ({n})", { n: contadores.pendente })}
-          </button>
-          <button type="button" className={`pill ${filtroStatus === "atrasado" ? "active" : ""}`} onClick={() => setFiltroStatus("atrasado")}>
-            <AlertTriangle size={11} />
-            {t("Atrasadas ({n})", { n: contadores.atrasado })}
-          </button>
-          <button type="button" className={`pill ${filtroStatus === "pago" ? "active" : ""}`} onClick={() => setFiltroStatus("pago")}>
-            <CheckCircle2 size={11} />
-            {t("Pagas ({n})", { n: contadores.pago })}
-          </button>
-          {contadores.cancelado > 0 && (
-            <button type="button" className={`pill ${filtroStatus === "cancelado" ? "active" : ""}`} onClick={() => setFiltroStatus("cancelado")}>
-              <Ban size={11} />
-              {t("Canceladas ({n})", { n: contadores.cancelado })}
+        <div className="pill-group h-[42px] flex-wrap">
+          {(
+            [
+              { v: "todos", rotulo: "Todas", n: parcelasPeriodo.length },
+              { v: "pendente", rotulo: "Pendentes", n: contadores.pendente },
+              { v: "atrasado", rotulo: "Atrasadas", n: contadores.atrasado },
+              { v: "pago", rotulo: "Pagas", n: contadores.pago },
+              ...(contadores.cancelado > 0
+                ? [{ v: "cancelado", rotulo: "Canceladas", n: contadores.cancelado }]
+                : []),
+            ] as { v: StatusParcela | "todos"; rotulo: string; n: number }[]
+          ).map((f) => (
+            <button
+              key={f.v}
+              type="button"
+              className={`pill ${filtroStatus === f.v ? "active" : ""}`}
+              onClick={() => setFiltroStatus(f.v)}
+            >
+              {t(f.rotulo)}
+              <span className="pill-contagem">{f.n}</span>
             </button>
-          )}
+          ))}
         </div>
         )}
       </div>

@@ -570,11 +570,11 @@ export default function MercadoPagoSecureFields({
       />
 
       {/* Toggle Cartão | PIX (dentro da seção do Mercado Pago). */}
-      <div className="mb-4 inline-flex items-center gap-1 bg-surface border border-border rounded-full p-1 w-full">
+      <div className="mb-4 inline-flex items-center gap-1 bg-surface border border-border rounded-md p-1 w-full">
         <button
           type="button"
           onClick={() => setMetodo("cartao")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-colors ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-sm transition-colors ${
             metodo === "cartao"
               ? "bg-elevated text-primary"
               : "text-muted hover:text-secondary"
@@ -586,7 +586,7 @@ export default function MercadoPagoSecureFields({
         <button
           type="button"
           onClick={() => setMetodo("pix")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-colors ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-sm transition-colors ${
             metodo === "pix"
               ? "bg-elevated text-primary"
               : "text-muted hover:text-secondary"

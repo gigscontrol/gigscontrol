@@ -47,7 +47,7 @@ export default function PresetChips({
             type="button"
             onClick={() => onChange(aplicarPreset(items, p))}
             title={p.itens.map((it) => `${numeroQtd(it.qtd)} ${it.nome}`).join("\n")}
-            className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-all ${
               isAtivo
                 ? "border-transparent text-white"
                 : "bg-elevated text-secondary border-border hover:border-border-strong hover:text-primary"
@@ -61,7 +61,7 @@ export default function PresetChips({
       {/* "Personalizado" acende quando há SELEÇÃO que não bate com preset
           nenhum. Lista toda zerada não é personalizada — é só vazia. */}
       {ativo === null && temAlgumaQtd && (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border border-dashed border-border-strong text-primary">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border border-dashed border-border-strong text-primary">
           <PencilLine size={11} />
           {t("Personalizado")}
         </span>

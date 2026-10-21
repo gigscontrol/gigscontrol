@@ -681,7 +681,7 @@ export function ListaRider({
               key={s}
               type="button"
               onClick={() => adicionar(s)}
-              className="text-[0.7rem] px-2 py-0.5 rounded-full border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
+              className="text-[0.7rem] px-2 py-0.5 rounded-md border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
             >
               + {t(s)}
             </button>

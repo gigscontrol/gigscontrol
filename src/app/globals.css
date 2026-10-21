@@ -451,20 +451,28 @@
   .campo-input.erro { border-color: var(--danger); }
   .input-erro { border-color: var(--danger) !important; }
 
-  /* Tab pills (period selector etc.) */
+  /* Filtro segmentado (Todas / Pendentes / …, seletor de período) — UM
+     desenho em todas as telas. Itens alinhados (ícone, texto e contagem na
+     mesma linha), hover com fundo e contagem como numerozinho discreto
+     (.pill-contagem) em vez de "(180)" no meio do texto. */
   .pill-group {
     display: inline-flex;
-    padding: 4px;
+    align-items: center;
+    padding: 3px;
     gap: 2px;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--r-control);
   }
   .pill {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     font-weight: 600;
+    line-height: 1.25;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 150ms var(--ease);
@@ -472,9 +480,24 @@
     border: none;
     background: transparent;
   }
-  .pill:hover { color: var(--text-primary); }
+  .pill:hover { color: var(--text-primary); background-color: var(--bg-elevated); }
   .pill.active {
     background-color: var(--brand);
+    color: #fff;
+  }
+  .pill-contagem {
+    min-width: 1.25rem;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    background-color: var(--bg-elevated);
+    color: var(--text-muted);
+  }
+  .pill.active .pill-contagem {
+    background-color: rgba(255, 255, 255, 0.22);
     color: #fff;
   }
 }

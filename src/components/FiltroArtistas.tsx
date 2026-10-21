@@ -64,7 +64,7 @@ export function AvisoFiltroArtistas() {
       className="mx-auto mb-0 flex w-full max-w-[1400px] flex-wrap items-center gap-x-3 gap-y-1 px-6 pt-4 text-xs lg:px-8"
     >
       <span
-        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium"
+        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium"
         style={{
           backgroundColor: "color-mix(in srgb, var(--brand) 12%, transparent)",
           color: "var(--brand)",

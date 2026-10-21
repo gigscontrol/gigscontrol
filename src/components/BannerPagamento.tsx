@@ -34,7 +34,7 @@ export default function BannerPagamento({ papel, adminContato, plano, ciclo }: P
   return (
     <div className="fixed left-1/2 top-3 z-[60] max-w-[94vw] -translate-x-1/2">
       <div
-        className="flex items-center gap-2.5 rounded-full border px-4 py-2 text-xs shadow-lg"
+        className="flex items-center gap-2.5 rounded-lg border px-4 py-2 text-xs shadow-lg"
         style={{
           background: "color-mix(in srgb, var(--warning) 14%, var(--bg-surface))",
           borderColor: "color-mix(in srgb, var(--warning) 45%, transparent)",
@@ -58,7 +58,7 @@ export default function BannerPagamento({ papel, adminContato, plano, ciclo }: P
         {isAdmin && (
           <button
             onClick={renovar}
-            className="flex-shrink-0 rounded-full px-3 py-1 text-[0.7rem] font-bold text-white"
+            className="flex-shrink-0 rounded-md px-3 py-1 text-[0.7rem] font-bold text-white"
             style={{ background: "var(--warning)" }}
           >
             {t("Renovar")}
