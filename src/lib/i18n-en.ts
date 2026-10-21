@@ -4042,4 +4042,6 @@ export const EN: Record<string, string> = {
   "Orçamentos anteriores deste evento / local": "Previous quotes for this event / venue",
   // --- Navegação nova (out/2026) ---
   "Mensagem do WhatsApp": "WhatsApp message",
+  // --- Navegação nova (out/2026) ---
+  "Comprovante": "Receipt",
 };

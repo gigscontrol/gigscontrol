@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { resolverMes } from "@/lib/periodo";
 import {
   Search,
@@ -14,7 +14,6 @@ import {
   BellRing,
   Paperclip,
   Pin,
-  ChevronRight,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
@@ -22,8 +21,7 @@ import StatCard from "./StatCard";
 import DateRangeSelector from "./DateRangeSelector";
 import { useNavegacao } from "./NavOverlay";
 import { useFiltroArtistas } from "./FiltroArtistas";
-import { Paginacao } from "./lista/TabelaDados";
-import { paginar } from "@/lib/lista";
+import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
@@ -225,10 +223,133 @@ export default function ControlePagamentos({
   // Na página "Cobranças", a lista é a fila (fixadas + atrasadas); senão, o
   // recorte por período + filtros.
   const itensLista = ehCobrancas ? filaCobrancas : lista;
-  // Paginação da lista padrão (50 por página); volta pra 1ª quando a lista muda.
-  const [pagina, setPagina] = useState(1);
-  useEffect(() => setPagina(1), [itensLista.length, filtroStatus, ehCobrancas]);
-  const pagLista = paginar(itensLista, pagina, 50);
+
+  // LISTA PADRÃO (a mesma de Vendas/Orçamentos): uma tabela só, colunas que
+  // ordenam, 50 por página, cartão no celular. Antes cada parcela era um card
+  // solto — o único lugar do painel com esse desenho.
+  const colunasParcelas = useMemo<Coluna<LinhaParcela>[]>(
+    () => [
+      {
+        chave: "vencimento",
+        titulo: "Vencimento",
+        classe: "whitespace-nowrap tabular-nums",
+        ordenarPor: (l) => l.parcela.dataVencimento,
+        celula: (l) => (
+          <div>
+            <div className="font-semibold text-primary">{fmtData(l.parcela.dataVencimento)}</div>
+            {l.status === "pago" && l.parcela.dataPagamento ? (
+              <div className="text-[0.7rem] text-success">
+                {t("pago em")} {fmtData(l.parcela.dataPagamento)}
+              </div>
+            ) : (
+              <div className="text-[0.7rem] text-muted">
+                {t("parcela {i}/{n}", { i: l.indiceParcela, n: l.totalParcelas })}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        chave: "contratante",
+        titulo: "Contratante",
+        classe: "font-medium text-primary max-w-[240px] truncate",
+        ordenarPor: (l) => l.contratante,
+        celula: (l) => l.contratante || "—",
+      },
+      {
+        chave: "venda",
+        titulo: "Venda",
+        ordenarPor: (l) => l.vendaNumero,
+        celula: (l) => (
+          <div className="min-w-0 max-w-[260px]">
+            <div className="font-mono text-xs" style={{ color: accent }}>
+              {l.vendaNumero}
+            </div>
+            {l.nomeEvento && <div className="text-xs text-muted truncate">{l.nomeEvento}</div>}
+          </div>
+        ),
+      },
+      {
+        chave: "artista",
+        titulo: "Artista",
+        classe: "text-secondary whitespace-nowrap",
+        ordenarPor: (l) => l.artistaNome,
+        celula: (l) => (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.artistaColor }} />
+            {l.artistaNome}
+          </span>
+        ),
+      },
+      {
+        chave: "valor",
+        titulo: "Valor",
+        alinhar: "direita",
+        classe: "font-bold text-primary tabular-nums whitespace-nowrap",
+        decrescentePrimeiro: true,
+        ordenarPor: (l) => l.parcela.valor,
+        celula: (l) => formatarMoeda(l.parcela.valor, l.moeda),
+      },
+      {
+        chave: "status",
+        titulo: "Status",
+        ordenarPor: (l) => t(LABELS_STATUS_PARCELA[l.status].label),
+        celula: (l) => {
+          const st = LABELS_STATUS_PARCELA[l.status];
+          const meta = l.parcela.meta;
+          const nCobrancas = meta?.cobrancas?.length ?? 0;
+          return (
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <span className={`badge ${st.badge}`}>
+                {l.status === "pago" && <CheckCircle2 size={11} />}
+                {l.status === "pendente" && <Clock size={11} />}
+                {l.status === "atrasado" && <AlertTriangle size={11} />}
+                {l.status === "cancelado" && <Ban size={11} />}
+                {t(st.label)}
+              </span>
+              {nCobrancas > 0 && l.status !== "pago" && l.status !== "cancelado" && (
+                <span
+                  className="text-[0.7rem] inline-flex items-center gap-1"
+                  style={{ color: "var(--warning)" }}
+                  title={t("cobrado {n}x", { n: nCobrancas })}
+                >
+                  <BellRing size={11} /> {nCobrancas}
+                </span>
+              )}
+              {meta?.pagamento?.comprovantePath && (
+                <Paperclip size={13} className="text-muted" aria-label={t("Comprovante")} />
+              )}
+            </span>
+          );
+        },
+      },
+    ],
+    [t, accent]
+  );
+
+  // 📌 Fixar — cobrança prioritária (o clique não abre a parcela).
+  const acoesParcela = (l: LinhaParcela) => {
+    const fixada = !!l.parcela.meta?.fixada;
+    const podeFixar = l.status !== "pago" && l.status !== "cancelado";
+    return (
+      <button
+        type="button"
+        onClick={() => toggleFixar(l)}
+        disabled={!podeFixar && !fixada}
+        title={fixada ? t("Desafixar") : t("Fixar cobrança")}
+        aria-label={fixada ? t("Desafixar") : t("Fixar cobrança")}
+        className="btn-ghost p-2 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <Pin
+          size={15}
+          style={{
+            color: fixada ? "var(--warning)" : "var(--text-muted)",
+            fill: fixada ? "var(--warning)" : "none",
+          }}
+        />
+      </button>
+    );
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -344,21 +465,20 @@ export default function ControlePagamentos({
       </div>
 
       {!ehCobrancas && fixadas.length > 0 && (
-        <div className="card mb-4" style={{ borderColor: "var(--warning)" }}>
+        <div className="card mb-4 overflow-hidden" style={{ borderColor: "var(--warning)" }}>
           <div className="section-title mb-3 inline-flex items-center gap-2">
             <Pin size={15} style={{ color: "var(--warning)" }} />
             {t("Fixadas — cobranças a fazer")} · {fixadas.length}
           </div>
-          <div className="flex flex-col gap-2">
-            {fixadas.map((l) => (
-              <ParcelaRow
-                key={`fix-${l.vendaId}-${l.parcela.id}`}
-                linha={l}
-                accent={accent}
-                onClick={() => abrirParcela(l)}
-                onToggleFixar={() => toggleFixar(l)}
-              />
-            ))}
+          <div className="-mx-5 -mb-5 border-t border-border">
+            <TabelaDados
+              itens={fixadas}
+              colunas={colunasParcelas}
+              chaveDe={(l) => `fix-${l.vendaId}-${l.parcela.id}`}
+              onAbrir={abrirParcela}
+              acoes={acoesParcela}
+              rotuloItens="parcelas"
+            />
           </div>
         </div>
       )}
@@ -388,19 +508,15 @@ export default function ControlePagamentos({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {pagLista.itens.map((l) => (
-            <ParcelaRow
-              key={`${l.vendaId}-${l.parcela.id}`}
-              linha={l}
-              accent={accent}
-              onClick={() => abrirParcela(l)}
-              onToggleFixar={() => toggleFixar(l)}
-            />
-          ))}
-          <div className="card p-0 overflow-hidden empty:hidden">
-            <Paginacao pag={pagLista} porPagina={50} rotuloItens="parcelas" onPagina={setPagina} />
-          </div>
+        <div className="card p-0 overflow-hidden">
+          <TabelaDados
+            itens={itensLista}
+            colunas={colunasParcelas}
+            chaveDe={(l) => `${l.vendaId}-${l.parcela.id}`}
+            onAbrir={abrirParcela}
+            acoes={acoesParcela}
+            rotuloItens="parcelas"
+          />
         </div>
       )}
 
@@ -417,116 +533,6 @@ export default function ControlePagamentos({
         </div>
       )}
 
-    </div>
-  );
-}
-
-/* ============================================================ */
-
-function ParcelaRow({
-  linha: l,
-  accent,
-  onClick,
-  onToggleFixar,
-}: {
-  linha: LinhaParcela;
-  accent: string;
-  onClick: () => void;
-  onToggleFixar: () => void;
-}) {
-  const t = useT();
-  const st = LABELS_STATUS_PARCELA[l.status];
-  const venc = new Date(l.parcela.dataVencimento + "T12:00:00");
-  const meta = l.parcela.meta;
-  const nCobrancas = meta?.cobrancas?.length ?? 0;
-  const temComprovante = !!meta?.pagamento?.comprovantePath;
-  const fixada = !!meta?.fixada;
-  const podeFixar = l.status !== "pago" && l.status !== "cancelado";
-
-  return (
-    <div className="card card-interactive w-full flex items-center gap-2 py-3 px-4">
-      {/* Fixar (📌) — cobrança prioritária */}
-      <button
-        type="button"
-        onClick={onToggleFixar}
-        disabled={!podeFixar && !fixada}
-        title={fixada ? t("Desafixar") : t("Fixar cobrança")}
-        className="flex-shrink-0 p-1 rounded hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-      >
-        <Pin
-          size={15}
-          style={{
-            color: fixada ? "var(--warning)" : "var(--text-muted)",
-            fill: fixada ? "var(--warning)" : "none",
-          }}
-        />
-      </button>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex-1 flex items-center gap-4 text-left min-w-0"
-      >
-      {/* Vencimento */}
-      <div className="tabular-nums whitespace-nowrap min-w-[104px]">
-        <div className="font-semibold text-primary text-sm">{venc.toLocaleDateString("pt-BR")}</div>
-        {l.status === "pago" && l.parcela.dataPagamento ? (
-          <div className="text-[0.7rem] text-success">
-            {t("pago em")} {fmtData(l.parcela.dataPagamento + "T12:00:00")}
-          </div>
-        ) : (
-          <div className="text-[0.7rem] text-muted">
-            {t("parcela {i}/{n}", { i: l.indiceParcela, n: l.totalParcelas })}
-          </div>
-        )}
-      </div>
-
-      {/* Contratante / evento */}
-      <div className="min-w-0 flex-1">
-        <div className="font-medium text-primary truncate">{l.contratante || "—"}</div>
-        <div className="text-xs text-muted truncate">
-          <span className="font-mono" style={{ color: accent }}>{l.vendaNumero}</span>
-          {l.nomeEvento ? ` · ${l.nomeEvento}` : ""}
-        </div>
-      </div>
-
-      {/* DJ */}
-      <div className="hidden md:flex items-center gap-1.5 text-secondary text-sm min-w-0 max-w-[160px]">
-        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.artistaColor }} />
-        <span className="truncate">{l.artistaNome}</span>
-      </div>
-
-      {/* Indicadores (cobrança / comprovante) */}
-      <div className="hidden sm:flex items-center gap-2">
-        {nCobrancas > 0 && l.status !== "pago" && l.status !== "cancelado" && (
-          <span
-            className="text-[0.7rem] inline-flex items-center gap-1"
-            style={{ color: "var(--warning)" }}
-            title={t("cobrado {n}x", { n: nCobrancas })}
-          >
-            <BellRing size={11} /> {nCobrancas}
-          </span>
-        )}
-        {temComprovante && <Paperclip size={13} className="text-muted" />}
-      </div>
-
-      {/* Valor */}
-      <div className="text-right tabular-nums font-bold text-primary whitespace-nowrap">
-        {formatarMoeda(l.parcela.valor, l.moeda)}
-      </div>
-
-      {/* Status */}
-      <div className="min-w-[92px] flex justify-end">
-        <span className={`badge ${st.badge}`}>
-          {l.status === "pago" && <CheckCircle2 size={11} />}
-          {l.status === "pendente" && <Clock size={11} />}
-          {l.status === "atrasado" && <AlertTriangle size={11} />}
-          {l.status === "cancelado" && <Ban size={11} />}
-          {t(st.label)}
-        </span>
-      </div>
-
-      <ChevronRight size={16} className="text-muted flex-shrink-0" />
-      </button>
     </div>
   );
 }

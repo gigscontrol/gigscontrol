@@ -3030,4 +3030,6 @@ export const DE: Record<string, string> = {
   "Orçamentos anteriores deste evento / local": "Frühere Angebote für dieses Event / diese Location",
   // --- Navegação nova (out/2026) ---
   "Mensagem do WhatsApp": "WhatsApp-Nachricht",
+  // --- Navegação nova (out/2026) ---
+  "Comprovante": "Beleg",
 };
