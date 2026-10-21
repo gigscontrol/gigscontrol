@@ -7,6 +7,7 @@ import {
   resolverEscopoContrato,
   ContratoImutavelError,
   ContratoFinalizadoError,
+  ContratoStatusError,
 } from "@/lib/services/contratos.service";
 import {
   podeVerContrato,
@@ -139,7 +140,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
     );
     return NextResponse.json({ contrato });
   } catch (e) {
-    if (e instanceof ContratoImutavelError) {
+    if (e instanceof ContratoImutavelError || e instanceof ContratoStatusError) {
       return NextResponse.json({ erro: e.message }, { status: e.status });
     }
     return respostaDeErro(e, "Falha ao atualizar contrato.");

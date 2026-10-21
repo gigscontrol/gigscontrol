@@ -45,6 +45,9 @@ export type PatchContratoInput = {
   observacoes?: string | null;
   /** Pasta de organização (null = tira da pasta). */
   pastaId?: string | null;
+  /** Por que o status foi mudado à mão — vai pra trilha do contrato.
+   *  Obrigatório para marcar "assinado" sem as assinaturas eletrônicas. */
+  motivoStatus?: string;
 };
 
 /** Resumo de um assinante de contrato (pra pintar o status na lista). */
@@ -225,6 +228,7 @@ export function ContratosProvider({ children }: { children: ReactNode }) {
         body.data_assinatura = patch.dataAssinatura;
       if (patch.observacoes !== undefined) body.observacoes = patch.observacoes;
       if (patch.pastaId !== undefined) body.pasta_id = patch.pastaId;
+      if (patch.motivoStatus !== undefined) body.motivo_status = patch.motivoStatus;
 
       const res = await fetch(`/api/contratos/${id}`, {
         method: "PATCH",

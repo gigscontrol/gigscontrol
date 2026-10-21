@@ -57,6 +57,7 @@ import {
   LABELS_TIPO_EVENTO,
   TEXTO_TRANSLADO,
   MODULE_THEMES,
+  type OrcamentoStatus,
 } from "@/types";
 
 type Props = {
@@ -129,6 +130,32 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   const podeEditarOrc = podeEditarOrcamentoUI(podeUI, orc.artistaId || null, orc.criadoPor, userId);
   const podeExcluirOrc = podeUI(orc.artistaId || null, "vendas.excluir_orcamento");
   const semPermissao = t("Você não tem permissão para isso.");
+
+  // Mesma regra da lista: muda na hora e o aviso oferece "Desfazer".
+  async function mudarStatus(novo: OrcamentoStatus) {
+    if (!orc) return;
+    const { id, numero, status: anterior } = orc;
+    const falhou = (e: unknown) =>
+      setToast({ msg: (e as Error)?.message || t("Não foi possível mudar o status."), tipo: "erro" });
+    try {
+      await marcarStatus(id, novo);
+    } catch (e) {
+      falhou(e);
+      return;
+    }
+    setToast({
+      msg: t("{numero} passou para {status}.", {
+        numero,
+        status: t(LABELS_STATUS_ORCAMENTO[novo].label),
+      }),
+      tipo: "sucesso",
+      acaoLabel: t("Desfazer"),
+      onAcao: () => {
+        setToast(null);
+        marcarStatus(id, anterior).catch(falhou);
+      },
+    });
+  }
 
   const texto = gerarTextoWhatsApp(orc, { contratante: cont, casa: cs, cidade: cid, artista });
   const linkWA = montarLinkWhatsApp(cont?.telefone ?? "", texto);
@@ -272,7 +299,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             )}
             {orc.status !== "negociacao" && orc.status !== "aceito" && (
               <button
-                onClick={() => marcarStatus(orc.id, "negociacao")}
+                onClick={() => mudarStatus("negociacao")}
                 disabled={!podeEditarOrc}
                 title={!podeEditarOrc ? semPermissao : undefined}
                 className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -284,7 +311,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             )}
             {orc.status !== "recusado" && orc.status !== "aceito" && (
               <button
-                onClick={() => marcarStatus(orc.id, "recusado")}
+                onClick={() => mudarStatus("recusado")}
                 disabled={!podeEditarOrc}
                 title={!podeEditarOrc ? semPermissao : undefined}
                 className="text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -652,6 +679,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
         tipo={toast?.tipo ?? "sucesso"}
         acaoLabel={toast?.acaoLabel}
         onAcao={toast?.onAcao}
+        duracao={toast?.onAcao ? 6000 : 3000}
         onClose={() => setToast(null)}
       />
 

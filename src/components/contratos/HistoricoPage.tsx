@@ -10,11 +10,16 @@ import {
   Loader2,
   ArrowLeft,
   AlertCircle,
+  Send,
+  PenLine,
+  RotateCcw,
+  Undo2,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
 import DateRangeSelector from "../DateRangeSelector";
 import { FolhaA4, gerarPdfFolha, type AssinaturaInfo } from "./folhaA4";
 import PainelAssinatura from "./PainelAssinatura";
+import MarcarAssinadoModal from "./MarcarAssinadoModal";
 import TabelaDados, { type Coluna } from "../lista/TabelaDados";
 import Vinculos from "../detalhes/Vinculos";
 import { FichaHeroPagina } from "../detalhes/FichaUI";
@@ -49,7 +54,7 @@ function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; t
   return d.getFullYear() === p.ano && d.getMonth() === p.mes;
 }
 
-/** Status na ordem em que aparecem no pill-group de troca de status. */
+/** Status na ordem em que aparecem nos filtros da lista. */
 const STATUS_ORDEM: ContratoStatus[] = [
   "rascunho",
   "enviado",
@@ -215,19 +220,21 @@ export default function HistoricoPage({
     }
   }
 
-  async function mudarStatus(contrato: Contrato, status: ContratoStatus) {
-    if (status === contrato.status || salvandoStatus) return;
-    // Cancelar tem confirmação própria + gate de contratos.cancelar: o pill
-    // "Cancelado" reusa o mesmo fluxo do botão "Cancelar contrato".
-    if (status === "cancelado") {
-      await cancelar(contrato);
-      return;
-    }
+  /** Troca manual de status (as ações do rodapé da ficha). O caminho normal
+   *  é o status andar sozinho pelas assinaturas; cancelar tem fluxo próprio. */
+  async function mudarStatus(
+    contrato: Contrato,
+    status: ContratoStatus,
+    motivo?: string
+  ): Promise<boolean> {
+    if (status === contrato.status || salvandoStatus) return false;
     setSalvandoStatus(true);
     try {
-      await atualizarContrato(contrato.id, { status });
+      await atualizarContrato(contrato.id, { status, motivoStatus: motivo });
+      return true;
     } catch (e) {
       avisar((e as Error).message || t("Não foi possível alterar o status."));
+      return false;
     } finally {
       setSalvandoStatus(false);
     }
@@ -396,7 +403,7 @@ export default function HistoricoPage({
           podeCancelar={podeCancelar(selecionado)}
           onVoltar={onVoltar}
           onBaixarPdf={() => baixarPdf(selecionado)}
-          onMudarStatus={(s) => mudarStatus(selecionado, s)}
+          onMudarStatus={(s, motivo) => mudarStatus(selecionado, s, motivo)}
           onExcluir={() => excluir(selecionado)}
           onCancelar={() => cancelar(selecionado)}
         />
@@ -536,7 +543,7 @@ function DetalheContrato({
   podeCancelar: boolean;
   onVoltar: () => void;
   onBaixarPdf: () => void;
-  onMudarStatus: (status: ContratoStatus) => void;
+  onMudarStatus: (status: ContratoStatus, motivo?: string) => Promise<boolean>;
   onExcluir: () => void;
   onCancelar: () => void;
 }) {
@@ -544,8 +551,13 @@ function DetalheContrato({
   const jaCancelado = contrato.status === "cancelado";
 
   // Assinaturas do contrato → o preview e o "Baixar PDF" mostram o relatório
-  // (mesmos dados/mapa que o PainelAssinatura, pra gerar o MESMO PDF).
+  // (mesmos dados/mapa que o PainelAssinatura, pra gerar o MESMO PDF). O total
+  // de signatários alimenta o resumo do status. Relê quando o status muda
+  // (mandar pra assinatura e cada assinatura mexem nele).
   const [assinaturas, setAssinaturas] = useState<AssinaturaInfo[]>([]);
+  // null = ainda carregando (guardado por id pra não valer de outro contrato).
+  const [sigs, setSigs] = useState<{ id: string; total: number } | null>(null);
+  const totalSignatarios = sigs?.id === contrato.id ? sigs.total : null;
   useEffect(() => {
     let vivo = true;
     buscarSignatarios(contrato.id)
@@ -554,6 +566,7 @@ function DetalheContrato({
         setAssinaturas(
           lista.filter((s) => s.status === "assinado").map(paraAssinaturaInfo)
         );
+        setSigs({ id: contrato.id, total: lista.length });
       })
       .catch(() => {
         /* silencioso — sem relatório é o comportamento antigo */
@@ -561,7 +574,29 @@ function DetalheContrato({
     return () => {
       vivo = false;
     };
-  }, [contrato.id]);
+  }, [contrato.id, contrato.status]);
+
+  // O status vem das assinaturas; à mão só o que a assinatura eletrônica não
+  // cobre (enviado/assinado fora do sistema), sempre com volta.
+  const finalizado = !!contrato.finalizadoEm;
+  const assinadoFora = contrato.status === "assinado" && !finalizado;
+  // Pra onde volta quem desfaz o "assinado" manual ou reativa um cancelado.
+  const statusSemMarcacao: ContratoStatus = (totalSignatarios ?? 0) > 0 ? "enviado" : "rascunho";
+  const resumoStatus =
+    contrato.status === "cancelado"
+      ? t("Cancelado. O link de assinatura não funciona mais.")
+      : finalizado
+      ? t("Todas as assinaturas concluídas.")
+      : assinadoFora
+      ? t("Marcado como assinado fora do sistema.")
+      : totalSignatarios === null
+      ? t("Conferindo as assinaturas…")
+      : totalSignatarios > 0
+      ? t("{a} de {n} assinaturas.", { a: assinaturas.length, n: totalSignatarios })
+      : contrato.status === "enviado"
+      ? t("Enviado fora do sistema, sem assinatura eletrônica.")
+      : t("Ainda não foi mandado para assinatura.");
+  const [marcandoAssinado, setMarcandoAssinado] = useState(false);
 
   // Veio do "Mandar para assinatura" (Novo contrato): já mostra o painel.
   const painelAssinaturaRef = useRef<HTMLDivElement>(null);
@@ -636,37 +671,55 @@ function DetalheContrato({
           }
           rodape={
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-baseline gap-2">
                 <span className="stat-label">{t("Status")}</span>
-                <div
-                  className="inline-flex rounded-md p-0.5 gap-0.5"
-                  style={{ backgroundColor: "var(--bg-elevated)" }}
-                >
-                  {STATUS_ORDEM.map((s) => {
-                    const ativo = s === contrato.status;
-                    // A transição → "cancelado" usa contratos.cancelar (permissão
-                    // própria, D4); as demais mudanças de status usam contratos.editar.
-                    const virarCancelado = s === "cancelado" && !jaCancelado;
-                    const permitido = virarCancelado ? podeCancelar : podeEditar;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => onMudarStatus(s)}
-                        disabled={salvandoStatus || !permitido}
-                        title={!permitido ? t("Você não tem permissão para isso.") : undefined}
-                        className={`badge ${
-                          ativo ? STATUS_BADGE[s] : "text-muted"
-                        } transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
-                        style={ativo ? { boxShadow: "0 0 0 1px var(--border-color)" } : undefined}
-                      >
-                        {t(STATUS_LABEL[s])}
-                      </button>
-                    );
-                  })}
-                </div>
+                <span className="text-sm text-secondary">{resumoStatus}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {podeEditar && contrato.status === "rascunho" && (
+                  <button
+                    type="button"
+                    onClick={() => onMudarStatus("enviado")}
+                    disabled={salvandoStatus}
+                    className="btn btn-secondary px-3 py-1.5 text-xs"
+                  >
+                    <Send size={13} />
+                    {t("Marcar como enviado")}
+                  </button>
+                )}
+                {podeEditar && (contrato.status === "rascunho" || contrato.status === "enviado") && (
+                  <button
+                    type="button"
+                    onClick={() => setMarcandoAssinado(true)}
+                    disabled={salvandoStatus}
+                    className="btn btn-secondary px-3 py-1.5 text-xs"
+                  >
+                    <PenLine size={13} />
+                    {t("Marcar como assinado")}
+                  </button>
+                )}
+                {podeEditar && assinadoFora && (
+                  <button
+                    type="button"
+                    onClick={() => onMudarStatus(statusSemMarcacao)}
+                    disabled={salvandoStatus || totalSignatarios === null}
+                    className="btn btn-secondary px-3 py-1.5 text-xs"
+                  >
+                    <Undo2 size={13} />
+                    {t("Desmarcar assinado")}
+                  </button>
+                )}
+                {podeEditar && jaCancelado && (
+                  <button
+                    type="button"
+                    onClick={() => onMudarStatus(finalizado ? "assinado" : statusSemMarcacao)}
+                    disabled={salvandoStatus || (!finalizado && totalSignatarios === null)}
+                    className="btn btn-secondary px-3 py-1.5 text-xs"
+                  >
+                    <RotateCcw size={13} />
+                    {t("Reativar contrato")}
+                  </button>
+                )}
                 {podeCancelar && !jaCancelado && (
                   <button
                     type="button"
@@ -708,6 +761,16 @@ function DetalheContrato({
       <div ref={painelAssinaturaRef} className="scroll-mt-4">
         <PainelAssinatura contrato={contrato} />
       </div>
+
+      <MarcarAssinadoModal
+        aberto={marcandoAssinado}
+        numero={contrato.numero}
+        salvando={salvandoStatus}
+        onCancelar={() => setMarcandoAssinado(false)}
+        onConfirmar={async (motivo) => {
+          if (await onMudarStatus("assinado", motivo)) setMarcandoAssinado(false);
+        }}
+      />
 
       {/* Preview da folha A4 (com o relatório de assinaturas quando houver) */}
       <FolhaA4

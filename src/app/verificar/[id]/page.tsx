@@ -52,6 +52,7 @@ const ROTULO_EVENTO: Record<string, string> = {
   finalizado: "Todas as assinaturas concluídas",
   pdf_final_gerado: "PDF final selado",
   cancelado: "Contrato cancelado",
+  status_alterado: "Status alterado manualmente pela agência",
 };
 
 function dataHoraBR(iso: string | null): string {
