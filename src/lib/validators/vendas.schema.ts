@@ -127,6 +127,11 @@ export const parcelaUpdateSchema = z.object({
   cancelamento_motivo: z.string().max(1000).optional(),
   /** true = registra uma cobrança enviada no log (append). */
   registrar_cobranca: z.boolean().optional(),
+  /** Por onde a cobrança foi feita (vai junto no log). */
+  cobranca_canal: z.enum(["whatsapp", "outro"]).optional(),
+  /** `em` (ISO) da cobrança a tirar do log — o "Desfazer" logo depois de
+   *  registrar (só a da própria pessoa, só nos primeiros minutos). */
+  desfazer_cobranca: z.string().max(40).optional(),
   /** Fixar (📌) / desafixar a cobrança na fila de prioridade. */
   fixar: z.boolean().optional(),
 });
