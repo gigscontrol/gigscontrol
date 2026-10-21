@@ -13,8 +13,10 @@ import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { podeEditarVendaUI, podeCancelarVendaUI } from "@/lib/permissoes/gatesEquipeUI";
-import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
-import { MODULE_THEMES } from "@/types";
+import { formatarMoeda, formatarDataBR, totaisPorMoeda } from "@/lib/formatters";
+import TabelaDados, { type Coluna } from "./lista/TabelaDados";
+import EstadoVazio from "./lista/EstadoVazio";
+import { MODULE_THEMES, type Venda } from "@/types";
 
 type Props = {
   selectedArtistas: string[];
@@ -118,6 +120,100 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
     }
   }
 
+  // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
+  const colunas = useMemo<Coluna<Venda>[]>(() => {
+    const cidadeDe = (v: Venda) => cidades.find((c) => c.id === v.cidadeId);
+    const artistaDe = (v: Venda) => artistas.find((d) => d.id === v.artistaId);
+    return [
+      {
+        chave: "numero",
+        titulo: "Nº",
+        classe: "font-mono text-xs",
+        estilo: () => ({ color: accent }),
+        ordenarPor: (v) => v.numero,
+        celula: (v) => (
+          <>
+            <span className={v.status === "cancelada" ? "line-through" : ""}>{v.numero}</span>
+            {v.status === "cancelada" && (
+              <span className="badge badge-neutral inline-flex items-center gap-1 ml-2 no-underline">
+                <Ban size={10} />
+                {t("Cancelada")}
+              </span>
+            )}
+          </>
+        ),
+      },
+      {
+        chave: "contratante",
+        titulo: "Contratante",
+        classe: "font-medium text-primary truncate max-w-[200px]",
+        ordenarPor: (v) => v.contratanteNome,
+        celula: (v) => v.contratanteNome,
+      },
+      {
+        chave: "evento",
+        titulo: "Evento",
+        classe: "text-secondary truncate max-w-[220px]",
+        ordenarPor: (v) => v.nomeEvento,
+        celula: (v) => (
+          <>
+            {v.nomeEvento}
+            {v.nomeLocal && <span className="block text-xs text-muted truncate">{v.nomeLocal}</span>}
+          </>
+        ),
+      },
+      {
+        chave: "artista",
+        titulo: "Artista",
+        classe: "text-secondary",
+        ordenarPor: (v) => artistaDe(v)?.name,
+        celula: (v) => artistaDe(v)?.name ?? "—",
+      },
+      {
+        chave: "cidade",
+        titulo: "Cidade",
+        classe: "text-secondary",
+        ordenarPor: (v) => cidadeDe(v)?.nome,
+        celula: (v) => {
+          const cid = cidadeDe(v);
+          return cid ? `${cid.nome}/${cid.estado}` : "—";
+        },
+      },
+      {
+        chave: "data",
+        titulo: "Data show",
+        classe: "text-secondary tabular-nums",
+        decrescentePrimeiro: true,
+        ordenarPor: (v) => v.dataShow,
+        celula: (v) => formatarDataBR(v.dataShow),
+      },
+      {
+        chave: "cache",
+        titulo: "Cachê",
+        alinhar: "direita",
+        classe: "tabular-nums font-semibold",
+        decrescentePrimeiro: true,
+        ordenarPor: (v) => v.cache,
+        celula: (v) => formatarMoeda(v.cache, v.moeda),
+      },
+      {
+        chave: "origem",
+        titulo: "Origem",
+        celula: (v) => {
+          const orc = v.orcamentoId ? orcamentos.find((o) => o.id === v.orcamentoId) : null;
+          return orc ? (
+            <span className="badge badge-neutral inline-flex items-center gap-1">
+              <FileText size={10} />
+              {orc.numero}
+            </span>
+          ) : (
+            <span className="text-xs text-muted italic">{t("direta")}</span>
+          );
+        },
+      },
+    ];
+  }, [cidades, artistas, orcamentos, accent, t]);
+
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
@@ -153,161 +249,77 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
 
       <div className="card p-0 overflow-hidden">
         {lista.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
-              <CalendarCheck2 size={18} className="text-muted" />
-            </div>
-            <div className="section-title mb-1">
-              {vendas.length === 0 ? t("Nenhuma venda concretizada ainda") : t("Nenhum resultado")}
-            </div>
-            <div className="section-subtitle mb-4">
-              {vendas.length === 0
+          <EstadoVazio
+            icone={<CalendarCheck2 size={18} />}
+            titulo={vendas.length === 0 ? t("Nenhuma venda concretizada ainda") : t("Nenhum resultado")}
+            texto={
+              vendas.length === 0
                 ? t("Concretize um orçamento aceito ou crie uma nova venda")
-                : t("Ajuste os filtros ou a busca")}
-            </div>
-            {vendas.length === 0 && (
-              <button
-                onClick={onNovaVenda}
-                className="btn btn-primary"
-                style={{ backgroundColor: accent, color: "#fff" }}
-              >
-                <Plus size={14} />
-                {t("Nova venda")}
-              </button>
-            )}
-          </div>
+                : t("Ajuste os filtros ou a busca")
+            }
+            acao={
+              vendas.length === 0 ? (
+                <button onClick={onNovaVenda} className="btn btn-primary">
+                  <Plus size={14} />
+                  {t("Nova venda")}
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-2/40">
-                  <Th>{t("Nº")}</Th>
-                  <Th>{t("Contratante")}</Th>
-                  <Th>{t("Evento")}</Th>
-                  <Th>{t("Artista")}</Th>
-                  <Th>{t("Cidade")}</Th>
-                  <Th>{t("Data show")}</Th>
-                  <Th className="text-right">{t("Cachê")}</Th>
-                  <Th>{t("Origem")}</Th>
-                  <Th className="w-[1%]"></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.map((v) => {
-                  const cid = cidades.find((c) => c.id === v.cidadeId);
-                  const artista = artistas.find((d) => d.id === v.artistaId);
-                  const orc = v.orcamentoId
-                    ? orcamentos.find((o) => o.id === v.orcamentoId)
-                    : null;
-                  const cancelada = v.status === "cancelada";
-                  const podeCancelar =
-                    !cancelada &&
-                    podeCancelarVendaUI(podeUI, v.artistaId || null, v.criadoPor, userId);
-                  // Mesmo gate do VendaDetalhe.tsx:62-65 — permissão de VENDAS,
-                  // não de agenda. Sem `!cancelada`: nem o VendaDetalhe nem o
-                  // PATCH do servidor travam a edição de venda cancelada, e
-                  // esconder só o atalho aqui daria a impressão falsa de trava
-                  // (o ícone "Ver" ao lado leva à mesma edição).
-                  const podeEditar = podeEditarVendaUI(
-                    podeUI,
-                    v.artistaId || null,
-                    v.criadoPor,
-                    userId
-                  );
-                  return (
-                    <tr
-                      key={v.id}
-                      className={`border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer ${cancelada ? "opacity-60" : ""}`}
-                      onClick={() => onAbrir(v.id)}
+          <TabelaDados
+            itens={lista}
+            colunas={colunas}
+            chaveDe={(v) => v.id}
+            onAbrir={(v) => onAbrir(v.id)}
+            rotuloItens="vendas"
+            linhaClasse={(v) => (v.status === "cancelada" ? "opacity-60" : "")}
+            acoes={(v) => {
+              const cancelada = v.status === "cancelada";
+              const podeCancelar =
+                !cancelada &&
+                podeCancelarVendaUI(podeUI, v.artistaId || null, v.criadoPor, userId);
+              // Mesmo gate do VendaDetalhe — permissão de VENDAS, não de agenda.
+              // Sem `!cancelada`: nem o detalhe nem o PATCH travam a edição de
+              // venda cancelada; esconder só aqui daria a impressão falsa de trava.
+              const podeEditar = podeEditarVendaUI(podeUI, v.artistaId || null, v.criadoPor, userId);
+              return (
+                <>
+                  <button onClick={() => onAbrir(v.id)} className="btn-ghost p-1.5 rounded" title={t("Ver")}>
+                    <Eye size={14} />
+                  </button>
+                  {podeEditar && (
+                    <button
+                      onClick={() => onEditar(v.id)}
+                      className="btn-ghost p-1.5 rounded"
+                      title={t("Editar venda")}
                     >
-                      <Td className="font-mono text-xs" style={{ color: accent }}>
-                        <span className={cancelada ? "line-through" : ""}>{v.numero}</span>
-                        {cancelada && (
-                          <span className="badge badge-neutral inline-flex items-center gap-1 ml-2 no-underline">
-                            <Ban size={10} />
-                            {t("Cancelada")}
-                          </span>
-                        )}
-                      </Td>
-                      <Td className="font-medium text-primary truncate max-w-[200px]">
-                        {v.contratanteNome}
-                      </Td>
-                      <Td className="text-secondary truncate max-w-[220px]">
-                        {v.nomeEvento}
-                        {v.nomeLocal && (
-                          <span className="block text-xs text-muted truncate">
-                            {v.nomeLocal}
-                          </span>
-                        )}
-                      </Td>
-                      <Td className="text-secondary">{artista?.name ?? "—"}</Td>
-                      <Td className="text-secondary">
-                        {cid ? `${cid.nome}/${cid.estado}` : "—"}
-                      </Td>
-                      <Td className="text-secondary tabular-nums">
-                        {new Date(v.dataShow + "T12:00:00").toLocaleDateString("pt-BR")}
-                      </Td>
-                      <Td className="text-right tabular-nums font-semibold">
-                        {formatarMoeda(v.cache, v.moeda)}
-                      </Td>
-                      <Td>
-                        {orc ? (
-                          <span className="badge badge-neutral inline-flex items-center gap-1">
-                            <FileText size={10} />
-                            {orc.numero}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted italic">{t("direta")}</span>
-                        )}
-                      </Td>
-                      <Td>
-                        <div
-                          className="flex items-center gap-0.5 justify-end"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => onAbrir(v.id)}
-                            className="btn-ghost p-1.5 rounded"
-                            title={t("Ver")}
-                          >
-                            <Eye size={14} />
-                          </button>
-                          {podeEditar && (
-                            <button
-                              onClick={() => onEditar(v.id)}
-                              className="btn-ghost p-1.5 rounded"
-                              title={t("Editar venda")}
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
-                          {podeCancelar && (
-                            <button
-                              onClick={() => {
-                                setCancelMotivo("");
-                                setCancelAlvo(v.id);
-                              }}
-                              className="btn-ghost p-1.5 rounded"
-                              title={t("Cancelar venda")}
-                            >
-                              <Ban size={14} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleRemover(v.id)}
-                            className="btn-ghost p-1.5 rounded"
-                            title={t("Remover")}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {podeCancelar && (
+                    <button
+                      onClick={() => {
+                        setCancelMotivo("");
+                        setCancelAlvo(v.id);
+                      }}
+                      className="btn-ghost p-1.5 rounded"
+                      title={t("Cancelar venda")}
+                    >
+                      <Ban size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleRemover(v.id)}
+                    className="btn-ghost p-1.5 rounded hover:text-danger"
+                    title={t("Remover")}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </>
+              );
+            }}
+          />
         )}
       </div>
 
@@ -404,29 +416,5 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
         onClose={() => setToastMsg(null)}
       />
     </div>
-  );
-}
-
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return (
-    <th className={`text-left px-4 py-3 stat-label font-semibold whitespace-nowrap ${className}`}>
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = "",
-  style,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <td className={`px-4 py-3 align-middle ${className}`} style={style}>
-      {children}
-    </td>
   );
 }

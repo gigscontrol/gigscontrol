@@ -28,8 +28,10 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
-import { formatarMoeda } from "@/lib/formatters";
-import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type OrcamentoStatus } from "@/types";
+import { formatarMoeda, formatarDataBR } from "@/lib/formatters";
+import TabelaDados, { type Coluna } from "./lista/TabelaDados";
+import EstadoVazio from "./lista/EstadoVazio";
+import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type Orcamento, type OrcamentoStatus } from "@/types";
 
 type Props = {
   selectedArtistas: string[];
@@ -141,6 +143,79 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
     if (ok) removeOrcamento(id);
   }
 
+  // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
+  const colunas = useMemo<Coluna<Orcamento>[]>(() => {
+    const contratanteDe = (o: Orcamento) => contratantes.find((c) => c.id === o.contratanteId);
+    const cidadeDe = (o: Orcamento) => cidades.find((c) => c.id === o.cidadeId);
+    const artistaDe = (o: Orcamento) => artistas.find((d) => d.id === o.artistaId);
+    return [
+      {
+        chave: "numero",
+        titulo: "Nº",
+        classe: "font-mono text-xs text-secondary",
+        ordenarPor: (o) => o.numero,
+        celula: (o) => o.numero,
+      },
+      {
+        chave: "contratante",
+        titulo: "Contratante",
+        classe: "font-medium text-primary",
+        ordenarPor: (o) => contratanteDe(o)?.nome,
+        celula: (o) => contratanteDe(o)?.nome ?? "—",
+      },
+      {
+        chave: "tipo",
+        titulo: "Tipo",
+        ordenarPor: (o) => t(LABELS_TIPO_EVENTO[o.tipoEvento]),
+        celula: (o) => <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[o.tipoEvento])}</span>,
+      },
+      {
+        chave: "artista",
+        titulo: "Artista",
+        classe: "text-secondary",
+        ordenarPor: (o) => artistaDe(o)?.name,
+        celula: (o) => artistaDe(o)?.name ?? "—",
+      },
+      {
+        chave: "cidade",
+        titulo: "Cidade",
+        classe: "text-secondary",
+        ordenarPor: (o) => cidadeDe(o)?.nome,
+        celula: (o) => {
+          const cid = cidadeDe(o);
+          return cid ? `${cid.nome}/${cid.estado}` : "—";
+        },
+      },
+      {
+        chave: "data",
+        titulo: "Data show",
+        classe: "text-secondary tabular-nums",
+        decrescentePrimeiro: true,
+        ordenarPor: (o) => o.dataShow,
+        celula: (o) =>
+          o.dataShow ? formatarDataBR(o.dataShow) : <span className="text-muted italic">{t("a definir")}</span>,
+      },
+      {
+        chave: "valor",
+        titulo: "Valor",
+        alinhar: "direita",
+        classe: "tabular-nums font-semibold",
+        decrescentePrimeiro: true,
+        ordenarPor: (o) => o.valorCache,
+        celula: (o) => formatarMoeda(o.valorCache, o.moeda),
+      },
+      {
+        chave: "status",
+        titulo: "Status",
+        ordenarPor: (o) => t(LABELS_STATUS_ORCAMENTO[o.status].label),
+        celula: (o) => {
+          const st = LABELS_STATUS_ORCAMENTO[o.status];
+          return <span className={`badge ${st.badge}`}>{t(st.label)}</span>;
+        },
+      },
+    ];
+  }, [contratantes, cidades, artistas, t]);
+
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
       <PageHeader
@@ -245,114 +320,55 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
       {/* Tabela */}
       <div className="card p-0 overflow-hidden">
         {lista.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
-              <FileText size={18} className="text-muted" />
-            </div>
-            <div className="section-title mb-1">
-              {orcamentos.length === 0 ? t("Nenhum orçamento criado ainda") : t("Nenhum resultado")}
-            </div>
-            <div className="section-subtitle mb-4">
-              {orcamentos.length === 0
+          <EstadoVazio
+            icone={<FileText size={18} />}
+            titulo={orcamentos.length === 0 ? t("Nenhum orçamento criado ainda") : t("Nenhum resultado")}
+            texto={
+              orcamentos.length === 0
                 ? t("Crie seu primeiro orçamento e envie pelo WhatsApp")
-                : t("Ajuste os filtros ou a busca")}
-            </div>
-            {orcamentos.length === 0 && (
-              <button
-                onClick={onNovo}
-                disabled={!podeCriarOrcamento}
-                title={!podeCriarOrcamento ? t("Você não tem permissão para isso.") : undefined}
-                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: accent, color: "#fff" }}
-              >
-                <Plus size={14} />
-                {t("Novo orçamento")}
-              </button>
-            )}
-          </div>
+                : t("Ajuste os filtros ou a busca")
+            }
+            acao={
+              orcamentos.length === 0 ? (
+                <button
+                  onClick={onNovo}
+                  disabled={!podeCriarOrcamento}
+                  title={!podeCriarOrcamento ? t("Você não tem permissão para isso.") : undefined}
+                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus size={14} />
+                  {t("Novo orçamento")}
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-2/40">
-                  <Th>{t("Nº")}</Th>
-                  <Th>{t("Contratante")}</Th>
-                  <Th>{t("Tipo")}</Th>
-                  <Th>{t("Artista")}</Th>
-                  <Th>{t("Cidade")}</Th>
-                  <Th>{t("Data show")}</Th>
-                  <Th className="text-right">{t("Valor")}</Th>
-                  <Th>{t("Status")}</Th>
-                  <Th className="w-[1%]"></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.map((o) => {
-                  const cont = contratantes.find((c) => c.id === o.contratanteId);
-                  const cid = cidades.find((c) => c.id === o.cidadeId);
-                  const artista = artistas.find((d) => d.id === o.artistaId);
-                  const st = LABELS_STATUS_ORCAMENTO[o.status];
-                  return (
-                    <tr
-                      key={o.id}
-                      className="border-b border-border last:border-0 hover:bg-elevated/40 transition-colors cursor-pointer"
-                      onClick={() => onAbrir(o.id)}
-                    >
-                      <Td className="font-mono text-xs text-secondary">{o.numero}</Td>
-                      <Td className="font-medium text-primary">{cont?.nome ?? "—"}</Td>
-                      <Td>
-                        <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[o.tipoEvento])}</span>
-                      </Td>
-                      <Td className="text-secondary">{artista?.name ?? "—"}</Td>
-                      <Td className="text-secondary">
-                        {cid ? `${cid.nome}/${cid.estado}` : "—"}
-                      </Td>
-                      <Td className="text-secondary tabular-nums">
-                        {o.dataShow
-                          ? new Date(o.dataShow + "T12:00:00").toLocaleDateString("pt-BR")
-                          : <span className="text-muted italic">{t("a definir")}</span>}
-                      </Td>
-                      <Td className="text-right tabular-nums font-semibold">
-                        {formatarMoeda(o.valorCache, o.moeda)}
-                      </Td>
-                      <Td>
-                        <span className={`badge ${st.badge}`}>{t(st.label)}</span>
-                      </Td>
-                      <Td>
-                        <RowActions
-                          onView={() => onAbrir(o.id)}
-                          onWA={() => handleEnviarWA(o.id)}
-                          onAccept={() => handleAceitar(o.id)}
-                          onReject={() => marcarStatus(o.id, "recusado")}
-                          onNegotiate={() => marcarStatus(o.id, "negociacao")}
-                          onDuplicate={async () => {
-                            const novo = await duplicarOrcamento(o.id);
-                            if (novo) onAbrir(novo.id);
-                          }}
-                          onDelete={() => handleRemover(o.id)}
-                          onTransformar={() => onTransformarEmVenda(o.id)}
-                          status={o.status}
-                          podeEditar={podeEditarOrcamentoUI(
-                            podeUI,
-                            o.artistaId || null,
-                            o.criadoPor,
-                            userId
-                          )}
-                          podeConverter={podeConverterOrcamentoUI(
-                            podeUI,
-                            o.artistaId || null,
-                            o.criadoPor,
-                            userId
-                          )}
-                          podeExcluir={podeUI(o.artistaId || null, "vendas.excluir_orcamento")}
-                        />
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TabelaDados
+            itens={lista}
+            colunas={colunas}
+            chaveDe={(o) => o.id}
+            onAbrir={(o) => onAbrir(o.id)}
+            rotuloItens="orçamentos"
+            acoes={(o) => (
+              <RowActions
+                onView={() => onAbrir(o.id)}
+                onWA={() => handleEnviarWA(o.id)}
+                onAccept={() => handleAceitar(o.id)}
+                onReject={() => marcarStatus(o.id, "recusado")}
+                onNegotiate={() => marcarStatus(o.id, "negociacao")}
+                onDuplicate={async () => {
+                  const novo = await duplicarOrcamento(o.id);
+                  if (novo) onAbrir(novo.id);
+                }}
+                onDelete={() => handleRemover(o.id)}
+                onTransformar={() => onTransformarEmVenda(o.id)}
+                status={o.status}
+                podeEditar={podeEditarOrcamentoUI(podeUI, o.artistaId || null, o.criadoPor, userId)}
+                podeConverter={podeConverterOrcamentoUI(podeUI, o.artistaId || null, o.criadoPor, userId)}
+                podeExcluir={podeUI(o.artistaId || null, "vendas.excluir_orcamento")}
+              />
+            )}
+          />
         )}
       </div>
 
@@ -364,17 +380,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
 
 // ---------- Auxiliares ----------
 
-function Th({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return (
-    <th className={`text-left px-4 py-3 stat-label font-semibold whitespace-nowrap ${className}`}>
-      {children}
-    </th>
-  );
-}
 
-function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-middle ${className}`}>{children}</td>;
-}
 
 function StatusCard({
   label,
