@@ -18,6 +18,7 @@ import {
   Hash,
   StickyNote,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Modal from "./Modal";
@@ -35,6 +36,8 @@ import { useArtistas } from "@/lib/workspace-context";
 import { formatarMoeda } from "@/lib/formatters";
 import { LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 import { useT } from "@/lib/i18n";
+import { diasDeAtraso } from "@/lib/financeiro/cobranca";
+import { PreviaCobranca, useCobranca, type AlvoCobranca } from "./financeiro/Cobranca";
 
 function fmtData(iso?: string): string {
   if (!iso) return "";
@@ -65,7 +68,8 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
   const artistas = useArtistas();
   const { avisar, avisador } = useAviso();
 
-  const [modo, setModo] = useState<"info" | "pagar" | "cancelar">("info");
+  const [modo, setModo] = useState<"info" | "pagar" | "cancelar" | "cobrar">("info");
+  const cobranca = useCobranca();
   const [nota, setNota] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [motivo, setMotivo] = useState("");
@@ -88,6 +92,12 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
   const st = LABELS_STATUS_PARCELA[status];
   const meta = parcela.meta;
   const cobrancas = meta?.cobrancas ?? [];
+  const emAberto = status === "pendente" || status === "atrasado";
+  const dias = diasDeAtraso(parcela.dataVencimento, new Date());
+  const alvo: AlvoCobranca = { venda, parcela, indice: idx + 1, total: venda.parcelas.length, artista };
+  // A chave PIX chega redigida pra quem não é admin — o aviso de "sem chave"
+  // só faz sentido pra quem enxerga o cadastro.
+  const ehAdmin = sessao?.usuario.papel === "admin";
   // Autoria via VENDA-mãe: informar pagamento e cancelar/editar pagamento seguem
   // o criado_por da venda (parcela não tem autor próprio) — espelha
   // verificarMutacaoParcela ("informar"/"editar") no servidor.
@@ -166,9 +176,23 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
       <div className="flex flex-col gap-5">
         {/* ===== RESUMO ===== */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold text-primary tabular-nums">{formatarMoeda(parcela.valor, venda.moeda)}</span>
-            <span className="text-sm text-muted">({parcela.percentual.toFixed(0)}%)</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl font-bold text-primary tabular-nums">{formatarMoeda(parcela.valor, venda.moeda)}</span>
+              <span className="text-sm text-muted">({parcela.percentual.toFixed(0)}%)</span>
+            </div>
+            {emAberto && (
+              <span
+                className={`text-sm ${dias > 0 ? "font-semibold" : "text-muted"}`}
+                style={dias > 0 ? { color: "var(--danger-ink)" } : undefined}
+              >
+                {dias > 0
+                  ? t("Venceu em {data} · há {n} dias", { data: fmtData(parcela.dataVencimento + "T12:00:00"), n: dias })
+                  : dias === 0
+                  ? t("Vence hoje")
+                  : t("Vence em {data} · em {n} dias", { data: fmtData(parcela.dataVencimento + "T12:00:00"), n: -dias })}
+              </span>
+            )}
           </div>
           <span className={`badge ${st.badge}`}>
             {status === "pago" && <CheckCircle2 size={11} />}
@@ -248,14 +272,26 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
         )}
 
         {/* ===== COBRANÇAS (log) ===== */}
-        {cobrancas.length > 0 && (
-          <Bloco icon={<BellRing size={14} />} title={t("Cobranças enviadas ({n})", { n: cobrancas.length })}>
-            {cobrancas.map((c, i) => (
-              <Linha key={i} icon={<BellRing size={13} />} subtle>
-                {fmtDataHora(c.em)}
-                {c.porNome ? ` · ${c.porNome}` : ""}
-              </Linha>
-            ))}
+        {(cobrancas.length > 0 || status === "atrasado") && (
+          <Bloco icon={<BellRing size={14} />} title={t("Cobranças ({n})", { n: cobrancas.length })}>
+            {cobrancas.length === 0 ? (
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-semibold" style={{ color: "var(--warning)" }}>
+                  {t("Ainda não foi cobrada")}
+                </span>
+                <span className="text-xs text-muted">
+                  {t("Cada cobrança feita pelo botão fica registrada aqui, com data, quem cobrou e por onde.")}
+                </span>
+              </div>
+            ) : (
+              cobrancas.map((c, i) => (
+                <Linha key={i} icon={c.canal === "whatsapp" ? <MessageCircle size={13} /> : <BellRing size={13} />} subtle>
+                  {fmtDataHora(c.em)}
+                  {c.porNome ? ` · ${c.porNome}` : ""}
+                  {c.canal === "whatsapp" ? ` · ${t("WhatsApp")}` : c.canal === "outro" ? ` · ${t("outro canal")}` : ""}
+                </Linha>
+              ))
+            )}
           </Bloco>
         )}
 
@@ -283,33 +319,58 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                     <RotateCcw size={14} /> {t("Reativar cachê")}
                   </button>
                 ) : (
-                  <>
+                  // Em aberto: COBRAR é a ação principal (o mais comum aqui);
+                  // pagamento e cobrança por outro canal logo abaixo, e o
+                  // cancelar separado no fim.
+                  <div className="flex w-full flex-col gap-2">
                     <button
-                      onClick={() => setModo("pagar")}
+                      onClick={() => setModo("cobrar")}
                       disabled={!podeRegistrar}
-                      className="btn text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="btn h-11 w-full justify-center text-sm font-bold inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
                       style={{ backgroundColor: "var(--success-solid)", color: "#fff" }}
                     >
-                      <CheckCircle2 size={14} /> {t("Informar pagamento")}
+                      <MessageCircle size={16} />
+                      {status === "atrasado" ? t("Cobrar no WhatsApp") : t("Lembrar no WhatsApp")}
                     </button>
-                    <button
-                      onClick={() => rodar(() => acaoParcela(venda.id, parcela.id, { registrar_cobranca: true }))}
-                      disabled={!podeRegistrar || salvando}
-                      className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
-                    >
-                      <BellRing size={14} /> {t("Marcar cobrança enviada")}
-                    </button>
-                    <button
-                      onClick={() => setModo("cancelar")}
-                      disabled={!podeCancelar}
-                      className="btn btn-danger-outline text-sm"
-                      title={!podeCancelar ? t("Você não tem permissão para isso.") : undefined}
-                    >
-                      <Ban size={14} /> {t("Cancelar cachê")}
-                    </button>
-                  </>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <button
+                        onClick={() => setModo("pagar")}
+                        disabled={!podeRegistrar}
+                        className="btn btn-secondary justify-center text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
+                      >
+                        <CheckCircle2 size={14} /> {t("Informar pagamento")}
+                      </button>
+                      <button
+                        onClick={() => rodar(() => cobranca.registrarOutroCanal(alvo))}
+                        disabled={!podeRegistrar || salvando}
+                        className="btn btn-secondary justify-center text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
+                      >
+                        <BellRing size={14} /> {t("Cobrei por outro canal")}
+                      </button>
+                    </div>
+                    {artista?.pix ? (
+                      <span className="text-xs text-muted">
+                        {t("A mensagem leva a chave PIX do {artista} (a mesma do contrato).", { artista: artista.name })}
+                      </span>
+                    ) : ehAdmin && artista ? (
+                      <span className="text-xs" style={{ color: "var(--warning)" }}>
+                        {t("{artista} sem chave PIX cadastrada: a mensagem vai sem PIX.", { artista: artista.name })}
+                      </span>
+                    ) : null}
+                    <div className="flex justify-end pt-1">
+                      <button
+                        onClick={() => setModo("cancelar")}
+                        disabled={!podeCancelar}
+                        className="btn btn-danger-outline text-sm"
+                        title={!podeCancelar ? t("Você não tem permissão para isso.") : undefined}
+                      >
+                        <Ban size={14} /> {t("Cancelar cachê")}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -355,6 +416,18 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
               </div>
             )}
 
+            {modo === "cobrar" && (
+              <PreviaCobranca
+                alvo={alvo}
+                podeRegistrar={podeRegistrar}
+                onCancelar={() => setModo("info")}
+                onEnviar={(texto) => {
+                  cobranca.enviarWhatsApp(alvo, texto);
+                  setModo("info");
+                }}
+              />
+            )}
+
             {modo === "cancelar" && (
               <div className="flex flex-col gap-3">
                 <div className="text-xs text-secondary">
@@ -394,6 +467,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
       </div>
     </Modal>
     {avisador}
+    {cobranca.aviso}
     </>
   );
 }

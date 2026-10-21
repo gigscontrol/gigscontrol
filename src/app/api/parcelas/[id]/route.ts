@@ -69,6 +69,7 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
   if (parsed.data.status_base === "pendente") requeridas.add("informar"); // desfazer pagamento
   if (parsed.data.cancelar !== undefined) requeridas.add("cancelar"); // cancelar/reativar cachê (→ editar)
   if (parsed.data.registrar_cobranca === true) requeridas.add("informar");
+  if (parsed.data.desfazer_cobranca !== undefined) requeridas.add("informar");
   if (parsed.data.fixar !== undefined) requeridas.add("fixar");
   if (editaEstrutura) requeridas.add("editar");
   if (
@@ -139,8 +140,34 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
       ultima.por === r.sessao.userId &&
       new Date(agora).getTime() - new Date(ultima.em).getTime() < 60_000;
     if (!duplicada) {
-      cobrancaNova = { em: agora, por: r.sessao.userId, porNome: r.sessao.userNome ?? undefined };
+      cobrancaNova = {
+        em: agora,
+        por: r.sessao.userId,
+        porNome: r.sessao.userNome ?? undefined,
+        ...(parsed.data.cobranca_canal ? { canal: parsed.data.cobranca_canal } : {}),
+      };
     }
+  }
+
+  // "Desfazer" do aviso: tira do log a cobrança recém-registrada — só a da
+  // PRÓPRIA pessoa e só nos primeiros minutos (o botão abre o WhatsApp e já
+  // registra; se ela não chegou a enviar, desfaz). Fora disso o log é a
+  // história da cobrança e não se apaga.
+  if (parsed.data.desfazer_cobranca !== undefined) {
+    const lista = metaAtual.cobrancas ?? [];
+    const alvo = lista.findIndex(
+      (c) => c.em === parsed.data.desfazer_cobranca && c.por === r.sessao.userId
+    );
+    if (alvo === -1) {
+      return NextResponse.json({ erro: "Essa cobrança não está mais no registro." }, { status: 409 });
+    }
+    if (new Date(agora).getTime() - new Date(lista[alvo].em).getTime() > 15 * 60_000) {
+      return NextResponse.json(
+        { erro: "Só dá pra desfazer logo depois de registrar." },
+        { status: 409 }
+      );
+    }
+    metaPatch.cobrancas = lista.filter((_, i) => i !== alvo);
   }
 
   if (parsed.data.fixar !== undefined) {
@@ -205,7 +232,17 @@ export async function PATCH(request: Request, { params }: RouteCtx) {
         tipo: "cobranca",
         entidadeId: parcela.id,
         entidadeNome: nome,
-        descricao: `Registrou uma cobrança da parcela (${parcela.percentual}%)`,
+        descricao: `Registrou uma cobrança da parcela (${parcela.percentual}%)${
+          parsed.data.cobranca_canal === "whatsapp" ? " pelo WhatsApp" : ""
+        }`,
+      });
+    } else if (parsed.data.desfazer_cobranca !== undefined) {
+      await auditAndNotify(r.sessao, {
+        modulo: "parcela",
+        tipo: "cobranca",
+        entidadeId: parcela.id,
+        entidadeNome: nome,
+        descricao: `Desfez o registro de uma cobrança da parcela (${parcela.percentual}%)`,
       });
     }
     // Desfazer pagamento limpa a meta; apaga o comprovante órfão do bucket

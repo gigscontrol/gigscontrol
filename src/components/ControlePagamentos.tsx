@@ -9,11 +9,11 @@ import {
   AlertTriangle,
   Wallet,
   CalendarClock,
-  DollarSign,
   Ban,
   BellRing,
   Paperclip,
   Pin,
+  MessageCircle,
 } from "lucide-react";
 import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
@@ -33,9 +33,15 @@ import {
   type Parcela,
   type AgendaDateRange,
   type Moeda,
+  type Venda,
+  type Artista,
 } from "@/types";
 import { useT } from "@/lib/i18n";
 import { urls } from "@/lib/navegacao/rotas";
+import { useAuth } from "@/lib/auth-context";
+import { podeInformarPagamentoUI } from "@/lib/permissoes/gatesEquipeUI";
+import { diasDeAtraso, ordinal } from "@/lib/financeiro/cobranca";
+import { CobrarParcelaModal, useCobranca, type AlvoCobranca } from "./financeiro/Cobranca";
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -62,6 +68,9 @@ type LinhaParcela = {
   status: StatusParcela;
   /** Moeda da venda dona — a parcela herda (não tem moeda própria). */
   moeda: Moeda;
+  /** Venda e artista inteiros — o texto de cobrança precisa deles. */
+  venda: Venda;
+  artista?: Artista;
 };
 
 function fmtData(iso?: string): string {
@@ -91,7 +100,23 @@ export default function ControlePagamentos({
   const { workspaceCriadoEm } = useWorkspace();
 
   const [search, setSearch] = useState(buscaInicial ?? "");
-  const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos">("todos");
+  // Abre no que falta receber (atrasadas + pendentes). A lista já vem por
+  // vencimento crescente, então as atrasadas mais antigas ficam no topo.
+  const [filtroStatus, setFiltroStatus] = useState<StatusParcela | "todos" | "a-receber">("a-receber");
+  const { podeUI, sessao } = useAuth();
+  const userId = sessao?.usuario.id;
+  const hoje = useMemo(() => new Date(), []);
+  const cobranca = useCobranca();
+  const [cobrando, setCobrando] = useState<AlvoCobranca | null>(null);
+  const alvoDe = (l: LinhaParcela): AlvoCobranca => ({
+    venda: l.venda,
+    parcela: l.parcela,
+    indice: l.indiceParcela,
+    total: l.totalParcelas,
+    artista: l.artista,
+  });
+  const podeCobrar = (l: LinhaParcela) =>
+    podeInformarPagamentoUI(podeUI, l.venda.artistaId || null, l.venda.criadoPor, userId);
   // A parcela abre no modal GLOBAL com endereço (?parcela=<id>, ver layout):
   // F5 mantém aberta e o link pode ser mandado pra alguém.
   const { abrirSobreposicao } = useNavegacao();
@@ -127,6 +152,8 @@ export default function ControlePagamentos({
           nomeEvento: v.nomeEvento,
           status: statusEfetivoParcela(parcela),
           moeda: v.moeda,
+          venda: v,
+          artista,
         });
       });
     }
@@ -166,7 +193,9 @@ export default function ControlePagamentos({
 
   const lista = useMemo(() => {
     return parcelasPeriodo.filter((l) => {
-      if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
+      if (filtroStatus === "a-receber") {
+        if (l.status !== "pendente" && l.status !== "atrasado") return false;
+      } else if (filtroStatus !== "todos" && l.status !== filtroStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const hay = [l.vendaNumero, l.contratante, l.nomeEvento, l.artistaNome]
@@ -183,6 +212,23 @@ export default function ControlePagamentos({
     parcelasPeriodo.forEach((l) => c[l.status]++);
     return c;
   }, [parcelasPeriodo]);
+
+  // Números de cobrança dos cards — de todos os meses (o que está vencido
+  // continua vencido, olhe o mês que for).
+  const resumoCobranca = useMemo(() => {
+    const atrasadas = todasParcelas.filter((l) => l.status === "atrasado");
+    const aVencer7 = todasParcelas.filter((l) => {
+      if (l.status !== "pendente") return false;
+      const d = diasDeAtraso(l.parcela.dataVencimento, hoje);
+      return d <= 0 && d >= -7;
+    });
+    return {
+      atrasadas: atrasadas.length,
+      nuncaCobradas: atrasadas.filter((l) => (l.parcela.meta?.cobrancas?.length ?? 0) === 0).length,
+      aVencer7: aVencer7.length,
+      aVencer7Valor: totaisPorMoeda(aVencer7.map((l) => ({ valor: l.parcela.valor, moeda: l.moeda }))),
+    };
+  }, [todasParcelas, hoje]);
 
   // Fixadas (📌) — fila de cobranças a fazer. Independe do período (all-time),
   // só as em aberto (não pagas/canceladas).
@@ -292,13 +338,72 @@ export default function ControlePagamentos({
         celula: (l) => formatarMoeda(l.parcela.valor, l.moeda),
       },
       {
+        chave: "atraso",
+        titulo: "Atraso",
+        decrescentePrimeiro: true,
+        ordenarPor: (l) =>
+          l.status === "pago" || l.status === "cancelado"
+            ? -99999
+            : diasDeAtraso(l.parcela.dataVencimento, hoje),
+        celula: (l) => {
+          if (l.status === "pago" || l.status === "cancelado") return <span className="text-muted">—</span>;
+          const d = diasDeAtraso(l.parcela.dataVencimento, hoje);
+          if (d > 0) {
+            return (
+              <span className="font-semibold whitespace-nowrap" style={{ color: "var(--danger-ink)" }}>
+                {d === 1 ? t("1 dia") : t("{n} dias", { n: d })}
+              </span>
+            );
+          }
+          return (
+            <span className="text-muted whitespace-nowrap">
+              {d === 0 ? t("vence hoje") : t("vence em {n} dias", { n: -d })}
+            </span>
+          );
+        },
+      },
+      {
+        chave: "ultimaCobranca",
+        titulo: "Última cobrança",
+        ordenarPor: (l) => {
+          const cs = l.parcela.meta?.cobrancas ?? [];
+          return cs.length ? cs[cs.length - 1].em : "";
+        },
+        celula: (l) => {
+          const cs = l.parcela.meta?.cobrancas ?? [];
+          if (cs.length === 0) {
+            return l.status === "atrasado" ? (
+              <span className="font-semibold whitespace-nowrap" style={{ color: "var(--warning)" }}>
+                {t("Nunca cobrada")}
+              </span>
+            ) : (
+              <span className="text-muted">—</span>
+            );
+          }
+          const u = cs[cs.length - 1];
+          const detalhe = [
+            u.porNome ? t("por {nome}", { nome: u.porNome }) : null,
+            u.canal === "whatsapp" ? t("no WhatsApp") : u.canal === "outro" ? t("por outro canal") : null,
+          ]
+            .filter(Boolean)
+            .join(", ");
+          return (
+            <div className="whitespace-nowrap">
+              <div className="font-semibold text-primary">
+                {fmtData(u.em)} · {t("{n} vez", { n: ordinal(cs.length) })}
+              </div>
+              {detalhe && <div className="text-xs text-muted">{detalhe}</div>}
+            </div>
+          );
+        },
+      },
+      {
         chave: "status",
         titulo: "Status",
         ordenarPor: (l) => t(LABELS_STATUS_PARCELA[l.status].label),
         celula: (l) => {
           const st = LABELS_STATUS_PARCELA[l.status];
           const meta = l.parcela.meta;
-          const nCobrancas = meta?.cobrancas?.length ?? 0;
           return (
             <span className="inline-flex items-center gap-2 whitespace-nowrap">
               <span className={`badge ${st.badge}`}>
@@ -308,15 +413,6 @@ export default function ControlePagamentos({
                 {l.status === "cancelado" && <Ban size={11} />}
                 {t(st.label)}
               </span>
-              {nCobrancas > 0 && l.status !== "pago" && l.status !== "cancelado" && (
-                <span
-                  className="text-[0.7rem] inline-flex items-center gap-1"
-                  style={{ color: "var(--warning)" }}
-                  title={t("cobrado {n}x", { n: nCobrancas })}
-                >
-                  <BellRing size={11} /> {nCobrancas}
-                </span>
-              )}
               {meta?.pagamento?.comprovantePath && (
                 <Paperclip size={13} className="text-muted" aria-label={t("Comprovante")} />
               )}
@@ -325,14 +421,30 @@ export default function ControlePagamentos({
         },
       },
     ],
-    [t, accent]
+    [t, accent, hoje]
   );
 
   // 📌 Fixar — cobrança prioritária (o clique não abre a parcela).
   const acoesParcela = (l: LinhaParcela) => {
     const fixada = !!l.parcela.meta?.fixada;
     const podeFixar = l.status !== "pago" && l.status !== "cancelado";
+    const cobravel = l.status === "pendente" || l.status === "atrasado";
+    const pode = podeCobrar(l);
     return (
+      <>
+      {cobravel && (
+        <button
+          type="button"
+          onClick={() => setCobrando(alvoDe(l))}
+          disabled={!pode}
+          title={!pode ? t("Você não tem permissão para isso.") : undefined}
+          className="btn inline-flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-xs max-md:h-10 disabled:cursor-not-allowed disabled:opacity-50"
+          style={{ backgroundColor: "var(--success-solid)", color: "#fff" }}
+        >
+          <MessageCircle size={14} />
+          {l.status === "atrasado" ? t("Cobrar") : t("Lembrar")}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => toggleFixar(l)}
@@ -349,11 +461,21 @@ export default function ControlePagamentos({
           }}
         />
       </button>
+      </>
     );
   };
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+      <CobrarParcelaModal
+        alvo={cobrando}
+        podeRegistrar={!!cobrando && podeInformarPagamentoUI(podeUI, cobrando.venda.artistaId || null, cobrando.venda.criadoPor, userId)}
+        onEnviar={(alvo, texto) => {
+          cobranca.enviarWhatsApp(alvo, texto);
+        }}
+        onFechar={() => setCobrando(null)}
+      />
+      {cobranca.aviso}
       <PageHeader
         title={ehCobrancas ? "Cobranças" : "Pagamentos"}
         subtitle={
@@ -389,35 +511,36 @@ export default function ControlePagamentos({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Cada card diz por qual DATA ele recorta — era a ausência disso que
-            fazia "Total em vendas" parecer o total vendido (e não era). */}
-        <StatCard
-          title={t("Recebido")}
-          value={totais.recebido}
-          icon={<CheckCircle2 size={18} />}
-          accentColor="var(--success)"
-          subtitle={t("Pelo dia do pagamento")}
-        />
-        <StatCard
-          title={t("A receber")}
-          value={totais.aReceber}
-          icon={<CalendarClock size={18} />}
-          accentColor="var(--warning)"
-          subtitle={t("Vence no período")}
-        />
+        {/* Cards de COBRANÇA: o que está vencido e quanto disso ninguém cobrou
+            ainda, o que dá pra lembrar antes de vencer, e o que entrou. Cada
+            um diz a sua régua de data. */}
         <StatCard
           title={t("Atrasado")}
           value={totais.atrasado}
           icon={<AlertTriangle size={18} />}
           accentColor="var(--danger)"
-          subtitle={t("Vencido, de todos os meses")}
+          subtitle={t("{n} parcelas · vencidas, de todos os meses", { n: resumoCobranca.atrasadas })}
         />
         <StatCard
-          title={t("Previsto (90 dias)")}
-          value={totais.previsto}
-          icon={<DollarSign size={18} />}
+          title={t("Nunca cobradas")}
+          value={resumoCobranca.nuncaCobradas}
+          icon={<BellRing size={18} />}
+          accentColor="var(--warning)"
+          subtitle={t("das {n} atrasadas", { n: resumoCobranca.atrasadas })}
+        />
+        <StatCard
+          title={t("A vencer em 7 dias")}
+          value={resumoCobranca.aVencer7Valor}
+          icon={<CalendarClock size={18} />}
           accentColor={accent}
-          subtitle={t("Vence a partir de hoje")}
+          subtitle={t("{n} parcelas · dá pra lembrar antes", { n: resumoCobranca.aVencer7 })}
+        />
+        <StatCard
+          title={t("Recebido")}
+          value={totais.recebido}
+          icon={<CheckCircle2 size={18} />}
+          accentColor="var(--success)"
+          subtitle={`${t("Pelo dia do pagamento")} · ${tituloPeriodo}`}
         />
       </div>
 
@@ -442,14 +565,15 @@ export default function ControlePagamentos({
         <div className="pill-group h-[42px] flex-wrap">
           {(
             [
-              { v: "todos", rotulo: "Todas", n: parcelasPeriodo.length },
-              { v: "pendente", rotulo: "Pendentes", n: contadores.pendente },
+              { v: "a-receber", rotulo: "A receber", n: contadores.pendente + contadores.atrasado },
               { v: "atrasado", rotulo: "Atrasadas", n: contadores.atrasado },
+              { v: "pendente", rotulo: "Pendentes", n: contadores.pendente },
               { v: "pago", rotulo: "Pagas", n: contadores.pago },
               ...(contadores.cancelado > 0
                 ? [{ v: "cancelado", rotulo: "Canceladas", n: contadores.cancelado }]
                 : []),
-            ] as { v: StatusParcela | "todos"; rotulo: string; n: number }[]
+              { v: "todos", rotulo: "Todas", n: parcelasPeriodo.length },
+            ] as { v: StatusParcela | "todos" | "a-receber"; rotulo: string; n: number }[]
           ).map((f) => (
             <button
               key={f.v}
