@@ -267,7 +267,7 @@ function PaginaPdf({
             <div
               key={c.id}
               data-campo="1"
-              className="absolute rounded-sm flex items-center justify-center text-[10px] font-medium cursor-move group"
+              className="absolute rounded-sm flex items-center justify-center text-[0.6875rem] font-medium cursor-move group"
               style={{
                 left: `${c.xRel * 100}%`,
                 top: `${c.yRel * 100}%`,

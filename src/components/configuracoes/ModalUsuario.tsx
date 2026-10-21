@@ -552,7 +552,7 @@ export function ModalUsuario({
             {/* Tag visual do tipo de cadastro */}
             <div className="flex items-center gap-2">
               <span
-                className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+                className="text-[0.6875rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
                 style={{ backgroundColor: "var(--brand)" }}
               >
                 {t("Equipe")}
@@ -1079,7 +1079,7 @@ export function ModalUsuario({
                               return (
                                 <span
                                   key={pid}
-                                  className="text-[0.65rem] font-semibold px-1.5 py-0.5 rounded"
+                                  className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
                                     color: perfil?.cor ?? "#3D7BFF",
@@ -1090,11 +1090,11 @@ export function ModalUsuario({
                               );
                             })
                           ) : (
-                            <span className="text-[0.65rem] text-muted">
+                            <span className="text-[0.6875rem] text-muted">
                               {t("Personalizado")}
                             </span>
                           )}
-                          <span className="text-[0.65rem] text-muted">
+                          <span className="text-[0.6875rem] text-muted">
                             {t("{n} permissões", { n: v.permissoes.length })}
                           </span>
                         </div>

@@ -294,7 +294,7 @@ export default function MapaDobras({
             onChange={(e) => setRaioKm(Number(e.target.value))}
             className="w-full"
           />
-          <div className="flex justify-between font-mono text-[0.6rem] text-muted mt-0.5">
+          <div className="flex justify-between font-mono text-[0.6875rem] text-muted mt-0.5">
             <span>50</span>
             <span>1000</span>
           </div>
@@ -523,7 +523,7 @@ function BoxNoRaio({
       >
         <span className="flex items-center gap-2 min-w-0">
           <span className="flex-shrink-0">{swatch}</span>
-          <span className="font-mono text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-muted truncate">
+          <span className="font-mono text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-muted truncate">
             {titulo}
           </span>
         </span>
@@ -550,7 +550,7 @@ function BoxNoRaio({
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-primary truncate">{p.nome}</div>
                   {p.sub && (
-                    <div className="font-mono text-[0.6rem] uppercase tracking-[0.08em] text-muted truncate">
+                    <div className="font-mono text-[0.6875rem] uppercase tracking-[0.08em] text-muted truncate">
                       {p.sub}
                     </div>
                   )}

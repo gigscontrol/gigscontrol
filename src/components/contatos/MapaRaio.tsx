@@ -465,7 +465,7 @@ export default function MapaRaio({
       <div className="pointer-events-none absolute inset-0 z-[1000]">
         {/* Raio atual — mono CAIXA ALTA (tela 10) */}
         <div
-          className="pointer-events-auto absolute left-3 top-3 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-primary"
+          className="pointer-events-auto absolute left-3 top-3 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-primary"
           style={{
             backgroundColor: "color-mix(in srgb, var(--bg-main) 80%, transparent)",
             backdropFilter: "blur(8px)",
@@ -512,7 +512,7 @@ export default function MapaRaio({
 
         {/* Legenda */}
         <div
-          className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-3 rounded-lg border px-2.5 py-1.5 text-[0.65rem] text-secondary"
+          className="pointer-events-auto absolute bottom-3 left-3 flex items-center gap-3 rounded-lg border px-2.5 py-1.5 text-[0.6875rem] text-secondary"
           style={{
             backgroundColor: "color-mix(in srgb, var(--bg-main) 80%, transparent)",
             backdropFilter: "blur(8px)",

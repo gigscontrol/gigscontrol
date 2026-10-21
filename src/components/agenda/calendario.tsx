@@ -134,12 +134,12 @@ export function CartaoShow({
         {show.time ? (
           <span className="text-[0.7rem] font-semibold text-primary tabular-nums flex-shrink-0">{show.time}</span>
         ) : (
-          <span className="text-[0.65rem] font-medium text-warning flex-shrink-0">{t("A definir")}</span>
+          <span className="text-[0.6875rem] font-medium text-warning flex-shrink-0">{t("A definir")}</span>
         )}
       </div>
       {segunda && <div className="text-[0.7rem] text-secondary truncate mt-0.5">{segunda}</div>}
       <div className="flex items-center gap-1 min-w-0 mt-0.5">
-        <span className="text-[0.65rem] text-muted truncate flex-1">{show.location}</span>
+        <span className="text-[0.6875rem] text-muted truncate flex-1">{show.location}</span>
         {show.vendaId && (
           <span
             className={`badge ${rotContrato.badgeClass} flex-shrink-0 px-1 py-0`}

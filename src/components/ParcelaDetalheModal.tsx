@@ -289,7 +289,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                       disabled={!podeRegistrar}
                       className="btn text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
-                      style={{ backgroundColor: "var(--success)", color: "#fff" }}
+                      style={{ backgroundColor: "var(--success-solid)", color: "#fff" }}
                     >
                       <CheckCircle2 size={14} /> {t("Informar pagamento")}
                     </button>
@@ -347,7 +347,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                     onClick={confirmarPagamento}
                     disabled={salvando}
                     className="btn text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
-                    style={{ backgroundColor: "var(--success)", color: "#fff" }}
+                    style={{ backgroundColor: "var(--success-solid)", color: "#fff" }}
                   >
                     <CheckCircle2 size={14} /> {salvando ? t("Salvando…") : t("Confirmar pagamento")}
                   </button>

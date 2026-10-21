@@ -57,7 +57,7 @@ export function SegmentedChoice<T extends string>({
               }
             >
               <span className="block">{o.label}</span>
-              {o.sub && <span className="block text-[0.65rem] text-muted mt-0.5">{o.sub}</span>}
+              {o.sub && <span className="block text-[0.6875rem] text-muted mt-0.5">{o.sub}</span>}
             </button>
           );
         })}

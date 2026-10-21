@@ -122,7 +122,7 @@ export default function NotasDoShow({ showId }: { showId: string }) {
           {t("Adicionar nota")}
         </button>
       )}
-      <div className="text-[0.65rem] text-muted text-right tabular-nums">
+      <div className="text-[0.6875rem] text-muted text-right tabular-nums">
         {doShow.length}/{MAX_POR_SHOW}
       </div>
     </div>
@@ -201,7 +201,7 @@ function NotaShowEditor({
           {nota?.titulo && <div className="text-sm font-semibold text-primary">{nota.titulo}</div>}
           <div className="text-secondary text-sm">{renderMarkdownSeguro(nota?.conteudo ?? "")}</div>
           {nota && (
-            <div className="text-[0.65rem] text-muted tabular-nums">{fmtQuando(nota.criadoEm)}</div>
+            <div className="text-[0.6875rem] text-muted tabular-nums">{fmtQuando(nota.criadoEm)}</div>
           )}
         </div>
       ) : (

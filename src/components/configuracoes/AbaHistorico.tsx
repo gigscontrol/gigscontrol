@@ -104,7 +104,7 @@ export default function AbaHistorico() {
       {/* Filtros */}
       <div className="card flex flex-col gap-3">
         <div>
-          <div className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
+          <div className="text-[0.6875rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
             {t("Período")}
           </div>
           <div className="pill-group flex-wrap">
@@ -121,7 +121,7 @@ export default function AbaHistorico() {
         </div>
 
         <div>
-          <div className="text-[0.65rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
+          <div className="text-[0.6875rem] uppercase tracking-wider font-semibold text-muted mb-1.5">
             {t("Módulo")}
           </div>
           <div className="flex flex-wrap gap-1.5">

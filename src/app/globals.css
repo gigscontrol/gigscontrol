@@ -26,12 +26,12 @@
     /* Text */
     --text-primary: #F1F3F7;
     --text-secondary: #9AA2B4;
-    --text-muted: #6E7794;
+    --text-muted: #848DA8; /* ≥4,5:1 em todos os fundos (era #6E7794: 3,5–4,4) */
     --text-disabled: #5E6470;
     /* Aliases canônicos */
     --text: #F1F3F7;
     --text-2: #9AA2B4;
-    --text-3: #6E7794;
+    --text-3: #848DA8;
     --text-4: #5E6470;
 
     /* Marca — Signal Blue (cor de ação ÚNICA) */
@@ -54,6 +54,9 @@
     --accent-color: #F1F3F7;
     --success: #1F9E5A;
     --success-ink: #3CE08C;
+    /* Preenchimento de BOTÃO com texto branco (4,8:1). O --success (#1F9E5A)
+       segue pra ícones e barras; com branco em cima dava 3,4:1. */
+    --success-solid: #16834A;
     --success-weak: rgba(31, 158, 90, 0.14);
     --warning: #F5A623;
     --warning-weak: rgba(245, 166, 35, 0.14);
@@ -149,11 +152,11 @@
     /* Text */
     --text-primary: #111726;
     --text-secondary: #4B5468;
-    --text-muted: #667085;
+    --text-muted: #606A80;
     --text-disabled: #98A1B3;
     --text: #111726;
     --text-2: #4B5468;
-    --text-3: #667085;
+    --text-3: #606A80;
     --text-4: #98A1B3;
 
     /* Marca — --brand idêntico; variantes ESCURECEM no claro */
@@ -299,10 +302,10 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 8px;
+    padding: 4px 7px;
     border-radius: var(--radius-sm);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.5625rem;
+    font-size: 0.6875rem; /* 11px — piso de leitura (era 9px) */
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -382,7 +385,7 @@
   }
   .stat-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.6875rem; /* 11px (era 10,4px) */
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.12em;

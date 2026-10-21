@@ -70,7 +70,7 @@ export function AgendaItemCard({
           {item.titulo || t(meta.label)}
         </span>
       </div>
-      {sub && <div className="text-[0.65rem] text-muted mt-0.5 truncate">{sub}</div>}
+      {sub && <div className="text-[0.6875rem] text-muted mt-0.5 truncate">{sub}</div>}
     </button>
   );
 }

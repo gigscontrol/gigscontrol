@@ -127,7 +127,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
         <Bell size={18} />
         {badge && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[0.6rem] font-bold text-white"
+            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-white"
             style={{ backgroundColor: "var(--danger)" }}
           >
             {badge}
@@ -147,7 +147,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
               <span className="text-sm font-semibold text-primary">{t("Notificações")}</span>
               {naoLidas > 0 && (
                 <span
-                  className="text-[0.65rem] font-bold px-1.5 py-0.5 rounded text-white"
+                  className="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded text-white"
                   style={{ backgroundColor: "var(--danger)" }}
                 >
                   {t("{n} nova{s}", { n: naoLidas, s: naoLidas === 1 ? "" : "s" })}
@@ -157,7 +157,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
             {naoLidas > 0 && (
               <button
                 onClick={aoMarcarTodas}
-                className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
+                className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
                 title={t("Marcar todas como lidas")}
               >
                 <CheckCheck size={12} />
@@ -262,7 +262,7 @@ export function LinhaNotificacao({
             <div className="text-xs text-secondary mt-0.5 break-words">
               {notificacao.mensagem}
             </div>
-            <div className="text-[0.65rem] text-muted mt-1">
+            <div className="text-[0.6875rem] text-muted mt-1">
               {formatarTempoRelativo(notificacao.criadoEm, t)}
             </div>
           </>

@@ -352,7 +352,7 @@ export default function AnotacoesPage() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-[0.65rem] text-muted tabular-nums flex-shrink-0">
+                      <span className="text-[0.6875rem] text-muted tabular-nums flex-shrink-0">
                         {fmtQuando(g.ultimaEm)}
                       </span>
                       <ChevronRight size={14} className="text-muted flex-shrink-0" />

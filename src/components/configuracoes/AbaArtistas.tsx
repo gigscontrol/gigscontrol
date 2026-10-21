@@ -997,7 +997,7 @@ export default function AbaArtistas() {
                       return (
                         <div key={m.userId} className="flex items-center gap-2">
                           <span
-                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6rem] font-bold text-white flex-shrink-0"
+                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-white flex-shrink-0"
                             style={{ background: "var(--border-strong)" }}
                           >
                             {iniciaisDoNome(m.nome)}
@@ -1009,7 +1009,7 @@ export default function AbaArtistas() {
                                 perfis.map((p) => (
                                   <span
                                     key={p.id}
-                                    className="text-[0.6rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
+                                    className="text-[0.6875rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
                                     style={{
                                       backgroundColor: `${p.cor}22`,
                                       color: p.cor,
@@ -1019,7 +1019,7 @@ export default function AbaArtistas() {
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[0.6rem] text-muted">
+                                <span className="text-[0.6875rem] text-muted">
                                   {t("Personalizado")}
                                 </span>
                               )}
