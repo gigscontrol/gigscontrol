@@ -24,6 +24,7 @@ import {
   type ResumoListaItem,
 } from "./DashboardResumo";
 import { useContatos } from "@/lib/contatos-context";
+import { useContatosFiltrados } from "@/lib/useContatosFiltrados";
 import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useWorkspace } from "@/lib/workspace-context";
@@ -80,7 +81,9 @@ type ResumoAberto = "contratantes" | "casas" | "cidades" | "bloqueados" | null;
 export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   const t = useT();
   const { navegar } = useNavegacao();
-  const { contratantes, casas, cidades, carregando: carregandoContatos, erro: erroContatos, recarregar: recarregarContatos } = useContatos();
+  const { carregando: carregandoContatos, erro: erroContatos, recarregar: recarregarContatos } = useContatos();
+  // Filtro "Artistas" da barra lateral (contato herda do histórico).
+  const { contratantes, casas, cidades } = useContatosFiltrados();
   const { shows } = useShows();
   const { vendas } = useVendas();
   const { workspaceCriadoEm } = useWorkspace();

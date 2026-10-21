@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Search, Loader2, ChevronRight } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { useContatos } from "@/lib/contatos-context";
+import { useContatosFiltrados } from "@/lib/useContatosFiltrados";
 import { useShows } from "@/lib/shows-context";
 import { useVendas } from "@/lib/vendas-context";
 import { distanciaKm, formatarKm } from "@/lib/geo";
@@ -63,7 +63,8 @@ export default function MapaDobras({
   contratantes?: Contratante[];
 } = {}) {
   const t = useT();
-  const ctx = useContatos();
+  // Filtro "Artistas" da barra lateral (contato herda do histórico).
+  const ctx = useContatosFiltrados();
   const cidades = cidadesProp ?? ctx.cidades;
   const casas = casasProp ?? ctx.casas;
   const contratantes = contratantesProp ?? ctx.contratantes;

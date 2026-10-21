@@ -2963,4 +2963,8 @@ export const ES: Record<string, string> = {
   "Parcelas não recalculadas: alguma tem histórico financeiro (paga, cancelada, cobrada ou fixada) e foi preservada. Se o cachê mudou, revise em Financeiro → Pagamentos.": "Cuotas no recalculadas: alguna tiene historial financiero (pagada, cancelada, cobrada o fijada) y se conservó. Si el caché cambió, revise en Finanzas → Pagos.",
   "Bloquear sinaliza que este contato é problemático. Ele continua visível para a equipe, com um selo de bloqueio.": "Bloquear indica que este contacto es problemático. Sigue visible para el equipo, con un sello de bloqueo.",
   "Ver a mensagem que será enviada": "Ver el mensaje que se enviará",
+  // --- Navegação nova (out/2026) ---
+  "Mostrando {n} de {m} artistas": "Mostrando {n} de {m} artistas",
+  "Mostrar todos": "Mostrar todos",
+  "Nenhum artista marcado no filtro": "Ningún artista marcado en el filtro",
 };

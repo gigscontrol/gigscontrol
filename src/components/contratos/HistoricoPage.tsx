@@ -32,6 +32,7 @@ import { useConfirmar, useAviso } from "../ConfirmarModal";
 import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange } from "@/types";
 import { STATUS_CONTRATO } from "@/lib/statusUI";
+import { useFiltroArtistas } from "../FiltroArtistas";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
@@ -167,13 +168,19 @@ export default function HistoricoPage({
     return nomePorModelo.get(contrato.modeloId) ?? "—";
   }
 
+  // Filtro "Artistas" da barra lateral (lib/filtroArtistas) — vale pra LISTA;
+  // o contrato aberto por endereço abre sempre (link de outro artista).
+  const filtroArt = useFiltroArtistas();
+
   // Ordena por criadoEm desc (mais recente primeiro).
   const ordenados = useMemo(
     () =>
       contratos
         .filter((c) => dataNoMes(c.criadoEm, periodo))
+        .filter((c) => filtroArt.passa(artistaDoContrato(c)))
         .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)),
-    [contratos, periodo]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [contratos, periodo, vendas, filtroArt.ativo, filtroArt.selecionados]
   );
 
   // Contagem por status (pros chips do filtro) e a lista já filtrada.
