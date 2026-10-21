@@ -299,7 +299,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                       className="btn btn-secondary text-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       title={!podeRegistrar ? t("Você não tem permissão para isso.") : undefined}
                     >
-                      <BellRing size={14} /> {t("Cobrança enviada")}
+                      <BellRing size={14} /> {t("Marcar cobrança enviada")}
                     </button>
                     <button
                       onClick={() => setModo("cancelar")}

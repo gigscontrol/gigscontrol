@@ -49,7 +49,7 @@ export function FichaHero({
               {artistaNome ?? "—"}
             </div>
             {linhaSuperior && (
-              <div className="text-xs text-secondary capitalize">{linhaSuperior}</div>
+              <div className="text-xs text-secondary">{linhaSuperior}</div>
             )}
           </div>
         </div>
@@ -110,7 +110,7 @@ export function FichaHeroPagina({
                 {artistaNome ?? "—"}
               </div>
               {linhaSuperior && (
-                <div className="text-xs text-secondary capitalize mt-0.5">{linhaSuperior}</div>
+                <div className="text-xs text-secondary mt-0.5">{linhaSuperior}</div>
               )}
               {titulo && (
                 <div className="mt-2 text-base font-semibold text-primary">{titulo}</div>

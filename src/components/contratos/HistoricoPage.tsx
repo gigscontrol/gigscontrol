@@ -110,6 +110,13 @@ export default function HistoricoPage({
     const v = vendas.find((venda) => venda.id === c.vendaId);
     return v?.artistaId || null;
   };
+  // Cabeçalho da ficha quando não há artista pra mostrar. "Avulso" só quando
+  // não há venda; com venda cujo artista saiu da conta, diz isso.
+  const rotuloSemArtista = (c: Contrato): string => {
+    if (!c.vendaId) return t("Contrato avulso");
+    const v = vendas.find((venda) => venda.id === c.vendaId);
+    return v?.artistaId ? t("Artista removido") : t("Contrato");
+  };
   // Excluir contrato é ADMIN-ONLY (D4): saiu do catálogo delegável e do pacote
   // do artista — checa o papel direto (não uma chave).
   const ehAdmin = isSuperAdmin || sessao?.usuario.papel === "admin";
@@ -389,6 +396,7 @@ export default function HistoricoPage({
         <DetalheContrato
           contrato={selecionado}
           descricao={descreverContrato(selecionado, vendas, artistas)}
+          rotuloSemArtista={rotuloSemArtista(selecionado)}
           artista={(() => {
             const id = artistaDoContrato(selecionado);
             return id ? artistas.find((a) => a.id === id) ?? null : null;
@@ -515,6 +523,7 @@ function FiltroStatus({
 function DetalheContrato({
   contrato,
   descricao,
+  rotuloSemArtista,
   artista,
   focarAssinatura,
   folhaRef,
@@ -532,6 +541,7 @@ function DetalheContrato({
 }: {
   contrato: Contrato;
   descricao: ReturnType<typeof descreverContrato>;
+  rotuloSemArtista: string;
   artista: { name: string; color?: string } | null;
   focarAssinatura: boolean;
   folhaRef: React.Ref<HTMLDivElement>;
@@ -623,7 +633,7 @@ function DetalheContrato({
           {t("Voltar")}
         </button>
         <FichaHeroPagina
-          artistaNome={artista?.name ?? t("Contrato avulso")}
+          artistaNome={artista?.name ?? rotuloSemArtista}
           artistaCor={artista?.color}
           linhaSuperior={
             <>

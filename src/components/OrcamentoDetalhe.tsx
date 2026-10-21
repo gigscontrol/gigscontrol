@@ -51,7 +51,7 @@ import { gerarTextoWhatsApp, montarLinkWhatsApp, formatarDuracao } from "@/lib/w
 import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
-import { mascararCpfCnpj } from "@/lib/formatters";
+import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -180,12 +180,14 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   if (!cont?.documento) camposFaltantes.push(t("CPF / CNPJ do contratante"));
 
   const dataLegivel = orc.dataShow
-    ? new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
+    ? primeiraMaiuscula(
+        new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      )
     : "";
   /** "●" âmbar da ficha: campo que falta pra conversão em venda. */
   const Falta = () => (
@@ -243,7 +245,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
             <span className={`badge ${st.badge}`}>{t(st.label)}</span>
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[orc.tipoEvento])}</span>
             {dataLegivel ? (
-              <span className="text-xs text-secondary capitalize">{dataLegivel}</span>
+              <span className="text-xs text-secondary">{dataLegivel}</span>
             ) : (
               <span className="text-xs text-warning">{t("Data não definida")}</span>
             )}
@@ -448,7 +450,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           <SecaoFicha>
             <Bloco icon={<Plane size={14} />} title={t("Logística")}>
               {linhasLog.length === 0 && (
-                <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa do cachê")}</Linha>
+                <Linha icon={<Plane size={13} />} subtle>{t("Já inclusa no cachê")}</Linha>
               )}
               {linhasLog.map((l, i) => (
                 <Linha
