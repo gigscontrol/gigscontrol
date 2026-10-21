@@ -336,15 +336,6 @@ export default function HistoricoPage({
         ordenarPor: (c) => nomeModelo(c),
         celula: (c) => nomeModelo(c),
       },
-      {
-        chave: "secoes",
-        titulo: "Seções",
-        alinhar: "direita",
-        classe: "tabular-nums text-secondary",
-        noCelular: false,
-        ordenarPor: (c) => c.conteudo.secoes.length,
-        celula: (c) => c.conteudo.secoes.length,
-      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [vendas, artistas, nomePorModelo, t]

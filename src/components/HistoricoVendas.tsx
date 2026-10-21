@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Eye, Trash2, CalendarCheck2, FileText, Ban, Pencil } from "lucide-react";
+import { Plus, Search, Eye, Trash2, CalendarCheck2, Ban, Pencil } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
 import MiniLixeira from "./MiniLixeira";
 import { useVendas } from "@/lib/vendas-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
+import { useContratos } from "@/lib/contratos-context";
+import { STATUS_CONTRATO } from "@/lib/statusUI";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
@@ -16,7 +18,7 @@ import { podeEditarVendaUI, podeCancelarVendaUI } from "@/lib/permissoes/gatesEq
 import { formatarMoeda, formatarDataBR, totaisPorMoeda } from "@/lib/formatters";
 import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
-import { MODULE_THEMES, type Venda } from "@/types";
+import { MODULE_THEMES, statusEfetivoParcela, type Venda } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
 
 type Props = {
@@ -31,6 +33,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, recarregar } = useVendas();
   const { orcamentos } = useOrcamentos();
+  const { contratos } = useContratos();
   const { cidades } = useContatos();
   const artistas = useArtistas();
   const { podeUI, sessao } = useAuth();
@@ -122,6 +125,21 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   }
 
   // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
+  // Contrato vivo da venda (o mais recente que não foi cancelado).
+  const contratoDe = (v: Venda) =>
+    contratos
+      .filter((c) => c.vendaId === v.id && c.status !== "cancelado")
+      .sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))[0];
+  // Resumo do pagamento pelas parcelas (as canceladas não contam).
+  const pagamentoDe = (v: Venda): { rotulo: string; badge?: string; ordem: number } => {
+    const ps = v.parcelas.map((p) => statusEfetivoParcela(p)).filter((st) => st !== "cancelado");
+    if (ps.length === 0) return { rotulo: "—", ordem: 0 };
+    if (ps.includes("atrasado")) return { rotulo: "Atrasado", badge: "badge-danger", ordem: 4 };
+    const pagas = ps.filter((st) => st === "pago").length;
+    if (pagas === ps.length) return { rotulo: "Pago", badge: "badge-success", ordem: 1 };
+    return { rotulo: t("{a} de {n} pagas", { a: pagas, n: ps.length }), ordem: pagas === 0 ? 3 : 2 };
+  };
+
   const colunas = useMemo<Coluna<Venda>[]>(() => {
     const cidadeDe = (v: Venda) => cidades.find((c) => c.id === v.cidadeId);
     const artistaDe = (v: Venda) => artistas.find((d) => d.id === v.artistaId);
@@ -197,23 +215,43 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
         ordenarPor: (v) => v.cache,
         celula: (v) => formatarMoeda(v.cache, v.moeda),
       },
+      // "Origem" (quase sempre "direta") saiu; no lugar, as duas perguntas
+      // que a lista de vendas precisa responder: tem contrato? já pagaram?
       {
-        chave: "origem",
-        titulo: "Origem",
+        chave: "contrato",
+        titulo: "Contrato",
+        ordenarPor: (v) => contratoDe(v)?.status ?? "",
         celula: (v) => {
-          const orc = v.orcamentoId ? orcamentos.find((o) => o.id === v.orcamentoId) : null;
-          return orc ? (
-            <span className="badge badge-neutral inline-flex items-center gap-1">
-              <FileText size={10} />
-              {orc.numero}
-            </span>
+          if (v.status === "cancelada") return <span className="text-muted">—</span>;
+          const c = contratoDe(v);
+          if (!c) {
+            return (
+              <span className="text-xs font-semibold whitespace-nowrap" style={{ color: "var(--warning)" }}>
+                {t("Sem contrato")}
+              </span>
+            );
+          }
+          const st = STATUS_CONTRATO[c.status];
+          return <span className={`badge ${st.badge}`}>{t(st.label)}</span>;
+        },
+      },
+      {
+        chave: "pagamento",
+        titulo: "Pagamento",
+        ordenarPor: (v) => pagamentoDe(v).ordem,
+        celula: (v) => {
+          if (v.status === "cancelada") return <span className="text-muted">—</span>;
+          const p = pagamentoDe(v);
+          return p.badge ? (
+            <span className={`badge ${p.badge}`}>{t(p.rotulo)}</span>
           ) : (
-            <span className="text-xs text-muted italic">{t("direta")}</span>
+            <span className="text-xs text-secondary whitespace-nowrap">{p.rotulo}</span>
           );
         },
       },
     ];
-  }, [cidades, artistas, orcamentos, accent, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cidades, artistas, contratos, accent, t]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
