@@ -23,6 +23,7 @@ import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, formatarFaturamento } from "@/lib/contatos-stats";
 import { MODULE_THEMES, LABELS_TIPO_CASA } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange, TipoCasa } from "@/types";
+import { urls } from "@/lib/navegacao/rotas";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -822,6 +823,7 @@ function TabelaContratantes({
       colunas={colunas}
       chaveDe={(c) => c.id}
       onAbrir={onSelect}
+      hrefDe={(c) => urls.contato("contratantes", c.id)}
       rotuloItens="contratantes"
       acoes={(c) => (
         <RowActions
@@ -931,6 +933,7 @@ function TabelaCasas({
       colunas={colunas}
       chaveDe={(c) => c.id}
       onAbrir={onSelect}
+      hrefDe={(c) => urls.contato("casas", c.id)}
       rotuloItens="casas"
       acoes={(c) => (
         <RowActions
@@ -1020,6 +1023,7 @@ function TabelaCidades({
       colunas={colunas}
       chaveDe={(c) => c.id}
       onAbrir={onSelect}
+      hrefDe={(c) => urls.contato("cidades", c.id)}
       rotuloItens="cidades"
       acoes={(c) => <RowActions onEdit={() => onEdit(c)} onRemove={() => onRemove(c.id)} />}
     />
@@ -1099,6 +1103,7 @@ function TabelaBloqueados({
       colunas={colunas}
       chaveDe={(l) => `${l.tipo}-${l.item.id}`}
       onAbrir={(l) => (l.tipo === "contratante" ? onSelectContratante(l.item) : onSelectCasa(l.item))}
+      hrefDe={(l) => urls.contato(l.tipo === "contratante" ? "contratantes" : "casas", l.item.id)}
       rotuloItens="contatos"
       acoes={(l) => (
         <button

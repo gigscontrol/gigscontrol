@@ -41,6 +41,7 @@ import { MODULE_THEMES } from "@/types";
 import type { AgendaDateRange } from "@/types";
 import { STATUS_CONTRATO } from "@/lib/statusUI";
 import { useFiltroArtistas } from "../FiltroArtistas";
+import { urls } from "@/lib/navegacao/rotas";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
@@ -444,6 +445,7 @@ export default function HistoricoPage({
                 colunas={colunasContratos}
                 chaveDe={(c) => c.id}
                 onAbrir={(c) => onAbrirContrato(c.id)}
+                hrefDe={(c) => urls.contrato(c.id)}
                 rotuloItens="contratos"
                 acoes={(c) =>
                   // Excluir é ADMIN-ONLY (D4): escondido pra não-admin.

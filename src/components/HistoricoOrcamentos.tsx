@@ -34,6 +34,7 @@ import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
 import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type Orcamento, type OrcamentoStatus } from "@/types";
+import { urls } from "@/lib/navegacao/rotas";
 
 type Props = {
   selectedArtistas: string[];
@@ -392,6 +393,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
             colunas={colunas}
             chaveDe={(o) => o.id}
             onAbrir={(o) => onAbrir(o.id)}
+            hrefDe={(o) => urls.orcamento(o.id)}
             rotuloItens="orçamentos"
             acoes={(o) => (
               <RowActions

@@ -13,6 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import type { Migalha } from "@/lib/navegacao/rotas";
+import LinkInterno from "./navegacao/LinkInterno";
 import { useAuth } from "@/lib/auth-context";
 import { LABELS_PAPEL } from "@/lib/permissoes";
 import { getPlano } from "@/lib/planos";
@@ -140,15 +141,15 @@ export default function Topbar({
                   />
                 )}
                 {m.href ? (
-                  <button
-                    type="button"
-                    onClick={() => onNavegar(m.href!)}
+                  <LinkInterno
+                    href={m.href}
+                    onAbrir={() => onNavegar(m.href!)}
                     className={`truncate text-muted transition-colors hover:text-primary ${
                       meio ? "hidden md:inline max-w-[180px]" : "max-w-[140px] md:max-w-[200px]"
                     }`}
                   >
                     {rotulo}
-                  </button>
+                  </LinkInterno>
                 ) : (
                   <span aria-current="page" className="truncate font-medium text-primary">
                     {rotulo}
