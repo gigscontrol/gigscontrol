@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import LinkInterno from "../navegacao/LinkInterno";
 import { ordenar, paginar, proximaOrdem, type Ordem, type Pagina, type ValorOrdenavel } from "@/lib/lista";
 
 export type Coluna<T> = {
@@ -37,6 +46,7 @@ export default function TabelaDados<T>({
   colunas,
   chaveDe,
   onAbrir,
+  hrefDe,
   acoes,
   linhaClasse,
   porPagina = 50,
@@ -47,6 +57,13 @@ export default function TabelaDados<T>({
   chaveDe: (item: T) => string;
   /** Clique na linha (ou no cartão). */
   onAbrir?: (item: T) => void;
+  /**
+   * Endereço da ficha. Com ele, a 1ª coluna (o título do cartão no celular)
+   * vira link de verdade: Tab + Enter abre, Ctrl/Cmd + clique e clique do
+   * meio abrem em outra aba, "copiar link" funciona. Ctrl + clique em
+   * qualquer ponto da linha também abre em outra aba.
+   */
+  hrefDe?: (item: T) => string;
   /** Botões da linha (ícones) — o clique neles não abre a linha. */
   acoes?: (item: T) => ReactNode;
   linhaClasse?: (item: T) => string;
@@ -99,6 +116,26 @@ export default function TabelaDados<T>({
   };
 
   const [titulo, ...resto] = colunas;
+
+  // Clique na linha fora do link: abre a ficha (Ctrl/Cmd: em outra aba). O
+  // clique no próprio link ou num botão da linha já foi tratado por ele.
+  const clicarLinha = (e: MouseEvent, item: T) => {
+    if ((e.target as HTMLElement).closest("a, button, input, select, label")) return;
+    const href = hrefDe?.(item);
+    if (href && (e.ctrlKey || e.metaKey || e.button === 1)) {
+      window.open(href, "_blank", "noopener");
+      return;
+    }
+    if (e.button === 0) onAbrir?.(item);
+  };
+  const comLink = (item: T, conteudo: ReactNode) =>
+    hrefDe && onAbrir ? (
+      <LinkInterno href={hrefDe(item)} onAbrir={() => onAbrir(item)} className="block min-w-0 rounded-sm">
+        {conteudo}
+      </LinkInterno>
+    ) : (
+      conteudo
+    );
   const colunasCelular = resto.filter((c) => c.noCelular !== false && c.titulo);
   const ordenaveis = colunas.filter((c) => c.ordenarPor && c.titulo);
 
@@ -127,7 +164,8 @@ export default function TabelaDados<T>({
             {pag.itens.map((item) => (
               <tr
                 key={chaveDe(item)}
-                onClick={onAbrir ? () => onAbrir(item) : undefined}
+                onClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
+                onAuxClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
                 className={`border-b border-border last:border-0 transition-colors ${
                   onAbrir ? "cursor-pointer hover:bg-elevated/40" : ""
                 } ${linhaClasse?.(item) ?? ""}`}
@@ -140,7 +178,7 @@ export default function TabelaDados<T>({
                     }`}
                     style={c.estilo?.(item)}
                   >
-                    {c.celula(item)}
+                    {c === titulo ? comLink(item, c.celula(item)) : c.celula(item)}
                   </td>
                 ))}
                 {acoes && (
@@ -191,13 +229,13 @@ export default function TabelaDados<T>({
           {pag.itens.map((item) => (
             <div
               key={chaveDe(item)}
-              onClick={onAbrir ? () => onAbrir(item) : undefined}
+              onClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
               className={`flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0 ${
                 onAbrir ? "cursor-pointer active:bg-elevated/40" : ""
               } ${linhaClasse?.(item) ?? ""}`}
             >
               <div className={`text-sm font-semibold text-primary ${titulo.classe ?? ""}`} style={titulo.estilo?.(item)}>
-                {titulo.celula(item)}
+                {comLink(item, titulo.celula(item))}
               </div>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
                 {colunasCelular.map((c) => (

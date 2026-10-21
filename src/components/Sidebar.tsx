@@ -36,7 +36,8 @@ import { podeVerModulo, subPaginasVisiveis } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import LogoGC from "./LogoGC";
 import { iniciaisDoNome } from "@/lib/iniciais";
-import { ROTULO_MODULO, ROTULO_PAGINA } from "@/lib/navegacao/rotas";
+import { ROTULO_MODULO, ROTULO_PAGINA, urlDaTela } from "@/lib/navegacao/rotas";
+import LinkInterno from "./navegacao/LinkInterno";
 
 type Props = {
   activeTab: ActiveTab;
@@ -366,9 +367,11 @@ export default function Sidebar({
               const Icon = mod.icon;
               return (
                 <div key={mod.tab} className="flex flex-col">
-                  {/* Botão do módulo */}
-                  <button
-                    onClick={() => {
+                  {/* Módulo: link pro dashboard (Ctrl+clique abre em outra aba) */}
+                  <LinkInterno
+                    href={urlDaTela(mod.tab, "dashboard")}
+                    aria-current={isActive && activePage === "dashboard" ? "page" : undefined}
+                    onAbrir={() => {
                       // Recolhida: clicar num módulo expande de volta pra
                       // mostrar o submenu (pra escolher a subpágina).
                       if (collapsed) setColapsado(false);
@@ -413,7 +416,7 @@ export default function Sidebar({
                         style={{ backgroundColor: color }}
                       />
                     )}
-                  </button>
+                  </LinkInterno>
 
                   {/* Submenu inline. DESKTOP: inalterado — segue o módulo ativo.
                       MOBILE (D4): só o expandido, um por vez. */}
@@ -430,9 +433,11 @@ export default function Sidebar({
                           (activePage === sp.page ||
                             (sp.alsoActiveOn?.includes(activePage) ?? false));
                         return (
-                          <button
+                          <LinkInterno
                             key={sp.page}
-                            onClick={() =>
+                            href={urlDaTela(mod.tab, sp.page)}
+                            aria-current={isPageActive ? "page" : undefined}
+                            onAbrir={() =>
                               sp.page === "dashboard"
                                 ? setActiveTab(mod.tab)
                                 : setActivePage(sp.page)
@@ -453,7 +458,7 @@ export default function Sidebar({
                           >
                             <SubIcon size={14} />
                             <span>{t(sp.label)}</span>
-                          </button>
+                          </LinkInterno>
                         );
                       })}
                     </div>

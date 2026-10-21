@@ -17,6 +17,7 @@ import { formatarMoeda, formatarDataBR, totaisPorMoeda } from "@/lib/formatters"
 import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
 import { MODULE_THEMES, type Venda } from "@/types";
+import { urls } from "@/lib/navegacao/rotas";
 
 type Props = {
   selectedArtistas: string[];
@@ -272,6 +273,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
             colunas={colunas}
             chaveDe={(v) => v.id}
             onAbrir={(v) => onAbrir(v.id)}
+            hrefDe={(v) => urls.venda(v.id)}
             rotuloItens="vendas"
             linhaClasse={(v) => (v.status === "cancelada" ? "opacity-60" : "")}
             acoes={(v) => {

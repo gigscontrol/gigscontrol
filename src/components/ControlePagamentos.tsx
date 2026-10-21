@@ -35,6 +35,7 @@ import {
   type Moeda,
 } from "@/types";
 import { useT } from "@/lib/i18n";
+import { urls } from "@/lib/navegacao/rotas";
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -476,6 +477,7 @@ export default function ControlePagamentos({
               colunas={colunasParcelas}
               chaveDe={(l) => `fix-${l.vendaId}-${l.parcela.id}`}
               onAbrir={abrirParcela}
+            hrefDe={(l) => urls.parcela(l.parcela.id)}
               acoes={acoesParcela}
               rotuloItens="parcelas"
             />
@@ -514,6 +516,7 @@ export default function ControlePagamentos({
             colunas={colunasParcelas}
             chaveDe={(l) => `${l.vendaId}-${l.parcela.id}`}
             onAbrir={abrirParcela}
+            hrefDe={(l) => urls.parcela(l.parcela.id)}
             acoes={acoesParcela}
             rotuloItens="parcelas"
           />
