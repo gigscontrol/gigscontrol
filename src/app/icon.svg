@@ -5,10 +5,17 @@
       <stop offset="0.5" stop-color="#3D7BFF"/>
       <stop offset="1" stop-color="#2847D7"/>
     </linearGradient>
+    <linearGradient id="gcFundo" x1="0" y1="0" x2="168" y2="168" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1A2030"/>
+      <stop offset="1" stop-color="#0B0D12"/>
+    </linearGradient>
   </defs>
-  <!-- marca no maior tamanho possível sem cortar: enche a largura (~5px de
-       folga de cada lado) e centraliza na vertical. Fundo transparente. -->
-  <g transform="translate(-20.3 11.2) scale(1.4)">
+  <!-- Fundo PRÓPRIO, escuro (cores do painel). Com fundo transparente o Google
+       pinta o favicon sobre um círculo branco na busca — ficava estranho.
+       O Google recorta em círculo: a marca fica dentro do círculo inscrito,
+       com folga, e o quadrado arredondado serve de ícone na aba. -->
+  <rect width="168" height="168" rx="36" fill="url(#gcFundo)"/>
+  <g transform="translate(13.2 34.6) scale(0.95)">
     <g transform="translate(14,0) skewX(-8)" stroke="url(#gcGrad)" stroke-width="16" stroke-linecap="round">
       <path d="M72.5 31.4 A32 32 0 1 0 72.5 72.6"/>
       <path d="M80 52 H58"/>

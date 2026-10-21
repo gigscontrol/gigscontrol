@@ -5,9 +5,12 @@ import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";
-// Título "de vitrine": marca + categoria-mestre. O `template` acrescenta
-// " · Gigs Control" às páginas internas que definem só o próprio título.
-const TITULO_PADRAO =
+// Aba do navegador: só a marca (pedido do Bruno, 21/10/2026 — o "— Sistema
+// de gestão…" pesava na aba). O `template` acrescenta " · Gigs Control" às
+// páginas internas que definem só o próprio título. Quem procura pela
+// categoria continua achando pela descrição e pelo título do compartilhamento.
+const TITULO_PADRAO = "Gigs Control";
+const TITULO_COMPARTILHAMENTO =
   "Gigs Control — Sistema de gestão para agências de artistas e DJs";
 const DESCRICAO =
   "Agenda de shows, orçamentos, contratos com assinatura digital, financeiro e CRM de contratantes num só painel. Para artistas, agências e produtoras.";
@@ -42,13 +45,13 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Gigs Control",
-    title: TITULO_PADRAO,
+    title: TITULO_COMPARTILHAMENTO,
     description: DESCRICAO,
     locale: "pt_BR",
   },
   twitter: {
     card: "summary_large_image",
-    title: TITULO_PADRAO,
+    title: TITULO_COMPARTILHAMENTO,
     description: DESCRICAO,
   },
 };
