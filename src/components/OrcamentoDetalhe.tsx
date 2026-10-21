@@ -51,7 +51,7 @@ import { gerarTextoWhatsApp, montarLinkWhatsApp, formatarDuracao } from "@/lib/w
 import { formatarMoeda } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
-import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
+import { mascararCpfCnpj, primeiraMaiuscula, hojeISO } from "@/lib/formatters";
 import {
   LABELS_STATUS_ORCAMENTO,
   LABELS_TIPO_EVENTO,
@@ -243,6 +243,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               </span>
             )}
             <span className={`badge ${st.badge}`}>{t(st.label)}</span>
+            {(orc.status === "pendente" || orc.status === "negociacao") &&
+              !!orc.dataShow &&
+              orc.dataShow < hojeISO() && (
+                <span className="badge badge-neutral" title={t("A data do show já passou")}>
+                  {t("Expirado")}
+                </span>
+              )}
             <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[orc.tipoEvento])}</span>
             {dataLegivel ? (
               <span className="text-xs text-secondary">{dataLegivel}</span>

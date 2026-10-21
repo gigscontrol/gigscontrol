@@ -39,6 +39,7 @@ import {
 import type { Contrato } from "@/lib/mappers/contrato";
 import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
+import SearchableSelect from "../SearchableSelect";
 
 const ACCENT = "#3D7BFF";
 
@@ -600,28 +601,29 @@ export default function NovoContratoPage({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-secondary">
                   {t("Venda (opcional — pré-preenche os dados)")}
                 </span>
-                <select
+                {/* Com 100+ vendas, um select nativo virava rolagem infinita:
+                    agora busca por número, evento, contratante ou artista. */}
+                <SearchableSelect
                   value={vendaId}
-                  onChange={(e) => setVendaId(e.target.value)}
-                  className="campo-input"
-                >
-                  <option value="">{t("Sem venda (preencher manual)")}</option>
-                  {vendasDoSelect.map((v) => {
-                    const artista = artistas.find((a) => a.id === v.artistaId);
-                    return (
-                      <option key={v.id} value={v.id}>
-                        {v.numero} · {v.nomeEvento || "evento"} ·{" "}
-                        {dataBR(v.dataShow)}
-                        {artista ? ` · ${artista.name}` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
+                  onChange={setVendaId}
+                  placeholder={t("Buscar por número, evento, contratante ou artista…")}
+                  options={[
+                    { id: "", label: t("Sem venda (preencher manual)") },
+                    ...vendasDoSelect.map((v) => {
+                      const artista = artistas.find((a) => a.id === v.artistaId);
+                      return {
+                        id: v.id,
+                        label: `${v.numero} · ${v.nomeEvento || t("evento")} · ${dataBR(v.dataShow)}`,
+                        sublabel: [artista?.name, v.contratanteNome].filter(Boolean).join(" · "),
+                      };
+                    }),
+                  ]}
+                />
+              </div>
             </div>
 
             {modelo && (

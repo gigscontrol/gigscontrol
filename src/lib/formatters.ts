@@ -134,6 +134,11 @@ export function mascararCapacidade(s: string | null | undefined): string {
  * "Sexta-feira, 30 de outubro". (O `capitalize` do CSS punha maiúscula em
  * TODA palavra: "Sexta-Feira, 30 De Outubro De 2026".)
  */
+/** Hoje em YYYY-MM-DD, pela data LOCAL (toISOString é UTC e à noite vira amanhã). */
+export function hojeISO(agora: Date = new Date()): string {
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+}
+
 export function primeiraMaiuscula(s: string): string {
   return s ? s.charAt(0).toLocaleUpperCase("pt-BR") + s.slice(1) : s;
 }

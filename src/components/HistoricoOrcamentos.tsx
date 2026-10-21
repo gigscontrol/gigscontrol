@@ -29,7 +29,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
-import { formatarMoeda, formatarDataBR } from "@/lib/formatters";
+import { formatarMoeda, formatarDataBR, hojeISO } from "@/lib/formatters";
 import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
 import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
@@ -188,6 +188,8 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
     });
   }
 
+  const hoje = hojeISO();
+
   // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
   const colunas = useMemo<Coluna<Orcamento>[]>(() => {
     const contratanteDe = (o: Orcamento) => contratantes.find((c) => c.id === o.contratanteId);
@@ -255,11 +257,24 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
         ordenarPor: (o) => t(LABELS_STATUS_ORCAMENTO[o.status].label),
         celula: (o) => {
           const st = LABELS_STATUS_ORCAMENTO[o.status];
-          return <span className={`badge ${st.badge}`}>{t(st.label)}</span>;
+          // Em aberto com a data do show já passada: ninguém vai fechar —
+          // a marca separa o que ainda vale do que ficou parado.
+          const expirado =
+            (o.status === "pendente" || o.status === "negociacao") && !!o.dataShow && o.dataShow < hoje;
+          return (
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <span className={`badge ${st.badge}`}>{t(st.label)}</span>
+              {expirado && (
+                <span className="badge badge-neutral" title={t("A data do show já passou")}>
+                  {t("Expirado")}
+                </span>
+              )}
+            </span>
+          );
         },
       },
     ];
-  }, [contratantes, cidades, artistas, t]);
+  }, [contratantes, cidades, artistas, t, hoje]);
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">

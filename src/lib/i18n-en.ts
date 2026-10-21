@@ -4092,6 +4092,10 @@ export const EN: Record<string, string> = {
   "Artista removido": "Removed artist",
   "Ocultar todos": "Hide all",
   "Artistas removidos": "Removed artists",
+  "{a} de {n} pagas": "{a} of {n} paid",
+  "Expirado": "Expired",
+  "A data do show já passou": "The show date has passed",
+  "Buscar por número, evento, contratante ou artista…": "Search by number, event, client or artist…",
   // --- Roteiro de cobrança (out/2026) ---
   "Lembrar": "Remind",
   "1 dia": "1 day",
