@@ -32,7 +32,7 @@ type Props = {
 
 export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Props) {
   const t = useT();
-  const { shows, recarregar: recarregarShows } = useShows();
+  const { shows, carregando: carregandoShows, recarregar: recarregarShows } = useShows();
   const { workspaceCriadoEm } = useWorkspace();
   // Chegou na Agenda = refetch (I7) — ver AgendaDashboard.
   useEffect(() => {
@@ -199,16 +199,22 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
   // os 3 atalhos pré-definidos (Mês atual / anterior / próximo).
   // No "Personalizado" NÃO rola — o usuário pode estar só abrindo o
   // popover pra escolher outro período; teleportar a tela atrapalha.
+  //
+  // O cartão de hoje existe duas vezes (grade do computador e lista do
+  // celular, uma delas escondida): rola até o VISÍVEL. E só depois que os
+  // shows chegam — antes disso a lista do celular tinha só "hoje", e os dias
+  // que entravam depois empurravam o cartão pra baixo (abria em 2/out).
   useEffect(() => {
-    if (activeDateRange === "Personalizado") return;
+    if (activeDateRange === "Personalizado" || carregandoShows) return;
     const timer = setTimeout(() => {
-      const todayCard = document.getElementById("day-card-today");
-      if (todayCard) {
-        todayCard.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      const hoje = Array.from(document.querySelectorAll<HTMLElement>("[data-hoje]")).find(
+        (el) => el.offsetParent !== null
+      );
+      const celular = window.matchMedia("(max-width: 767px)").matches;
+      hoje?.scrollIntoView({ behavior: "smooth", block: celular ? "start" : "center" });
     }, 300);
     return () => clearTimeout(timer);
-  }, [activeDateRange]);
+  }, [activeDateRange, carregandoShows]);
 
   const filteredShows = shows.filter((show) => selectedArtistas.includes(show.artistaId));
   // Um artista só na tela (login de artista ou filtro com 1): o cartão do show

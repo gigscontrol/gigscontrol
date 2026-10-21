@@ -187,7 +187,7 @@ export function DayCellComponent({
   const temConteudo = shows.length > 0 || itens.length > 0;
   return (
     <div
-      id={day.isToday ? "day-card-today" : undefined}
+      data-hoje={day.isToday || undefined}
       className={`
         relative bg-surface border rounded-md p-2.5 flex flex-col overflow-hidden
         min-h-[280px] lg:min-h-[340px] transition-all
@@ -331,7 +331,8 @@ export function MobileDayCard({
   const t = useT();
   return (
     <div
-      className="card"
+      data-hoje={day.isToday || undefined}
+      className="card scroll-mt-20"
       style={{
         borderColor: day.isToday ? accent : undefined,
         boxShadow: day.isToday ? `0 0 0 1px ${accent}` : undefined,
