@@ -24,7 +24,9 @@ export type TipoEventoContrato =
   | "assinado"
   | "finalizado"
   | "pdf_final_gerado"
-  | "cancelado";
+  | "cancelado"
+  /** Troca manual de status pela agência (detalhes: de, para, motivo). */
+  | "status_alterado";
 
 export type EventoContratoInput = {
   contratoId: string;

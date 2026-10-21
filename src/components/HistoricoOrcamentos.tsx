@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -23,6 +23,7 @@ import {
 import PageHeader from "./PageHeader";
 import { EstadoCarga } from "./EstadoCarga";
 import MiniLixeira from "./MiniLixeira";
+import Toast from "./Toast";
 import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useContatos } from "@/lib/contatos-context";
@@ -31,6 +32,7 @@ import { gerarTextoWhatsApp, montarLinkWhatsApp } from "@/lib/whatsapp";
 import { formatarMoeda, formatarDataBR } from "@/lib/formatters";
 import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
+import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type Orcamento, type OrcamentoStatus } from "@/types";
 
 type Props = {
@@ -141,6 +143,34 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
       perigo: true,
     });
     if (ok) removeOrcamento(id);
+  }
+
+  // Mudança de status pela lista: sem confirmação (é rápida e frequente), mas
+  // com "Desfazer" no aviso — clique errado num ícone vizinho não fica mudo.
+  const [aviso, setAviso] = useState<{ msg: string; tipo: "sucesso" | "erro"; desfazer?: () => void } | null>(null);
+  const fecharAviso = useCallback(() => setAviso(null), []);
+
+  async function mudarStatus(o: Orcamento, novo: OrcamentoStatus) {
+    const anterior = o.status;
+    const falhou = (e: unknown) =>
+      setAviso({ msg: (e as Error)?.message || t("Não foi possível mudar o status."), tipo: "erro" });
+    try {
+      await marcarStatus(o.id, novo);
+    } catch (e) {
+      falhou(e);
+      return;
+    }
+    setAviso({
+      msg: t("{numero} passou para {status}.", {
+        numero: o.numero,
+        status: t(LABELS_STATUS_ORCAMENTO[novo].label),
+      }),
+      tipo: "sucesso",
+      desfazer: () => {
+        setAviso(null);
+        marcarStatus(o.id, anterior).catch(falhou);
+      },
+    });
   }
 
   // Colunas da lista padrão — as mesmas de antes, agora ordenáveis.
@@ -354,8 +384,8 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
                 onView={() => onAbrir(o.id)}
                 onWA={() => handleEnviarWA(o.id)}
                 onAccept={() => handleAceitar(o.id)}
-                onReject={() => marcarStatus(o.id, "recusado")}
-                onNegotiate={() => marcarStatus(o.id, "negociacao")}
+                onReject={() => mudarStatus(o, "recusado")}
+                onNegotiate={() => mudarStatus(o, "negociacao")}
                 onDuplicate={async () => {
                   const novo = await duplicarOrcamento(o.id);
                   if (novo) onAbrir(novo.id);
@@ -373,6 +403,15 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
       </div>
 
       <MiniLixeira tipo="orcamento" />
+      <Toast
+        open={!!aviso}
+        mensagem={aviso?.msg ?? ""}
+        tipo={aviso?.tipo ?? "sucesso"}
+        duracao={aviso?.desfazer ? 6000 : 3000}
+        acaoLabel={aviso?.desfazer ? t("Desfazer") : undefined}
+        onAcao={aviso?.desfazer}
+        onClose={fecharAviso}
+      />
       {confirmador}
     </div>
   );
@@ -421,6 +460,11 @@ function StatusCard({
   );
 }
 
+/**
+ * Ações da linha: à vista só as duas do dia a dia (WhatsApp e Concretizar);
+ * mudar status, duplicar e remover ficam no "⋯", com nome escrito e o
+ * Remover separado no fim — longe do clique de passagem.
+ */
 function RowActions({
   onView,
   onWA,
@@ -450,40 +494,76 @@ function RowActions({
 }) {
   const t = useT();
   const semPermissao = t("Você não tem permissão para isso.");
+  const itens: ItemMenuLinha[] = [
+    { chave: "abrir", rotulo: t("Abrir orçamento"), icone: <Eye size={15} />, onClick: onView },
+  ];
+  if (status !== "aceito") {
+    itens.push({
+      chave: "aceito",
+      rotulo: t("Marcar aceito"),
+      icone: <CheckCircle2 size={15} className="text-success" />,
+      onClick: onAccept,
+      desabilitado: !podeEditar,
+      motivo: semPermissao,
+      separar: true,
+    });
+  }
+  if (status !== "negociacao" && status !== "aceito") {
+    itens.push({
+      chave: "negociacao",
+      rotulo: t("Marcar em negociação"),
+      icone: <Clock size={15} className="text-warning" />,
+      onClick: onNegotiate,
+      desabilitado: !podeEditar,
+      motivo: semPermissao,
+    });
+  }
+  if (status !== "recusado" && status !== "aceito") {
+    itens.push({
+      chave: "recusado",
+      rotulo: t("Marcar recusado"),
+      icone: <XCircle size={15} className="text-danger" />,
+      onClick: onReject,
+      desabilitado: !podeEditar,
+      motivo: semPermissao,
+    });
+  }
+  itens.push(
+    {
+      chave: "duplicar",
+      rotulo: t("Duplicar"),
+      icone: <Copy size={15} />,
+      onClick: onDuplicate,
+      desabilitado: !podeEditar,
+      motivo: semPermissao,
+      separar: true,
+    },
+    {
+      chave: "remover",
+      rotulo: t("Remover"),
+      icone: <Trash2 size={15} />,
+      onClick: onDelete,
+      desabilitado: !podeExcluir,
+      motivo: semPermissao,
+      perigo: true,
+      separar: true,
+    }
+  );
+
   return (
-    <div className="flex items-center gap-0.5 justify-end" onClick={(e) => e.stopPropagation()}>
-      <ActionBtn label={t("Ver")} onClick={onView}>
-        <Eye size={14} />
-      </ActionBtn>
+    <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
       <ActionBtn label={t("Enviar WhatsApp")} onClick={onWA}>
-        <MessageCircle size={14} />
+        <MessageCircle size={16} />
       </ActionBtn>
-      {status !== "aceito" && (
-        <ActionBtn label={t("Marcar aceito")} onClick={onAccept} disabled={!podeEditar} disabledTitle={semPermissao}>
-          <CheckCircle2 size={14} className="text-success" />
-        </ActionBtn>
-      )}
-      {status !== "recusado" && (
+      {status !== "recusado" ? (
         <ActionBtn label={t("Concretizar venda")} onClick={onTransformar} disabled={!podeConverter} disabledTitle={semPermissao}>
-          <CalendarCheck2 size={14} style={{ color: "var(--brand)" }} />
+          <CalendarCheck2 size={16} style={{ color: "var(--brand)" }} />
         </ActionBtn>
+      ) : (
+        // Guarda o lugar: os botões não mudam de posição conforme o status.
+        <span aria-hidden className="h-9 w-9 max-md:hidden" />
       )}
-      {status !== "negociacao" && status !== "aceito" && (
-        <ActionBtn label={t("Em negociação")} onClick={onNegotiate} disabled={!podeEditar} disabledTitle={semPermissao}>
-          <Clock size={14} className="text-warning" />
-        </ActionBtn>
-      )}
-      {status !== "recusado" && status !== "aceito" && (
-        <ActionBtn label={t("Marcar recusado")} onClick={onReject} disabled={!podeEditar} disabledTitle={semPermissao}>
-          <XCircle size={14} className="text-danger" />
-        </ActionBtn>
-      )}
-      <ActionBtn label={t("Duplicar")} onClick={onDuplicate} disabled={!podeEditar} disabledTitle={semPermissao}>
-        <Copy size={14} />
-      </ActionBtn>
-      <ActionBtn label={t("Remover")} onClick={onDelete} disabled={!podeExcluir} disabledTitle={semPermissao}>
-        <Trash2 size={14} />
-      </ActionBtn>
+      <MenuLinha itens={itens} />
     </div>
   );
 }
@@ -507,7 +587,7 @@ function ActionBtn({
       disabled={disabled}
       title={disabled ? (disabledTitle ?? label) : label}
       aria-label={label}
-      className="btn-ghost p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+      className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-10 max-md:w-10 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>

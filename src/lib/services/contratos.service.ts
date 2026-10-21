@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Contrato } from "@/lib/mappers/contrato";
-import { rowParaContrato, type ContratoEscrita } from "@/lib/mappers/contrato";
+import { rowParaContrato, statusValido, type ContratoEscrita } from "@/lib/mappers/contrato";
 import {
   listarContratos as repoListar,
   buscarContrato as repoBuscar,
@@ -20,6 +20,7 @@ import { janelaDoCicloISO } from "@/lib/services/cicloLimite";
 import type { SessaoAutenticada } from "@/lib/api/session";
 import { verTodosContratos, podeVerContrato } from "@/lib/api/permissoes";
 import { hashConteudoContrato } from "@/lib/contratos/integridade";
+import { erroTrocaStatus } from "@/lib/contratos/regraStatus";
 import { registrarEventoContrato } from "@/lib/services/contratoEventos.service";
 import { listarPorContrato } from "@/lib/repositories/contratoSignatarios.repo";
 
@@ -64,6 +65,17 @@ export class ContratoImutavelError extends Error {
       "Este contrato já tem assinatura registrada — o conteúdo não pode mais ser alterado. Cancele-o e gere um novo se precisar mudar algo."
     );
     this.name = "ContratoImutavelError";
+  }
+}
+
+/**
+ * Mudança de status à mão que a regra não aceita (contrato finalizado
+ * voltando atrás, "assinado" sem motivo). A rota traduz `status` pra HTTP.
+ */
+export class ContratoStatusError extends Error {
+  constructor(public status: 400 | 409, mensagem: string) {
+    super(mensagem);
+    this.name = "ContratoStatusError";
   }
 }
 
@@ -165,6 +177,21 @@ export async function atualizarContratoPorId(
   const escrita = entradaParaEscrita(input);
   const existente = await repoBuscar(supabase, id);
 
+  // STATUS à mão: travas em lib/contratos/regraStatus (finalizado não volta
+  // atrás; "assinado" sem as assinaturas exige motivo, que vai pra trilha).
+  const statusNovo = escrita.status;
+  const mudaStatus =
+    existente !== null && statusNovo !== undefined && statusNovo !== existente.status;
+  if (mudaStatus && existente && statusNovo) {
+    const erro = erroTrocaStatus({
+      statusAtual: statusValido(existente.status),
+      statusNovo,
+      finalizado: !!existente.finalizado_em,
+      motivo: input.motivo_status,
+    });
+    if (erro) throw new ContratoStatusError(erro.status, erro.mensagem);
+  }
+
   // TRAVA DE CONTEÚDO (mig 98 — integridade): comparação por hash CANÔNICO
   // (CRLF/espaços invisíveis não contam como mudança).
   const mudaCorpo =
@@ -207,6 +234,21 @@ export async function atualizarContratoPorId(
         hashAnterior: existente.conteudo_hash,
         hash: escrita.conteudo_hash,
         versao: escrita.conteudo_versao,
+      },
+    });
+  }
+
+  // Troca manual de status (fora o cancelamento, que tem evento próprio
+  // abaixo) → trilha, com o motivo quando houver (best-effort).
+  if (mudaStatus && existente && statusNovo !== "cancelado") {
+    await registrarEventoContrato({
+      contratoId: id,
+      workspaceId: existente.workspace_id,
+      tipo: "status_alterado",
+      detalhes: {
+        de: existente.status,
+        para: statusNovo,
+        motivo: input.motivo_status || null,
       },
     });
   }
