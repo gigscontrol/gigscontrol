@@ -4111,6 +4111,7 @@ export const EN: Record<string, string> = {
   "{n} parcelas · dá pra lembrar antes": "{n} installments · remind them early",
   "{n} parcelas · vencidas, de todos os meses": "{n} installments · overdue, from every month",
   "Última cobrança": "Last reminder",
+  "Cobrança": "Reminder",
   "Atraso": "Overdue",
   "no WhatsApp": "on WhatsApp",
   "por outro canal": "another channel",
