@@ -508,7 +508,7 @@ function RowActions({
         </ActionBtn>
       ) : (
         // Guarda o lugar: os botões não mudam de posição conforme o status.
-        <span aria-hidden className="h-9 w-9 max-md:hidden" />
+        <span aria-hidden className="h-9 w-9 max-lg:hidden" />
       )}
       <MenuLinha itens={itens} />
     </div>
@@ -534,7 +534,7 @@ function ActionBtn({
       disabled={disabled}
       title={disabled ? (disabledTitle ?? label) : label}
       aria-label={label}
-      className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-11 max-md:w-11 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-lg:h-11 max-lg:w-11 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>

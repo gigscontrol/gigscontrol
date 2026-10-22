@@ -161,7 +161,7 @@ export function FichaHeroPagina({
  *   </FolhaFicha>
  */
 export function FolhaFicha({ children }: { children: ReactNode }) {
-  return <div className="card p-0 overflow-hidden grid grid-cols-1 lg:grid-cols-2">{children}</div>;
+  return <div className="card p-0 overflow-hidden grid grid-cols-1 md:grid-cols-2">{children}</div>;
 }
 
 export function ColunaFicha({
@@ -174,7 +174,7 @@ export function ColunaFicha({
   return (
     <div
       className={`flex flex-col divide-y divide-border min-w-0 ${
-        lado === "direita" ? "border-t border-border lg:border-t-0 lg:border-l" : ""
+        lado === "direita" ? "border-t border-border md:border-t-0 md:border-l" : ""
       }`}
     >
       {children}
@@ -185,7 +185,7 @@ export function ColunaFicha({
 /** Uma seção da folha. `cheia` = ocupa as 2 colunas (fica embaixo). */
 export function SecaoFicha({ cheia = false, children }: { cheia?: boolean; children: ReactNode }) {
   return (
-    <section className={`p-5 min-w-0 ${cheia ? "lg:col-span-2 border-t border-border" : ""}`}>
+    <section className={`p-5 min-w-0 ${cheia ? "md:col-span-2 border-t border-border" : ""}`}>
       {children}
     </section>
   );

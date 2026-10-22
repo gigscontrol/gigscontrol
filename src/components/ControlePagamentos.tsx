@@ -429,7 +429,7 @@ export default function ControlePagamentos({
           onClick={() => setCobrando(alvoDe(l))}
           disabled={!pode}
           title={!pode ? t("Você não tem permissão para isso.") : undefined}
-          className="btn inline-flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-xs max-md:h-11 disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn inline-flex h-9 items-center gap-1.5 whitespace-nowrap px-3 text-xs max-lg:h-11 disabled:cursor-not-allowed disabled:opacity-50"
           style={{ backgroundColor: "var(--success-solid)", color: "#fff" }}
         >
           <MessageCircle size={14} />

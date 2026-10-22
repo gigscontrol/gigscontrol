@@ -27,7 +27,7 @@ export type Coluna<T> = {
   /** Classes extras da célula (cor, truncamento, fonte). */
   classe?: string;
   estilo?: (item: T) => CSSProperties | undefined;
-  /** No celular a linha vira cartão; false tira esta coluna do cartão. */
+  /** Abaixo de 1024 px a linha vira cartão; false tira esta coluna do cartão. */
   noCelular?: boolean;
 };
 
@@ -37,8 +37,10 @@ export type Coluna<T> = {
  *
  * - Clique no título ordena (crescente → decrescente → ordem original).
  * - Paginação com "51–100 de 132".
- * - No celular cada linha vira um CARTÃO (a 1ª coluna é o título) — a tabela
- *   espremida de 9 colunas era ilegível no telefone.
+ * - Abaixo de 1024 px (celular e tablet) cada linha vira um CARTÃO (a 1ª
+ *   coluna é o título), em 2 colunas no tablet — a tabela de 9 colunas era
+ *   ilegível no telefone e, no tablet, passava ~570 px da tela. O corte é o
+ *   mesmo da navegação (barra inferior até 1023 px, menu lateral depois).
  * - Sem ordem escolhida, mantém a ordem que a tela entregou.
  */
 export default function TabelaDados<T>({
@@ -154,7 +156,7 @@ export default function TabelaDados<T>({
   return (
     <>
       {/* Computador: tabela */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40">
@@ -222,8 +224,8 @@ export default function TabelaDados<T>({
         </table>
       </div>
 
-      {/* Celular: cartões (+ ordenar por um seletor, já que não há cabeçalho) */}
-      <div className="md:hidden">
+      {/* Celular e tablet: cartões (+ ordenar por um seletor, já que não há cabeçalho) */}
+      <div className="lg:hidden">
         {ordenaveis.length > 0 && (
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-xs text-muted">
             <label htmlFor={idSeletor}>{t("Ordenar por")}</label>
@@ -250,12 +252,14 @@ export default function TabelaDados<T>({
             </select>
           </div>
         )}
-        <div className="flex flex-col">
+        {/* Tablet: 2 colunas. Linha vertical entre elas e sem linha embaixo da
+            última fileira (o cartão de fora já fecha). */}
+        <div className="flex flex-col md:grid md:grid-cols-2">
           {pag.itens.map((item) => (
             <div
               key={chaveDe(item)}
               onClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
-              className={`relative flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0 ${
+              className={`relative flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0 md:odd:border-r md:[&:last-child:nth-child(odd)]:border-r-0 md:[&:nth-last-child(2):nth-child(odd)]:border-b-0 ${
                 onAbrir ? "cursor-pointer active:bg-elevated/40" : ""
               } ${linhaClasse?.(item) ?? ""}`}
             >
