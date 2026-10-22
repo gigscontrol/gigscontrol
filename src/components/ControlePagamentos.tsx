@@ -293,6 +293,7 @@ export default function ControlePagamentos({
       },
       {
         chave: "venda",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Venda",
         ordenarPor: (l) => l.vendaNumero,
         celula: (l) => (
@@ -306,6 +307,7 @@ export default function ControlePagamentos({
       },
       {
         chave: "artista",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
         classe: "text-secondary whitespace-nowrap",
         ordenarPor: (l) => l.artistaNome,
@@ -352,6 +354,7 @@ export default function ControlePagamentos({
       },
       {
         chave: "ultimaCobranca",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Última cobrança",
         ordenarPor: (l) => {
           const cs = l.parcela.meta?.cobrancas ?? [];

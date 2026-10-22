@@ -788,6 +788,7 @@ function TabelaContratantes({
     },
     {
       chave: "orcamentos",
+      noCelular: false, // cartão do celular só com o principal
       titulo: "Orçamentos",
       alinhar: "direita",
       classe: "tabular-nums font-semibold",
@@ -886,6 +887,7 @@ function TabelaCasas({
     },
     {
       chave: "capacidade",
+      noCelular: false, // cartão do celular só com o principal
       titulo: "Capacidade",
       alinhar: "direita",
       classe: "tabular-nums",
@@ -904,6 +906,7 @@ function TabelaCasas({
     },
     {
       chave: "faturado",
+      noCelular: false, // cartão do celular só com o principal
       titulo: "Faturado",
       alinhar: "direita",
       classe: "tabular-nums font-semibold",

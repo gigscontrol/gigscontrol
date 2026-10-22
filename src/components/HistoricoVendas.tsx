@@ -184,6 +184,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
       },
       {
         chave: "artista",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
         classe: "text-secondary",
         ordenarPor: (v) => artistaDe(v)?.name,
@@ -191,6 +192,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
       },
       {
         chave: "cidade",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Cidade",
         classe: "text-secondary",
         ordenarPor: (v) => cidadeDe(v)?.nome,
@@ -220,6 +222,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
       // que a lista de vendas precisa responder: tem contrato? já pagaram?
       {
         chave: "contrato",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Contrato",
         ordenarPor: (v) => contratoDe(v)?.status ?? "",
         celula: (v) => {

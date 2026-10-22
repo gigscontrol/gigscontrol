@@ -332,6 +332,7 @@ export default function HistoricoPage({
       },
       {
         chave: "modelo",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Modelo",
         classe: "text-secondary max-w-[220px] truncate",
         ordenarPor: (c) => nomeModelo(c),

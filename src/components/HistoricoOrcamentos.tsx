@@ -212,12 +212,14 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
       },
       {
         chave: "tipo",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Tipo",
         ordenarPor: (o) => t(LABELS_TIPO_EVENTO[o.tipoEvento]),
         celula: (o) => <span className="badge badge-neutral">{t(LABELS_TIPO_EVENTO[o.tipoEvento])}</span>,
       },
       {
         chave: "artista",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
         classe: "text-secondary",
         ordenarPor: (o) => artistaDe(o)?.name,
@@ -225,6 +227,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
       },
       {
         chave: "cidade",
+        noCelular: false, // cartão do celular só com o principal
         titulo: "Cidade",
         classe: "text-secondary",
         ordenarPor: (o) => cidadeDe(o)?.nome,
