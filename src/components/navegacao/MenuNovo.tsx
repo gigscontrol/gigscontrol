@@ -63,7 +63,7 @@ export function BotaoNovo() {
 
   if (acoes.length === 0) return null;
   return (
-    <div ref={ref} className="relative hidden lg:block">
+    <div ref={ref} className="relative hidden lg:block paisagem:block">
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}

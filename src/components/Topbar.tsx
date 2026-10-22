@@ -20,6 +20,7 @@ import { getPlano } from "@/lib/planos";
 import { useContratos } from "@/lib/contratos-context";
 import SinoNotificacoes from "./SinoNotificacoes";
 import { BotaoNovo } from "./navegacao/MenuNovo";
+import { useTemBarraInferior } from "./navegacao/BarraInferior";
 import { abrirBusca } from "./navegacao/BuscaGlobal";
 import LanguageSwitcher, { IDIOMAS } from "./LanguageSwitcher";
 import BotaoTema from "./BotaoTema";
@@ -49,6 +50,7 @@ export default function Topbar({
 }: Props) {
   const { sessao, logout } = useAuth();
   const t = useT();
+  const temBarraInferior = useTemBarraInferior();
   const { lang, setLang } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -115,11 +117,16 @@ export default function Topbar({
     "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap";
 
   return (
-    <header className="flex items-center justify-between gap-4 px-4 lg:px-6 h-16 flex-shrink-0">
+    // 56 px no celular e no tablet (64 no computador): a altura do topo e a
+    // da barra de baixo somavam 128 px dos 844 do celular.
+    <header className="flex items-center justify-between gap-4 px-4 lg:px-6 h-14 lg:h-16 flex-shrink-0">
       <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* Menu: com a barra de baixo, o "Menu" dela já abre o mesmo menu
+            (eram 2 botões iguais na tela); volta no celular deitado, onde
+            a barra some, e pra quem não tem barra. */}
         <button
           onClick={onOpenSidebar}
-          className="lg:hidden btn-ghost p-3 -ml-1 rounded"
+          className={`${temBarraInferior ? "hidden paisagem:inline-flex" : "lg:hidden"} btn-ghost p-3 -ml-1 rounded`}
           aria-label={t("Abrir menu")}
         >
           <Menu size={18} />
