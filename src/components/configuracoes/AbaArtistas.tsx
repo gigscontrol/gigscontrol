@@ -539,7 +539,17 @@ export default function AbaArtistas() {
           <p className="text-xs text-muted mt-2">
             {arrastandoId
               ? t("Agora toque no avatar que está no lugar onde ele deve ficar.")
-              : t("Arraste os avatares pra reordenar (ou toque num e depois no lugar dele; no teclado, setas ← →) — reflete na sidebar e nos filtros do app.")}
+              : (
+                <>
+                  {/* No celular não dá pra arrastar: a instrução começa pelo toque. */}
+                  <span className="[@media(hover:none)]:hidden">
+                    {t("Arraste os avatares pra reordenar (ou toque num e depois no lugar dele; no teclado, setas ← →) — reflete na sidebar e nos filtros do app.")}
+                  </span>
+                  <span className="hidden [@media(hover:none)]:inline">
+                    {t("Toque num avatar e depois no lugar dele pra reordenar — reflete na sidebar e nos filtros do app.")}
+                  </span>
+                </>
+              )}
           </p>
         )}
       </div>

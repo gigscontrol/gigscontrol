@@ -181,17 +181,17 @@ export function DayCellComponent({
   onNovoItem: (day: DayCell) => void;
 }) {
   const t = useT();
-  // Dia de outro mês VAZIO continua bem apagado (é só moldura); com conteúdo
-  // sobe pra 60% — no 30% o card do show ficava ilegível, e o objetivo aqui é
+  // Dia de outro mês: só a MOLDURA fica discreta (sem fundo, número em
+  // cinza, sem "Sem shows"). Antes a célula inteira ia a 60% de opacidade
+  // e o card do show caía pra 1,8–3,3:1 de contraste — o objetivo é
   // justamente conseguir LER o show da borda sem trocar de mês.
-  const temConteudo = shows.length > 0 || itens.length > 0;
   return (
     <div
       data-hoje={day.isToday || undefined}
       className={`
-        relative bg-surface border rounded-md p-2.5 flex flex-col overflow-hidden
+        relative border rounded-md p-2.5 flex flex-col overflow-hidden
         min-h-[280px] lg:min-h-[340px] transition-all
-        ${day.isOtherMonth ? (temConteudo ? "opacity-60" : "opacity-30") : ""}
+        ${day.isOtherMonth ? "bg-transparent" : "bg-surface"}
       `}
       style={{
         borderColor: day.isToday ? accent : day.isQuente ? "var(--border-strong)" : "var(--border-color)",
@@ -213,7 +213,7 @@ export function DayCellComponent({
           )}
         </div>
         <div
-          className={`text-base font-bold tabular-nums ${day.isToday ? "" : "text-primary"}`}
+          className={`text-base font-bold tabular-nums ${day.isToday ? "" : day.isOtherMonth ? "text-muted" : "text-primary"}`}
           style={day.isToday ? { color: accent } : undefined}
         >
           {typeof day.id === "number" ? day.id : day.date.split(" ")[0]}
@@ -240,7 +240,7 @@ export function DayCellComponent({
             onClick={() => onItemClick(item)}
           />
         ))}
-        {shows.length === 0 && itens.length === 0 && <DayCellEmptySlot />}
+        {shows.length === 0 && itens.length === 0 && !day.isOtherMonth && <DayCellEmptySlot />}
         {!day.isOtherMonth && (
           <NovoItemSlot onClick={() => onNovoItem(day)} podeCriar={podeAbrirNovoItem} />
         )}
