@@ -272,9 +272,9 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
       />
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
-          <input
+          <input aria-label={t("Buscar vendas")}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -421,13 +421,13 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
           </p>
           <div className="flex flex-col gap-1.5">
             <label className="stat-label">{t("Motivo (opcional)")}</label>
-            <textarea
+            <textarea aria-label={t("Motivo (opcional)")}
               value={cancelMotivo}
               onChange={(e) => setCancelMotivo(e.target.value)}
               placeholder={t("Ex.: contratante desistiu, evento cancelado…")}
               rows={2}
               maxLength={1000}
-              className="input resize-none bg-surface border border-border rounded-md px-3 py-2 focus:border-border-strong transition-colors"
+              className="input resize-none bg-surface border border-border rounded-md px-3 py-2 foco-campo transition-colors"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-border">

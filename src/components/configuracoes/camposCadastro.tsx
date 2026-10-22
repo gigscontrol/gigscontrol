@@ -647,7 +647,7 @@ export function ListaRider({
 
       {/* Adicionar novo */}
       <div className="flex items-center gap-2">
-        <input
+        <input aria-label={t("Novo item")}
           value={novoNome}
           onChange={(e) => setNovoNome(e.target.value)}
           placeholder={cheio ? t("Limite de {n} atingido", { n: limite }) : t(placeholderItem)}

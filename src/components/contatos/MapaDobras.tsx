@@ -266,6 +266,7 @@ export default function MapaDobras({
         <div className="flex-1">
           <label className="text-xs text-muted block mb-1">{t("Cidade de referência")}</label>
           <CidadeGlobalAutocomplete
+            ariaLabel={t("Cidade de referência")}
             value={refCidade}
             onChange={escolherCidade}
             orientacao="horizontal"
@@ -286,7 +287,7 @@ export default function MapaDobras({
               {raioKm} km
             </span>
           </div>
-          <input
+          <input aria-label={t("Raio")}
             type="range"
             min={50}
             max={1000}

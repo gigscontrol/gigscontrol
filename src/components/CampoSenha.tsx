@@ -60,7 +60,7 @@ export default function CampoSenha({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-secondary">{label}</span>
-      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors">
+      <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 foco-campo-dentro transition-colors">
         <Lock size={14} className="text-muted flex-shrink-0" />
         <input
           type={visivel ? "text" : "password"}

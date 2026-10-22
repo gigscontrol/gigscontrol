@@ -146,11 +146,11 @@ export default function NotaEditor({
       <div className="card flex flex-col gap-4">
         {/* Título */}
         <div>
-          <input
+          <input aria-label={t("Título da nota")}
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             placeholder={t("Título da nota")}
-            className="input w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-1.5 text-lg font-semibold text-primary focus:border-border-strong"
+            className="input w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-1.5 text-lg font-semibold text-primary foco-campo"
             autoFocus={!editando}
           />
           {!titulo.trim() && (
@@ -181,7 +181,7 @@ export default function NotaEditor({
             </button>
           </div>
           {aba === "escrever" ? (
-            <textarea
+            <textarea aria-label={t("Conteúdo da nota")}
               value={conteudo}
               onChange={(e) => setConteudo(e.target.value)}
               placeholder={t("Escreva o conteúdo... (aceita **negrito**, *itálico*, listas com - e links)")}
@@ -248,7 +248,7 @@ export default function NotaEditor({
 
           <div className="min-w-[180px]">
             <label className="stat-label mb-1.5 block">{t("Etiquetar artista")}</label>
-            <select
+            <select aria-label={t("Etiquetar artista")}
               value={artistId ?? ""}
               onChange={(e) => setArtistId(e.target.value || null)}
               className="input w-full border border-border rounded-md px-3 py-2 bg-surface"

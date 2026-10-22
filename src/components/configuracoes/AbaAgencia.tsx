@@ -329,7 +329,7 @@ function SlugSection({
           {t("Trocar pra")}
         </span>
         <div
-          className="flex items-center gap-2 bg-elevated border rounded-md px-3 py-2 focus-within:border-border-strong transition-colors"
+          className="flex items-center gap-2 bg-elevated border rounded-md px-3 py-2 foco-campo-dentro transition-colors"
           style={{
             borderColor:
               check.status === "disponivel"

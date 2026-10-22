@@ -111,7 +111,7 @@ export function EventoFormModal({
           />
         </CampoForm>
 
-        <CampoForm label={t("Quando")}>
+        <CampoForm label={t("Quando")} grupo>
           <div className="flex rounded-md border border-border overflow-hidden text-sm">
             {[
               { v: true, label: t("Dia inteiro") },

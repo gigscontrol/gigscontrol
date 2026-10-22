@@ -14,6 +14,8 @@ import {
 import Flag from "./Flag";
 
 type Props = {
+  /** Nome do campo pro leitor de tela quando não há <label> em volta. */
+  ariaLabel?: string;
   country: Country;
   onCountryChange: (c: Country) => void;
   value: string;
@@ -23,6 +25,7 @@ type Props = {
 };
 
 export default function PhoneInput({
+  ariaLabel,
   country,
   onCountryChange,
   value,
@@ -66,7 +69,7 @@ export default function PhoneInput({
       <div
         className={`
           flex items-stretch bg-elevated border rounded-md transition-colors
-          ${error ? "border-danger" : "border-border focus-within:border-border-strong"}
+          ${error ? "border-danger" : "border-border foco-campo-dentro"}
         `}
       >
         <button
@@ -83,7 +86,7 @@ export default function PhoneInput({
           />
         </button>
 
-        <input
+        <input aria-label={ariaLabel}
           type="tel"
           inputMode="numeric"
           value={masked}
@@ -100,9 +103,9 @@ export default function PhoneInput({
           style={{ boxShadow: "0 12px 30px var(--shadow-color)", maxHeight: 380 }}
         >
           <div className="p-2 border-b border-border flex-shrink-0">
-            <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
+            <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2 foco-campo-dentro">
               <Search size={14} className="text-muted flex-shrink-0" />
-              <input
+              <input aria-label={t("Buscar país ou DDI")}
                 ref={searchRef}
                 type="text"
                 value={search}

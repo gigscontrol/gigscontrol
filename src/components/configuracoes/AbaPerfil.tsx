@@ -136,7 +136,7 @@ function MeusDados({
   const [salvandoCor, setSalvandoCor] = useState(false);
 
   const campo =
-    "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary focus:border-border-strong outline-none";
+    "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary foco-campo outline-none";
   const docCfg = configDocumento(pais);
 
   // Carrega o perfil (GET /api/perfil, já ramificado por papel no backend).
@@ -686,7 +686,7 @@ function AcessoCard({
           <span className="text-[0.7rem] text-muted -mt-1">
             {t("Cadastre um e-mail seu. Enviamos um link pra confirmar — depois disso você pode entrar tanto pelo seu login de usuário quanto pelo e-mail.")}
           </span>
-          <input
+          <input aria-label={t("E-mail de acesso")}
             type="email"
             value={novoEmail}
             onChange={(e) => setNovoEmail(e.target.value)}

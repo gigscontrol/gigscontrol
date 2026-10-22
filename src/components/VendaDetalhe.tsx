@@ -454,13 +454,13 @@ export default function VendaDetalhe({
               )}
               {editandoInfoExtra ? (
                 <div className="flex flex-col gap-2">
-                  <textarea
+                  <textarea aria-label={t("Informações extras")}
                     value={infoExtraDraft}
                     onChange={(e) => setInfoExtraDraft(e.target.value)}
                     rows={4}
                     maxLength={1000}
                     placeholder={t("Algo extra que apareceu no orçamento ou queira anotar.")}
-                    className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
+                    className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none foco-campo resize-none"
                     autoFocus
                   />
                   <div className="flex items-center justify-end gap-2">

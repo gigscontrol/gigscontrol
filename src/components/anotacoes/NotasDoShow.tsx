@@ -206,14 +206,14 @@ function NotaShowEditor({
         </div>
       ) : (
         <div className="card flex flex-col gap-2.5">
-          <input
+          <input aria-label={t("Título (opcional)")}
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             placeholder={t("Título (opcional)")}
-            className="input w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-1.5 text-sm font-semibold text-primary focus:border-border-strong"
+            className="input w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-1.5 text-sm font-semibold text-primary foco-campo"
             autoFocus
           />
-          <textarea
+          <textarea aria-label={t("Conteúdo da anotação")}
             value={conteudo}
             onChange={(e) => setConteudo(e.target.value)}
             placeholder={t("Escreva o conteúdo... (aceita **negrito**, *itálico*, listas com - e links)")}

@@ -218,9 +218,9 @@ export default function AnotacoesPage() {
       />
 
       {!pastaAberta && (
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 foco-campo-dentro transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
-          <input
+          <input aria-label={t("Buscar anotações")}
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar anotações...")}
@@ -856,7 +856,7 @@ function PastaFormModal({
       <div className="flex flex-col gap-4">
         <div>
           <label className="stat-label mb-1 block">{t("Nome")}</label>
-          <input
+          <input aria-label={t("Nome da pasta")}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             placeholder={t("Ex.: Contatos úteis, Procedimentos...")}

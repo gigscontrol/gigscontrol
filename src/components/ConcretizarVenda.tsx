@@ -1607,7 +1607,7 @@ export default function ConcretizarVenda({
                 </button>
               </div>
               {previewWA && (
-                <textarea
+                <textarea aria-label={t("Prévia da mensagem")}
                   readOnly
                   value={texto}
                   rows={14}

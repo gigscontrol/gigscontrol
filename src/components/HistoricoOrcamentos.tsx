@@ -350,9 +350,9 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-control px-3 py-2 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
+        <div className="flex items-center gap-2 bg-surface border border-border rounded-control px-3 py-2 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
-          <input
+          <input aria-label={t("Buscar orçamentos")}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

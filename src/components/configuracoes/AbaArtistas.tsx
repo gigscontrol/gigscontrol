@@ -482,9 +482,9 @@ export default function AbaArtistas() {
           {/* Busca + filtro (só com muitos DJs) */}
           {muitosDJs && !modoReordenar && (
             <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 bg-elevated border border-border rounded-md px-2 py-1.5 w-40 focus-within:border-border-strong">
+              <div className="flex items-center gap-1.5 bg-elevated border border-border rounded-md px-2 py-1.5 w-40 foco-campo-dentro">
                 <Search size={13} className="text-muted flex-shrink-0" />
-                <input
+                <input aria-label={t("Buscar artista")}
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder={t("Buscar")}

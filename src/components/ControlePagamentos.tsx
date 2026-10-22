@@ -532,9 +532,9 @@ export default function ControlePagamentos({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex h-[42px] items-center gap-2 bg-surface border border-border rounded-md px-3 flex-1 min-w-[240px] max-w-md focus-within:border-border-strong transition-colors">
+        <div className="flex h-[42px] items-center gap-2 bg-surface border border-border rounded-md px-3 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
-          <input
+          <input aria-label={t("Buscar pagamentos")}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

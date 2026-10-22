@@ -19,12 +19,15 @@ export default function SearchableSelect({
   onChange,
   placeholder = "Buscar…",
   className = "",
+  ariaLabel,
 }: {
   options: SearchOption[];
   value: string | null;
   onChange: (id: string) => void;
   placeholder?: string;
   className?: string;
+  /** Nome do campo pro leitor de tela quando não há <label> em volta. */
+  ariaLabel?: string;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -85,7 +88,7 @@ export default function SearchableSelect({
       )}
       <div className="campo-input flex items-center gap-2 relative z-50">
         <Search size={14} className="flex-shrink-0 text-muted" />
-        <input
+        <input aria-label={ariaLabel}
           ref={inputRef}
           value={open ? query : selected?.label ?? ""}
           onChange={(e) => {

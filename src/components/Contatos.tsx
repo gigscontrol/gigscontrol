@@ -480,9 +480,9 @@ export default function Contatos({
       </div>
 
       {/* Busca */}
-      <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 focus-within:border-border-strong transition-colors">
+      <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 foco-campo-dentro transition-colors">
         <Search size={15} className="text-muted flex-shrink-0" />
-        <input
+        <input aria-label={t("Buscar em {categoria}...", { categoria })}
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -502,7 +502,7 @@ export default function Contatos({
       {(categoria === "contratantes" || categoria === "casas") && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {categoria === "casas" && (
-            <select
+            <select aria-label={t("Tipo de casa")}
               value={filtroTipo}
               onChange={(e) => setFiltroTipo(e.target.value as TipoCasa | "")}
               className="campo-input w-auto min-w-[140px] flex-1 sm:flex-none"
@@ -515,7 +515,7 @@ export default function Contatos({
               ))}
             </select>
           )}
-          <select
+          <select aria-label={t("Cidade")}
             value={filtroCidadeId}
             onChange={(e) => setFiltroCidadeId(e.target.value)}
             className="campo-input w-auto min-w-[160px] flex-1 sm:flex-none"
@@ -530,7 +530,7 @@ export default function Contatos({
                 </option>
               ))}
           </select>
-          <select
+          <select aria-label={t("Estado")}
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
             className="campo-input w-auto min-w-[120px] flex-1 sm:flex-none"
