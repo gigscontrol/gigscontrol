@@ -22,11 +22,11 @@ const stepBtn =
 function Stepper({ qtd, onQtd, accent }: { qtd: number; onQtd: (n: number) => void; accent: string }) {
   return (
     <div className="flex items-center gap-2">
-      <button type="button" onClick={() => onQtd(Math.max(1, qtd - 1))} className={stepBtn} style={{ accentColor: accent }}>
+      <button type="button" aria-label="−1" onClick={() => onQtd(Math.max(1, qtd - 1))} className={stepBtn} style={{ accentColor: accent }}>
         −
       </button>
       <span className="text-sm font-bold tabular-nums w-6 text-center">{qtd}</span>
-      <button type="button" onClick={() => onQtd(Math.min(MAX, qtd + 1))} className={stepBtn} style={{ accentColor: accent }}>
+      <button type="button" aria-label="+1" onClick={() => onQtd(Math.min(MAX, qtd + 1))} className={stepBtn} style={{ accentColor: accent }}>
         +
       </button>
     </div>

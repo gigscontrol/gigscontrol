@@ -295,6 +295,7 @@ function PresetModal({
             <button
               type="button"
               onClick={() => adicionar(novoItem)}
+              aria-label={t("Adicionar item")}
               disabled={!novoItem.trim()}
               className="btn btn-secondary disabled:opacity-50"
             >

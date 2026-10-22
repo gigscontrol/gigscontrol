@@ -472,6 +472,7 @@ export default function AbaArtistas() {
               onClick={() => setCriando(true)}
               disabled={noLimite}
               title={noLimite ? t("Limite do plano atingido") : t("Adicionar artista")}
+              aria-label={t("Adicionar artista")}
               className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: "var(--brand)" }}
             >

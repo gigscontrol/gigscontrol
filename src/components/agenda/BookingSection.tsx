@@ -233,10 +233,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
           <>
             {/* Cartão do hotel */}
             <div className="rounded-lg border border-border bg-elevated overflow-hidden">
-              <div
-                className="p-3 flex items-start justify-between gap-3"
-                style={{ borderLeft: "3px solid var(--brand)" }}
-              >
+              <div className="p-3 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5 min-w-0">
                   <div
                     className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
