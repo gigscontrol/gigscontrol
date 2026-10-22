@@ -288,7 +288,17 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
 
       {/* Cards clicáveis — abrem um popup de resumo na própria página; o rodapé do
           popup leva ao Controle de Pagamentos. */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <ClickableStat onClick={() => setResumo("atrasado")} ariaLabel={t("Resumo do atrasado")}>
+          <StatCard
+            title={t("Atrasado")}
+            value={totais.atrasado}
+            icon={<AlertTriangle size={16} />}
+            accentColor="var(--danger)"
+            subtitle={t("Vencidas, de todos os meses")}
+            destaque={totais.atrasadoNum > 0}
+          />
+        </ClickableStat>
         <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Resumo do total do período")}>
           <StatCard
             title={t("Total do período")}
@@ -314,15 +324,6 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
             icon={<CalendarClock size={16} />}
             accentColor="var(--warning)"
             subtitle={t("Vencem no período, em dia")}
-          />
-        </ClickableStat>
-        <ClickableStat onClick={() => setResumo("atrasado")} ariaLabel={t("Resumo do atrasado")}>
-          <StatCard
-            title={t("Atrasado")}
-            value={totais.atrasado}
-            icon={<AlertTriangle size={16} />}
-            accentColor="var(--danger)"
-            subtitle={t("Vencidas, de todos os meses")}
           />
         </ClickableStat>
       </div>

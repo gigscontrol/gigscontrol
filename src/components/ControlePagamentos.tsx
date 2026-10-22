@@ -42,6 +42,7 @@ import { podeInformarPagamentoUI } from "@/lib/permissoes/gatesEquipeUI";
 import { diasDeAtraso, ordinal } from "@/lib/financeiro/cobranca";
 import { CobrarParcelaModal, useCobranca, type AlvoCobranca } from "./financeiro/Cobranca";
 import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
+import { ClickableStat } from "./DashboardResumo";
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -501,34 +502,44 @@ export default function ControlePagamentos({
         {/* Cards de COBRANÇA: o que está vencido e quanto disso ninguém cobrou
             ainda, o que dá pra lembrar antes de vencer, e o que entrou. Cada
             um diz a sua régua de data. */}
-        <StatCard
-          title={t("Atrasado")}
-          value={totais.atrasado}
-          icon={<AlertTriangle size={18} />}
-          accentColor="var(--danger)"
-          subtitle={t("{n} parcelas · vencidas, de todos os meses", { n: resumoCobranca.atrasadas })}
-        />
-        <StatCard
-          title={t("Nunca cobradas")}
-          value={resumoCobranca.nuncaCobradas}
-          icon={<BellRing size={18} />}
-          accentColor="var(--warning)"
-          subtitle={t("das {n} atrasadas", { n: resumoCobranca.atrasadas })}
-        />
-        <StatCard
-          title={t("A vencer em 7 dias")}
-          value={resumoCobranca.aVencer7Valor}
-          icon={<CalendarClock size={18} />}
-          accentColor={accent}
-          subtitle={t("{n} parcelas · dá pra lembrar antes", { n: resumoCobranca.aVencer7 })}
-        />
-        <StatCard
-          title={t("Recebido")}
-          value={totais.recebido}
-          icon={<CheckCircle2 size={18} />}
-          accentColor="var(--success)"
-          subtitle={`${t("Pelo dia do pagamento")} · ${tituloPeriodo}`}
-        />
+        {/* Clicar no card aplica o filtro da lista (antes só olhava). */}
+        <ClickableStat onClick={() => setFiltroStatus("atrasado")} ariaLabel={t("Filtrar atrasadas")}>
+          <StatCard
+            title={t("Atrasado")}
+            value={totais.atrasado}
+            icon={<AlertTriangle size={18} />}
+            accentColor="var(--danger)"
+            subtitle={t("{n} parcelas · vencidas, de todos os meses", { n: resumoCobranca.atrasadas })}
+            destaque={totais.atrasadoNum > 0}
+          />
+        </ClickableStat>
+        <ClickableStat onClick={() => setFiltroStatus("atrasado")} ariaLabel={t("Filtrar atrasadas")}>
+          <StatCard
+            title={t("Nunca cobradas")}
+            value={resumoCobranca.nuncaCobradas}
+            icon={<BellRing size={18} />}
+            accentColor="var(--warning)"
+            subtitle={t("das {n} atrasadas", { n: resumoCobranca.atrasadas })}
+          />
+        </ClickableStat>
+        <ClickableStat onClick={() => setFiltroStatus("pendente")} ariaLabel={t("Filtrar pendentes")}>
+          <StatCard
+            title={t("A vencer em 7 dias")}
+            value={resumoCobranca.aVencer7Valor}
+            icon={<CalendarClock size={18} />}
+            accentColor={accent}
+            subtitle={t("{n} parcelas · dá pra lembrar antes", { n: resumoCobranca.aVencer7 })}
+          />
+        </ClickableStat>
+        <ClickableStat onClick={() => setFiltroStatus("pago")} ariaLabel={t("Filtrar pagas")}>
+          <StatCard
+            title={t("Recebido")}
+            value={totais.recebido}
+            icon={<CheckCircle2 size={18} />}
+            accentColor="var(--success)"
+            subtitle={`${t("Pelo dia do pagamento")} · ${tituloPeriodo}`}
+          />
+        </ClickableStat>
       </div>
 
       <BarraLista>
