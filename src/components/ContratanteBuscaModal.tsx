@@ -93,8 +93,8 @@ export default function ContratanteBuscaModal({
                   className="flex items-center gap-3 rounded-md px-1 py-2.5 text-left transition-colors hover:bg-elevated"
                 >
                   <span
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ background: "var(--brand)" }}
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                    style={{ background: "var(--brand-weak)", color: "var(--brand)" }}
                   >
                     {iniciaisDoNome(c.nome)}
                   </span>

@@ -309,7 +309,7 @@ export function EditorPermissoesVinculo({
                     className="text-xs font-semibold px-2.5 py-1.5 rounded-md border transition-colors text-left"
                     style={{
                       borderColor: on ? p.cor : "var(--border-strong)",
-                      backgroundColor: on ? `${p.cor}22` : "transparent",
+                      backgroundColor: on ? `color-mix(in srgb, ${p.cor} 13%, transparent)` : "transparent",
                       color: on ? p.cor : "var(--text-secondary)",
                     }}
                     title={p.descricao}
@@ -363,7 +363,7 @@ export function EditorPermissoesVinculo({
                         onClick={() => toggleModulo(mod)}
                         className="relative flex-shrink-0 w-10 h-[22px] rounded-full border transition-colors"
                         style={{
-                          backgroundColor: on ? "var(--brand)" : "var(--elevated)",
+                          backgroundColor: on ? "var(--brand)" : "var(--bg-elevated)",
                           borderColor: on ? "var(--brand)" : "var(--border-strong)",
                         }}
                       >
@@ -741,7 +741,7 @@ export default function EquipeDoArtista({
                         <span
                           key={p}
                           className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`, color: perfil?.cor ?? "#3D7BFF" }}
+                          style={{ backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`, color: perfil?.cor ?? "#3D7BFF" }}
                         >
                           {perfil?.nome ?? p}
                         </span>

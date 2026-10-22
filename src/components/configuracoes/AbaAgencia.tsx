@@ -128,7 +128,7 @@ export default function AbaAgencia() {
         <div
           className="text-sm rounded-md px-3 py-2"
           style={{
-            backgroundColor: "rgba(239,68,68,0.1)",
+            backgroundColor: "var(--danger-weak)",
             color: "var(--danger)",
           }}
         >
@@ -390,12 +390,12 @@ function SlugSection({
         className="text-xs rounded-md px-3 py-2 mb-3 leading-relaxed"
         style={{
           backgroundColor: semCota
-            ? "rgba(239,68,68,0.08)"
-            : "rgba(245,158,11,0.08)",
+            ? "var(--danger-weak)"
+            : "var(--warning-weak)",
           color: semCota ? "var(--danger)" : "var(--warning)",
           border: semCota
-            ? "1px solid rgba(239,68,68,0.2)"
-            : "1px solid rgba(245,158,11,0.2)",
+            ? "1px solid color-mix(in srgb, var(--danger) 20%, transparent)"
+            : "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
         }}
       >
         <div className="flex items-start gap-2">
@@ -435,9 +435,9 @@ function SlugSection({
           <div
             className="text-sm rounded-md px-3 py-3 leading-relaxed"
             style={{
-              backgroundColor: "rgba(245,158,11,0.08)",
+              backgroundColor: "var(--warning-weak)",
               color: "var(--text-secondary)",
-              border: "1px solid rgba(245,158,11,0.2)",
+              border: "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
             }}
           >
             <div className="flex items-start gap-2">
@@ -472,8 +472,8 @@ function SlugSection({
               <div
                 className="text-sm font-mono rounded-md px-3 py-2"
                 style={{
-                  backgroundColor: "rgba(34,197,94,0.08)",
-                  border: "1px solid rgba(34,197,94,0.2)",
+                  backgroundColor: "var(--success-weak)",
+                  border: "1px solid color-mix(in srgb, var(--success) 20%, transparent)",
                   color: "var(--success)",
                 }}
               >

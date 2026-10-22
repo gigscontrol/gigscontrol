@@ -270,7 +270,7 @@ export default function Topbar({
                     <span className="text-xs text-muted">{t("Papel")}</span>
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded"
-                      style={{ backgroundColor: `${papel.cor}22`, color: papel.cor }}
+                      style={{ backgroundColor: `color-mix(in srgb, ${papel.cor} 13%, transparent)`, color: papel.cor }}
                     >
                       {papel.nome}
                     </span>

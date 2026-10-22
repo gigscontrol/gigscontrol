@@ -657,9 +657,9 @@ export function ModalNovoArtista({
             <div
               className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
               style={{
-                backgroundColor: "rgba(239,68,68,0.08)",
+                backgroundColor: "var(--danger-weak)",
                 color: "var(--danger)",
-                border: "1px solid rgba(239,68,68,0.3)",
+                border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
               }}
             >
               <AlertCircle size={13} className="flex-shrink-0" />

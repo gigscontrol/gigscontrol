@@ -118,7 +118,7 @@ export default function PixPendente({ dados, onAprovado, onGerarNovo }: Props) {
   if (expirado) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <Clock size={28} style={{ color: "var(--muted)" }} />
+        <Clock size={28} style={{ color: "var(--text-muted)" }} />
         <p className="text-sm" style={{ color: "var(--text-primary)" }}>
           {t("O código PIX expirou.")}
         </p>
@@ -170,7 +170,7 @@ export default function PixPendente({ dados, onAprovado, onGerarNovo }: Props) {
 
       <div
         className="flex items-center gap-2 text-xs"
-        style={{ color: "var(--muted)" }}
+        style={{ color: "var(--text-muted)" }}
       >
         <Clock size={12} />
         {t("Expira em {tempo}", { tempo: formatarTempo(restanteMs) })}
@@ -178,7 +178,7 @@ export default function PixPendente({ dados, onAprovado, onGerarNovo }: Props) {
 
       <div
         className="flex items-center gap-2 text-xs"
-        style={{ color: "var(--muted)" }}
+        style={{ color: "var(--text-muted)" }}
       >
         <Loader2 size={12} className="animate-spin" />
         {t("Aguardando o pagamento...")}

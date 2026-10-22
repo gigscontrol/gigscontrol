@@ -63,7 +63,7 @@ export default function BloqueioModal({ papel, adminContato, plano, ciclo }: Pro
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(2,6,12,.72)", backdropFilter: "blur(3px)" }}
+      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       role="dialog"
       aria-modal="true"
     >

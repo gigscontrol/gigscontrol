@@ -107,7 +107,7 @@ export function FolhaNovo({ aberta, onFechar }: { aberta: boolean; onFechar: () 
         type="button"
         aria-label={t("Fechar")}
         onClick={onFechar}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade"
+        className="absolute inset-0 bg-[var(--overlay-scrim)] backdrop-blur-sm animate-fade"
       />
       <div
         className="absolute inset-x-0 bottom-0 rounded-t-xl border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] animate-in"

@@ -25,7 +25,7 @@ export default function Stepper({ steps, current, accent }: Props) {
                 style={{
                   backgroundColor: isCurrent || isDone ? accent : "var(--bg-elevated)",
                   color: isCurrent || isDone ? "#fff" : "var(--text-muted)",
-                  boxShadow: isCurrent ? `0 0 0 4px ${accent}25` : undefined,
+                  boxShadow: isCurrent ? `0 0 0 4px color-mix(in srgb, ${accent} 15%, transparent)` : undefined,
                 }}
               >
                 {isDone ? <Check size={14} /> : s.num}

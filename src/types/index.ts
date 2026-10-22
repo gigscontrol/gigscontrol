@@ -751,7 +751,10 @@ export type ModuleTheme = {
 // Cor de ação ÚNICA (Signal Blue) — as cores por módulo foram removidas.
 // `color` continua existindo pra não quebrar quem consome MODULE_THEMES,
 // mas todas apontam pro Signal Blue. A cor pessoal do artista é `artista.color`.
-const SIGNAL = "#3D7BFF";
+// Token, não hexadecimal: no tema claro o --brand escurece pra passar como
+// TEXTO (o hex fixo dava 3,8:1 no branco). Quem precisa de transparência usa
+// color-mix(in srgb, <cor> N%, transparent) — `${cor}26` não funciona com var().
+const SIGNAL = "var(--brand)";
 export const MODULE_THEMES: Record<ActiveTab, ModuleTheme> = {
   agenda: { key: "agenda", label: "Agenda", color: SIGNAL },
   vendas: { key: "vendas", label: "Vendas", color: SIGNAL },

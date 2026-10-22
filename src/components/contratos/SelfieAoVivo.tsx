@@ -28,7 +28,7 @@ const MAX_LADO = 1280;
 /** Qualidade do JPEG exportado (0–1). */
 const QUALIDADE = 0.8;
 
-const ACCENT = "#3D7BFF";
+const ACCENT = "var(--brand)";
 
 export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
   const t = useT();

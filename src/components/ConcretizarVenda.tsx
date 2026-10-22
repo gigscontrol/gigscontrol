@@ -95,6 +95,7 @@ import {
   type TipoEvento,
   type Venda,
 } from "@/types";
+import { corTextoSobre } from "@/lib/contraste";
 
 /** Dados do contato já cadastrado que a venda vai reusar (D2). */
 type ContatoAlvo = {
@@ -1521,7 +1522,7 @@ export default function ConcretizarVenda({
       {orc && !emEdicao && (
         <div
           className="card mb-4 flex items-start gap-3"
-          style={{ borderColor: accent, backgroundColor: `${accent}08` }}
+          style={{ borderColor: accent, backgroundColor: `color-mix(in srgb, ${accent} 3%, transparent)` }}
         >
           <Sparkles size={16} className="flex-shrink-0 mt-0.5" style={{ color: accent }} />
           <div className="text-sm text-secondary">
@@ -1667,7 +1668,7 @@ export default function ConcretizarVenda({
                 className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{
                   backgroundColor: artistaEfetivoOrc.color,
-                  color: "#fff",
+                  color: corTextoSobre(artistaEfetivoOrc.color),
                 }}
               >
                 {iniciaisDoNome(artistaEfetivoOrc.name)}
@@ -1721,7 +1722,7 @@ export default function ConcretizarVenda({
                         backgroundColor: isActive
                           ? d.color
                           : "var(--bg-surface-2)",
-                        color: isActive ? "#fff" : "var(--text-muted)",
+                        color: isActive ? corTextoSobre(d.color) : "var(--text-muted)",
                       }}
                     >
                       {iniciaisDoNome(d.name)}
@@ -1944,7 +1945,7 @@ export default function ConcretizarVenda({
                     <div
                       className="h-9 w-9 rounded-md flex items-center justify-center"
                       style={{
-                        backgroundColor: isActive ? `${accent}20` : "var(--bg-elevated)",
+                        backgroundColor: isActive ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
                         color: isActive ? accent : "var(--text-secondary)",
                       }}
                     >
@@ -2454,7 +2455,7 @@ export default function ConcretizarVenda({
               className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
               style={{
                 backgroundColor:
-                  modoPagamento === "padrao" ? `${accent}20` : "var(--bg-elevated)",
+                  modoPagamento === "padrao" ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
                 color: modoPagamento === "padrao" ? accent : "var(--text-secondary)",
               }}
             >
@@ -2482,7 +2483,7 @@ export default function ConcretizarVenda({
               className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
               style={{
                 backgroundColor:
-                  modoPagamento === "detalhado" ? `${accent}20` : "var(--bg-elevated)",
+                  modoPagamento === "detalhado" ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
                 color: modoPagamento === "detalhado" ? accent : "var(--text-secondary)",
               }}
             >
@@ -2686,7 +2687,7 @@ function SectionCard({
         {icon && (
           <div
             className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: `${accent}20`, color: accent }}
+            style={{ backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`, color: accent }}
           >
             {icon}
           </div>

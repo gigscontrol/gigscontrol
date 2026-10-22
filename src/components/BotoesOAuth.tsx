@@ -97,7 +97,7 @@ export default function BotoesOAuth({
       </button>
 
       {erro && (
-        <div className="flex items-center gap-2 text-xs text-danger bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.3)] rounded-md px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-danger bg-[var(--danger-weak)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] rounded-md px-3 py-2">
           <AlertCircle size={13} className="flex-shrink-0" />
           {erro}
         </div>

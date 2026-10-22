@@ -700,7 +700,7 @@ export function ModalUsuario({
               <div
                 style={{
                   height: 4,
-                  background: `linear-gradient(90deg, ${cor}, ${cor}66)`,
+                  background: `linear-gradient(90deg, ${cor}, color-mix(in srgb, ${cor} 40%, transparent))`,
                 }}
               />
               <div className="p-5 flex flex-col gap-4">
@@ -708,7 +708,7 @@ export function ModalUsuario({
                   <span
                     className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
                     style={{
-                      background: `linear-gradient(135deg, ${cor}, ${cor}99)`,
+                      background: `linear-gradient(135deg, ${cor}, color-mix(in srgb, ${cor} 60%, transparent))`,
                     }}
                   >
                     {(nome.trim().charAt(0) || "?").toUpperCase()}
@@ -944,9 +944,9 @@ export function ModalUsuario({
                 <div
                   className="flex items-start gap-2 text-xs rounded-md px-3 py-2.5 leading-relaxed"
                   style={{
-                    backgroundColor: "rgba(245,158,11,0.08)",
+                    backgroundColor: "var(--warning-weak)",
                     color: "var(--warning)",
-                    border: "1px solid rgba(245,158,11,0.2)",
+                    border: "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
                   }}
                 >
                   <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
@@ -959,9 +959,9 @@ export function ModalUsuario({
                 <div
                   className="flex items-center gap-2 text-xs rounded-md px-3 py-2.5"
                   style={{
-                    backgroundColor: "rgba(34,197,94,0.08)",
+                    backgroundColor: "var(--success-weak)",
                     color: "var(--success)",
-                    border: "1px solid rgba(34,197,94,0.2)",
+                    border: "1px solid color-mix(in srgb, var(--success) 20%, transparent)",
                   }}
                 >
                   <Lock size={13} className="flex-shrink-0" />
@@ -1081,7 +1081,7 @@ export function ModalUsuario({
                                   key={pid}
                                   className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
-                                    backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                    backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                     color: perfil?.cor ?? "#3D7BFF",
                                   }}
                                 >

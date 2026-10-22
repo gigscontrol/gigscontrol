@@ -713,7 +713,7 @@ function SummaryTile({
       <div
         className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
         style={{
-          backgroundColor: active ? `${accent}20` : "var(--bg-elevated)",
+          backgroundColor: active ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
           color: active ? accent : "var(--text-secondary)",
         }}
       >

@@ -144,7 +144,7 @@ export default function PagamentoSection({
             {/* Número */}
             <div
               className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{ backgroundColor: `${accent}20`, color: accent }}
+              style={{ backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`, color: accent }}
             >
               {idx + 1}
             </div>
@@ -217,7 +217,7 @@ export default function PagamentoSection({
         className="mt-3 flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-sm"
         style={{
           borderColor: tudoOk ? "var(--success)" : "var(--danger)",
-          backgroundColor: tudoOk ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+          backgroundColor: tudoOk ? "var(--success-weak)" : "var(--danger-weak)",
         }}
       >
         <span className="text-secondary">

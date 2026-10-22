@@ -34,6 +34,7 @@ import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { useFiltroArtistas } from "../FiltroArtistas";
+import { corTextoSobre } from "@/lib/contraste";
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const MAX_PASTAS = 8;
@@ -327,7 +328,7 @@ export default function AnotacoesPage() {
                     >
                       <div
                         className="h-10 w-10 rounded-chip flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                        style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
                       >
                         <Music size={17} />
                       </div>
@@ -345,7 +346,7 @@ export default function AnotacoesPage() {
                           <span
                             key={uid}
                             className="h-6 w-6 rounded-full flex items-center justify-center text-[0.55rem] font-bold border-2"
-                            style={{ backgroundColor: corDe(uid), color: "#fff", borderColor: "var(--surface)" }}
+                            style={{ backgroundColor: corDe(uid), color: corTextoSobre(corDe(uid)), borderColor: "var(--surface)" }}
                             title={nomeDe(uid)}
                           >
                             {iniciaisDoNome(nomeDe(uid))}
@@ -373,7 +374,7 @@ export default function AnotacoesPage() {
               <div className="card flex items-center gap-3 py-6 text-left">
                 <div
                   className="h-10 w-10 rounded-chip flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
                 >
                   <Music size={17} />
                 </div>
@@ -451,7 +452,7 @@ function PastasGrid({
       <div className="card flex flex-col items-center justify-center py-16 text-center">
         <div
           className="h-14 w-14 rounded-chip flex items-center justify-center mb-4"
-          style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+          style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
         >
           <NotebookPen size={26} />
         </div>
@@ -484,7 +485,7 @@ function PastasGrid({
             <div className="flex items-start justify-between gap-2">
               <div
                 className="h-11 w-11 rounded-chip flex items-center justify-center text-xl flex-shrink-0"
-                style={{ backgroundColor: `${cor}20` }}
+                style={{ backgroundColor: `color-mix(in srgb, ${cor} 13%, transparent)` }}
               >
                 {p.icone || "📁"}
               </div>
@@ -580,7 +581,7 @@ function PastaView({
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="h-11 w-11 rounded-chip flex items-center justify-center text-xl flex-shrink-0"
-            style={{ backgroundColor: `${pasta.cor || ACCENT}20` }}
+            style={{ backgroundColor: `color-mix(in srgb, ${pasta.cor || ACCENT} 13%, transparent)` }}
           >
             {pasta.icone || "📁"}
           </div>
@@ -642,7 +643,7 @@ function PastaView({
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors"
             style={{
               borderColor: filtroArtista === null ? ACCENT : "var(--border)",
-              backgroundColor: filtroArtista === null ? `${ACCENT}15` : "transparent",
+              backgroundColor: filtroArtista === null ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent",
               color: filtroArtista === null ? ACCENT : "var(--text-secondary)",
             }}
           >
@@ -657,7 +658,7 @@ function PastaView({
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs transition-colors"
                 style={{
                   borderColor: on ? ACCENT : "var(--border)",
-                  backgroundColor: on ? `${ACCENT}15` : "transparent",
+                  backgroundColor: on ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent",
                   color: on ? ACCENT : "var(--text-secondary)",
                 }}
               >
@@ -674,7 +675,7 @@ function PastaView({
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <div
             className="h-14 w-14 rounded-chip flex items-center justify-center mb-4"
-            style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+            style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
           >
             <FileText size={26} />
           </div>
@@ -905,7 +906,7 @@ function PastaFormModal({
                   key={o.v}
                   onClick={() => setVisibilidade(o.v)}
                   className="flex items-center gap-3 p-2.5 rounded-md border text-left transition-colors"
-                  style={{ borderColor: ativo ? ACCENT : "var(--border)", backgroundColor: ativo ? `${ACCENT}12` : "transparent" }}
+                  style={{ borderColor: ativo ? ACCENT : "var(--border)", backgroundColor: ativo ? `color-mix(in srgb, ${ACCENT} 7%, transparent)` : "transparent" }}
                 >
                   <o.icon size={16} style={{ color: ativo ? ACCENT : "var(--text-muted)" }} />
                   <div className="min-w-0">
@@ -936,7 +937,7 @@ function PastaFormModal({
                           key={u.id}
                           onClick={() => toggleMembro(u.id)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-sm transition-colors"
-                          style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `${ACCENT}15` : "transparent" }}
+                          style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent" }}
                         >
                           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: u.cor || "#8892a6" }} />
                           {u.nome}
@@ -961,11 +962,11 @@ function PastaFormModal({
                         key={a.id}
                         onClick={() => toggleArtista(a.id)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-sm transition-colors"
-                        style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `${ACCENT}15` : "transparent" }}
+                        style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent" }}
                       >
                         <span
                           className="h-4 w-4 rounded-full flex items-center justify-center text-[0.5rem] font-bold flex-shrink-0"
-                          style={{ backgroundColor: a.color, color: "#fff" }}
+                          style={{ backgroundColor: a.color, color: corTextoSobre(a.color) }}
                         >
                           {iniciaisDoNome(a.name)}
                         </span>

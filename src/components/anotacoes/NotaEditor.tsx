@@ -236,7 +236,7 @@ export default function NotaEditor({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors"
               style={{
                 borderColor: fixada ? ACCENT : "var(--border)",
-                backgroundColor: fixada ? `${ACCENT}15` : "transparent",
+                backgroundColor: fixada ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent",
                 color: fixada ? ACCENT : "var(--text-secondary)",
               }}
               aria-pressed={fixada}

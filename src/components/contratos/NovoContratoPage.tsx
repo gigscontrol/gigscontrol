@@ -41,7 +41,7 @@ import { getPlano, formatarPreco } from "@/lib/planos";
 import { useT } from "@/lib/i18n";
 import SearchableSelect from "../SearchableSelect";
 
-const ACCENT = "#3D7BFF";
+const ACCENT = "var(--brand)";
 
 // Tokens que costumam ser longos → textarea.
 const LONGOS = new Set([
@@ -487,7 +487,7 @@ export default function NovoContratoPage({
       {noLimite && (
         <div
           className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5 mb-6"
-          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+          style={{ backgroundColor: "var(--warning-weak)", color: "var(--warning)" }}
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
@@ -533,7 +533,7 @@ export default function NovoContratoPage({
             {excedenteErro && (
               <div
                 className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5"
-                style={{ backgroundColor: "rgba(239,68,68,0.1)", color: "var(--danger)" }}
+                style={{ backgroundColor: "var(--danger-weak)", color: "var(--danger)" }}
               >
                 <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
                 <span>{excedenteErro}</span>

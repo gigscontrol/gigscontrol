@@ -460,7 +460,7 @@ export default function VendasDashboard({
         <div className="card mt-4 flex items-center gap-3">
           <div
             className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: `${accent}20`, color: accent }}
+            style={{ backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`, color: accent }}
           >
             <TrendingUp size={18} />
           </div>

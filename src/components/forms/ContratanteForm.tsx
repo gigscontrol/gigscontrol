@@ -215,8 +215,8 @@ export default function ContratanteForm({ initial, onSubmit, onCancel }: Props) 
                     style={
                       ativo
                         ? {
-                            color: "#3D7BFF",
-                            background: "color-mix(in srgb, #3D7BFF 20%, transparent)",
+                            color: "var(--brand)",
+                            background: "color-mix(in srgb, var(--brand) 20%, transparent)",
                           }
                         : { color: "var(--text-muted)" }
                     }

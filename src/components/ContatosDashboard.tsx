@@ -327,7 +327,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
               >
                 <span
                   className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-semibold tabular-nums flex-shrink-0"
-                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
                 >
                   {i + 1}
                 </span>
@@ -498,7 +498,7 @@ function AtalhoCard({
     >
       <div
         className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+        style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
       >
         {icon}
       </div>

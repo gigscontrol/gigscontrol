@@ -465,9 +465,9 @@ function MeusDados({
         <div
           className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
           style={{
-            backgroundColor: "rgba(239,68,68,0.08)",
+            backgroundColor: "var(--danger-weak)",
             color: "var(--danger)",
-            border: "1px solid rgba(239,68,68,0.3)",
+            border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
           }}
         >
           <AlertTriangle size={12} /> {erro}
@@ -661,7 +661,7 @@ function AcessoCard({
           <div
             className="flex items-center gap-2 border rounded-md px-3 py-2"
             style={{
-              backgroundColor: "rgba(34,197,94,0.08)",
+              backgroundColor: "var(--success-weak)",
               borderColor: "var(--success)",
             }}
           >

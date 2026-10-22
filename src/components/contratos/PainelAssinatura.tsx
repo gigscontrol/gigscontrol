@@ -50,7 +50,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
 import { useT } from "@/lib/i18n";
 
-const ACCENT = "#3D7BFF";
+const ACCENT = "var(--brand)";
 
 /** Linha editável do form de definição (papel é texto livre). */
 type LinhaForm = {
@@ -305,7 +305,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
       <div className="flex items-start gap-3">
         <div
           className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+          style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
         >
           <PenLine size={18} />
         </div>
@@ -530,7 +530,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
         {contrato.verificacaoId && (
           <div
             className="flex items-start gap-2.5 rounded-md border border-border p-3 text-sm"
-            style={{ backgroundColor: "rgba(34,197,94,0.08)" }}
+            style={{ backgroundColor: "var(--success-weak)" }}
           >
             <ShieldCheck size={18} className="flex-shrink-0 mt-0.5" style={{ color: "var(--success)" }} />
             <div className="min-w-0">
