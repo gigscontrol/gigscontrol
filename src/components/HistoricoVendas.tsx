@@ -170,7 +170,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir, onEditar }: Prop
       {
         chave: "contratante",
         titulo: "Contratante",
-        classe: "font-medium text-primary truncate max-w-[180px]",
+        classe: "font-medium text-primary truncate max-w-[160px]",
         ordenarPor: (v) => v.contratanteNome,
         celula: (v) => v.contratanteNome,
       },
