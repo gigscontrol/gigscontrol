@@ -4112,6 +4112,7 @@ export const EN: Record<string, string> = {
   "{n} parcelas · vencidas, de todos os meses": "{n} installments · overdue, from every month",
   "Última cobrança": "Last reminder",
   "Cobrança": "Reminder",
+  "Toque num avatar e depois no lugar dele pra reordenar — reflete na sidebar e nos filtros do app.": "Tap an avatar, then tap where it should go to reorder — reflects in the sidebar and app filters.",
   "Atraso": "Overdue",
   "no WhatsApp": "on WhatsApp",
   "por outro canal": "another channel",

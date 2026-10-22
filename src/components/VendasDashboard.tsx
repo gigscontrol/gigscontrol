@@ -382,7 +382,8 @@ export default function VendasDashboard({
                   >
                     <span
                       className="font-mono text-xs font-bold flex-shrink-0"
-                      style={{ color: accent }}
+                      // --brand-ink: o --brand sobre o cartão elevado dava 4,06:1 no escuro.
+                      style={{ color: "var(--brand-ink)" }}
                     >
                       {o.numero}
                     </span>
@@ -431,7 +432,8 @@ export default function VendasDashboard({
                   >
                     <span
                       className="font-mono text-xs font-bold flex-shrink-0"
-                      style={{ color: accent }}
+                      // --brand-ink: o --brand sobre o cartão elevado dava 4,06:1 no escuro.
+                      style={{ color: "var(--brand-ink)" }}
                     >
                       {v.numero}
                     </span>
