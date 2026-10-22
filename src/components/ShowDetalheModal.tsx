@@ -16,7 +16,6 @@ import {
   DollarSign,
   User,
   Mail,
-  MessageCircle,
   Phone,
   FileText,
   FileSignature,
@@ -54,12 +53,7 @@ import { formatarMoeda, formatarDataExtenso, formatarDataHora, formatarNumero } 
 import { numeroQtd } from "@/lib/quantidades";
 import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
-import { linkMapa, linkTelefone, linkWhatsApp } from "@/lib/contatoLinks";
-
-// Link de contato: sublinhado discreto e área de toque maior (o -my compensa
-// o py, sem mexer no espaçamento das linhas da ficha).
-const LINK_CONTATO =
-  "text-primary underline decoration-border-strong underline-offset-2 transition-colors hover:text-brand py-1.5 -my-1.5";
+import { EmailLink, EnderecoLink, InstagramLink, TelefoneLinks } from "./detalhes/LinksContato";
 import Vinculos from "./detalhes/Vinculos";
 import ListaParcelas from "./detalhes/ListaParcelas";
 import {
@@ -497,27 +491,12 @@ export default function ShowDetalheModal({
             )}
             {contTelefone && (
               <Linha icon={<Phone size={13} />}>
-                <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <a href={linkTelefone(contTelefone)} className={LINK_CONTATO}>
-                    +{contTelefone.replace(/\D/g, "")}
-                  </a>
-                  <a
-                    href={linkWhatsApp(contTelefone)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${LINK_CONTATO} inline-flex items-center gap-1`}
-                  >
-                    <MessageCircle size={12} />
-                    WhatsApp
-                  </a>
-                </span>
+                <TelefoneLinks telefone={contTelefone} />
               </Linha>
             )}
             {contEmail && (
               <Linha icon={<Mail size={13} />}>
-                <a href={`mailto:${contEmail}`} className={`${LINK_CONTATO} break-all`}>
-                  {contEmail}
-                </a>
+                <EmailLink email={contEmail} />
               </Linha>
             )}
             {contDocumento && (
@@ -525,9 +504,7 @@ export default function ShowDetalheModal({
             )}
             {contEndereco && (
               <Linha icon={<MapPin size={13} />}>
-                <a href={linkMapa(contEndereco)} target="_blank" rel="noopener noreferrer" className={LINK_CONTATO}>
-                  {contEndereco}
-                </a>
+                <EnderecoLink endereco={contEndereco} />
               </Linha>
             )}
           </Bloco>
@@ -542,18 +519,13 @@ export default function ShowDetalheModal({
               </Linha>
             )}
             {instagram && (
-              <Linha icon={<Instagram size={13} />}>{instagram}</Linha>
+              <Linha icon={<Instagram size={13} />}>
+                <InstagramLink perfil={instagram} />
+              </Linha>
             )}
             {enderecoLocal && (
               <Linha icon={<MapPin size={13} />}>
-                <a
-                  href={linkMapa(enderecoLocal, cidadeNome)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={LINK_CONTATO}
-                >
-                  {enderecoLocal}
-                </a>
+                <EnderecoLink endereco={enderecoLocal} cidade={cidadeNome} />
               </Linha>
             )}
             {cidadeNome && (

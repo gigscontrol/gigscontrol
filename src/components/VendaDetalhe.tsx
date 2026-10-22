@@ -39,6 +39,7 @@ import Modal from "./Modal";
 import Toast from "./Toast";
 import { FichaHeroPagina, Bloco, Linha, ItensGrid, FolhaFicha, ColunaFicha, SecaoFicha } from "./detalhes/FichaUI";
 import Vinculos from "./detalhes/Vinculos";
+import { EmailLink, EnderecoLink, InstagramLink, TelefoneLinks } from "./detalhes/LinksContato";
 import ListaParcelas from "./detalhes/ListaParcelas";
 import { useConfirmar } from "./ConfirmarModal";
 import AlteracoesModal, { temDetalhe } from "./AlteracoesModal";
@@ -349,16 +350,22 @@ export default function VendaDetalhe({
                 <Linha icon={<Building2 size={13} />}>{venda.contratanteRazaoSocial}</Linha>
               )}
               {venda.contratanteTelefone && (
-                <Linha icon={<Phone size={13} />}>+{venda.contratanteTelefone.replace(/\D/g, "")}</Linha>
+                <Linha icon={<Phone size={13} />}>
+                  <TelefoneLinks telefone={venda.contratanteTelefone} />
+                </Linha>
               )}
               {venda.contratanteEmail && (
-                <Linha icon={<Mail size={13} />}>{venda.contratanteEmail}</Linha>
+                <Linha icon={<Mail size={13} />}>
+                  <EmailLink email={venda.contratanteEmail} />
+                </Linha>
               )}
               {venda.contratanteDocumento && (
                 <Linha icon={<Hash size={13} />}>{mascararCpfCnpj(venda.contratanteDocumento)}</Linha>
               )}
               {venda.contratanteEndereco && (
-                <Linha icon={<MapPin size={13} />}>{venda.contratanteEndereco}</Linha>
+                <Linha icon={<MapPin size={13} />}>
+                  <EnderecoLink endereco={venda.contratanteEndereco} />
+                </Linha>
               )}
             </Bloco>
           </SecaoFicha>
@@ -367,10 +374,14 @@ export default function VendaDetalhe({
             <Bloco icon={<Building2 size={14} />} title={t("Local do evento")}>
               <Linha icon={<Building2 size={13} />} bold>{venda.nomeLocal}</Linha>
               {venda.eventoInstagram && (
-                <Linha icon={<Instagram size={13} />}>{venda.eventoInstagram}</Linha>
+                <Linha icon={<Instagram size={13} />}>
+                  <InstagramLink perfil={venda.eventoInstagram} />
+                </Linha>
               )}
               {venda.enderecoLocal && (
-                <Linha icon={<MapPin size={13} />}>{venda.enderecoLocal}</Linha>
+                <Linha icon={<MapPin size={13} />}>
+                  <EnderecoLink endereco={venda.enderecoLocal} />
+                </Linha>
               )}
               {venda.capacidadePublico && (
                 <Linha icon={<Users size={13} />}>

@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Pencil, Mail, Phone, MapPin, Calendar, Music, Building2, Users, FileText, Banknote, Hash, StickyNote } from "lucide-react";
 import { FichaHeroPagina, Bloco, Linha, FolhaFicha } from "./detalhes/FichaUI";
+import { EmailLink, EnderecoLink, TelefoneLinks } from "./detalhes/LinksContato";
 import { useContatos } from "@/lib/contatos-context";
 import {
   getContratanteStats,
@@ -266,9 +267,11 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                 <Linha icon={<Building2 size={13} />}>{atual.razaoSocial}</Linha>
               )}
               <Linha icon={<Mail size={13} />} subtle={!atual.email}>
-                {atual.email || "—"}
+                {atual.email ? <EmailLink email={atual.email} /> : "—"}
               </Linha>
-              <Linha icon={<Phone size={13} />}>+{atual.telefone.replace(/\D/g, "")}</Linha>
+              <Linha icon={<Phone size={13} />}>
+                {atual.telefone ? <TelefoneLinks telefone={atual.telefone} /> : "—"}
+              </Linha>
               <Linha icon={<MapPin size={13} />}>
                 {getCidadeNome(cidadePrincipalId, cidades)}
               </Linha>
@@ -469,7 +472,11 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             <Bloco icon={<Building2 size={14} />} title={t("Informações")}>
               <Linha icon={<Building2 size={13} />} bold>{t(LABELS_TIPO_CASA[item.tipo])}</Linha>
               <Linha icon={<MapPin size={13} />}>{getCidadeNome(item.cidadeId, cidades)}</Linha>
-              {item.endereco && <Linha icon={<MapPin size={13} />}>{item.endereco}</Linha>}
+              {item.endereco && (
+                <Linha icon={<MapPin size={13} />}>
+                  <EnderecoLink endereco={item.endereco} cidade={getCidadeNome(item.cidadeId, cidades)} />
+                </Linha>
+              )}
               {item.contatoResponsavel && (
                 <Linha icon={<Users size={13} />}>{item.contatoResponsavel}</Linha>
               )}
