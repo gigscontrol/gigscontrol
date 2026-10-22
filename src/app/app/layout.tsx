@@ -12,6 +12,7 @@ import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { FiltroArtistasProvider, AvisoFiltroArtistas } from "@/components/FiltroArtistas";
 import BuscaGlobal from "@/components/navegacao/BuscaGlobal";
 import BarraInferior from "@/components/navegacao/BarraInferior";
+import MotivoNoToque from "@/components/navegacao/MotivoNoToque";
 import { ContatosProvider, useContatos } from "@/lib/contatos-context";
 import { ShowsProvider } from "@/lib/shows-context";
 import { AgendaItemsProvider } from "@/lib/agenda-items-context";
@@ -770,6 +771,8 @@ function AppRoot() {
       )}
       {/* Busca geral — Ctrl+K em qualquer tela. */}
       <BuscaGlobal />
+      {/* Toque num botão desabilitado mostra o motivo (o title não aparece no toque). */}
+      <MotivoNoToque />
       </div>
     </div>
     </FiltroArtistasProvider>
