@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
@@ -42,9 +42,14 @@ export default function Modal({
 
   if (!isOpen || !mounted) return null;
 
+  // No celular (< 768 px) o modal é uma FOLHA que sobe do pé da tela, na
+  // largura toda: centralizado com 16 px de margem, o formulário longo
+  // passava da altura e o X e o "Salvar" saíam da tela. A altura agora
+  // é do diálogo inteiro (título fixo, só o corpo rola) e usa dvh, que
+  // desconta a barra do navegador. Do tablet pra cima continua no centro.
   const content = (
     <div
-      className="fixed inset-0 flex items-center justify-center p-4 animate-fade"
+      className="fixed inset-0 flex items-end justify-center md:items-center md:p-4 animate-fade"
       style={{ zIndex: 9999 }}
     >
       <button
@@ -61,12 +66,12 @@ export default function Modal({
         aria-label={title ? undefined : ariaLabel}
         aria-describedby={title && subtitle ? subtituloId : undefined}
         tabIndex={-1}
-        className="relative w-full bg-surface border border-border rounded-lg overflow-hidden animate-modal"
-        style={{ maxWidth, boxShadow: "0 24px 60px var(--shadow-color)" }}
+        className="relative flex w-full flex-col overflow-hidden border border-b-0 border-border bg-surface rounded-t-xl max-h-[calc(100dvh-1.5rem)] md:max-w-[var(--largura-modal)] md:max-h-[calc(100dvh-2rem)] md:rounded-lg md:border-b animate-dialogo"
+        style={{ "--largura-modal": `${maxWidth}px`, boxShadow: "0 24px 60px var(--shadow-color)" } as CSSProperties}
         onClick={(e) => e.stopPropagation()}
       >
         {title ? (
-          <div className="flex items-start justify-between gap-4 p-5 border-b border-border">
+          <div className="flex flex-shrink-0 items-start justify-between gap-4 p-5 border-b border-border">
             <div className="min-w-0">
               <h2 id={tituloId} className="section-title">{title}</h2>
               {subtitle && (
@@ -93,7 +98,9 @@ export default function Modal({
             <X size={18} />
           </button>
         )}
-        <div className="p-5 max-h-[calc(100vh-100px)] overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5">
+          {children}
+        </div>
       </div>
     </div>
   );

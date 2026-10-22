@@ -633,6 +633,18 @@
     from { opacity: 0; transform: translateY(8px) scale(0.97); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
+  /* Modal: no celular sobe do pé da tela (folha); do tablet pra cima, a
+     mesma entrada do modal centralizado. */
+  .animate-dialogo {
+    animation: folhaIn 260ms var(--ease) both;
+  }
+  @media screen(md) {
+    .animate-dialogo { animation: modalIn 200ms var(--ease) both; }
+  }
+  @keyframes folhaIn {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
   .animate-fade {
     animation: fade 200ms var(--ease) both;
   }
@@ -709,7 +721,8 @@
     .spinner { animation-duration: 1.4s; }
     .loader-breathe { animation: none; opacity: 1; }
     .animate-in,
-    .animate-modal { animation-name: fade; }
+    .animate-modal,
+    .animate-dialogo { animation-name: fade; }
     .animate-flame { animation: none; }
     .card-interactive:hover { transform: none; }
     .animate-pulse { animation: none !important; }

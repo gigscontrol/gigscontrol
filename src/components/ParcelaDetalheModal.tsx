@@ -160,7 +160,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
 
   return (
     // avisador FORA do Modal (não como children): o container de conteúdo do
-    // Modal tem transform (animate-modal) + overflow-y-auto, o que confinaria
+    // Modal tem transform (animate-dialogo) + overflow-y-auto, o que confinaria
     // um Toast position:fixed dentro dele em vez do viewport.
     <>
     <Modal isOpen onClose={onClose} title={t("Parcela {i}/{n}", { i: idx + 1, n: venda.parcelas.length })}>
