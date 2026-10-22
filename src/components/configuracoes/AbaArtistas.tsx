@@ -52,7 +52,7 @@ import { ArtistaParaEdicao } from "./camposCadastro";
 import { ModalNovoArtista, extrairRaizUsername } from "./ModalNovoArtista";
 import { DadosConta, ModalEditarArtista } from "./ModalEditarArtista";
 import { ModalCredenciais } from "./ModalCredenciais";
-import { corTextoSobre } from "@/lib/contraste";
+import { corTextoSobre, corComoTexto } from "@/lib/contraste";
 
 /**
  * Aba "Artistas" das Configurações.
@@ -1058,7 +1058,7 @@ export default function AbaArtistas() {
                                     className="text-[0.6875rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
                                     style={{
                                       backgroundColor: `color-mix(in srgb, ${p.cor} 13%, transparent)`,
-                                      color: p.cor,
+                                      color: corComoTexto(p.cor),
                                     }}
                                   >
                                     {t(p.nome)}

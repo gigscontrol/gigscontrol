@@ -78,7 +78,7 @@ import {
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 import { iniciaisDoNome } from "@/lib/iniciais";
-import { corTextoSobre } from "@/lib/contraste";
+import { corTextoSobre, corComoTexto } from "@/lib/contraste";
 
 type Props = {
   onSaved: (orcamentoIds: string[]) => void;
@@ -878,7 +878,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                 <div className="flex items-center gap-2 min-w-0">
                   <div
                     className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `color-mix(in srgb, ${s.artistaCor} 15%, transparent)`, color: s.artistaCor }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${s.artistaCor} 15%, transparent)`, color: corComoTexto(s.artistaCor) }}
                   >
                     <User size={14} />
                   </div>

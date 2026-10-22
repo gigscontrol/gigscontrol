@@ -65,6 +65,9 @@
     --on-warning: #14110A;
     --danger: #F5455C;
     --danger-ink: #F5808C;
+    /* Preenchimento com texto BRANCO (contador do sino, botão de excluir):
+       o --danger (#F5455C) dava 3,6:1 com branco; este dá 5,7:1. */
+    --danger-solid: #C22B40;
     --danger-weak: rgba(245, 69, 92, 0.14);
     --info: #3D7BFF;
     --info-weak: rgba(61, 123, 255, 0.14);
@@ -396,7 +399,7 @@
      .btn-danger-outline → o botão que ABRE a confirmação, na tela.
      Lixeira em linha de tabela: btn-ghost + hover:text-danger. */
   .btn-danger {
-    background-color: var(--danger);
+    background-color: var(--danger-solid);
     color: #fff;
   }
   .btn-danger:hover { filter: brightness(0.93); }

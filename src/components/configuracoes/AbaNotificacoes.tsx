@@ -102,7 +102,7 @@ export default function AbaNotificacoes() {
           {naoLidas > 0 && (
             <span
               className="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded text-white"
-              style={{ backgroundColor: "var(--danger)" }}
+              style={{ backgroundColor: "var(--danger-solid)" }}
             >
               {naoLidas} {naoLidas === 1 ? t("nova") : t("novas")}
             </span>

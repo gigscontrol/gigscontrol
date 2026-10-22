@@ -15,6 +15,7 @@ import {
 import type { Artista, AgendaItem } from "@/types";
 import InputDataBR from "../inputs/InputDataBR";
 import { useT } from "@/lib/i18n";
+import { corComoTexto } from "@/lib/contraste";
 
 export const META_TIPO: Record<AgendaItem["tipo"], { label: string; icon: typeof Music; cor: string }> = {
   evento: { label: "Evento", icon: Calendar, cor: "var(--brand)" },
@@ -154,7 +155,7 @@ export function SeletorArtistas({
                 style={{
                   borderColor: a.color,
                   backgroundColor: `color-mix(in srgb, ${a.color} 16%, transparent)`,
-                  color: a.color,
+                  color: corComoTexto(a.color),
                 }}
               >
                 {a.name}
