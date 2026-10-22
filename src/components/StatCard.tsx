@@ -17,6 +17,9 @@ type Props = {
   accentColor?: string;
   trend?: Trend;
   subtitle?: string;
+  /** KPI que pede ação (atrasado, pendências): fundo e borda tingidos com a
+   *  cor do card. Só um por grade, e só quando há algo a fazer. */
+  destaque?: boolean;
 };
 
 export default function StatCard({
@@ -26,9 +29,21 @@ export default function StatCard({
   accentColor,
   trend,
   subtitle,
+  destaque = false,
 }: Props) {
+  const tingido = destaque && accentColor;
   return (
-    <div className="card flex flex-col gap-2 sm:gap-4 min-h-0 sm:min-h-[140px] p-3 sm:p-5">
+    <div
+      className="card flex flex-col gap-2 sm:gap-4 min-h-0 sm:min-h-[140px] p-3 sm:p-5"
+      style={
+        tingido
+          ? {
+              background: `color-mix(in srgb, ${accentColor} 9%, var(--bg-surface))`,
+              borderColor: `color-mix(in srgb, ${accentColor} 40%, var(--border-color))`,
+            }
+          : undefined
+      }
+    >
       <div className="flex items-start justify-between">
         <span className="stat-label">{title}</span>
         <div

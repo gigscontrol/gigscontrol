@@ -306,7 +306,7 @@ export default function VendasDashboard({
       </div>
 
       {/* Cards clicáveis — 4 cores fixas (azul/verde/âmbar/vermelho) */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Os cards lideram com DINHEIRO, não com contagem. Antes "Vendas
             fechadas" mostrava a QUANTIDADE e o valor vendido só aparecia
             dentro do popup — daí a sensação de que o total vendido não

@@ -226,14 +226,14 @@ export default function DashboardContratos({
         <div className="flex flex-col gap-6">
           {/* 4 cards — um de cada cor (azul, verde, âmbar, vermelho). */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <ClickableStat onClick={() => setResumo("aguardando")} ariaLabel={t("Ver resumo de aguardando assinatura")}>
+              <StatCard title={t("Aguardando assinatura")} value={aguardando} icon={<Clock size={16} />} accentColor="var(--warning)" subtitle={t("Sem nenhuma assinatura")} destaque={aguardando > 0} />
+            </ClickableStat>
             <ClickableStat onClick={() => setResumo("total")} ariaLabel={t("Ver resumo de contratos criados")}>
               <StatCard title={t("Contratos criados")} value={total} icon={<FileText size={16} />} accentColor={ACCENT} subtitle={tituloPeriodo} />
             </ClickableStat>
             <ClickableStat onClick={() => setResumo("assinado")} ariaLabel={t("Ver resumo de assinados")}>
               <StatCard title={t("Contratos assinados")} value={porStatus.assinado} icon={<CheckCircle2 size={16} />} accentColor="var(--success)" subtitle={t("Finalizados")} />
-            </ClickableStat>
-            <ClickableStat onClick={() => setResumo("aguardando")} ariaLabel={t("Ver resumo de aguardando assinatura")}>
-              <StatCard title={t("Aguardando assinatura")} value={aguardando} icon={<Clock size={16} />} accentColor="var(--warning)" subtitle={t("Sem nenhuma assinatura")} />
             </ClickableStat>
             <ClickableStat onClick={() => setResumo("cancelado")} ariaLabel={t("Ver resumo de cancelados")}>
               <StatCard title={t("Contratos cancelados")} value={porStatus.cancelado} icon={<XCircle size={16} />} accentColor="var(--danger)" subtitle={t("Ver resumo")} />

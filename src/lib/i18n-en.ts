@@ -4182,4 +4182,10 @@ export const EN: Record<string, string> = {
   "Menu principal": "Main menu",
   "Credenciais de acesso": "Login credentials",
   "Selfie ao vivo": "Live selfie",
+  // --- Layout das listas e KPIs (out/2026) ---
+  "Buscar contratos": "Search contracts",
+  "Buscar por número, evento, artista, contratante...": "Search by number, event, artist, client...",
+  "Filtrar atrasadas": "Filter overdue",
+  "Filtrar pendentes": "Filter pending",
+  "Filtrar pagas": "Filter paid",
 };

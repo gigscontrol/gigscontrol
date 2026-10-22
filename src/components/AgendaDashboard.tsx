@@ -515,6 +515,25 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       <div className="grid grid-cols-2 gap-4 lg:mb-6 lg:grid-cols-4">
         <ClickableStat
           onClick={() =>
+            setLista({
+              titulo: t("Shows com pendências"),
+              subtitulo: tituloMes,
+              shows: showsComPendencia,
+              pendencias: true,
+            })
+          }
+        >
+          <StatCard
+            title={t("Com pendências")}
+            value={showsComPendencia.length}
+            icon={<AlertTriangle size={16} />}
+            accentColor="var(--warning)"
+            subtitle={subtitlePendencia}
+            destaque={showsComPendencia.length > 0}
+          />
+        </ClickableStat>
+        <ClickableStat
+          onClick={() =>
             setLista({ titulo: t("Todos os shows"), subtitulo: tituloMes, shows: resumo })
           }
         >
@@ -558,24 +577,6 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
             icon={<XCircle size={16} />}
             accentColor="var(--danger)"
             subtitle={cancelados === 0 ? t("Nenhum cancelamento") : t("Fora da operação")}
-          />
-        </ClickableStat>
-        <ClickableStat
-          onClick={() =>
-            setLista({
-              titulo: t("Shows com pendências"),
-              subtitulo: tituloMes,
-              shows: showsComPendencia,
-              pendencias: true,
-            })
-          }
-        >
-          <StatCard
-            title={t("Com pendências")}
-            value={showsComPendencia.length}
-            icon={<AlertTriangle size={16} />}
-            accentColor="var(--warning)"
-            subtitle={subtitlePendencia}
           />
         </ClickableStat>
       </div>
