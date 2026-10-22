@@ -646,7 +646,7 @@ export default function AgenciaDashboard({
       {isAdmin && (
         <>
           {/* ── Faixa de alertas (estado atual) ── */}
-          <div className="section-title mt-8 mb-4">{t("Alertas")}</div>
+          <h2 className="section-title mt-8 mb-4">{t("Alertas")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <AlertaCard
               icon={<AlertTriangle size={15} />}
@@ -693,7 +693,7 @@ export default function AgenciaDashboard({
 
           {/* ── Rankings (filtrados pelo período) ── */}
           <div className="flex items-center gap-2 mt-8 mb-4">
-            <div className="section-title">{t("Rankings")}</div>
+            <h2 className="section-title">{t("Rankings")}</h2>
             <span className="badge badge-neutral">{tituloPeriodo}</span>
             {/* Mesma régua de Vendas (data de criação) — o Financeiro soma
                 parcelas pelo vencimento, por isso os números diferem. */}
@@ -754,7 +754,7 @@ export default function AgenciaDashboard({
           <div className="card mt-8">
             <div className="flex items-center gap-2 mb-4">
               <History size={16} style={{ color: accent }} />
-              <div className="section-title">{t("Últimas ações")}</div>
+              <h2 className="section-title">{t("Últimas ações")}</h2>
             </div>
 
             {carregandoAcoes ? (

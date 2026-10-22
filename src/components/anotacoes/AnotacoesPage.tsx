@@ -379,7 +379,7 @@ export default function AnotacoesPage() {
                   <Music size={17} />
                 </div>
                 <div className="min-w-0">
-                  <div className="section-title">{t("Nenhuma nota de show ainda")}</div>
+                  <h2 className="section-title">{t("Nenhuma nota de show ainda")}</h2>
                   <p className="section-subtitle">
                     {t("Anote detalhes direto no show (na Agenda) e eles aparecem aqui.")}
                   </p>
@@ -456,7 +456,7 @@ function PastasGrid({
         >
           <NotebookPen size={26} />
         </div>
-        <div className="section-title mb-1">{t("Nenhuma pasta ainda")}</div>
+        <h2 className="section-title mb-1">{t("Nenhuma pasta ainda")}</h2>
         <p className="section-subtitle max-w-sm mb-4">
           {t("Crie pastas por tema (contatos úteis, procedimentos, ideias...) e deixe anotações que a equipe pode consultar.")}
         </p>
@@ -586,7 +586,7 @@ function PastaView({
             {pasta.icone || "📁"}
           </div>
           <div className="min-w-0">
-            <div className="section-title truncate">{pasta.nome}</div>
+            <h2 className="section-title truncate">{pasta.nome}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span
                 className={`badge inline-flex items-center gap-1 ${
@@ -679,9 +679,9 @@ function PastaView({
           >
             <FileText size={26} />
           </div>
-          <div className="section-title mb-1">
+          <h2 className="section-title mb-1">
             {filtroArtista ? t("Nenhuma nota para este artista") : t("Nenhuma nota ainda")}
-          </div>
+          </h2>
           {!filtroArtista && (
             <>
               <p className="section-subtitle max-w-sm mb-4">

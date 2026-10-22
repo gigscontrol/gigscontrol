@@ -42,14 +42,17 @@ export default function SearchableSelect({
     // abaixo e o mousedown-fora deixava o clique acertar o campo coberto.
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        e.preventDefault();
         setOpen(false);
         setQuery("");
         inputRef.current?.blur();
       }
     }
-    document.addEventListener("keydown", onKey);
+    // Captura: roda ANTES do Esc do modal em volta — marca o evento e o
+    // modal fica aberto (fecha só esta lista).
+    document.addEventListener("keydown", onKey, true);
     return () => {
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
 

@@ -310,7 +310,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
           <PenLine size={18} />
         </div>
         <div className="min-w-0">
-          <div className="section-title">{t("Assinatura")}</div>
+          <h2 className="section-title">{t("Assinatura")}</h2>
           <p className="section-subtitle mt-1">
             {t("Defina quem assina e envie o link de assinatura para cada pessoa.")}
           </p>
@@ -557,9 +557,9 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
             <div key={s.id} className="rounded-md border border-border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="section-title truncate" title={s.nome}>
+                  <h2 className="section-title truncate" title={s.nome}>
                     {s.nome}
-                  </div>
+                  </h2>
                   {s.papel && (
                     <div className="stat-label mt-0.5">{s.papel}</div>
                   )}

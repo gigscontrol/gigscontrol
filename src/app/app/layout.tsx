@@ -526,6 +526,10 @@ function AppRoot() {
   return (
     <FiltroArtistasProvider valor={filtroArtistas}>
     <div className="flex flex-col h-screen overflow-hidden bg-main">
+      {/* Teclado: 1º Tab da página pula menu e topo direto pro conteúdo. */}
+      <a href="#conteudo" className="pular-conteudo">
+        {t("Pular para o conteúdo")}
+      </a>
       {/* Faixa — super-admin visualizando a dashboard de um cliente */}
       <VisitanteBanner />
       <div className="flex flex-1 overflow-hidden">
@@ -569,15 +573,17 @@ function AppRoot() {
         />
 
         {configAberta ? (
-          <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in">
+          <main id="conteudo" tabIndex={-1} ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in outline-none">
             <NavOverlay />
             <Configuracoes onSair={() => voltar(urls.modulo("agenda"))} />
           </main>
         ) : (
         <main
+          id="conteudo"
+          tabIndex={-1}
           key={chaveMain}
           ref={mainRef}
-          className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in"
+          className="relative flex-1 overflow-y-auto overflow-x-hidden animate-in outline-none"
         >
           <NavOverlay />
           {filtroValeAqui && !contratoId && !contatoId && <AvisoFiltroArtistas />}
@@ -830,7 +836,7 @@ function EditarVendaLoader({
     return (
       <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
         <div className="card text-center py-12">
-          <div className="section-title">{t("Venda não encontrada")}</div>
+          <h2 className="section-title">{t("Venda não encontrada")}</h2>
         </div>
       </div>
     );

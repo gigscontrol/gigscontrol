@@ -123,6 +123,7 @@ export function EventoFormModal({
                   key={op.label}
                   type="button"
                   onClick={() => setDiaInteiro(op.v)}
+                  aria-pressed={ativo}
                   className={`flex-1 py-2 font-medium transition-colors ${
                     i === 1 ? "border-l border-border" : ""
                   }`}

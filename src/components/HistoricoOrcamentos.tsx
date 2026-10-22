@@ -366,7 +366,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
             <button
               key={s.value}
               type="button"
-              className={`pill ${filtroStatus === s.value ? "active" : ""}`}
+              aria-pressed={filtroStatus === s.value} className={`pill ${filtroStatus === s.value ? "active" : ""}`}
               onClick={() => setFiltroStatus(s.value)}
             >
               {t(s.label)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   CalendarDays,
   ShoppingBag,
@@ -240,6 +240,22 @@ export default function Sidebar({
     if (isOpenMobile) setMobileExpandedTab(configAberta ? null : activeTab);
     else setMobileExpandedTab(null);
   }, [isOpenMobile, activeTab, configAberta]);
+
+  // Gaveta do celular FECHADA só sai da tela por translate: continuava no
+  // Tab e no leitor de tela. `inert` tira do ar; aberta, o Esc fecha.
+  const asideRef = useRef<HTMLElement>(null);
+  const gavetaFechada = isMobile && !isOpenMobile;
+  useEffect(() => {
+    if (asideRef.current) asideRef.current.inert = gavetaFechada;
+  }, [gavetaFechada]);
+  useEffect(() => {
+    if (!isMobile || !isOpenMobile) return;
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) onCloseMobile();
+    };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [isMobile, isOpenMobile, onCloseMobile]);
   useEffect(() => {
     if (localStorage.getItem("gc-sidebar-collapsed") === "1") setCollapsed(true);
   }, []);
@@ -272,6 +288,8 @@ export default function Sidebar({
 
   return (
     <aside
+      ref={asideRef}
+      aria-label={t("Menu principal")}
       className={`
         fixed lg:static inset-y-0 left-0 z-40
         flex flex-col flex-shrink-0
@@ -503,6 +521,7 @@ export default function Sidebar({
                   <button
                     key={artista.id}
                     onClick={() => toggleDJ(artista.id)}
+                    aria-pressed={planoIndividual ? undefined : isActiveDj}
                     disabled={planoIndividual}
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium

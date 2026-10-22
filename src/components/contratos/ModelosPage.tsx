@@ -282,7 +282,7 @@ export default function ModelosPage() {
                       {t("Comece por aqui")}
                     </span>
                   </div>
-                  <div className="section-title mt-1.5">{NOME_MODELO_EXEMPLO}</div>
+                  <h2 className="section-title mt-1.5">{NOME_MODELO_EXEMPLO}</h2>
                   <p className="section-subtitle mt-1 max-w-2xl">
                     {t("Modelo pronto de apresentação artística, com seções automáticas (variáveis já posicionadas) e cláusulas para você completar. Duplique e ajuste do seu jeito.")}
                   </p>
@@ -318,7 +318,7 @@ export default function ModelosPage() {
                       {t("Internacional")}
                     </span>
                   </div>
-                  <div className="section-title mt-1.5">{NOME_MODELO_GLOBAL}</div>
+                  <h2 className="section-title mt-1.5">{NOME_MODELO_GLOBAL}</h2>
                   <p className="section-subtitle mt-1 max-w-2xl">
                     {t("Contrato de apresentação artística no padrão internacional, em inglês (com Force Majeure e lei aplicável). É um ponto de partida — revise com um advogado antes de usar.")}
                   </p>
@@ -366,7 +366,7 @@ export default function ModelosPage() {
                 <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
                   <FileText size={18} className="text-muted" />
                 </div>
-                <div className="section-title mb-1">{t("Nenhum modelo ainda")}</div>
+                <h2 className="section-title mb-1">{t("Nenhum modelo ainda")}</h2>
                 <div className="section-subtitle">
                   {t("Duplique o modelo de exemplo acima ou crie um do zero.")}
                 </div>
@@ -383,9 +383,9 @@ export default function ModelosPage() {
                         <FileText size={16} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="section-title truncate" title={modelo.nome}>
+                        <h2 className="section-title truncate" title={modelo.nome}>
                           {modelo.nome}
-                        </div>
+                        </h2>
                         <span className="badge badge-neutral mt-1.5">
                           {modelo.secoes.length}{" "}
                           {modelo.secoes.length === 1 ? t("seção") : t("seções")}

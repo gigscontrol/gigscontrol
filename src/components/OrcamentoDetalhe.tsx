@@ -112,7 +112,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           {t("Voltar")}
         </button>
         <div className="card text-center py-12">
-          <div className="section-title">{t("Orçamento não encontrado")}</div>
+          <h2 className="section-title">{t("Orçamento não encontrado")}</h2>
         </div>
       </div>
     );

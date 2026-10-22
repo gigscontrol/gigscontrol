@@ -23,7 +23,7 @@ export default function EstadoVazio({
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-elevated text-muted">
         {icone}
       </div>
-      <div className="section-title mb-1">{titulo}</div>
+      <h2 className="section-title mb-1">{titulo}</h2>
       {texto && <div className={`section-subtitle ${acao ? "mb-4" : ""}`}>{texto}</div>}
       {acao}
     </div>

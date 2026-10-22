@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, RefreshCw, Check, AlertCircle, Smartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useDialogo } from "@/lib/useDialogo";
 import { useT } from "@/lib/i18n";
 
 type Props = {
@@ -32,6 +33,7 @@ const ACCENT = "var(--brand)";
 
 export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
   const t = useT();
+  const camadaRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -120,6 +122,8 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
     parar();
     onCancelar();
   }, [parar, onCancelar]);
+  // Tela cheia própria: foco preso dentro, Esc fecha a câmera.
+  useDialogo(camadaRef, true, cancelar);
 
   // A pessoa diz que não tem câmera: encerra o stream e mostra o QR na hora.
   const usarCelular = useCallback(() => {
@@ -131,7 +135,13 @@ export default function SelfieAoVivo({ onCapturar, onCancelar }: Props) {
   const telaQr = !!erro || mostrarQr;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div
+      ref={camadaRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("Selfie ao vivo")}
+      className="fixed inset-0 z-50 flex flex-col bg-black"
+    >
       {/* Topo */}
       <div className="flex items-center justify-between px-3 py-3 text-white">
         <button

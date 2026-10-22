@@ -256,10 +256,10 @@ export default function MapaDobras({
 
   return (
     <div className="card">
-      <div className="section-title mb-4 flex items-center gap-2">
+      <h2 className="section-title mb-4 flex items-center gap-2">
         <Search size={14} />
         {t("Busca por raio")}
-      </div>
+      </h2>
 
       {/* Filtros numa linha (tela 10) — acima do mapa, dropdown sempre por cima */}
       <div className="relative z-20 mb-4 flex flex-col gap-3 lg:flex-row lg:items-start">

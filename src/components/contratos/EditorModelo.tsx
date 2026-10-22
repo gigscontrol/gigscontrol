@@ -1110,7 +1110,7 @@ export default function EditorModelo({
         {/* Coluna direita: paleta de variáveis (sticky) */}
         <aside className="lg:sticky lg:top-6 self-start">
           <div className="card p-4 mb-4">
-            <div className="section-title mb-1">{t("Formatação")}</div>
+            <h2 className="section-title mb-1">{t("Formatação")}</h2>
             <p className="section-subtitle mb-3">
               {t("Selecione um trecho no campo e clique para formatar.")}
             </p>
@@ -1145,7 +1145,7 @@ export default function EditorModelo({
             </div>
           </div>
           <div className="card p-4">
-            <div className="section-title mb-1">{t("Variáveis")}</div>
+            <h2 className="section-title mb-1">{t("Variáveis")}</h2>
             <p className="section-subtitle mb-4">
               {t("Clique para inserir no ponto do cursor.")}
             </p>

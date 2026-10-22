@@ -106,14 +106,21 @@ export function FichaHeroPagina({
           <div className="flex items-center gap-4 min-w-0">
             <Avatar nome={artistaNome} cor={artistaCor} size="lg" anel />
             <div className="min-w-0">
-              <div className="text-lg font-bold text-primary truncate leading-tight">
-                {artistaNome ?? "—"}
-              </div>
+              {/* Título da PÁGINA (h1): o nome do documento quando há; senão o artista. */}
+              {titulo ? (
+                <div className="text-lg font-bold text-primary truncate leading-tight">
+                  {artistaNome ?? "—"}
+                </div>
+              ) : (
+                <h1 className="text-lg font-bold text-primary truncate leading-tight">
+                  {artistaNome ?? "—"}
+                </h1>
+              )}
               {linhaSuperior && (
                 <div className="text-xs text-secondary mt-0.5">{linhaSuperior}</div>
               )}
               {titulo && (
-                <div className="mt-2 text-base font-semibold text-primary">{titulo}</div>
+                <h1 className="mt-2 text-base font-semibold text-primary">{titulo}</h1>
               )}
               {badges && (
                 <div className="flex flex-wrap items-center gap-1.5 mt-2.5">{badges}</div>

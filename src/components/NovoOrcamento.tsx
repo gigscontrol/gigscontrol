@@ -927,7 +927,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
         <div className="flex flex-col gap-4">
           {/* Modo do orçamento: simples (padrão) x detalhado */}
           <div className="card">
-            <div className="section-title mb-3">{t("Tipo de orçamento")}</div>
+            <h2 className="section-title mb-3">{t("Tipo de orçamento")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 {
@@ -975,9 +975,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
           </div>
 
           <div className="card">
-            <div className="section-title mb-3">
+            <h2 className="section-title mb-3">
               {t("Tipo de evento")} <span className="text-danger">*</span>
-            </div>
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {TIPOS_EVENTO.map(({ value, label, icon: Icon, desc }) => {
                 const isActive = tipoEvento === value;
@@ -1174,9 +1174,9 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               entra no painel "Informações do Evento" (abaixo), pra ser um só. */}
           {modoOrcamento === "simples" && (
             <div className="card">
-              <div className="section-title mb-3">
+              <h2 className="section-title mb-3">
                 {t("Cidade do evento")} <span className="text-danger">*</span>
-              </div>
+              </h2>
               <CidadeGlobalAutocomplete
                 value={cidadeIbge}
                 onChange={(c) => {
@@ -1196,7 +1196,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
               (obrigatória) no topo + campos opcionais que não vão pro WhatsApp. */}
           {modoOrcamento === "detalhado" && (
             <div className="card">
-              <div className="section-title mb-1">{t("Informações do Evento")}</div>
+              <h2 className="section-title mb-1">{t("Informações do Evento")}</h2>
               <p className="text-xs text-muted mb-4">
                 {t("A cidade é obrigatória. Os demais campos são opcionais e não aparecem no WhatsApp — ficam salvos pra pré-preencher a venda.")}
               </p>
@@ -1662,7 +1662,7 @@ function BlocoOrcamentoDj({
 
         {/* Logística - multi-seleção */}
         <div>
-          <div className="section-title mb-2">{t("Logística")}</div>
+          <h2 className="section-title mb-2">{t("Logística")}</h2>
           <p className="text-xs text-muted mb-3">
             {t("Não marque nenhuma se a logística estiver inclusa no cachê.")}
           </p>
@@ -1706,7 +1706,7 @@ function SectionItens({
 }) {
   return (
     <div>
-      <div className="section-title mb-2">{title}</div>
+      <h2 className="section-title mb-2">{title}</h2>
       <PresetChips presets={presets} items={items} onChange={onChange} />
       <div className="flex flex-col gap-2">
         {items.map((item, idx) => (

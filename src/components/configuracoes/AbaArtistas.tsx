@@ -497,7 +497,7 @@ export default function AbaArtistas() {
                     key={f}
                     type="button"
                     onClick={() => setFiltroStatus(f)}
-                    className={`pill ${filtroStatus === f ? "active" : ""}`}
+                    aria-pressed={filtroStatus === f} className={`pill ${filtroStatus === f ? "active" : ""}`}
                   >
                     {f === "todos" ? t("Todos") : f === "ativos" ? t("Ativos") : t("Suspensos")}
                   </button>
@@ -551,7 +551,7 @@ export default function AbaArtistas() {
           >
             <Music size={22} />
           </div>
-          <div className="section-title">{t("Nenhum artista cadastrado")}</div>
+          <h2 className="section-title">{t("Nenhum artista cadastrado")}</h2>
           <p className="text-sm text-muted max-w-sm">
             {t("Cadastre o primeiro artista da sua agência pra começar.")}
           </p>
@@ -1203,9 +1203,9 @@ export default function AbaArtistas() {
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               <Trash2 size={14} style={{ color: "var(--brand)" }} />
-              <div className="section-title">
+              <h2 className="section-title">
                 {t("Na lixeira ({n})", { n: lixeiraArtistas.length })}
-              </div>
+              </h2>
             </div>
             <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
           </div>

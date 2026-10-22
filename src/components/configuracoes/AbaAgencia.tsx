@@ -90,7 +90,7 @@ export default function AbaAgencia() {
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <Building2 size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Nome exibido")}</div>
+          <h2 className="section-title">{t("Nome exibido")}</h2>
         </div>
         <div className="section-subtitle mb-4">
           {t("Aparece no topo da dashboard quando não há logo, e também em contratos e orçamentos gerados pelo sistema.")}
@@ -272,7 +272,7 @@ function SlugSection({
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <AtSign size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Username da agência")}</div>
+          <h2 className="section-title">{t("Username da agência")}</h2>
         </div>
         <div className="text-sm text-muted flex items-center gap-2 mt-3">
           <Loader2 size={14} className="animate-spin" /> {t("Carregando...")}
@@ -286,7 +286,7 @@ function SlugSection({
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <AtSign size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Username da agência")}</div>
+          <h2 className="section-title">{t("Username da agência")}</h2>
         </div>
         <p className="text-sm text-danger mt-2">
           {t("Não foi possível carregar. Tente recarregar a página.")}
@@ -302,7 +302,7 @@ function SlugSection({
     <section className="card">
       <div className="flex items-center gap-2 mb-1">
         <AtSign size={16} style={{ color: "var(--brand)" }} />
-        <div className="section-title">{t("Username da agência")}</div>
+        <h2 className="section-title">{t("Username da agência")}</h2>
       </div>
       <div className="section-subtitle mb-4">
         {t("Vai pro fim do login de todo artista e da equipe (ex:")} {" "}

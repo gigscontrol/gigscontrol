@@ -399,7 +399,7 @@ export function EmptyState() {
       <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
         <Calendar size={20} className="text-muted" />
       </div>
-      <div className="section-title mb-1">{t("Nenhum show no período")}</div>
+      <h2 className="section-title mb-1">{t("Nenhum show no período")}</h2>
       <div className="section-subtitle">{t("Ajuste os filtros ou cadastre novos eventos")}</div>
     </div>
   );

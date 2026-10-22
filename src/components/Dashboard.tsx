@@ -330,7 +330,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
       {/* Barra de progresso de recebimento */}
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="section-title">{t("Progresso de recebimento")}</div>
+          <h2 className="section-title">{t("Progresso de recebimento")}</h2>
           <span className="text-sm font-bold tabular-nums" style={{ color: accent }}>
             {pctRecebido}%
           </span>
@@ -351,7 +351,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
         {/* Vencimentos: vencidas (todos os meses) separadas das a vencer */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">{t("Vencimentos")}</div>
+            <h2 className="section-title">{t("Vencimentos")}</h2>
             <button
               onClick={() => onNavigate?.("financeiro", "financeiro-pagamentos")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
@@ -393,7 +393,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={16} style={{ color: accent }} />
             <div className="min-w-0">
-              <div className="section-title">{t("Parcelas por artista")}</div>
+              <h2 className="section-title">{t("Parcelas por artista")}</h2>
               <div className="text-xs text-muted">
                 {t("Pelo vencimento · {periodo}", { periodo: tituloPeriodo })}
               </div>
