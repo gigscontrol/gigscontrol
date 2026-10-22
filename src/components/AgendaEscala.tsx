@@ -24,6 +24,7 @@ import { EventoFormModal } from "./agenda/EventoFormModal";
 import { TransporteFormModal } from "./agenda/TransporteFormModal";
 import { ItemDetalheModal } from "./agenda/ItemDetalheModal";
 import { comportamentoRolagem } from "@/lib/movimento";
+import { ROTULO_PAGINA } from "@/lib/navegacao/rotas";
 
 type Props = {
   selectedArtistas: string[];
@@ -266,7 +267,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
   return (
     <div className="pagina">
       <PageHeader
-        title="Calendário"
+        title={ROTULO_PAGINA["agenda-completa"]}
         subtitle={`${t("Visão dinâmica")} — ${t(activeDateRange)}`}
         accentColor={accent}
         actions={
