@@ -167,7 +167,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
       {
         chave: "contratante",
         titulo: "Contratante",
-        classe: "font-medium text-primary truncate max-w-[200px]",
+        classe: "font-medium text-primary truncate max-w-[180px]",
         ordenarPor: (v) => v.contratanteNome,
         celula: (v) => v.contratanteNome,
       },
@@ -176,12 +176,23 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
         titulo: "Evento",
         classe: "text-secondary truncate max-w-[220px]",
         ordenarPor: (v) => v.nomeEvento,
-        celula: (v) => (
-          <>
-            {v.nomeEvento}
-            {v.nomeLocal && <span className="block text-xs text-muted truncate">{v.nomeLocal}</span>}
-          </>
-        ),
+        // Local e cidade na 2ª linha (a coluna Cidade, de 131 px, fazia a
+        // tabela rolar pro lado em notebook); local igual ao nome do evento
+        // não se repete ("Two Brothers / Two Brothers").
+        celula: (v) => {
+          const cid = cidadeDe(v);
+          const local =
+            v.nomeLocal && v.nomeLocal.trim().toLowerCase() !== (v.nomeEvento ?? "").trim().toLowerCase()
+              ? v.nomeLocal
+              : "";
+          const segunda = [local, cid ? `${cid.nome}/${cid.estado}` : ""].filter(Boolean).join(" · ");
+          return (
+            <>
+              {v.nomeEvento}
+              {segunda && <span className="block text-xs text-muted truncate">{segunda}</span>}
+            </>
+          );
+        },
       },
       {
         chave: "artista",
@@ -190,17 +201,6 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
         classe: "text-secondary",
         ordenarPor: (v) => artistaDe(v)?.name,
         celula: (v) => artistaDe(v)?.name ?? "—",
-      },
-      {
-        chave: "cidade",
-        noCelular: false, // cartão do celular só com o principal
-        titulo: "Cidade",
-        classe: "text-secondary",
-        ordenarPor: (v) => cidadeDe(v)?.nome,
-        celula: (v) => {
-          const cid = cidadeDe(v);
-          return cid ? `${cid.nome}/${cid.estado}` : "—";
-        },
       },
       {
         chave: "data",

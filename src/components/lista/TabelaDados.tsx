@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type MouseEvent,
@@ -99,6 +100,24 @@ export default function TabelaDados<T>({
 
   const pag = paginar(ordenados, pagina, porPagina);
 
+  // Tabela mais larga que a caixa (notebook com o menu lateral): a coluna
+  // de ações fica presa à direita, com sombra, pra "Cobrar"/"⋯" não
+  // saírem da tela. Cabendo, nada muda.
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const [rola, setRola] = useState(false);
+  const temAcoes = !!acoes;
+  useEffect(() => {
+    const caixa = caixaRef.current;
+    if (!caixa || !temAcoes) return;
+    const medir = () => setRola(caixa.scrollWidth > caixa.clientWidth + 1);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(caixa);
+    if (caixa.firstElementChild) ro.observe(caixa.firstElementChild);
+    return () => ro.disconnect();
+  }, [temAcoes]);
+  const presa = rola ? "sticky right-0 z-[1] shadow-[-10px_0_12px_-10px_var(--shadow-color)]" : "";
+
   const cabecalho = (c: Coluna<T>) => {
     const ativa = ordem?.chave === c.chave;
     if (!c.ordenarPor || !c.titulo) return c.titulo ? t(c.titulo) : null;
@@ -158,7 +177,7 @@ export default function TabelaDados<T>({
   return (
     <>
       {/* Computador: tabela */}
-      <div className="hidden overflow-x-auto lg:block [@media(pointer:coarse)_and_(max-width:1279px)]:hidden">
+      <div ref={caixaRef} className="hidden overflow-x-auto lg:block [@media(pointer:coarse)_and_(max-width:1279px)]:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40">
@@ -173,7 +192,13 @@ export default function TabelaDados<T>({
                   {cabecalho(c)}
                 </th>
               ))}
-              {acoes && <th className={`w-[1%] ${px} py-3`} />}
+              {acoes && (
+                <th
+                  className={`w-[1%] ${px} py-3 ${
+                    rola ? `${presa} bg-[color-mix(in_srgb,var(--bg-surface-2)_40%,var(--bg-surface))]` : ""
+                  }`}
+                />
+              )}
             </tr>
           </thead>
           <tbody>
@@ -182,7 +207,7 @@ export default function TabelaDados<T>({
                 key={chaveDe(item)}
                 onClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
                 onAuxClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
-                className={`border-b border-border last:border-0 transition-colors ${
+                className={`group/linha border-b border-border last:border-0 transition-colors ${
                   onAbrir ? "cursor-pointer hover:bg-elevated/40" : ""
                 } ${linhaClasse?.(item) ?? ""}`}
               >
@@ -211,7 +236,13 @@ export default function TabelaDados<T>({
                   );
                 })}
                 {acoes && (
-                  <td className={`${px} py-3 align-middle`}>
+                  <td
+                    className={`${px} py-3 align-middle ${
+                      rola
+                        ? `${presa} bg-surface ${onAbrir ? "group-hover/linha:bg-[color-mix(in_srgb,var(--bg-elevated)_40%,var(--bg-surface))]" : ""}`
+                        : ""
+                    }`}
+                  >
                     <div
                       className="flex items-center justify-end gap-0.5"
                       onClick={(e) => e.stopPropagation()}

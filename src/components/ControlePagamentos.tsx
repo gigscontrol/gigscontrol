@@ -285,23 +285,21 @@ export default function ControlePagamentos({
         ),
       },
       {
+        // Contratante com a venda embaixo (eram 2 colunas, 244 + 238 px): a
+        // tabela tinha 1335 px e rolava pro lado em notebook de 1366/1440.
         chave: "contratante",
         titulo: "Contratante",
-        classe: "font-medium text-primary max-w-[220px] truncate",
+        classe: "max-w-[240px]",
         ordenarPor: (l) => l.contratante,
-        celula: (l) => l.contratante || "—",
-      },
-      {
-        chave: "venda",
-        noCelular: false, // cartão do celular só com o principal
-        titulo: "Venda",
-        ordenarPor: (l) => l.vendaNumero,
         celula: (l) => (
-          <div className="min-w-0 max-w-[260px]">
-            <div className="font-mono text-xs" style={{ color: accent }}>
-              {l.vendaNumero}
+          <div className="min-w-0">
+            <div className="truncate font-medium text-primary">{l.contratante || "—"}</div>
+            <div className="truncate text-xs text-muted">
+              <span className="font-mono" style={{ color: accent }}>
+                {l.vendaNumero}
+              </span>
+              {l.nomeEvento && <> · {l.nomeEvento}</>}
             </div>
-            {l.nomeEvento && <div className="text-xs text-muted truncate">{l.nomeEvento}</div>}
           </div>
         ),
       },
@@ -309,12 +307,12 @@ export default function ControlePagamentos({
         chave: "artista",
         noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
-        classe: "text-secondary whitespace-nowrap",
+        classe: "text-secondary whitespace-nowrap max-w-[130px]",
         ordenarPor: (l) => l.artistaNome,
         celula: (l) => (
-          <span className="inline-flex items-center gap-1.5">
+          <span className="flex min-w-0 items-center gap-1.5" title={l.artistaNome}>
             <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: l.artistaColor }} />
-            {l.artistaNome}
+            <span className="truncate">{l.artistaNome}</span>
           </span>
         ),
       },
@@ -355,7 +353,7 @@ export default function ControlePagamentos({
       {
         chave: "ultimaCobranca",
         noCelular: false, // cartão do celular só com o principal
-        titulo: "Última cobrança",
+        titulo: "Cobrança",
         ordenarPor: (l) => {
           const cs = l.parcela.meta?.cobrancas ?? [];
           return cs.length ? cs[cs.length - 1].em : "";
