@@ -417,8 +417,8 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
     );
   };
 
-  // Cartão "Shows a realizar" — renderizado no celular (antes dos números) e
-  // no computador (à esquerda da grade); só um aparece por tamanho de tela.
+  // Cartão "Shows a realizar" — à esquerda dos realizados no computador,
+  // logo depois dos números no celular.
   const cartaoARealizar = (
     <div className="card">
         <div className="flex items-center justify-between mb-4">
@@ -502,16 +502,12 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         />
       </div>
 
-      {/* No celular (artista/equipe) a 1ª coisa é "onde e quando eu toco":
-          Shows a realizar → números → Shows realizados. No computador:
-          números em cima, depois a realizar | realizados. O cartão "a
-          realizar" fica em dois lugares (um escondido por tamanho de tela)
-          pra ordem do DOM — teclado e leitor de tela — bater com a da tela;
-          antes era `order-*`, e o Tab passava por ele por último. */}
+      {/* Mesma ordem no celular e no computador (pedido do Bruno, 22/10):
+          números em cima, depois Shows a realizar e Shows realizados — lado
+          a lado no computador, um embaixo do outro no celular. */}
       <div className="mb-4 flex flex-col gap-4 lg:mb-0 lg:block">
       {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
           geral" contam a agenda inteira; senão, só o mês selecionado. */}
-      <div className="lg:hidden">{cartaoARealizar}</div>
       <div className="grid grid-cols-2 gap-4 lg:mb-6 lg:grid-cols-4">
         <ClickableStat
           onClick={() =>
@@ -581,12 +577,11 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         </ClickableStat>
       </div>
 
-      {/* Shows realizados + a realizar — em lista (saíram dos cards de cima).
-          `contents` no celular: os dois cartões entram na ordem de cima. */}
+      {/* Shows a realizar + realizados — em lista (saíram dos cards de cima).
+          `contents` no celular: os dois cartões entram na coluna de cima. */}
       <div className="contents lg:mb-4 lg:grid lg:grid-cols-2 lg:gap-4">
-        {/* Computador: "a realizar" à esquerda — o que ainda vai acontecer vem
-            primeiro. (No celular ele já apareceu antes dos números.) */}
-        <div className="hidden lg:block">{cartaoARealizar}</div>
+        {/* "A realizar" primeiro — o que ainda vai acontecer. */}
+        {cartaoARealizar}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title flex items-center gap-2">
