@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
-import { Trash2, MousePointerClick } from "lucide-react";
+import { Trash2, MousePointerClick, Plus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { CampoAssinatura } from "@/lib/mappers/contrato";
 
@@ -100,7 +100,7 @@ export default function PosicionadorPdf({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted inline-flex items-center gap-1.5">
           <MousePointerClick size={13} />
-          {t("Clique no documento pra colocar a assinatura de:")}
+          {t("Toque ou clique no documento (ou use “Adicionar” em cada página) pra colocar a assinatura de:")}
         </span>
         {signatarios.map((s) => {
           const ativo = s.ordem === sigAtiva;
@@ -109,6 +109,7 @@ export default function PosicionadorPdf({
             <button
               key={s.ordem}
               type="button"
+              aria-pressed={ativo}
               onClick={() => setSigAtiva(s.ordem)}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs transition-colors"
               style={{
@@ -143,6 +144,7 @@ export default function PosicionadorPdf({
               campos={campos.filter((c) => c.pagina === i)}
               corDe={corDe}
               nomeDe={nomeDe}
+              nomeAtivo={nomeDe(sigAtiva)}
               onAdicionar={(x, y) => adicionar(i, x, y)}
               onMover={(id, x, y) => atualizar(id, { xRel: x, yRel: y })}
               onRedimensionar={(id, w, h) => atualizar(id, { wRel: w, hRel: h })}
@@ -160,6 +162,8 @@ type PaginaProps = {
   campos: CampoAssinatura[];
   corDe: (ordem: number) => string;
   nomeDe: (ordem: number) => string;
+  /** Signatário escolhido na barra (o botão "Adicionar" usa ele). */
+  nomeAtivo: string;
   onAdicionar: (xRel: number, yRel: number) => void;
   onMover: (id: string, xRel: number, yRel: number) => void;
   onRedimensionar: (id: string, wRel: number, hRel: number) => void;
@@ -172,6 +176,7 @@ function PaginaPdf({
   campos,
   corDe,
   nomeDe,
+  nomeAtivo,
   onAdicionar,
   onMover,
   onRedimensionar,
@@ -243,12 +248,58 @@ function PaginaPdf({
     }
   }
 
+  // Teclado no campo focado: setas movem, Shift+setas mudam o tamanho
+  // (passo de 1%; Alt = 0,2% pro ajuste fino), Delete/Backspace remove.
+  function onTecla(e: React.KeyboardEvent, c: CampoAssinatura) {
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      onRemover(c.id);
+      return;
+    }
+    const passo = e.altKey ? 0.002 : 0.01;
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    if (e.shiftKey) {
+      onRedimensionar(
+        c.id,
+        clamp(c.wRel + d[0] * passo, 0.05, 1 - c.xRel),
+        clamp(c.hRel + d[1] * passo, 0.02, 1 - c.yRel)
+      );
+    } else {
+      onMover(
+        c.id,
+        clamp(c.xRel + d[0] * passo, 0, 1 - c.wRel),
+        clamp(c.yRel + d[1] * passo, 0, 1 - c.hRel)
+      );
+    }
+  }
+
   return (
+    <div className="w-full max-w-[720px] flex flex-col gap-1.5">
+    {/* Alternativa ao clique no papel: teclado, leitor de tela e toque sem
+        precisar acertar o ponto. O campo nasce no centro e se ajusta depois. */}
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs text-muted">{t("Página {n}", { n: pagina + 1 })}</span>
+      <button
+        type="button"
+        onClick={() => onAdicionar(0.5, 0.5)}
+        disabled={!pronto}
+        className="btn-ghost text-xs inline-flex items-center gap-1 px-2 py-1.5 rounded"
+      >
+        <Plus size={13} />
+        {t("Adicionar assinatura de {nome} nesta página", { nome: nomeAtivo })}
+      </button>
+    </div>
     <div
       ref={wrapRef}
-      className="relative w-full max-w-[720px] border border-border rounded shadow-sm bg-white select-none"
+      className="relative w-full border border-border rounded shadow-sm bg-white select-none"
       onPointerMove={onPointerMove}
       onPointerUp={encerrar}
+      onPointerCancel={encerrar}
+      onLostPointerCapture={() => {
+        arraste.current = null;
+      }}
       onPointerLeave={encerrar}
       onClick={(e) => {
         // Clicar numa área vazia adiciona um campo. Ignora clique que veio de arraste.
@@ -267,7 +318,13 @@ function PaginaPdf({
             <div
               key={c.id}
               data-campo="1"
-              className="absolute rounded-sm flex items-center justify-center text-[0.6875rem] font-medium cursor-move group"
+              role="group"
+              tabIndex={0}
+              aria-label={t("Assinatura de {nome}. Setas movem, Shift+setas mudam o tamanho, Delete remove.", {
+                nome: nomeDe(c.signatarioOrdem),
+              })}
+              onKeyDown={(e) => onTecla(e, c)}
+              className="absolute rounded-sm flex items-center justify-center text-[0.6875rem] font-medium cursor-move group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{
                 left: `${c.xRel * 100}%`,
                 top: `${c.yRel * 100}%`,
@@ -276,6 +333,9 @@ function PaginaPdf({
                 border: `1.5px dashed ${cor}`,
                 backgroundColor: `color-mix(in srgb, ${cor} 14%, transparent)`,
                 color: cor,
+                // No toque, arrastar o campo move o campo (não rola a página).
+                touchAction: "none",
+                outlineColor: cor,
               }}
               onPointerDown={(e) => {
                 e.preventDefault();
@@ -304,10 +364,11 @@ function PaginaPdf({
                   e.stopPropagation();
                   onRemover(c.id);
                 }}
-                className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-danger text-white flex items-center justify-center opacity-0 group-hover:opacity-100"
+                // Visível no hover, no foco do campo e sempre no toque (sem hover).
+                className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-danger text-white flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:-top-3.5 [@media(pointer:coarse)]:-right-3.5 [@media(pointer:coarse)]:h-7 [@media(pointer:coarse)]:w-7"
                 aria-label={t("Remover campo")}
               >
-                <Trash2 size={9} />
+                <Trash2 size={11} />
               </button>
               {/* Handle de resize (canto inferior-direito) */}
               <span
@@ -327,12 +388,13 @@ function PaginaPdf({
                     h: c.hRel,
                   };
                 }}
-                className="absolute -bottom-1 -right-1 h-3 w-3 rounded-sm cursor-se-resize"
-                style={{ backgroundColor: cor }}
+                className="absolute -bottom-1 -right-1 h-3 w-3 rounded-sm cursor-se-resize [@media(pointer:coarse)]:-bottom-2.5 [@media(pointer:coarse)]:-right-2.5 [@media(pointer:coarse)]:h-6 [@media(pointer:coarse)]:w-6"
+                style={{ backgroundColor: cor, touchAction: "none" }}
               />
             </div>
           );
         })}
+    </div>
     </div>
   );
 }

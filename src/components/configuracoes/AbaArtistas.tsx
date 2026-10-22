@@ -102,6 +102,22 @@ export default function AbaArtistas() {
     });
   }
 
+  // Sem mouse: setas ←/→ no avatar focado andam uma posição (o foco segue o
+  // avatar — o React pode mover o nó no DOM e o navegador solta o foco).
+  function moverPorTeclado(id: string, delta: -1 | 1) {
+    const ids = artistas.map((a) => a.id);
+    const de = ids.indexOf(id);
+    const para = de + delta;
+    if (de < 0 || para < 0 || para >= ids.length) return;
+    [ids[de], ids[para]] = [ids[para], ids[de]];
+    void reordenarArtistas(ids).catch((e) => {
+      setToast({ msg: (e as Error).message, tipo: "erro" });
+    });
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(`[data-chip-artista="${id}"]`)?.focus()
+    );
+  }
+
   const plano = sessao?.workspace ? getPlano(sessao.workspace.plano) : null;
   const slugAgencia = sessao?.workspace?.slug ?? "";
   const limite = plano?.maxArtistas ?? 0;
@@ -350,11 +366,32 @@ export default function AbaArtistas() {
                 <button
                   key={a.id}
                   type="button"
+                  data-chip-artista={a.id}
                   draggable={modoReordenar}
+                  aria-pressed={modoReordenar ? sendoArrastado : undefined}
+                  aria-label={
+                    modoReordenar
+                      ? t("{nome}: toque e depois toque no lugar dele, ou use as setas", { nome: a.name })
+                      : undefined
+                  }
                   onClick={() => {
                     if (!modoReordenar) {
                       setEditando(null);
                       setArtistaSelecionadoId(a.id);
+                      return;
+                    }
+                    // Toque (e Enter): 1º toque pega o avatar, 2º toque solta
+                    // no lugar do avatar tocado — o mesmo que arrastar.
+                    if (!arrastandoId) setArrastandoId(a.id);
+                    else aoSoltar(a.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!modoReordenar) return;
+                    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                      e.preventDefault();
+                      moverPorTeclado(a.id, e.key === "ArrowLeft" ? -1 : 1);
+                    } else if (e.key === "Escape" && arrastandoId) {
+                      setArrastandoId(null);
                     }
                   }}
                   onDragStart={(e) => {
@@ -495,7 +532,9 @@ export default function AbaArtistas() {
         </div>
         {modoReordenar && (
           <p className="text-xs text-muted mt-2">
-            {t("Arraste os avatares pra reordenar — reflete na sidebar e nos filtros do app.")}
+            {arrastandoId
+              ? t("Agora toque no avatar que está no lugar onde ele deve ficar.")
+              : t("Arraste os avatares pra reordenar (ou toque num e depois no lugar dele; no teclado, setas ← →) — reflete na sidebar e nos filtros do app.")}
           </p>
         )}
       </div>
