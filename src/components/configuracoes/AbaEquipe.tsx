@@ -673,7 +673,7 @@ export default function AbaEquipe() {
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Acesso ao sistema */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <KeyRound size={12} style={{ color: "var(--brand)" }} />
                 {t("Acesso ao sistema")}
               </div>
@@ -681,7 +681,7 @@ export default function AbaEquipe() {
                   Membros antigos (login por e-mail) têm username null. */}
               {selecionado.username && (
                 <div>
-                  <div className="text-micro text-muted mb-1">{t("Login")}</div>
+                  <div className="text-xs font-medium text-secondary mb-1">{t("Login")}</div>
                   <button
                     type="button"
                     onClick={() => {
@@ -717,7 +717,7 @@ export default function AbaEquipe() {
               ) : (
                 <>
                   <div>
-                    <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
+                    <div className="text-xs font-medium text-secondary mb-1">{t("E-mail")}</div>
                     {conta.emailFakeInterno ? (
                       // Membro novo (login por handle) — não tem e-mail real.
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -755,7 +755,7 @@ export default function AbaEquipe() {
                     )}
                   </div>
                   <div>
-                    <div className="text-micro text-muted mb-1">{t("Senha")}</div>
+                    <div className="text-xs font-medium text-secondary mb-1">{t("Senha")}</div>
                     {conta.senhaPadrao && conta.senhaPadraoValor ? (
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -837,7 +837,7 @@ export default function AbaEquipe() {
 
             {/* Funções e DJs atendidos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--brand)" }} />
                 {t("Funções e artistas atendidos")}
               </div>
@@ -906,7 +906,7 @@ export default function AbaEquipe() {
                 módulos que o vínculo concede (com contagem de chaves) + a
                 permissão de agência (anotações) quando ligada. Sem dado legado. */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
                 {t("Permissões")}
               </div>

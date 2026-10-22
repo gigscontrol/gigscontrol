@@ -495,7 +495,7 @@ export function Secao({
 }) {
   return (
     <div className="flex flex-col gap-2 pb-3 border-b border-border last:border-b-0 last:pb-0">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
+      <h3 className="stat-label">
         {titulo}
       </h3>
       <div className="flex flex-col gap-3">{children}</div>

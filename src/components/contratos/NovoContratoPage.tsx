@@ -653,7 +653,7 @@ export default function NovoContratoPage({
                 )}
                 {grupos.map(([grupo, vars]) => (
                   <div key={grupo} className="flex flex-col gap-2">
-                    <div className="text-micro font-semibold uppercase tracking-wider text-muted">
+                    <div className="stat-label">
                       {t(grupo)}
                     </div>
                     {vars.map((v) => {

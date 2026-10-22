@@ -362,7 +362,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
               <div className="flex items-start gap-2">
                 <div className="grid flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
-                    <label className="stat-label mb-1 block">{t("Nome")}</label>
+                    <label className="text-xs font-medium text-secondary mb-1 block">{t("Nome")}</label>
                     <input aria-label={t("Nome")}
                       type="text"
                       className="campo-input"
@@ -372,7 +372,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     />
                   </div>
                   <div>
-                    <label className="stat-label mb-1 block">{t("E-mail")}</label>
+                    <label className="text-xs font-medium text-secondary mb-1 block">{t("E-mail")}</label>
                     <input aria-label={t("E-mail")}
                       type="email"
                       className="campo-input"
@@ -382,7 +382,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     />
                   </div>
                   <div>
-                    <label className="stat-label mb-1 block">{t("Telefone")}</label>
+                    <label className="text-xs font-medium text-secondary mb-1 block">{t("Telefone")}</label>
                     <input aria-label={t("Telefone")}
                       type="tel"
                       className="campo-input"
@@ -392,7 +392,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                     />
                   </div>
                   <div>
-                    <label className="stat-label mb-1 block">{t("Papel")}</label>
+                    <label className="text-xs font-medium text-secondary mb-1 block">{t("Papel")}</label>
                     <input aria-label={t("Papel")}
                       type="text"
                       className="campo-input"

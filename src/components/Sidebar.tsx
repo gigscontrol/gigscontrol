@@ -503,7 +503,7 @@ export default function Sidebar({
               {!planoIndividual && (
                 <button
                   onClick={toggleAll}
-                  className="text-micro font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                  className="stat-label hover:text-primary transition-colors"
                 >
                   {allSelected ? t("Ocultar todos") : t("Mostrar todos")}
                 </button>

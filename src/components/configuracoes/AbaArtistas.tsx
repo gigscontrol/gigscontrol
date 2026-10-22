@@ -798,13 +798,13 @@ export default function AbaArtistas() {
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Acesso */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <KeyRound size={12} style={{ color: "var(--brand)" }} />
                 {t("Acesso ao sistema")}
               </div>
               {artistaSelecionado.username && (
                 <div>
-                  <div className="text-micro text-muted mb-1">{t("Login")}</div>
+                  <div className="text-xs font-medium text-secondary mb-1">{t("Login")}</div>
                   <button
                     type="button"
                     onClick={() => copiarUsername(artistaSelecionado.username!)}
@@ -833,7 +833,7 @@ export default function AbaArtistas() {
               ) : (
                 <>
                   <div>
-                    <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
+                    <div className="text-xs font-medium text-secondary mb-1">{t("E-mail")}</div>
                     {conta.emailFakeInterno ? (
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                         <Mail size={14} className="text-muted flex-shrink-0" />
@@ -870,7 +870,7 @@ export default function AbaArtistas() {
                     )}
                   </div>
                   <div>
-                    <div className="text-micro text-muted mb-1">{t("Senha")}</div>
+                    <div className="text-xs font-medium text-secondary mb-1">{t("Senha")}</div>
                     {conta.senhaPadrao && conta.senhaPadraoValor ? (
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -952,7 +952,7 @@ export default function AbaArtistas() {
 
             {/* Permissões (read-only; edita no formulário) */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
                 {t("Permissões")}
               </div>
@@ -1021,7 +1021,7 @@ export default function AbaArtistas() {
 
             {/* Membros da equipe que atendem o DJ */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 <Users size={12} style={{ color: "var(--brand)" }} />
                 {t("Membros da equipe")}
               </div>
@@ -1084,7 +1084,7 @@ export default function AbaArtistas() {
 
             {/* Rider de camarim */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+              <div className="stat-label">
                 {t("Rider de Camarim")} ({(artistaSelecionado.riderCamarim ?? []).length}/
                 {LIMITE_RIDER_CAMARIM})
               </div>
@@ -1106,7 +1106,7 @@ export default function AbaArtistas() {
 
             {/* Rider de efeitos */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+              <div className="stat-label">
                 {t("Rider de Efeitos")} ({(artistaSelecionado.riderEfeitos ?? []).length}/
                 {LIMITE_RIDER_EFEITOS})
               </div>
@@ -1128,7 +1128,7 @@ export default function AbaArtistas() {
 
             {/* Rider técnico */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+              <div className="stat-label">
                 {t("Rider técnico")} ({(artistaSelecionado.riderTecnico ?? []).length}/
                 {LIMITE_RIDER_TECNICO})
               </div>
@@ -1160,7 +1160,7 @@ export default function AbaArtistas() {
 
             {/* Taxa de agência */}
             <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+              <div className="stat-label inline-flex items-center gap-1.5">
                 {(artistaSelecionado.taxaModo ?? "sem-taxa").startsWith("perc") ? (
                   <Percent size={12} style={{ color: "var(--brand)" }} />
                 ) : (

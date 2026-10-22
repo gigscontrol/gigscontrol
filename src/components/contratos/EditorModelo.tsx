@@ -677,7 +677,7 @@ export default function EditorModelo({
               {/* Barra de aparência: cores + baixar PDF */}
               <div className="card flex flex-wrap items-center gap-x-5 gap-y-3 p-3">
                 <span
-                  className="text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1"
+                  className="stat-label inline-flex items-center gap-1"
                   style={{ color: ACCENT }}
                 >
                   <Palette size={13} />
@@ -970,7 +970,7 @@ export default function EditorModelo({
                           className="bg-surface border border-border rounded p-3 flex flex-col gap-2"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-muted uppercase tracking-wide">
+                            <span className="stat-label">
                               {t("Testemunha")} {i + 1}
                             </span>
                             <button

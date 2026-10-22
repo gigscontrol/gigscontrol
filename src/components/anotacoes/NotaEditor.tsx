@@ -201,7 +201,7 @@ export default function NotaEditor({
         {/* Opções: cor · fixar · artista */}
         <div className="flex items-end gap-4 flex-wrap">
           <div>
-            <label className="stat-label mb-1.5 block inline-flex items-center gap-1">
+            <label className="text-xs font-medium text-secondary mb-1.5 block inline-flex items-center gap-1">
               <Palette size={12} /> {t("Cor")}
             </label>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -230,7 +230,7 @@ export default function NotaEditor({
           </div>
 
           <div>
-            <label className="stat-label mb-1.5 block">{t("Fixar")}</label>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">{t("Fixar")}</label>
             <button
               onClick={() => setFixada((v) => !v)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm transition-colors"
@@ -247,7 +247,7 @@ export default function NotaEditor({
           </div>
 
           <div className="min-w-[180px]">
-            <label className="stat-label mb-1.5 block">{t("Etiquetar artista")}</label>
+            <label className="text-xs font-medium text-secondary mb-1.5 block">{t("Etiquetar artista")}</label>
             <select aria-label={t("Etiquetar artista")}
               value={artistId ?? ""}
               onChange={(e) => setArtistId(e.target.value || null)}

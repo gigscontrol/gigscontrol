@@ -792,7 +792,7 @@ export function ModalUsuario({
             Acesso ativo + toggle Anotações + Senha/gerar nova. */}
         {modo === "editar" && (
           <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <div className="stat-label inline-flex items-center gap-1.5">
               <KeyRound size={12} style={{ color: "var(--brand)" }} />
               {t("Acesso ao sistema")}
             </div>
@@ -802,7 +802,7 @@ export function ModalUsuario({
                 têm username null → oculta. */}
             {inicial?.username && (
               <div>
-                <div className="text-micro text-muted mb-1">{t("Login")}</div>
+                <div className="text-xs font-medium text-secondary mb-1">{t("Login")}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -841,7 +841,7 @@ export function ModalUsuario({
               </p>
             ) : (
               <div>
-                <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
+                <div className="text-xs font-medium text-secondary mb-1">{t("E-mail")}</div>
                 {conta.emailFakeInterno ? (
                   <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                     <Mail size={14} className="text-muted flex-shrink-0" />
@@ -890,7 +890,7 @@ export function ModalUsuario({
 
             {/* (4) Senha — mostra a padrão (se houver) + copiar + gerar nova */}
             <div>
-              <div className="text-micro text-muted mb-1">{t("Senha")}</div>
+              <div className="text-xs font-medium text-secondary mb-1">{t("Senha")}</div>
               {carregandoConta ? (
                 <div className="flex items-center gap-2 text-sm text-muted py-1">
                   <Loader2 size={14} className="animate-spin" />
@@ -1003,7 +1003,7 @@ export function ModalUsuario({
             e continua gravando profiles.pode_criar_anotacoes (payload idêntico). */}
         {modo === "editar" && (
           <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <div className="stat-label inline-flex items-center gap-1.5">
               <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
               {t("Permissões da agência")}
             </div>
@@ -1037,7 +1037,7 @@ export function ModalUsuario({
             trabalha; cada linha abre o EditorPermissoesVinculo. */}
         {modo === "editar" && (
           <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+            <div className="stat-label inline-flex items-center gap-1.5">
               <Users size={12} style={{ color: "var(--brand)" }} />
               {t("Permissões por artista")}
             </div>

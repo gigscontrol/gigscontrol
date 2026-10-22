@@ -522,7 +522,7 @@ export function ModalEditarArtista({
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Acesso ao sistema */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <div className="stat-label inline-flex items-center gap-1.5">
             <KeyRound size={12} style={{ color: "var(--brand)" }} />
             {t("Acesso ao sistema")}
           </div>
@@ -782,7 +782,7 @@ export function ModalEditarArtista({
 
         {/* Permissões */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <div className="stat-label inline-flex items-center gap-1.5">
             <ShieldCheck size={12} style={{ color: "var(--brand)" }} />
             {t("Permissões")}
           </div>
@@ -794,7 +794,7 @@ export function ModalEditarArtista({
 
         {/* Rider de camarim */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+          <div className="stat-label">
             {t("Rider de camarim ({n}/{max})", { n: riderCamarim.length, max: LIMITE_RIDER_CAMARIM })}
           </div>
           <ListaRider
@@ -808,7 +808,7 @@ export function ModalEditarArtista({
 
         {/* Rider de efeitos */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+          <div className="stat-label">
             {t("Rider de efeitos ({n}/{max})", { n: riderEfeitos.length, max: LIMITE_RIDER_EFEITOS })}
           </div>
           <ListaRider
@@ -822,7 +822,7 @@ export function ModalEditarArtista({
 
         {/* Rider técnico */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+          <div className="stat-label">
             {t("Rider técnico ({n}/{max})", { n: riderTecnico.length, max: LIMITE_RIDER_TECNICO })}
           </div>
           <ListaRider
@@ -836,7 +836,7 @@ export function ModalEditarArtista({
 
         {/* Taxa de agência */}
         <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+          <div className="stat-label inline-flex items-center gap-1.5">
             {taxaModo.startsWith("perc") ? (
               <Percent size={12} style={{ color: "var(--brand)" }} />
             ) : (

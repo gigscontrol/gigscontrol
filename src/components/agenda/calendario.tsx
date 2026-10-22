@@ -200,7 +200,7 @@ export function DayCellComponent({
       }}
     >
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
-        <div className="text-micro uppercase font-bold tracking-wider text-muted flex items-center gap-1">
+        <div className="stat-label flex items-center gap-1">
           {t(day.name).slice(0, 3)}
           {day.isQuente && !day.isOtherMonth && (
             <span
@@ -340,7 +340,7 @@ export function MobileDayCard({
     >
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
         <div>
-          <div className="text-micro uppercase tracking-wider text-muted font-bold">
+          <div className="stat-label">
             {t(day.name)}
           </div>
           <div
