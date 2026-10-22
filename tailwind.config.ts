@@ -3,6 +3,9 @@ import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  // `hover:` só vale com mouse (@media (hover: hover)). No toque, o hover
+  // "grudava": o item tocado ficava aceso até tocar em outro lugar.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {

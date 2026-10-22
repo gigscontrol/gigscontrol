@@ -549,7 +549,7 @@ export default function AbaEquipe() {
                       ) : (
                         <Copy
                           size={11}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
                         />
                       )}
                     </button>

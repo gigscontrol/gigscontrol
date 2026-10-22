@@ -302,7 +302,9 @@
     box-shadow: var(--shadow-card);
     transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
   }
-  .card:hover { border-color: var(--border-hover); }
+  @media (hover: hover) {
+    .card:hover { border-color: var(--border-hover); }
+  }
 
   .card-interactive {
     background-color: var(--bg-surface);
@@ -314,10 +316,14 @@
     transition: border-color 200ms var(--ease), transform 200ms var(--ease),
       box-shadow 200ms var(--ease);
   }
-  .card-interactive:hover {
-    border-color: var(--border-strong);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px -10px var(--shadow-color);
+  /* Hover só com mouse (aqui e nos botões abaixo): no toque o estado de
+     hover grudava no item tocado até o próximo toque. */
+  @media (hover: hover) {
+    .card-interactive:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px -10px var(--shadow-color);
+    }
   }
 
   /* Badges — mono CAIXA ALTA, cor semântica sobre o *-weak */
@@ -358,20 +364,26 @@
     background-color: var(--brand-solid);
     color: #fff;
   }
-  .btn-primary:hover { filter: brightness(0.93); }
+  @media (hover: hover) {
+    .btn-primary:hover { filter: brightness(0.93); }
+  }
   .btn-secondary {
     background-color: var(--bg-surface-2);
     color: var(--text-secondary);
     border: 1px solid var(--border-strong);
   }
-  .btn-secondary:hover { color: var(--text-primary); border-color: var(--border-hover); }
+  @media (hover: hover) {
+    .btn-secondary:hover { color: var(--text-primary); border-color: var(--border-hover); }
+  }
   .btn-ghost {
     background: transparent;
     color: var(--text-secondary);
   }
-  .btn-ghost:hover {
-    background-color: var(--bg-elevated);
-    color: var(--text-primary);
+  @media (hover: hover) {
+    .btn-ghost:hover {
+      background-color: var(--bg-elevated);
+      color: var(--text-primary);
+    }
   }
   .btn:active { transform: translateY(1px); }
 
@@ -409,13 +421,17 @@
     background-color: var(--danger-solid);
     color: #fff;
   }
-  .btn-danger:hover { filter: brightness(0.93); }
+  @media (hover: hover) {
+    .btn-danger:hover { filter: brightness(0.93); }
+  }
   .btn-danger-outline {
     background-color: transparent;
     color: var(--danger);
     border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
   }
-  .btn-danger-outline:hover { background-color: var(--danger-weak); }
+  @media (hover: hover) {
+    .btn-danger-outline:hover { background-color: var(--danger-weak); }
+  }
   .btn-danger:disabled,
   .btn-danger-outline:disabled {
     opacity: 0.5;
@@ -534,7 +550,9 @@
     cursor: pointer;
     transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
   }
-  .opcao:hover { border-color: var(--border-strong); }
+  @media (hover: hover) {
+    .opcao:hover { border-color: var(--border-strong); }
+  }
 
   /* "Pular para o conteúdo": fora da tela até receber o foco do teclado. */
   .pular-conteudo {
@@ -587,7 +605,9 @@
     border: none;
     background: transparent;
   }
-  .pill:hover { color: var(--text-primary); background-color: var(--bg-elevated); }
+  @media (hover: hover) {
+    .pill:hover { color: var(--text-primary); background-color: var(--bg-elevated); }
+  }
   .pill.active {
     background-color: var(--brand-solid);
     color: #fff;
