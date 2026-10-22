@@ -1,17 +1,14 @@
 /**
- * Cor do texto EM CIMA de uma cor de identidade (artista, equipe, papel).
+ * Contraste de cores de identidade (artista, equipe, papel).
  *
- * As iniciais dos avatares eram sempre brancas — em cor clara (verde, ciano,
- * laranja, amarelo) davam de 1,9 a 3,9:1. Aqui escolhe branco ou quase-preto,
- * o que tiver MAIS contraste com a cor de fundo (WCAG 2.x).
- *
- * Só entende hexadecimal (#RGB / #RRGGBB); qualquer outra coisa (var(...),
- * nome de cor) cai no branco — o comportamento antigo.
+ * As iniciais dos avatares ficam SEMPRE brancas (decisão do Bruno, 22/10:
+ * iniciais escuras em cor clara foram testadas e recusadas). O que mora aqui
+ * é a cor de identidade usada como TEXTO (corComoTexto) e a conta de razão
+ * de contraste (WCAG 2.x) que os testes usam.
  *
  * Módulo puro — coberto por contraste.test.ts.
  */
 
-const BRANCO = "#FFFFFF";
 const ESCURO = "#111726";
 
 function luminancia(hex: string): number | null {
@@ -33,13 +30,6 @@ export function razaoContraste(a: string, b: string): number | null {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-export function corTextoSobre(fundo: string | null | undefined): string {
-  if (!fundo) return BRANCO;
-  const comBranco = razaoContraste(BRANCO, fundo);
-  const comEscuro = razaoContraste(ESCURO, fundo);
-  if (comBranco === null || comEscuro === null) return BRANCO;
-  return comBranco >= comEscuro ? BRANCO : ESCURO;
-}
 
 /**
  * Cor de identidade (artista, papel) usada como TEXTO sobre o chip tingido

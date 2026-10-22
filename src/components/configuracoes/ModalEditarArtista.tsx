@@ -42,7 +42,7 @@ import {
 } from "@/types";
 import { ArtistaParaEdicao, Campo, LinhaEscopo, ListaRider, MODOS_TAXA, SecaoDadosContrato, SeletorDeCor, validarDadosContrato } from "./camposCadastro";
 import { PrivacidadePills } from "./PrivacidadePills";
-import { corTextoSobre } from "@/lib/contraste";
+
 
 // ============================================================
 // Modal — Editar artista
@@ -423,7 +423,7 @@ export function ModalEditarArtista({
             <span
               className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
               style={{
-                color: corTextoSobre(cor),
+                color: "#fff",
                 background: `linear-gradient(135deg, ${cor}, color-mix(in srgb, ${cor} 60%, transparent))`,
               }}
             >

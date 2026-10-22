@@ -14,7 +14,7 @@
  */
 
 import { iniciaisDoNome } from "@/lib/iniciais";
-import { corTextoSobre } from "@/lib/contraste";
+
 
 export type TamanhoAvatar = "sm" | "md" | "lg";
 
@@ -63,8 +63,7 @@ export default function Avatar({
       style={{
         fontSize: fonte,
         background: cor ? `linear-gradient(135deg, ${cor}, color-mix(in srgb, ${cor} 60%, transparent))` : "var(--bg-elevated)",
-        // Branco ou escuro, o que contrastar mais com a cor (verde/amarelo pedem escuro).
-        color: cor ? corTextoSobre(cor) : "var(--text-primary)",
+        color: cor ? "#fff" : "var(--text-primary)",
         boxShadow: anel && cor ? `0 0 0 3px color-mix(in srgb, ${cor} 20%, transparent)` : undefined,
       }}
       aria-hidden="true"

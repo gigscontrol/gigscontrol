@@ -25,7 +25,7 @@ import { STATUS_SHOW } from "@/lib/statusUI";
 import { useNavegacao } from "./NavOverlay";
 import { urls } from "@/lib/navegacao/rotas";
 import { iniciaisDoNome } from "@/lib/iniciais";
-import { corTextoSobre } from "@/lib/contraste";
+
 
 /**
  * Detalhe de contato (contratante/casa/cidade) na LINGUAGEM DA FICHA
@@ -335,7 +335,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
                           style={{
                             backgroundColor: h.artistaCor ?? "var(--bg-surface-2)",
-                            color: h.artistaCor ? corTextoSobre(h.artistaCor) : "var(--text-secondary)",
+                            color: h.artistaCor ? "#fff" : "var(--text-secondary)",
                           }}
                         >
                           {iniciaisDoNome((h.artistaNome || "?"))}

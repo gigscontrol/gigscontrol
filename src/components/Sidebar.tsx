@@ -38,7 +38,7 @@ import LogoGC from "./LogoGC";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { ROTULO_MODULO, ROTULO_PAGINA, urlDaTela } from "@/lib/navegacao/rotas";
 import LinkInterno from "./navegacao/LinkInterno";
-import { corTextoSobre } from "@/lib/contraste";
+
 
 type Props = {
   activeTab: ActiveTab;
@@ -543,7 +543,7 @@ export default function Sidebar({
                       className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0 transition-all"
                       style={{
                         backgroundColor: isActiveDj ? artista.color : "var(--bg-elevated)",
-                        color: isActiveDj ? corTextoSobre(artista.color) : "var(--text-muted)",
+                        color: isActiveDj ? "#fff" : "var(--text-muted)",
                         boxShadow: isActiveDj ? `0 0 0 2px color-mix(in srgb, ${artista.color} 20%, transparent)` : "none",
                       }}
                     >
