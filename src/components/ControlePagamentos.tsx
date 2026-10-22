@@ -286,7 +286,7 @@ export default function ControlePagamentos({
       {
         chave: "contratante",
         titulo: "Contratante",
-        classe: "font-medium text-primary max-w-[240px] truncate",
+        classe: "font-medium text-primary max-w-[220px] truncate",
         ordenarPor: (l) => l.contratante,
         celula: (l) => l.contratante || "—",
       },
