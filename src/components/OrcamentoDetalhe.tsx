@@ -39,6 +39,7 @@ import {
 import Modal from "./Modal";
 import Toast from "./Toast";
 import { FichaHeroPagina, Bloco, Linha, ItensGrid, FolhaFicha, ColunaFicha, SecaoFicha } from "./detalhes/FichaUI";
+import { EmailLink, TelefoneLinks } from "./detalhes/LinksContato";
 import { useConfirmar } from "./ConfirmarModal";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
@@ -430,9 +431,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
           <SecaoFicha>
             <Bloco icon={<User size={14} />} title={t("Contratante")}>
               <Linha icon={<User size={13} />} bold>{cont?.nome ?? "—"}</Linha>
-              {cont?.telefone && <Linha icon={<Phone size={13} />}>+{cont.telefone.replace(/\D/g, "")}</Linha>}
+              {cont?.telefone && (
+                <Linha icon={<Phone size={13} />}>
+                  <TelefoneLinks telefone={cont.telefone} />
+                </Linha>
+              )}
               <Linha icon={<Mail size={13} />} subtle={!cont?.email}>
-                {cont?.email || <>— <Falta /></>}
+                {cont?.email ? <EmailLink email={cont.email} /> : <>— <Falta /></>}
               </Linha>
               <Linha icon={<Hash size={13} />} subtle={!cont?.documento}>
                 {mascararCpfCnpj(cont?.documento) || <>— <Falta /></>}

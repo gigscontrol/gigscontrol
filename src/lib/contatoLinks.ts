@@ -23,6 +23,20 @@ export function linkWhatsApp(telefone: string): string {
   return d ? `https://wa.me/${d}` : "";
 }
 
+/**
+ * Perfil do Instagram ("@casa", "casa", "instagram.com/casa" ou o link)
+ * → link do perfil. "" se não dá pra montar (texto com espaço, link de
+ * outro site): aí a ficha mostra só o texto.
+ */
+export function linkInstagram(perfil: string): string {
+  const s = perfil.trim();
+  if (!s) return "";
+  const m = s.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  if (!m && /^https?:\/\//i.test(s)) return "";
+  const usuario = m ? m[1] : s.replace(/^@/, "");
+  return /^[A-Za-z0-9._]{1,30}$/.test(usuario) ? `https://www.instagram.com/${usuario}/` : "";
+}
+
 /** Busca do endereço no Google Maps (abre o app de mapas no celular). */
 export function linkMapa(endereco: string, cidade?: string): string {
   const consulta = [endereco, cidade].map((s) => s?.trim()).filter(Boolean).join(", ");
