@@ -115,7 +115,7 @@ export default function ResumoPedido({
           </span>
         </div>
 
-        <div className="text-[0.6875rem] text-right" style={{ color: "var(--text-muted)" }}>
+        <div className="text-micro text-right" style={{ color: "var(--text-muted)" }}>
           {gratis
             ? t("depois, {preco} por {periodo}", {
                 preco: formatarPreco(subtotal, moeda),
@@ -128,7 +128,7 @@ export default function ResumoPedido({
       </div>
 
       <div
-        className="mt-3 flex items-center gap-1.5 text-[0.6875rem]"
+        className="mt-3 flex items-center gap-1.5 text-micro"
         style={{ color: "var(--text-secondary)" }}
       >
         <Lock size={11} className="flex-shrink-0" />

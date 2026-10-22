@@ -1528,7 +1528,7 @@ export default function ConcretizarVenda({
           <Sparkles size={16} className="flex-shrink-0 mt-0.5" style={{ color: accent }} />
           <div className="text-sm text-secondary">
             {t("Os campos com selo")}{" "}
-            <span className="badge badge-neutral text-[0.6875rem]">auto</span> {t("vieram do orçamento")}{" "}
+            <span className="badge badge-neutral text-micro">auto</span> {t("vieram do orçamento")}{" "}
             <strong>{orc.numero}</strong>. {t("Você pode alterar qualquer um — o selo some quando edita.")}
           </div>
         </div>
@@ -1718,7 +1718,7 @@ export default function ConcretizarVenda({
                     }}
                   >
                     <span
-                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-micro font-bold flex-shrink-0"
                       style={{
                         backgroundColor: isActive
                           ? d.color
@@ -2721,7 +2721,7 @@ function FieldWithAuto({
       <span className="text-xs font-medium text-secondary inline-flex items-center gap-2">
         {typeof label === "string" ? t(label) : label}
         {required && <span className="text-danger">*</span>}
-        {showAuto && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
+        {showAuto && <span className="badge badge-neutral py-0">auto</span>}
       </span>
       {children}
       {error ? (
@@ -2752,7 +2752,7 @@ function SubSection({
     <div>
       <div className="flex items-center gap-2 mb-2">
         <span className="stat-label">{t(title)}</span>
-        {autoBadge && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
+        {autoBadge && <span className="badge badge-neutral py-0">auto</span>}
       </div>
       <PresetChips presets={presets} items={items} onChange={onChange} />
       <div className="flex flex-col gap-2">
@@ -2787,7 +2787,7 @@ function LogisticaBlock({
     <div>
       <div className="flex items-center gap-2 mb-2">
         <span className="stat-label">{t("Logística")}</span>
-        {showAuto && <span className="badge badge-neutral text-[0.55rem] py-0">auto</span>}
+        {showAuto && <span className="badge badge-neutral py-0">auto</span>}
       </div>
       <p className="text-xs text-muted mb-3">
         {t("Não marque nada se a logística estiver inclusa no cachê.")}

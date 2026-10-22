@@ -298,7 +298,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
         {DAY_NAMES_SHORT.map((d) => (
           <div
             key={d}
-            className="text-[0.7rem] uppercase tracking-wider font-bold text-muted text-center"
+            className="text-micro uppercase tracking-wider font-bold text-muted text-center"
           >
             {t(d)}
           </div>

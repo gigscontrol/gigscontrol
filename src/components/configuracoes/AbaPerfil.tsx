@@ -337,7 +337,7 @@ function MeusDados({
           placeholder={t("Como te chamam")}
           className={campo}
         />
-        <span className="text-[0.7rem] text-muted">
+        <span className="text-micro text-muted">
           {t("É o nome que aparece pros outros usuários da sua agência.")}
         </span>
       </label>
@@ -373,7 +373,7 @@ function MeusDados({
           }}
           onPaisChange={(country) => sincronizarPais(country.code)}
         />
-        <span className="text-[0.7rem] text-muted">
+        <span className="text-micro text-muted">
           {t("O país aqui define o seu documento e o DDI do telefone.")}
         </span>
       </label>
@@ -414,7 +414,7 @@ function MeusDados({
               placeholder={t("Rua, número, bairro, cidade")}
               className={campo}
             />
-            <span className="text-[0.7rem] text-muted">
+            <span className="text-micro text-muted">
               {t("Aparece nos contratos gerados pelo sistema.")}
             </span>
           </label>
@@ -668,13 +668,13 @@ function AcessoCard({
             <Mail size={14} className="text-muted flex-shrink-0" />
             <span className="flex-1 text-sm text-secondary break-all">{emailAtual}</span>
             <span
-              className="inline-flex items-center gap-1 text-[0.7rem] flex-shrink-0"
+              className="inline-flex items-center gap-1 text-micro flex-shrink-0"
               style={{ color: "var(--success)" }}
             >
               <ShieldCheck size={12} /> {t("Verificado")}
             </span>
           </div>
-          <span className="text-[0.7rem]" style={{ color: "var(--success)" }}>
+          <span className="text-micro" style={{ color: "var(--success)" }}>
             {t("E-mail verificado — é o seu login e não pode ser alterado.")}
           </span>
         </label>
@@ -683,7 +683,7 @@ function AcessoCard({
           <span className="text-xs font-medium text-secondary">
             {t("Cadastrar e-mail de acesso")}
           </span>
-          <span className="text-[0.7rem] text-muted -mt-1">
+          <span className="text-micro text-muted -mt-1">
             {t("Cadastre um e-mail seu. Enviamos um link pra confirmar — depois disso você pode entrar tanto pelo seu login de usuário quanto pelo e-mail.")}
           </span>
           <input aria-label={t("E-mail de acesso")}

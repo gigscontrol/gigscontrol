@@ -43,7 +43,7 @@ export default function StatCard({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="stat-value max-sm:text-2xl max-sm:truncate">{value}</div>
+        <div className="stat-value max-sm:text-lg">{value}</div>
         {(trend || subtitle) && (
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {trend && <TrendBadge value={trend.value} />}

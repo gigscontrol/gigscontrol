@@ -69,7 +69,7 @@ export function AgendaItemCard({
           {item.titulo || t(meta.label)}
         </span>
       </div>
-      {sub && <div className="text-[0.6875rem] text-muted mt-0.5 truncate">{sub}</div>}
+      {sub && <div className="text-micro text-muted mt-0.5 truncate">{sub}</div>}
     </button>
   );
 }
@@ -218,7 +218,7 @@ export function SeletorArtistas({
         )}
       </div>
       {value.length === 0 && hintVazio && (
-        <div className="text-[0.7rem] text-muted mt-1.5">{hintVazio}</div>
+        <div className="text-micro text-muted mt-1.5">{hintVazio}</div>
       )}
     </CampoForm>
   );

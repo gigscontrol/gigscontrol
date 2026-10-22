@@ -332,7 +332,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                     >
                       <div className="min-w-0 flex items-center gap-2.5">
                         <span
-                          className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
+                          className="h-7 w-7 rounded-full flex items-center justify-center text-micro font-bold flex-shrink-0"
                           style={{
                             backgroundColor: h.artistaCor ?? "var(--bg-surface-2)",
                             color: h.artistaCor ? "#fff" : "var(--text-secondary)",

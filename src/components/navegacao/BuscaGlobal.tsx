@@ -108,7 +108,7 @@ const MODULOS: ActiveTab[] = ["agenda", "vendas", "financeiro", "contratos", "co
 /** Tecla no rodapé — mesmo chip do "Ctrl K" da barra do topo. */
 function Tecla({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border px-1.5 text-[0.6875rem] font-medium text-secondary">
+    <kbd className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border px-1.5 text-micro font-medium text-secondary">
       {children}
     </kbd>
   );
@@ -317,7 +317,7 @@ export default function BuscaGlobal() {
   };
 
   const cabecalho = (texto: string) => (
-    <div className="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{texto}</div>
+    <div className="px-3 pb-1 pt-2 text-micro font-semibold uppercase tracking-wider text-muted">{texto}</div>
   );
 
   const linha = (item: ItemBusca, mostrarTipo: boolean) => {
@@ -349,7 +349,7 @@ export default function BuscaGlobal() {
           </span>
         ) : (
           mostrarTipo && (
-            <span className="flex-shrink-0 text-[0.7rem] text-muted">{t(TIPO_SINGULAR[item.tipo])}</span>
+            <span className="flex-shrink-0 text-micro text-muted">{t(TIPO_SINGULAR[item.tipo])}</span>
           )
         )}
       </button>

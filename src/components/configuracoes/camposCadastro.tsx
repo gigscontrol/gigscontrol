@@ -179,7 +179,7 @@ export function SeletorDeCor({
 
         {/* Hex da cor personalizada (preview legível) */}
         {ePersonalizada && (
-          <span className="text-[0.7rem] font-mono text-muted ml-1 tabular-nums">
+          <span className="text-micro font-mono text-muted ml-1 tabular-nums">
             {cor.toUpperCase()}
           </span>
         )}
@@ -199,7 +199,7 @@ export function SeletorDeCor({
       </div>
 
       {/* Dica sutil */}
-      <p className="text-[0.6875rem] text-muted mt-0.5">
+      <p className="text-micro text-muted mt-0.5">
         {ePersonalizada
           ? t("Cor personalizada — clique pra trocar")
           : t("Clique no + pra escolher uma cor personalizada")}
@@ -619,7 +619,7 @@ export function ListaRider({
   return (
     <div className="flex flex-col gap-2">
       {/* Mensagem explicativa */}
-      <p className="text-[0.7rem] text-muted leading-relaxed">
+      <p className="text-micro text-muted leading-relaxed">
         {t("Liste apenas os itens. A")} <strong>{t("quantidade")}</strong> {t("é definida em cada orçamento (varia por evento).")}
       </p>
 
@@ -674,7 +674,7 @@ export function ListaRider({
       {/* Chips de sugestões */}
       {!cheio && sugestoes.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1">
-          <span className="text-[0.6875rem] text-muted self-center">
+          <span className="text-micro text-muted self-center">
             {t("Sugestões:")}
           </span>
           {sugestoes.map((s) => (
@@ -682,7 +682,7 @@ export function ListaRider({
               key={s}
               type="button"
               onClick={() => adicionar(s)}
-              className="text-[0.7rem] px-2 py-0.5 rounded-md border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
+              className="text-micro px-2 py-0.5 rounded-md border border-border bg-elevated hover:border-border-strong text-secondary hover:text-primary transition-colors"
             >
               + {t(s)}
             </button>

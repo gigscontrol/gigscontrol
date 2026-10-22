@@ -351,10 +351,10 @@ export function EditorPermissoesVinculo({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-primary">{mod.nome}</div>
-                      <div className="text-[0.6875rem] text-muted leading-tight">{mod.hint}</div>
+                      <div className="text-micro text-muted leading-tight">{mod.hint}</div>
                     </div>
                     {mod.sempre ? (
-                      <span className="text-[0.6875rem] text-muted flex-shrink-0">{t("sempre ativa")}</span>
+                      <span className="text-micro text-muted flex-shrink-0">{t("sempre ativa")}</span>
                     ) : (
                       <button
                         type="button"
@@ -402,7 +402,7 @@ export function EditorPermissoesVinculo({
                                   ? fixarPers(mod)
                                   : aplicarNivelNomeado(mod, c.k as NivelNomeado)
                               }
-                              className={`text-[0.7rem] font-semibold px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
+                              className={`text-micro font-semibold px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
                                 sel ? "" : "text-muted hover:text-secondary"
                               }`}
                               style={
@@ -417,7 +417,7 @@ export function EditorPermissoesVinculo({
                             >
                               {c.rot}
                               {c.k === "pers" && sel && (
-                                <span className="ml-1 mono-label text-[0.6875rem] opacity-90">
+                                <span className="ml-1 mono-label text-micro opacity-90">
                                   {marcadas}/{total}
                                 </span>
                               )}
@@ -454,14 +454,14 @@ export function EditorPermissoesVinculo({
                               <button
                                 type="button"
                                 onClick={() => aplicarNivelNomeado(mod, "basico")}
-                                className="text-[0.6875rem] font-semibold px-2 py-0.5 rounded border border-border-strong text-muted hover:text-secondary transition-colors"
+                                className="text-micro font-semibold px-2 py-0.5 rounded border border-border-strong text-muted hover:text-secondary transition-colors"
                               >
                                 {t("Só o básico")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => aplicarNivelNomeado(mod, "total")}
-                                className="text-[0.6875rem] font-semibold px-2 py-0.5 rounded border border-border-strong text-muted hover:text-secondary transition-colors"
+                                className="text-micro font-semibold px-2 py-0.5 rounded border border-border-strong text-muted hover:text-secondary transition-colors"
                               >
                                 {t("Marcar todos")}
                               </button>
@@ -510,7 +510,7 @@ export function EditorPermissoesVinculo({
                       </div>
 
                       {mod.nota && (
-                        <div className="mt-2.5 text-[0.6875rem] text-muted bg-surface rounded-md p-2 flex gap-1.5 items-start">
+                        <div className="mt-2.5 text-micro text-muted bg-surface rounded-md p-2 flex gap-1.5 items-start">
                           <span className="flex-shrink-0">💡</span>
                           {/* nota é conteúdo estático do MODELO (contém <b>). */}
                           <span dangerouslySetInnerHTML={{ __html: mod.nota }} />
@@ -576,7 +576,7 @@ export function EditorPermissoesVinculo({
             </div>
           </div>
 
-          <div className="bg-surface-2 border border-border rounded-md p-3.5 text-[0.6875rem] text-muted">
+          <div className="bg-surface-2 border border-border rounded-md p-3.5 text-micro text-muted">
             <div className="stat-label mb-1.5">{t("Regras que valem sempre")}</div>
             <ul className="list-disc ml-4 flex flex-col gap-1">
               <li>{t("O nível se ajusta sozinho: marcar tudo vira Acesso total; deixar só o piso do básico volta a Básico; qualquer outra combinação é Personalizado.")}</li>
@@ -741,7 +741,7 @@ export default function EquipeDoArtista({
                       return (
                         <span
                           key={p}
-                          className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                          className="text-micro font-semibold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`, color: corComoTexto(perfil?.cor ?? "#3D7BFF") }}
                         >
                           {perfil?.nome ?? p}
@@ -749,9 +749,9 @@ export default function EquipeDoArtista({
                       );
                     })
                   ) : (
-                    <span className="text-[0.6875rem] text-muted">{t("Personalizado")}</span>
+                    <span className="text-micro text-muted">{t("Personalizado")}</span>
                   )}
-                  <span className="mono-label text-[0.6875rem]">
+                  <span className="mono-label text-micro">
                     {m.permissoes.length} {t("permissões")}
                   </span>
                 </div>

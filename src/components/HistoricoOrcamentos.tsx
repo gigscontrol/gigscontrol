@@ -486,7 +486,7 @@ function StatusCard({
           {icon}
         </div>
       </div>
-      <div className="stat-value max-sm:text-2xl max-sm:truncate">{value}</div>
+      <div className="stat-value max-sm:text-lg">{value}</div>
     </button>
   );
 }

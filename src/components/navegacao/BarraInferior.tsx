@@ -64,7 +64,7 @@ export default function BarraInferior({
         type="button"
         onClick={() => navegar(urls.modulo(tab))}
         aria-current={ativo ? "page" : undefined}
-        className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium"
+        className="flex flex-1 flex-col items-center justify-center gap-0.5 text-micro font-medium"
         style={{ color: ativo ? "var(--brand)" : "var(--text-muted)" }}
       >
         <Icone size={20} />
@@ -100,7 +100,7 @@ export default function BarraInferior({
               <button
                 type="button"
                 onClick={abrirBusca}
-                className="flex flex-col items-center gap-0.5 text-[0.6875rem] font-medium text-muted"
+                className="flex flex-col items-center gap-0.5 text-micro font-medium text-muted"
               >
                 <Search size={20} />
                 {t("Buscar")}
@@ -111,7 +111,7 @@ export default function BarraInferior({
           <button
             type="button"
             onClick={onAbrirMenu}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium text-muted"
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 text-micro font-medium text-muted"
           >
             <Menu size={20} />
             {t("Menu")}

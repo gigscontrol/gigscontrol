@@ -125,7 +125,7 @@ export default function PresetsRiderEditor({
                     <div className="text-sm font-semibold text-primary truncate">
                       {p.nome}
                     </div>
-                    <div className="text-[0.7rem] text-muted">
+                    <div className="text-micro text-muted">
                       {t("{n} itens", { n: p.itens.length })}
                     </div>
                   </div>

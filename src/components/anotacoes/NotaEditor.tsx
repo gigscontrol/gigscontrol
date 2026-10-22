@@ -185,10 +185,10 @@ export default function NotaEditor({
               value={conteudo}
               onChange={(e) => setConteudo(e.target.value)}
               placeholder={t("Escreva o conteúdo... (aceita **negrito**, *itálico*, listas com - e links)")}
-              className="input w-full min-h-[320px] resize-y border border-border rounded-md p-3 bg-surface leading-relaxed"
+              className="input w-full max-w-[72ch] min-h-[320px] resize-y border border-border rounded-md p-3 bg-surface leading-relaxed"
             />
           ) : (
-            <div className="border border-border rounded-md p-3 bg-surface min-h-[320px]">
+            <div className="max-w-[72ch] border border-border rounded-md p-3 bg-surface min-h-[320px]">
               {conteudo.trim() ? (
                 renderMarkdownSeguro(conteudo)
               ) : (

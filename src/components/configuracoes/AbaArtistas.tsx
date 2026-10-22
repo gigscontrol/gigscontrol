@@ -433,7 +433,7 @@ export default function AbaArtistas() {
                 >
                   <span className="relative flex-shrink-0">
                     <span
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold"
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-micro font-bold"
                       style={{
                         // Suspenso: fundo cinza da borda — branco sumia no claro (1,3:1).
                         color: suspenso ? "var(--text-secondary)" : "#fff",
@@ -804,7 +804,7 @@ export default function AbaArtistas() {
               </div>
               {artistaSelecionado.username && (
                 <div>
-                  <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
+                  <div className="text-micro text-muted mb-1">{t("Login")}</div>
                   <button
                     type="button"
                     onClick={() => copiarUsername(artistaSelecionado.username!)}
@@ -833,7 +833,7 @@ export default function AbaArtistas() {
               ) : (
                 <>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
+                    <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
                     {conta.emailFakeInterno ? (
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                         <Mail size={14} className="text-muted flex-shrink-0" />
@@ -849,7 +849,7 @@ export default function AbaArtistas() {
                             {conta.email}
                           </span>
                         </div>
-                        <div className="mt-1 text-[0.7rem]">
+                        <div className="mt-1 text-micro">
                           {conta.emailVerificado ? (
                             <span
                               className="inline-flex items-center gap-1"
@@ -870,7 +870,7 @@ export default function AbaArtistas() {
                     )}
                   </div>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
+                    <div className="text-micro text-muted mb-1">{t("Senha")}</div>
                     {conta.senhaPadrao && conta.senhaPadraoValor ? (
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -912,7 +912,7 @@ export default function AbaArtistas() {
                           </button>
                         </div>
                         <div
-                          className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                          className="text-micro mt-1 inline-flex items-center gap-1"
                           style={{ color: "var(--warning)" }}
                         >
                           <AlertTriangle size={11} /> {t("Senha padrão — usuário ainda não trocou.")}
@@ -1043,7 +1043,7 @@ export default function AbaArtistas() {
                       return (
                         <div key={m.userId} className="flex items-center gap-2">
                           <span
-                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-secondary flex-shrink-0"
+                            className="h-7 w-7 rounded-full flex items-center justify-center text-micro font-bold text-secondary flex-shrink-0"
                             style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-strong)" }}
                           >
                             {iniciaisDoNome(m.nome)}
@@ -1055,7 +1055,7 @@ export default function AbaArtistas() {
                                 perfis.map((p) => (
                                   <span
                                     key={p.id}
-                                    className="text-[0.6875rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
+                                    className="text-micro px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
                                     style={{
                                       backgroundColor: `color-mix(in srgb, ${p.cor} 13%, transparent)`,
                                       color: corComoTexto(p.cor),
@@ -1065,7 +1065,7 @@ export default function AbaArtistas() {
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[0.6875rem] text-muted">
+                                <span className="text-micro text-muted">
                                   {t("Personalizado")}
                                 </span>
                               )}

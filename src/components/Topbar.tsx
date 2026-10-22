@@ -205,7 +205,7 @@ export default function Topbar({
         >
           <Search size={15} />
           <span className="flex-1 text-left">{t("Buscar…")}</span>
-          <kbd className="rounded border border-border px-1.5 text-[0.6875rem]">Ctrl K</kbd>
+          <kbd className="rounded border border-border px-1.5 text-micro">Ctrl K</kbd>
         </button>
         <button
           type="button"

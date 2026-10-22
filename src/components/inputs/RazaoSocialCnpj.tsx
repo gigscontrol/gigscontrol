@@ -198,7 +198,7 @@ export function LabelRazaoSocial({ busca }: { busca: BuscaRazaoSocial }) {
     <span className="inline-flex items-center gap-2">
       {t("Razão social / Nome da empresa")}
       {busca.buscando && (
-        <span className="text-[0.6875rem] font-normal text-muted">{t("buscando…")}</span>
+        <span className="text-micro font-normal text-muted">{t("buscando…")}</span>
       )}
     </span>
   );

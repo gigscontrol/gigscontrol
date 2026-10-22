@@ -262,7 +262,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-border border-t border-border">
                   {celulas.map((c) => (
                     <div key={c.label} className="bg-elevated p-2.5 min-w-0">
-                      <div className="text-[0.6875rem] uppercase tracking-wide text-muted inline-flex items-center gap-1">
+                      <div className="text-micro uppercase tracking-wide text-muted inline-flex items-center gap-1">
                         {c.icon}
                         {c.label}
                       </div>
@@ -310,7 +310,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
               <div className="flex items-center justify-between gap-2 flex-wrap border-t border-border pt-2.5">
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
                   {b.atualizadoPor && (
-                    <span className="text-[0.6875rem] text-muted truncate">
+                    <span className="text-micro text-muted truncate">
                       {t("Atualizado por")} {b.atualizadoPor}
                       {b.atualizadoEm ? ` · ${fmtDataHora(b.atualizadoEm)}` : ""}
                     </span>

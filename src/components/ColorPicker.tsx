@@ -211,7 +211,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
     >
       {/* Header com X */}
       <div className="flex items-center justify-between -mb-1">
-        <span className="text-[0.6875rem] uppercase tracking-wider text-muted font-semibold">
+        <span className="text-micro uppercase tracking-wider text-muted font-semibold">
           {t("Cor personalizada")}
         </span>
         <button

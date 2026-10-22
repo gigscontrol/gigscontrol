@@ -427,7 +427,7 @@ export function VooFormModal({
                   className="campo-input uppercase placeholder:normal-case"
                 />
               )}
-              {aviso && <div className="text-[0.7rem] text-muted mt-1.5">{aviso}</div>}
+              {aviso && <div className="text-micro text-muted mt-1.5">{aviso}</div>}
             </CampoForm>
 
             <div className="grid grid-cols-2 gap-3">

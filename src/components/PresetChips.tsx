@@ -35,7 +35,7 @@ export default function PresetChips({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-      <span className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted mr-0.5">
+      <span className="inline-flex items-center gap-1 text-micro font-semibold uppercase tracking-wider text-muted mr-0.5">
         <Wand2 size={11} />
         {t("Preset")}
       </span>

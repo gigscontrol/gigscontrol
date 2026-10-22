@@ -132,14 +132,14 @@ export function CartaoShow({
           {titulo}
         </span>
         {show.time ? (
-          <span className="text-[0.7rem] font-semibold text-primary tabular-nums flex-shrink-0">{show.time}</span>
+          <span className="text-micro font-semibold text-primary tabular-nums flex-shrink-0">{show.time}</span>
         ) : (
-          <span className="text-[0.6875rem] font-medium text-warning flex-shrink-0">{t("A definir")}</span>
+          <span className="text-micro font-medium text-warning flex-shrink-0">{t("A definir")}</span>
         )}
       </div>
-      {segunda && <div className="text-[0.7rem] text-secondary truncate mt-0.5">{segunda}</div>}
+      {segunda && <div className="text-micro text-secondary truncate mt-0.5">{segunda}</div>}
       <div className="flex items-center gap-1 min-w-0 mt-0.5">
-        <span className="text-[0.6875rem] text-muted truncate flex-1">{show.location}</span>
+        <span className="text-micro text-muted truncate flex-1">{show.location}</span>
         {show.vendaId && (
           <span
             className={`badge ${rotContrato.badgeClass} flex-shrink-0 px-1 py-0`}
@@ -200,7 +200,7 @@ export function DayCellComponent({
       }}
     >
       <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-border">
-        <div className="text-[0.7rem] uppercase font-bold tracking-wider text-muted flex items-center gap-1">
+        <div className="text-micro uppercase font-bold tracking-wider text-muted flex items-center gap-1">
           {t(day.name).slice(0, 3)}
           {day.isQuente && !day.isOtherMonth && (
             <span
@@ -252,7 +252,7 @@ export function DayCellComponent({
 export function DayCellEmptySlot() {
   const t = useT();
   return (
-    <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md text-[0.7rem] text-muted">
+    <div className="flex items-center justify-center h-20 border border-dashed border-border rounded-md text-micro text-muted">
       {t("Sem shows")}
     </div>
   );
@@ -340,7 +340,7 @@ export function MobileDayCard({
     >
       <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
         <div>
-          <div className="text-[0.7rem] uppercase tracking-wider text-muted font-bold">
+          <div className="text-micro uppercase tracking-wider text-muted font-bold">
             {t(day.name)}
           </div>
           <div

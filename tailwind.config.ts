@@ -40,6 +40,12 @@ const config: Config = {
         display: ["var(--fonte-titulo)", "system-ui", "sans-serif"],
         mono: ["var(--fonte-mono)", "monospace"],
       },
+      // Piso do painel: 11 px com entrelinha de 16 px. Substitui os avulsos
+      // text-[0.6875rem] e text-[0.7rem] (11 e 11,2 px faziam o mesmo papel e
+      // herdavam a entrelinha de 20 px do text-sm em volta).
+      fontSize: {
+        micro: ["0.6875rem", { lineHeight: "1rem" }],
+      },
       borderRadius: {
         DEFAULT: "var(--radius)",
         sm: "var(--radius-sm)",

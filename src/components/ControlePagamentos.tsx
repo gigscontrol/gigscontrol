@@ -272,11 +272,11 @@ export default function ControlePagamentos({
           <div>
             <div className="font-semibold text-primary">{fmtData(l.parcela.dataVencimento)}</div>
             {l.status === "pago" && l.parcela.dataPagamento ? (
-              <div className="text-[0.7rem] text-success">
+              <div className="text-micro text-success">
                 {t("pago em")} {fmtData(l.parcela.dataPagamento)}
               </div>
             ) : (
-              <div className="text-[0.7rem] text-muted">
+              <div className="text-micro text-muted">
                 {t("parcela {i}/{n}", { i: l.indiceParcela, n: l.totalParcelas })}
               </div>
             )}

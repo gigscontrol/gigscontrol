@@ -389,7 +389,7 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                     className="text-sm text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1.5 file:text-primary file:cursor-pointer"
                   />
-                  {file && <span className="text-[0.7rem] text-muted">{file.name}</span>}
+                  {file && <span className="text-micro text-muted">{file.name}</span>}
                 </label>
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setModo("info")} disabled={salvando} className="btn btn-secondary text-sm">

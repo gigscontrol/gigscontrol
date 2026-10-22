@@ -33,7 +33,7 @@ export type TamanhoAvatar = "sm" | "md" | "lg";
  * avatar que fica na mesma tela, lado a lado, e qualquer diferença salta.
  */
 const TAMANHOS: Record<TamanhoAvatar, { box: string; fonte: string }> = {
-  sm: { box: "h-7 w-7", fonte: "0.65rem" }, // 28px → 10.4px (Topbar, Sidebar)
+  sm: { box: "h-7 w-7", fonte: "0.6875rem" }, // 28px → 11px (Topbar, Sidebar) — piso do painel
   md: { box: "h-9 w-9", fonte: "0.75rem" }, // 36px → 12px   (menus, listas)
   lg: { box: "h-12 w-12", fonte: "1rem" }, // 48px → 16px   (cabeçalho de modal)
 };
