@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { Plus, Eye, Trash2, CalendarCheck2, Ban, Pencil } from "lucide-react";
+import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -322,41 +323,34 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
               // Sem `!cancelada`: nem o detalhe nem o PATCH travam a edição de
               // venda cancelada; esconder só aqui daria a impressão falsa de trava.
               const podeEditar = podeEditarVendaUI(podeUI, v.artistaId || null, v.criadoPor, userId);
-              return (
-                <>
-                  <button onClick={() => onAbrir(v.id)} className="btn-ghost p-1.5 rounded" title={t("Ver")}>
-                    <Eye size={14} />
-                  </button>
-                  {podeEditar && (
-                    <button
-                      onClick={() => onEditar(v.id)}
-                      className="btn-ghost p-1.5 rounded"
-                      title={t("Editar venda")}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                  {podeCancelar && (
-                    <button
-                      onClick={() => {
-                        setCancelMotivo("");
-                        setCancelAlvo(v.id);
-                      }}
-                      className="btn-ghost p-1.5 rounded"
-                      title={t("Cancelar venda")}
-                    >
-                      <Ban size={14} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleRemover(v.id)}
-                    className="btn-ghost p-1.5 rounded hover:text-danger"
-                    title={t("Remover")}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </>
-              );
+              const itens: ItemMenuLinha[] = [
+                { chave: "abrir", rotulo: t("Abrir venda"), icone: <Eye size={15} />, onClick: () => onAbrir(v.id) },
+                ...(podeEditar
+                  ? [{ chave: "editar", rotulo: t("Editar venda"), icone: <Pencil size={15} />, onClick: () => onEditar(v.id) }]
+                  : []),
+                ...(podeCancelar
+                  ? [
+                      {
+                        chave: "cancelar",
+                        rotulo: t("Cancelar venda"),
+                        icone: <Ban size={15} />,
+                        onClick: () => {
+                          setCancelMotivo("");
+                          setCancelAlvo(v.id);
+                        },
+                      },
+                    ]
+                  : []),
+                {
+                  chave: "remover",
+                  rotulo: t("Remover"),
+                  icone: <Trash2 size={15} />,
+                  onClick: () => handleRemover(v.id),
+                  perigo: true,
+                  separar: true,
+                },
+              ];
+              return <MenuLinha itens={itens} />;
             }}
           />
         )}

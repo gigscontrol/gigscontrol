@@ -40,7 +40,9 @@ export type Coluna<T> = {
  * - Abaixo de 1024 px (celular e tablet) cada linha vira um CARTÃO (a 1ª
  *   coluna é o título), em 2 colunas no tablet — a tabela de 9 colunas era
  *   ilegível no telefone e, no tablet, passava ~570 px da tela. O corte é o
- *   mesmo da navegação (barra inferior até 1023 px, menu lateral depois).
+ *   mesmo da navegação (barra inferior até 1023 px, menu lateral depois);
+ *   em tablet de toque deitado (até 1279 px) também, porque com o menu
+ *   lateral a tabela de Pagamentos rolava ~490 px pro lado.
  * - Sem ordem escolhida, mantém a ordem que a tela entregou.
  */
 export default function TabelaDados<T>({
@@ -156,7 +158,7 @@ export default function TabelaDados<T>({
   return (
     <>
       {/* Computador: tabela */}
-      <div className="hidden overflow-x-auto lg:block">
+      <div className="hidden overflow-x-auto lg:block [@media(pointer:coarse)_and_(max-width:1279px)]:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40">
@@ -225,7 +227,7 @@ export default function TabelaDados<T>({
       </div>
 
       {/* Celular e tablet: cartões (+ ordenar por um seletor, já que não há cabeçalho) */}
-      <div className="lg:hidden">
+      <div className="lg:hidden [@media(pointer:coarse)_and_(max-width:1279px)]:block">
         {ordenaveis.length > 0 && (
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-xs text-muted">
             <label htmlFor={idSeletor}>{t("Ordenar por")}</label>
