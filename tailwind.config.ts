@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
@@ -67,7 +68,14 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Celular deitado (844×390): a barra de baixo comia 64 dos ~390 px de
+    // altura. Nessa posição ela some e o topo ganha o menu e o "Novo".
+    // Variante (não `screens`): tela em objeto desligaria os `max-*`.
+    plugin(({ addVariant }) => {
+      addVariant("paisagem", "@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)");
+    }),
+  ],
 };
 
 export default config;

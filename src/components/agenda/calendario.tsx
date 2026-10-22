@@ -293,7 +293,7 @@ export function FabNovoDia({ onClick, podeCriar }: { onClick: () => void; podeCr
       type="button"
       onClick={onClick}
       aria-label={t("Novo item na agenda")}
-      className="xl:hidden fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6 right-5 z-30 h-14 w-14 rounded-full flex items-center justify-center text-white transition-transform active:scale-95"
+      className="xl:hidden fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6 paisagem:bottom-6 right-5 z-30 h-14 w-14 rounded-full flex items-center justify-center text-white transition-transform active:scale-95"
       style={{
         backgroundColor: "var(--brand)",
         boxShadow: "0 10px 30px var(--shadow-color)",

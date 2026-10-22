@@ -31,6 +31,13 @@ const ICONE: Partial<Record<ActiveTab, LucideIcon>> = {
 /** Ordem de prioridade dos atalhos (os 3 primeiros que a pessoa enxerga). */
 const PRIORIDADE: ActiveTab[] = ["agenda", "vendas", "financeiro", "contratos", "contatos"];
 
+/** A barra aparece quando a pessoa enxerga ao menos 1 módulo — o topo usa
+ *  isto pra não repetir o "Menu" dela (e pra mostrá-lo quando não há barra). */
+export function useTemBarraInferior(): boolean {
+  const podeVer = useModulosVisiveis();
+  return PRIORIDADE.some((m) => podeVer(m));
+}
+
 /**
  * Barra de navegação de baixo, SÓ no celular (artistas e equipe usam muito
  * pelo celular — pedido do dono). Três módulos que a pessoa enxerga, o "+"
@@ -77,7 +84,7 @@ export default function BarraInferior({
     <>
       <nav
         aria-label={t("Navegação principal")}
-        className="flex flex-shrink-0 items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="flex flex-shrink-0 items-stretch border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden paisagem:hidden"
       >
         <div className="flex h-16 w-full items-stretch">
           {modulos[0] && atalho(modulos[0])}
