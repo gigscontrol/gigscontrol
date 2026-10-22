@@ -27,7 +27,7 @@ const MAX_NOTAS_POR_SHOW = 4;
  * no COLS/select do repo.
  */
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   try {
     const todas = await listarNotasDoWorkspace(r.sessao.supabase);

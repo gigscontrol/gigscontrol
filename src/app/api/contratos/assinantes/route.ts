@@ -17,7 +17,7 @@ import { respostaDeErro } from "@/lib/api/erros";
  * / artista) só recebe o resumo dos contratos que enxerga na lista.
  */
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   try {
     const assinantes = await resumoAssinantesDoWorkspace(

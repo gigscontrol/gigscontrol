@@ -12,7 +12,7 @@ import {
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   // Artista NÃO é barrado aqui: a lista é filtrada por privacidade.contatos no
   // serviço (nenhum → vazia; proprios → só das casas dos eventos dele; todos →

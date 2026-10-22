@@ -12,7 +12,7 @@ const COLS =
 
 /** GET /api/workspace — dados do workspace ativo. */
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   try {
     const { data, error } = await r.sessao.supabase

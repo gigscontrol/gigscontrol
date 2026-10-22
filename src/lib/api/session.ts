@@ -68,15 +68,32 @@ export type SessaoAutenticada = {
   privacidade?: PrivacidadeDj;
 };
 
-export async function autenticar(): Promise<
+export async function autenticar(opts?: { leitura?: boolean }): Promise<
   { sessao: SessaoAutenticada } | { response: NextResponse }
 > {
   const supabase = criarClienteServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // LEITURA (GET que só lê com o cliente do usuário, sob RLS): confere o
+  // token aqui mesmo — assinatura ES256 + validade, via getClaims — em vez
+  // de ir ao servidor de login. O banco (PostgREST) confere o MESMO token do
+  // mesmo jeito em cada consulta, então a proteção dos dados não muda; e a
+  // conta removida/desativada continua barrada pelo profile logo abaixo.
+  // Mutações e rotas com chave de serviço seguem com getUser(), que também
+  // pega sessão revogada antes de o token vencer.
+  let userId: string | null = null;
+  if (opts?.leitura) {
+    const { data } = await supabase.auth.getClaims();
+    userId = data?.claims?.sub ?? null;
+  }
+  // Falhou (token inválido/vencido, chave pública indisponível) ou é mutação:
+  // confere no servidor de login, como sempre foi.
+  if (!userId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  }
 
-  if (!user) {
+  if (!userId) {
     return {
       response: NextResponse.json({ erro: "Não autenticado." }, { status: 401 }),
     };
@@ -87,7 +104,7 @@ export async function autenticar(): Promise<
     .select(
       "id, nome, email, workspace_id, is_super_admin, papel, artista_id, status, deletado_em, pode_criar_anotacoes"
     )
-    .eq("id", user.id)
+    .eq("id", userId)
     .single<{
       id: string;
       nome: string | null;
@@ -192,12 +209,16 @@ export async function autenticar(): Promise<
  * tenant.
  */
 export async function autenticarComWorkspace(
-  opts?: { exigirAcesso?: boolean }
+  opts?: {
+    exigirAcesso?: boolean;
+    /** GET que só lê com o cliente do usuário (RLS) — ver `autenticar`. */
+    leitura?: boolean;
+  }
 ): Promise<
   | { sessao: SessaoAutenticada & { workspaceId: string } }
   | { response: NextResponse }
 > {
-  const r = await autenticar();
+  const r = await autenticar({ leitura: opts?.leitura });
   if ("response" in r) return r;
 
   if (!r.sessao.workspaceId) {

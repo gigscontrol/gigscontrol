@@ -13,7 +13,7 @@ import { pastasValidas, MAX_PASTAS } from "@/lib/mappers/contrato";
  */
 
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   const { data } = await r.sessao.supabase
     .from("workspaces")

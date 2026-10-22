@@ -37,8 +37,15 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Disparar getUser() força a leitura/atualização do cookie de sessão.
-  await supabase.auth.getUser();
+  // getClaims() lê o cookie e renova a sessão quando o token está pra vencer
+  // (o que importa aqui). Era getUser(), que ia ao servidor de login a CADA
+  // requisição — inclusive nas /api, que fazem a própria checagem: 2 idas
+  // ao Auth por chamada, 34 só pra abrir o painel. Com a chave assimétrica
+  // (ES256) do projeto, getClaims confere a assinatura aqui mesmo.
+  // Se falhar por outro motivo (chave pública indisponível), volta ao
+  // getUser() de antes — sem sessão, nenhum dos dois vai à rede.
+  const { error } = await supabase.auth.getClaims();
+  if (error) await supabase.auth.getUser();
 
   return response;
 }

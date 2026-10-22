@@ -10,7 +10,7 @@ import { respostaDeErro } from "@/lib/api/erros";
 
 /** GET /api/agenda-items — lista os itens (evento/voo/transporte) do workspace. */
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
 
   try {
