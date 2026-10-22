@@ -25,6 +25,7 @@ import { MODULE_THEMES, LABELS_TIPO_CASA } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange, TipoCasa } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
 import { formatarData, formatarNumero } from "@/lib/formatters";
+import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -479,28 +480,20 @@ export default function Contatos({
         />
       </div>
 
-      {/* Busca */}
-      <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 foco-campo-dentro transition-colors">
-        <Search size={15} className="text-muted flex-shrink-0" />
-        <input aria-label={t("Buscar em {categoria}...", { categoria })}
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      {/* Busca + filtros na mesma linha (os seletores ficavam numa 2ª linha) */}
+      <BarraLista>
+        <BuscaLista
+          valor={search}
+          onMudar={setSearch}
+          rotulo={t("Buscar em {categoria}...", { categoria })}
           placeholder={t("Buscar em {categoria}...", { categoria })}
-          className="input"
         />
-        {search && (
-          <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
-            {t("Limpar")}
-          </button>
-        )}
-      </div>
 
       {/* J1 — filtro por tipo (só casas) / cidade / estado. Só faz sentido
           nas abas que têm cidade vinculada (contratantes e casas); cidades
           e bloqueados não ganham a barra. Vazio = tudo (nunca esconde por padrão). */}
       {(categoria === "contratantes" || categoria === "casas") && (
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
           {categoria === "casas" && (
             <select aria-label={t("Tipo de casa")}
               value={filtroTipo}
@@ -552,6 +545,7 @@ export default function Contatos({
           )}
         </div>
       )}
+      </BarraLista>
 
       {/* Abas SEM a barra (Cidades / Bloqueados): os cards de resumo do topo
           continuam contando contratantes e casas COM o filtro aplicado, então

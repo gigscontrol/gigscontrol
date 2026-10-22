@@ -9,7 +9,6 @@ import {
 } from "@/lib/permissoes/gatesEquipeUI";
 import {
   Plus,
-  Search,
   MessageCircle,
   CheckCircle2,
   XCircle,
@@ -35,6 +34,7 @@ import EstadoVazio from "./lista/EstadoVazio";
 import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type Orcamento, type OrcamentoStatus } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
+import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
 
 type Props = {
   selectedArtistas: string[];
@@ -306,76 +306,28 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
         />
       </div>
 
-      {/* Cards de status */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatusCard
-          label={t("Pendentes")}
-          value={totalPorStatus.pendente}
-          color="var(--warning)"
-          icon={<Clock size={14} />}
-          active={filtroStatus === "pendente"}
-          onClick={() =>
-            setFiltroStatus((s) => (s === "pendente" ? "todos" : "pendente"))
-          }
+      {/* Filtros — os 4 cartões de status que ficavam aqui repetiam estas
+          pílulas (mesmo filtro, duas vezes); a contagem foi pra pílula. */}
+      <BarraLista>
+        <BuscaLista
+          valor={search}
+          onMudar={setSearch}
+          rotulo={t("Buscar orçamentos")}
+          placeholder={t("Buscar por número, contratante, cidade...")}
         />
-        <StatusCard
-          label={t("Em negociação")}
-          value={totalPorStatus.negociacao}
-          color="var(--info)"
-          icon={<MessageCircle size={14} />}
-          active={filtroStatus === "negociacao"}
-          onClick={() =>
-            setFiltroStatus((s) => (s === "negociacao" ? "todos" : "negociacao"))
-          }
+        <FiltroPilulas
+          opcoes={STATUS_FILTROS.map((s) => ({
+            valor: s.value,
+            rotulo: t(s.label),
+            n: s.value === "todos"
+              ? Object.values(totalPorStatus).reduce((a, b) => a + b, 0)
+              : totalPorStatus[s.value],
+          }))}
+          valor={filtroStatus}
+          onMudar={setFiltroStatus}
         />
-        <StatusCard
-          label={t("Aceitos")}
-          value={totalPorStatus.aceito}
-          color="var(--success)"
-          icon={<CheckCircle2 size={14} />}
-          active={filtroStatus === "aceito"}
-          onClick={() => setFiltroStatus((s) => (s === "aceito" ? "todos" : "aceito"))}
-        />
-        <StatusCard
-          label={t("Recusados")}
-          value={totalPorStatus.recusado}
-          color="var(--danger)"
-          icon={<XCircle size={14} />}
-          active={filtroStatus === "recusado"}
-          onClick={() =>
-            setFiltroStatus((s) => (s === "recusado" ? "todos" : "recusado"))
-          }
-        />
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-control px-3 py-2 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input aria-label={t("Buscar orçamentos")}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar por número, contratante, cidade...")}
-            className="input"
-          />
-        </div>
-
-        <div className="pill-group flex-wrap">
-          {STATUS_FILTROS.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              aria-pressed={filtroStatus === s.value} className={`pill ${filtroStatus === s.value ? "active" : ""}`}
-              onClick={() => setFiltroStatus(s.value)}
-            >
-              {t(s.label)}
-            </button>
-          ))}
-        </div>
-
         {/* Filtro de artista: SÓ o da barra lateral (havia um 2º aqui). */}
-      </div>
+      </BarraLista>
 
       {/* Tabela */}
       <div className="card p-0 overflow-hidden">
@@ -451,45 +403,6 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
 // ---------- Auxiliares ----------
 
 
-
-function StatusCard({
-  label,
-  value,
-  color,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  icon: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="card flex flex-col gap-2 sm:gap-4 min-h-0 sm:min-h-[140px] p-3 sm:p-5 text-left cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0"
-      style={{
-        borderColor: active ? color : undefined,
-        boxShadow: active ? `0 0 0 1px ${color}` : undefined,
-      }}
-    >
-      <div className="flex items-start justify-between">
-        <span className="stat-label">{label}</span>
-        <div
-          className="h-[30px] w-[30px] rounded-chip flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: color, color: "var(--text-primary)" }}
-        >
-          {icon}
-        </div>
-      </div>
-      <div className="stat-value max-sm:text-lg">{value}</div>
-    </button>
-  );
-}
 
 /**
  * Ações da linha: à vista só as duas do dia a dia (WhatsApp e Concretizar);
