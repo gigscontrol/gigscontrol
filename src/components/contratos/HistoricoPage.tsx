@@ -423,8 +423,8 @@ export default function HistoricoPage({
           </div>
         </div>
       ) : (
-        {/* Sem gap: a BarraLista já dá os 16 px até a tabela (somava 32). */}
         <div className="flex flex-col">
+          {/* Sem gap: a BarraLista já dá os 16 px até a tabela (somava 32). */}
           <BarraLista>
             <BuscaLista
               valor={busca}
