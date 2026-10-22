@@ -307,24 +307,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? "super-admin"
         : "cliente";
 
+      // Depois do profile, as consultas abaixo dependem SÓ dele — vão juntas
+      // (Promise.all no fim). Eram em série: a equipe esperava 4 idas ao
+      // banco (profile → workspace → vínculos → pastas) antes de o painel
+      // começar a carregar; agora 2.
+
       // Cliente: carrega o workspace dele. Super-admin: workspace nulo.
-      let workspace: Workspace | null = null;
-      if (!profile.is_super_admin && profile.workspace_id) {
+      const carregarWorkspace = async (): Promise<Workspace | null> => {
+        if (profile.is_super_admin || !profile.workspace_id) return null;
         const { data: ws } = await supabase
           .from("workspaces")
           .select("id, nome, plano, slug, criado_em")
           .eq("id", profile.workspace_id)
           .single<WorkspaceRow>();
-        if (ws) {
-          workspace = {
-            id: ws.id,
-            nome: ws.nome,
-            plano: ws.plano as Workspace["plano"],
-            slug: ws.slug ?? "",
-            criadoEm: ws.criado_em,
-          };
-        }
-      }
+        if (!ws) return null;
+        return {
+          id: ws.id,
+          nome: ws.nome,
+          plano: ws.plano as Workspace["plano"],
+          slug: ws.slug ?? "",
+          criadoEm: ws.criado_em,
+        };
+      };
 
       // Vínculos por artista (novo modelo de permissões). Só operacionais
       // precisam carregar — admin/artista/super são resolvidos pelo papel.
@@ -339,68 +343,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // coluna de soft-delete, por isso não há filtro de deletado_em.
       let temPastaCompartilhada = false;
       let vinculosErro = false;
-      if (
-        !profile.is_super_admin &&
-        profile.workspace_id &&
-        profile.papel !== "admin" &&
-        profile.papel !== "artista"
-      ) {
-        // FALHA ≠ ZERO LINHAS. Descartar o `error` fazia `vinculos = {}` calado;
-        // com a UI agora escondendo módulo por permissão, isso viraria "app sem
-        // nenhum módulo" numa instabilidade passageira. Tenta de novo e, se
-        // ainda assim falhar, marca o erro pra UI falhar ABERTO.
-        let vinc: unknown[] | null = null;
-        for (let tentativa = 0; tentativa < 2; tentativa++) {
-          const { data, error } = await supabase
-            .from("membros_artista")
-            .select("artist_id, permissoes")
-            .eq("user_id", profile.id)
-            .is("deletado_em", null);
-          if (!error) {
-            vinc = data ?? [];
-            break;
+      const carregarVinculos = async () => {
+        if (
+          !profile.is_super_admin &&
+          profile.workspace_id &&
+          profile.papel !== "admin" &&
+          profile.papel !== "artista"
+        ) {
+          // A pasta compartilhada vai junto com os vínculos (a consulta do
+          // Supabase só dispara no await — daí a função que já roda aqui).
+          const pastaCompartilhada = (async () =>
+            (
+              await supabase
+                .from("anotacao_pasta_membros")
+                .select("id")
+                .eq("usuario_id", profile.id)
+                .limit(1)
+            ).data ?? [])();
+          // FALHA ≠ ZERO LINHAS. Descartar o `error` fazia `vinculos = {}` calado;
+          // com a UI agora escondendo módulo por permissão, isso viraria "app sem
+          // nenhum módulo" numa instabilidade passageira. Tenta de novo e, se
+          // ainda assim falhar, marca o erro pra UI falhar ABERTO.
+          let vinc: unknown[] | null = null;
+          for (let tentativa = 0; tentativa < 2; tentativa++) {
+            const { data, error } = await supabase
+              .from("membros_artista")
+              .select("artist_id, permissoes")
+              .eq("user_id", profile.id)
+              .is("deletado_em", null);
+            if (!error) {
+              vinc = data ?? [];
+              break;
+            }
+            if (tentativa === 1) vinculosErro = true;
           }
-          if (tentativa === 1) vinculosErro = true;
-        }
-        for (const v of vinc ?? []) {
-          const perms = (v as { permissoes?: unknown }).permissoes;
-          // Espelha `mapaDeVinculos` do servidor: expande as chaves legadas de
-          // leitura — agenda (setores) + os 4 módulos da equipe v2 (vendas/
-          // financeiro/contratos/contatos). Se um lado expandir e o outro não,
-          // a UI e o servidor discordam sobre o que a pessoa vê.
-          vinculos[(v as { artist_id: string }).artist_id] = expandirLegadoVinculo(
-            Array.isArray(perms)
-              ? (perms.filter((x) => typeof x === "string") as string[])
-              : []
-          );
-        }
+          for (const v of vinc ?? []) {
+            const perms = (v as { permissoes?: unknown }).permissoes;
+            // Espelha `mapaDeVinculos` do servidor: expande as chaves legadas de
+            // leitura — agenda (setores) + os 4 módulos da equipe v2 (vendas/
+            // financeiro/contratos/contatos). Se um lado expandir e o outro não,
+            // a UI e o servidor discordam sobre o que a pessoa vê.
+            vinculos[(v as { artist_id: string }).artist_id] = expandirLegadoVinculo(
+              Array.isArray(perms)
+                ? (perms.filter((x) => typeof x === "string") as string[])
+                : []
+            );
+          }
 
-        // Falha aqui NÃO derruba a sessão: o pior caso é o item "Anotações"
-        // não aparecer pra quem só alcança por pasta compartilhada — o mesmo
-        // estado de antes desta correção, nunca um acesso a mais.
-        const { data: pm } = await supabase
-          .from("anotacao_pasta_membros")
-          .select("id")
-          .eq("usuario_id", profile.id)
-          .limit(1);
-        temPastaCompartilhada = (pm ?? []).length > 0;
-      }
+          // Falha aqui NÃO derruba a sessão: o pior caso é o item "Anotações"
+          // não aparecer pra quem só alcança por pasta compartilhada — o mesmo
+          // estado de antes desta correção, nunca um acesso a mais.
+          temPastaCompartilhada = (await pastaCompartilhada).length > 0;
+        }
+      };
 
       // Privacidade do artista (config do admin em artists.privacidade). Só o
       // papel artista precisa — governa o motor no próprio espaço; sem isso o
       // grey-out do cliente usava sempre o padrão e divergia do servidor.
       let privacidade: PrivacidadeDj | undefined;
-      if (profile.papel === "artista" && profile.artista_id) {
-        const { data: art } = await supabase
-          .from("artists")
-          .select("privacidade, cor")
-          .eq("id", profile.artista_id)
-          .maybeSingle<{ privacidade: unknown; cor: string | null }>();
-        privacidade = privacidadeValida(art?.privacidade ?? null);
-        // A identidade do ARTISTA é a cor do artista (artists.cor) — a mesma da
-        // Agenda/roster. Sobrescreve a cor do perfil pro avatar bater com tudo.
-        if (art?.cor) usuario.cor = art.cor;
-      }
+      const carregarArtista = async () => {
+        if (profile.papel === "artista" && profile.artista_id) {
+          const { data: art } = await supabase
+            .from("artists")
+            .select("privacidade, cor")
+            .eq("id", profile.artista_id)
+            .maybeSingle<{ privacidade: unknown; cor: string | null }>();
+          privacidade = privacidadeValida(art?.privacidade ?? null);
+          // A identidade do ARTISTA é a cor do artista (artists.cor) — a mesma da
+          // Agenda/roster. Sobrescreve a cor do perfil pro avatar bater com tudo.
+          if (art?.cor) usuario.cor = art.cor;
+        }
+      };
+
+      const [workspace] = await Promise.all([
+        carregarWorkspace(),
+        carregarVinculos(),
+        carregarArtista(),
+      ]);
 
       return {
         tipo,
