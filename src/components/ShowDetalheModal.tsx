@@ -316,7 +316,7 @@ export default function ShowDetalheModal({
         className="-mx-5 -mt-5 mb-5 px-5 pt-5 pb-4 border-b border-border"
         style={{
           background: artista
-            ? `linear-gradient(135deg, ${artista.color}26 0%, transparent 75%)`
+            ? `linear-gradient(135deg, color-mix(in srgb, ${artista.color} 15%, transparent) 0%, transparent 75%)`
             : "transparent",
         }}
       >
@@ -374,7 +374,7 @@ export default function ShowDetalheModal({
       {cancelado ? (
         <div
           className="mb-5 rounded-md border p-3"
-          style={{ borderColor: "var(--danger)", background: "rgba(239,68,68,0.08)" }}
+          style={{ borderColor: "var(--danger)", background: "var(--danger-weak)" }}
         >
           <div className="flex items-center justify-between gap-2">
             <span className="badge badge-danger inline-flex items-center gap-1">

@@ -41,7 +41,7 @@ export default function ConfirmarModal({
   if (!aberto) return null;
 
   const cor = perigo ? "var(--danger)" : "var(--warning)";
-  const bg = perigo ? "var(--danger-weak)" : "rgba(245,158,11,0.12)";
+  const bg = perigo ? "var(--danger-weak)" : "var(--warning-weak)";
   // Corpo nunca fica só com o ícone: sem mensagem, entra o padrão.
   const corpo =
     mensagem ??

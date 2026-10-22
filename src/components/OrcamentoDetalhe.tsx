@@ -366,7 +366,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
       {orc.status !== "recusado" && camposFaltantes.length > 0 && (
         <div
           className="mb-4 flex items-start gap-3 rounded-md border p-3"
-          style={{ borderColor: "var(--warning)", backgroundColor: "rgba(245,158,11,0.06)" }}
+          style={{ borderColor: "var(--warning)", backgroundColor: "var(--warning-weak)" }}
         >
           <AlertCircle size={16} className="text-warning flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1 text-xs">

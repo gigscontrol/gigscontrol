@@ -30,6 +30,7 @@ import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { hojeISO } from "@/lib/formatters";
+import { corTextoSobre } from "@/lib/contraste";
 
 type Props = {
   selectedArtistas: string[];
@@ -378,7 +379,7 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         </div>
         <span
           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
-          style={{ backgroundColor: artista?.color ?? "#888", color: "#fff" }}
+          style={{ backgroundColor: artista?.color ?? "#888", color: corTextoSobre(artista?.color ?? "#888") }}
         >
           {iniciaisDoNome(artista?.name)}
         </span>

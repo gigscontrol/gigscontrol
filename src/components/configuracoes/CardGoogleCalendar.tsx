@@ -154,7 +154,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
           <div className="flex items-center gap-2">
             <span
               className="h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "var(--success)" }}
+              style={{ backgroundColor: "var(--success-weak)", color: "var(--success)" }}
             >
               <Check size={14} />
             </span>

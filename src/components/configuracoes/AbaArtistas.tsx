@@ -52,6 +52,7 @@ import { ArtistaParaEdicao } from "./camposCadastro";
 import { ModalNovoArtista, extrairRaizUsername } from "./ModalNovoArtista";
 import { DadosConta, ModalEditarArtista } from "./ModalEditarArtista";
 import { ModalCredenciais } from "./ModalCredenciais";
+import { corTextoSobre } from "@/lib/contraste";
 
 /**
  * Aba "Artistas" das Configurações.
@@ -342,7 +343,7 @@ export default function AbaArtistas() {
       {noLimite && (
         <div
           className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5"
-          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+          style={{ backgroundColor: "var(--warning-weak)", color: "var(--warning)" }}
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
@@ -432,11 +433,13 @@ export default function AbaArtistas() {
                 >
                   <span className="relative flex-shrink-0">
                     <span
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold text-white"
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold"
                       style={{
+                        // Suspenso: fundo cinza da borda — branco sumia no claro (1,3:1).
+                        color: suspenso ? "var(--text-secondary)" : corTextoSobre(a.color),
                         background: suspenso
                           ? "var(--border-strong)"
-                          : `linear-gradient(135deg, ${a.color}, ${a.color}99)`,
+                          : `linear-gradient(135deg, ${a.color}, color-mix(in srgb, ${a.color} 60%, transparent))`,
                         boxShadow: ativo
                           ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${a.color}`
                           : undefined,
@@ -603,16 +606,19 @@ export default function AbaArtistas() {
             <div
               style={{
                 height: 4,
-                background: `linear-gradient(90deg, ${artistaSelecionado.color}, ${artistaSelecionado.color}66)`,
+                background: `linear-gradient(90deg, ${artistaSelecionado.color}, color-mix(in srgb, ${artistaSelecionado.color} 40%, transparent))`,
               }}
             />
             <div className="p-5 flex items-start gap-4 flex-wrap">
               <span
-                className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+                className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
                 style={{
+                  color: artistaSelecionado.acessoSuspenso
+                    ? "var(--text-secondary)"
+                    : corTextoSobre(artistaSelecionado.color),
                   background: artistaSelecionado.acessoSuspenso
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${artistaSelecionado.color}, ${artistaSelecionado.color}99)`,
+                    : `linear-gradient(135deg, ${artistaSelecionado.color}, color-mix(in srgb, ${artistaSelecionado.color} 60%, transparent))`,
                 }}
               >
                 {iniciaisDoNome(artistaSelecionado.name)}
@@ -915,9 +921,9 @@ export default function AbaArtistas() {
                       <div
                         className="flex items-start gap-2 text-xs rounded-md px-3 py-2 leading-relaxed"
                         style={{
-                          backgroundColor: "rgba(245,158,11,0.08)",
+                          backgroundColor: "var(--warning-weak)",
                           color: "var(--warning)",
-                          border: "1px solid rgba(245,158,11,0.2)",
+                          border: "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
                         }}
                       >
                         <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
@@ -929,9 +935,9 @@ export default function AbaArtistas() {
                       <div
                         className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
                         style={{
-                          backgroundColor: "rgba(34,197,94,0.08)",
+                          backgroundColor: "var(--success-weak)",
                           color: "var(--success)",
-                          border: "1px solid rgba(34,197,94,0.2)",
+                          border: "1px solid color-mix(in srgb, var(--success) 20%, transparent)",
                         }}
                       >
                         <Lock size={13} className="flex-shrink-0" />
@@ -1036,8 +1042,8 @@ export default function AbaArtistas() {
                       return (
                         <div key={m.userId} className="flex items-center gap-2">
                           <span
-                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-white flex-shrink-0"
-                            style={{ background: "var(--border-strong)" }}
+                            className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-secondary flex-shrink-0"
+                            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-strong)" }}
                           >
                             {iniciaisDoNome(m.nome)}
                           </span>
@@ -1050,7 +1056,7 @@ export default function AbaArtistas() {
                                     key={p.id}
                                     className="text-[0.6875rem] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide"
                                     style={{
-                                      backgroundColor: `${p.cor}22`,
+                                      backgroundColor: `color-mix(in srgb, ${p.cor} 13%, transparent)`,
                                       color: p.cor,
                                     }}
                                   >
@@ -1212,8 +1218,8 @@ export default function AbaArtistas() {
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <span
-                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ background: item.artista.color, opacity: 0.6 }}
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: item.artista.color, color: corTextoSobre(item.artista.color), opacity: 0.6 }}
                   >
                     {iniciaisDoNome(item.artista.name)}
                   </span>

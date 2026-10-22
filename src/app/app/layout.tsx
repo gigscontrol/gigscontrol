@@ -533,7 +533,7 @@ function AppRoot() {
         <button
           aria-label={t("Fechar menu")}
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden animate-fade"
+          className="fixed inset-0 z-30 bg-[var(--overlay-scrim)] backdrop-blur-sm lg:hidden animate-fade"
         />
       )}
 

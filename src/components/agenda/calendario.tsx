@@ -195,7 +195,7 @@ export function DayCellComponent({
       `}
       style={{
         borderColor: day.isToday ? accent : day.isQuente ? "var(--border-strong)" : "var(--border-color)",
-        boxShadow: day.isToday ? `0 0 0 1px ${accent}, 0 0 30px ${accent}25` : undefined,
+        boxShadow: day.isToday ? `0 0 0 1px ${accent}, 0 0 30px color-mix(in srgb, ${accent} 15%, transparent)` : undefined,
         backgroundColor: day.isQuente && !day.isOtherMonth ? "var(--bg-surface-2)" : undefined,
       }}
     >

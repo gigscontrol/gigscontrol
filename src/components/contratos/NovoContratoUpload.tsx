@@ -360,7 +360,7 @@ export default function NovoContratoUpload() {
       {aviso && aviso.length > 0 && (
         <div
           className="flex items-start gap-2 rounded-md p-3 text-sm"
-          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+          style={{ backgroundColor: "var(--warning-weak)", color: "var(--warning)" }}
         >
           <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
           <div className="flex-1">

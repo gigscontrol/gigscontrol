@@ -343,7 +343,7 @@ export default function AbaEquipe() {
       {noLimite && (
         <div
           className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5"
-          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+          style={{ backgroundColor: "var(--warning-weak)", color: "var(--warning)" }}
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
@@ -384,7 +384,7 @@ export default function AbaEquipe() {
                       style={{
                         background: bloqueado
                           ? "var(--border-strong)"
-                          : `linear-gradient(135deg, ${corMembro ?? "var(--border-strong)"}, ${corMembro ?? "var(--border-strong)"}99)`,
+                          : `linear-gradient(135deg, ${corMembro ?? "var(--border-strong)"}, color-mix(in srgb, ${corMembro ?? "var(--border-strong)"} 60%, transparent))`,
                         boxShadow: ativoChip
                           ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${corMembro ?? "var(--border-strong)"}`
                           : undefined,
@@ -502,7 +502,7 @@ export default function AbaEquipe() {
             <div
               style={{
                 height: 4,
-                background: `linear-gradient(90deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}66)`,
+                background: `linear-gradient(90deg, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, color-mix(in srgb, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"} 40%, transparent))`,
               }}
             />
             <div className="p-5 flex items-start gap-4 flex-wrap">
@@ -511,7 +511,7 @@ export default function AbaEquipe() {
                 style={{
                   background: !selecionado.ativo
                     ? "var(--border-strong)"
-                    : `linear-gradient(135deg, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}99)`,
+                    : `linear-gradient(135deg, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"}, color-mix(in srgb, ${selecionado.cor ?? LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "var(--border-strong)"} 60%, transparent))`,
                 }}
               >
                 {iniciaisDoNome(selecionado.nome)}
@@ -604,7 +604,7 @@ export default function AbaEquipe() {
                         <span
                           className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                           style={{
-                            backgroundColor: `${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888"}22`,
+                            backgroundColor: `color-mix(in srgb, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888"} 13%, transparent)`,
                             color: LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888",
                           }}
                         >
@@ -622,7 +622,7 @@ export default function AbaEquipe() {
                               key={pid}
                               className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                               style={{
-                                backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                 color: perfil?.cor ?? "#3D7BFF",
                               }}
                             >
@@ -633,7 +633,7 @@ export default function AbaEquipe() {
                         <span
                           className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                           style={{
-                            backgroundColor: "var(--elevated)",
+                            backgroundColor: "var(--bg-elevated)",
                             color: "var(--text-muted)",
                           }}
                         >
@@ -805,9 +805,9 @@ export default function AbaEquipe() {
                       <div
                         className="flex items-start gap-2 text-xs rounded-md px-3 py-2 leading-relaxed"
                         style={{
-                          backgroundColor: "rgba(245,158,11,0.08)",
+                          backgroundColor: "var(--warning-weak)",
                           color: "var(--warning)",
-                          border: "1px solid rgba(245,158,11,0.2)",
+                          border: "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
                         }}
                       >
                         <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
@@ -819,9 +819,9 @@ export default function AbaEquipe() {
                       <div
                         className="flex items-center gap-2 text-xs rounded-md px-3 py-2"
                         style={{
-                          backgroundColor: "rgba(34,197,94,0.08)",
+                          backgroundColor: "var(--success-weak)",
                           color: "var(--success)",
-                          border: "1px solid rgba(34,197,94,0.2)",
+                          border: "1px solid color-mix(in srgb, var(--success) 20%, transparent)",
                         }}
                       >
                         <Lock size={13} className="flex-shrink-0" />
@@ -876,7 +876,7 @@ export default function AbaEquipe() {
                                   key={pid}
                                   className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
-                                    backgroundColor: `${perfil?.cor ?? "#3D7BFF"}22`,
+                                    backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                     color: perfil?.cor ?? "#3D7BFF",
                                   }}
                                 >
@@ -994,8 +994,8 @@ export default function AbaEquipe() {
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <span
-                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ backgroundColor: "var(--border-strong)", opacity: 0.6 }}
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-secondary flex-shrink-0"
+                    style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-strong)", opacity: 0.6 }}
                   >
                     {iniciaisDoNome(item.usuario.nome)}
                   </span>

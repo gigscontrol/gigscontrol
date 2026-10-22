@@ -37,7 +37,7 @@ export function FichaHero({
       className="-mx-5 -mt-5 mb-5 px-5 pt-5 pb-4 border-b border-border rounded-t-lg"
       style={{
         background: artistaCor
-          ? `linear-gradient(135deg, ${artistaCor}26 0%, transparent 75%)`
+          ? `linear-gradient(135deg, color-mix(in srgb, ${artistaCor} 15%, transparent) 0%, transparent 75%)`
           : "transparent",
       }}
     >
@@ -97,7 +97,7 @@ export function FichaHeroPagina({
       className="rounded-lg border border-border overflow-hidden mb-4"
       style={{
         background: artistaCor
-          ? `linear-gradient(120deg, ${artistaCor}2e 0%, ${artistaCor}10 35%, var(--surface) 78%)`
+          ? `linear-gradient(120deg, color-mix(in srgb, ${artistaCor} 18%, transparent) 0%, color-mix(in srgb, ${artistaCor} 6%, transparent) 35%, var(--surface) 78%)`
           : "var(--surface)",
       }}
     >

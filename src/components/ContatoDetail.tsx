@@ -25,6 +25,7 @@ import { STATUS_SHOW } from "@/lib/statusUI";
 import { useNavegacao } from "./NavOverlay";
 import { urls } from "@/lib/navegacao/rotas";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { corTextoSobre } from "@/lib/contraste";
 
 /**
  * Detalhe de contato (contratante/casa/cidade) na LINGUAGEM DA FICHA
@@ -332,7 +333,10 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                       <div className="min-w-0 flex items-center gap-2.5">
                         <span
                           className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0"
-                          style={{ backgroundColor: h.artistaCor ?? "var(--bg-surface-2)", color: "#fff" }}
+                          style={{
+                            backgroundColor: h.artistaCor ?? "var(--bg-surface-2)",
+                            color: h.artistaCor ? corTextoSobre(h.artistaCor) : "var(--text-secondary)",
+                          }}
                         >
                           {iniciaisDoNome((h.artistaNome || "?"))}
                         </span>
@@ -685,7 +689,7 @@ function MetricTile({
         <div
           className="h-7 w-7 rounded-md flex items-center justify-center"
           style={{
-            backgroundColor: accent ? `${accent}15` : "var(--bg-elevated)",
+            backgroundColor: accent ? `color-mix(in srgb, ${accent} 8%, transparent)` : "var(--bg-elevated)",
             color: accent ?? "var(--text-secondary)",
           }}
         >

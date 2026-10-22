@@ -78,6 +78,7 @@ import {
 } from "@/types";
 import type { ContratanteInput, CasaInput, CidadeInput } from "@/lib/orcamentos-context";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { corTextoSobre } from "@/lib/contraste";
 
 type Props = {
   onSaved: (orcamentoIds: string[]) => void;
@@ -836,12 +837,12 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             card solto no fim, depois do botão do WhatsApp perdido no canto. */}
         <div
           className="card mb-4 flex flex-wrap items-center justify-between gap-3"
-          style={{ borderColor: accent, boxShadow: `0 0 0 1px ${accent}30` }}
+          style={{ borderColor: accent, boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 19%, transparent)` }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <div
               className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: `${accent}20`, color: accent }}
+              style={{ backgroundColor: `color-mix(in srgb, ${accent} 13%, transparent)`, color: accent }}
             >
               <FileText size={18} />
             </div>
@@ -877,7 +878,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                 <div className="flex items-center gap-2 min-w-0">
                   <div
                     className="h-7 w-7 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${s.artistaCor}25`, color: s.artistaCor }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${s.artistaCor} 15%, transparent)`, color: s.artistaCor }}
                   >
                     <User size={14} />
                   </div>
@@ -957,7 +958,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     <div
                       className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
                       style={{
-                        backgroundColor: isActive ? `${accent}20` : "var(--bg-elevated)",
+                        backgroundColor: isActive ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
                         color: isActive ? accent : "var(--text-secondary)",
                       }}
                     >
@@ -994,7 +995,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     <div
                       className="h-9 w-9 rounded-md flex items-center justify-center"
                       style={{
-                        backgroundColor: isActive ? `${accent}20` : "var(--bg-elevated)",
+                        backgroundColor: isActive ? `color-mix(in srgb, ${accent} 13%, transparent)` : "var(--bg-elevated)",
                         color: isActive ? accent : "var(--text-secondary)",
                       }}
                     >
@@ -1041,8 +1042,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                       <div
                         className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
                         style={{
-                          borderColor: `${accent}55`,
-                          backgroundColor: `${accent}14`,
+                          borderColor: `color-mix(in srgb, ${accent} 33%, transparent)`,
+                          backgroundColor: `color-mix(in srgb, ${accent} 8%, transparent)`,
                         }}
                       >
                         <Check
@@ -1096,7 +1097,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                         className="rounded-md border px-3 py-2.5"
                         style={{
                           borderColor: "var(--warning)",
-                          backgroundColor: "rgba(245,158,11,0.08)",
+                          backgroundColor: "var(--warning-weak)",
                         }}
                       >
                         <div className="flex items-start gap-2 text-xs text-secondary">
@@ -1371,8 +1372,8 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                     style={{
                       backgroundColor: d.color,
-                      color: "#fff",
-                      boxShadow: `0 0 0 2px ${d.color}33`,
+                      color: corTextoSobre(d.color),
+                      boxShadow: `0 0 0 2px color-mix(in srgb, ${d.color} 20%, transparent)`,
                     }}
                   >
                     {iniciaisDoNome(d.name)}
@@ -1500,7 +1501,7 @@ function BlocoOrcamentoDj({
         className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border"
         style={{
           background: artista
-            ? `linear-gradient(90deg, ${artista.color}15 0%, transparent 60%)`
+            ? `linear-gradient(90deg, color-mix(in srgb, ${artista.color} 8%, transparent) 0%, transparent 60%)`
             : "var(--bg-surface-2)",
         }}
       >

@@ -45,7 +45,7 @@ import {
 } from "@/lib/contratos/variaveis";
 import { hojeBR } from "@/lib/contratos/preencherSecoes";
 
-const ACCENT = "#3D7BFF";
+const ACCENT = "var(--brand)";
 
 type Props = {
   /** Quando presente, o editor atualiza um modelo existente; senão cria um novo. */

@@ -38,6 +38,7 @@ import LogoGC from "./LogoGC";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { ROTULO_MODULO, ROTULO_PAGINA, urlDaTela } from "@/lib/navegacao/rotas";
 import LinkInterno from "./navegacao/LinkInterno";
+import { corTextoSobre } from "@/lib/contraste";
 
 type Props = {
   activeTab: ActiveTab;
@@ -424,7 +425,7 @@ export default function Sidebar({
                     mod.subPages.length > 0 && (
                     <div
                       className={`ml-3 mt-1 mb-2 pl-3 flex flex-col gap-0.5 border-l ${collapsed ? "lg:hidden" : ""}`}
-                      style={{ borderColor: `${color}40` }}
+                      style={{ borderColor: `color-mix(in srgb, ${color} 25%, transparent)` }}
                     >
                       {mod.subPages.map((sp) => {
                         const SubIcon = sp.icon;
@@ -523,8 +524,8 @@ export default function Sidebar({
                       className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0 transition-all"
                       style={{
                         backgroundColor: isActiveDj ? artista.color : "var(--bg-elevated)",
-                        color: isActiveDj ? "#fff" : "var(--text-muted)",
-                        boxShadow: isActiveDj ? `0 0 0 2px ${artista.color}33` : "none",
+                        color: isActiveDj ? corTextoSobre(artista.color) : "var(--text-muted)",
+                        boxShadow: isActiveDj ? `0 0 0 2px color-mix(in srgb, ${artista.color} 20%, transparent)` : "none",
                       }}
                     >
                       {iniciaisDoNome(artista.name)}

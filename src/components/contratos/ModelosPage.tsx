@@ -33,7 +33,7 @@ import {
   SECOES_MODELO_GLOBAL,
 } from "@/lib/contratos/modeloExemplo";
 
-const ACCENT = "#3D7BFF";
+const ACCENT = "var(--brand)";
 
 type Vista = "lista" | "editor";
 
@@ -236,7 +236,7 @@ export default function ModelosPage() {
       {vista === "lista" && noLimite && (
         <div
           className="flex items-start gap-2 text-sm rounded-md px-3 py-2.5 mb-6"
-          style={{ backgroundColor: "rgba(245,158,11,0.1)", color: "var(--warning)" }}
+          style={{ backgroundColor: "var(--warning-weak)", color: "var(--warning)" }}
         >
           <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
           <span>
@@ -272,13 +272,13 @@ export default function ModelosPage() {
               <div className="flex items-start gap-3 min-w-0">
                 <div
                   className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
                 >
                   <Sparkles size={18} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="badge" style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
+                    <span className="badge" style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}>
                       {t("Comece por aqui")}
                     </span>
                   </div>
@@ -308,13 +308,13 @@ export default function ModelosPage() {
               <div className="flex items-start gap-3 min-w-0">
                 <div
                   className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}
                 >
                   <Globe size={18} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="badge" style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
+                    <span className="badge" style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 13%, transparent)`, color: ACCENT }}>
                       {t("Internacional")}
                     </span>
                   </div>
@@ -378,7 +378,7 @@ export default function ModelosPage() {
                     <div className="flex items-start gap-3">
                       <div
                         className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${ACCENT}18`, color: ACCENT }}
+                        style={{ backgroundColor: `color-mix(in srgb, ${ACCENT} 9%, transparent)`, color: ACCENT }}
                       >
                         <FileText size={16} />
                       </div>

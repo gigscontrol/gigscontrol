@@ -219,9 +219,9 @@ export default function AbaPreferencias() {
                 aria-pressed={ativo}
                 className="flex items-center gap-2 px-4 py-2 rounded-control border text-sm font-medium transition disabled:opacity-60"
                 style={{
-                  borderColor: ativo ? "var(--brand)" : "var(--borda)",
+                  borderColor: ativo ? "var(--brand)" : "var(--border-color)",
                   background: ativo ? "color-mix(in srgb, var(--brand) 12%, transparent)" : "transparent",
-                  color: ativo ? "var(--brand)" : "var(--texto)",
+                  color: ativo ? "var(--brand)" : "var(--text-primary)",
                 }}
               >
                 <span className="font-semibold">{SIMBOLO_MOEDA[m]}</span>

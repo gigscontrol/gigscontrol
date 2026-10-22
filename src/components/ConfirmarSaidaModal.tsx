@@ -43,7 +43,7 @@ export default function ConfirmarSaidaModal({
         <span
           className="flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center"
           style={{
-            backgroundColor: "rgba(245,158,11,0.12)",
+            backgroundColor: "var(--warning-weak)",
             color: "var(--warning)",
           }}
         >

@@ -635,7 +635,7 @@ export default function ControlePagamentos({
       )}
 
       {!ehCobrancas && totais.atrasadoNum > 0 && (
-        <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "rgba(239,68,68,0.06)" }}>
+        <div className="mt-4 card flex items-start gap-3" style={{ borderColor: "var(--danger)", backgroundColor: "var(--danger-weak)" }}>
           <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
           <div className="text-sm text-secondary">
             {t("Você tem")} <strong>{totais.atrasado}</strong>{" "}

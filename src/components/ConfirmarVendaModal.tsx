@@ -6,6 +6,7 @@ import { formatarMoeda, formatarDataBR } from "@/lib/formatters";
 import type { Moeda } from "@/types";
 import { CalendarCheck2 } from "lucide-react";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { corTextoSobre } from "@/lib/contraste";
 
 export type ResumoVenda = {
   artistaNome: string;
@@ -58,7 +59,7 @@ export default function ConfirmarVendaModal({
       >
         <span
           className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-          style={{ backgroundColor: resumo.artistaCor, color: "#fff" }}
+          style={{ backgroundColor: resumo.artistaCor, color: corTextoSobre(resumo.artistaCor) }}
         >
           {iniciaisDoNome(resumo.artistaNome)}
         </span>

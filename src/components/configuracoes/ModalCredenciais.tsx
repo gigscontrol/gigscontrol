@@ -50,7 +50,7 @@ export function ModalCredenciais({
             className="h-12 w-12 rounded-full flex items-center justify-center mb-3"
             style={{
               background:
-                "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.05))",
+                "linear-gradient(135deg, color-mix(in srgb, var(--success) 20%, transparent), var(--success-weak))",
               color: "var(--success)",
             }}
           >
@@ -110,9 +110,9 @@ export function ModalCredenciais({
           <div
             className="text-xs rounded-md px-3 py-2 mt-1"
             style={{
-              backgroundColor: "rgba(245,158,11,0.08)",
+              backgroundColor: "var(--warning-weak)",
               color: "var(--warning)",
-              border: "1px solid rgba(245,158,11,0.2)",
+              border: "1px solid color-mix(in srgb, var(--warning) 20%, transparent)",
             }}
           >
             <strong>{t("Importante:")}</strong> {t("essas credenciais não ficam salvas. Se fechar essa janela, vai precisar gerar nova senha.")}
