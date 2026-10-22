@@ -735,12 +735,12 @@ function AppRoot() {
             />
           )}
           {podeAgencia && activeTab === "agencia" && activePage === "agencia-artistas" && (
-            <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
+            <div className="pagina">
               <AbaArtistas />
             </div>
           )}
           {podeAgencia && activeTab === "agencia" && activePage === "agencia-equipe" && (
-            <div className="p-6 lg:p-8 max-w-[1400px] mx-auto w-full">
+            <div className="pagina">
               <AbaEquipe />
             </div>
           )}
@@ -799,7 +799,7 @@ function EditarVendaLoader({
   if (!venda) {
     if (carregando) {
       return (
-        <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
+        <div className="pagina">
           <div className="card text-center py-12">
             <div className="section-subtitle">{t("Carregando...")}</div>
           </div>
@@ -807,7 +807,7 @@ function EditarVendaLoader({
       );
     }
     return (
-      <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
+      <div className="pagina">
         <div className="card text-center py-12">
           <h2 className="section-title">{t("Venda não encontrada")}</h2>
         </div>

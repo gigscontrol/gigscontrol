@@ -264,7 +264,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
   }, [allDays]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Calendário"
         subtitle={`${t("Visão dinâmica")} — ${t(activeDateRange)}`}
@@ -329,7 +329,8 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
       </div>
 
       {/* Lista mobile (dias com shows OU dia atual) */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* pb-20: o botão flutuante (56 px) cobria o "+ adicionar" do último dia. */}
+      <div className="md:hidden flex flex-col gap-3 pb-20">
         {allDays
           .filter((d) => !d.isOtherMonth)
           .map((day) => {

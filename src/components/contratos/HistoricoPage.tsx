@@ -335,7 +335,10 @@ export default function HistoricoPage({
   // ---- Render: estados base ----
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
+      {/* Com um contrato aberto, a ficha tem o próprio título: o cabeçalho da
+          lista ficava em cima dela (dois h1) e o "Voltar" saía embaixo. */}
+      {!contratoId && (
       <PageHeader
         title="Todos os contratos"
         subtitle={tituloPeriodo}
@@ -353,6 +356,7 @@ export default function HistoricoPage({
           />
         }
       />
+      )}
 
       {carregando || (contratoId && !carregado) ? (
         <div className="card flex items-center justify-center gap-2 py-12 text-sm text-muted">

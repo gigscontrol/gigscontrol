@@ -569,7 +569,7 @@ export default function AgenciaDashboard({
     );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Agência"
         subtitle="Visão geral dos seus artistas, equipe e atividade recente."

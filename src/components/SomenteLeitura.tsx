@@ -116,7 +116,10 @@ function avisar(msg: string) {
     el.id = ID;
     el.style.cssText = [
       "position:fixed",
-      "bottom:24px",
+      // Abaixo de 1024 px a barra inferior ocupa o pé da tela.
+      window.matchMedia("(max-width: 1023px)").matches
+        ? "bottom:calc(5.5rem + env(safe-area-inset-bottom))"
+        : "bottom:24px",
       "left:50%",
       "transform:translateX(-50%)",
       "z-index:9999",

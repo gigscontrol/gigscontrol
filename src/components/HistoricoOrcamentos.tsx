@@ -277,7 +277,7 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   }, [contratantes, cidades, artistas, t, hoje]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Todos os orçamentos"
         subtitle={resumoTotal}

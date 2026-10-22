@@ -197,7 +197,7 @@ export default function ModelosPage() {
   // ---- Render ----
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Modelos de contrato"
         subtitle={

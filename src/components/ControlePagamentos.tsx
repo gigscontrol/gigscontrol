@@ -375,8 +375,8 @@ export default function ControlePagamentos({
             .filter(Boolean)
             .join(", ");
           return (
-            <div className="whitespace-nowrap">
-              <div className="font-semibold text-primary">
+            <div>
+              <div className="font-semibold text-primary whitespace-nowrap">
                 {fmtData(u.em)} · {t("{n} vez", { n: ordinal(cs.length) })}
               </div>
               {detalhe && <div className="text-xs text-muted">{detalhe}</div>}
@@ -453,7 +453,7 @@ export default function ControlePagamentos({
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <CobrarParcelaModal
         alvo={cobrando}
         podeRegistrar={!!cobrando && podeInformarPagamentoUI(podeUI, cobrando.venda.artistaId || null, cobrando.venda.criadoPor, userId)}
@@ -549,7 +549,7 @@ export default function ControlePagamentos({
         </div>
 
         {!ehCobrancas && (
-        <div className="pill-group h-[42px] flex-wrap">
+        <div className="pill-group h-[42px] max-w-full overflow-x-auto [scrollbar-width:thin]">
           {(
             [
               { v: "a-receber", rotulo: "A receber", n: contadores.pendente + contadores.atrasado },
@@ -591,6 +591,7 @@ export default function ControlePagamentos({
             hrefDe={(l) => urls.parcela(l.parcela.id)}
               acoes={acoesParcela}
               rotuloItens="parcelas"
+              compacta
             />
           </div>
         </div>
@@ -630,6 +631,7 @@ export default function ControlePagamentos({
             hrefDe={(l) => urls.parcela(l.parcela.id)}
             acoes={acoesParcela}
             rotuloItens="parcelas"
+            compacta
           />
         </div>
       )}

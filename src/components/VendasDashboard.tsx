@@ -263,7 +263,7 @@ export default function VendasDashboard({
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Vendas"
         subtitle={`${tituloMes} — ${t("por data de criação")}`}

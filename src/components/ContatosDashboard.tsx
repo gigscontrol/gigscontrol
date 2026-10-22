@@ -205,7 +205,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   }, [contratantesBloqueados, casasBloqueadas, t]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Contatos"
         subtitle="Contratantes, casas e cidades da agência"

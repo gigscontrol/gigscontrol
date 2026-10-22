@@ -61,7 +61,7 @@ export function AvisoFiltroArtistas() {
   return (
     <div
       role="status"
-      className="mx-auto mb-0 flex w-full max-w-[1400px] flex-wrap items-center gap-x-3 gap-y-1 px-6 pt-4 text-xs lg:px-8"
+      className="pagina !pb-0 !pt-4 mb-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
     >
       <span
         className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium"
