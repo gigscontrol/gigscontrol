@@ -554,7 +554,7 @@ export default function NovoContratoPage({
               <button
                 type="button"
                 className="btn btn-primary text-sm disabled:opacity-50 inline-flex items-center gap-1.5"
-                style={{ backgroundColor: ACCENT, color: "#fff" }}
+                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
                 onClick={pagarExcedente}
                 disabled={excedenteIndo}
               >
@@ -786,7 +786,7 @@ export default function NovoContratoPage({
                       title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
                       className="btn disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
-                        backgroundColor: ACCENT,
+                        backgroundColor: "var(--brand-solid)",
                         color: "#fff",
                         opacity: gerando || !podeCriar ? 0.6 : 1,
                       }}

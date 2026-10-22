@@ -407,7 +407,7 @@ export function EditorPermissoesVinculo({
                               style={
                                 sel
                                   ? {
-                                      backgroundColor: "var(--brand)",
+                                      backgroundColor: "var(--brand-solid)",
                                       color: "#fff",
                                       boxShadow: "0 1px 2px var(--shadow-color)",
                                     }

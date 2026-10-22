@@ -18,6 +18,7 @@ const config: Config = {
         disabled: "var(--text-disabled)",
         accent: "var(--accent-color)",
         brand: "var(--brand)",
+        "brand-solid": "var(--brand-solid)",
         "brand-2": "var(--brand-2)",
         success: "var(--success)",
         "success-ink": "var(--success-ink)",

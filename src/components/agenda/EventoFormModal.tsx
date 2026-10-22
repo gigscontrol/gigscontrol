@@ -182,7 +182,7 @@ export function EventoFormModal({
             onClick={submit}
             disabled={salvando}
             className="btn btn-primary disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
           >
             {salvando ? t("Salvando…") : editando ? t("Salvar alterações") : t("Criar evento")}
           </button>

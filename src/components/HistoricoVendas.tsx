@@ -263,7 +263,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
           <button
             onClick={onNovaVenda}
             className="btn btn-primary"
-            style={{ backgroundColor: accent, color: "#fff" }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
           >
             <Plus size={14} />
             {t("Nova venda")}

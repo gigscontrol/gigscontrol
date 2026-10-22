@@ -1414,7 +1414,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                 : undefined
             }
             className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: accent, color: "#fff" }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
           >
             <Save size={14} />
             {blocos.length > 1

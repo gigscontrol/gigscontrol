@@ -398,7 +398,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
                 }}
                 disabled={!/^\d{4}-\d{2}-\d{2}$/.test(fabDataISO)}
                 className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
               >
                 {t("Continuar")}
               </button>

@@ -285,7 +285,7 @@ export default function VendasDashboard({
               disabled={!podeCriarOrcamento}
               title={!podeCriarOrcamento ? "Você não tem permissão para isso." : undefined}
               className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: accent, color: "#fff" }}
+              style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
             >
               <Plus size={14} />
               {t("Novo orçamento")}

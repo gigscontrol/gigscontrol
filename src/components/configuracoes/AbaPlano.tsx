@@ -375,7 +375,7 @@ export default function AbaPlano() {
                                 type="button"
                                 onClick={irParaCheckoutUpgrade}
                                 className="btn btn-primary text-sm inline-flex items-center gap-1.5"
-                                style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+                                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
                               >
                                 <Sparkles size={14} />
                                 {t("Ir para o pagamento")}
@@ -575,7 +575,7 @@ function CheckoutHostedFallback({
         onClick={ir}
         disabled={indo}
         className="btn btn-primary text-sm inline-flex items-center gap-1.5 disabled:opacity-50"
-        style={{ backgroundColor: "var(--brand)", color: "#fff" }}
+        style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
       >
         {indo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
         {indo ? t("Abrindo o pagamento seguro…") : t("Ir para o pagamento seguro")}

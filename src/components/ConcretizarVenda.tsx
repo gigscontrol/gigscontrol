@@ -2589,7 +2589,7 @@ export default function ConcretizarVenda({
           disabled={salvando || !podeSalvar}
           title={!podeSalvar ? "Você não tem permissão para isso." : undefined}
           className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: accent, color: "#fff" }}
+          style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
         >
           <CheckCircle2 size={14} />
           {emEdicao
