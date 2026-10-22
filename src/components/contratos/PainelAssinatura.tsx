@@ -499,7 +499,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
             disabled={salvando || !podeEditarSignatarios}
             title={!podeEditarSignatarios ? t("Você não tem permissão para isso.") : undefined}
             className="btn disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT, color: "#fff" }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
           >
             {salvando ? (
               <Loader2 size={15} className="animate-spin" />
@@ -621,7 +621,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
               onClick={baixarPdf}
               disabled={gerandoPdf}
               className="btn"
-              style={{ backgroundColor: ACCENT, color: "#fff" }}
+              style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
             >
               {gerandoPdf ? (
                 <Loader2 size={15} className="animate-spin" />

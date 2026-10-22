@@ -294,7 +294,7 @@ export default function ModelosPage() {
                 disabled={noLimite}
                 title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
                 className="btn flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: ACCENT, color: "#fff" }}
+                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
               >
                 <Copy size={15} />
                 {t("Duplicar e editar")}
@@ -330,7 +330,7 @@ export default function ModelosPage() {
                 disabled={noLimite}
                 title={noLimite ? t("Limite de modelos do plano atingido") : undefined}
                 className="btn flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: ACCENT, color: "#fff" }}
+                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
               >
                 <Copy size={15} />
                 {t("Duplicar e editar")}

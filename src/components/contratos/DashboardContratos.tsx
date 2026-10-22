@@ -184,7 +184,7 @@ export default function DashboardContratos({
               disabled={!podeCriar}
               title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
               className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: ACCENT, color: "#fff" }}
+              style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
             >
               <Plus size={14} />
               {t("Novo contrato")}
@@ -216,7 +216,7 @@ export default function DashboardContratos({
             disabled={!podeCriar}
             title={!podeCriar ? t("Você não tem permissão para isso.") : undefined}
             className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT, color: "#fff" }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
           >
             <Plus size={14} />
             {t("Novo contrato")}

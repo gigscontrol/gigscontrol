@@ -165,7 +165,7 @@ function CardPlano({
           className="inline-flex items-center justify-center gap-1.5 rounded py-2.5 text-[13px] font-bold transition-colors"
           style={
             selecionado
-              ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
+              ? { backgroundColor: "var(--brand-solid)", border: "1px solid var(--brand-solid)", color: "#fff" }
               : { backgroundColor: "transparent", border: "1px solid var(--border-hover)", color: "var(--text-primary)" }
           }
         >
@@ -181,7 +181,7 @@ function CardPlano({
           className="inline-flex items-center justify-center gap-1.5 rounded py-2.5 text-[13px] font-bold transition-colors"
           style={
             selecionado
-              ? { backgroundColor: "var(--brand)", border: "1px solid var(--brand)", color: "#fff" }
+              ? { backgroundColor: "var(--brand-solid)", border: "1px solid var(--brand-solid)", color: "#fff" }
               : { backgroundColor: "transparent", border: "1px solid var(--border-hover)", color: "var(--text-primary)" }
           }
         >

@@ -292,7 +292,7 @@ export default function VendaDetalhe({
               type="button"
               onClick={() => onEditar(venda.id)}
               className="btn btn-primary"
-              style={{ backgroundColor: accent, color: "#fff" }}
+              style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
             >
               <Pencil size={14} />
               {t("Editar venda")}

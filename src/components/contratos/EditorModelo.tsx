@@ -654,7 +654,7 @@ export default function EditorModelo({
             onClick={salvar}
             disabled={salvando}
             className="btn"
-            style={{ backgroundColor: ACCENT, color: "#fff", opacity: salvando ? 0.6 : 1 }}
+            style={{ backgroundColor: "var(--brand-solid)", color: "#fff", opacity: salvando ? 0.6 : 1 }}
           >
             <Save size={15} />
             {salvando ? t("Salvando...") : t("Salvar")}
@@ -706,7 +706,7 @@ export default function EditorModelo({
                   onClick={baixarPdf}
                   disabled={baixandoPdf}
                   className="btn ml-auto"
-                  style={{ backgroundColor: ACCENT, color: "#fff", opacity: baixandoPdf ? 0.6 : 1 }}
+                  style={{ backgroundColor: "var(--brand-solid)", color: "#fff", opacity: baixandoPdf ? 0.6 : 1 }}
                 >
                   <Download size={15} />
                   {baixandoPdf ? t("Gerando...") : t("Baixar PDF")}

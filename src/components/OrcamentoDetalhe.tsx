@@ -269,7 +269,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 disabled={!podeConverter}
                 title={!podeConverter ? semPermissao : undefined}
                 className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: accent, color: "#fff" }}
+                style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
               >
                 <CalendarCheck2 size={14} />
                 {t("Concretizar venda")}
@@ -672,7 +672,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
                 }
               }}
               className="btn btn-primary"
-              style={{ backgroundColor: accent, color: "#fff" }}
+              style={{ backgroundColor: "var(--brand-solid)", color: "#fff" }}
               disabled={duplicando}
             >
               {duplicando ? t("Duplicando...") : t("Duplicar")}

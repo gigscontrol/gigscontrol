@@ -36,6 +36,9 @@
     --brand: #3D7BFF;
     --brand-2: #5B93FF;
     --brand-weak: rgba(61, 123, 255, 0.14);
+    /* Preenchimento de BOTÃO com texto branco (4,8:1). O --brand (#3D7BFF)
+       segue em links, ícones e destaques; com branco em cima dava 3,8:1. */
+    --brand-solid: #2F6AEB;
     --brand-soft: rgba(61, 123, 255, 0.18);
     --grad-signal: linear-gradient(120deg, #4AC4FF, #3D7BFF 50%, #2847D7);
 
@@ -164,6 +167,7 @@
        2,0:1 (âmbar). Escuros, passam de 4,5:1 como texto E seguem
        funcionando como preenchimento (branco em cima também passa). */
     --brand: #2E63E0;
+    --brand-solid: #2E63E0;
     --info: #2E63E0;
     --success: #157347;
     --warning: #9A6200;
@@ -341,7 +345,7 @@
     transition: all 200ms var(--ease);
   }
   .btn-primary {
-    background-color: var(--brand);
+    background-color: var(--brand-solid);
     color: #fff;
   }
   .btn-primary:hover { filter: brightness(0.93); }
@@ -541,7 +545,7 @@
   }
   .pill:hover { color: var(--text-primary); background-color: var(--bg-elevated); }
   .pill.active {
-    background-color: var(--brand);
+    background-color: var(--brand-solid);
     color: #fff;
   }
   .pill-contagem {
@@ -556,7 +560,8 @@
     color: var(--text-muted);
   }
   .pill.active .pill-contagem {
-    background-color: rgba(255, 255, 255, 0.22);
+    /* Escurece em vez de clarear: branco sobre o azul clareado dava 2,8:1. */
+    background-color: rgba(0, 0, 0, 0.2);
     color: #fff;
   }
 }
