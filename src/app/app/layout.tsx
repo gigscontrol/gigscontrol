@@ -111,7 +111,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 function LoaderTelaCheia({ texto }: { texto: string }) {
   const { aparencia } = useWorkspace();
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-main">
+    <div className="flex h-screen h-dvh w-full items-center justify-center bg-main">
       <div className="flex flex-col items-center gap-5">
         {aparencia.logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -525,7 +525,7 @@ function AppRoot() {
 
   return (
     <FiltroArtistasProvider valor={filtroArtistas}>
-    <div className="flex flex-col h-screen overflow-hidden bg-main">
+    <div className="flex flex-col h-screen h-dvh overflow-hidden bg-main">
       {/* Teclado: 1º Tab da página pula menu e topo direto pro conteúdo. */}
       <a href="#conteudo" className="pular-conteudo">
         {t("Pular para o conteúdo")}

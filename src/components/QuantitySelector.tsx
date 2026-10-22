@@ -29,7 +29,7 @@ export default function QuantitySelector({ label, value, onChange, min = 0, max 
           type="button"
           onClick={dec}
           disabled={value <= min}
-          className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center transition-all hover:border-border-strong hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          className="alvo-toque h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center transition-all hover:border-border-strong hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label={t("Diminuir {label}", { label })}
         >
           <Minus size={13} />
@@ -46,7 +46,7 @@ export default function QuantitySelector({ label, value, onChange, min = 0, max 
           type="button"
           onClick={inc}
           disabled={value >= max}
-          className="h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center transition-all hover:border-border-strong hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+          className="alvo-toque h-7 w-7 rounded-md border border-border bg-surface-2 text-secondary flex items-center justify-center transition-all hover:border-border-strong hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label={t("Aumentar {label}", { label })}
         >
           <Plus size={13} />

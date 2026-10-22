@@ -328,7 +328,7 @@ export function PassageirosField({
               <button
                 type="button"
                 onClick={() => onChange(value.filter((_, idx) => idx !== i))}
-                className="text-muted hover:text-danger p-1"
+                className="alvo-toque text-muted hover:text-danger p-1"
                 aria-label={t("Remover")}
               >
                 <Trash2 size={14} />

@@ -207,7 +207,7 @@ export default function NotaEditor({
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setCor(null)}
-                className={`h-7 w-7 rounded-full border flex items-center justify-center ${
+                className={`alvo-toque h-7 w-7 rounded-full border flex items-center justify-center ${
                   cor === null ? "border-border-strong" : "border-border"
                 }`}
                 title={t("Sem cor")}
@@ -219,7 +219,7 @@ export default function NotaEditor({
                 <button
                   key={c}
                   onClick={() => setCor(c)}
-                  className="h-7 w-7 rounded-full border-2 flex items-center justify-center"
+                  className="alvo-toque h-7 w-7 rounded-full border-2 flex items-center justify-center"
                   style={{ backgroundColor: c, borderColor: cor === c ? "#fff" : "transparent" }}
                   aria-label={t("Cor")}
                 >

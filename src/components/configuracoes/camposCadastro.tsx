@@ -558,7 +558,7 @@ export function LinhaEscopo({
       <button
         type="button"
         onClick={() => onChange(!valor)}
-        className="relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
+        className="alvo-toque relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
         style={{
           backgroundColor: valor ? "var(--brand)" : "var(--border-strong)",
         }}

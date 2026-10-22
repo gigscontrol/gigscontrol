@@ -493,7 +493,7 @@ export default function MapaRaio({
               zoomManualRef.current = true;
               mapaRef.current?.zoomIn();
             }}
-            className="flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
+            className="alvo-toque flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
           >
             <Plus size={14} />
           </button>
@@ -505,7 +505,7 @@ export default function MapaRaio({
               zoomManualRef.current = true;
               mapaRef.current?.zoomOut();
             }}
-            className="flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
+            className="alvo-toque flex h-8 w-8 items-center justify-center text-secondary hover:text-primary transition-colors"
           >
             <Minus size={14} />
           </button>

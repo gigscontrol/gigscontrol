@@ -618,7 +618,7 @@ function ActionBtn({
       disabled={disabled}
       title={disabled ? (disabledTitle ?? label) : label}
       aria-label={label}
-      className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-10 max-md:w-10 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-11 max-md:w-11 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>

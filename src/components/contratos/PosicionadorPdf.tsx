@@ -365,7 +365,7 @@ function PaginaPdf({
                   onRemover(c.id);
                 }}
                 // Visível no hover, no foco do campo e sempre no toque (sem hover).
-                className="absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-danger text-white flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:-top-3.5 [@media(pointer:coarse)]:-right-3.5 [@media(pointer:coarse)]:h-7 [@media(pointer:coarse)]:w-7"
+                className="alvo-toque absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full bg-danger text-white flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:-top-3.5 [@media(pointer:coarse)]:-right-3.5 [@media(pointer:coarse)]:h-7 [@media(pointer:coarse)]:w-7"
                 aria-label={t("Remover campo")}
               >
                 <Trash2 size={11} />
