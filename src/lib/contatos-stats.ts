@@ -1,5 +1,5 @@
 import type { Show, Contratante, Casa, Cidade, Orcamento, Venda, Moeda } from "@/types";
-import { formatarMoeda, totaisPorMoeda } from "./formatters";
+import { formatarMoeda, totaisPorMoeda, hojeISO as hojeLocal } from "./formatters";
 
 // ---------- Multi-moeda (regra-mãe: nunca somar moedas diferentes) ----------
 
@@ -173,7 +173,7 @@ export function getCidadePrincipalContratante(
   contratanteId: string,
   shows: Show[]
 ): string | undefined {
-  const hojeISO = new Date().toISOString().slice(0, 10);
+  const hojeISO = hojeLocal(); // dia local (toISOString é UTC)
   const realizados = shows.filter(
     (s) =>
       s.contratanteId === contratanteId &&

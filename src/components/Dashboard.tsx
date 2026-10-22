@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import {
   DollarSign,
   CheckCircle2,
@@ -26,7 +26,7 @@ import {
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { gradienteSutil } from "@/lib/gradiente";
-import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
+import { formatarMoeda, totaisPorMoeda, formatarData } from "@/lib/formatters";
 import { calcularTotaisFinanceiro } from "@/lib/financeiro/totais";
 import {
   LABELS_STATUS_PARCELA,
@@ -43,12 +43,6 @@ const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 
 /** A data (vencimento) cai no período? Em "Visão geral", tudo passa. */
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 /** Mais antigo primeiro. */
 function porVencimento(a: LinhaParcela, b: LinhaParcela): number {
@@ -60,9 +54,7 @@ function entrouEm(l: LinhaParcela): string {
   return l.parcela.dataPagamento || l.parcela.dataVencimento;
 }
 
-function fmtData(dataISO: string): string {
-  return new Date(dataISO + "T12:00:00").toLocaleDateString("pt-BR");
-}
+const fmtData = (dataISO: string) => formatarData(dataISO);
 
 type Props = {
   selectedArtistas: string[];

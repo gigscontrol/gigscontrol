@@ -49,7 +49,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useShows } from "@/lib/shows-context";
 import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useArtistas } from "@/lib/workspace-context";
-import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
+import { mascararCpfCnpj, primeiraMaiuscula, formatarData, formatarDataExtenso, formatarHora, formatarNumero } from "@/lib/formatters";
 import { formatarDuracao } from "@/lib/whatsapp";
 import { linhasLogistica } from "@/lib/logisticaTexto";
 import { formatarMoeda } from "@/lib/formatters";
@@ -237,7 +237,7 @@ export default function VendaDetalhe({
     itensHotel.length > 0;
 
   const dataLegivel = primeiraMaiuscula(
-    new Date(venda.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+    formatarDataExtenso(venda.dataShow, {
       weekday: "long",
       day: "2-digit",
       month: "long",
@@ -282,7 +282,7 @@ export default function VendaDetalhe({
               </span>
             )}
             <span className="text-xs text-muted">
-              {new Date(venda.criadoEm).toLocaleDateString("pt-BR")}
+              {formatarData(venda.criadoEm)}
             </span>
           </>
         }
@@ -374,7 +374,7 @@ export default function VendaDetalhe({
               )}
               {venda.capacidadePublico && (
                 <Linha icon={<Users size={13} />}>
-                  {t("Capacidade:")} {venda.capacidadePublico.toLocaleString("pt-BR")} {t("pessoas")}
+                  {t("Capacidade:")} {formatarNumero(venda.capacidadePublico)} {t("pessoas")}
                 </Linha>
               )}
             </Bloco>
@@ -711,10 +711,7 @@ function RastroItem({ acao }: { acao: HistoricoAcao }) {
   // Cargo derivado do profile ATUAL (cargo de HOJE). Ex-membro (soft delete)
   // continua aparecendo com cargo até o purge físico do profile.
   const cargo = acao.actorPapel ? LABELS_PAPEL[acao.actorPapel]?.nome : null;
-  const data = `${quando.toLocaleDateString("pt-BR")} ${t("às")} ${quando.toLocaleTimeString(
-    "pt-BR",
-    { hour: "2-digit", minute: "2-digit" }
-  )}`;
+  const data = `${formatarData(quando)} ${t("às")} ${formatarHora(quando)}`;
 
   return (
     <div className="border-b border-border/50 last:border-0 pb-3 last:pb-0">

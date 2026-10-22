@@ -29,6 +29,7 @@ import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
+import { hojeISO } from "@/lib/formatters";
 
 type Props = {
   selectedArtistas: string[];
@@ -51,10 +52,6 @@ const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta"
 
 function iso(ano: number, mes1: number, dia: number): string {
   return `${ano}-${String(mes1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-}
-function hojeISO(): string {
-  const d = new Date();
-  return iso(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 function diasEntre(aISO: string, bISO: string): number {
   const a = new Date(`${aISO}T12:00:00`).getTime();

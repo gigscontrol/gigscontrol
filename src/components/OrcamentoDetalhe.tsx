@@ -48,7 +48,7 @@ import { useContatos } from "@/lib/contatos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { linhasLogistica } from "@/lib/logisticaTexto";
 import { gerarTextoWhatsApp, montarLinkWhatsApp, formatarDuracao } from "@/lib/whatsapp";
-import { formatarMoeda } from "@/lib/formatters";
+import { formatarMoeda, formatarData, formatarDataExtenso } from "@/lib/formatters";
 import { liquidoArtista } from "@/lib/taxaAgencia";
 import { nomeCidadeFuso } from "./TimezoneSelect";
 import { mascararCpfCnpj, primeiraMaiuscula, hojeISO } from "@/lib/formatters";
@@ -181,7 +181,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
 
   const dataLegivel = orc.dataShow
     ? primeiraMaiuscula(
-        new Date(orc.dataShow + "T12:00:00").toLocaleDateString("pt-BR", {
+        formatarDataExtenso(orc.dataShow, {
           weekday: "long",
           day: "2-digit",
           month: "long",
@@ -257,7 +257,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               <span className="text-xs text-warning">{t("Data não definida")}</span>
             )}
             <span className="text-xs text-muted">
-              · {t("Criado em")} {new Date(orc.criadoEm).toLocaleDateString("pt-BR")}
+              · {t("Criado em")} {formatarData(orc.criadoEm)}
             </span>
           </>
         }
@@ -421,7 +421,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               <Linha icon={<CalendarCheck2 size={13} />} subtle={!orc.validade}>
                 {t("Validade")}:{" "}
                 {orc.validade
-                  ? new Date(orc.validade + "T12:00:00").toLocaleDateString("pt-BR")
+                  ? formatarData(orc.validade)
                   : <>— <Falta /></>}
               </Linha>
             </Bloco>

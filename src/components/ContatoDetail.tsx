@@ -17,7 +17,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, LABELS_TIPO_CASA } from "@/types";
 import { useT } from "@/lib/i18n";
-import { mascararCpfCnpj, formatarMoeda, formatarDataBR } from "@/lib/formatters";
+import { mascararCpfCnpj, formatarMoeda, formatarDataBR, formatarData, formatarNumero } from "@/lib/formatters";
 import { ResumoModal, ResumoLista } from "./DashboardResumo";
 import { useEffect, useState } from "react";
 import type { Contratante, Casa, Cidade, Show, Venda, Moeda, Orcamento, ShowStatus } from "@/types";
@@ -205,7 +205,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           artistaCor={accent}
           linhaSuperior={
             <span className="normal-case">
-              {t("cadastrado em")} {new Date(atual.criadoEm).toLocaleDateString("pt-BR")}
+              {t("cadastrado em")} {formatarData(atual.criadoEm)}
             </span>
           }
           badges={
@@ -303,7 +303,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                               {d.pais && d.pais !== "BR" && <span>{d.pais}</span>}
                               {principal && <span className="badge badge-info">{t("Atual")}</span>}
                               <span>
-                                {t("Último uso")}: {d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleDateString("pt-BR") : "—"}
+                                {t("Último uso")}: {d.ultimo_uso ? formatarData(d.ultimo_uso) : "—"}
                               </span>
                             </span>
                           </div>
@@ -352,7 +352,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                           <span className="badge badge-danger">{t("Cancelado")}</span>
                         )}
                         <span className="text-muted tabular-nums">
-                          {h.data ? new Date(`${h.data}T12:00:00`).toLocaleDateString("pt-BR") : "—"}
+                          {h.data ? formatarData(h.data) : "—"}
                         </span>
                       </div>
                     </div>
@@ -451,7 +451,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile label={t("Faturamento")} value={formatarFaturamento(stats.faturamentoPorMoeda)} accent={accent} icon={<Banknote size={14} />} />
-          <MetricTile label={t("Capacidade")} value={item.capacidade?.toLocaleString("pt-BR") ?? "—"} icon={<Users size={14} />} />
+          <MetricTile label={t("Capacidade")} value={item.capacidade != null ? formatarNumero(item.capacidade) : "—"} icon={<Users size={14} />} />
           <MetricTile label={t("Artistas que tocaram")} value={stats.artistasQueTocaram.length.toString()} icon={<Music size={14} />} />
         </div>
 
@@ -625,7 +625,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
                       {c.capacidade && (
                         <div className="text-xs text-secondary flex items-center gap-1 flex-shrink-0">
                           <Users size={12} />
-                          {c.capacidade.toLocaleString("pt-BR")}
+                          {formatarNumero(c.capacidade)}
                         </div>
                       )}
                     </div>
@@ -793,7 +793,7 @@ function LinhaOrcamento({
         <div className="text-xs text-muted truncate">
           {t("Orçamento nº {n}", { n: orcamento.numero })}
           {orcamento.dataShow
-            ? ` · ${new Date(`${orcamento.dataShow}T12:00:00`).toLocaleDateString("pt-BR")}`
+            ? ` · ${formatarData(orcamento.dataShow)}`
             : ` · ${t("Sem data definida")}`}
         </div>
       </div>

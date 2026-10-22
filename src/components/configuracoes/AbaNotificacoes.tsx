@@ -6,6 +6,7 @@ import { Bell, CheckCheck, ChevronRight } from "lucide-react";
 import type { Notificacao } from "@/lib/mappers/notificacao";
 import { linkDaNotificacao } from "@/lib/navegacao/rotas";
 import { useNavegacaoOpcional } from "../NavOverlay";
+import { formatarDataHora } from "@/lib/formatters";
 
 const LIMIT = 50;
 
@@ -238,13 +239,7 @@ function LinhaCompleta({
         </div>
         <div className="text-xs text-secondary mt-0.5 break-words">{item.mensagem}</div>
         <div className="text-[0.6875rem] text-muted mt-1">
-          {new Date(item.criadoEm).toLocaleString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {formatarDataHora(item.criadoEm)}
         </div>
       </div>
       {!lida && (

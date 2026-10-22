@@ -28,7 +28,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
 import { useAuth } from "@/lib/auth-context";
-import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
+import { formatarMoeda, totaisPorMoeda, hojeISO as hojeLocal } from "@/lib/formatters";
 import { MODULE_THEMES, LABELS_STATUS_ORCAMENTO, statusEfetivoParcela } from "@/types";
 import type { ActiveTab, ActivePage, OrcamentoStatus, AgendaDateRange, Moeda } from "@/types";
 import { useFiltroArtistas } from "./FiltroArtistas";
@@ -175,7 +175,7 @@ export default function VendasDashboard({
     );
 
     // --- Vendas próximas (a realizar) x já realizadas (por dataShow) ---
-    const hojeISO = new Date().toISOString().slice(0, 10);
+    const hojeISO = hojeLocal(); // dia local (toISOString é UTC)
     let proximas = 0;
     let realizadas = 0;
     for (const v of vendasVisiveis) {

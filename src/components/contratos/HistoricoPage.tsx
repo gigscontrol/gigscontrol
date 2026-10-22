@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import {
   FileText,
   Download,
@@ -42,18 +42,13 @@ import type { AgendaDateRange } from "@/types";
 import { STATUS_CONTRATO } from "@/lib/statusUI";
 import { useFiltroArtistas } from "../FiltroArtistas";
 import { urls } from "@/lib/navegacao/rotas";
+import { formatarData as formatarDataLib } from "@/lib/formatters";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_CTR: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 /** Status na ordem em que aparecem nos filtros da lista. */
 const STATUS_ORDEM: ContratoStatus[] = [
@@ -71,13 +66,8 @@ const STATUS_BADGE = Object.fromEntries(
   Object.entries(STATUS_CONTRATO).map(([k, v]) => [k, v.badge])
 ) as Record<ContratoStatus, string>;
 
-/** ISO/YYYY-MM-DD → DD/MM/AAAA (só a parte da data). "—" se vazio/ inválido. */
-function formatarData(iso: string | null): string {
-  if (!iso) return "—";
-  const m = iso.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return "—";
-  return `${m[3]}/${m[2]}/${m[1]}`;
-}
+/** Só a parte da data, na ordem da preferência. "—" se vazio/ inválido. */
+const formatarData = (iso: string | null) => formatarDataLib(iso?.slice(0, 10)) || "—";
 
 export default function HistoricoPage({
   contratoId = null,

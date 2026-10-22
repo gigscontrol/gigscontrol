@@ -9,7 +9,7 @@
  * (YYYY-MM-DD) no estado/banco, mas mostramos DD/MM/YYYY pro usuário.
  */
 
-import { getFormatoData } from "./preferencias";
+import { getFormatoData, getLocaleIntl } from "./preferencias";
 import type { Moeda } from "@/types";
 
 /** Remove tudo que não é dígito. */
@@ -150,6 +150,79 @@ export function formatarDataBR(iso: string | null | undefined): string {
   const [, y, mo, d] = m;
   // Ordem conforme a preferência da agência (dmy = DD/MM, mdy = MM/DD).
   return getFormatoData() === "mdy" ? `${mo}/${d}/${y}` : `${d}/${mo}/${y}`;
+}
+
+// ============================================================
+// Datas pra exibição — UM lugar só. A ordem dos números segue a preferência
+// da agência (DD/MM × MM/DD); nomes de mês/dia e horas seguem o idioma da
+// interface. Antes, ~36 `toLocaleDateString("pt-BR")` espalhados ignoravam
+// as duas coisas.
+// ============================================================
+
+/** "YYYY-MM-DD" (dia puro) ou timestamp → Date no dia LOCAL certo.
+ *  (`new Date("2026-08-24")` é meia-noite UTC → dia anterior no Brasil.) */
+function paraDate(valor: string | Date): Date {
+  if (valor instanceof Date) return valor;
+  return /^\d{4}-\d{2}-\d{2}$/.test(valor) ? new Date(`${valor}T12:00:00`) : new Date(valor);
+}
+
+/** Só o dia ("24/08/2026" ou "08/24/2026"); aceita "YYYY-MM-DD" ou timestamp. Vazio se inválido. */
+export function formatarData(valor: string | Date | null | undefined): string {
+  if (!valor) return "";
+  const d = paraDate(valor);
+  return isNaN(d.getTime()) ? "" : formatarDataBR(hojeISO(d));
+}
+
+/** Dia e mês sem o ano ("24/08" ou "08/24"). */
+export function formatarDiaMes(valor: string | Date | null | undefined): string {
+  const completa = formatarData(valor);
+  return completa ? completa.slice(0, 5) : "";
+}
+
+/** Hora no formato do idioma ("14:30" / "2:30 PM"). */
+export function formatarHora(valor: string | Date | null | undefined): string {
+  if (!valor) return "";
+  const d = paraDate(valor);
+  return isNaN(d.getTime()) ? "" : d.toLocaleTimeString(getLocaleIntl(), { hour: "2-digit", minute: "2-digit" });
+}
+
+/** "24/08/2026, 14:30". */
+export function formatarDataHora(valor: string | Date | null | undefined): string {
+  const data = formatarData(valor);
+  return data ? `${data}, ${formatarHora(valor)}` : "";
+}
+
+/** Data por extenso no idioma da interface (ex.: { weekday: "long", day: "2-digit", month: "long" }). */
+export function formatarDataExtenso(
+  valor: string | Date | null | undefined,
+  opcoes: Intl.DateTimeFormatOptions
+): string {
+  if (!valor) return "";
+  const d = paraDate(valor);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString(getLocaleIntl(), opcoes);
+}
+
+/** Número no idioma da interface ("1.500" / "1,500"). */
+export function formatarNumero(n: number): string {
+  return n.toLocaleString(getLocaleIntl());
+}
+
+/** "agora há pouco", "há 5 min", "há 2h", "há 3 dias" — depois de 7 dias, a data. */
+export function tempoRelativo(
+  iso: string,
+  t: (s: string, p?: Record<string, string | number>) => string,
+  opcoes: { comHora?: boolean; agora?: Date } = {}
+): string {
+  const data = new Date(iso);
+  if (isNaN(data.getTime())) return "";
+  const minutos = Math.floor(((opcoes.agora ?? new Date()).getTime() - data.getTime()) / 60000);
+  if (minutos < 1) return t("agora há pouco");
+  if (minutos < 60) return t("há {n} min", { n: minutos });
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return t("há {n}h", { n: horas });
+  const dias = Math.floor(horas / 24);
+  if (dias < 7) return t("há {n} dia{s}", { n: dias, s: dias === 1 ? "" : "s" });
+  return opcoes.comHora ? formatarDataHora(data) : formatarData(data);
 }
 
 /**

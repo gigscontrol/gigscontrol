@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import {
   FileText,
   CheckCircle2,
@@ -43,12 +43,6 @@ const STATUS_ORDEM: ContratoStatus[] = ["rascunho", "enviado", "assinado", "canc
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_CTR: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 /** Qual card está aberto no modal de resumo (null = fechado).
  *  "total" = Contratos criados (inclui Taxa de assinatura + Rascunhos + Vendas sem contrato).

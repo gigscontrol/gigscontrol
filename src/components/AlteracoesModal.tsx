@@ -3,6 +3,7 @@
 import { useT } from "@/lib/i18n";
 import Modal from "./Modal";
 import type { HistoricoAcao } from "@/lib/mappers/historico";
+import { formatarData, formatarHora } from "@/lib/formatters";
 
 /**
  * Popup do rastro (D4): mostra O QUE mudou numa ação da venda — o diff
@@ -79,12 +80,7 @@ export default function AlteracoesModal({
       isOpen={aberto}
       onClose={onFechar}
       title={t("Alterações")}
-      subtitle={`${acao.actorNome ?? acao.actorEmail ?? t("Alguém")} · ${quando.toLocaleDateString(
-        "pt-BR"
-      )} ${t("às")} ${quando.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`}
+      subtitle={`${acao.actorNome ?? acao.actorEmail ?? t("Alguém")} · ${formatarData(quando)} ${t("às")} ${formatarHora(quando)}`}
       maxWidth={520}
     >
       <div className="flex flex-col gap-4">

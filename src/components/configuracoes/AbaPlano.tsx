@@ -14,6 +14,7 @@ import {
   type Moeda,
 } from "@/lib/planos";
 import CheckoutEmbutido from "@/components/checkout/CheckoutEmbutido";
+import { formatarData } from "@/lib/formatters";
 
 /**
  * Aba Plano & Assinatura (Configurações — admin). MODELO PRÉ-PAGO por
@@ -100,8 +101,7 @@ export default function AbaPlano() {
   }, []);
 
   const moedaFmt: Moeda = moeda ?? moedaRegiao;
-  const fmtData = (iso: string | null) =>
-    iso ? new Date(iso + "T00:00:00").toLocaleDateString() : "—";
+  const fmtData = (iso: string | null) => formatarData(iso?.slice(0, 10)) || "—";
 
   // ---------- upgrade ----------
   // MODELO PRÉ-PAGO: a prévia só calcula o creditoDias (sem cobrar nada). A

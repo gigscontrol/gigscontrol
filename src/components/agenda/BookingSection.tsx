@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useT, type Traduzir } from "@/lib/i18n";
 import type { BookingShow } from "@/types";
+import { formatarData, formatarDataHora } from "@/lib/formatters";
 
 type Props = {
   showId: string;
@@ -466,21 +467,5 @@ function CampoInput({
   );
 }
 
-function fmtData(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso.length <= 10 ? `${iso}T12:00:00` : iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-function fmtDataHora(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const fmtData = (iso?: string) => formatarData(iso);
+const fmtDataHora = (iso: string) => formatarDataHora(iso);

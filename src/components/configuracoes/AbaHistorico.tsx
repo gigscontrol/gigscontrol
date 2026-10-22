@@ -19,6 +19,7 @@ import type {
   HistoricoAcao,
   ModuloHistorico,
 } from "@/lib/mappers/historico";
+import { tempoRelativo } from "@/lib/formatters";
 
 type Periodo = "tudo" | "24h" | "7d" | "30d";
 
@@ -222,20 +223,5 @@ function LinhaAcao({ item }: { item: HistoricoAcao }) {
 }
 
 function formatarTempoRelativo(iso: string, t: (s: string, p?: Record<string, string | number>) => string): string {
-  const data = new Date(iso);
-  const diffMs = Date.now() - data.getTime();
-  const minutos = Math.floor(diffMs / 60000);
-  if (minutos < 1) return t("agora há pouco");
-  if (minutos < 60) return t("há {n} min", { n: minutos });
-  const horas = Math.floor(minutos / 60);
-  if (horas < 24) return t("há {n}h", { n: horas });
-  const dias = Math.floor(horas / 24);
-  if (dias < 7) return t("há {n} dia{s}", { n: dias, s: dias === 1 ? "" : "s" });
-  return data.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return tempoRelativo(iso, t, { comHora: true });
 }

@@ -11,6 +11,7 @@ import { STATUS_SHOW } from "@/lib/statusUI";
 import { useVendas } from "@/lib/vendas-context";
 import { ordenarShowsDoDia } from "@/lib/agenda/ordemDoDia";
 import { AgendaItemCard, labelArtistas } from "./camposAgenda";
+import { hojeISO } from "@/lib/formatters";
 
 export const ALL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 export const MESES_LONGOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -38,8 +39,7 @@ export function isoDia(ano: number, mes1a12: number, dia: number): string {
 
 /** ISO "YYYY-MM-DD" de hoje (fuso local do browser). */
 export function isoHoje(): string {
-  const now = new Date();
-  return isoDia(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  return hojeISO();
 }
 
 /**
