@@ -440,7 +440,7 @@ export default function NovoContratoPage({
   }
 
   return (
-    <div className="pagina">
+    <div className="pagina pagina-estreita">
       <PageHeader
         title="Novo contrato"
         subtitle={

@@ -518,6 +518,24 @@
   @media (min-width: 640px) { .pagina { padding: 1.5rem; } }
   @media (min-width: 1024px) { .pagina { padding: 2rem; } }
 
+  /* Formulários e Configurações: até 960 px. Na largura toda (1336 px) um
+     campo de texto chegava a ~1290 px e o olho perdia o fio entre rótulo e
+     botão de salvar. */
+  .pagina-estreita { max-width: 60rem; }
+
+  /* Opção escolhível DENTRO de um cartão (tipo de evento, modo de pagamento,
+     tipo de orçamento): borda simples, sem sombra nem levantar — um
+     .card-interactive ali virava cartão dentro de cartão. */
+  .opcao {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--r-control);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
+  }
+  .opcao:hover { border-color: var(--border-strong); }
+
   /* "Pular para o conteúdo": fora da tela até receber o foco do teclado. */
   .pular-conteudo {
     position: fixed; top: 8px; left: 8px; z-index: 10000;
