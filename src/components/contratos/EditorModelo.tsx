@@ -1256,7 +1256,7 @@ function SeletorCorInline({
         type="button"
         onClick={() => setAberto(true)}
         title={t("Cor personalizada (RGB)")}
-        className="h-6 w-6 rounded-md flex items-center justify-center transition-transform hover:scale-110"
+        className="alvo-toque h-6 w-6 rounded-md flex items-center justify-center transition-transform hover:scale-110"
         style={{
           backgroundColor: ehCustom ? cor : "transparent",
           border: `1px ${ehCustom ? "solid" : "dashed"} ${

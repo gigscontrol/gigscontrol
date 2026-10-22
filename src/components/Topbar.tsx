@@ -332,7 +332,7 @@ export default function Topbar({
                           aria-label={i.nome}
                           aria-pressed={ativo}
                           title={i.nome}
-                          className="flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
+                          className="alvo-toque flex h-8 w-8 items-center justify-center rounded-md border transition-colors"
                           style={{
                             borderColor: ativo ? "var(--brand)" : "var(--border-color)",
                             boxShadow: ativo ? "0 0 0 1px var(--brand)" : undefined,

@@ -228,7 +228,7 @@ export default function DateRangeSelector<T extends string>({
                   type="button"
                   onClick={() => setView("list")}
                   aria-label={t("Voltar")}
-                  className="inline-flex items-center justify-center h-7 w-7 -ml-1 rounded-md text-secondary hover:text-primary hover:bg-elevated transition-colors"
+                  className="alvo-toque inline-flex items-center justify-center h-7 w-7 -ml-1 rounded-md text-secondary hover:text-primary hover:bg-elevated transition-colors"
                 >
                   <ArrowLeft size={14} />
                 </button>

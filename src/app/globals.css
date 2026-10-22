@@ -363,6 +363,32 @@
   }
   .btn:active { transform: translateY(1px); }
 
+  /* Toque: alvo mínimo de 44×44 px sem mexer no desenho. Botões só com
+     ícone (p-1, p-1.5 → 22–30 px) ficavam pequenos demais pro dedo; a área
+     de toque cresce por um pseudo-elemento invisível centrado no botão.
+     Só com ponteiro grosso — no mouse nada muda. */
+  @media (pointer: coarse) {
+    .btn-ghost,
+    .pill,
+    .alvo-toque { position: relative; }
+    .btn-ghost::after,
+    .pill::after,
+    .alvo-toque::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+    /* Campo com menos de 16 px faz o iPhone dar zoom ao focar (e a tela
+       fica ampliada depois de sair do campo). */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea { font-size: 16px !important; }
+  }
+
   /* Ações DESTRUTIVAS — só dois jeitos (padrão definido em out/2026):
      .btn-danger         → a confirmação final ("Excluir" no "tem certeza?");
      .btn-danger-outline → o botão que ABRE a confirmação, na tela.

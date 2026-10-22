@@ -125,7 +125,7 @@ export default function MenuLinha({ itens, rotulo }: { itens: ItemMenuLinha[]; r
         aria-haspopup="menu"
         aria-expanded={aberto}
         aria-controls={aberto ? id : undefined}
-        className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-10 max-md:w-10"
+        className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-11 max-md:w-11"
       >
         <MoreHorizontal size={16} />
       </button>

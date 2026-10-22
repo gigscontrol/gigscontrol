@@ -345,7 +345,7 @@ export default function Sidebar({
           onClick={toggleCollapsed}
           title={collapsed ? t("Expandir menu") : t("Recolher menu")}
           aria-label={collapsed ? t("Expandir menu") : t("Recolher menu")}
-          className={`hidden lg:flex flex-shrink-0 items-center justify-center h-5 w-5 rounded text-muted hover:text-primary hover:bg-elevated transition-colors ${
+          className={`hidden lg:flex flex-shrink-0 items-center justify-center h-6 w-6 rounded text-muted hover:text-primary hover:bg-elevated transition-colors ${
             collapsed ? "" : "lg:absolute lg:right-2.5 lg:top-1/2 lg:-translate-y-1/2"
           }`}
         >
