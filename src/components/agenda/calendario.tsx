@@ -120,15 +120,16 @@ export function CartaoShow({
       ]
         .filter(Boolean)
         .join(" — ")}
-      className={`w-full text-left bg-surface-2 border border-border rounded-md px-2 py-1.5 mb-1.5 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer ${
-        cancelado ? "opacity-60" : ""
-      }`}
+      // Cancelado: título riscado + borda vermelha, SEM opacidade — com 60% o
+      // local e a cidade caíam pra 2,7–3,3:1 (o show cancelado ainda abre e
+      // precisa ser lido).
+      className="w-full text-left bg-surface-2 border border-border rounded-md px-2 py-1.5 mb-1.5 transition-all hover:border-border-strong hover:bg-elevated cursor-pointer"
       style={{
         borderLeft: `3px solid ${cancelado ? "var(--danger)" : artista ? artista.color : "transparent"}`,
       }}
     >
       <div className="flex items-center gap-1.5 min-w-0">
-        <span className={`text-xs font-bold text-primary truncate flex-1 ${cancelado ? "line-through" : ""}`}>
+        <span className={`text-xs font-bold truncate flex-1 ${cancelado ? "line-through text-secondary" : "text-primary"}`}>
           {titulo}
         </span>
         {show.time ? (
