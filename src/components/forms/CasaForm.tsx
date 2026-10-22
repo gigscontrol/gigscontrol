@@ -123,7 +123,7 @@ export default function CasaForm({ initial, onSubmit, onCancel }: Props) {
           <TextInput value={contatoResponsavel} onChange={(e) => setContatoResponsavel(e.target.value)} placeholder="Renata Souza" />
         </Field>
         <Field label="Telefone">
-          <TextInput value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+          <TextInput type="tel" autoComplete="off" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
         </Field>
       </div>
 

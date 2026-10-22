@@ -486,6 +486,7 @@ export default function AbaArtistas() {
               <div className="flex items-center gap-1.5 bg-elevated border border-border rounded-md px-2 py-1.5 w-40 foco-campo-dentro">
                 <Search size={13} className="text-muted flex-shrink-0" />
                 <input aria-label={t("Buscar artista")}
+                  enterKeyHint="search"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder={t("Buscar")}

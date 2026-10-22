@@ -281,6 +281,7 @@ export default function CidadeGlobalAutocomplete({
               <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-2.5 py-1.5 foco-campo-dentro">
                 <Search size={13} className="text-muted flex-shrink-0" />
                 <input aria-label={t("Buscar país")}
+                  enterKeyHint="search"
                   autoFocus
                   value={buscaPais}
                   onChange={(e) => setBuscaPais(e.target.value)}

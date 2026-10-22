@@ -221,6 +221,7 @@ export default function AnotacoesPage() {
         <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 mb-4 foco-campo-dentro transition-colors">
           <Search size={15} className="text-muted flex-shrink-0" />
           <input aria-label={t("Buscar anotações")}
+            enterKeyHint="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder={t("Buscar anotações...")}

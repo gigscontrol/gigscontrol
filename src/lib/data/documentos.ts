@@ -214,6 +214,11 @@ const DEFAULT_DOC: DocConfig = {
   empresa: { detecta: AMBIGUO, rotulo: "Company name" },
 };
 
+/** Documento só de dígitos (CPF/CNPJ, SSN…): o celular abre o teclado numérico. */
+export function documentoSoNumeros(pais: string | undefined | null): boolean {
+  return NUMERICOS.has((pais ?? "BR").toUpperCase());
+}
+
 export function configDocumento(pais: string | undefined | null): DocConfig {
   return DOCS[(pais ?? "BR").toUpperCase()] ?? DEFAULT_DOC;
 }

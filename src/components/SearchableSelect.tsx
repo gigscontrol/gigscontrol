@@ -92,6 +92,7 @@ export default function SearchableSelect({
       <div className="campo-input flex items-center gap-2 relative z-50">
         <Search size={14} className="flex-shrink-0 text-muted" />
         <input aria-label={ariaLabel}
+          enterKeyHint="search"
           ref={inputRef}
           value={open ? query : selected?.label ?? ""}
           onChange={(e) => {
