@@ -167,6 +167,7 @@ export function SeletorArtistas({
           </div>
         )}
         <input aria-label={t("Buscar artista")}
+          enterKeyHint="search"
           value={busca}
           onChange={(e) => {
             setBusca(e.target.value);

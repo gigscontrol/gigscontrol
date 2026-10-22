@@ -33,6 +33,8 @@ export function BuscaLista({
       <input
         aria-label={rotulo}
         type="text"
+        inputMode="search"
+        enterKeyHint="search"
         value={valor}
         onChange={(e) => onMudar(e.target.value)}
         placeholder={placeholder}

@@ -29,7 +29,7 @@ import PhoneInput, {
   type Country,
 } from "@/components/PhoneInput";
 import { montarTelefoneE164, COUNTRIES } from "@/lib/data/countries";
-import { configDocumento, normalizarDocumento } from "@/lib/data/documentos";
+import { configDocumento, documentoSoNumeros, normalizarDocumento } from "@/lib/data/documentos";
 import { SeletorDeCor } from "./camposCadastro";
 
 /** Fallback quando o usuário ainda não escolheu cor — mesmo default usado
@@ -383,6 +383,7 @@ function MeusDados({
           {t("Nome completo")} <span className="text-danger">*</span>
         </span>
         <input
+          autoComplete="name"
           value={nomeLegal}
           onChange={(e) => setNomeLegal(e.target.value)}
           placeholder={t("Ex: João Silva")}
@@ -397,6 +398,7 @@ function MeusDados({
               {t("Razão social")}
             </span>
             <input
+              autoComplete="organization"
               value={razaoSocial}
               onChange={(e) => setRazaoSocial(e.target.value)}
               placeholder={t("Se você emitir nota fiscal por CNPJ")}
@@ -409,6 +411,7 @@ function MeusDados({
               {t("Endereço")}
             </span>
             <input
+              autoComplete="street-address"
               value={endereco}
               onChange={(e) => setEndereco(e.target.value)}
               placeholder={t("Rua, número, bairro, cidade")}
@@ -442,6 +445,7 @@ function MeusDados({
           {docCfg.label} <span className="text-danger">*</span>
         </span>
         <input
+          inputMode={documentoSoNumeros(pais) ? "numeric" : undefined}
           value={docCfg.format(doc)}
           onChange={(e) => setDoc(e.target.value)}
           placeholder={docCfg.placeholder}

@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import { useT } from "@/lib/i18n";
-import { configDocumento } from "@/lib/data/documentos";
+import { configDocumento, documentoSoNumeros } from "@/lib/data/documentos";
 
 const INPUT_BASE =
   "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors foco-campo";
@@ -33,6 +33,7 @@ const InputDocumento = forwardRef<HTMLInputElement, Props>(function InputDocumen
     <input
       ref={ref}
       type="text"
+      inputMode={documentoSoNumeros(pais) ? "numeric" : undefined}
       autoComplete="off"
       placeholder={t(placeholder ?? cfg.placeholder)}
       value={cfg.format(value)}
