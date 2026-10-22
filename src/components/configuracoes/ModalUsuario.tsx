@@ -29,6 +29,7 @@ import { BRASIL, COUNTRIES, type Country } from "@/lib/data/countries";
 import { CORES, Campo, CamposDadosContrato, LinhaEscopo, Secao, SeletorDeCor, normalizarUsername } from "./camposCadastro";
 import { EditorPermissoesVinculo } from "./EquipeDoArtista";
 import type { DocumentoTipo } from "@/types";
+import { corComoTexto } from "@/lib/contraste";
 
 /** Vínculo (usuário × artista) resumido — perfis + permissões por artista. */
 export type VinculoResumo = { artistId: string; perfis: string[]; permissoes: string[] };
@@ -1083,7 +1084,7 @@ export function ModalUsuario({
                                   className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
-                                    color: perfil?.cor ?? "#3D7BFF",
+                                    color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
                                   }}
                                 >
                                   {perfil?.nome ?? pid}

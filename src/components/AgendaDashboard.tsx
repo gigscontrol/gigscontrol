@@ -29,7 +29,7 @@ import { MODULE_THEMES } from "@/types";
 import type { ActiveTab, ActivePage, AgendaDateRange, Show } from "@/types";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
-import { hojeISO } from "@/lib/formatters";
+import { hojeISO, formatarDiaMes } from "@/lib/formatters";
 import { corTextoSobre } from "@/lib/contraste";
 
 type Props = {
@@ -696,12 +696,13 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
                     </span>
                     <span className="text-xs text-muted">{v.artistaNome}</span>
                   </span>
-                  <span className="text-xs font-semibold tabular-nums" style={{ color: accent }}>
+                  {/* --brand-ink: o azul do cartão (#3D7BFF) sobre a linha elevada dava 4,1:1. */}
+                  <span className="text-xs font-semibold tabular-nums" style={{ color: "var(--brand-ink)" }}>
                     {v.dias > 0
                       ? t("em {n} dia{s}", { n: v.dias, s: v.dias > 1 ? "s" : "" })
                       : v.dias === 0
                       ? t("hoje")
-                      : v.data.split("-").reverse().slice(0, 2).join("/")}
+                      : formatarDiaMes(v.data)}
                   </span>
                 </button>
               ))}

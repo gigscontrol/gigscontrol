@@ -129,7 +129,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
         {badge && (
           <span
             className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[0.6875rem] font-bold text-white"
-            style={{ backgroundColor: "var(--danger)" }}
+            style={{ backgroundColor: "var(--danger-solid)" }}
           >
             {badge}
           </span>
@@ -149,7 +149,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
               {naoLidas > 0 && (
                 <span
                   className="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded text-white"
-                  style={{ backgroundColor: "var(--danger)" }}
+                  style={{ backgroundColor: "var(--danger-solid)" }}
                 >
                   {t("{n} nova{s}", { n: naoLidas, s: naoLidas === 1 ? "" : "s" })}
                 </span>

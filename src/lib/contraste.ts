@@ -40,3 +40,18 @@ export function corTextoSobre(fundo: string | null | undefined): string {
   if (comBranco === null || comEscuro === null) return BRANCO;
   return comBranco >= comEscuro ? BRANCO : ESCURO;
 }
+
+/**
+ * Cor de identidade (artista, papel) usada como TEXTO sobre o chip tingido
+ * com a própria cor. Pura, ela some no fundo: amarelo e ciano no tema claro,
+ * azul-marinho no escuro (1,4–1,6:1). Misturada meio a meio com a cor do
+ * texto principal do tema, passa de 4,5:1 com qualquer cor da paleta, nos
+ * dois temas — e continua com o tom do artista.
+ *
+ * `fundoFixo`: superfície que não muda com o tema (ex.: a folha do PDF, sempre
+ * branca) — mistura com esse tom em vez do texto do tema.
+ */
+export function corComoTexto(cor: string, fundoFixo?: "claro"): string {
+  const base = fundoFixo === "claro" ? ESCURO : "var(--text-primary)";
+  return `color-mix(in srgb, ${cor} 50%, ${base})`;
+}

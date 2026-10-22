@@ -128,9 +128,16 @@ export default function TabelaDados<T>({
     }
     if (e.button === 0) onAbrir?.(item);
   };
-  const comLink = (item: T, conteudo: ReactNode) =>
+  // `cartao`: no celular o link "estica" (::after cobrindo o cartão inteiro).
+  // O título sozinho tinha 16 px de altura — o alvo de verdade passa a ser o
+  // cartão todo, e o Ctrl/toque longo continua sendo de um link real.
+  const comLink = (item: T, conteudo: ReactNode, cartao = false) =>
     hrefDe && onAbrir ? (
-      <LinkInterno href={hrefDe(item)} onAbrir={() => onAbrir(item)} className="block min-w-0 rounded-sm">
+      <LinkInterno
+        href={hrefDe(item)}
+        onAbrir={() => onAbrir(item)}
+        className={`block min-w-0 rounded-sm ${cartao ? "after:absolute after:inset-0 after:content-['']" : ""}`}
+      >
         {conteudo}
       </LinkInterno>
     ) : (
@@ -230,12 +237,12 @@ export default function TabelaDados<T>({
             <div
               key={chaveDe(item)}
               onClick={onAbrir ? (e) => clicarLinha(e, item) : undefined}
-              className={`flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0 ${
+              className={`relative flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0 ${
                 onAbrir ? "cursor-pointer active:bg-elevated/40" : ""
               } ${linhaClasse?.(item) ?? ""}`}
             >
               <div className={`text-sm font-semibold text-primary ${titulo.classe ?? ""}`} style={titulo.estilo?.(item)}>
-                {comLink(item, titulo.celula(item))}
+                {comLink(item, titulo.celula(item), true)}
               </div>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
                 {colunasCelular.map((c) => (
@@ -246,7 +253,8 @@ export default function TabelaDados<T>({
                 ))}
               </dl>
               {acoes && (
-                <div className="flex items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                // Acima do link esticado: as ações continuam recebendo o toque.
+                <div className="relative z-10 flex items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
                   {acoes(item)}
                 </div>
               )}

@@ -27,6 +27,7 @@ import Flag from "./Flag";
 import { useT, useLang } from "@/lib/i18n";
 import { ehEmailInterno, handleDoEmailInterno } from "@/lib/email-interno";
 import Avatar from "./Avatar";
+import { corComoTexto } from "@/lib/contraste";
 
 type Props = {
   onOpenSidebar: () => void;
@@ -270,7 +271,7 @@ export default function Topbar({
                     <span className="text-xs text-muted">{t("Papel")}</span>
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded"
-                      style={{ backgroundColor: `color-mix(in srgb, ${papel.cor} 13%, transparent)`, color: papel.cor }}
+                      style={{ backgroundColor: `color-mix(in srgb, ${papel.cor} 13%, transparent)`, color: corComoTexto(papel.cor) }}
                     >
                       {papel.nome}
                     </span>

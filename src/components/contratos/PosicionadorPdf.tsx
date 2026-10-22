@@ -5,6 +5,7 @@ import type { PDFDocumentProxy, PDFDocumentLoadingTask } from "pdfjs-dist";
 import { Trash2, MousePointerClick, Plus } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import type { CampoAssinatura } from "@/lib/mappers/contrato";
+import { corComoTexto } from "@/lib/contraste";
 
 // pdfjs referencia DOMMatrix (API de browser) já no import → NÃO pode carregar
 // no SSR (Node). Importado DINAMICAMENTE dentro do effect (client-only), abaixo.
@@ -332,7 +333,7 @@ function PaginaPdf({
                 height: `${c.hRel * 100}%`,
                 border: `1.5px dashed ${cor}`,
                 backgroundColor: `color-mix(in srgb, ${cor} 14%, transparent)`,
-                color: cor,
+                color: corComoTexto(cor, "claro"), // folha do PDF é sempre branca
                 // No toque, arrastar o campo move o campo (não rola a página).
                 touchAction: "none",
                 outlineColor: cor,

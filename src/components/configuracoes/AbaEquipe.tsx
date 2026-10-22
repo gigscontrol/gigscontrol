@@ -41,6 +41,7 @@ import { MODULOS } from "@/lib/permissoes/catalogo";
 import ChipsPessoa from "./ChipsPessoa";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { DadosContaUsuario, ModalUsuario, PatchEditarUsuario, VinculoResumo } from "./ModalUsuario";
+import { corComoTexto } from "@/lib/contraste";
 
 /**
  * Agrupa as chaves de um vínculo por MÓDULO, com contagem de chaves, na ordem
@@ -624,7 +625,7 @@ export default function AbaEquipe() {
                               className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                               style={{
                                 backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
-                                color: perfil?.cor ?? "#3D7BFF",
+                                color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
                               }}
                             >
                               {perfil?.nome ?? pid}
@@ -878,7 +879,7 @@ export default function AbaEquipe() {
                                   className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
-                                    color: perfil?.cor ?? "#3D7BFF",
+                                    color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
                                   }}
                                 >
                                   {perfil?.nome ?? pid}

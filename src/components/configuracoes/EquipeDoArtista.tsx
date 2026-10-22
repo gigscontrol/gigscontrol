@@ -29,6 +29,7 @@ import {
 import { expandirLegadoVinculo } from "@/lib/permissoes/legadoEquipe";
 import { PERFIS, permissoesDosPerfis, type PerfilId } from "@/lib/permissoes/perfis";
 import { useT } from "@/lib/i18n";
+import { corComoTexto } from "@/lib/contraste";
 
 type Membro = {
   userId: string;
@@ -741,7 +742,7 @@ export default function EquipeDoArtista({
                         <span
                           key={p}
                           className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`, color: perfil?.cor ?? "#3D7BFF" }}
+                          style={{ backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`, color: corComoTexto(perfil?.cor ?? "#3D7BFF") }}
                         >
                           {perfil?.nome ?? p}
                         </span>
