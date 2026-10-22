@@ -44,6 +44,7 @@ import { useFiltroArtistas } from "../FiltroArtistas";
 import { urls } from "@/lib/navegacao/rotas";
 import { formatarData as formatarDataLib } from "@/lib/formatters";
 import { comportamentoRolagem } from "@/lib/movimento";
+import { BarraLista, BuscaLista, FiltroPilulas } from "../lista/BarraLista";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
@@ -180,13 +181,22 @@ export default function HistoricoPage({
     return c;
   }, [ordenados]);
 
-  const filtrados = useMemo(
-    () =>
-      filtro === "todos"
-        ? ordenados
-        : ordenados.filter((c) => c.status === filtro),
-    [ordenados, filtro]
-  );
+  // Busca por número, título (evento/artista) e contratante — a lista de
+  // contratos era a única sem busca.
+  const [busca, setBusca] = useState("");
+  const filtrados = useMemo(() => {
+    const porStatus = filtro === "todos" ? ordenados : ordenados.filter((c) => c.status === filtro);
+    const q = busca.trim().toLowerCase();
+    if (!q) return porStatus;
+    return porStatus.filter((c) => {
+      const d = descreverContrato(c, vendas, artistas);
+      const contratante = c.vendaId ? vendas.find((v) => v.id === c.vendaId)?.contratanteNome : null;
+      return [c.numero, d.titulo, d.artista, contratante]
+        .filter(Boolean)
+        .some((x) => String(x).toLowerCase().includes(q));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ordenados, filtro, busca, vendas, artistas]);
 
   // Procura em TODOS (não só no período da lista): um link pro contrato de
   // outro mês tem que abrir mesmo com o filtro de período em "Mês atual".
@@ -414,12 +424,22 @@ export default function HistoricoPage({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <FiltroStatus
-            valor={filtro}
-            onChange={setFiltro}
-            contagem={contagem}
-            total={ordenados.length}
-          />
+          <BarraLista>
+            <BuscaLista
+              valor={busca}
+              onMudar={setBusca}
+              rotulo={t("Buscar contratos")}
+              placeholder={t("Buscar por número, evento, artista, contratante...")}
+            />
+            <FiltroPilulas
+              opcoes={[
+                { valor: "todos" as const, rotulo: t("Todos"), n: ordenados.length },
+                ...STATUS_ORDEM.map((s) => ({ valor: s, rotulo: t(STATUS_LABEL[s]), n: contagem[s] })),
+              ]}
+              valor={filtro}
+              onMudar={setFiltro}
+            />
+          </BarraLista>
           {filtrados.length === 0 ? (
             <div className="card py-10 text-center text-sm text-muted">
               {t("Nenhum contrato com esse status.")}
@@ -458,53 +478,6 @@ export default function HistoricoPage({
   );
 }
 
-// ---------------- Filtro por status ----------------
-
-/** Chips de filtro: Todos + um por status, cada um com a contagem. */
-function FiltroStatus({
-  valor,
-  onChange,
-  contagem,
-  total,
-}: {
-  valor: ContratoStatus | "todos";
-  onChange: (v: ContratoStatus | "todos") => void;
-  contagem: Record<ContratoStatus, number>;
-  total: number;
-}) {
-  const t = useT();
-  const chips: { key: ContratoStatus | "todos"; label: string; n: number }[] = [
-    { key: "todos", label: t("Todos"), n: total },
-    ...STATUS_ORDEM.map((s) => ({ key: s, label: t(STATUS_LABEL[s]), n: contagem[s] })),
-  ];
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {chips.map((c) => {
-        const ativo = valor === c.key;
-        return (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => onChange(c.key)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border transition-colors"
-            style={
-              ativo
-                ? {
-                    backgroundColor: `color-mix(in srgb, ${ACCENT} 15%, transparent)`,
-                    borderColor: ACCENT,
-                    color: ACCENT,
-                  }
-                : { borderColor: "var(--border-color)", color: "var(--text-secondary)" }
-            }
-          >
-            {c.label}
-            <span className="text-xs opacity-70 tabular-nums">{c.n}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ---------------- Detalhe (preview + ações) ----------------
 

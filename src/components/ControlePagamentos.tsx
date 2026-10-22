@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { resolverMes, dataNoMes } from "@/lib/periodo";
 import {
-  Search,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -42,6 +41,7 @@ import { useAuth } from "@/lib/auth-context";
 import { podeInformarPagamentoUI } from "@/lib/permissoes/gatesEquipeUI";
 import { diasDeAtraso, ordinal } from "@/lib/financeiro/cobranca";
 import { CobrarParcelaModal, useCobranca, type AlvoCobranca } from "./financeiro/Cobranca";
+import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
 
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
@@ -286,7 +286,7 @@ export default function ControlePagamentos({
       {
         chave: "contratante",
         titulo: "Contratante",
-        classe: "font-medium text-primary max-w-[240px] truncate",
+        classe: "font-medium text-primary max-w-[220px] truncate",
         ordenarPor: (l) => l.contratante,
         celula: (l) => l.contratante || "—",
       },
@@ -531,27 +531,19 @@ export default function ControlePagamentos({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex h-[42px] items-center gap-2 bg-surface border border-border rounded-md px-3 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input aria-label={t("Buscar pagamentos")}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar por venda, contratante, evento, artista...")}
-            className="input"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="text-muted hover:text-primary text-xs">
-              {t("Limpar")}
-            </button>
-          )}
-        </div>
+      <BarraLista>
+        <BuscaLista
+          valor={search}
+          onMudar={setSearch}
+          rotulo={t("Buscar pagamentos")}
+          placeholder={t("Buscar por venda, contratante, evento, artista...")}
+        />
 
         {!ehCobrancas && (
-        <div className="pill-group h-[42px] max-w-full overflow-x-auto [scrollbar-width:thin]">
-          {(
+        <FiltroPilulas
+          opcoes={(
             [
+              { v: "todos", rotulo: "Todas", n: parcelasPeriodo.length },
               { v: "a-receber", rotulo: "A receber", n: contadores.pendente + contadores.atrasado },
               { v: "atrasado", rotulo: "Atrasadas", n: contadores.atrasado },
               { v: "pendente", rotulo: "Pendentes", n: contadores.pendente },
@@ -559,22 +551,13 @@ export default function ControlePagamentos({
               ...(contadores.cancelado > 0
                 ? [{ v: "cancelado", rotulo: "Canceladas", n: contadores.cancelado }]
                 : []),
-              { v: "todos", rotulo: "Todas", n: parcelasPeriodo.length },
             ] as { v: StatusParcela | "todos" | "a-receber"; rotulo: string; n: number }[]
-          ).map((f) => (
-            <button
-              key={f.v}
-              type="button"
-              aria-pressed={filtroStatus === f.v} className={`pill ${filtroStatus === f.v ? "active" : ""}`}
-              onClick={() => setFiltroStatus(f.v)}
-            >
-              {t(f.rotulo)}
-              <span className="pill-contagem">{f.n}</span>
-            </button>
-          ))}
-        </div>
+          ).map((f) => ({ valor: f.v, rotulo: t(f.rotulo), n: f.n }))}
+          valor={filtroStatus}
+          onMudar={setFiltroStatus}
+        />
         )}
-      </div>
+      </BarraLista>
 
       {!ehCobrancas && fixadas.length > 0 && (
         <div className="card mb-4 overflow-hidden" style={{ borderColor: "var(--warning)" }}>

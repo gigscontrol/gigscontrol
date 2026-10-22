@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n";
-import { Plus, Search, Eye, Trash2, CalendarCheck2, Ban, Pencil } from "lucide-react";
+import { Plus, Eye, Trash2, CalendarCheck2, Ban, Pencil } from "lucide-react";
 import PageHeader from "./PageHeader";
 import Modal from "./Modal";
 import Toast from "./Toast";
@@ -20,6 +20,7 @@ import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import EstadoVazio from "./lista/EstadoVazio";
 import { MODULE_THEMES, statusEfetivoParcela, type Venda } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
+import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
 
 type Props = {
   selectedArtistas: string[];
@@ -271,20 +272,15 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-md px-3 py-2 flex-1 min-w-[240px] max-w-md foco-campo-dentro transition-colors">
-          <Search size={15} className="text-muted flex-shrink-0" />
-          <input aria-label={t("Buscar vendas")}
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("Buscar por nº, contratante, evento, local...")}
-            className="input"
-          />
-        </div>
-
+      <BarraLista>
+        <BuscaLista
+          valor={search}
+          onMudar={setSearch}
+          rotulo={t("Buscar vendas")}
+          placeholder={t("Buscar por nº, contratante, evento, local...")}
+        />
         {/* Filtro de artista: SÓ o da barra lateral (havia um 2º aqui). */}
-      </div>
+      </BarraLista>
 
       <div className="card p-0 overflow-hidden">
         {lista.length === 0 ? (
