@@ -43,6 +43,7 @@ import { STATUS_CONTRATO } from "@/lib/statusUI";
 import { useFiltroArtistas } from "../FiltroArtistas";
 import { urls } from "@/lib/navegacao/rotas";
 import { formatarData as formatarDataLib } from "@/lib/formatters";
+import { comportamentoRolagem } from "@/lib/movimento";
 
 const ACCENT = MODULE_THEMES.contratos.color;
 
@@ -596,7 +597,7 @@ function DetalheContrato({
   useEffect(() => {
     if (!focarAssinatura) return;
     const id = setTimeout(
-      () => painelAssinaturaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      () => painelAssinaturaRef.current?.scrollIntoView({ behavior: comportamentoRolagem(), block: "start" }),
       150
     );
     return () => clearTimeout(id);

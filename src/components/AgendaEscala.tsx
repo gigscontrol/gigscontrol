@@ -23,6 +23,7 @@ import { VooFormModal } from "./agenda/VooFormModal";
 import { EventoFormModal } from "./agenda/EventoFormModal";
 import { TransporteFormModal } from "./agenda/TransporteFormModal";
 import { ItemDetalheModal } from "./agenda/ItemDetalheModal";
+import { comportamentoRolagem } from "@/lib/movimento";
 
 type Props = {
   selectedArtistas: string[];
@@ -211,7 +212,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
         (el) => el.offsetParent !== null
       );
       const celular = window.matchMedia("(max-width: 767px)").matches;
-      hoje?.scrollIntoView({ behavior: "smooth", block: celular ? "start" : "center" });
+      hoje?.scrollIntoView({ behavior: comportamentoRolagem(), block: celular ? "start" : "center" });
     }, 300);
     return () => clearTimeout(timer);
   }, [activeDateRange, carregandoShows]);

@@ -443,7 +443,8 @@ export default function MapaRaio({
         .gc-mk-cidade.gc-fora { border-color:#4A5265; opacity:.5; }
         .gc-mk-ref { position:relative; display:block; width:16px; height:16px; }
         .gc-mk-ref-nucleo { position:absolute; inset:0; border-radius:50%; background:${BRAND}; border:2px solid #fff; box-shadow:0 0 16px color-mix(in srgb, var(--brand) 95%, transparent); }
-        .gc-mk-ref-pulso { position:absolute; inset:-9px; border-radius:50%; border:2px solid color-mix(in srgb, var(--brand) 55%, transparent); animation:gc-pulso 2.2s ease-out infinite; }
+        .gc-mk-ref-pulso { position:absolute; inset:-9px; border-radius:50%; border:2px solid color-mix(in srgb, var(--brand) 55%, transparent); animation:gc-pulso 2.2s ease-out 2; }
+        @media (prefers-reduced-motion: reduce) { .gc-mk-ref-pulso { animation:none; opacity:0; } }
         @keyframes gc-pulso { from { transform:scale(.45); opacity:.95; } to { transform:scale(1.7); opacity:0; } }
         .gc-mk-ref-rotulo { position:absolute; top:24px; left:50%; transform:translateX(-50%); background:color-mix(in srgb, var(--bg-main) 85%, transparent); backdrop-filter:blur(6px); border:1px solid color-mix(in srgb, var(--text-primary) 10%, transparent); color:var(--text-primary); font-size:11px; font-weight:600; padding:3px 9px; border-radius:8px; white-space:nowrap; }
         .gc-mapa .leaflet-popup-content-wrapper { background:var(--bg-surface); color:var(--text-primary); border:1px solid color-mix(in srgb, var(--text-primary) 10%, transparent); border-radius:10px; box-shadow:0 12px 32px var(--shadow-color); }

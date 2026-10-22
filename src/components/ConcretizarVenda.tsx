@@ -96,6 +96,7 @@ import {
   type Venda,
 } from "@/types";
 import { corTextoSobre } from "@/lib/contraste";
+import { comportamentoRolagem } from "@/lib/movimento";
 
 /** Dados do contato já cadastrado que a venda vai reusar (D2). */
 type ContatoAlvo = {
@@ -840,7 +841,7 @@ export default function ConcretizarVenda({
     if (Object.keys(errs).length > 0) {
       setTimeout(() => {
         const firstErr = document.querySelector('[data-has-error="true"]');
-        firstErr?.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstErr?.scrollIntoView({ behavior: comportamentoRolagem(), block: "center" });
       }, 50);
     }
     return Object.keys(errs).length === 0;
