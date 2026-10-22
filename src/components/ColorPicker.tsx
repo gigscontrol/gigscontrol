@@ -317,7 +317,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
             boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 5%, transparent)",
           }}
         />
-        <div className="flex items-center bg-elevated border border-border rounded-md px-2 py-1.5 flex-1 focus-within:border-border-strong transition-colors">
+        <div className="flex items-center bg-elevated border border-border rounded-md px-2 py-1.5 flex-1 foco-campo-dentro transition-colors">
           <span className="text-xs text-muted mr-1.5">#</span>
           <input
             type="text"

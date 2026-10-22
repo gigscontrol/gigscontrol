@@ -608,6 +608,7 @@ export default function NovoContratoPage({
                 {/* Com 100+ vendas, um select nativo virava rolagem infinita:
                     agora busca por número, evento, contratante ou artista. */}
                 <SearchableSelect
+                  ariaLabel={t("Venda (opcional — pré-preenche os dados)")}
                   value={vendaId}
                   onChange={setVendaId}
                   placeholder={t("Buscar por número, evento, contratante ou artista…")}

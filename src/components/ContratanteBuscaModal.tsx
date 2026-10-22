@@ -61,7 +61,7 @@ export default function ContratanteBuscaModal({
         <div className="campo-input flex items-center gap-2">
           <Search size={15} className="flex-shrink-0 text-muted" />
           {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
-          <input
+          <input aria-label={t("Buscar contratante")}
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}

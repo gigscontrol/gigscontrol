@@ -56,11 +56,11 @@ function AereaBloco({
   const t = useT();
   const ativo = qtd > 0;
   const airport =
-    "w-16 text-sm uppercase tracking-widest text-center rounded-md border border-border bg-surface-2 py-1.5 outline-none focus:border-border-strong placeholder:tracking-normal placeholder:normal-case";
+    "w-16 text-sm uppercase tracking-widest text-center rounded-md border border-border bg-surface-2 py-1.5 outline-none foco-campo placeholder:tracking-normal placeholder:normal-case";
   return (
     <div className={`rounded-md border transition-colors ${ativo ? "border-border-strong bg-elevated" : "border-border"}`}>
       <div className="flex items-center gap-3 py-2 px-3">
-        <input
+        <input aria-label={label}
           type="checkbox"
           checked={ativo}
           onChange={(e) => onQtd(e.target.checked ? Math.max(1, qtd) : 0)}
@@ -110,7 +110,7 @@ function LinhaQtd({
   const ativo = qtd > 0;
   return (
     <div className={`flex items-center gap-3 py-2 px-3 rounded-md border transition-colors ${ativo ? "border-border-strong bg-elevated" : "border-border"}`}>
-      <input
+      <input aria-label={label}
         type="checkbox"
         checked={ativo}
         onChange={(e) => onQtd(e.target.checked ? Math.max(1, qtd) : 0)}

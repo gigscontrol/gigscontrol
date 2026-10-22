@@ -648,7 +648,7 @@ export default function MercadoPagoSecureFields({
           >
             {t("Nome no cartão")}
           </label>
-          <input
+          <input aria-label={t("Nome no cartão")}
             type="text"
             className="campo-input"
             value={cardholderName}
@@ -666,7 +666,7 @@ export default function MercadoPagoSecureFields({
             >
               {t("Documento")}
             </label>
-            <select
+            <select aria-label={t("Documento")}
               className="campo-input"
               value={tipoDoc}
               onChange={(e) => setTipoDoc(e.target.value)}
@@ -685,7 +685,7 @@ export default function MercadoPagoSecureFields({
             >
               {t("Número do documento")}
             </label>
-            <input
+            <input aria-label={t("Número do documento")}
               type="text"
               inputMode="numeric"
               className="campo-input"
@@ -704,7 +704,7 @@ export default function MercadoPagoSecureFields({
             >
               {t("Banco emissor")}
             </label>
-            <select
+            <select aria-label={t("Banco emissor")}
               className="campo-input"
               value={issuerId}
               onChange={(e) => setIssuerId(e.target.value)}
@@ -734,7 +734,7 @@ export default function MercadoPagoSecureFields({
           >
             {t("E-mail")}
           </label>
-          <input
+          <input aria-label={t("E-mail")}
             type="email"
             className="campo-input"
             value={emailPagador}
@@ -769,7 +769,7 @@ export default function MercadoPagoSecureFields({
             >
               {t("E-mail")}
             </label>
-            <input
+            <input aria-label={t("E-mail")}
               type="email"
               className="campo-input"
               value={emailPagador}
@@ -814,7 +814,7 @@ function SelectParcelas({
       >
         {label}
       </label>
-      <select
+      <select aria-label={label}
         className="campo-input"
         value={valor}
         onChange={(e) => onChange(Number(e.target.value))}

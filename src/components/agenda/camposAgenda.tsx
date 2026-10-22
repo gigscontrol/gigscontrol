@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useId, useState, useRef, type ReactNode } from "react";
 import {
   Music,
   Calendar,
@@ -73,13 +73,39 @@ export function AgendaItemCard({
   );
 }
 
-/** Campo rotulado simples pro form. */
-export function CampoForm({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * Campo rotulado do form. O `<label>` ENVOLVE o campo — antes era irmão, sem
+ * ligação, e o leitor de tela anunciava o campo sem nome.
+ *
+ * `grupo`: conteúdo com vários controles (chips, botões segmentados, lista
+ * de passageiros) — vira um grupo nomeado. Um `<label>` em volta de botões
+ * faria o clique no rótulo acionar o 1º botão.
+ */
+export function CampoForm({
+  label,
+  children,
+  grupo = false,
+}: {
+  label: string;
+  children: ReactNode;
+  grupo?: boolean;
+}) {
+  const id = useId();
+  if (grupo) {
+    return (
+      <div role="group" aria-labelledby={id} className="flex flex-col gap-1.5">
+        <span id={id} className="text-xs font-medium text-muted">
+          {label}
+        </span>
+        {children}
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted">{label}</label>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-muted">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -117,7 +143,7 @@ export function SeletorArtistas({
   const q = busca.trim().toLowerCase();
   const filtrados = q ? artistas.filter((a) => a.name.toLowerCase().includes(q)) : artistas;
   return (
-    <CampoForm label={label}>
+    <CampoForm label={label} grupo>
       <div className="relative" ref={ref}>
         {selecionados.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
@@ -139,7 +165,7 @@ export function SeletorArtistas({
             ))}
           </div>
         )}
-        <input
+        <input aria-label={t("Buscar artista")}
           value={busca}
           onChange={(e) => {
             setBusca(e.target.value);
@@ -288,12 +314,12 @@ export function PassageirosField({
   const setP = (i: number, patch: Partial<Passageiro>) =>
     onChange(value.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   return (
-    <CampoForm label={t("Passageiros")}>
+    <CampoForm label={t("Passageiros")} grupo>
       <div className="flex flex-col gap-2">
         {value.map((p, i) => (
           <div key={i} className="rounded-md border border-border p-2.5 flex flex-col gap-2">
             <div className="flex gap-2 items-center">
-              <input
+              <input aria-label={t("Nome do passageiro")}
                 value={p.nome}
                 onChange={(e) => setP(i, { nome: e.target.value })}
                 placeholder={t("Nome completo")}

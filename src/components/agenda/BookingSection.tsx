@@ -45,7 +45,7 @@ function mensagemSolicitacao(t: Traduzir): string {
 }
 
 const INPUT =
-  "w-full bg-surface border border-border rounded-md px-3 py-2 text-sm text-primary outline-none focus:border-border-strong";
+  "w-full bg-surface border border-border rounded-md px-3 py-2 text-sm text-primary outline-none foco-campo";
 
 export default function BookingSection({ showId, booking, podeEditar, onSave }: Props) {
   const t = useT();
@@ -348,15 +348,15 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
         </div>
         <div>
           <label className="stat-label block mb-1">{t("Check-in")}</label>
-          <input type="date" className={INPUT} value={form.checkin ?? ""} onChange={(e) => set("checkin", e.target.value)} />
+          <input aria-label={t("Check-in")} type="date" className={INPUT} value={form.checkin ?? ""} onChange={(e) => set("checkin", e.target.value)} />
         </div>
         <div>
           <label className="stat-label block mb-1">{t("Check-out")}</label>
-          <input type="date" className={INPUT} value={form.checkout ?? ""} onChange={(e) => set("checkout", e.target.value)} />
+          <input aria-label={t("Check-out")} type="date" className={INPUT} value={form.checkout ?? ""} onChange={(e) => set("checkout", e.target.value)} />
         </div>
         <div>
           <label className="stat-label block mb-1">{t("Nº de quartos")}</label>
-          <input
+          <input aria-label={t("Nº de quartos")}
             type="number"
             min={0}
             className={INPUT}
@@ -418,7 +418,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
 
       <div>
         <label className="stat-label block mb-1">{t("Observações")}</label>
-        <textarea
+        <textarea aria-label={t("Observações")}
           rows={2}
           className={`${INPUT} resize-none`}
           value={form.observacoes ?? ""}
@@ -456,7 +456,7 @@ function CampoInput({
   return (
     <div>
       <label className="stat-label block mb-1">{label}</label>
-      <input
+      <input aria-label={label}
         type="text"
         className={INPUT}
         value={value ?? ""}

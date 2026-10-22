@@ -495,13 +495,13 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
               </div>
               {editandoInfoExtra ? (
                 <div className="flex flex-col gap-2">
-                  <textarea
+                  <textarea aria-label={t("Informações extras")}
                     value={infoExtraDraft}
                     onChange={(e) => setInfoExtraDraft(e.target.value)}
                     rows={4}
                     maxLength={1000}
                     placeholder={t("Ex: Promoção especial — desconto de 10% se confirmar até amanhã.")}
-                    className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none focus:border-border-strong resize-none"
+                    className="bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none foco-campo resize-none"
                     autoFocus
                   />
                   <div className="flex items-center justify-end gap-2">

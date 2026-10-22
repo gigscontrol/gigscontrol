@@ -235,7 +235,7 @@ export default function MeusContratosPage({
                   >
                     <div className="flex items-start justify-between gap-2">
                       {emEdicao ? (
-                        <input
+                        <input aria-label={t("Nome da pasta")}
                           autoFocus
                           value={nomeEdit}
                           onClick={(e) => e.stopPropagation()}

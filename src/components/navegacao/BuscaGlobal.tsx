@@ -372,7 +372,7 @@ export default function BuscaGlobal() {
       >
         <div className="flex items-center gap-3 border-b border-border pl-5 pr-3">
           <Search size={18} className="flex-shrink-0 text-muted" />
-          <input
+          <input aria-label={t("Buscar")}
             ref={inputRef}
             value={consulta}
             onChange={(e) => setConsulta(e.target.value)}

@@ -5,7 +5,7 @@ import { mascararCapacidade } from "@/lib/formatters";
 import { useT } from "@/lib/i18n";
 
 const INPUT_BASE =
-  "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors focus:border-border-strong";
+  "bg-elevated border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-muted outline-none transition-colors foco-campo";
 
 type Props = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,

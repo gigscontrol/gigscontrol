@@ -433,7 +433,7 @@ export function ModalNovoArtista({
           <Secao titulo={t("Acesso ao sistema")}>
             <Campo label={t("Login (username)")} erro={erros.has("username")}>
               <div
-                className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong"
+                className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 foco-campo-dentro"
                 style={erros.has("username") ? { borderColor: "var(--danger)" } : undefined}
               >
                 {/* Input cresce conforme o usuário digita (largura em `ch`
@@ -593,7 +593,7 @@ export function ModalNovoArtista({
                             setErroGeral(null);
                           }}
                           placeholder={m === "perc-fixa" ? "15" : "500"}
-                          className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none focus:border-border-strong"
+                          className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none foco-campo"
                           style={
                             erros.has("taxaValor")
                               ? { borderColor: "var(--danger)" }

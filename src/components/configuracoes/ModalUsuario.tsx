@@ -562,7 +562,7 @@ export function ModalUsuario({
             <Secao titulo={t("Acesso ao sistema")}>
               <Campo label={t("Login (username)")} erro={erros.has("username")}>
                 <div
-                  className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong"
+                  className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 foco-campo-dentro"
                   style={erros.has("username") ? { borderColor: "var(--danger)" } : undefined}
                 >
                   <input
@@ -714,7 +714,7 @@ export function ModalUsuario({
                     {(nome.trim().charAt(0) || "?").toUpperCase()}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <input
+                    <input aria-label={t("Apelido")}
                       value={nome}
                       onChange={(e) => {
                         setNome(e.target.value);
@@ -753,6 +753,7 @@ export function ModalUsuario({
                   <div className="border-t border-border" />
                   <Secao titulo={t("País e cidade onde reside")}>
                     <CidadeGlobalAutocomplete
+                      ariaLabel={t("País e cidade onde reside")}
                       value={cidadeSel}
                       onChange={setCidadeSel}
                       onPaisChange={setPaisPessoal}

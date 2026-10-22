@@ -231,7 +231,7 @@ function PresetModal({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-muted">{t("Nome do preset")}</label>
-          <input
+          <input aria-label={t("Nome do preset")}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
             maxLength={MAX_NOME_PRESET}
@@ -279,7 +279,7 @@ function PresetModal({
         {/* Adicionar item: texto livre + sugestões do rider/catálogo */}
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
-            <input
+            <input aria-label={t("Adicionar item")}
               value={novoItem}
               onChange={(e) => setNovoItem(e.target.value)}
               onKeyDown={(e) => {

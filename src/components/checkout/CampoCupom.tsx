@@ -137,7 +137,7 @@ export default function CampoCupom({
   return (
     <div className="mb-1">
       <div className="flex items-center gap-2">
-        <input
+        <input aria-label={t("Código do cupom")}
           type="text"
           value={codigo}
           onChange={(e) => {

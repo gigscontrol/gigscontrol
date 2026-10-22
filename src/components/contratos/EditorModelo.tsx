@@ -614,7 +614,7 @@ export default function EditorModelo({
           {t("Voltar")}
         </button>
 
-        <input
+        <input aria-label={t("Nome do modelo")}
           type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
@@ -982,7 +982,7 @@ export default function EditorModelo({
                               <X size={13} />
                             </button>
                           </div>
-                          <input
+                          <input aria-label={t("Nome da testemunha")}
                             type="text"
                             value={testemunha.nome}
                             onChange={(e) =>
@@ -991,7 +991,7 @@ export default function EditorModelo({
                             placeholder={t("Nome da testemunha")}
                             className="campo-input"
                           />
-                          <input
+                          <input aria-label={t("Documento da testemunha")}
                             type="text"
                             value={testemunha.documento}
                             onChange={(e) =>

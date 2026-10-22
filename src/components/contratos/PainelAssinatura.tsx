@@ -363,7 +363,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                 <div className="grid flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="stat-label mb-1 block">{t("Nome")}</label>
-                    <input
+                    <input aria-label={t("Nome")}
                       type="text"
                       className="campo-input"
                       value={linha.nome}
@@ -373,7 +373,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                   </div>
                   <div>
                     <label className="stat-label mb-1 block">{t("E-mail")}</label>
-                    <input
+                    <input aria-label={t("E-mail")}
                       type="email"
                       className="campo-input"
                       value={linha.email}
@@ -383,7 +383,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                   </div>
                   <div>
                     <label className="stat-label mb-1 block">{t("Telefone")}</label>
-                    <input
+                    <input aria-label={t("Telefone")}
                       type="tel"
                       className="campo-input"
                       value={linha.telefone}
@@ -393,7 +393,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                   </div>
                   <div>
                     <label className="stat-label mb-1 block">{t("Papel")}</label>
-                    <input
+                    <input aria-label={t("Papel")}
                       type="text"
                       className="campo-input"
                       value={linha.papel}
@@ -583,7 +583,7 @@ export default function PainelAssinatura({ contrato }: { contrato: Contrato }) {
                 </div>
               ) : (
                 <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <input
+                  <input aria-label={t("Link de assinatura")}
                     type="text"
                     readOnly
                     value={linkAssinatura(s.token)}

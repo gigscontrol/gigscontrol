@@ -430,7 +430,7 @@ export function ModalEditarArtista({
               {iniciaisDoNome(nome) || "?"}
             </span>
             <div className="flex-1 min-w-0">
-              <input
+              <input aria-label={t("Nome do artista")}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder={t("Nome do artista")}
@@ -529,7 +529,7 @@ export function ModalEditarArtista({
 
           {/* Login (username) */}
           <Campo label={t("Login (username)")}>
-            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 focus-within:border-border-strong">
+            <div className="flex items-center bg-elevated border border-border rounded-md px-3 py-2 foco-campo-dentro">
               {/* Input com largura dinâmica (em ch + font-mono) — o
                   sufixo da agência fica colado na ponta do que foi
                   digitado, mesmo padrão do cadastro novo. */}
@@ -879,7 +879,7 @@ export function ModalEditarArtista({
                         value={taxaValor}
                         onChange={(e) => setTaxaValor(e.target.value)}
                         placeholder={m === "perc-fixa" ? "15" : "500"}
-                        className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none focus:border-border-strong"
+                        className="bg-main border border-border rounded px-2 py-0.5 text-sm w-20 text-right outline-none foco-campo"
                         onClick={(e) => e.preventDefault()}
                       />
                       {m === "perc-fixa" && (
