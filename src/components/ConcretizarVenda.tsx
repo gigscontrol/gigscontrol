@@ -2692,7 +2692,7 @@ function SectionCard({
             {icon}
           </div>
         )}
-        <div className="section-title">{title}</div>
+        <h2 className="section-title">{title}</h2>
       </div>
       {children}
     </div>

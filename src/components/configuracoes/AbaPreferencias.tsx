@@ -72,7 +72,7 @@ export default function AbaPreferencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Languages size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("Idioma padrão")}</div>
+            <h2 className="section-title">{t("Idioma padrão")}</h2>
           </div>
           <p className="text-xs text-muted">
             {t("Idioma que aparece ao entrar e com que novos usuários começam.")}
@@ -114,7 +114,7 @@ export default function AbaPreferencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Globe size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("País padrão")}</div>
+            <h2 className="section-title">{t("País padrão")}</h2>
           </div>
           <p className="text-xs text-muted">
             {t("Default de país nos contatos, no telefone e nas cidades. Dá pra trocar campo a campo na hora de preencher.")}
@@ -128,7 +128,7 @@ export default function AbaPreferencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <CalendarDays size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("Formato de data")}</div>
+            <h2 className="section-title">{t("Formato de data")}</h2>
           </div>
           <p className="text-xs text-muted">
             {t("Como as datas aparecem e são digitadas no sistema.")}
@@ -170,7 +170,7 @@ export default function AbaPreferencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Clock size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("Fuso horário padrão")}</div>
+            <h2 className="section-title">{t("Fuso horário padrão")}</h2>
           </div>
           <p className="text-xs text-muted">
             {t("Fuso que já vem selecionado ao criar shows e nos horários de apresentação. É só exibição — não muda nada no backend nem os horários já salvos.")}
@@ -201,7 +201,7 @@ export default function AbaPreferencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Coins size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("Moeda padrão da agência")}</div>
+            <h2 className="section-title">{t("Moeda padrão da agência")}</h2>
           </div>
           <p className="text-xs text-muted">
             {t("Moeda que já vem selecionada ao criar orçamentos e vendas. Cada venda guarda a sua — trocar aqui não altera vendas já feitas.")}

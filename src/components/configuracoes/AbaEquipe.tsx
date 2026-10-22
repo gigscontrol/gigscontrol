@@ -442,7 +442,7 @@ export default function AbaEquipe() {
                     key={f}
                     type="button"
                     onClick={() => setFiltroStatus(f)}
-                    className={`pill ${filtroStatus === f ? "active" : ""}`}
+                    aria-pressed={filtroStatus === f} className={`pill ${filtroStatus === f ? "active" : ""}`}
                   >
                     {f === "todos" ? t("Todos") : f === "ativos" ? t("Ativos") : t("Bloqueados")}
                   </button>
@@ -466,7 +466,7 @@ export default function AbaEquipe() {
           >
             <Users size={22} />
           </div>
-          <div className="section-title">{t("Nenhum usuário da equipe cadastrado")}</div>
+          <h2 className="section-title">{t("Nenhum usuário da equipe cadastrado")}</h2>
           <p className="text-sm text-muted max-w-sm">
             {t("Cadastre o primeiro usuário da sua equipe pra começar.")}
           </p>
@@ -977,9 +977,9 @@ export default function AbaEquipe() {
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               <Trash2 size={14} style={{ color: "var(--brand)" }} />
-              <div className="section-title">
+              <h2 className="section-title">
                 {t("Na lixeira ({n})", { n: lixeiraUsuarios.length })}
-              </div>
+              </h2>
             </div>
             <span className="text-xs text-muted">
               {t("Recuperáveis por 30 dias")}

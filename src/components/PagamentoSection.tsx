@@ -110,7 +110,7 @@ export default function PagamentoSection({
         <div className="pill-group">
           <button
             type="button"
-            className={`pill ${modo === "percentual" ? "active" : ""}`}
+            aria-pressed={modo === "percentual"} className={`pill ${modo === "percentual" ? "active" : ""}`}
             onClick={() => onModoChange("percentual")}
           >
             <Percent size={11} />
@@ -118,7 +118,7 @@ export default function PagamentoSection({
           </button>
           <button
             type="button"
-            className={`pill ${modo === "valor" ? "active" : ""}`}
+            aria-pressed={modo === "valor"} className={`pill ${modo === "valor" ? "active" : ""}`}
             onClick={() => onModoChange("valor")}
           >
             <DollarSign size={11} />

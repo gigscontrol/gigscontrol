@@ -464,6 +464,16 @@
      `focus:border-border-strong` — 8% → 12% de branco, 1,1:1, mais fraco
      que o próprio hover. `foco-campo` vai no campo; `foco-campo-dentro`,
      no invólucro. */
+  /* "Pular para o conteúdo": fora da tela até receber o foco do teclado. */
+  .pular-conteudo {
+    position: fixed; top: 8px; left: 8px; z-index: 10000;
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    background: var(--bg-elevated); color: var(--text-primary);
+    border: 1px solid var(--brand); font-size: 0.875rem; font-weight: 600;
+    transform: translateY(-200%);
+  }
+  .pular-conteudo:focus { transform: none; }
+
   .foco-campo:focus,
   .foco-campo-dentro:focus-within {
     border-color: var(--brand);

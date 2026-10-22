@@ -150,7 +150,7 @@ export default function VendaDetalhe({
           {t("Voltar")}
         </button>
         <div className="card text-center py-12">
-          <div className="section-title">{t("Venda não encontrada")}</div>
+          <h2 className="section-title">{t("Venda não encontrada")}</h2>
         </div>
       </div>
     );

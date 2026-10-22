@@ -207,7 +207,7 @@ export default function DashboardContratos({
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <FileText size={18} className="text-muted" />
           </div>
-          <div className="section-title mb-1">{t("Nenhum contrato ainda")}</div>
+          <h2 className="section-title mb-1">{t("Nenhum contrato ainda")}</h2>
           <div className="section-subtitle mb-4">
             {t("Gere o primeiro em Novo Contrato.")}
           </div>
@@ -243,7 +243,7 @@ export default function DashboardContratos({
           {/* Contratos recentes */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <div className="section-title">{t("Contratos recentes")}</div>
+              <h2 className="section-title">{t("Contratos recentes")}</h2>
               <button
                 onClick={() => onNavigate?.("contratos", "contratos-historico")}
                 className="btn-ghost text-xs inline-flex items-center gap-1"

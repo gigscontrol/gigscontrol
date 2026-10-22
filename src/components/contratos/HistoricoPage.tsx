@@ -368,7 +368,7 @@ export default function HistoricoPage({
         </div>
       ) : contratoId && !selecionado ? (
         <div className="card flex flex-col items-center gap-3 py-12 text-center">
-          <div className="section-title">{t("Contrato não encontrado")}</div>
+          <h2 className="section-title">{t("Contrato não encontrado")}</h2>
           <button type="button" onClick={onVoltar} className="btn btn-secondary">
             <ArrowLeft size={15} />
             {t("Voltar")}
@@ -402,7 +402,7 @@ export default function HistoricoPage({
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <FileText size={18} className="text-muted" />
           </div>
-          <div className="section-title mb-1">{t("Nenhum contrato gerado ainda")}</div>
+          <h2 className="section-title mb-1">{t("Nenhum contrato gerado ainda")}</h2>
           <div className="section-subtitle">
             {t("Crie um em")}{" "}<span className="font-medium">{t("Novo contrato")}</span>.
           </div>

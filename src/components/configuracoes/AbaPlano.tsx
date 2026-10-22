@@ -312,7 +312,7 @@ export default function AbaPlano() {
           {/* Upgrades */}
           {upgrades.length > 0 && (
             <section className="flex flex-col gap-2">
-              <div className="section-title">{t("Fazer upgrade")}</div>
+              <h2 className="section-title">{t("Fazer upgrade")}</h2>
               {upgrades.map((p) => {
                 const sel = selUp === p.id;
                 return (
@@ -410,7 +410,7 @@ export default function AbaPlano() {
           {/* Downgrades */}
           {downgrades.length > 0 && (
             <section className="flex flex-col gap-2">
-              <div className="section-title">{t("Fazer downgrade")}</div>
+              <h2 className="section-title">{t("Fazer downgrade")}</h2>
               <p className="text-xs text-muted">
                 {t("O downgrade vale só na próxima renovação (sem reembolso). Você mantém o plano atual até os dias já pagos acabarem.")}
               </p>

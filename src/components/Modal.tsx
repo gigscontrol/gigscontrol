@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useT } from "@/lib/i18n";
-import { pilhaModais } from "@/lib/pilhaModais";
+import { useDialogo } from "@/lib/useDialogo";
 
 type Props = {
   isOpen: boolean;
@@ -16,13 +16,6 @@ type Props = {
   children: ReactNode;
   maxWidth?: number;
 };
-
-/** `overflow` do body antes do 1º modal abrir (devolvido quando o último fecha). */
-let overflowAntes = "";
-
-/** Seletor dos elementos que participam do ciclo de Tab dentro do dialog. */
-const FOCAVEIS =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function Modal({
   isOpen,
@@ -44,75 +37,8 @@ export default function Modal({
 
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // `onClose` num ref: as telas passam `onClose` inline, que muda a cada
-  // render. Com ele nas dependências do efeito abaixo, cada tecla digitada num
-  // campo do modal (estado na tela de trás) refazia o efeito e jogava o foco
-  // pro X — a 2ª letra já se perdia.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // FOCUS TRAP (auditoria 27/08/2026): antes o Tab escapava pro fundo da
-    // página. Ao abrir: foca o 1º elemento focável do dialog; Tab/Shift+Tab
-    // circulam DENTRO dele; ao fechar: devolve o foco pra quem abriu.
-    const eu = pilhaModais.abrir();
-    const focoAnterior = document.activeElement as HTMLElement | null;
-    const focarPrimeiro = () => {
-      const raiz = dialogRef.current;
-      if (!raiz) return;
-      // Um campo com autoFocus já pegou o foco: fica nele.
-      if (raiz.contains(document.activeElement)) return;
-      const alvo = raiz.querySelector<HTMLElement>(FOCAVEIS);
-      (alvo ?? raiz).focus();
-    };
-    // Depois do paint — o portal precisa existir no DOM.
-    const id = requestAnimationFrame(focarPrimeiro);
-
-    const handler = (e: KeyboardEvent) => {
-      // Modal dentro de modal: só o do topo responde (o de baixo não puxa o
-      // foco nem fecha junto). `defaultPrevented` cobre a ordem inversa dos
-      // listeners — quem tratou o Esc primeiro marca o evento.
-      if (!pilhaModais.noTopo(eu) || e.defaultPrevented) return;
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const raiz = dialogRef.current;
-      if (!raiz) return;
-      const focaveis = Array.from(raiz.querySelectorAll<HTMLElement>(FOCAVEIS));
-      if (focaveis.length === 0) return;
-      const primeiro = focaveis[0];
-      const ultimo = focaveis[focaveis.length - 1];
-      const ativo = document.activeElement;
-      // Foco fora do dialog (ou nas pontas) → circula pra dentro.
-      if (e.shiftKey) {
-        if (ativo === primeiro || !raiz.contains(ativo)) {
-          e.preventDefault();
-          ultimo.focus();
-        }
-      } else if (ativo === ultimo || !raiz.contains(ativo)) {
-        e.preventDefault();
-        primeiro.focus();
-      }
-    };
-    document.addEventListener("keydown", handler);
-    if (pilhaModais.tamanho === 1) overflowAntes = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      cancelAnimationFrame(id);
-      document.removeEventListener("keydown", handler);
-      pilhaModais.fechar(eu);
-      if (pilhaModais.tamanho === 0) document.body.style.overflow = overflowAntes;
-      // Restaura o foco pra quem abriu o modal (se ainda está na página).
-      if (focoAnterior && document.contains(focoAnterior)) focoAnterior.focus();
-    };
-  }, [isOpen]);
+  // Foco, Tab, Esc, pilha de modais e trava de rolagem: lib/useDialogo.
+  useDialogo(dialogRef, isOpen, onClose);
 
   if (!isOpen || !mounted) return null;
 

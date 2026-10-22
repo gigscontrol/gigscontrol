@@ -301,7 +301,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} style={{ color: ACCENT }} />
-            <div className="section-title">{t("Principais contratantes")}</div>
+            <h2 className="section-title">{t("Principais contratantes")}</h2>
             <span className="badge badge-neutral">{tituloPeriodo}</span>
           </div>
           <button

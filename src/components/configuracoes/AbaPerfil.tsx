@@ -306,7 +306,7 @@ function MeusDados({
       <section className="card">
         <div className="flex items-center gap-2 mb-1">
           <UserIcon size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Meus dados")}</div>
+          <h2 className="section-title">{t("Meus dados")}</h2>
         </div>
         <div className="text-sm text-muted flex items-center gap-2 mt-3">
           <Loader2 size={14} className="animate-spin" /> {t("Carregando...")}
@@ -320,7 +320,7 @@ function MeusDados({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <UserIcon size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Meus dados")}</div>
+          <h2 className="section-title">{t("Meus dados")}</h2>
         </div>
         <div className="section-subtitle">
           {t("Seus dados pessoais. Aparecem nos contratos e orçamentos gerados pelo sistema.")}
@@ -643,7 +643,7 @@ function AcessoCard({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Acesso")}</div>
+          <h2 className="section-title">{t("Acesso")}</h2>
         </div>
         <div className="section-subtitle">
           {t("Seu e-mail de login e a senha de acesso à sua dashboard.")}

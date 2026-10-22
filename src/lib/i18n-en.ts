@@ -4177,4 +4177,9 @@ export const EN: Record<string, string> = {
   "Buscar país ou DDI": "Search country or dialing code",
   "Buscar fuso horário": "Search time zone",
   "Nome do passageiro": "Passenger name",
+  // --- Diálogos, menu e navegação (out/2026) ---
+  "Pular para o conteúdo": "Skip to content",
+  "Menu principal": "Main menu",
+  "Credenciais de acesso": "Login credentials",
+  "Selfie ao vivo": "Live selfie",
 };

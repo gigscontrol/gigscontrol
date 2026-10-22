@@ -97,7 +97,7 @@ export default function RankingCard({
           <span style={{ color: accent }} className="flex-shrink-0">
             {icon}
           </span>
-          <div className="section-title truncate">{titulo}</div>
+          <h2 className="section-title truncate">{titulo}</h2>
         </div>
 
         {/* Toggle segmentado de métrica */}

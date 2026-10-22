@@ -376,9 +376,9 @@ export default function Contatos({
     return (
       <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
         <div className="card text-center py-12">
-          <div className="section-title mb-3">
+          <h2 className="section-title mb-3">
             {!contatosCarregados ? t("Carregando...") : t("Contato não encontrado")}
-          </div>
+          </h2>
           {contatosCarregados && (
             <button onClick={onVoltarDaFicha} className="btn btn-secondary">
               {t("Voltar")}
@@ -1175,7 +1175,7 @@ function EmptyTable({ label }: { label: string }) {
       <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
         <Search size={18} className="text-muted" />
       </div>
-      <div className="section-title mb-1">{label}</div>
+      <h2 className="section-title mb-1">{label}</h2>
       <div className="section-subtitle">{t("Ajuste a busca ou cadastre um novo registro")}</div>
     </div>
   );

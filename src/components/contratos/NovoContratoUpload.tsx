@@ -220,7 +220,7 @@ export default function NovoContratoUpload() {
         </div>
         <div className="card flex flex-col gap-4">
           <div>
-            <div className="section-title">{t("Quem vai assinar")}</div>
+            <h2 className="section-title">{t("Quem vai assinar")}</h2>
             <p className="text-xs text-muted">
               {t("Todos assinam na tela e informam CPF/CNPJ. Marque abaixo se quer exigir mais autenticação de cada um.")}
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useDialogo } from "@/lib/useDialogo";
 import { useT } from "@/lib/i18n";
 import {
   Music,
@@ -100,6 +101,10 @@ export function ModalNovoArtista({
   modoInline = false,
 }: Props) {
   const t = useT();
+  // Overlay próprio (não usa o Modal): mesmo comportamento de diálogo —
+  // foco preso dentro, Esc fecha, foco volta pra quem abriu.
+  const camadaRef = useRef<HTMLDivElement>(null);
+  useDialogo(camadaRef, !modoInline, onCancelar);
   // Seção 1 — dados básicos
   const [nome, setNome] = useState("");
   const [cor, setCor] = useState(CORES[0]);
@@ -316,7 +321,7 @@ export function ModalNovoArtista({
         <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-surface z-10">
           <div className="flex items-center gap-2">
             <Music size={16} style={{ color: "var(--brand)" }} />
-            <div className="section-title">{t("Novo artista")}</div>
+            <h2 className="section-title">{t("Novo artista")}</h2>
           </div>
           <button onClick={onCancelar} className="btn-ghost p-1.5 rounded" aria-label={t("Fechar")}>
             <X size={18} />
@@ -703,6 +708,10 @@ export function ModalNovoArtista({
 
   return (
     <div
+      ref={camadaRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("Novo artista")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "var(--overlay-scrim)" }}
       onClick={onCancelar}

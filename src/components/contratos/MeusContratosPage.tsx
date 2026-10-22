@@ -206,7 +206,7 @@ export default function MeusContratosPage({
         <div className="flex flex-col gap-6">
           {/* ---- PASTAS (topo) ---- */}
           <section>
-            <div className="section-title mb-3">{t("Pastas")}</div>
+            <h2 className="section-title mb-3">{t("Pastas")}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
               {[
                 { id: PASTA_ARQUIVADOS, nome: t("Arquivados"), sistema: true },
@@ -343,10 +343,10 @@ export default function MeusContratosPage({
                 style={{ borderColor: hover === aberta ? ACCENT : undefined }}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="section-title inline-flex items-center gap-2">
+                  <h2 className="section-title inline-flex items-center gap-2">
                     <FolderOpen size={15} style={{ color: ACCENT }} />
                     {nomePorPasta.get(aberta)}
-                  </div>
+                  </h2>
                   <button onClick={() => setAberta(null)} className="btn-ghost text-xs">
                     {t("Fechar")}
                   </button>
@@ -376,10 +376,10 @@ export default function MeusContratosPage({
 
           {/* ---- CONTRATOS SEM PASTA (embaixo) ---- */}
           <section>
-            <div className="section-title mb-3">
+            <h2 className="section-title mb-3">
               {t("Contratos sem pasta")}{" "}
               <span className="text-muted font-normal">({semPasta.length})</span>
-            </div>
+            </h2>
             {contratos.length === 0 ? (
               <div className="card text-sm text-muted py-8 text-center">
                 {t("Nenhum contrato ainda")}

@@ -143,9 +143,9 @@ export default function MiniLixeira({ tipo }: Props) {
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Trash2 size={14} style={{ color: "var(--brand)" }} />
-            <div className="section-title">
+            <h2 className="section-title">
               {t("Na lixeira ({n})", { n: dados.itens.length })}
-            </div>
+            </h2>
           </div>
           <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
         </div>

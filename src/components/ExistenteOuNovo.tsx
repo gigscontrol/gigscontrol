@@ -44,10 +44,10 @@ export default function ExistenteOuNovo({
 
   return (
     <div>
-      <div className="section-title mb-3">
+      <h2 className="section-title mb-3">
         {titulo}
         {required && <span className="text-danger"> *</span>}
-      </div>
+      </h2>
 
       {mode === "novo" ? (
         <div className="flex flex-col gap-3">{newFormChildren}</div>

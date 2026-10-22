@@ -106,13 +106,15 @@ export default function CidadeGlobalAutocomplete({
     if (!open && !openPais) return;
     const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
         setOpen(false);
         setOpenPais(false);
         setBuscaPais("");
       }
     };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
+    // Captura: antes do Esc do modal em volta (fecha só esta lista).
+    document.addEventListener("keydown", h, true);
+    return () => document.removeEventListener("keydown", h, true);
   }, [open, openPais]);
 
   const fecharTudo = () => {

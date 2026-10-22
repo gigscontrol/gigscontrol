@@ -93,10 +93,14 @@ export default function TimezoneSelect({ value, onChange, disabled }: Props) {
   useEffect(() => {
     if (!aberto) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setAberto(false);
+      }
     }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    // Captura: antes do Esc do modal em volta (fecha só esta lista).
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
   }, [aberto]);
 
   const rotuloAtual = value

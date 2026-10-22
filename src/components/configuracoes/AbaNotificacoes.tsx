@@ -98,7 +98,7 @@ export default function AbaNotificacoes() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Bell size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Notificações")}</div>
+          <h2 className="section-title">{t("Notificações")}</h2>
           {naoLidas > 0 && (
             <span
               className="text-[0.6875rem] font-bold px-1.5 py-0.5 rounded text-white"
@@ -118,13 +118,13 @@ export default function AbaNotificacoes() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="pill-group">
             <button
-              className={`pill ${!apenasNaoLidas ? "active" : ""}`}
+              aria-pressed={!apenasNaoLidas} className={`pill ${!apenasNaoLidas ? "active" : ""}`}
               onClick={() => setApenasNaoLidas(false)}
             >
               {t("Todas")}
             </button>
             <button
-              className={`pill ${apenasNaoLidas ? "active" : ""}`}
+              aria-pressed={apenasNaoLidas} className={`pill ${apenasNaoLidas ? "active" : ""}`}
               onClick={() => setApenasNaoLidas(true)}
             >
               {t("Não lidas")} {naoLidas > 0 && `(${naoLidas})`}

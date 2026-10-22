@@ -356,7 +356,7 @@ export default function VendasDashboard({
         {/* Orçamentos recentes */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">{t("Orçamentos recentes")}</div>
+            <h2 className="section-title">{t("Orçamentos recentes")}</h2>
             <button
               onClick={() => onNavigate?.("vendas", "vendas-historico")}
               className="btn-ghost text-xs inline-flex items-center gap-1"
@@ -406,7 +406,7 @@ export default function VendasDashboard({
         {/* Vendas recentes */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title">{t("Vendas recentes")}</div>
+            <h2 className="section-title">{t("Vendas recentes")}</h2>
             <button
               onClick={() => onNavigate?.("vendas", "vendas-historico-vendas")}
               className="btn-ghost text-xs inline-flex items-center gap-1"

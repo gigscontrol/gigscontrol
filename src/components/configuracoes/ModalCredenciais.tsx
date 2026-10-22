@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialogo } from "@/lib/useDialogo";
 import { useT } from "@/lib/i18n";
 import { Copy, CheckCircle2 } from "lucide-react";
 
@@ -20,6 +21,9 @@ export function ModalCredenciais({
   onFechar: () => void;
 }) {
   const t = useT();
+  // Sem Esc: as credenciais aparecem UMA vez — sai só pelo botão, depois de copiar.
+  const camadaRef = useRef<HTMLDivElement>(null);
+  useDialogo(camadaRef, true);
   const [copiou, setCopiou] = useState<"user" | "pass" | "ambos" | null>(null);
   const mostraUsuario = username !== "—";
 
@@ -38,6 +42,10 @@ export function ModalCredenciais({
 
   return (
     <div
+      ref={camadaRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("Credenciais de acesso")}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "var(--overlay-scrim)" }}
     >
@@ -56,9 +64,9 @@ export function ModalCredenciais({
           >
             <CheckCircle2 size={24} />
           </div>
-          <div className="section-title">
+          <h2 className="section-title">
             {mostraUsuario ? t("Artista cadastrado") : t("Senha redefinida")}
-          </div>
+          </h2>
           <div className="text-xs text-secondary mt-1">
             {mostraUsuario
               ? t("Copie e mande pro {nome}. Aparece só uma vez.", { nome: nomeArtista })

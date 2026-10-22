@@ -262,7 +262,7 @@ export default function AbaLixeira() {
       <div className="card">
         <div className="flex items-center gap-2 mb-1">
           <Trash2 size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Lixeira")}</div>
+          <h2 className="section-title">{t("Lixeira")}</h2>
         </div>
         <div className="section-subtitle">
           {t("Itens removidos ficam aqui por")}{" "}
@@ -275,7 +275,7 @@ export default function AbaLixeira() {
         <div className="pill-group flex-wrap">
           <button
             type="button"
-            className={`pill ${subAba === "todos" ? "active" : ""}`}
+            aria-pressed={subAba === "todos"} className={`pill ${subAba === "todos" ? "active" : ""}`}
             onClick={() => setSubAba("todos")}
           >
             {t("Todos")} ({totalItens})
@@ -287,7 +287,7 @@ export default function AbaLixeira() {
               <button
                 key={tipo}
                 type="button"
-                className={`pill ${subAba === tipo ? "active" : ""}`}
+                aria-pressed={subAba === tipo} className={`pill ${subAba === tipo ? "active" : ""}`}
                 onClick={() => setSubAba(tipo)}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
               >
@@ -319,9 +319,9 @@ export default function AbaLixeira() {
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Icon size={14} style={{ color: m.cor }} />
-                  <div className="section-title">
+                  <h2 className="section-title">
                     {t(m.label)} ({linhas.length})
-                  </div>
+                  </h2>
                 </div>
                 <span className="text-xs text-muted">{t("Recuperáveis por 30 dias")}</span>
               </div>

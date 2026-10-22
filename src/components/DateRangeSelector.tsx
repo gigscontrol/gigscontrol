@@ -107,10 +107,14 @@ export default function DateRangeSelector<T extends string>({
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsOpen(false);
+      }
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    // Captura: antes do Esc do modal em volta (fecha só o seletor).
+    document.addEventListener("keydown", handler, true);
+    return () => document.removeEventListener("keydown", handler, true);
   }, [isOpen]);
 
   // Mês mínimo permitido pro ano selecionado

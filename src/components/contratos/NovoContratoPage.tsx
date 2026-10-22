@@ -480,7 +480,7 @@ export default function NovoContratoPage({
       />
 
       {/* Tudo numa página: (1) gerar por modelo + venda; (2) subir PDF + posicionar. */}
-      <div className="section-title mt-8 mb-4">{t("1. Gerar a partir de um modelo")}</div>
+      <h2 className="section-title mt-8 mb-4">{t("1. Gerar a partir de um modelo")}</h2>
 
       <>
 
@@ -571,7 +571,7 @@ export default function NovoContratoPage({
       {editaveis.length === 0 ? (
         <div className="card flex flex-col items-center text-center gap-3 py-16">
           <FileText size={26} style={{ color: ACCENT }} />
-          <div className="section-title">{t("Nenhum modelo disponível")}</div>
+          <h2 className="section-title">{t("Nenhum modelo disponível")}</h2>
           <p className="text-sm text-muted max-w-sm">
             {t("Crie um modelo de contrato primeiro (Contratos → Modelos) para poder gerar contratos.")}
           </p>
@@ -707,7 +707,7 @@ export default function NovoContratoPage({
             {!modelo ? (
               <div className="card flex flex-col items-center text-center gap-3 py-16">
                 <FileSignature size={26} style={{ color: ACCENT }} />
-                <div className="section-title">{t("Selecione um modelo")}</div>
+                <h2 className="section-title">{t("Selecione um modelo")}</h2>
                 <p className="text-sm text-muted max-w-sm">
                   {t("Escolha um modelo (e opcionalmente uma venda) para ver o contrato preenchido aqui.")}
                 </p>
@@ -816,9 +816,9 @@ export default function NovoContratoPage({
 
       {/* 2. Subir um contrato pronto (PDF) e posicionar as assinaturas. */}
       <div className="border-t border-border mt-12 pt-8">
-        <div className="section-title mb-1">
+        <h2 className="section-title mb-1">
           {t("2. Ou: subir um PDF pronto e posicionar as assinaturas")}
-        </div>
+        </h2>
         <p className="section-subtitle mb-4">
           {t("Já tem o contrato feito? Envie o PDF, escolha os signatários e posicione onde cada um assina.")}
         </p>

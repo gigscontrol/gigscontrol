@@ -95,7 +95,7 @@ export default function AbaHistorico() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <History size={16} style={{ color: "var(--brand)" }} />
-          <div className="section-title">{t("Histórico de ações")}</div>
+          <h2 className="section-title">{t("Histórico de ações")}</h2>
         </div>
         <div className="section-subtitle">
           {t("Trilha de auditoria do workspace — quem fez o quê e quando. Visível apenas para o admin.")}
@@ -113,7 +113,7 @@ export default function AbaHistorico() {
               <button
                 key={p.id}
                 onClick={() => setPeriodo(p.id)}
-                className={`pill ${periodo === p.id ? "active" : ""}`}
+                aria-pressed={periodo === p.id} className={`pill ${periodo === p.id ? "active" : ""}`}
               >
                 {t(p.label)}
               </button>

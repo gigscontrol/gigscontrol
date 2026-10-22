@@ -565,7 +565,7 @@ export default function ControlePagamentos({
             <button
               key={f.v}
               type="button"
-              className={`pill ${filtroStatus === f.v ? "active" : ""}`}
+              aria-pressed={filtroStatus === f.v} className={`pill ${filtroStatus === f.v ? "active" : ""}`}
               onClick={() => setFiltroStatus(f.v)}
             >
               {t(f.rotulo)}
@@ -578,10 +578,10 @@ export default function ControlePagamentos({
 
       {!ehCobrancas && fixadas.length > 0 && (
         <div className="card mb-4 overflow-hidden" style={{ borderColor: "var(--warning)" }}>
-          <div className="section-title mb-3 inline-flex items-center gap-2">
+          <h2 className="section-title mb-3 inline-flex items-center gap-2">
             <Pin size={15} style={{ color: "var(--warning)" }} />
             {t("Fixadas — cobranças a fazer")} · {fixadas.length}
-          </div>
+          </h2>
           <div className="-mx-5 -mb-5 border-t border-border">
             <TabelaDados
               itens={fixadas}
@@ -601,7 +601,7 @@ export default function ControlePagamentos({
           <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
             <Wallet size={18} className="text-muted" />
           </div>
-          <div className="section-title mb-1">
+          <h2 className="section-title mb-1">
             {ehCobrancas && search.trim()
               ? t("Nenhum resultado")
               : ehCobrancas
@@ -609,7 +609,7 @@ export default function ControlePagamentos({
               : todasParcelas.length === 0
                 ? t("Nenhuma parcela registrada")
                 : t("Nenhum resultado")}
-          </div>
+          </h2>
           <div className="section-subtitle">
             {ehCobrancas && search.trim()
               ? t("Ajuste os filtros ou a busca")

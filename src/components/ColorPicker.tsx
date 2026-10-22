@@ -115,17 +115,21 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
   // ESC fecha e click fora fecha
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
     }
     function onClick(e: MouseEvent) {
       if (popRef.current && !popRef.current.contains(e.target as Node)) {
         onClose();
       }
     }
-    document.addEventListener("keydown", onKey);
+    // Captura: antes do Esc do modal pai (fecha só o seletor).
+    document.addEventListener("keydown", onKey, true);
     document.addEventListener("mousedown", onClick);
     return () => {
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("mousedown", onClick);
     };
   }, [onClose]);

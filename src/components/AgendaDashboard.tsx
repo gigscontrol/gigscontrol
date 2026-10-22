@@ -538,11 +538,11 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       <div className="contents lg:mb-4 lg:grid lg:grid-cols-2 lg:gap-4">
         <div className="card order-3 lg:order-none">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title flex items-center gap-2">
+            <h2 className="section-title flex items-center gap-2">
               <CheckCircle2 size={16} style={{ color: "var(--success)" }} />
               {t("Shows realizados")}
               <span className="badge badge-neutral tabular-nums">{realizados.total}</span>
-            </div>
+            </h2>
             {realizados.lista.length > 0 && (
               <button
                 onClick={() =>
@@ -577,11 +577,11 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
 
         <div className="card order-1 lg:order-none">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title flex items-center gap-2">
+            <h2 className="section-title flex items-center gap-2">
               <Clock size={16} style={{ color: "var(--warning)" }} />
               {t("Shows a realizar")}
               <span className="badge badge-neutral tabular-nums">{aRealizar}</span>
-            </div>
+            </h2>
             {aRealizarList.length > 0 && (
               <button
                 onClick={() =>
@@ -620,10 +620,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
         {/* Fim de semana / feriados ocupados */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <div className="section-title flex items-center gap-2">
+            <h2 className="section-title flex items-center gap-2">
               <CalendarDays size={16} style={{ color: accent }} />
               {t("Ocupação do mês")}
-            </div>
+            </h2>
             <button
               onClick={() => setOcupacaoAberta(true)}
               className="btn-ghost text-xs inline-flex items-center gap-1"
@@ -668,10 +668,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
 
         {/* Próximas viagens */}
         <div className="card">
-          <div className="section-title mb-4 flex items-center gap-2">
+          <h2 className="section-title mb-4 flex items-center gap-2">
             <Plane size={16} style={{ color: accent }} />
             {t("Próximas viagens")}
-          </div>
+          </h2>
           {viagens.length === 0 ? (
             <div className="text-sm text-muted text-center py-6">
               {periodoPassado
@@ -714,10 +714,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       {/* Resumo do mês — preview + botão pra ver completo */}
       <div className="card mt-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="section-title flex items-center gap-2">
+          <h2 className="section-title flex items-center gap-2">
             <ListChecks size={16} style={{ color: accent }} />
             {t("Resumo — {mes} ({n} {show})", { mes: tituloMes, n: resumo.length, show: resumo.length === 1 ? "show" : "shows" })}
-          </div>
+          </h2>
           {resumo.length > 0 && (
             <button
               onClick={() => setResumoAberto(true)}
@@ -836,28 +836,28 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
               <div className="pill-group flex-wrap">
                 <button
                   type="button"
-                  className={`pill ${incluir.sex ? "active" : ""}`}
+                  aria-pressed={incluir.sex} className={`pill ${incluir.sex ? "active" : ""}`}
                   onClick={() => toggleInclui("sex")}
                 >
                   {t("Sex")}
                 </button>
                 <button
                   type="button"
-                  className={`pill ${incluir.sab ? "active" : ""}`}
+                  aria-pressed={incluir.sab} className={`pill ${incluir.sab ? "active" : ""}`}
                   onClick={() => toggleInclui("sab")}
                 >
                   {t("Sáb")}
                 </button>
                 <button
                   type="button"
-                  className={`pill ${incluir.dom ? "active" : ""}`}
+                  aria-pressed={incluir.dom} className={`pill ${incluir.dom ? "active" : ""}`}
                   onClick={() => toggleInclui("dom")}
                 >
                   {t("Dom")}
                 </button>
                 <button
                   type="button"
-                  className={`pill ${incluir.feriado ? "active" : ""}`}
+                  aria-pressed={incluir.feriado} className={`pill ${incluir.feriado ? "active" : ""}`}
                   onClick={() => toggleInclui("feriado")}
                 >
                   {t("Feriados")}
