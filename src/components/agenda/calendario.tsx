@@ -293,7 +293,7 @@ export function FabNovoDia({ onClick, podeCriar }: { onClick: () => void; podeCr
       type="button"
       onClick={onClick}
       aria-label={t("Novo item na agenda")}
-      className="md:hidden fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-5 z-30 h-14 w-14 rounded-full flex items-center justify-center text-white transition-transform active:scale-95"
+      className="xl:hidden fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-6 right-5 z-30 h-14 w-14 rounded-full flex items-center justify-center text-white transition-transform active:scale-95"
       style={{
         backgroundColor: "var(--brand)",
         boxShadow: "0 10px 30px var(--shadow-color)",
@@ -397,7 +397,7 @@ export function MobileDayEmptySlot() {
 export function EmptyState() {
   const t = useT();
   return (
-    <div className="card flex flex-col items-center justify-center py-12 text-center">
+    <div className="card flex flex-col items-center justify-center py-12 text-center md:col-span-2">
       <div className="h-12 w-12 rounded-full bg-elevated flex items-center justify-center mb-3">
         <Calendar size={20} className="text-muted" />
       </div>

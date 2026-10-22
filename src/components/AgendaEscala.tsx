@@ -211,7 +211,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
       const hoje = Array.from(document.querySelectorAll<HTMLElement>("[data-hoje]")).find(
         (el) => el.offsetParent !== null
       );
-      const celular = window.matchMedia("(max-width: 767px)").matches;
+      const celular = window.matchMedia("(max-width: 1279px)").matches;
       hoje?.scrollIntoView({ behavior: comportamentoRolagem(), block: celular ? "start" : "center" });
     }, 300);
     return () => clearTimeout(timer);
@@ -294,7 +294,7 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
       )}
 
       {/* Header dos dias da semana (desktop) — rola junto (cada card já mostra o dia) */}
-      <div className="hidden md:grid grid-cols-7 gap-2 mb-2 py-2">
+      <div className="hidden xl:grid grid-cols-7 gap-2 mb-2 py-2">
         {DAY_NAMES_SHORT.map((d) => (
           <div
             key={d}
@@ -305,8 +305,10 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
         ))}
       </div>
 
-      {/* Calendário desktop (grid 7 colunas) */}
-      <div className="hidden md:flex flex-col gap-2">
+      {/* Calendário desktop (grid 7 colunas) só a partir de 1280 px: abaixo disso
+          (tablet, ou 1024 px com o menu lateral) cada dia ficava com ~95 px e o
+          nome do artista/local truncava em tudo. */}
+      <div className="hidden xl:flex flex-col gap-2">
         {monthWeeks.map((week, wIdx) => (
           <div key={`week-${wIdx}`} className="grid grid-cols-7 gap-2">
             {week.map((day) => (
@@ -329,8 +331,9 @@ export default function AgendaEscala({ selectedArtistas, onNovaVendaNoDia }: Pro
       </div>
 
       {/* Lista mobile (dias com shows OU dia atual) */}
-      {/* pb-20: o botão flutuante (56 px) cobria o "+ adicionar" do último dia. */}
-      <div className="md:hidden flex flex-col gap-3 pb-20">
+      {/* pb-20: o botão flutuante (56 px) cobria o "+ adicionar" do último dia.
+          A partir do tablet, 2 colunas. */}
+      <div className="xl:hidden flex flex-col gap-3 pb-20 md:grid md:grid-cols-2 md:items-start">
         {allDays
           .filter((d) => !d.isOtherMonth)
           .map((day) => {

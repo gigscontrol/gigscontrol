@@ -125,7 +125,7 @@ export default function MenuLinha({ itens, rotulo }: { itens: ItemMenuLinha[]; r
         aria-haspopup="menu"
         aria-expanded={aberto}
         aria-controls={aberto ? id : undefined}
-        className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-md:h-11 max-md:w-11"
+        className="btn-ghost inline-flex h-9 w-9 items-center justify-center rounded-md max-lg:h-11 max-lg:w-11"
       >
         <MoreHorizontal size={16} />
       </button>
@@ -158,7 +158,7 @@ export default function MenuLinha({ itens, rotulo }: { itens: ItemMenuLinha[]; r
                     fechar(false);
                     item.onClick();
                   }}
-                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors max-md:min-h-[44px] ${
+                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors max-lg:min-h-[44px] ${
                     item.desabilitado
                       ? "cursor-not-allowed opacity-50"
                       : "hover:bg-elevated focus-visible:bg-elevated"

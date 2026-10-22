@@ -233,7 +233,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
 
         <FolhaFicha>
         {/* Números do contato: 1ª linha da folha (eram 4 cartões soltos). */}
-        <div className="lg:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
+        <div className="md:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
           <MetricTile label={t("Orçamentos")} value={stats.totalOrcamentos.toString()} accent={accent} icon={<FileText size={14} />} />
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile
@@ -319,7 +319,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           </div>
 
           {/* Histórico de shows */}
-          <div className="p-5 min-w-0 border-t border-border lg:border-t-0 lg:border-l">
+          <div className="p-5 min-w-0 border-t border-border md:border-t-0 md:border-l">
             <Bloco icon={<Music size={14} />} title={t("Histórico de shows")}>
               {showsContratante.length === 0 && historicoSanitizado.length > 0 ? (
                 // I12 — contratante de OUTRO artista: o cache local é escopado ao
@@ -386,7 +386,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
           </div>
 
           {/* J3 — Histórico de orçamentos, linha inteira (conteúdo largo). */}
-          <div className="p-5 min-w-0 lg:col-span-2 border-t border-border">
+          <div className="p-5 min-w-0 md:col-span-2 border-t border-border">
             <Bloco icon={<FileText size={14} />} title={t("Histórico de orçamentos")}>
               {orcamentosContratante.length === 0 ? (
                 <div className="text-sm text-muted py-6 text-center">
@@ -457,7 +457,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
 
         <FolhaFicha>
         {/* Números do contato: 1ª linha da folha (eram 4 cartões soltos). */}
-        <div className="lg:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
+        <div className="md:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile label={t("Faturamento")} value={formatarFaturamento(stats.faturamentoPorMoeda)} accent={accent} icon={<Banknote size={14} />} />
           <MetricTile label={t("Capacidade")} value={item.capacidade != null ? formatarNumero(item.capacidade) : "—"} icon={<Users size={14} />} />
@@ -512,7 +512,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             </div>
           </div>
 
-          <div className="p-5 min-w-0 border-t border-border lg:border-t-0 lg:border-l">
+          <div className="p-5 min-w-0 border-t border-border md:border-t-0 md:border-l">
             {/* Título na gramática do Bloco, mas inline com o "Ver todos". */}
             <div className="flex items-center justify-between gap-3 mb-2">
               <div className="inline-flex items-center gap-1.5 text-sm font-bold text-primary">
@@ -609,7 +609,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
 
         <FolhaFicha>
         {/* Números do contato: 1ª linha da folha (eram 4 cartões soltos). */}
-        <div className="lg:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
+        <div className="md:col-span-2 grid grid-cols-2 xl:grid-cols-4 gap-px border-b border-border" style={{ backgroundColor: "var(--border-color)" }}>
           <MetricTile label={t("Casas cadastradas")} value={stats.totalCasas.toString()} accent={accent} icon={<Building2 size={14} />} />
           <MetricTile label={t("Total de shows")} value={stats.totalShows.toString()} accent={accent} icon={<Music size={14} />} />
           <MetricTile label={t("Faturamento")} value={formatarFaturamento(stats.faturamentoPorMoeda)} icon={<Banknote size={14} />} />
@@ -647,7 +647,7 @@ export default function ContatoDetail({ selecionado, onBack, onEdit, onAbrirShow
             </Bloco>
           </div>
 
-          <div className="p-5 min-w-0 border-t border-border lg:border-t-0 lg:border-l">
+          <div className="p-5 min-w-0 border-t border-border md:border-t-0 md:border-l">
             <Bloco icon={<Music size={14} />} title={t("Shows nesta cidade")}>
               {showsCidade.length === 0 ? (
                 <div className="text-sm text-muted py-6 text-center">{t("Nenhum show realizado aqui ainda.")}</div>
