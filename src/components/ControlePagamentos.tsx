@@ -307,7 +307,7 @@ export default function ControlePagamentos({
         chave: "artista",
         noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
-        classe: "text-secondary whitespace-nowrap max-w-[116px]",
+        classe: "text-secondary whitespace-nowrap max-w-[100px]",
         ordenarPor: (l) => l.artistaNome,
         celula: (l) => (
           <span className="flex min-w-0 items-center gap-1.5" title={l.artistaNome}>
