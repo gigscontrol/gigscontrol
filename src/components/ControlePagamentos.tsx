@@ -289,7 +289,7 @@ export default function ControlePagamentos({
         // tabela tinha 1335 px e rolava pro lado em notebook de 1366/1440.
         chave: "contratante",
         titulo: "Contratante",
-        classe: "max-w-[240px]",
+        classe: "max-w-[200px]",
         ordenarPor: (l) => l.contratante,
         celula: (l) => (
           <div className="min-w-0">
@@ -307,7 +307,7 @@ export default function ControlePagamentos({
         chave: "artista",
         noCelular: false, // cartão do celular só com o principal
         titulo: "Artista",
-        classe: "text-secondary whitespace-nowrap max-w-[130px]",
+        classe: "text-secondary whitespace-nowrap max-w-[116px]",
         ordenarPor: (l) => l.artistaNome,
         celula: (l) => (
           <span className="flex min-w-0 items-center gap-1.5" title={l.artistaNome}>

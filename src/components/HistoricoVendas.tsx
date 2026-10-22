@@ -177,7 +177,7 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir, onEditar }: Prop
       {
         chave: "evento",
         titulo: "Evento",
-        classe: "text-secondary truncate max-w-[220px]",
+        classe: "text-secondary truncate max-w-[200px]",
         ordenarPor: (v) => v.nomeEvento,
         // Local e cidade na 2ª linha (a coluna Cidade, de 131 px, fazia a
         // tabela rolar pro lado em notebook); local igual ao nome do evento
@@ -316,6 +316,8 @@ export default function HistoricoVendas({ onNovaVenda, onAbrir, onEditar }: Prop
             onAbrir={(v) => onAbrir(v.id)}
             hrefDe={(v) => urls.venda(v.id)}
             rotuloItens="vendas"
+            // 9 colunas: respiro de 12 px (como Pagamentos) pra caber em notebook de 1366 px.
+            compacta
             linhaClasse={(v) => (v.status === "cancelada" ? "opacity-60" : "")}
             acoes={(v) => {
               const cancelada = v.status === "cancelada";
