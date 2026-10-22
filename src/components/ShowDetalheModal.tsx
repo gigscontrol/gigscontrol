@@ -50,7 +50,7 @@ import { useVendas } from "@/lib/vendas-context";
 import { useContratos } from "@/lib/contratos-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { formatarDuracao } from "@/lib/whatsapp";
-import { formatarMoeda } from "@/lib/formatters";
+import { formatarMoeda, formatarDataExtenso, formatarDataHora, formatarNumero } from "@/lib/formatters";
 import { numeroQtd } from "@/lib/quantidades";
 import { mascararCpfCnpj, primeiraMaiuscula } from "@/lib/formatters";
 import { resumoContratoDoShow, rotuloContratoShow } from "@/lib/contratoDoShow";
@@ -282,7 +282,7 @@ export default function ShowDetalheModal({
   const dataISO = venda?.dataShow || orcamento?.dataShow || show.data;
   let dataLegivel = "";
   if (dataISO) {
-    dataLegivel = new Date(dataISO + "T12:00:00").toLocaleDateString("pt-BR", {
+    dataLegivel = formatarDataExtenso(dataISO, {
       weekday: "long",
       day: "2-digit",
       month: "long",
@@ -291,7 +291,7 @@ export default function ShowDetalheModal({
   } else if (show.dayId) {
     const now = new Date();
     const d = new Date(now.getFullYear(), now.getMonth(), show.dayId);
-    dataLegivel = d.toLocaleDateString("pt-BR", {
+    dataLegivel = formatarDataExtenso(d, {
       weekday: "long",
       day: "2-digit",
       month: "long",
@@ -564,7 +564,7 @@ export default function ShowDetalheModal({
             )}
             {capacidade !== undefined && (
               <Linha icon={<Users size={13} />}>
-                {t("Capacidade:")} {capacidade.toLocaleString("pt-BR")} {t("pessoas")}
+                {t("Capacidade:")} {formatarNumero(capacidade)} {t("pessoas")}
               </Linha>
             )}
           </Bloco>
@@ -807,18 +807,7 @@ export default function ShowDetalheModal({
 
 // ---------- Auxiliares ----------
 
-/** "07/07/2026 · 14:30" a partir de um timestamp ISO. Vazio se inválido. */
-function formatarDataHora(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+
 
 // Bloco/Linha/ItensGrid moraram aqui até 28/08/2026 — hoje vivem em
 // detalhes/FichaUI.tsx, compartilhados com OrcamentoDetalhe e VendaDetalhe.

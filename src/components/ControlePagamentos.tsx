@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import {
   Search,
   CheckCircle2,
@@ -24,7 +24,7 @@ import { useFiltroArtistas } from "./FiltroArtistas";
 import TabelaDados, { type Coluna } from "./lista/TabelaDados";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas, useWorkspace } from "@/lib/workspace-context";
-import { formatarMoeda, totaisPorMoeda } from "@/lib/formatters";
+import { formatarMoeda, totaisPorMoeda, formatarData } from "@/lib/formatters";
 import { calcularTotaisFinanceiro } from "@/lib/financeiro/totais";
 import {
   LABELS_STATUS_PARCELA,
@@ -46,12 +46,6 @@ import { CobrarParcelaModal, useCobranca, type AlvoCobranca } from "./financeiro
 const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const ATALHOS_FIN: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 /** Linha achatada: uma parcela + dados da venda dona */
 type LinhaParcela = {
@@ -73,14 +67,7 @@ type LinhaParcela = {
   artista?: Artista;
 };
 
-function fmtData(iso?: string): string {
-  if (!iso) return "";
-  // Uma data pura "YYYY-MM-DD" é lida como meia-noite UTC pelo JS, exibindo o
-  // DIA ANTERIOR em fuso negativo (BR, UTC-3). Ancora ao meio-dia local.
-  const s = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
-}
+const fmtData = (iso?: string) => formatarData(iso);
 
 export default function ControlePagamentos({
   modo = "completo",

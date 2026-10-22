@@ -7,7 +7,7 @@ import { useOrcamentos } from "@/lib/orcamentos-context";
 import { useVendas } from "@/lib/vendas-context";
 import { useArtistas } from "@/lib/workspace-context";
 import { useContatos } from "@/lib/contatos-context";
-import { formatarMoeda } from "@/lib/formatters";
+import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { urls } from "@/lib/navegacao/rotas";
 import { LABELS_STATUS_ORCAMENTO, type Orcamento } from "@/types";
 
@@ -182,18 +182,5 @@ export default function HistoricoContratante({ contratanteId }: Props) {
   );
 }
 
-/** timestamp ISO → DD/MM/AAAA. */
-function fmtTimestamp(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-/** "YYYY-MM-DD" → DD/MM/AAAA (ancorada ao meio-dia, sem pulo de fuso). */
-function fmtData(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(`${iso}T12:00:00`);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+const fmtTimestamp = (iso?: string) => formatarData(iso);
+const fmtData = (iso?: string) => formatarData(iso);

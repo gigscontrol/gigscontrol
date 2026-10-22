@@ -37,3 +37,23 @@ export function getPaisPadrao(): Country {
 export function getFormatoData(): FormatoData {
   return formatoData;
 }
+
+/** Locale do Intl pro idioma da interface (datas por extenso, horas, números). */
+const LOCALE_DO_IDIOMA: Record<string, string> = {
+  pt: "pt-BR",
+  en: "en-US",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  it: "it-IT",
+};
+let localeIntl = "pt-BR";
+
+/** Chamado pelo LanguageProvider sempre que o idioma muda. */
+export function setIdiomaFormatos(lang: string): void {
+  localeIntl = LOCALE_DO_IDIOMA[lang] ?? "pt-BR";
+}
+
+export function getLocaleIntl(): string {
+  return localeIntl;
+}

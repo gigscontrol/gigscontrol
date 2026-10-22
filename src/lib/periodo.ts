@@ -33,3 +33,20 @@ export function resolverMes(
   }
   return { ano: h.getFullYear(), mes: h.getMonth(), tudo: false };
 }
+
+/**
+ * A data cai no período? `tudo` = sempre. Aceita "YYYY-MM-DD" (ancorada ao
+ * meio-dia local) ou timestamp. Sem data: fica de fora — ou entra, com
+ * `semDataEntra` (cadastros antigos sem data de criação, em Contatos).
+ * (Antes eram 6 cópias locais, uma com a regra trocada.)
+ */
+export function dataNoMes(
+  dataISO: string | undefined | null,
+  p: PeriodoMes,
+  opcoes: { semDataEntra?: boolean } = {}
+): boolean {
+  if (p.tudo) return true;
+  if (!dataISO) return !!opcoes.semDataEntra;
+  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
+  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
+}

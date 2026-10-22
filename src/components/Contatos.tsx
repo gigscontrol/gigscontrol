@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import { useT } from "@/lib/i18n";
 import { Plus, Search, Users, Building2, MapPin, Pencil, Trash2, ChevronRight, Ban, ShieldCheck } from "lucide-react";
 import PageHeader from "./PageHeader";
@@ -24,6 +24,7 @@ import { getContratanteStats, getCasaStats, getCidadeStats, getCidadeNome, forma
 import { MODULE_THEMES, LABELS_TIPO_CASA } from "@/types";
 import type { ContatoCategoria, Contratante, Casa, Cidade, AgendaDateRange, TipoCasa } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
+import { formatarData, formatarNumero } from "@/lib/formatters";
 
 type Selecionado =
   | { tipo: "contratante"; item: Contratante }
@@ -43,12 +44,6 @@ const ATALHOS_CONTATOS: AgendaDateRange[] = ["Visão geral", "Mês anterior", "M
 
 /** Casa a data de cadastro (ISO) no período. Sem data de cadastro → SEMPRE visível
  *  (registro legado não some do Gerenciar por causa do filtro de período). */
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return true;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 export default function Contatos({
   aba = "contratantes",
@@ -219,7 +214,7 @@ export default function Contatos({
 
   // Filtros aplicados conforme aba
   const contratantesFiltrados = useMemo(() => {
-    let base = visiveis.contratantes.filter((c) => dataNoMes(c.criadoEm, periodo));
+    let base = visiveis.contratantes.filter((c) => dataNoMes(c.criadoEm, periodo, { semDataEntra: true }));
     // J1 — filtro vazio ("") não filtra nada, nunca esconde por padrão.
     if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
     if (filtroEstado) base = base.filter((c) => estadoPorCidadeId.get(c.cidadeId ?? "") === filtroEstado);
@@ -235,7 +230,7 @@ export default function Contatos({
   }, [visiveis.contratantes, search, cidades, periodo, filtroCidadeId, filtroEstado, estadoPorCidadeId]);
 
   const casasFiltradas = useMemo(() => {
-    let base = visiveis.casas.filter((c) => dataNoMes(c.criadoEm, periodo));
+    let base = visiveis.casas.filter((c) => dataNoMes(c.criadoEm, periodo, { semDataEntra: true }));
     // J1 — tipo/cidade/estado; "" = sem filtro (mostra tudo).
     if (filtroTipo) base = base.filter((c) => c.tipo === filtroTipo);
     if (filtroCidadeId) base = base.filter((c) => c.cidadeId === filtroCidadeId);
@@ -670,7 +665,7 @@ function SeloBloqueado({
   const t = useT();
   const quem = por ? nomePorUsuario.get(por) : undefined;
   const data = em
-    ? new Date(em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    ? formatarData(em)
     : undefined;
   return (
     <div className="inline-flex flex-col gap-0.5">
@@ -902,7 +897,7 @@ function TabelaCasas({
       classe: "tabular-nums",
       decrescentePrimeiro: true,
       ordenarPor: (c) => c.capacidade ?? null,
-      celula: (c) => (c.capacidade ? c.capacidade.toLocaleString("pt-BR") : "—"),
+      celula: (c) => (c.capacidade ? formatarNumero(c.capacidade) : "—"),
     },
     {
       chave: "shows",

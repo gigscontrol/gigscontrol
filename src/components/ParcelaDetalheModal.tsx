@@ -33,24 +33,14 @@ import {
   podeCancelarPagamentoUI,
 } from "@/lib/permissoes/gatesEquipeUI";
 import { useArtistas } from "@/lib/workspace-context";
-import { formatarMoeda } from "@/lib/formatters";
+import { formatarMoeda, hojeISO, formatarData, formatarDataHora } from "@/lib/formatters";
 import { LABELS_STATUS_PARCELA, statusEfetivoParcela } from "@/types";
 import { useT } from "@/lib/i18n";
 import { diasDeAtraso } from "@/lib/financeiro/cobranca";
 import { PreviaCobranca, useCobranca, type AlvoCobranca } from "./financeiro/Cobranca";
 
-function fmtData(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR");
-}
-function fmtDataHora(iso?: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return isNaN(d.getTime())
-    ? ""
-    : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
+const fmtData = (iso?: string) => formatarData(iso);
+const fmtDataHora = (iso?: string) => formatarDataHora(iso);
 
 type Props = {
   vendaId: string | null;
@@ -150,7 +140,8 @@ export default function ParcelaDetalheModal({ vendaId, parcelaId, onClose }: Pro
       }
       await acaoParcela(venda!.id, parcela!.id, {
         status_base: "pago",
-        data_pagamento: new Date().toISOString().slice(0, 10),
+        // Dia LOCAL: toISOString é UTC e, depois das 21h no Brasil, gravava amanhã.
+        data_pagamento: hojeISO(),
         nota_pagamento: nota.trim() || null,
       });
     });

@@ -22,11 +22,9 @@ export const META_TIPO: Record<AgendaItem["tipo"], { label: string; icon: typeof
   transporte: { label: "Transporte", icon: Car, cor: "var(--brand)" },
 };
 
-/** "YYYY-MM-DD" → "DD/MM/YYYY". */
-export function formatarDataBR(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return d && m && y ? `${d}/${m}/${y}` : iso;
-}
+// A agenda usa o mesmo formatador do resto do painel (segue a preferência
+// DD/MM × MM/DD). Antes havia aqui um homônimo que ignorava a preferência.
+export { formatarDataBR } from "@/lib/formatters";
 
 /** Nomes dos artistas (juntos) a partir dos ids; undefined se vazio. */
 export function labelArtistas(ids: string[], artistas: Artista[]): string | undefined {

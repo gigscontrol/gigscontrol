@@ -21,6 +21,7 @@ import {
 import type { Country } from "@/lib/data/countries";
 import { MODULE_THEMES, LABELS_TIPO_CASA, type Cidade, type Casa, type Contratante, type Show, type Venda } from "@/types";
 import type { PontoMapa, FocoPais } from "@/components/contatos/MapaRaio";
+import { formatarNumero } from "@/lib/formatters";
 
 // Leaflet usa `window` — só carrega no cliente, quando a aba do mapa abre.
 const MapaRaio = dynamic(() => import("@/components/contatos/MapaRaio"), {
@@ -441,7 +442,7 @@ function DetalhePontoModal({
       <ResumoLinha key="fat" label={t("Faturamento")} valor={formatarFaturamento(st.faturamentoPorMoeda)} destaque />
     );
     if (casa?.capacidade)
-      linhas.push(<ResumoLinha key="cap" label={t("Capacidade")} valor={casa.capacidade.toLocaleString("pt-BR")} />);
+      linhas.push(<ResumoLinha key="cap" label={t("Capacidade")} valor={formatarNumero(casa.capacidade)} />);
     if (casa?.contatoResponsavel)
       linhas.push(<ResumoLinha key="resp" label={t("Responsável")} valor={casa.contatoResponsavel} />);
     if (casa?.telefone) linhas.push(<ResumoLinha key="tel" label={t("Telefone")} valor={casa.telefone} />);

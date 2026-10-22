@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { resolverMes } from "@/lib/periodo";
+import { resolverMes, dataNoMes } from "@/lib/periodo";
 import { useT } from "@/lib/i18n";
 import {
   Users,
@@ -34,6 +34,7 @@ import { useNavegacao } from "./NavOverlay";
 import { urls } from "@/lib/navegacao/rotas";
 import { MODULE_THEMES } from "@/types";
 import type { ContatoCategoria, AgendaDateRange, Moeda } from "@/types";
+import { hojeISO } from "@/lib/formatters";
 
 const ACCENT = MODULE_THEMES.contatos.color;
 
@@ -41,12 +42,6 @@ const MESES_LONGO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
 const ATALHOS: AgendaDateRange[] = ["Visão geral", "Mês anterior", "Mês atual", "Próximo mês", "Personalizado"];
 
 /** Casa uma data ISO (YYYY-MM-DD do show, ou timestamp da venda) no período. */
-function dataNoMes(dataISO: string | undefined, p: { ano: number; mes: number; tudo: boolean }): boolean {
-  if (p.tudo) return true;
-  if (!dataISO) return false;
-  const d = dataISO.length <= 10 ? new Date(`${dataISO}T12:00:00`) : new Date(dataISO);
-  return d.getFullYear() === p.ano && d.getMonth() === p.mes;
-}
 
 type Props = {
   /** Abre a aba de Contatos numa categoria específica */
@@ -106,7 +101,7 @@ export default function ContatosDashboard({ onAbrirCategoria }: Props) {
   // moeda só) mas EXIBE por moeda (faturamentoPorMoeda), sem somar moedas
   // diferentes num R$ mentiroso.
   const rankingContratantes = useMemo(() => {
-    const hojeYmd = new Date().toISOString().slice(0, 10);
+    const hojeYmd = hojeISO();
     return contratantes
       .map((c) => {
         const vDo = vendasPeriodo.filter((v) => v.contratanteId === c.id);

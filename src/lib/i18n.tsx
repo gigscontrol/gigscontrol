@@ -28,6 +28,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Moeda } from "./planos";
+import { setIdiomaFormatos } from "./preferencias";
 
 export type Lang = "pt" | "en" | "es" | "fr" | "de" | "it";
 
@@ -84,6 +85,9 @@ export function LanguageProvider({
 }) {
   // Idioma inicial vem do servidor (cookie gc-lang ou geo por IP) — sem flash.
   const [lang, setLangState] = useState<Lang>(initialLang);
+  // Datas por extenso, horas e números (lib/formatters) seguem o idioma da
+  // interface. Setado no render (idempotente) pra a mesma passada já sair certa.
+  setIdiomaFormatos(lang);
   // Moeda é definida pela região (IP) no servidor; não muda no client.
   const moeda = initialMoeda;
 

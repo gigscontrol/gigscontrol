@@ -41,7 +41,7 @@ import { canonicalizarTelefoneBR, telefonesIguais } from "@/lib/telefone";
 import InputCapacidade from "./inputs/InputCapacidade";
 import InputDataBR, { haDataPendente } from "./inputs/InputDataBR";
 import InputHora from "./inputs/InputHora";
-import { apenasDigitos, SIMBOLO_MOEDA, formatarMoeda } from "@/lib/formatters";
+import { apenasDigitos, SIMBOLO_MOEDA, formatarMoeda, formatarData } from "@/lib/formatters";
 import CidadeGlobalAutocomplete, { type CidadeEscolhida } from "./CidadeGlobalAutocomplete";
 import { resolverCidade, cidadeParaEscolhida } from "@/lib/cidade-helpers";
 import PhoneInput, { DEFAULT_COUNTRY, COUNTRIES, contarDigitos, type Country } from "./PhoneInput";
@@ -2513,7 +2513,7 @@ export default function ConcretizarVenda({
                     <>
                       {t("em")}{" "}
                       <span className="text-primary font-semibold">
-                        {new Date(dataShow + "T12:00:00").toLocaleDateString("pt-BR")}
+                        {formatarData(dataShow)}
                       </span>{" "}
                       {t("(data do show)")}
                     </>

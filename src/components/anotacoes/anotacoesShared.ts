@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatarDiaMes, formatarHora } from "@/lib/formatters";
 
 /**
  * Utilitários compartilhados das Anotações (fora de qualquer componente de UI).
@@ -25,7 +26,7 @@ export function fmtQuando(iso: string): string {
   if (!iso) return "";
   const d = new Date(iso);
   const hoje = new Date();
-  const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const hora = formatarHora(d);
   if (d.toDateString() === hoje.toDateString()) return hora;
-  return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${hora}`;
+  return `${formatarDiaMes(d)} ${hora}`;
 }
