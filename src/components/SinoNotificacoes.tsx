@@ -158,7 +158,7 @@ export default function SinoNotificacoes({ onVerTodas, onAbrirLink }: Props) {
             {naoLidas > 0 && (
               <button
                 onClick={aoMarcarTodas}
-                className="text-micro font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
+                className="stat-label hover:text-primary inline-flex items-center gap-1"
                 title={t("Marcar todas como lidas")}
               >
                 <CheckCheck size={12} />

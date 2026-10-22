@@ -412,7 +412,7 @@ export default function ShowDetalheModal({
         </div>
       ) : mostrarFormCancel ? (
         <div className="mb-5 rounded-md border border-border bg-elevated p-3">
-          <label className="stat-label block mb-1.5">
+          <label className="text-xs font-medium text-secondary block mb-1.5">
             {t("Motivo do cancelamento")} *
           </label>
           <textarea aria-label={t("Motivo do cancelamento")}

@@ -855,7 +855,7 @@ function PastaFormModal({
     >
       <div className="flex flex-col gap-4">
         <div>
-          <label className="stat-label mb-1 block">{t("Nome")}</label>
+          <label className="text-xs font-medium text-secondary mb-1 block">{t("Nome")}</label>
           <input aria-label={t("Nome da pasta")}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
@@ -867,7 +867,7 @@ function PastaFormModal({
 
         <div className="flex gap-4 flex-wrap">
           <div>
-            <label className="stat-label mb-1 block">{t("Ícone")}</label>
+            <label className="text-xs font-medium text-secondary mb-1 block">{t("Ícone")}</label>
             <div className="flex gap-1 flex-wrap max-w-[220px]">
               {EMOJIS.map((e) => (
                 <button
@@ -881,7 +881,7 @@ function PastaFormModal({
             </div>
           </div>
           <div>
-            <label className="stat-label mb-1 block">{t("Cor")}</label>
+            <label className="text-xs font-medium text-secondary mb-1 block">{t("Cor")}</label>
             <div className="flex gap-1.5 flex-wrap">
               {CORES.map((c) => (
                 <button
@@ -897,7 +897,7 @@ function PastaFormModal({
         </div>
 
         <div>
-          <label className="stat-label mb-1.5 block">{t("Quem pode ver")}</label>
+          <label className="text-xs font-medium text-secondary mb-1.5 block">{t("Quem pode ver")}</label>
           <div className="flex flex-col gap-2">
             {opcoes.map((o) => {
               const ativo = visibilidade === o.v;
@@ -923,7 +923,7 @@ function PastaFormModal({
         {visibilidade === "selecionados" && (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="stat-label mb-1.5 block">{t("Equipe")}</label>
+              <label className="text-xs font-medium text-secondary mb-1.5 block">{t("Equipe")}</label>
               <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto">
                 {usuarios.filter((u) => u.id !== meuId).length === 0 ? (
                   <span className="text-sm text-muted">{t("Nenhum outro usuário no workspace.")}</span>
@@ -950,7 +950,7 @@ function PastaFormModal({
             </div>
 
             <div>
-              <label className="stat-label mb-1.5 block">{t("Artistas")}</label>
+              <label className="text-xs font-medium text-secondary mb-1.5 block">{t("Artistas")}</label>
               <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto">
                 {artistas.length === 0 ? (
                   <span className="text-sm text-muted">{t("Nenhum artista no workspace.")}</span>

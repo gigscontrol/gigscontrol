@@ -420,7 +420,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
             {t("A venda sai dos dashboards e do \"a receber\". As parcelas não pagas são canceladas; as já pagas permanecem. A venda continua visível no histórico com o selo Cancelada.")}
           </p>
           <div className="flex flex-col gap-1.5">
-            <label className="stat-label">{t("Motivo (opcional)")}</label>
+            <label className="text-xs font-medium text-secondary">{t("Motivo (opcional)")}</label>
             <textarea aria-label={t("Motivo (opcional)")}
               value={cancelMotivo}
               onChange={(e) => setCancelMotivo(e.target.value)}

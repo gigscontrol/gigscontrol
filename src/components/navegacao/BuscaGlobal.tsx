@@ -317,7 +317,7 @@ export default function BuscaGlobal() {
   };
 
   const cabecalho = (texto: string) => (
-    <div className="px-3 pb-1 pt-2 text-micro font-semibold uppercase tracking-wider text-muted">{texto}</div>
+    <div className="stat-label px-3 pb-1 pt-2">{texto}</div>
   );
 
   const linha = (item: ItemBusca, mostrarTipo: boolean) => {

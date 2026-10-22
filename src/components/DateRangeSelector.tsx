@@ -241,7 +241,7 @@ export default function DateRangeSelector<T extends string>({
                   <button
                     type="button"
                     onClick={() => setShowMoreYears((v) => !v)}
-                    className="text-micro font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                    className="stat-label hover:text-primary transition-colors"
                   >
                     {showMoreYears ? t("Recolher") : t("+ Mostrar mais")}
                   </button>

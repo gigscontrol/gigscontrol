@@ -42,7 +42,7 @@ export default function ConfirmarVendaModal({
   const t = useT();
   const linha = (rotulo: string, valor: string) => (
     <div className="flex items-baseline justify-between gap-4 py-1.5 border-b border-border last:border-0">
-      <span className="text-xs text-muted uppercase tracking-wide shrink-0">{rotulo}</span>
+      <span className="stat-label shrink-0">{rotulo}</span>
       <span className="text-sm text-primary text-right font-medium">{valor}</span>
     </div>
   );
@@ -64,7 +64,7 @@ export default function ConfirmarVendaModal({
           {iniciaisDoNome(resumo.artistaNome)}
         </span>
         <div className="min-w-0">
-          <div className="text-micro text-muted uppercase tracking-wide">{t("Artista")}</div>
+          <div className="stat-label">{t("Artista")}</div>
           <div className="text-sm font-bold text-primary truncate">{resumo.artistaNome}</div>
         </div>
       </div>

@@ -96,7 +96,7 @@ export default function PresetsRiderEditor({
 
   return (
     <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-4">
-      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+      <div className="stat-label flex items-center gap-1.5">
         <Wand2 size={13} />
         {t("Presets de rider")}
         <span className="normal-case font-normal tracking-normal">

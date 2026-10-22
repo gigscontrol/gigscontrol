@@ -133,7 +133,7 @@ export default function AbaNotificacoes() {
           {naoLidas > 0 && (
             <button
               onClick={marcarTodas}
-              className="text-micro font-semibold uppercase tracking-wider text-muted hover:text-primary inline-flex items-center gap-1"
+              className="stat-label hover:text-primary inline-flex items-center gap-1"
             >
               <CheckCheck size={12} />
               {t("Marcar todas como lidas")}

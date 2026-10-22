@@ -106,21 +106,27 @@ export function FichaHeroPagina({
           <div className="flex items-center gap-4 min-w-0">
             <Avatar nome={artistaNome} cor={artistaCor} size="lg" anel />
             <div className="min-w-0">
-              {/* Título da PÁGINA (h1): o nome do documento quando há; senão o artista. */}
+              {/* Título da PÁGINA (h1) no tamanho do título das outras telas: o
+                  nome do documento quando há (artista e data viram a linha de
+                  cima, de metadado); sem documento, o próprio artista. Antes o
+                  artista (18 px) ficava maior que o título do documento (16 px). */}
               {titulo ? (
-                <div className="text-lg font-bold text-primary truncate leading-tight">
-                  {artistaNome ?? "—"}
-                </div>
+                <>
+                  <div className="text-xs text-secondary truncate" title={artistaNome}>
+                    <span className="font-semibold text-primary">{artistaNome ?? "—"}</span>
+                    {linhaSuperior && <> · {linhaSuperior}</>}
+                  </div>
+                  <h1 className="page-title mt-1">{titulo}</h1>
+                </>
               ) : (
-                <h1 className="text-lg font-bold text-primary truncate leading-tight">
-                  {artistaNome ?? "—"}
-                </h1>
-              )}
-              {linhaSuperior && (
-                <div className="text-xs text-secondary mt-0.5">{linhaSuperior}</div>
-              )}
-              {titulo && (
-                <h1 className="mt-2 text-base font-semibold text-primary">{titulo}</h1>
+                <>
+                  <h1 className="page-title truncate" title={artistaNome}>
+                    {artistaNome ?? "—"}
+                  </h1>
+                  {linhaSuperior && (
+                    <div className="text-xs text-secondary mt-1">{linhaSuperior}</div>
+                  )}
+                </>
               )}
               {badges && (
                 <div className="flex flex-wrap items-center gap-1.5 mt-2.5">{badges}</div>
@@ -197,10 +203,11 @@ export function Bloco({
 }) {
   return (
     <div>
-      <div className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
+      {/* Mesmo título de seção do resto do painel (era 14 px Hanken). */}
+      <h2 className="section-title mb-2 inline-flex items-center gap-1.5">
         <span style={{ color: "var(--brand)" }}>{icon}</span>
         {title}
-      </div>
+      </h2>
       <div className="flex flex-col gap-1">{children}</div>
     </div>
   );

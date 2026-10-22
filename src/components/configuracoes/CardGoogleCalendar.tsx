@@ -140,7 +140,7 @@ export default function CardGoogleCalendar({ artistaId }: { artistaId: string })
 
   return (
     <div className="bg-surface-2 border border-border rounded p-4 flex flex-col gap-3">
-      <div className="text-xs font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
+      <div className="stat-label inline-flex items-center gap-1.5">
         <CalendarClock size={12} style={{ color: "var(--brand)" }} />
         Google Calendar
       </div>

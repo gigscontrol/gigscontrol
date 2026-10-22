@@ -262,7 +262,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-border border-t border-border">
                   {celulas.map((c) => (
                     <div key={c.label} className="bg-elevated p-2.5 min-w-0">
-                      <div className="text-micro uppercase tracking-wide text-muted inline-flex items-center gap-1">
+                      <div className="stat-label inline-flex items-center gap-1">
                         {c.icon}
                         {c.label}
                       </div>
@@ -344,15 +344,15 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
           />
         </div>
         <div>
-          <label className="stat-label block mb-1">{t("Check-in")}</label>
+          <label className="text-xs font-medium text-secondary block mb-1">{t("Check-in")}</label>
           <input aria-label={t("Check-in")} type="date" className={INPUT} value={form.checkin ?? ""} onChange={(e) => set("checkin", e.target.value)} />
         </div>
         <div>
-          <label className="stat-label block mb-1">{t("Check-out")}</label>
+          <label className="text-xs font-medium text-secondary block mb-1">{t("Check-out")}</label>
           <input aria-label={t("Check-out")} type="date" className={INPUT} value={form.checkout ?? ""} onChange={(e) => set("checkout", e.target.value)} />
         </div>
         <div>
-          <label className="stat-label block mb-1">{t("Nº de quartos")}</label>
+          <label className="text-xs font-medium text-secondary block mb-1">{t("Nº de quartos")}</label>
           <input aria-label={t("Nº de quartos")}
             type="number"
             min={0}
@@ -414,7 +414,7 @@ export default function BookingSection({ showId, booking, podeEditar, onSave }: 
       </div>
 
       <div>
-        <label className="stat-label block mb-1">{t("Observações")}</label>
+        <label className="text-xs font-medium text-secondary block mb-1">{t("Observações")}</label>
         <textarea aria-label={t("Observações")}
           rows={2}
           className={`${INPUT} resize-none`}
@@ -452,7 +452,7 @@ function CampoInput({
 }) {
   return (
     <div>
-      <label className="stat-label block mb-1">{label}</label>
+      <label className="text-xs font-medium text-secondary block mb-1">{label}</label>
       <input aria-label={label}
         type="text"
         className={INPUT}

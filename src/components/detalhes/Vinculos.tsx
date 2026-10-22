@@ -220,7 +220,7 @@ function LinhaVinculo({
         {icone}
       </span>
       <span className="flex min-w-0 flex-1 flex-col text-left">
-        <span className="text-micro uppercase tracking-wider text-muted">{rotulo}</span>
+        <span className="stat-label">{rotulo}</span>
         <span
           className={`truncate text-sm font-semibold ${apagado ? "text-muted font-normal" : "text-primary"}`}
         >
