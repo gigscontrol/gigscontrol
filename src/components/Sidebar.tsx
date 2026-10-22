@@ -370,7 +370,7 @@ export default function Sidebar({
               porquê e manda falar com o admin. */}
           {modulosVisiveis.length === 0 && (
             <div
-              className={`px-3 py-2 text-[0.7rem] leading-relaxed text-muted ${
+              className={`px-3 py-2 text-micro leading-relaxed text-muted ${
                 collapsed ? "lg:hidden" : ""
               }`}
             >
@@ -503,7 +503,7 @@ export default function Sidebar({
               {!planoIndividual && (
                 <button
                   onClick={toggleAll}
-                  className="text-[0.6875rem] font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
+                  className="text-micro font-semibold uppercase tracking-wider text-muted hover:text-primary transition-colors"
                 >
                   {allSelected ? t("Ocultar todos") : t("Mostrar todos")}
                 </button>
@@ -540,7 +540,7 @@ export default function Sidebar({
                     }
                   >
                     <span
-                      className="h-7 w-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold flex-shrink-0 transition-all"
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-micro font-bold flex-shrink-0 transition-all"
                       style={{
                         backgroundColor: isActiveDj ? artista.color : "var(--bg-elevated)",
                         color: isActiveDj ? "#fff" : "var(--text-muted)",
@@ -562,7 +562,7 @@ export default function Sidebar({
       </div>
 
       <div className={`border-t border-border p-4 flex-shrink-0 ${collapsed || !mostrarFiltroArtistas ? "lg:hidden" : ""} ${!mostrarFiltroArtistas ? "hidden" : ""}`}>
-        <div className="text-[0.7rem] text-muted">
+        <div className="text-micro text-muted">
           {planoIndividual
             ? t(ARTISTAS.length === 1 ? "{n} artista" : "{n} artistas", { n: ARTISTAS.length })
             : t("{n} de {m} artistas visíveis", { n: selectedArtistas.length, m: ARTISTAS.length })}

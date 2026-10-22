@@ -325,7 +325,7 @@ function PaginaPdf({
                 nome: nomeDe(c.signatarioOrdem),
               })}
               onKeyDown={(e) => onTecla(e, c)}
-              className="absolute rounded-sm flex items-center justify-center text-[0.6875rem] font-medium cursor-move group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="absolute rounded-sm flex items-center justify-center text-micro font-medium cursor-move group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{
                 left: `${c.xRel * 100}%`,
                 top: `${c.yRel * 100}%`,

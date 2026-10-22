@@ -425,7 +425,7 @@ export default function ShowDetalheModal({
             className="w-full bg-surface border border-border rounded-md px-3 py-2 text-sm text-primary resize-none outline-none foco-campo"
           />
           <div className="flex items-center justify-between gap-2 mt-2">
-            <p className="text-[0.6875rem] text-muted">
+            <p className="text-micro text-muted">
               {t("O evento não é apagado — fica vermelho na agenda e no Google.")}
             </p>
             <div className="flex items-center gap-2 flex-shrink-0">

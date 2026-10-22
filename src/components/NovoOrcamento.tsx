@@ -1516,7 +1516,7 @@ function BlocoOrcamentoDj({
             <div className="text-sm font-semibold text-primary truncate">
               {artista?.name ?? "—"}
             </div>
-            <div className="text-[0.7rem] text-muted">
+            <div className="text-micro text-muted">
               {t("Orçamento {n} de {m}", { n: indice + 1, m: totalBlocos })}
             </div>
           </div>

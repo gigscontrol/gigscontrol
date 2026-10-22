@@ -519,7 +519,7 @@ export default function AbaPlano() {
 
       {erro && <div className="text-xs text-danger">{erro}</div>}
 
-      <p className="text-[0.7rem] text-muted">
+      <p className="text-micro text-muted">
         {t("Cancelamento da assinatura: fale com o suporte por enquanto.")}
       </p>
     </div>

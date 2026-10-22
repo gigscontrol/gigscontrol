@@ -345,7 +345,7 @@ export default function AnotacoesPage() {
                         {autores.slice(0, 4).map((uid) => (
                           <span
                             key={uid}
-                            className="h-6 w-6 rounded-full flex items-center justify-center text-[0.55rem] font-bold border-2"
+                            className="h-6 w-6 rounded-full flex items-center justify-center text-micro leading-none font-bold border-2"
                             style={{ backgroundColor: corDe(uid), color: "#fff", borderColor: "var(--surface)" }}
                             title={nomeDe(uid)}
                           >
@@ -353,7 +353,7 @@ export default function AnotacoesPage() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-[0.6875rem] text-muted tabular-nums flex-shrink-0">
+                      <span className="text-micro text-muted tabular-nums flex-shrink-0">
                         {fmtQuando(g.ultimaEm)}
                       </span>
                       <ChevronRight size={14} className="text-muted flex-shrink-0" />
@@ -965,7 +965,7 @@ function PastaFormModal({
                         style={{ borderColor: on ? ACCENT : "var(--border)", backgroundColor: on ? `color-mix(in srgb, ${ACCENT} 8%, transparent)` : "transparent" }}
                       >
                         <span
-                          className="h-4 w-4 rounded-full flex items-center justify-center text-[0.5rem] font-bold flex-shrink-0"
+                          className="h-5 w-5 rounded-full flex items-center justify-center text-micro leading-none font-bold flex-shrink-0"
                           style={{ backgroundColor: a.color, color: "#fff" }}
                         >
                           {iniciaisDoNome(a.name)}

@@ -9,7 +9,9 @@ import { regiaoDe, resolverPais } from "@/lib/regiao";
 // @import do Google Fonts no CSS — uma requisição encadeada que segurava a
 // primeira pintura. As variáveis são usadas no globals.css e no Tailwind.
 const fonteTitulo = Bricolage_Grotesque({ subsets: ["latin"], axes: ["opsz"], variable: "--fonte-titulo", display: "swap" });
-const fonteTexto = Hanken_Grotesk({ subsets: ["latin"], variable: "--fonte-texto", display: "swap" });
+// Itálico de verdade (as observações usam `italic`; sem ele o navegador inclinava
+// o romano). Só baixa se alguma tela usar itálico.
+const fonteTexto = Hanken_Grotesk({ subsets: ["latin"], style: ["normal", "italic"], variable: "--fonte-texto", display: "swap" });
 const fonteMono = JetBrains_Mono({ subsets: ["latin"], variable: "--fonte-mono", display: "swap" });
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";

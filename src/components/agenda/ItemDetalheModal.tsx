@@ -244,7 +244,7 @@ export function ItemDetalheModal({
         {item.tipo === "transporte" && <DetalheTransporte dados={item.dados} />}
         {item.observacoes && <LinhaDetalhe rotulo={t("Observações")} valor={item.observacoes} />}
         {item.tipo === "voo" && (
-          <div className="text-[0.7rem] text-muted pt-2 border-t border-border">
+          <div className="text-micro text-muted pt-2 border-t border-border">
             ⚠ {t("Confira no site da companhia (pelo localizador) se o horário não mudou.")}
           </div>
         )}

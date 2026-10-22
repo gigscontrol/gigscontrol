@@ -87,7 +87,7 @@ export default function CampoSenha({
 
       {capsOn && (
         <span
-          className="text-[0.7rem] flex items-center gap-1"
+          className="text-micro flex items-center gap-1"
           style={{ color: "var(--warning)" }}
         >
           <AlertCircle size={11} />
@@ -129,7 +129,7 @@ function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
           ))}
         </div>
         <span
-          className="text-[0.6875rem] font-medium tabular-nums flex-shrink-0"
+          className="text-micro font-medium tabular-nums flex-shrink-0"
           style={{ color: cor }}
         >
           {t(labelForca(forca))}
@@ -139,7 +139,7 @@ function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
       {motivos.map((m, i) => (
         <span
           key={i}
-          className="text-[0.7rem] flex items-center gap-1"
+          className="text-micro flex items-center gap-1"
           style={{ color: podeUsar ? "var(--text-muted)" : "var(--danger)" }}
         >
           {podeUsar ? (
@@ -153,7 +153,7 @@ function MedidorForca({ avaliacao }: { avaliacao: AvaliacaoSenha }) {
 
       {/* Senhas comuns: mensagem extra de educação */}
       {comum && (
-        <span className="text-[0.6875rem] text-muted italic">
+        <span className="text-micro text-muted italic">
           {t("Senhas como essa são as primeiras testadas em ataques.")}
         </span>
       )}

@@ -427,7 +427,7 @@ export function ModalNovoArtista({
           {/* Tag visual do tipo de cadastro */}
           <div className="flex items-center gap-2">
             <span
-              className="text-[0.6875rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+              className="text-micro font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
               style={{ backgroundColor: "var(--brand)" }}
             >
               {t("Artista")}

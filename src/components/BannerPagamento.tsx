@@ -58,7 +58,7 @@ export default function BannerPagamento({ papel, adminContato, plano, ciclo }: P
         {isAdmin && (
           <button
             onClick={renovar}
-            className="flex-shrink-0 rounded-md px-3 py-1 text-[0.7rem] font-bold"
+            className="flex-shrink-0 rounded-md px-3 py-1 text-micro font-bold"
             style={{ background: "var(--warning)", color: "var(--on-warning)" }}
           >
             {t("Renovar")}

@@ -64,7 +64,7 @@ export default function ConfirmarVendaModal({
           {iniciaisDoNome(resumo.artistaNome)}
         </span>
         <div className="min-w-0">
-          <div className="text-[0.6875rem] text-muted uppercase tracking-wide">{t("Artista")}</div>
+          <div className="text-micro text-muted uppercase tracking-wide">{t("Artista")}</div>
           <div className="text-sm font-bold text-primary truncate">{resumo.artistaNome}</div>
         </div>
       </div>

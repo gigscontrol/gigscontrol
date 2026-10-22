@@ -580,7 +580,7 @@ export function ModalEditarArtista({
               </button>
             </div>
             {!usernameValido && usernameRaiz.length > 0 && (
-              <p className="text-[0.7rem] mt-1" style={{ color: "var(--danger)" }}>
+              <p className="text-micro mt-1" style={{ color: "var(--danger)" }}>
                 {t("Use 3+ chars (letras, números, hífen)")}.
               </p>
             )}
@@ -605,7 +605,7 @@ export function ModalEditarArtista({
             )}
             {usernameMudou && usernameValido && !colisaoUsername && (
               <div
-                className="flex items-start gap-2 text-[0.7rem] mt-1 rounded-md px-2 py-1.5"
+                className="flex items-start gap-2 text-micro mt-1 rounded-md px-2 py-1.5"
                 style={{
                   backgroundColor: "var(--warning-weak)",
                   color: "var(--warning)",
@@ -650,7 +650,7 @@ export function ModalEditarArtista({
                         {conta.email}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[0.7rem]">
+                    <div className="flex items-center gap-3 mt-1.5 text-micro">
                       {conta.emailVerificado ? (
                         <span
                           className="inline-flex items-center gap-1"
@@ -719,7 +719,7 @@ export function ModalEditarArtista({
                       </button>
                     </div>
                     <div
-                      className="text-[0.7rem] mt-1.5 inline-flex items-center gap-1"
+                      className="text-micro mt-1.5 inline-flex items-center gap-1"
                       style={{ color: "var(--warning)" }}
                     >
                       <AlertTriangle size={11} />

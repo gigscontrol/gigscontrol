@@ -513,7 +513,7 @@ export function ModalUsuario({
                   className={`campo-input${erros.has("nome") ? " erro" : ""}`}
                   autoFocus
                 />
-                <span className="text-[0.7rem] text-muted mt-1 block">
+                <span className="text-micro text-muted mt-1 block">
                   {t("É o nome que aparece pros outros usuários da sua agência.")}
                 </span>
               </Campo>
@@ -553,7 +553,7 @@ export function ModalUsuario({
             {/* Tag visual do tipo de cadastro */}
             <div className="flex items-center gap-2">
               <span
-                className="text-[0.6875rem] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+                className="text-micro font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
                 style={{ backgroundColor: "var(--brand)" }}
               >
                 {t("Equipe")}
@@ -623,14 +623,14 @@ export function ModalUsuario({
                     <strong className="font-mono text-primary">{usernameCompleto}</strong>
                   </p>
                 )}
-                <p className="text-[0.7rem] text-muted mt-1">
+                <p className="text-micro text-muted mt-1">
                   {t("A senha é gerada automaticamente e mostrada só uma vez ao final.")}
                 </p>
               </Campo>
             </Secao>
 
             <Secao titulo={t("Com quais artistas trabalha")}>
-              <p className="text-[0.7rem] text-muted -mt-1">
+              <p className="text-micro text-muted -mt-1">
                 {t("Marque os artistas. A função de cada um (e as permissões) você define depois, na aba Equipe do artista.")}
               </p>
               {artistas.length === 0 ? (
@@ -677,7 +677,7 @@ export function ModalUsuario({
                           <button
                             type="button"
                             onClick={() => setEditandoPermsDe(artista.id)}
-                            className="btn-ghost text-[0.7rem] inline-flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
+                            className="btn-ghost text-micro inline-flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
                             style={{ color: nPerms > 0 ? "var(--brand)" : "var(--text-muted)" }}
                             title={t("Definir permissões deste artista")}
                           >
@@ -725,7 +725,7 @@ export function ModalUsuario({
                       className={`campo-input text-xl font-bold${erros.has("nome") ? " erro" : ""}`}
                       autoFocus
                     />
-                    <span className="text-[0.7rem] text-muted mt-1 block">
+                    <span className="text-micro text-muted mt-1 block">
                       {t("É o nome que aparece pros outros usuários da sua agência.")}
                     </span>
                   </div>
@@ -802,7 +802,7 @@ export function ModalUsuario({
                 têm username null → oculta. */}
             {inicial?.username && (
               <div>
-                <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
+                <div className="text-micro text-muted mb-1">{t("Login")}</div>
                 <button
                   type="button"
                   onClick={() => {
@@ -841,7 +841,7 @@ export function ModalUsuario({
               </p>
             ) : (
               <div>
-                <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
+                <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
                 {conta.emailFakeInterno ? (
                   <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
                     <Mail size={14} className="text-muted flex-shrink-0" />
@@ -857,7 +857,7 @@ export function ModalUsuario({
                         {conta.email}
                       </span>
                     </div>
-                    <div className="mt-1.5 text-[0.7rem]">
+                    <div className="mt-1.5 text-micro">
                       {conta.emailVerificado ? (
                         <span
                           className="inline-flex items-center gap-1"
@@ -890,7 +890,7 @@ export function ModalUsuario({
 
             {/* (4) Senha — mostra a padrão (se houver) + copiar + gerar nova */}
             <div>
-              <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
+              <div className="text-micro text-muted mb-1">{t("Senha")}</div>
               {carregandoConta ? (
                 <div className="flex items-center gap-2 text-sm text-muted py-1">
                   <Loader2 size={14} className="animate-spin" />
@@ -935,7 +935,7 @@ export function ModalUsuario({
                     </button>
                   </div>
                   <div
-                    className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                    className="text-micro mt-1 inline-flex items-center gap-1"
                     style={{ color: "var(--warning)" }}
                   >
                     <AlertTriangle size={11} />
@@ -1081,7 +1081,7 @@ export function ModalUsuario({
                               return (
                                 <span
                                   key={pid}
-                                  className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                                  className="text-micro font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                     color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
@@ -1092,11 +1092,11 @@ export function ModalUsuario({
                               );
                             })
                           ) : (
-                            <span className="text-[0.6875rem] text-muted">
+                            <span className="text-micro text-muted">
                               {t("Personalizado")}
                             </span>
                           )}
-                          <span className="text-[0.6875rem] text-muted">
+                          <span className="text-micro text-muted">
                             {t("{n} permissões", { n: v.permissoes.length })}
                           </span>
                         </div>

@@ -381,7 +381,7 @@ export default function AbaEquipe() {
                 >
                   <span className="relative flex-shrink-0">
                     <span
-                      className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold text-white"
+                      className="h-8 w-8 rounded-full flex items-center justify-center text-micro font-bold text-white"
                       style={{
                         background: bloqueado
                           ? "var(--border-strong)"
@@ -604,7 +604,7 @@ export default function AbaEquipe() {
                     if (vs.length === 0)
                       return (
                         <span
-                          className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                          className="text-micro font-semibold px-1.5 py-0.5 rounded"
                           style={{
                             backgroundColor: `color-mix(in srgb, ${LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888"} 13%, transparent)`,
                             color: LABELS_PAPEL_EQUIPE[selecionado.papel]?.cor ?? "#888",
@@ -622,7 +622,7 @@ export default function AbaEquipe() {
                           return (
                             <span
                               key={pid}
-                              className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                              className="text-micro font-semibold px-1.5 py-0.5 rounded"
                               style={{
                                 backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                 color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
@@ -633,7 +633,7 @@ export default function AbaEquipe() {
                           );
                         })}
                         <span
-                          className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                          className="text-micro font-semibold px-1.5 py-0.5 rounded"
                           style={{
                             backgroundColor: "var(--bg-elevated)",
                             color: "var(--text-muted)",
@@ -681,7 +681,7 @@ export default function AbaEquipe() {
                   Membros antigos (login por e-mail) têm username null. */}
               {selecionado.username && (
                 <div>
-                  <div className="text-[0.7rem] text-muted mb-1">{t("Login")}</div>
+                  <div className="text-micro text-muted mb-1">{t("Login")}</div>
                   <button
                     type="button"
                     onClick={() => {
@@ -717,7 +717,7 @@ export default function AbaEquipe() {
               ) : (
                 <>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">{t("E-mail")}</div>
+                    <div className="text-micro text-muted mb-1">{t("E-mail")}</div>
                     {conta.emailFakeInterno ? (
                       // Membro novo (login por handle) — não tem e-mail real.
                       <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -734,7 +734,7 @@ export default function AbaEquipe() {
                             {conta.email}
                           </span>
                         </div>
-                        <div className="mt-1 text-[0.7rem]">
+                        <div className="mt-1 text-micro">
                           {conta.emailVerificado ? (
                             <span
                               className="inline-flex items-center gap-1"
@@ -755,7 +755,7 @@ export default function AbaEquipe() {
                     )}
                   </div>
                   <div>
-                    <div className="text-[0.7rem] text-muted mb-1">{t("Senha")}</div>
+                    <div className="text-micro text-muted mb-1">{t("Senha")}</div>
                     {conta.senhaPadrao && conta.senhaPadraoValor ? (
                       <>
                         <div className="flex items-center gap-2 bg-elevated border border-border rounded-md px-3 py-2">
@@ -797,7 +797,7 @@ export default function AbaEquipe() {
                           </button>
                         </div>
                         <div
-                          className="text-[0.7rem] mt-1 inline-flex items-center gap-1"
+                          className="text-micro mt-1 inline-flex items-center gap-1"
                           style={{ color: "var(--warning)" }}
                         >
                           <AlertTriangle size={11} /> {t("Senha padrão — usuário ainda não trocou.")}
@@ -876,7 +876,7 @@ export default function AbaEquipe() {
                               return (
                                 <span
                                   key={pid}
-                                  className="text-[0.6875rem] font-semibold px-1.5 py-0.5 rounded"
+                                  className="text-micro font-semibold px-1.5 py-0.5 rounded"
                                   style={{
                                     backgroundColor: `color-mix(in srgb, ${perfil?.cor ?? "#3D7BFF"} 13%, transparent)`,
                                     color: corComoTexto(perfil?.cor ?? "#3D7BFF"),
@@ -887,11 +887,11 @@ export default function AbaEquipe() {
                               );
                             })
                           ) : (
-                            <span className="text-[0.6875rem] text-muted">
+                            <span className="text-micro text-muted">
                               {t("Personalizado")}
                             </span>
                           )}
-                          <span className="text-[0.6875rem] text-muted">
+                          <span className="text-micro text-muted">
                             {t("{n} permissões", { n: v.permissoes.length })}
                           </span>
                         </div>
@@ -940,7 +940,7 @@ export default function AbaEquipe() {
                           </span>
                         </div>
                         {mods.length === 0 ? (
-                          <span className="text-[0.6875rem] text-muted">
+                          <span className="text-micro text-muted">
                             {t("Sem permissões")}
                           </span>
                         ) : (
@@ -948,7 +948,7 @@ export default function AbaEquipe() {
                             {mods.map((m) => (
                               <span
                                 key={m.modulo}
-                                className="inline-flex items-center gap-1 text-[0.6875rem] font-medium px-1.5 py-0.5 rounded bg-elevated text-secondary"
+                                className="inline-flex items-center gap-1 text-micro font-medium px-1.5 py-0.5 rounded bg-elevated text-secondary"
                               >
                                 {m.label}
                                 <span className="text-muted tabular-nums">{m.n}</span>

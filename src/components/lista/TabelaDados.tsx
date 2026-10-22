@@ -177,17 +177,30 @@ export default function TabelaDados<T>({
                   onAbrir ? "cursor-pointer hover:bg-elevated/40" : ""
                 } ${linhaClasse?.(item) ?? ""}`}
               >
-                {colunas.map((c) => (
-                  <td
-                    key={c.chave}
-                    className={`px-4 py-3 align-middle ${c.alinhar === "direita" ? "text-right" : ""} ${
-                      c.classe ?? ""
-                    }`}
-                    style={c.estilo?.(item)}
-                  >
-                    {c === titulo ? comLink(item, c.celula(item)) : c.celula(item)}
-                  </td>
-                ))}
+                {colunas.map((c) => {
+                  // `max-w-*` e `truncate` não valem num <td> (a célula estica até
+                  // caber o texto e a tabela alarga): vão numa div dentro dela.
+                  const partes = (c.classe ?? "").split(/\s+/).filter(Boolean);
+                  const corte = partes.filter((x) => x === "truncate" || x.startsWith("max-w-")).join(" ");
+                  const resto = partes.filter((x) => x !== "truncate" && !x.startsWith("max-w-")).join(" ");
+                  const valor = c.celula(item);
+                  const conteudo = c === titulo ? comLink(item, valor) : valor;
+                  return (
+                    <td
+                      key={c.chave}
+                      className={`px-4 py-3 align-middle ${c.alinhar === "direita" ? "text-right" : ""} ${resto}`}
+                      style={c.estilo?.(item)}
+                    >
+                      {corte ? (
+                        <div className={corte} title={typeof valor === "string" ? valor : undefined}>
+                          {conteudo}
+                        </div>
+                      ) : (
+                        conteudo
+                      )}
+                    </td>
+                  );
+                })}
                 {acoes && (
                   <td className="px-4 py-3 align-middle">
                     <div
