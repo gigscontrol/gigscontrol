@@ -1,29 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ComponentProps, type ReactNode } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
-import Dashboard from "@/components/Dashboard";
-import ControlePagamentos from "@/components/ControlePagamentos";
-import VendasDashboard from "@/components/VendasDashboard";
-import AgendaDashboard from "@/components/AgendaDashboard";
-import AgendaEscala from "@/components/AgendaEscala";
-import AnotacoesPage from "@/components/anotacoes/AnotacoesPage";
-import Contatos from "@/components/Contatos";
-import ContatosDashboard from "@/components/ContatosDashboard";
-import MapaPage from "@/components/contatos/MapaPage";
-import NovoOrcamento from "@/components/NovoOrcamento";
-import HistoricoOrcamentos from "@/components/HistoricoOrcamentos";
-import OrcamentoDetalhe from "@/components/OrcamentoDetalhe";
-import ConcretizarVenda from "@/components/ConcretizarVenda";
-import HistoricoVendas from "@/components/HistoricoVendas";
-import VendaDetalhe from "@/components/VendaDetalhe";
-import ShowDetalheModal from "@/components/ShowDetalheModal";
-import ParcelaDetalheModal from "@/components/ParcelaDetalheModal";
 import SomenteLeitura from "@/components/SomenteLeitura";
 import BannerPagamento from "@/components/BannerPagamento";
-import BloqueioModal from "@/components/BloqueioModal";
 import PreferenciasApply from "@/components/PreferenciasApply";
 import { NavProvider, NavOverlay, useNavegacao } from "@/components/NavOverlay";
 import { FiltroArtistasProvider, AvisoFiltroArtistas } from "@/components/FiltroArtistas";
@@ -42,15 +25,6 @@ import { ctxDaSessao } from "@/lib/permissoes/resolver";
 import { podeVerModulo } from "@/lib/permissoes/modulos";
 import { useT } from "@/lib/i18n";
 import { WorkspaceProvider, useArtistas, useWorkspace } from "@/lib/workspace-context";
-import Configuracoes from "@/components/configuracoes/Configuracoes";
-import AbaArtistas from "@/components/configuracoes/AbaArtistas";
-import AbaEquipe from "@/components/configuracoes/AbaEquipe";
-import ModelosPage from "@/components/contratos/ModelosPage";
-import NovoContratoPage from "@/components/contratos/NovoContratoPage";
-import HistoricoPage from "@/components/contratos/HistoricoPage";
-import MeusContratosPage from "@/components/contratos/MeusContratosPage";
-import DashboardContratos from "@/components/contratos/DashboardContratos";
-import AgenciaDashboard from "@/components/agencia/AgenciaDashboard";
 import type { ActiveTab, ActivePage } from "@/types";
 import type { ContratoStatus } from "@/lib/mappers/contrato";
 import {
@@ -59,7 +33,46 @@ import {
   urlDaTela,
   urls,
   migalhasDaRota,
+  type Rota,
 } from "@/lib/navegacao/rotas";
+
+// Cada tela vira um pedaço próprio do JavaScript, baixado quando é aberta.
+// Antes as ~25 telas iam todas no bundle do layout (905 KB sem compressão)
+// — quem só usa a Agenda baixava o editor de contratos e o checkout junto.
+function carregandoTela() {
+  return (
+    <div className="flex justify-center py-16" role="status" aria-label="Carregando">
+      <span className="spinner spinner-sm text-brand" />
+    </div>
+  );
+}
+const Dashboard = dynamic(() => import("@/components/Dashboard"), { loading: carregandoTela });
+const ControlePagamentos = dynamic(() => import("@/components/ControlePagamentos"), { loading: carregandoTela });
+const VendasDashboard = dynamic(() => import("@/components/VendasDashboard"), { loading: carregandoTela });
+const AgendaDashboard = dynamic(() => import("@/components/AgendaDashboard"), { loading: carregandoTela });
+const AgendaEscala = dynamic(() => import("@/components/AgendaEscala"), { loading: carregandoTela });
+const AnotacoesPage = dynamic(() => import("@/components/anotacoes/AnotacoesPage"), { loading: carregandoTela });
+const Contatos = dynamic(() => import("@/components/Contatos"), { loading: carregandoTela });
+const ContatosDashboard = dynamic(() => import("@/components/ContatosDashboard"), { loading: carregandoTela });
+const MapaPage = dynamic(() => import("@/components/contatos/MapaPage"), { loading: carregandoTela });
+const NovoOrcamento = dynamic(() => import("@/components/NovoOrcamento"), { loading: carregandoTela });
+const HistoricoOrcamentos = dynamic(() => import("@/components/HistoricoOrcamentos"), { loading: carregandoTela });
+const OrcamentoDetalhe = dynamic(() => import("@/components/OrcamentoDetalhe"), { loading: carregandoTela });
+const ConcretizarVenda = dynamic(() => import("@/components/ConcretizarVenda"), { loading: carregandoTela });
+const HistoricoVendas = dynamic(() => import("@/components/HistoricoVendas"), { loading: carregandoTela });
+const VendaDetalhe = dynamic(() => import("@/components/VendaDetalhe"), { loading: carregandoTela });
+const Configuracoes = dynamic(() => import("@/components/configuracoes/Configuracoes"), { loading: carregandoTela });
+const AbaArtistas = dynamic(() => import("@/components/configuracoes/AbaArtistas"), { loading: carregandoTela });
+const AbaEquipe = dynamic(() => import("@/components/configuracoes/AbaEquipe"), { loading: carregandoTela });
+const ModelosPage = dynamic(() => import("@/components/contratos/ModelosPage"), { loading: carregandoTela });
+const NovoContratoPage = dynamic(() => import("@/components/contratos/NovoContratoPage"), { loading: carregandoTela });
+const HistoricoPage = dynamic(() => import("@/components/contratos/HistoricoPage"), { loading: carregandoTela });
+const MeusContratosPage = dynamic(() => import("@/components/contratos/MeusContratosPage"), { loading: carregandoTela });
+const DashboardContratos = dynamic(() => import("@/components/contratos/DashboardContratos"), { loading: carregandoTela });
+const AgenciaDashboard = dynamic(() => import("@/components/agencia/AgenciaDashboard"), { loading: carregandoTela });
+const ShowDetalheModal = dynamic(() => import("@/components/ShowDetalheModal"), { loading: () => null });
+const ParcelaDetalheModal = dynamic(() => import("@/components/ParcelaDetalheModal"), { loading: () => null });
+const BloqueioModal = dynamic(() => import("@/components/BloqueioModal"), { loading: () => null });
 
 /**
  * Layout do app logado.
@@ -454,55 +467,11 @@ function AppRoot() {
   const abrirShow = (id: string) => abrirSobreposicao("show", id);
 
   // ---- Caminho no topo ----
-  const { vendas } = useVendas();
-  const { orcamentos } = useOrcamentos();
-  const { contratos } = useContratos();
-  const { contratantes, casas, cidades } = useContatos();
+  // Os nomes (VND-0063, nome do contato…) vêm dos dados — quem assina os
+  // contexts é o TopbarComCaminho, não o AppRoot: assim cada mudança de
+  // dado re-renderiza só a barra, não o painel inteiro.
   const abaConfig = configAberta ? searchParams.get("aba") ?? "perfil" : null;
   const ehAdminSessao = isSuperAdmin || sessao?.usuario?.papel === "admin";
-  const migalhas = useMemo(() => {
-    const nomeContato = (() => {
-      if (!contatoId) return null;
-      if (contatoAba === "contratantes") return contratantes.find((c) => c.id === contatoId)?.nome ?? null;
-      if (contatoAba === "casas") return casas.find((c) => c.id === contatoId)?.nome ?? null;
-      if (contatoAba === "cidades") return cidades.find((c) => c.id === contatoId)?.nome ?? null;
-      return null;
-    })();
-    return migalhasDaRota(rota, {
-      nomes: {
-        orcamento: orcamentoId ? orcamentos.find((o) => o.id === orcamentoId)?.numero : null,
-        venda: vendaId ? vendas.find((v) => v.id === vendaId)?.numero : null,
-        contrato: contratoId ? contratos.find((c) => c.id === contratoId)?.numero : null,
-        contato: nomeContato,
-        orcamentoOrigem: orcamentoOrigem
-          ? orcamentos.find((o) => o.id === orcamentoOrigem)?.numero ?? null
-          : null,
-      },
-      abaConfig,
-      ehAdmin: ehAdminSessao,
-    });
-  }, [
-    rota,
-    orcamentoId,
-    vendaId,
-    contratoId,
-    contatoId,
-    contatoAba,
-    orcamentoOrigem,
-    abaConfig,
-    ehAdminSessao,
-    orcamentos,
-    vendas,
-    contratos,
-    contratantes,
-    casas,
-    cidades,
-  ]);
-
-  // Parcela aberta no modal global: a venda dona é achada pela própria parcela.
-  const vendaDaParcela = parcelaAberta
-    ? vendas.find((v) => v.parcelas.some((p) => p.id === parcelaAberta))?.id ?? null
-    : null;
 
   // Lista + ficha do MESMO componente (contratos, contatos) dividem a chave:
   // abrir/fechar o item não remonta a lista (filtros e período ficam).
@@ -564,9 +533,12 @@ function AppRoot() {
           background: `radial-gradient(380px 160px at 145px -10px, color-mix(in srgb, var(--brand) 15%, transparent), transparent 66%)`,
         }}
       >
-        <Topbar
+        <TopbarComCaminho
+          rota={rota}
+          orcamentoOrigem={orcamentoOrigem}
+          abaConfig={abaConfig}
+          ehAdmin={ehAdminSessao}
           onOpenSidebar={() => setSidebarOpen(true)}
-          migalhas={migalhas}
           onNavegar={irParaHref}
           onAbrirConfiguracoes={() => irPara(urls.configuracoes())}
           onVerNotificacoes={() => irPara(urls.configuracoes("notificacoes"))}
@@ -786,17 +758,18 @@ function AppRoot() {
 
       {/* Modais com ENDEREÇO (?show= / ?parcela=): valem por cima de qualquer
           tela, o F5 reabre e o voltar do navegador fecha. */}
-      <ShowDetalheModal
-        showId={showAberto}
-        onClose={() => fecharSobreposicao("show")}
-        onAbrirOrcamento={abrirOrcamento}
-        onEditarVenda={editarVenda}
-      />
-      <ParcelaDetalheModal
-        vendaId={vendaDaParcela}
-        parcelaId={parcelaAberta}
-        onClose={() => fecharSobreposicao("parcela")}
-      />
+      {/* Só montam com id na URL: senão o pedaço de JS deles baixaria em toda tela. */}
+      {showAberto && (
+        <ShowDetalheModal
+          showId={showAberto}
+          onClose={() => fecharSobreposicao("show")}
+          onAbrirOrcamento={abrirOrcamento}
+          onEditarVenda={editarVenda}
+        />
+      )}
+      {parcelaAberta && (
+        <ParcelaGlobal parcelaId={parcelaAberta} onClose={() => fecharSobreposicao("parcela")} />
+      )}
       {/* Busca geral — Ctrl+K em qualquer tela. */}
       <BuscaGlobal />
       </div>
@@ -881,4 +854,71 @@ function VisitanteBanner() {
       </button>
     </div>
   );
+}
+
+/** Topbar com o caminho ("Vendas › Todas as vendas › VND-0063"). Assina os
+ *  contexts de dados AQUI (e não no AppRoot) pros nomes do caminho. */
+function TopbarComCaminho({
+  rota,
+  orcamentoOrigem,
+  abaConfig,
+  ehAdmin,
+  ...topbar
+}: {
+  rota: Rota;
+  orcamentoOrigem: string | null;
+  abaConfig: string | null;
+  ehAdmin: boolean;
+} & Omit<ComponentProps<typeof Topbar>, "migalhas">) {
+  const { vendas } = useVendas();
+  const { orcamentos } = useOrcamentos();
+  const { contratos } = useContratos();
+  const { contratantes, casas, cidades } = useContatos();
+  const { orcamentoId, vendaId, contratoId, contatoId, contatoAba } = rota;
+  const migalhas = useMemo(() => {
+    const nomeContato = (() => {
+      if (!contatoId) return null;
+      if (contatoAba === "contratantes") return contratantes.find((c) => c.id === contatoId)?.nome ?? null;
+      if (contatoAba === "casas") return casas.find((c) => c.id === contatoId)?.nome ?? null;
+      if (contatoAba === "cidades") return cidades.find((c) => c.id === contatoId)?.nome ?? null;
+      return null;
+    })();
+    return migalhasDaRota(rota, {
+      nomes: {
+        orcamento: orcamentoId ? orcamentos.find((o) => o.id === orcamentoId)?.numero : null,
+        venda: vendaId ? vendas.find((v) => v.id === vendaId)?.numero : null,
+        contrato: contratoId ? contratos.find((c) => c.id === contratoId)?.numero : null,
+        contato: nomeContato,
+        orcamentoOrigem: orcamentoOrigem
+          ? orcamentos.find((o) => o.id === orcamentoOrigem)?.numero ?? null
+          : null,
+      },
+      abaConfig,
+      ehAdmin,
+    });
+  }, [
+    rota,
+    orcamentoId,
+    vendaId,
+    contratoId,
+    contatoId,
+    contatoAba,
+    orcamentoOrigem,
+    abaConfig,
+    ehAdmin,
+    orcamentos,
+    vendas,
+    contratos,
+    contratantes,
+    casas,
+    cidades,
+  ]);
+  return <Topbar {...topbar} migalhas={migalhas} />;
+}
+
+/** Modal global da parcela (?parcela=): a venda dona é achada pela própria parcela. */
+function ParcelaGlobal({ parcelaId, onClose }: { parcelaId: string; onClose: () => void }) {
+  const { vendas } = useVendas();
+  const vendaId = vendas.find((v) => v.parcelas.some((p) => p.id === parcelaId))?.id ?? null;
+  return <ParcelaDetalheModal vendaId={vendaId} parcelaId={parcelaId} onClose={onClose} />;
 }
