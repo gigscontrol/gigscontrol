@@ -231,7 +231,7 @@ export const ROTULO_MODULO: Record<ActiveTab, string> = {
  */
 export const ROTULO_PAGINA: Record<ActivePage, string> = {
   dashboard: "Dashboard",
-  "agenda-completa": "Calendário",
+  "agenda-completa": "Agenda",
   "agenda-anotacoes": "Anotações",
   "vendas-novo-orcamento": "Novo orçamento",
   "vendas-historico": "Todos os orçamentos",

@@ -138,7 +138,7 @@ const MODULOS: Modulo[] = [
     icone: "calendario",
     submenu: [
       { icone: "dashboard", label: "Dashboard" },
-      { icone: "calendario", label: "Calendário" },
+      { icone: "calendario", label: "Agenda" },
       { icone: "nota", label: "Anotações" },
     ],
   },
