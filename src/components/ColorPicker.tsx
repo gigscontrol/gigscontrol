@@ -161,6 +161,22 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
     setHsv((prev) => ({ ...prev, h: x * 360 }));
   }
 
+  // Teclado nas duas áreas de arrastar (passo 2%; Shift = 10%).
+  function teclaSv(e: React.KeyboardEvent) {
+    const p = e.shiftKey ? 0.1 : 0.02;
+    const d = { ArrowLeft: [-p, 0], ArrowRight: [p, 0], ArrowUp: [0, p], ArrowDown: [0, -p] }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    setHsv((prev) => ({ ...prev, s: clamp(prev.s + d[0], 0, 1), v: clamp(prev.v + d[1], 0, 1) }));
+  }
+  function teclaHue(e: React.KeyboardEvent) {
+    const p = e.shiftKey ? 30 : 5;
+    const d = { ArrowLeft: -p, ArrowDown: -p, ArrowRight: p, ArrowUp: p }[e.key];
+    if (d === undefined) return;
+    e.preventDefault();
+    setHsv((prev) => ({ ...prev, h: (prev.h + d + 360) % 360 }));
+  }
+
   function aplicarHexDigitado() {
     const limpo = hexInput.trim().replace(/^#?/, "#");
     if (/^#[0-9a-fA-F]{6}$/.test(limpo)) {
@@ -207,6 +223,17 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
       {/* Quadrado saturação × brilho */}
       <div
         ref={svRef}
+        role="slider"
+        tabIndex={0}
+        aria-label={t("Saturação e brilho")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(hsv.s * 100)}
+        aria-valuetext={t("Saturação {s}%, brilho {v}%", {
+          s: Math.round(hsv.s * 100),
+          v: Math.round(hsv.v * 100),
+        })}
+        onKeyDown={teclaSv}
         onPointerDown={handleSvPointer}
         onPointerMove={(e) => {
           if (e.buttons === 1) atualizarSv(e);
@@ -215,6 +242,8 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
         style={{
           width: "100%",
           height: 140,
+          // Arrastar no toque escolhe a cor (não rola a página).
+          touchAction: "none",
           // Gradient layered: branco→matiz horizontal, depois preto→transparente vertical
           background: `
             linear-gradient(to top, #000, transparent),
@@ -241,6 +270,13 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
       {/* Slider de matiz */}
       <div
         ref={hueRef}
+        role="slider"
+        tabIndex={0}
+        aria-label={t("Matiz")}
+        aria-valuemin={0}
+        aria-valuemax={360}
+        aria-valuenow={Math.round(hsv.h)}
+        onKeyDown={teclaHue}
         onPointerDown={handleHuePointer}
         onPointerMove={(e) => {
           if (e.buttons === 1) atualizarHue(e);
@@ -249,6 +285,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
         style={{
           width: "100%",
           height: 12,
+          touchAction: "none",
           background:
             "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
         }}
@@ -294,6 +331,7 @@ export default function ColorPicker({ cor, onApply, onClose, anchorRef }: Props)
               }
             }}
             maxLength={6}
+            aria-label={t("Cor em hexadecimal")}
             className="bg-transparent outline-none text-sm text-primary uppercase font-mono w-full tracking-wider"
             placeholder="3D7BFF"
           />

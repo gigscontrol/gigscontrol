@@ -13,6 +13,7 @@ import {
   FolderInput,
 } from "lucide-react";
 import PageHeader from "../PageHeader";
+import MenuLinha, { type ItemMenuLinha } from "../lista/MenuLinha";
 import { useConfirmar } from "../ConfirmarModal";
 import { useContratos, type AssinanteResumo } from "@/lib/contratos-context";
 import { useVendas } from "@/lib/vendas-context";
@@ -160,6 +161,17 @@ export default function MeusContratosPage({
       if (id) void comOcupado(() => moverContrato(id, pastaId));
     };
   }
+  // Arrastar só funciona com mouse: o menu ⋯ de cada contrato faz o mesmo
+  // movimento no toque e no teclado ("Mover para…" / "Tirar da pasta").
+  const destinos = useMemo(
+    () => [
+      { id: PASTA_ARQUIVADOS, nome: t("Arquivados") },
+      ...pastas.map((p) => ({ id: p.id, nome: p.nome })),
+    ],
+    [pastas, t]
+  );
+  const mover = (c: Contrato, pastaId: string | null) =>
+    void comOcupado(() => moverContrato(c.id, pastaId));
 
   return (
     <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
@@ -170,7 +182,7 @@ export default function MeusContratosPage({
       />
 
       <p className="text-sm text-muted -mt-2 mb-5">
-        {t("Aqui você só organiza: arraste os contratos para as pastas. Excluir uma pasta NÃO apaga os contratos — eles voltam para “sem pasta”.")}{" "}
+        {t("Aqui você só organiza: arraste os contratos para as pastas (ou use o menu ⋯ de cada contrato). Excluir uma pasta NÃO apaga os contratos — eles voltam para “sem pasta”.")}{" "}
         <button
           type="button"
           onClick={() => onNavigate?.("contratos", "contratos-historico")}
@@ -251,7 +263,21 @@ export default function MeusContratosPage({
                     <div className="flex items-end justify-between gap-2">
                       <div className="min-w-0">
                         <div className="stat-value leading-none">{contagem.get(slot.id) ?? 0}</div>
-                        <div className="text-xs text-muted mt-1">{selec ? t("Aberta") : t("Abrir")}</div>
+                        {/* O cartão inteiro abre no clique; este botão é a
+                            mesma ação pro teclado e o leitor de tela. */}
+                        <button
+                          type="button"
+                          aria-expanded={selec}
+                          aria-label={`${slot.nome}: ${selec ? t("Fechar") : t("Abrir")}`}
+                          disabled={emEdicao}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAberta((a) => (a === slot.id ? null : slot.id));
+                          }}
+                          className="text-xs text-muted mt-1 hover:text-primary"
+                        >
+                          {selec ? t("Aberta") : t("Abrir")}
+                        </button>
                       </div>
                       {emEdicao ? (
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -327,7 +353,7 @@ export default function MeusContratosPage({
                 </div>
                 {conteudoAberta.length === 0 ? (
                   <div className="text-sm text-muted text-center py-6">
-                    {t("Arraste um contrato para cá.")}
+                    {t("Arraste um contrato para cá, ou use o menu ⋯ do contrato.")}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1.5">
@@ -338,7 +364,8 @@ export default function MeusContratosPage({
                         desc={desc(c)}
                         assinantes={assinantesPorContrato[c.id]}
                         onAbrir={onAbrirContrato}
-                        onRemover={() => void comOcupado(() => moverContrato(c.id, null))}
+                        destinos={destinos}
+                        onMover={(pastaId) => mover(c, pastaId)}
                       />
                     ))}
                   </div>
@@ -370,6 +397,8 @@ export default function MeusContratosPage({
                     desc={desc(c)}
                     assinantes={assinantesPorContrato[c.id]}
                     onAbrir={onAbrirContrato}
+                    destinos={destinos}
+                    onMover={(pastaId) => mover(c, pastaId)}
                     arrastavel
                   />
                 ))}
@@ -388,7 +417,8 @@ function ContratoCard({
   contrato,
   desc,
   onAbrir,
-  onRemover,
+  destinos,
+  onMover,
   pastaNome,
   arrastavel,
   assinantes,
@@ -396,7 +426,10 @@ function ContratoCard({
   contrato: Contrato;
   desc: ReturnType<typeof descreverContrato>;
   onAbrir?: (id: string) => void;
-  onRemover?: () => void;
+  /** Pastas pra onde o contrato pode ir (menu ⋯). */
+  destinos: { id: string; nome: string }[];
+  /** `null` = tirar da pasta. */
+  onMover: (pastaId: string | null) => void;
   pastaNome?: string | null;
   arrastavel?: boolean;
   assinantes?: AssinanteResumo[];
@@ -408,6 +441,27 @@ function ContratoCard({
   if (desc.artista) partes.push(desc.artista);
   if (desc.temEvento) partes.push(desc.numero);
   partes.push(formatarDataCurta(desc.data));
+  const itensMenu: ItemMenuLinha[] = [
+    ...destinos
+      .filter((p) => p.id !== contrato.pastaId)
+      .map((p) => ({
+        chave: `mover-${p.id}`,
+        rotulo: t("Mover para {pasta}", { pasta: p.nome }),
+        icone: <FolderOpen size={14} />,
+        onClick: () => onMover(p.id),
+      })),
+    ...(contrato.pastaId
+      ? [
+          {
+            chave: "tirar",
+            rotulo: t("Tirar da pasta"),
+            icone: <FolderInput size={14} />,
+            onClick: () => onMover(null),
+            separar: true,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div
@@ -426,12 +480,21 @@ function ContratoCard({
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
+        {/* O cartão inteiro abre no clique; o título é o botão de verdade
+            (teclado e leitor de tela). */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAbrir?.(contrato.id);
+          }}
+          className="min-w-0 flex-1 text-left"
+        >
           <div className="text-sm font-medium text-primary truncate" title={desc.titulo}>
             {desc.titulo}
           </div>
           <div className="text-xs text-muted truncate">{partes.join(" · ")}</div>
-        </div>
+        </button>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {pastaNome && (
             <span
@@ -444,18 +507,11 @@ function ContratoCard({
             </span>
           )}
           <span className={`badge ${info.badge}`}>{t(info.label)}</span>
-          {onRemover && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemover();
-              }}
-              className="btn-ghost p-1 rounded"
-              title={t("Tirar da pasta")}
-              aria-label={t("Tirar da pasta")}
-            >
-              <FolderInput size={13} />
-            </button>
+          {itensMenu.length > 0 && (
+            // stopPropagation: o clique no menu (mesmo no portal) não abre o contrato.
+            <div onClick={(e) => e.stopPropagation()}>
+              <MenuLinha itens={itensMenu} rotulo={t("Ações do contrato {titulo}", { titulo: desc.titulo })} />
+            </div>
           )}
         </div>
       </div>
