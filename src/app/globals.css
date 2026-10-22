@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 @layer base {
   :root {
     /* Superfícies (dark, frias) — Signal design system */
@@ -233,7 +231,7 @@
   }
 
   body {
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-texto), system-ui, sans-serif;
     background-color: var(--bg-main);
     color: var(--text-primary);
     line-height: 1.5;
@@ -245,7 +243,7 @@
      classe própria também herdam). Utilitários font-* do Tailwind ainda têm
      prioridade. */
   h1, h2, h3 {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-titulo), var(--fonte-texto), system-ui, sans-serif;
     letter-spacing: -0.02em;
   }
 
@@ -315,7 +313,7 @@
     gap: 4px;
     padding: 4px 7px;
     border-radius: var(--radius-sm);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--fonte-mono), monospace;
     font-size: 0.6875rem; /* 11px — piso de leitura (era 9px) */
     font-weight: 600;
     text-transform: uppercase;
@@ -413,7 +411,7 @@
 
   /* Typography helpers */
   .stat-value {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-titulo), var(--fonte-texto), system-ui, sans-serif;
     font-size: 1.875rem;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -421,7 +419,7 @@
     font-variant-numeric: tabular-nums;
   }
   .stat-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--fonte-mono), monospace;
     font-size: 0.6875rem; /* 11px (era 10,4px) */
     font-weight: 500;
     text-transform: uppercase;
@@ -429,7 +427,7 @@
     color: var(--text-secondary);
   }
   .section-title {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-titulo), var(--fonte-texto), system-ui, sans-serif;
     font-size: 1rem;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -440,7 +438,7 @@
     color: var(--text-muted);
   }
   .page-title {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-titulo), var(--fonte-texto), system-ui, sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -453,7 +451,7 @@
 
   /* Microlabel em mono CAIXA ALTA (IDs, datas, valores auxiliares) */
   .mono-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--fonte-mono), monospace;
     font-size: 0.6875rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -566,7 +564,7 @@
 @layer utilities {
   /* Fonte de display dos títulos da landing pública — não altera o resto do app. */
   .font-display {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: var(--fonte-titulo), var(--fonte-texto), system-ui, sans-serif;
     letter-spacing: -0.02em;
   }
 

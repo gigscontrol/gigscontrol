@@ -1,8 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider, type Lang } from "@/lib/i18n";
 import { regiaoDe, resolverPais } from "@/lib/regiao";
+
+// Fontes servidas pelo próprio Next (baixadas no build): antes vinham de um
+// @import do Google Fonts no CSS — uma requisição encadeada que segurava a
+// primeira pintura. As variáveis são usadas no globals.css e no Tailwind.
+const fonteTitulo = Bricolage_Grotesque({ subsets: ["latin"], axes: ["opsz"], variable: "--fonte-titulo", display: "swap" });
+const fonteTexto = Hanken_Grotesk({ subsets: ["latin"], variable: "--fonte-texto", display: "swap" });
+const fonteMono = JetBrains_Mono({ subsets: ["latin"], variable: "--fonte-mono", display: "swap" });
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gigscontrol.com";
 // Aba do navegador: só a marca (pedido do Bruno, 21/10/2026 — o "— Sistema
@@ -86,7 +94,11 @@ export default function RootLayout({
       : langPadrao;
 
   return (
-    <html lang={initialLang} suppressHydrationWarning>
+    <html
+      lang={initialLang}
+      suppressHydrationWarning
+      className={`${fonteTitulo.variable} ${fonteTexto.variable} ${fonteMono.variable}`}
+    >
       <body>
         {/* No-flash do tema: roda ANTES do primeiro paint (primeiro filho do
             body, inline síncrono). Padrão é escuro (atributo ausente); só quem

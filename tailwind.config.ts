@@ -35,9 +35,9 @@ const config: Config = {
         DEFAULT: "var(--border-color)",
       },
       fontFamily: {
-        sans: ["Hanken Grotesk", "system-ui", "sans-serif"],
-        display: ["Bricolage Grotesque", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["var(--fonte-texto)", "system-ui", "sans-serif"],
+        display: ["var(--fonte-titulo)", "system-ui", "sans-serif"],
+        mono: ["var(--fonte-mono)", "monospace"],
       },
       borderRadius: {
         DEFAULT: "var(--radius)",
