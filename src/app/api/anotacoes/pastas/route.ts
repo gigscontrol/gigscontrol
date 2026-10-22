@@ -21,7 +21,7 @@ const MAX_PASTAS = 8;
  * código e não dependa só da policy.
  */
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   try {
     const todas = await listarPastasDoWorkspace(r.sessao.supabase);

@@ -11,7 +11,7 @@ import type { PlanoId } from "@/lib/planos";
 import { respostaDeErro } from "@/lib/api/erros";
 
 export async function GET() {
-  const r = await autenticarComWorkspace();
+  const r = await autenticarComWorkspace({ leitura: true });
   if ("response" in r) return r.response;
   // LER modelos (D3): fecha pra quem tem acesso a contratos (admin, ou equipe
   // com alguma chave contratos.* em algum vínculo, ou artista com contratosVer).
