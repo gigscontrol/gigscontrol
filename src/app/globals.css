@@ -568,9 +568,12 @@
     to { opacity: 1; }
   }
 
-  /* Foguinho animado nos dias de sexta/sábado da agenda */
+  /* Foguinho animado nos dias de sexta/sábado da agenda. Pisca 3 vezes e
+     para (3,6 s): animação automática que dura mais de 5 s precisaria de um
+     jeito de pausar (WCAG 2.2.2) — e um calendário cheio de chamas piscando
+     sem parar disputa atenção com os shows. */
   .animate-flame {
-    animation: flame-flicker 1.2s ease-in-out infinite;
+    animation: flame-flicker 1.2s ease-in-out 3;
     transform-origin: center bottom;
     filter: drop-shadow(0 0 4px #ff6b35);
   }
@@ -625,8 +628,18 @@
     -webkit-backdrop-filter: blur(4px);
   }
 
+  /* Menos movimento (preferência do sistema). A troca de estado continua
+     visível — entradas viram só fade, sem deslizar nem crescer; o que é
+     decorativo (chama, pulso, hover que levanta) para. Spinner continua,
+     mais lento: é o aviso de que algo está carregando. */
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation-duration: 1.4s; }
     .loader-breathe { animation: none; opacity: 1; }
+    .animate-in,
+    .animate-modal { animation-name: fade; }
+    .animate-flame { animation: none; }
+    .card-interactive:hover { transform: none; }
+    .animate-pulse { animation: none !important; }
+    .animate-spin { animation-duration: 1.4s !important; }
   }
 }
