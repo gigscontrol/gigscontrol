@@ -254,7 +254,7 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
   }, [cidades, artistas, contratos, accent, t]);
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Todas as vendas"
         subtitle={`${ativas.length} ${ativas.length === 1 ? t("venda concretizada") : t("vendas concretizadas")} · ${t("Total")} ${totaisPorMoeda(ativas.map((v) => ({ valor: v.cache, moeda: v.moeda })))}`}

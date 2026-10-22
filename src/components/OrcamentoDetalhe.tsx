@@ -106,7 +106,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
     null;
   if (!orc) {
     return (
-      <div className="max-w-[800px] mx-auto w-full p-6 lg:p-8">
+      <div className="pagina">
         <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
           <ArrowLeft size={14} />
           {t("Voltar")}
@@ -195,7 +195,7 @@ export default function OrcamentoDetalhe({ orcamentoId, onBack, onTransformarEmV
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <button onClick={onBack} className="btn-ghost mb-4 inline-flex items-center gap-1.5 text-sm">
         <ArrowLeft size={14} />
         {t("Voltar")}

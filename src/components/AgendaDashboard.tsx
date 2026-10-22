@@ -417,8 +417,51 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
     );
   };
 
+  // Cartão "Shows a realizar" — renderizado no celular (antes dos números) e
+  // no computador (à esquerda da grade); só um aparece por tamanho de tela.
+  const cartaoARealizar = (
+    <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="section-title flex items-center gap-2">
+            <Clock size={16} style={{ color: "var(--warning)" }} />
+            {t("Shows a realizar")}
+            <span className="badge badge-neutral tabular-nums">{aRealizar}</span>
+          </h2>
+          {aRealizarList.length > 0 && (
+            <button
+              onClick={() =>
+                setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
+              }
+              className="btn-ghost text-xs inline-flex items-center gap-1"
+            >
+              {t("Ver todos")} <ChevronRight size={12} />
+            </button>
+          )}
+        </div>
+        {aRealizarList.length === 0 ? (
+          <div className="text-sm text-muted text-center py-6">
+            {t("Nenhum show a realizar no período.")}
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border">
+            {aRealizarList.slice(0, 5).map((s) => renderLinhaResumo(s))}
+            {aRealizarList.length > 5 && (
+              <button
+                onClick={() =>
+                  setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
+                }
+                className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
+              >
+                {t("+ {n} shows — ver todos", { n: aRealizarList.length - 5 })}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+  );
+
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Agenda"
         subtitle={tudo ? t("Panorama completo da agenda") : `${t("Visão do mês")} — ${tituloMes}`}
@@ -460,12 +503,16 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       </div>
 
       {/* No celular (artista/equipe) a 1ª coisa é "onde e quando eu toco":
-          Shows a realizar → números → Shows realizados. No computador, a
-          ordem de sempre (números em cima, as duas listas lado a lado). */}
+          Shows a realizar → números → Shows realizados. No computador:
+          números em cima, depois a realizar | realizados. O cartão "a
+          realizar" fica em dois lugares (um escondido por tamanho de tela)
+          pra ordem do DOM — teclado e leitor de tela — bater com a da tela;
+          antes era `order-*`, e o Tab passava por ele por último. */}
       <div className="mb-4 flex flex-col gap-4 lg:mb-0 lg:block">
       {/* Cards de número — clicáveis, abrem a lista correspondente. Em "Visão
           geral" contam a agenda inteira; senão, só o mês selecionado. */}
-      <div className="order-2 grid grid-cols-2 gap-4 lg:mb-6 lg:grid-cols-4">
+      <div className="lg:hidden">{cartaoARealizar}</div>
+      <div className="grid grid-cols-2 gap-4 lg:mb-6 lg:grid-cols-4">
         <ClickableStat
           onClick={() =>
             setLista({ titulo: t("Todos os shows"), subtitulo: tituloMes, shows: resumo })
@@ -536,7 +583,10 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
       {/* Shows realizados + a realizar — em lista (saíram dos cards de cima).
           `contents` no celular: os dois cartões entram na ordem de cima. */}
       <div className="contents lg:mb-4 lg:grid lg:grid-cols-2 lg:gap-4">
-        <div className="card order-3 lg:order-none">
+        {/* Computador: "a realizar" à esquerda — o que ainda vai acontecer vem
+            primeiro. (No celular ele já apareceu antes dos números.) */}
+        <div className="hidden lg:block">{cartaoARealizar}</div>
+        <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title flex items-center gap-2">
               <CheckCircle2 size={16} style={{ color: "var(--success)" }} />
@@ -569,45 +619,6 @@ export default function AgendaDashboard({ selectedArtistas, onNavigate, onAbrirS
                   className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
                 >
                   {t("+ {n} shows — ver todos", { n: realizados.lista.length - 5 })}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="card order-1 lg:order-none">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-title flex items-center gap-2">
-              <Clock size={16} style={{ color: "var(--warning)" }} />
-              {t("Shows a realizar")}
-              <span className="badge badge-neutral tabular-nums">{aRealizar}</span>
-            </h2>
-            {aRealizarList.length > 0 && (
-              <button
-                onClick={() =>
-                  setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
-                }
-                className="btn-ghost text-xs inline-flex items-center gap-1"
-              >
-                {t("Ver todos")} <ChevronRight size={12} />
-              </button>
-            )}
-          </div>
-          {aRealizarList.length === 0 ? (
-            <div className="text-sm text-muted text-center py-6">
-              {t("Nenhum show a realizar no período.")}
-            </div>
-          ) : (
-            <div className="flex flex-col divide-y divide-border">
-              {aRealizarList.slice(0, 5).map((s) => renderLinhaResumo(s))}
-              {aRealizarList.length > 5 && (
-                <button
-                  onClick={() =>
-                    setLista({ titulo: t("Shows a realizar"), subtitulo: tituloMes, shows: aRealizarList })
-                  }
-                  className="text-xs text-muted hover:text-primary py-2.5 text-center transition-colors"
-                >
-                  {t("+ {n} shows — ver todos", { n: aRealizarList.length - 5 })}
                 </button>
               )}
             </div>

@@ -440,7 +440,7 @@ export default function NovoContratoPage({
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Novo contrato"
         subtitle={

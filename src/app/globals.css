@@ -505,6 +505,19 @@
      `focus:border-border-strong` — 8% → 12% de branco, 1,1:1, mais fraco
      que o próprio hover. `foco-campo` vai no campo; `foco-campo-dentro`,
      no invólucro. */
+  /* Contêiner de toda tela do painel: até 1400 px, centralizado; margem
+     16 px no celular, 24 a partir de 640 px, 32 a partir de 1024 px. Era a
+     mesma string colada em 26 lugares (e 800 px nos estados de carregando,
+     que pulavam pra 1400 quando os dados chegavam). */
+  .pagina {
+    width: 100%;
+    max-width: 1400px;
+    margin-inline: auto;
+    padding: 1rem;
+  }
+  @media (min-width: 640px) { .pagina { padding: 1.5rem; } }
+  @media (min-width: 1024px) { .pagina { padding: 2rem; } }
+
   /* "Pular para o conteúdo": fora da tela até receber o foco do teclado. */
   .pular-conteudo {
     position: fixed; top: 8px; left: 8px; z-index: 10000;

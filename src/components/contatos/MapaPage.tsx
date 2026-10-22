@@ -14,7 +14,7 @@ const ACCENT = MODULE_THEMES.contatos.color;
 export default function MapaPage() {
   const t = useT();
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title={t("Mapa")}
         subtitle={t("Contratantes, casas e cidades no mapa — busca por raio")}

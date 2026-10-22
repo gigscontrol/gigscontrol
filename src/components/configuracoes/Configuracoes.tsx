@@ -95,7 +95,7 @@ export default function Configuracoes({ onSair }: { onSair: () => void }) {
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <button
         onClick={onSair}
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary transition-colors mb-3"

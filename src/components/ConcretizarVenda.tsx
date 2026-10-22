@@ -1487,7 +1487,7 @@ export default function ConcretizarVenda({
 
   return (
     <div
-      className="max-w-[1400px] mx-auto w-full p-6 lg:p-8 pb-32"
+      className="pagina"
       // Guarda de saída (auditoria 27/08/2026): qualquer edição em qualquer
       // input do form marca "sujo" — sem listar os ~50 estados um a um.
       onChangeCapture={() => {

@@ -374,7 +374,7 @@ export default function Contatos({
   // Tela de detalhe quando algo selecionado
   if (contatoId && !selecionado) {
     return (
-      <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+      <div className="pagina">
         <div className="card text-center py-12">
           <h2 className="section-title mb-3">
             {!contatosCarregados ? t("Carregando...") : t("Contato não encontrado")}
@@ -409,7 +409,7 @@ export default function Contatos({
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Todos os contatos"
         subtitle="Contratantes, casas/eventos e cidades — sua base de relacionamento"

@@ -51,6 +51,7 @@ export default function TabelaDados<T>({
   linhaClasse,
   porPagina = 50,
   rotuloItens,
+  compacta = false,
 }: {
   itens: readonly T[];
   colunas: Coluna<T>[];
@@ -70,8 +71,12 @@ export default function TabelaDados<T>({
   porPagina?: number;
   /** "vendas", "contratos"… pro rodapé "1–50 de 132 vendas". */
   rotuloItens?: string;
+  /** Respiro lateral menor (12 px) pra tabelas de muitas colunas — Pagamentos
+   *  tem 9 e, com 16 px, a coluna de ações saía da tela a 1920 px. */
+  compacta?: boolean;
 }) {
   const t = useT();
+  const px = compacta ? "px-3" : "px-4";
   const [ordem, setOrdem] = useState<Ordem>(null);
   const [pagina, setPagina] = useState(1);
 
@@ -157,14 +162,14 @@ export default function TabelaDados<T>({
                 <th
                   key={c.chave}
                   aria-sort={ariaSort(c)}
-                  className={`px-4 py-3 stat-label font-semibold whitespace-nowrap ${
+                  className={`${px} py-3 stat-label font-semibold whitespace-nowrap ${
                     c.alinhar === "direita" ? "text-right" : "text-left"
                   }`}
                 >
                   {cabecalho(c)}
                 </th>
               ))}
-              {acoes && <th className="w-[1%] px-4 py-3" />}
+              {acoes && <th className={`w-[1%] ${px} py-3`} />}
             </tr>
           </thead>
           <tbody>
@@ -188,7 +193,7 @@ export default function TabelaDados<T>({
                   return (
                     <td
                       key={c.chave}
-                      className={`px-4 py-3 align-middle ${c.alinhar === "direita" ? "text-right" : ""} ${resto}`}
+                      className={`${px} py-3 align-middle ${c.alinhar === "direita" ? "text-right" : ""} ${resto}`}
                       style={c.estilo?.(item)}
                     >
                       {corte ? (
@@ -202,7 +207,7 @@ export default function TabelaDados<T>({
                   );
                 })}
                 {acoes && (
-                  <td className="px-4 py-3 align-middle">
+                  <td className={`${px} py-3 align-middle`}>
                     <div
                       className="flex items-center justify-end gap-0.5"
                       onClick={(e) => e.stopPropagation()}

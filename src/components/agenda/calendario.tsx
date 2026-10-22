@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Plus, FileSignature } from "lucide-react";
+import { Calendar, CalendarPlus, Plus, FileSignature } from "lucide-react";
 import type { AgendaDateRange, Show, Artista, AgendaItem } from "@/types";
 import { useT } from "@/lib/i18n";
 import { useContratos } from "@/lib/contratos-context";
@@ -299,7 +299,9 @@ export function FabNovoDia({ onClick, podeCriar }: { onClick: () => void; podeCr
         boxShadow: "0 10px 30px var(--shadow-color)",
       }}
     >
-      <Plus size={24} />
+      {/* Ícone de calendário (não "+"): a barra inferior já tem o "+" de Criar a
+          24 px daqui, e os dois "+" lado a lado faziam coisas diferentes. */}
+      <CalendarPlus size={24} />
     </button>,
     document.body
   );

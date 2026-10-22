@@ -258,7 +258,7 @@ export default function Dashboard({ onNavigate, onAbrirVenda }: Props) {
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Financeiro"
         subtitle={`${t("Recebimentos, pendências e faturamento")} · ${tituloPeriodo}`}

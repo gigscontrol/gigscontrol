@@ -162,7 +162,7 @@ export default function DashboardContratos({
   );
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full p-6 lg:p-8">
+    <div className="pagina">
       <PageHeader
         title="Contratos"
         subtitle={tituloPeriodo}
