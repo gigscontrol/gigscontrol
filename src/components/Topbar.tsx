@@ -168,9 +168,11 @@ export default function Topbar({
           })}
         </nav>
 
-        {/* Status do plano (só admin): dias restantes + contratos do mês */}
+        {/* Status do plano (só admin): dias restantes + contratos do mês. Some
+            no celular deitado: com o menu e o "Novo" no topo, o caminho ficava
+            "V… › To…". `!`: o `md:flex` vem depois do `paisagem:` no CSS. */}
         {isAdmin && (
-          <div className="hidden md:flex items-center gap-2 ml-1">
+          <div className="hidden md:flex paisagem:!hidden items-center gap-2 ml-1">
             {diasRestantes !== null && (
               <span
                 className={pillBase}
