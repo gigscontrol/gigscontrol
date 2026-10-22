@@ -304,7 +304,13 @@ export default function ShowDetalheModal({
     contratante || venda || orcamento || nomeLocal || casa || cache !== undefined;
 
   return (
-    <Modal isOpen onClose={onClose} title="" maxWidth={580}>
+    <Modal
+      isOpen
+      onClose={onClose}
+      title=""
+      ariaLabel={[artista?.name, tituloDoEvento].filter(Boolean).join(" · ")}
+      maxWidth={580}
+    >
       {/* Cabeçalho com a cor do DJ */}
       <div
         className="-mx-5 -mt-5 mb-5 px-5 pt-5 pb-4 border-b border-border"
