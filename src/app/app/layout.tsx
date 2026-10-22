@@ -593,7 +593,6 @@ function AppRoot() {
           )}
           {activeTab === "vendas" && activePage === "vendas-historico" && (
             <HistoricoOrcamentos
-              selectedArtistas={selectedArtistas}
               onNovo={() => irPara(urls.novoOrcamento())}
               onAbrir={abrirOrcamento}
               onTransformarEmVenda={transformarOrcamentoEmVenda}
@@ -626,7 +625,6 @@ function AppRoot() {
           )}
           {activeTab === "vendas" && activePage === "vendas-historico-vendas" && (
             <HistoricoVendas
-              selectedArtistas={selectedArtistas}
               onNovaVenda={() => irPara(urls.novaVenda())}
               onAbrir={abrirVenda}
               onEditar={editarVenda}

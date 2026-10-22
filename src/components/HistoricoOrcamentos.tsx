@@ -35,9 +35,9 @@ import MenuLinha, { type ItemMenuLinha } from "./lista/MenuLinha";
 import { LABELS_STATUS_ORCAMENTO, LABELS_TIPO_EVENTO, MODULE_THEMES, type Orcamento, type OrcamentoStatus } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
 import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
+import { useFiltroArtistas } from "./FiltroArtistas";
 
 type Props = {
-  selectedArtistas: string[];
   onNovo: () => void;
   onAbrir: (id: string) => void;
   onTransformarEmVenda: (orcamentoId: string) => void;
@@ -51,7 +51,7 @@ const STATUS_FILTROS: { value: OrcamentoStatus | "todos"; label: string }[] = [
   { value: "recusado", label: "Recusados" },
 ];
 
-export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir, onTransformarEmVenda }: Props) {
+export default function HistoricoOrcamentos({ onNovo, onAbrir, onTransformarEmVenda }: Props) {
   const t = useT();
   const { podeUI, sessao } = useAuth();
   const userId = sessao?.usuario.id;
@@ -68,12 +68,14 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   const [filtroStatus, setFiltroStatus] = useState<OrcamentoStatus | "todos">("todos");
   const [search, setSearch] = useState("");
 
-  // Respeita a seleção de artistas da sidebar (filtro de visualização, não de
-  // permissão — D3). Orçamento sem artistaId nunca some (não tem checkbox pra
-  // remarcar).
+  // Regra ÚNICA do filtro de artistas (lib/filtroArtistas): filtro desligado
+  // = tudo, inclusive orçamento de artista que saiu da conta (29 sumiam
+  // sempre). Com o filtro ligado, só os artistas marcados.
+  const filtro = useFiltroArtistas();
   const orcamentosVisiveis = useMemo(
-    () => orcamentos.filter((o) => !o.artistaId || selectedArtistas.includes(o.artistaId)),
-    [orcamentos, selectedArtistas]
+    () => orcamentos.filter((o) => filtro.passa(o.artistaId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orcamentos, filtro.selecionados, filtro.ativo]
   );
 
   // O total do topo conta o MESMO conjunto dos cards e da lista; o que ficou
@@ -81,14 +83,15 @@ export default function HistoricoOrcamentos({ selectedArtistas, onNovo, onAbrir,
   const resumoTotal = useMemo(() => {
     const n = orcamentosVisiveis.length;
     const base = n === 1 ? t("1 orçamento") : t("{n} orçamentos", { n });
-    const fora = orcamentos.filter((o) => o.artistaId && !selectedArtistas.includes(o.artistaId));
+    const fora = orcamentos.filter((o) => !filtro.passa(o.artistaId));
     const doFiltro = fora.filter((o) => artistas.some((a) => a.id === o.artistaId)).length;
     const semArtista = fora.length - doFiltro;
     const partes = [base];
     if (doFiltro > 0) partes.push(t("{n} ocultos pelo filtro de artistas", { n: doFiltro }));
     if (semArtista > 0) partes.push(t("{n} de artistas removidos", { n: semArtista }));
     return partes.join(" · ");
-  }, [orcamentos, orcamentosVisiveis, selectedArtistas, artistas, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamentos, orcamentosVisiveis, filtro.selecionados, filtro.ativo, artistas, t]);
 
   const lista = useMemo(() => {
     return [...orcamentosVisiveis]
