@@ -22,15 +22,15 @@ import EstadoVazio from "./lista/EstadoVazio";
 import { MODULE_THEMES, statusEfetivoParcela, type Venda } from "@/types";
 import { urls } from "@/lib/navegacao/rotas";
 import { BarraLista, BuscaLista, FiltroPilulas } from "./lista/BarraLista";
+import { useFiltroArtistas } from "./FiltroArtistas";
 
 type Props = {
-  selectedArtistas: string[];
   onNovaVenda: () => void;
   onAbrir: (id: string) => void;
   onEditar: (id: string) => void;
 };
 
-export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir, onEditar }: Props) {
+export default function HistoricoVendas({ onNovaVenda, onAbrir, onEditar }: Props) {
   const t = useT();
   const accent = MODULE_THEMES.vendas.color;
   const { vendas, removeVenda, recarregar } = useVendas();
@@ -43,12 +43,15 @@ export default function HistoricoVendas({ selectedArtistas, onNovaVenda, onAbrir
 
   const [search, setSearch] = useState("");
 
-  // Respeita a seleção de artistas da sidebar (filtro de visualização, não de
-  // permissão — D3). Venda sem artistaId nunca some (não tem checkbox pra
-  // remarcar).
+  // Regra ÚNICA do filtro de artistas (a mesma do painel de Vendas e de
+  // Pagamentos): filtro desligado = tudo, inclusive venda de artista que
+  // saiu da conta. O `selectedArtistas.includes` daqui escondia essas
+  // vendas sempre, e a lista não batia com o total do painel.
+  const filtro = useFiltroArtistas();
   const vendasVisiveis = useMemo(
-    () => vendas.filter((v) => !v.artistaId || selectedArtistas.includes(v.artistaId)),
-    [vendas, selectedArtistas]
+    () => vendas.filter((v) => filtro.passa(v.artistaId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vendas, filtro.selecionados, filtro.ativo]
   );
 
   const lista = useMemo(() => {
