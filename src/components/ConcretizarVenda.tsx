@@ -95,7 +95,7 @@ import {
   type TipoEvento,
   type Venda,
 } from "@/types";
-import { corTextoSobre } from "@/lib/contraste";
+
 import { comportamentoRolagem } from "@/lib/movimento";
 
 /** Dados do contato já cadastrado que a venda vai reusar (D2). */
@@ -1669,7 +1669,7 @@ export default function ConcretizarVenda({
                 className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{
                   backgroundColor: artistaEfetivoOrc.color,
-                  color: corTextoSobre(artistaEfetivoOrc.color),
+                  color: "#fff",
                 }}
               >
                 {iniciaisDoNome(artistaEfetivoOrc.name)}
@@ -1723,7 +1723,7 @@ export default function ConcretizarVenda({
                         backgroundColor: isActive
                           ? d.color
                           : "var(--bg-surface-2)",
-                        color: isActive ? corTextoSobre(d.color) : "var(--text-muted)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
                       }}
                     >
                       {iniciaisDoNome(d.name)}

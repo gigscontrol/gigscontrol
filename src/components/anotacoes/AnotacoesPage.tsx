@@ -34,7 +34,7 @@ import NotasDoShow from "./NotasDoShow";
 import { useT } from "@/lib/i18n";
 import { iniciaisDoNome } from "@/lib/iniciais";
 import { useFiltroArtistas } from "../FiltroArtistas";
-import { corTextoSobre } from "@/lib/contraste";
+
 
 const ACCENT = MODULE_THEMES.agenda.color;
 const MAX_PASTAS = 8;
@@ -346,7 +346,7 @@ export default function AnotacoesPage() {
                           <span
                             key={uid}
                             className="h-6 w-6 rounded-full flex items-center justify-center text-[0.55rem] font-bold border-2"
-                            style={{ backgroundColor: corDe(uid), color: corTextoSobre(corDe(uid)), borderColor: "var(--surface)" }}
+                            style={{ backgroundColor: corDe(uid), color: "#fff", borderColor: "var(--surface)" }}
                             title={nomeDe(uid)}
                           >
                             {iniciaisDoNome(nomeDe(uid))}
@@ -966,7 +966,7 @@ function PastaFormModal({
                       >
                         <span
                           className="h-4 w-4 rounded-full flex items-center justify-center text-[0.5rem] font-bold flex-shrink-0"
-                          style={{ backgroundColor: a.color, color: corTextoSobre(a.color) }}
+                          style={{ backgroundColor: a.color, color: "#fff" }}
                         >
                           {iniciaisDoNome(a.name)}
                         </span>

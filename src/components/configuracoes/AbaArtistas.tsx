@@ -52,7 +52,7 @@ import { ArtistaParaEdicao } from "./camposCadastro";
 import { ModalNovoArtista, extrairRaizUsername } from "./ModalNovoArtista";
 import { DadosConta, ModalEditarArtista } from "./ModalEditarArtista";
 import { ModalCredenciais } from "./ModalCredenciais";
-import { corTextoSobre, corComoTexto } from "@/lib/contraste";
+import { corComoTexto } from "@/lib/contraste";
 
 /**
  * Aba "Artistas" das Configurações.
@@ -436,7 +436,7 @@ export default function AbaArtistas() {
                       className="h-8 w-8 rounded-full flex items-center justify-center text-[0.7rem] font-bold"
                       style={{
                         // Suspenso: fundo cinza da borda — branco sumia no claro (1,3:1).
-                        color: suspenso ? "var(--text-secondary)" : corTextoSobre(a.color),
+                        color: suspenso ? "var(--text-secondary)" : "#fff",
                         background: suspenso
                           ? "var(--border-strong)"
                           : `linear-gradient(135deg, ${a.color}, color-mix(in srgb, ${a.color} 60%, transparent))`,
@@ -616,7 +616,7 @@ export default function AbaArtistas() {
                 style={{
                   color: artistaSelecionado.acessoSuspenso
                     ? "var(--text-secondary)"
-                    : corTextoSobre(artistaSelecionado.color),
+                    : "#fff",
                   background: artistaSelecionado.acessoSuspenso
                     ? "var(--border-strong)"
                     : `linear-gradient(135deg, ${artistaSelecionado.color}, color-mix(in srgb, ${artistaSelecionado.color} 60%, transparent))`,
@@ -1220,7 +1220,7 @@ export default function AbaArtistas() {
                 >
                   <span
                     className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{ background: item.artista.color, color: corTextoSobre(item.artista.color), opacity: 0.6 }}
+                    style={{ background: item.artista.color, color: "#fff", opacity: 0.6 }}
                   >
                     {iniciaisDoNome(item.artista.name)}
                   </span>
