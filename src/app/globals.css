@@ -413,6 +413,13 @@
     textarea { font-size: 16px !important; }
   }
 
+  /* Toque: botão desabilitado com o motivo no title deixa o toque passar
+     pro que está por baixo — onde MotivoNoToque o pega e mostra o motivo
+     num balão (o botão desabilitado engolia o toque sem dizer nada). */
+  @media (hover: none) {
+    button:disabled[title] { pointer-events: none; }
+  }
+
   /* Ações DESTRUTIVAS — só dois jeitos (padrão definido em out/2026):
      .btn-danger         → a confirmação final ("Excluir" no "tem certeza?");
      .btn-danger-outline → o botão que ABRE a confirmação, na tela.
