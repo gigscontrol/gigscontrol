@@ -1487,7 +1487,7 @@ export default function ConcretizarVenda({
 
   return (
     <div
-      className="pagina"
+      className="pagina pagina-estreita"
       // Guarda de saída (auditoria 27/08/2026): qualquer edição em qualquer
       // input do form marca "sujo" — sem listar os ~50 estados um a um.
       onChangeCapture={() => {
@@ -1937,7 +1937,7 @@ export default function ConcretizarVenda({
                       setTipoEvento(value);
                       setErrors((p) => ({ ...p, tipoEvento: "" }));
                     }}
-                    className="card-interactive flex flex-col items-start gap-2 text-left"
+                    className="opcao flex flex-col items-start gap-2 text-left"
                     style={{
                       borderColor: isActive ? accent : undefined,
                       boxShadow: isActive ? `0 0 0 1px ${accent}` : undefined,
@@ -2431,7 +2431,7 @@ export default function ConcretizarVenda({
             cancelamento, o log de cobranças e o 📌. */}
         {temParcelaComHistorico && (
           <div
-            className="card mb-4 flex items-start gap-3"
+            className="mb-4 flex items-start gap-3 rounded-md border p-4"
             style={{ borderColor: "var(--warning)", backgroundColor: "var(--warning-weak)" }}
           >
             <Lock size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
@@ -2446,7 +2446,7 @@ export default function ConcretizarVenda({
           <button
             type="button"
             onClick={() => setModoPagamento("padrao")}
-            className="card-interactive flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+            className="opcao flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               borderColor: modoPagamento === "padrao" ? accent : undefined,
               boxShadow: modoPagamento === "padrao" ? `0 0 0 1px ${accent}` : undefined,
@@ -2473,7 +2473,7 @@ export default function ConcretizarVenda({
           <button
             type="button"
             onClick={() => setModoPagamento("detalhado")}
-            className="card-interactive flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
+            className="opcao flex items-start gap-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               borderColor: modoPagamento === "detalhado" ? accent : undefined,
               boxShadow:

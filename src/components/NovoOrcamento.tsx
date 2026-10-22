@@ -822,7 +822,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   // ============ TELA 3 ============
   if (salvos) {
     return (
-      <div className="pagina">
+      <div className="pagina pagina-estreita">
         <PageHeader
           title={salvos.length === 1 ? "Orçamento criado" : `${salvos.length} orçamentos criados`}
           subtitle={
@@ -901,7 +901,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
   const djsDisponiveis = artistas.filter((d) => !blocos.some((b) => b.artistaId === d.id));
 
   return (
-    <div className="pagina">
+    <div className="pagina pagina-estreita">
       <PageHeader
         title="Novo orçamento"
         subtitle="Você pode incluir mais de um artista — cada um gera um orçamento próprio"
@@ -949,7 +949,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     key={value}
                     type="button"
                     onClick={() => setModoOrcamento(value)}
-                    className="card-interactive flex items-start gap-3 text-left"
+                    className="opcao flex items-start gap-3 text-left"
                     style={{
                       borderColor: isActive ? accent : undefined,
                       boxShadow: isActive ? `0 0 0 1px ${accent}` : undefined,
@@ -986,7 +986,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
                     key={value}
                     type="button"
                     onClick={() => setTipoEvento(value)}
-                    className="card-interactive flex flex-col items-start gap-2 text-left"
+                    className="opcao flex flex-col items-start gap-2 text-left"
                     style={{
                       borderColor: isActive ? accent : undefined,
                       boxShadow: isActive ? `0 0 0 1px ${accent}` : undefined,
@@ -1341,7 +1341,7 @@ export default function NovoOrcamento({ onSaved, onCancel, onDone }: Props) {
             <button
               type="button"
               onClick={() => setModalAddDj(true)}
-              className="card-interactive flex items-center justify-center gap-2 text-sm font-medium border-dashed"
+              className="opcao flex items-center justify-center gap-2 text-sm font-medium border-dashed"
               style={{ color: accent }}
             >
               <Plus size={16} />
