@@ -663,6 +663,7 @@ export function ListaRider({
         <button
           type="button"
           onClick={() => adicionar(novoNome)}
+          aria-label={t("Adicionar item")}
           disabled={!novoNome.trim() || cheio}
           className="btn-ghost p-2 rounded disabled:opacity-40"
         >

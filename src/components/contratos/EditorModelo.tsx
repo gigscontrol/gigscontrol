@@ -978,6 +978,7 @@ export default function EditorModelo({
                               onClick={() => removerTestemunha(secao.id, testemunha.id)}
                               className="btn-ghost p-1 rounded text-muted hover:text-danger"
                               title={t("Remover testemunha")}
+                              aria-label={t("Remover testemunha")}
                             >
                               <X size={13} />
                             </button>
@@ -1256,6 +1257,7 @@ function SeletorCorInline({
         type="button"
         onClick={() => setAberto(true)}
         title={t("Cor personalizada (RGB)")}
+        aria-label={t("Cor personalizada (RGB)")}
         className="alvo-toque h-6 w-6 rounded-md flex items-center justify-center transition-transform hover:scale-110"
         style={{
           backgroundColor: ehCustom ? cor : "transparent",

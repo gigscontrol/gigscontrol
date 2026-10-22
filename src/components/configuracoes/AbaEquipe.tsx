@@ -417,6 +417,7 @@ export default function AbaEquipe() {
               onClick={() => setCriando(true)}
               disabled={noLimite}
               title={noLimite ? t("Limite do plano atingido") : t("Criar usuário")}
+              aria-label={t("Criar usuário")}
               className="h-9 w-9 rounded-full border-2 border-dashed border-border flex items-center justify-center flex-shrink-0 transition-colors hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: "var(--brand)" }}
             >
